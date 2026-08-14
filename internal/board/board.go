@@ -7,9 +7,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/konkov/agile/internal/rank"
+	"github.com/konkov/agile/internal/store"
 )
 
 var ErrNotFound = errors.New("доска не найдена")
@@ -46,135 +46,144 @@ type Snapshot struct {
 }
 
 type Service struct {
-	pool *pgxpool.Pool
+	db *store.Store
 }
 
-func New(pool *pgxpool.Pool) *Service { return &Service{pool: pool} }
+func New(db *store.Store) *Service { return &Service{db: db} }
+
+// Все запросы идут через store.InTenant: база сама отсекает чужие строки
+// политиками RLS, а условие по org_id в SQL остаётся как читаемое намерение,
+// а не как единственная линия обороны.
 
 // List возвращает доски организации.
 func (s *Service) List(ctx context.Context, orgID string) ([]Info, error) {
-	rows, err := s.pool.Query(ctx, `
-		select id, name, version
-		  from boards
-		 where org_id = $1 and archived_at is null
-		 order by created_at`, orgID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	out := []Info{}
-	for rows.Next() {
-		var b Info
-		if err := rows.Scan(&b.ID, &b.Name, &b.Version); err != nil {
-			return nil, err
+	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select id, name, version
+			  from boards
+			 where archived_at is null
+			 order by created_at`)
+		if err != nil {
+			return err
 		}
-		out = append(out, b)
-	}
-	return out, rows.Err()
+		defer rows.Close()
+		for rows.Next() {
+			var b Info
+			if err := rows.Scan(&b.ID, &b.Name, &b.Version); err != nil {
+				return err
+			}
+			out = append(out, b)
+		}
+		return rows.Err()
+	})
+	return out, err
 }
 
 // Create заводит доску с тремя колонками потока по умолчанию.
 func (s *Service) Create(ctx context.Context, orgID, name string) (Info, error) {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return Info{}, err
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck // откат после успешного Commit безвреден
-
-	var projectID string
-	err = tx.QueryRow(ctx, `
-		select id from projects
-		 where org_id = $1 and archived_at is null
-		 order by created_at limit 1`, orgID).Scan(&projectID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		err = tx.QueryRow(ctx,
-			`insert into projects (org_id, name) values ($1, $2) returning id`,
-			orgID, "Проекты").Scan(&projectID)
-	}
-	if err != nil {
-		return Info{}, err
-	}
-
 	var b Info
-	err = tx.QueryRow(ctx, `
-		insert into boards (org_id, project_id, name) values ($1, $2, $3)
-		returning id, name, version`, orgID, projectID, name).
-		Scan(&b.ID, &b.Name, &b.Version)
-	if err != nil {
-		return Info{}, err
-	}
-
-	defaults := []string{"Очередь", "В работе", "Готово"}
-	positions, err := rank.NBetween("", "", len(defaults))
-	if err != nil {
-		return Info{}, err
-	}
-	for i, name := range defaults {
-		_, err = tx.Exec(ctx, `
-			insert into board_columns (org_id, board_id, name, position)
-			values ($1, $2, $3, $4)`, orgID, b.ID, name, positions[i])
-		if err != nil {
-			return Info{}, err
+	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		var projectID string
+		err := tx.QueryRow(ctx, `
+			select id from projects
+			 where archived_at is null
+			 order by created_at limit 1`).Scan(&projectID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = tx.QueryRow(ctx,
+				`insert into projects (org_id, name) values ($1, $2) returning id`,
+				orgID, "Проекты").Scan(&projectID)
 		}
-	}
+		if err != nil {
+			return err
+		}
 
-	return b, tx.Commit(ctx)
+		err = tx.QueryRow(ctx, `
+			insert into boards (org_id, project_id, name) values ($1, $2, $3)
+			returning id, name, version`, orgID, projectID, name).
+			Scan(&b.ID, &b.Name, &b.Version)
+		if err != nil {
+			return err
+		}
+
+		defaults := []string{"Очередь", "В работе", "Готово"}
+		positions, err := rank.NBetween("", "", len(defaults))
+		if err != nil {
+			return err
+		}
+		for i, columnName := range defaults {
+			_, err = tx.Exec(ctx, `
+				insert into board_columns (org_id, board_id, name, position)
+				values ($1, $2, $3, $4)`, orgID, b.ID, columnName, positions[i])
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return b, err
 }
 
 // Snapshot читает доску целиком вместе с её версией.
 func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot, error) {
 	var snap Snapshot
-	err := s.pool.QueryRow(ctx, `
-		select id, name, version from boards
-		 where id = $1 and org_id = $2 and archived_at is null`, boardID, orgID).
-		Scan(&snap.Board.ID, &snap.Board.Name, &snap.Board.Version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return snap, ErrNotFound
-	}
-	if err != nil {
-		return snap, err
-	}
-
-	colRows, err := s.pool.Query(ctx, `
-		select id, name, position, wip_limit
-		  from board_columns
-		 where board_id = $1 and archived_at is null
-		 order by position`, boardID)
-	if err != nil {
-		return snap, err
-	}
-	defer colRows.Close()
-	snap.Columns = []Column{}
-	for colRows.Next() {
-		var c Column
-		if err := colRows.Scan(&c.ID, &c.Name, &c.Position, &c.WIPLimit); err != nil {
-			return snap, err
+	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
+			select id, name, version from boards
+			 where id = $1 and archived_at is null`, boardID).
+			Scan(&snap.Board.ID, &snap.Board.Name, &snap.Board.Version)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Доска чужой организации неотличима от несуществующей —
+			// и это правильный ответ: подтверждать её существование
+			// постороннему не нужно.
+			return ErrNotFound
 		}
-		snap.Columns = append(snap.Columns, c)
-	}
-	if err := colRows.Err(); err != nil {
-		return snap, err
-	}
-
-	cardRows, err := s.pool.Query(ctx, `
-		select id, column_id, position, title, description, version
-		  from cards
-		 where board_id = $1 and archived_at is null
-		 order by column_id, position`, boardID)
-	if err != nil {
-		return snap, err
-	}
-	defer cardRows.Close()
-	snap.Cards = []Card{}
-	for cardRows.Next() {
-		var c Card
-		if err := cardRows.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version); err != nil {
-			return snap, err
+		if err != nil {
+			return err
 		}
-		snap.Cards = append(snap.Cards, c)
-	}
-	return snap, cardRows.Err()
+
+		colRows, err := tx.Query(ctx, `
+			select id, name, position, wip_limit
+			  from board_columns
+			 where board_id = $1 and archived_at is null
+			 order by position`, boardID)
+		if err != nil {
+			return err
+		}
+		defer colRows.Close()
+		snap.Columns = []Column{}
+		for colRows.Next() {
+			var c Column
+			if err := colRows.Scan(&c.ID, &c.Name, &c.Position, &c.WIPLimit); err != nil {
+				return err
+			}
+			snap.Columns = append(snap.Columns, c)
+		}
+		if err := colRows.Err(); err != nil {
+			return err
+		}
+		colRows.Close()
+
+		cardRows, err := tx.Query(ctx, `
+			select id, column_id, position, title, description, version
+			  from cards
+			 where board_id = $1 and archived_at is null
+			 order by column_id, position`, boardID)
+		if err != nil {
+			return err
+		}
+		defer cardRows.Close()
+		snap.Cards = []Card{}
+		for cardRows.Next() {
+			var c Card
+			if err := cardRows.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version); err != nil {
+				return err
+			}
+			snap.Cards = append(snap.Cards, c)
+		}
+		return cardRows.Err()
+	})
+	return snap, err
 }
 
 // CardOrder — текущий порядок колонки, который возвращается клиенту

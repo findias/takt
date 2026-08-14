@@ -1,12 +1,55 @@
 // Клиент API. Одна точка входа, чтобы обработка ошибок и таймаутов
 // не расползалась по компонентам.
 
-export type User = {
+export type Role = 'owner' | 'member' | 'viewer'
+
+/** Кто выполняет запрос и от имени какой организации. */
+export type Principal = {
   id: string
-  orgId: string
   email: string
   name: string
-  role: 'owner' | 'member' | 'viewer'
+  orgId: string
+  orgName: string
+  orgSlug: string
+  role: Role
+}
+
+export type Membership = {
+  orgId: string
+  orgName: string
+  orgSlug: string
+  role: Role
+}
+
+export type Member = {
+  userId: string
+  name: string
+  email: string
+  role: Role
+  joinedAt: string
+}
+
+export type Invite = {
+  id: string
+  email: string
+  role: Role
+  expiresAt: string
+  createdAt: string
+  /** Приходит только в ответе на создание: в базе лежит лишь хеш токена. */
+  link?: string
+}
+
+export type InviteInfo = {
+  orgName: string
+  email: string
+  role: Role
+  needsAccount: boolean
+}
+
+export const ROLE_NAMES: Record<Role, string> = {
+  owner: 'Владелец',
+  member: 'Участник',
+  viewer: 'Наблюдатель',
 }
 
 export type BoardInfo = { id: string; name: string; version: number }
@@ -90,12 +133,27 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const api = {
-  me: () => request<User>('GET', '/api/me'),
+  me: () => request<Principal>('GET', '/api/me'),
   login: (email: string, password: string) =>
-    request<User>('POST', '/api/auth/login', { email, password }),
+    request<Principal>('POST', '/api/auth/login', { email, password }),
   register: (org: string, name: string, email: string, password: string) =>
-    request<User>('POST', '/api/auth/register', { org, name, email, password }),
+    request<Principal>('POST', '/api/auth/register', { org, name, email, password }),
   logout: () => request<void>('POST', '/api/auth/logout'),
+
+  listOrgs: () => request<{ orgs: Membership[]; activeOrgId: string }>('GET', '/api/orgs'),
+  createOrg: (name: string) => request<Membership>('POST', '/api/orgs', { name }),
+  switchOrg: (orgId: string) => request<Principal>('POST', '/api/session/org', { orgId }),
+
+  team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
+  invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),
+  revokeInvite: (id: string) => request<void>('DELETE', `/api/invites/${id}`),
+  setRole: (userId: string, role: Role) =>
+    request<void>('PUT', `/api/members/${userId}/role`, { role }),
+  removeMember: (userId: string) => request<void>('DELETE', `/api/members/${userId}`),
+
+  inviteInfo: (token: string) => request<InviteInfo>('GET', `/api/invites/${token}/info`),
+  acceptInvite: (token: string, account?: { name: string; password: string }) =>
+    request<Principal>('POST', `/api/invites/${token}/accept`, account ?? {}),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
   createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),

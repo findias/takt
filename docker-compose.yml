@@ -11,11 +11,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: board
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-board}
-      POSTGRES_DB: board
+      # Суперпользователь нужен только для инициализации. Приложение ходит
+      # под ролью board без прав суперпользователя — иначе Row-Level
+      # Security не действует и изоляция организаций исчезает.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD:-board}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U board -d board"]
       interval: 3s

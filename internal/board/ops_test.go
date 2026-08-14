@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/konkov/agile/internal/store"
 )
 
 // Тесты работают против настоящей базы: почти вся логика операций живёт
@@ -19,18 +21,18 @@ import (
 //
 // Без TEST_DATABASE_URL тесты пропускаются, чтобы `go test ./...` оставался
 // зелёным на машине без docker.
-func testPool(t *testing.T) *pgxpool.Pool {
+func testStore(t *testing.T) *store.Store {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
 		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	db, err := store.Open(context.Background(), url)
 	if err != nil {
 		t.Fatalf("подключение к тестовой базе: %v", err)
 	}
-	t.Cleanup(pool.Close)
-	return pool
+	t.Cleanup(db.Close)
+	return db
 }
 
 type fixture struct {
@@ -45,28 +47,48 @@ type fixture struct {
 	sequence int
 }
 
-func newFixture(t *testing.T) *fixture {
+// newTenant заводит изолированную организацию с владельцем.
+func newTenant(t *testing.T, db *store.Store) (orgID, userID string) {
 	t.Helper()
-	pool := testPool(t)
 	ctx := context.Background()
-	svc := New(pool)
+	suffix := uuid.NewString()
 
-	var orgID, actorID string
-	err := pool.QueryRow(ctx, `insert into orgs (name) values ('Тест') returning id`).Scan(&orgID)
+	err := db.Pool.QueryRow(ctx,
+		`insert into orgs (name, slug) values ($1, $2) returning id`,
+		"Тест "+suffix[:8], "test-"+suffix[:8]).Scan(&orgID)
 	if err != nil {
 		t.Fatalf("создание организации: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `delete from orgs where id = $1`, orgID)
+		_, _ = db.Pool.Exec(context.Background(), `delete from orgs where id = $1`, orgID)
 	})
 
-	err = pool.QueryRow(ctx, `
-		insert into users (org_id, email, name, password_hash, role)
-		values ($1, $2, 'Тестовый', 'x', 'owner') returning id`,
-		orgID, uuid.NewString()+"@example.test").Scan(&actorID)
+	err = db.Pool.QueryRow(ctx, `
+		insert into users (email, name, password_hash)
+		values ($1, 'Тестовый', 'x') returning id`,
+		suffix+"@example.test").Scan(&userID)
 	if err != nil {
 		t.Fatalf("создание пользователя: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = db.Pool.Exec(context.Background(), `delete from users where id = $1`, userID)
+	})
+
+	_, err = db.Pool.Exec(ctx,
+		`insert into memberships (org_id, user_id, role) values ($1, $2, 'owner')`,
+		orgID, userID)
+	if err != nil {
+		t.Fatalf("создание членства: %v", err)
+	}
+	return orgID, userID
+}
+
+func newFixture(t *testing.T) *fixture {
+	t.Helper()
+	db := testStore(t)
+	ctx := context.Background()
+	svc := New(db)
+	orgID, actorID := newTenant(t, db)
 
 	b, err := svc.Create(ctx, orgID, "Доска")
 	if err != nil {
@@ -248,8 +270,10 @@ func TestArchivedCardDisappearsButEventsRemain(t *testing.T) {
 	}
 
 	var events int
-	err := f.svc.pool.QueryRow(f.ctx,
-		`select count(*) from card_events where card_id = $1`, id).Scan(&events)
+	err := f.svc.db.InTenant(f.ctx, f.orgID, func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx,
+			`select count(*) from card_events where card_id = $1`, id).Scan(&events)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

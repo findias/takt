@@ -1,190 +1,191 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from './api'
-import type { BoardInfo, User } from './api'
+import { ROLE_NAMES, api } from './api'
+import type { Principal } from './api'
 import { Board } from './Board'
+import { Auth } from './Auth'
+import { InviteScreen } from './Invite'
+import { Team } from './Team'
+import { BoardList } from './BoardList'
+
+/** Приглашение приходит ссылкой вида /invite/<токен>. */
+function inviteTokenFromLocation(): string | null {
+  const match = window.location.pathname.match(/^\/invite\/(.+)$/)
+  return match ? match[1] : null
+}
 
 export function App() {
-  const [user, setUser] = useState<User | null>(null)
+  const [principal, setPrincipal] = useState<Principal | null>(null)
   const [checking, setChecking] = useState(true)
+  const [invite, setInvite] = useState<string | null>(inviteTokenFromLocation())
   const [boardId, setBoardId] = useState<string | null>(null)
+  const [tab, setTab] = useState<'boards' | 'team'>('boards')
 
   useEffect(() => {
     api
       .me()
-      .then(setUser)
-      .catch(() => setUser(null))
+      .then(setPrincipal)
+      .catch(() => setPrincipal(null))
       .finally(() => setChecking(false))
   }, [])
 
+  const clearInvite = useCallback(() => {
+    window.history.replaceState(null, '', '/')
+    setInvite(null)
+  }, [])
+
+  if (invite) {
+    return (
+      <InviteScreen
+        token={invite}
+        onJoined={(p) => {
+          setPrincipal(p)
+          setBoardId(null)
+          setTab('boards')
+          clearInvite()
+        }}
+        onCancel={clearInvite}
+      />
+    )
+  }
+
   if (checking) return <div className="centered">Проверяем сессию…</div>
-  if (!user) return <Auth onSignedIn={setUser} />
+  if (!principal) return <Auth onSignedIn={setPrincipal} />
   if (boardId) return <Board boardId={boardId} onBack={() => setBoardId(null)} />
 
   return (
-    <BoardList
-      user={user}
-      onOpen={setBoardId}
-      onSignOut={() => {
-        void api.logout().finally(() => setUser(null))
-      }}
-    />
-  )
-}
-
-function Auth({ onSignedIn }: { onSignedIn: (user: User) => void }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [org, setOrg] = useState('')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    setError(null)
-    try {
-      const user =
-        mode === 'login'
-          ? await api.login(email, password)
-          : await api.register(org, name, email, password)
-      onSignedIn(user)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не получилось')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
     <div className="centered">
-      <form className="panel" onSubmit={submit}>
-        <h1>{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
-
-        {mode === 'register' && (
-          <>
-            <label>
-              Организация
-              <input value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Моя команда" />
-            </label>
-            <label>
-              Как вас зовут
-              <input value={name} onChange={(e) => setName(e.target.value)} required />
-            </label>
-          </>
-        )}
-        <label>
-          Почта
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            required
-          />
-        </label>
-        <label>
-          Пароль
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={8}
-            required
-          />
-        </label>
-
-        {error && <p className="error">{error}</p>}
-
-        <button type="submit" disabled={busy}>
-          {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Создать команду'}
-        </button>
-        <button
-          type="button"
-          className="link"
-          onClick={() => {
-            setMode(mode === 'login' ? 'register' : 'login')
-            setError(null)
+      <div className="panel">
+        <OrgHeader
+          principal={principal}
+          onSwitched={(p) => {
+            setPrincipal(p)
+            setBoardId(null)
           }}
-        >
-          {mode === 'login' ? 'Создать новую команду' : 'У меня уже есть аккаунт'}
-        </button>
-      </form>
+          onSignOut={() => {
+            void api.logout().finally(() => setPrincipal(null))
+          }}
+        />
+
+        <nav className="tabs">
+          <button
+            className={tab === 'boards' ? 'tab tab--active' : 'tab'}
+            onClick={() => setTab('boards')}
+          >
+            Доски
+          </button>
+          <button
+            className={tab === 'team' ? 'tab tab--active' : 'tab'}
+            onClick={() => setTab('team')}
+          >
+            Команда
+          </button>
+        </nav>
+
+        {tab === 'boards' ? (
+          <BoardList principal={principal} onOpen={setBoardId} />
+        ) : (
+          <Team principal={principal} />
+        )}
+      </div>
     </div>
   )
 }
 
-function BoardList({
-  user,
-  onOpen,
+function OrgHeader({
+  principal,
+  onSwitched,
   onSignOut,
 }: {
-  user: User
-  onOpen: (id: string) => void
+  principal: Principal
+  onSwitched: (p: Principal) => void
   onSignOut: () => void
 }) {
-  const [boards, setBoards] = useState<BoardInfo[] | null>(null)
+  const [orgs, setOrgs] = useState<{ orgId: string; orgName: string }[]>([])
+  const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api
-      .listBoards()
-      .then((r) => setBoards(r.boards))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить список'))
-  }, [])
+      .listOrgs()
+      .then((r) => setOrgs(r.orgs))
+      .catch(() => setOrgs([{ orgId: principal.orgId, orgName: principal.orgName }]))
+  }, [principal.orgId, principal.orgName])
 
   useEffect(load, [load])
 
+  const switchTo = (orgId: string) => {
+    if (orgId === principal.orgId) return
+    api
+      .switchOrg(orgId)
+      .then(onSwitched)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось переключиться'))
+  }
+
   return (
-    <div className="centered">
-      <div className="panel">
-        <header className="panel-header">
-          <h1>Доски</h1>
-          <button className="link" onClick={onSignOut}>
-            Выйти ({user.name})
-          </button>
-        </header>
+    <header className="org-header">
+      <div className="org-row">
+        {orgs.length > 1 ? (
+          <select
+            className="org-select"
+            value={principal.orgId}
+            onChange={(e) => switchTo(e.target.value)}
+            aria-label="Организация"
+          >
+            {orgs.map((o) => (
+              <option key={o.orgId} value={o.orgId}>
+                {o.orgName}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <h1>{principal.orgName}</h1>
+        )}
+        <span className="role-chip">{ROLE_NAMES[principal.role]}</span>
+      </div>
 
-        {error && <p className="error">{error}</p>}
-        {boards === null && <p>Загружаем…</p>}
-        {boards?.length === 0 && <p className="muted">Пока ни одной. Создайте первую.</p>}
+      <div className="org-row muted small">
+        <span>{principal.name}</span>
+        <button className="link" onClick={() => setCreating((v) => !v)}>
+          {creating ? 'Отмена' : 'Новая организация'}
+        </button>
+        <button className="link" onClick={onSignOut}>
+          Выйти
+        </button>
+      </div>
 
-        <ul className="board-list">
-          {boards?.map((b) => (
-            <li key={b.id}>
-              <button onClick={() => onOpen(b.id)}>{b.name}</button>
-            </li>
-          ))}
-        </ul>
-
+      {creating && (
         <form
           className="row"
           onSubmit={(e) => {
             e.preventDefault()
             if (!name.trim()) return
             api
-              .createBoard(name.trim())
-              .then((b) => {
+              .createOrg(name.trim())
+              .then(() => api.me())
+              .then((p) => {
                 setName('')
+                setCreating(false)
+                setError(null)
                 load()
-                onOpen(b.id)
+                onSwitched(p)
               })
-              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать доску'))
+              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать'))
           }}
         >
           <input
+            autoFocus
             value={name}
-            placeholder="Название новой доски"
+            placeholder="Название организации"
             onChange={(e) => setName(e.target.value)}
           />
           <button type="submit" disabled={!name.trim()}>
             Создать
           </button>
         </form>
-      </div>
-    </div>
+      )}
+
+      {error && <p className="error">{error}</p>}
+    </header>
   )
 }

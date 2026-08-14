@@ -71,7 +71,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		return Result{}, badRequestf("не передан operationId")
 	}
 
-	tx, err := s.pool.Begin(ctx)
+	tx, err := s.db.BeginTenant(ctx, orgID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -94,14 +94,14 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	if tag.RowsAffected() == 0 {
 		_ = tx.Rollback(ctx)
-		return s.storedResult(ctx, req.OperationID)
+		return s.storedResult(ctx, orgID, req.OperationID)
 	}
 
 	var version int64
 	err = tx.QueryRow(ctx, `
 		select version from boards
-		 where id = $1 and org_id = $2 and archived_at is null
-		 for update`, boardID, orgID).Scan(&version)
+		 where id = $1 and archived_at is null
+		 for update`, boardID).Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Result{}, ErrNotFound
 	}
@@ -117,7 +117,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 			if conflict.ColumnID != "" && conflict.Order == nil {
 				// читаем текущий порядок отдельным запросом: наша транзакция
 				// вот-вот откатится, а клиенту нужны актуальные данные
-				if order, oErr := s.columnOrderOutside(ctx, conflict.ColumnID); oErr == nil {
+				if order, oErr := s.columnOrderOutside(ctx, orgID, conflict.ColumnID); oErr == nil {
 					conflict.Order = order
 				}
 			}
@@ -150,10 +150,12 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	return result, nil
 }
 
-func (s *Service) storedResult(ctx context.Context, operationID string) (Result, error) {
+func (s *Service) storedResult(ctx context.Context, orgID, operationID string) (Result, error) {
 	var raw []byte
-	err := s.pool.QueryRow(ctx,
-		`select result from operations where operation_id = $1`, operationID).Scan(&raw)
+	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`select result from operations where operation_id = $1`, operationID).Scan(&raw)
+	})
 	if err != nil {
 		return Result{}, fmt.Errorf("чтение результата повторённой операции: %w", err)
 	}
@@ -164,24 +166,27 @@ func (s *Service) storedResult(ctx context.Context, operationID string) (Result,
 	return res, nil
 }
 
-func (s *Service) columnOrderOutside(ctx context.Context, columnID string) ([]CardOrder, error) {
-	rows, err := s.pool.Query(ctx, `
-		select id, position from cards
-		 where column_id = $1 and archived_at is null
-		 order by position`, columnID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+func (s *Service) columnOrderOutside(ctx context.Context, orgID, columnID string) ([]CardOrder, error) {
 	out := []CardOrder{}
-	for rows.Next() {
-		var c CardOrder
-		if err := rows.Scan(&c.ID, &c.Position); err != nil {
-			return nil, err
+	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select id, position from cards
+			 where column_id = $1 and archived_at is null
+			 order by position`, columnID)
+		if err != nil {
+			return err
 		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
+		defer rows.Close()
+		for rows.Next() {
+			var c CardOrder
+			if err := rows.Scan(&c.ID, &c.Position); err != nil {
+				return err
+			}
+			out = append(out, c)
+		}
+		return rows.Err()
+	})
+	return out, err
 }
 
 func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, req Request) (Patch, error) {

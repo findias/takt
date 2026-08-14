@@ -11,11 +11,16 @@ help: ## Показать список команд
 
 # --- разработка ---
 
+# Роль board намеренно создаётся без прав суперпользователя: для
+# суперпользователя политики Row-Level Security не действуют, и локальная
+# разработка перестала бы отличаться от продакшена ровно в том месте,
+# где ошибка стоит дороже всего.
 .PHONY: db
 db: ## Поднять локальную базу в docker (порт 55432)
 	@docker start board-dev-db 2>/dev/null || \
 	 docker run -d --name board-dev-db \
-	   -e POSTGRES_USER=board -e POSTGRES_PASSWORD=board -e POSTGRES_DB=board \
+	   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e APP_DB_PASSWORD=board \
+	   -v "$(CURDIR)/deploy/postgres-init:/docker-entrypoint-initdb.d:ro" \
 	   -p 55432:5432 postgres:16-alpine
 	@until docker exec board-dev-db pg_isready -U board -d board >/dev/null 2>&1; do sleep 0.5; done
 	@echo "база готова: $(DEV_DB_URL)"

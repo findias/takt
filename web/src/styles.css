@@ -146,6 +146,132 @@ label {
   text-align: left;
 }
 
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.small {
+  font-size: 0.85rem;
+}
+.section-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 650;
+  margin: 0;
+}
+
+/* --- организация и команда --- */
+
+.org-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--rule);
+}
+.org-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.org-select {
+  font: inherit;
+  font-weight: 650;
+  font-size: 1.05rem;
+  padding: 0.2em 0.4em;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  max-width: 100%;
+}
+.role-chip {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+.tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-3);
+  padding: 0.35em 0.6em;
+}
+.tab--active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 650;
+}
+
+.member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.member-list li:last-child {
+  border-bottom: none;
+}
+.member-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.member-who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+select {
+  font: inherit;
+  padding: 0.3em 0.4em;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.note {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.note p {
+  margin: 0;
+}
+.note input {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
 /* --- доска --- */
 
 .board-screen {

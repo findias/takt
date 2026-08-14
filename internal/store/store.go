@@ -13,6 +13,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/konkov/agile/migrations"
@@ -43,6 +44,70 @@ func Open(ctx context.Context, databaseURL string) (*Store, error) {
 
 func (s *Store) Close() { s.Pool.Close() }
 
+// Scope — область видимости транзакции для политик Row-Level Security.
+//
+// Изоляция арендаторов держится не на том, что каждый запрос не забыли
+// снабдить условием по org_id, а на политиках в самой базе. Они сравнивают
+// поля строки с настройками сеанса, которые выставляются здесь.
+//
+// Пустая область не открывает ничего: политики сравнивают org_id с NULL
+// и не пропускают ни одной строки. Забыть выставить область — значит
+// увидеть пустую доску, а не чужую.
+type Scope struct {
+	// OrgID открывает данные одной организации.
+	OrgID string
+	// InviteToken открывает одну строку приглашения по хешу его токена.
+	// Приглашение открывают по секретной ссылке, когда организация ещё
+	// неизвестна, а у человека может не быть аккаунта.
+	InviteToken string
+}
+
+// BeginScope открывает транзакцию с заданной областью видимости.
+//
+// Настройки транзакционные (третий аргумент set_config = true), поэтому
+// соединение возвращается в пул чистым и следующий запрос не унаследует
+// чужую область.
+func (s *Store) BeginScope(ctx context.Context, scope Scope) (pgx.Tx, error) {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.Exec(ctx, `
+		select set_config('app.current_org', $1, true),
+		       set_config('app.invite_token', $2, true)`,
+		scope.OrgID, scope.InviteToken)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, fmt.Errorf("установка области видимости: %w", err)
+	}
+	return tx, nil
+}
+
+// InScope выполняет fn в транзакции с заданной областью и фиксирует её,
+// если fn не вернула ошибку.
+func (s *Store) InScope(ctx context.Context, scope Scope, fn func(pgx.Tx) error) error {
+	tx, err := s.BeginScope(ctx, scope)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// BeginTenant открывает транзакцию, внутри которой база видит данные только
+// одной организации.
+func (s *Store) BeginTenant(ctx context.Context, orgID string) (pgx.Tx, error) {
+	return s.BeginScope(ctx, Scope{OrgID: orgID})
+}
+
+// InTenant выполняет fn в транзакции с областью организации.
+func (s *Store) InTenant(ctx context.Context, orgID string, fn func(pgx.Tx) error) error {
+	return s.InScope(ctx, Scope{OrgID: orgID}, fn)
+}
+
 // WaitReady ждёт, пока база начнёт отвечать. Нужно при первом запуске
 // docker compose, когда приложение стартует раньше PostgreSQL.
 func (s *Store) WaitReady(ctx context.Context, timeout time.Duration) error {
@@ -61,6 +126,33 @@ func (s *Store) WaitReady(ctx context.Context, timeout time.Duration) error {
 		}
 	}
 	return fmt.Errorf("база не отвечает за %s: %w", timeout, last)
+}
+
+// EnsureTenantIsolation проверяет, что роль подключения не обходит
+// Row-Level Security.
+//
+// Для суперпользователя и для роли с атрибутом BYPASSRLS политики не
+// применяются вообще — вся изоляция арендаторов при этом молча исчезает.
+// Заметить такое по логам невозможно: запросы работают, просто отдают
+// лишнее. Поэтому приложение отказывается стартовать, а не надеется
+// на аккуратность того, кто настраивал базу.
+func (s *Store) EnsureTenantIsolation(ctx context.Context) error {
+	var bypasses bool
+	err := s.Pool.QueryRow(ctx, `
+		select rolsuper or rolbypassrls
+		  from pg_roles where rolname = current_user`).Scan(&bypasses)
+	if err != nil {
+		return fmt.Errorf("проверка прав роли подключения: %w", err)
+	}
+	if bypasses {
+		var role string
+		_ = s.Pool.QueryRow(ctx, `select current_user`).Scan(&role)
+		return fmt.Errorf(
+			"роль %q подключается с правами суперпользователя или BYPASSRLS — "+
+				"политики изоляции организаций для неё не действуют; "+
+				"заведите отдельную роль без этих прав и укажите её в DATABASE_URL", role)
+	}
+	return nil
 }
 
 // Migrate применяет неприменённые миграции по порядку имён.

@@ -82,10 +82,16 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 		log.Error("схема базы не готова", "err", err)
 		os.Exit(1)
 	}
+	// Изоляция организаций держится на политиках базы. Если роль подключения
+	// их обходит, лучше не запуститься, чем работать без изоляции.
+	if err := db.EnsureTenantIsolation(ctx); err != nil {
+		log.Error("небезопасная роль подключения", "err", err)
+		os.Exit(1)
+	}
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(cfg, db.Pool, log).Handler(),
+		Handler:           httpapi.New(cfg, db, log).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Долгий таймаут записи нужен будущим WebSocket-соединениям;
 		// обычные запросы ограничены таймаутом чтения заголовков.
