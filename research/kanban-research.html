@@ -1,0 +1,857 @@
+<title>Своя канбан-платформа</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<article class="doc">
+
+<header class="masthead">
+  <p class="kicker mono">Исследование рынка и архитектуры · август 2026</p>
+  <h1>Своя канбан-платформа</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">Разбор российских и зарубежных agile/kanban-трекеров, готовых open-source платформ как источника архитектурных решений, и конкретный план собственного приложения на 130 пользователей, которое одинаково разворачивается на одной VM и в Kubernetes.</p>
+  <dl class="meta">
+    <div><dt class="mono">Отправная точка</dt><dd>YouGile</dd></div>
+    <div><dt class="mono">Разобрано продуктов</dt><dd>28</dd></div>
+    <div><dt class="mono">Open-source кандидатов</dt><dd>10</dd></div>
+    <div><dt class="mono">Масштаб</dt><dd>до 130 человек</dd></div>
+    <div><dt class="mono">Целевой деплой</dt><dd>VM + K8s</dd></div>
+  </dl>
+</header>
+
+<section>
+  <p><strong>Короткий вывод.</strong> Рынок канбан-трекеров насыщен, но не консолидирован: в России одновременно живут полтора десятка продуктов, и каждый выигрывает в своей нише — YouGile простотой и чатом внутри задачи, Kaiten метриками потока, Яндекс&nbsp;Трекер корпоративной глубиной. Технически все они решают один и тот же набор из шести инженерных задач, и именно на них, а не на списке фич, стоит потратить проектирование. Ниже — что копировать, чего избегать, какая архитектура выдерживает оба сценария развёртывания, и что нужно решить до первой строчки кода.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Пять тезисов</span>
+    <ol style="margin-bottom:0">
+      <li><strong>Фичи — не преимущество.</strong> Доски, карточки, Гант, чек-листы есть у всех. Дифференциаторы лежат в скорости интерфейса, модели прав и аналитике потока.</li>
+      <li><strong>Порядок карточек и журнал переходов — фундамент.</strong> Оба решения необратимы задним числом: на первом держится drag&amp;drop, на втором — вся канбан-аналитика.</li>
+      <li><strong>Realtime нужен разный.</strong> Для карточек — серверный авторитет плюс операции; посимвольное слияние текста (CRDT) на нашем масштабе не окупается.</li>
+      <li><strong>Один артефакт, два профиля деплоя.</strong> Compose и Helm разворачивают один и тот же образ, отличаясь только values и способом запуска миграций.</li>
+      <li><strong>Коробка — не «потом».</strong> Для российского рынка on-premise, OIDC/SSO и аудит определяют архитектуру с первого дня, а не добавляются в версии 2.0.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ scale ============ -->
+<section>
+  <div class="sechead"><span class="num mono">01a</span><h2>Поправка на масштаб: 130 человек</h2></div>
+  <p>Потолок в 130 пользователей — не ограничение, а сильное упрощающее условие. Оно вычёркивает из проекта целый класс инфраструктуры, которая существует ради нагрузки, и оставляет только ту, что нужна ради корректности и эксплуатации. Ниже вся остальная часть отчёта уже пересчитана под этот масштаб; здесь — сводка того, что именно изменилось.</p>
+
+  <h4>Порядок величин, из которого всё следует</h4>
+  <ul>
+    <li>Одновременно в системе — реалистично <strong>30–50 человек</strong>, пик до сотни. Это <strong>сотня WebSocket-соединений</strong>, а не десятки тысяч.</li>
+    <li>Записей: при активной работе всей компании — <strong>десятки тысяч карточек в год</strong>, за пять лет с журналом событий это единицы миллионов строк. Для PostgreSQL это маленькая база.</li>
+    <li>Пиковая нагрузка на запись — единицы операций в секунду. Один процесс на одном ядре покрывает это с запасом в два порядка.</li>
+  </ul>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Что вычёркивается и почему</caption>
+      <thead><tr><th style="width:22%">Компонент</th><th style="width:16%">Решение</th><th>Обоснование</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Микросервисы</strong></td><td class="no">убрать</td><td>API, WebSocket, воркер и планировщик — <strong>один процесс, один образ</strong>. Разделение оправдано разными профилями масштабирования, которых у нас нет. Каждый лишний сервис — минус в надёжности и плюс к стоимости установки у клиента.</td></tr>
+        <tr><td><strong>Redis / Valkey</strong></td><td class="no">убрать</td><td>Нужен был для трёх вещей: fan-out между репликами, очередь задач, кэш. Всё три закрывает PostgreSQL — <code>LISTEN/NOTIFY</code>, таблица задач с <code>FOR UPDATE SKIP LOCKED</code>, и кэш в памяти процесса. Минус одно хранилище, которое надо мониторить и объяснять чужому админу.</td></tr>
+        <tr><td><strong>RabbitMQ</strong></td><td class="no">убрать</td><td>Не рассматривался всерьёз и на большом масштабе; здесь тем более.</td></tr>
+        <tr><td><strong>OpenSearch</strong></td><td class="no">убрать</td><td><code>tsvector</code> с русской конфигурацией на паре миллионов строк отвечает за миллисекунды. Отдельный поисковый кластер удваивает объём эксплуатации ради нуля.</td></tr>
+        <tr><td><strong>Yjs / Hocuspocus</strong></td><td class="no">убрать</td><td>Посимвольное слияние нужно, когда описание задачи одновременно правят несколько человек. На 130 сотрудниках это происходит редко и решается дешевле: версия поля + <code>409</code> при расхождении + индикатор «эту задачу сейчас редактирует Пётр». Целый сервис ради редкого случая не окупается.</td></tr>
+        <tr><td><strong>HPA, автомасштабирование</strong></td><td class="no">убрать</td><td>Две фиксированные реплики — не для нагрузки, а чтобы обновление проходило без простоя.</td></tr>
+        <tr><td><strong>Виртуализация списков, курсорная пагинация</strong></td><td class="no">убрать</td><td>Колонка с тысячами карточек — организационная патология, а не сценарий. Обычная отрисовка справляется; виртуализация ломает drag&amp;drop и доступность.</td></tr>
+        <tr><td><strong>PgBouncer</strong></td><td class="no">убрать</td><td>Пула соединений в приложении достаточно. Дополнительный плюс: <code>LISTEN/NOTIFY</code> несовместим с transaction-режимом PgBouncer, так что его отсутствие ещё и упрощает realtime.</td></tr>
+        <tr><td><strong>S3 / MinIO</strong></td><td class="maybe">по ситуации</td><td>При одной реплике достаточно тома. Но приложение всё равно пишется под S3-совместимый интерфейс с локальной файловой системой как одной из реализаций — это дёшево сейчас и снимает переезд потом.</td></tr>
+        <tr><td><strong>LexoRank</strong></td><td class="yes">оставить</td><td>Здесь причина не в производительности, а в корректности: два человека, одновременно перетаскивающие карточки в одной колонке, ломают целочисленную нумерацию независимо от масштаба. Готовая библиотека — работа на день.</td></tr>
+        <tr><td><strong>Журнал <code>card_events</code></strong></td><td class="yes">оставить</td><td>Это не про нагрузку, а про то, что без него не существует аналитики потока и аудита. Необратимо задним числом.</td></tr>
+        <tr><td><strong>Оптимистичный UI, очередь команд</strong></td><td class="yes">оставить</td><td>Определяет, ощущается приложение живым или нет. К нагрузке отношения не имеет.</td></tr>
+        <tr><td><strong>CloudNativePG</strong></td><td class="yes">оставить</td><td>В Kubernetes — ради резервных копий и восстановления на точку во времени, а не ради HA. Достаточно одного-двух экземпляров.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note pick">
+    <span class="lbl mono">Итог по объёму работ</span>
+    <p>Было: 6 процессов приложения и 4 хранилища. Стало: <strong>один процесс и одна база</strong> плюс том для файлов. Это примерно вдвое меньше кода инфраструктуры, вдвое короче Helm-чарт и качественно другой разговор при установке у клиента. Освободившееся время имеет смысл потратить на аналитику потока — единственную часть, которую конкуренты действительно не догоняют быстро.</p>
+  </div>
+
+  <div class="note warn">
+    <span class="lbl mono">Что не упрощается вместе с нагрузкой</span>
+    <p>Права и роли, аудит, резервное копирование и восстановление, SSO, импорт и экспорт данных, обновление без простоя. Это функции числа <em>организаций</em> и требований безопасности, а не числа пользователей. Ста тридцати сотрудникам нужна ровно та же ролевая модель, что и десяти тысячам.</p>
+  </div>
+</section>
+
+<!-- ============ 1 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">01</span><h2>Ландшафт: кто и чем берёт</h2></div>
+
+  <h3>Российские платформы</h3>
+  <p>Российский сегмент вырос за счёт ухода Atlassian и требований к хранению данных. Продукты чётко расслоились: «лёгкие доски», «канбан с метриками», «всё-в-одном» и «корпоративная Jira». YouGile сидит в первом слое и держится за счёт двух вещей — нулевого порога входа и того, что каждая задача является чатом.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Российские таск-трекеры — по состоянию на середину 2026</caption>
+      <thead><tr>
+        <th style="width:15%">Продукт</th><th style="width:26%">Позиционирование</th><th style="width:11%">On-premise</th><th style="width:11%">Реестр РФ</th><th>Что перенять</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><strong>YouGile</strong></td><td>Лёгкий канбан + встроенный мессенджер + простая CRM. Бесплатно до 10 человек без урезания функций.</td><td class="yes">есть</td><td class="yes">да</td><td>Чат внутри каждой задачи; «стикеры» как универсальные кастомные поля; сводки — сохранённые срезы по фильтру; зеркальные колонки и задачи.</td></tr>
+        <tr><td><strong>Kaiten</strong></td><td>Канбан как метод: WIP-лимиты, Cycle Time, CFD, автоматизации. Продуктовые и dev-команды.</td><td class="yes">есть</td><td class="yes">да</td><td>Аналитика потока — главный дифференциатор, который сложно скопировать задним числом.</td></tr>
+        <tr><td><strong>WEEEK</strong></td><td>Задачи + база знаний + CRM + отчёты + AI-ассистент в одной среде.</td><td class="maybe">частично</td><td class="yes">да</td><td>Стратегия «не прыгать между вкладками»; связка задача ↔ документ.</td></tr>
+        <tr><td><strong>Shtab</strong></td><td>Минималистичный трекер с автоматическим тайм-трекингом; бесплатный тариф без лимита по людям.</td><td class="yes">есть</td><td class="yes">да</td><td>Позиционирование по ФЗ-152 как продающий аргумент; много представлений (канбан, Гант, матрица Эйзенхауэра).</td></tr>
+        <tr><td><strong>Яндекс Трекер</strong></td><td>Корпоративная система, выросшая из внутренних процессов Яндекса. Продаётся в составе Яндекс&nbsp;360.</td><td class="maybe">анонс</td><td class="maybe">уточнить</td><td>Глубина workflow и очередей; но интерфейс формальный — это ниша, которую мы не занимаем.</td></tr>
+        <tr><td><strong>Битрикс24</strong></td><td>Бизнес-платформа: CRM + задачи + HR + телефония. Бесплатный тариф без лимита пользователей.</td><td class="yes">есть</td><td class="yes">да</td><td>Ничего по части канбана; это конкурент за бюджет, а не за сценарий.</td></tr>
+        <tr><td><strong>ПланФикс</strong></td><td>Конструктор: задачи, CRM, документы, финансы и учёт времени по проектам.</td><td class="maybe">уточнить</td><td class="maybe">уточнить</td><td>Гибкость через настройку сущностей — дорогая в поддержке модель, но объясняет удержание.</td></tr>
+        <tr><td><strong>Aspro.Cloud / Aspro.Agile</strong></td><td>Две линейки: «всё-в-одном» и отдельный agile-трекер под гибкие методологии.</td><td class="maybe">уточнить</td><td class="maybe">уточнить</td><td>Разделение продукта на «для бизнеса» и «для разработки» вместо одного перегруженного.</td></tr>
+        <tr><td><strong>EvaTeam, TeamStorm, Strive, Мяудза</strong></td><td>Замена связке Jira + Confluence: задачи, база знаний, сервис-деск.</td><td class="maybe">частично</td><td class="yes">да<sup>*</sup></td><td>Сегмент «джирозаменитель» плотный и продаётся в госсектор — вход туда требует реестра и сертификатов.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote wide">* Класс ПО 05.05 «Средства управления проектами» по классификатору Минцифры (приказ №&nbsp;486 от 22.09.2020); реестр ведётся с 2016 года по 188-ФЗ. Наличие в реестре и статус on-premise проверять по карточкам продуктов — условия меняются.</p>
+
+  <h3>Международные: что оттуда брать</h3>
+  <p>Копировать функциональность Jira бессмысленно, а вот три вещи стоит забрать целиком:</p>
+  <ul>
+    <li><strong>Linear — скорость как продукт.</strong> Локальная БД в браузере, оптимистичные мутации, синхронизация дельтами. Ощущение мгновенности здесь важнее любого списка фич, и это архитектурное, а не UI-решение.</li>
+    <li><strong>Trello — модель ментальной простоты.</strong> Доска/список/карточка усвоена рынком; отклоняться от неё в базовом слое дорого. Импорт из Trello — обязательная функция миграции, а не бонус.</li>
+    <li><strong>Jira — LexoRank.</strong> Алгоритм сортировки, который позволяет перетащить карточку одним UPDATE вместо перенумерации колонки.</li>
+  </ul>
+
+  <h3>Open-source: наш главный источник решений</h3>
+  <p>Это самая полезная часть исследования. Здесь видно не маркетинг, а реальную цену архитектурных решений — сколько сервисов приходится держать в проде и что ломается при self-hosting.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Open-source канбан и PM-платформы — стек и вес эксплуатации</caption>
+      <thead><tr>
+        <th style="width:13%">Проект</th><th style="width:30%">Стек</th><th style="width:15%">Сервисов в проде</th><th style="width:12%">Лицензия</th><th>Оценка как источника</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><strong>Plane</strong></td><td>Django + DRF + Celery + Channels; Next.js; PostgreSQL, Redis/Valkey, RabbitMQ, S3/MinIO, опционально OpenSearch; live-сервер на Hocuspocus (Yjs)</td><td>8 приложений + 4–5 инфраструктурных</td><td>AGPL-3.0</td><td class="yes">Эталон. 100&nbsp;000+ Docker- и 44&nbsp;000+ Kubernetes-развёртываний; Helm-чарт в ArtifactHub; поддержка air-gapped. Их публичный разбор граблей self-hosting — готовый чек-лист для нас.</td></tr>
+        <tr><td><strong>Huly</strong></td><td>TypeScript-платформа с транзакционной моделью; PostgreSQL/CockroachDB, Elasticsearch, Redpanda, S3, nginx</td><td>10+ микросервисов</td><td>EPL-2.0</td><td>Амбициозно (задачи + чат + доки + CRM + HR), но минимум 2&nbsp;vCPU/8&nbsp;ГБ, рекомендуется 4/16. Показательный антипример по стоимости эксплуатации.</td></tr>
+        <tr><td><strong>Planka</strong></td><td>React + Redux + Redux-ORM; Sails.js (Node) + Knex; PostgreSQL; Socket.io</td><td>1 контейнер + Postgres</td><td>fair-code</td><td class="yes">Ближайший ориентир по объёму MVP: один образ, ~80&nbsp;МБ RSS в простое, OIDC, вебхуки, 35+ локализаций. Читать как референс минимально достаточной реализации.</td></tr>
+        <tr><td><strong>Vikunja</strong></td><td>Go (один бинарник) + Vue; PostgreSQL/SQLite; CalDAV</td><td>1–2</td><td>AGPL-3.0</td><td class="yes">Лучший пример упаковки: единый бинарник разворачивается где угодно. Модель «одна артефакт-единица» стоит перенять.</td></tr>
+        <tr><td><strong>Taiga</strong></td><td>Python/Django + фронт на JS; Postgres, RabbitMQ, Redis</td><td>~9 контейнеров</td><td class="maybe">уточнить</td><td>Полноценный agile (Scrum + Kanban), но self-hosting регулярно ломается при обновлениях — частая жалоба сообщества.</td></tr>
+        <tr><td><strong>OpenProject</strong></td><td>Ruby on Rails; PostgreSQL</td><td>монолит + Postgres</td><td>GPLv3</td><td>Сильные Гант и планирование бюджета; слабый agile. Ниша строительства и подрядчиков.</td></tr>
+        <tr><td><strong>Wekan</strong></td><td>Meteor + MongoDB</td><td>2</td><td>MIT</td><td>Ближайший клон Trello с импортом; сообщество жалуется на баги и вес. Ценна модель импорта досок.</td></tr>
+        <tr><td><strong>Kanboard</strong></td><td>PHP; MySQL/Postgres/SQLite</td><td>1–2</td><td>MIT</td><td>В режиме поддержки. Но эталонная реализация WIP-лимитов и swimlanes — стоит прочитать доменную логику.</td></tr>
+        <tr><td><strong>Focalboard</strong></td><td>Go + React</td><td>1</td><td class="maybe">уточнить</td><td class="no">С августа 2023 переведён Mattermost в «community supported» и фактически заморожен. Ценная идея — переключение представлений (доска/таблица/календарь/галерея) над одними данными.</td></tr>
+        <tr><td><strong>Leantime</strong></td><td>PHP; MySQL</td><td>1–2</td><td>AGPL-3.0</td><td>Нишевая аудитория (не-технические команды, ADHD-friendly UX). Интересен подход к онбордингу.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote wide">Лицензии указаны по публичным описаниям и должны быть перепроверены по репозиториям перед любым заимствованием кода. AGPL накладывает обязательства даже при использовании по сети — для проприетарного продукта это блокирующее ограничение; читать такой код как источник идей можно, копировать — нет.</p>
+
+  <div class="note warn">
+    <span class="lbl mono">Наблюдение, которое стоит денег</span>
+    <p>Между Planka (1 контейнер) и Huly (10+ микросервисов) разница в функциональности примерно двукратная, а в стоимости эксплуатации — на порядок. Для продукта, который будет ставиться клиентам в коробку, число сервисов — это не архитектурная деталь, а параметр продаж: каждый лишний сервис превращается в отдельный разговор с чужим админом.</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">02</span><h2>Анатомия продукта: что вообще надо построить</h2></div>
+
+  <h3>Доменная модель</h3>
+  <p>Она устоялась и почти не варьируется между продуктами. Отклонения дороги — пользователи приходят из Trello и Jira с готовыми ожиданиями.</p>
+
+<pre><code>Организация (тенант)
+└── Проект / пространство
+    └── Доска
+        ├── Колонка (статус потока)      ← WIP-лимит живёт здесь
+        ├── Дорожка / swimlane           ← второе измерение группировки
+        └── Карточка (задача)
+            ├── исполнители, срок, приоритет, метки
+            ├── кастомные поля («стикеры» в терминах YouGile)
+            ├── чек-листы и подзадачи (произвольная вложенность)
+            ├── комментарии / чат
+            ├── вложения
+            ├── связи: блокирует / зависит от / дублирует
+            └── журнал событий            ← источник всей аналитики</code></pre>
+
+  <p>Два элемента этой схемы заслуживают отдельного внимания, потому что их нельзя добавить позже без миграции всех данных.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Решение 1 · Кастомные поля с первого дня</span>
+    <p>YouGile называет их «стикерами» и строит на них всё: исполнитель, дедлайн, таймер, повторение — это тоже стикеры, просто системные. Такая унификация даёт бесплатно фильтры, сортировки и сводки по любому полю. Если начать с жёсткой схемы «assignee, due_date, priority» и добавить кастомные поля потом, придётся переписывать фильтры, поиск и отчёты целиком.</p>
+  </div>
+
+  <div class="note pick">
+    <span class="lbl mono">Решение 2 · Журнал событий как первичные данные</span>
+    <p>Cycle Time, Lead Time, CFD, «время в колонках», диаграмма старения — всё это считается не по текущему состоянию карточки, а по истории её переходов между колонками. Append-only таблица <code>card_events</code> должна появиться в первой же миграции. Восстановить её задним числом невозможно: данные о переходах просто не существуют.</p>
+  </div>
+
+  <h3>Аналитика потока — то, чем берёт Kaiten</h3>
+  <p>Это самая недооценённая часть таких продуктов и одновременно самая защищаемая. Набор минимальный и конечный:</p>
+  <ul>
+    <li><strong>WIP</strong> — сколько карточек в работе прямо сейчас, против лимита колонки. Лидирующий индикатор: реагирует раньше всех остальных.</li>
+    <li><strong>Cycle Time</strong> (от взятия в работу до готовности) и <strong>Lead Time</strong> (от попадания в очередь). Показывать не среднее, а перцентили — 50-й и 85-й; среднее по такому распределению вводит в заблуждение.</li>
+    <li><strong>Throughput</strong> — карточек завершено за период. Основа прогноза.</li>
+    <li><strong>CFD</strong> — накопительная диаграмма потока: видно рост очередей и расширение полос до того, как сроки поплывут.</li>
+    <li><strong>Scatter plot по Cycle Time</strong> и <strong>диаграмма старения</strong> — где висят конкретные карточки прямо сейчас.</li>
+    <li><strong>Прогноз Монте-Карло</strong> — «когда будет готово 20 задач» в виде вероятностей вместо оценки в часах. Считается из исторического throughput, реализуется за пару дней, а воспринимается как магия.</li>
+  </ul>
+  <p>Все шесть метрик выводятся из одной таблицы событий. Это редкий случай, когда одно правильное решение в схеме БД закрывает целый раздел продукта.</p>
+
+  <h3>Приоритизация функциональности</h3>
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Что в какую версию</caption>
+      <thead><tr><th style="width:16%">Уровень</th><th style="width:42%">Состав</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td><strong>MVP</strong><br><span class="mono" style="font-size:.75rem;color:var(--ink-3)">билет на вход</span></td><td>Доски, колонки, карточки, drag&amp;drop, исполнители, сроки, метки, чек-листы, комментарии, вложения, поиск, роли, приглашения, импорт из Trello/CSV</td><td>Без этого продукт не существует. Отсутствие импорта убивает миграцию с конкурента.</td></tr>
+        <tr><td><strong>v1</strong><br><span class="mono" style="font-size:.75rem;color:var(--ink-3)">конкурентоспособность</span></td><td>Realtime-совместная работа, кастомные поля, WIP-лимиты, swimlanes, сохранённые фильтры и сводки, уведомления (веб/почта/Telegram), автоматизации, представления «список / календарь / Гант», мобильный веб, REST API и вебхуки</td><td>Уровень, на котором продукт сравним с YouGile и Kaiten.</td></tr>
+        <tr><td><strong>Дифференциаторы</strong><br><span class="mono" style="font-size:.75rem;color:var(--ink-3)">почему мы</span></td><td>Аналитика потока и Монте-Карло; чат внутри задачи; мгновенный интерфейс на локальной реплике; on-premise с OIDC/SSO и аудитом; связка задача ↔ документ</td><td>Здесь выбирается позиционирование. Взять всё сразу нельзя — нужен выбор одного-двух.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">03</span><h2>Инженерное ядро: шесть задач</h2></div>
+  <p>Всё остальное — CRUD. Эти шесть определяют, будет ли приложение ощущаться живым и переживёт ли рост.</p>
+
+  <h3>3.1 · Порядок карточек</h3>
+  <p>Пользователь перетаскивает карточку между двумя соседями. Вопрос — сколько строк надо обновить в базе.</p>
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Стратегии упорядочивания</caption>
+      <thead><tr><th style="width:22%">Подход</th><th style="width:16%">Записей на перемещение</th><th>Цена</th></tr></thead>
+      <tbody>
+        <tr><td>Плотные целые (1, 2, 3…)</td><td>O(n)</td><td>Перенумерация половины колонки на каждое перетаскивание. При двух одновременных пользователях — гонки и перепутанный порядок.</td></tr>
+        <tr><td>Разреженные целые (1000, 2000…)</td><td>1, обычно</td><td>Зазоры схлопываются; нужен фоновый ребаланс. Приемлемо для досок до сотен карточек.</td></tr>
+        <tr><td><strong>LexoRank / дробная индексация</strong></td><td><strong>1, всегда</strong></td><td>Строковый ключ между соседями, сортировка обычным <code>ORDER BY</code>. Ребаланс редкий и фоновый. Это то, что используют Jira, Trello и Linear.</td></tr>
+        <tr><td>DECIMAL высокой точности</td><td>1, всегда</td><td>Достойная альтернатива, если в стеке удобная арифметика произвольной точности. Проще LexoRank, те же гарантии.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note pick">
+    <span class="lbl mono">Выбор</span>
+    <p>LexoRank-подобные строковые ключи, поле <code>position TEXT NOT NULL</code>, индекс по <code>(column_id, position)</code>. Клиент отправляет не позицию, а намерение: «после карточки X». Сервер вычисляет ключ сам — иначе два клиента, одновременно считающие «середину», получат одинаковый ключ.</p>
+    <p style="margin-bottom:0">На нашем масштабе это решение принимается <em>не ради производительности</em> — перенумеровать сорок карточек в колонке база успеет незаметно. Причина в другом: целочисленный порядок ломается при <strong>двух одновременных перетаскиваниях</strong>, а это происходит на любой доске, где работает больше одного человека. Готовая библиотека закрывает вопрос за день.</p>
+  </div>
+
+  <h3>3.2 · Realtime: три разные задачи, три разных механизма</h3>
+  <p>Главная ошибка проектирования — считать, что «совместная работа» решается одним механизмом. Это три разные задачи с разными требованиями к согласованности.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Что чем синхронизировать</caption>
+      <thead><tr><th style="width:22%">Что синхронизируем</th><th style="width:26%">Механизм</th><th>Почему именно так</th></tr></thead>
+      <tbody>
+        <tr><td>Структура доски: перемещения, статусы, поля</td><td><strong>Серверный авторитет + операции</strong> (WebSocket, fan-out через <code>LISTEN/NOTIFY</code>)</td><td>Нужны бизнес-правила: WIP-лимиты, права, валидация переходов. CRDT их не проверит — он просто сольёт всё подряд.</td></tr>
+        <tr><td>Текст описания, вики-документы</td><td><strong>Версия поля + 409</strong> и индикатор «редактирует Пётр»</td><td>На большом масштабе здесь стоял бы CRDT (Yjs/Hocuspocus, как отдельный сервис <code>live</code> в Plane). При 130 сотрудниках одновременная правка одного описания — редкое событие, и отдельный сервис ради него не окупается. Интерфейс редактора при этом стоит спроектировать так, чтобы CRDT можно было подставить позже, не переписывая экран.</td></tr>
+        <tr><td>Курсоры, «кто смотрит», индикатор набора</td><td><strong>Эфемерный канал</strong>, без записи в БД</td><td>Эти данные не нужно хранить и не нужно доставлять надёжно. Смешивать их с персистентным потоком — прямой путь к раздутой базе.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>3.3 · Клиент как реплика</h3>
+  <p>Ощущение скорости даёт не быстрый бэкенд, а отсутствие ожидания ответа. Схема, отработанная Linear и описанная в разборах их sync engine:</p>
+  <ul>
+    <li>Клиент держит <strong>нормализованное состояние</strong> — карточки, колонки и пользователи в словарях по id, колонка хранит упорядоченный список id, а не объекты. Это убирает класс багов с «зомби-карточками», когда в панели деталей редактируется одна копия объекта, а на доске отрисовывается другая.</li>
+    <li>Жест превращается в <strong>команду</strong> со стабильным <code>operationId</code>, применяется локально сразу и попадает в очередь.</li>
+    <li>Отрисовка всегда есть <code>базовое_состояние + применённые_по_порядку_команды</code> — никогда не «в порядке прихода ответов».</li>
+    <li>Повтор запроса идёт с тем же <code>operationId</code> — сервер дедуплицирует вместо создания дубля.</li>
+    <li>Конфликт — это <strong>409 с текущим состоянием колонки</strong>, а не полная перезагрузка доски. Клиент пересобирает базу и отбрасывает неприменимые команды.</li>
+    <li>При переподключении сравниваются версии; при большом разрыве — точечный дозапрос затронутых колонок.</li>
+  </ul>
+  <div class="note warn">
+    <span class="lbl mono">Отдельно предусмотреть</span>
+    <p><strong>Призрачные перемещения.</strong> Если ответ не пришёл за 5–10 секунд, карточку надо вернуть на место и показать кнопку «Повторить», сохранив намерение. Молча оставленная в новой колонке карточка, которой на сервере там нет, — худший из возможных багов: пользователь узнает о нём через неделю.</p>
+  </div>
+
+  <h3>3.4 · Права и мультиарендность</h3>
+  <p>Модель YouGile — руководитель / сотрудник / наблюдатель плюс кастомные роли, отделы и права на уровне отдельной доски и задачи. Это разумный ориентир. Технически:</p>
+  <ul>
+    <li>Каждая строка несёт <code>org_id</code>; проверка арендатора — на уровне репозитория, а не контроллера. Опционально — Row-Level Security в PostgreSQL как вторая линия обороны.</li>
+    <li>Права — пара «роль × скоуп» (организация / проект / доска), разрешения — плоский список строк. Иерархия ролей запутывается быстрее, чем кажется.</li>
+    <li>Публичный доступ по ссылке (есть у YouGile) — отдельный тип субъекта, а не «гость без пароля». Иначе это станет источником утечек.</li>
+    <li>Аудит-лог действий — требование корпоративных продаж, а не опция.</li>
+  </ul>
+
+  <h3>3.5 · Автоматизации</h3>
+  <p>Простой и достаточный движок: <em>событие → условия → действия</em>, правила хранятся как данные, выполняются в фоновом воркере, а не в HTTP-запросе.</p>
+<pre><code>событие:   card.moved | card.created | field.changed | due.approaching
+условия:   доска = X И колонка = "Готово" И метка ≠ "срочно"
+действия:  переместить · назначить · выставить поле · уведомить
+           · создать связанную карточку · вызвать вебхук</code></pre>
+  <p>Обязательно: защита от каскадов (правило запускает правило запускает правило) — счётчик глубины в контексте выполнения и жёсткий лимит.</p>
+
+  <h3>3.6 · Поиск, уведомления, история</h3>
+  <ul>
+    <li><strong>Поиск.</strong> Начинать с <code>tsvector</code> в PostgreSQL с русской конфигурацией. Отдельный OpenSearch — только когда упрётся; Plane держит его опциональным, и это правильная градация.</li>
+    <li><strong>Уведомления.</strong> Одна доменная модель события, несколько каналов доставки (веб, e-mail, Telegram, мобильный push). Пользовательские настройки по типам и агрегация в дайджест — иначе продукт быстро начинают отключать.</li>
+    <li><strong>История.</strong> Та же таблица <code>card_events</code>, что питает аналитику, даёт ленту активности и аудит. Один источник, три потребителя.</li>
+  </ul>
+</section>
+
+<!-- ============ 4 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">04</span><h2>Референсная архитектура</h2></div>
+
+  <div class="wide diagram">
+    <div class="dgrid">
+      <div class="dlane">
+        <div class="dlabel">Клиенты</div>
+        <div class="dboxes">
+          <div class="dbox"><b>Веб-SPA</b><span>React + TS, нормализованный стор, очередь команд</span></div>
+          <div class="dbox"><b>Мобильный веб / PWA</b><span>тот же API</span></div>
+          <div class="dbox"><b>Интеграции</b><span>REST + вебхуки</span></div>
+        </div>
+      </div>
+      <div class="dflow mono" aria-hidden="true">▼ HTTPS · WSS</div>
+      <div class="dlane">
+        <div class="dlabel">Периметр</div>
+        <div class="dboxes">
+          <div class="dbox"><b>Ingress / nginx</b><span>TLS, upgrade-заголовки для WS, rate limit</span></div>
+        </div>
+      </div>
+      <div class="dflow mono" aria-hidden="true">▼</div>
+      <div class="dlane">
+        <div class="dlabel">Приложение</div>
+        <div class="dboxes">
+          <div class="dbox hot" style="flex:1 1 100%">
+            <b>Один процесс · один образ</b>
+            <span>HTTP API и операции · WebSocket-соединения · домен и права · воркер фоновых задач · планировщик (лидер по advisory-lock) · раздача статики фронтенда</span>
+          </div>
+          <div class="dbox"><b>Migrator</b><span>одноразовый Job перед обновлением, ровно один экземпляр</span></div>
+        </div>
+      </div>
+      <div class="dflow mono" aria-hidden="true">▼</div>
+      <div class="dlane">
+        <div class="dlabel">Данные</div>
+        <div class="dboxes">
+          <div class="dbox hot"><b>PostgreSQL</b><span>данные · очередь задач · LISTEN/NOTIFY для fan-out · полнотекстовый поиск</span></div>
+          <div class="dbox"><b>Файлы</b><span>том или S3-совместимое хранилище — за одним интерфейсом</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="tnote wide">Один процесс, одна база, том для вложений. Всё, что раньше требовало Redis, RabbitMQ и OpenSearch, здесь делает PostgreSQL — на объёмах в единицы миллионов строк и единицы операций в секунду он справляется с очередью и pub/sub не хуже специализированных систем, зато не добавляет ни одного узла, за которым надо следить.</p>
+
+  <h4>Расчёт ресурсов</h4>
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Сайзинг на 130 пользователей</caption>
+      <thead><tr><th style="width:20%">Компонент</th><th style="width:14%">CPU</th><th style="width:14%">Память</th><th style="width:14%">Диск</th><th>Комментарий</th></tr></thead>
+      <tbody>
+        <tr><td>Приложение (реплика)</td><td>0,5–1 vCPU</td><td>512 МБ – 1 ГБ</td><td>—</td><td>Две реплики — ради обновления без простоя, а не ради нагрузки.</td></tr>
+        <tr><td>PostgreSQL</td><td>2 vCPU</td><td>4 ГБ</td><td>50 ГБ</td><td>С запасом на пять лет работы вместе с журналом событий.</td></tr>
+        <tr><td>Вложения</td><td>—</td><td>—</td><td>100–200 ГБ</td><td>Основной потребитель диска; зависит от дисциплины команды с файлами.</td></tr>
+        <tr><td><strong>Итого одна VM</strong></td><td><strong>4 vCPU</strong></td><td><strong>8 ГБ</strong></td><td><strong>200 ГБ</strong></td><td>С двукратным запасом. Это обычный недорогой сервер, а не кластер.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Стек: рекомендация</h3>
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Выбор и обоснование</caption>
+      <thead><tr><th style="width:16%">Слой</th><th style="width:30%">Рекомендация</th><th>Почему · альтернатива</th></tr></thead>
+      <tbody>
+        <tr><td>Фронтенд</td><td>React + TypeScript, Vite; нормализованный стор; drag&amp;drop на <code>@atlaskit/pragmatic-drag-and-drop</code></td><td>Pragmatic DnD доступен с клавиатуры и не привязан к фреймворку. <code>react-beautiful-dnd</code>, на котором сидит Planka, больше не поддерживается — не наследовать.</td></tr>
+        <tr><td>Бэкенд</td><td>Go <em>или</em> TypeScript (NestJS) — <strong>один процесс</strong></td><td>При такой архитектуре Go выглядит предпочтительнее: один статический бинарник, десятки мегабайт памяти, тривиальная установка у клиента — модель Vikunja. TypeScript оправдан, если команда уже на нём и общие типы с фронтом важнее веса коробки. Смешивать не стоит.</td></tr>
+        <tr><td>База</td><td>PostgreSQL 16+ — <strong>единственное хранилище</strong></td><td><code>jsonb</code> под кастомные поля, <code>tsvector</code> для поиска, <code>LISTEN/NOTIFY</code> для рассылки событий между репликами, таблица задач с <code>SELECT … FOR UPDATE SKIP LOCKED</code> вместо брокера очередей. Второй базы в системе быть не должно.</td></tr>
+        <tr><td>Realtime</td><td>WebSocket внутри того же процесса</td><td>Соединения держит сам процесс, события между двумя репликами разлетаются через <code>LISTEN/NOTIFY</code>. Sticky sessions не нужны: любой под может обслуживать любого клиента, потому что состояние подписок восстанавливается из запроса на подключение.</td></tr>
+        <tr><td>Фоновые задачи</td><td>Воркер в том же процессе</td><td>Уведомления, автоматизации, экспорт, повторяющиеся задачи. Планировщик выбирает лидера через advisory-lock в PostgreSQL — иначе две реплики продублируют каждую периодическую задачу.</td></tr>
+        <tr><td>Файлы</td><td>Абстракция хранилища: том или S3</td><td>Стартовать на локальном томе (проще для коробки), но за интерфейсом, у которого есть и S3-реализация. Стоит один день сейчас и снимает миграцию потом.</td></tr>
+        <tr><td>Аутентификация</td><td>Своя + OIDC</td><td>OIDC (Keycloak и совместимые) — обязательное условие корпоративных продаж в РФ. Закладывать сразу, дорабатывать потом дороже.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Ключевые таблицы</h3>
+<pre><code>-- порядок: один UPDATE на перетаскивание
+CREATE TABLE cards (
+  id           uuid PRIMARY KEY,
+  org_id       uuid NOT NULL,
+  board_id     uuid NOT NULL,
+  column_id    uuid NOT NULL,
+  swimlane_id  uuid,
+  position     text NOT NULL,          -- LexoRank
+  title        text NOT NULL,
+  description  jsonb,                  -- rich text, совместимо с Yjs
+  version      bigint NOT NULL DEFAULT 1,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  archived_at  timestamptz
+);
+CREATE INDEX ON cards (column_id, position);
+CREATE INDEX ON cards (org_id, board_id) WHERE archived_at IS NULL;
+
+-- значения кастомных полей («стикеров»)
+CREATE TABLE card_field_values (
+  card_id   uuid NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+  field_id  uuid NOT NULL,
+  value     jsonb NOT NULL,
+  PRIMARY KEY (card_id, field_id)
+);
+
+-- append-only: аудит, лента активности и ВСЯ аналитика потока
+CREATE TABLE card_events (
+  id          bigserial PRIMARY KEY,
+  org_id      uuid NOT NULL,
+  card_id     uuid NOT NULL,
+  board_id    uuid NOT NULL,
+  actor_id    uuid,
+  type        text NOT NULL,           -- moved | created | field_changed | ...
+  from_column uuid,
+  to_column   uuid,
+  payload     jsonb,
+  at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ON card_events (board_id, at);
+CREATE INDEX ON card_events (card_id, at);
+
+-- идемпотентность операций
+CREATE TABLE operations (
+  operation_id uuid PRIMARY KEY,       -- приходит от клиента
+  org_id       uuid NOT NULL,
+  result       jsonb NOT NULL,
+  at           timestamptz NOT NULL DEFAULT now()
+);</code></pre>
+
+  <h3>Контракт API</h3>
+<pre><code>GET  /api/boards/:id                  → снимок доски целиком + version
+                                        (на нашем масштабе доска отдаётся
+                                         одним ответом; пагинация колонок
+                                         не нужна)
+
+POST /api/boards/:id/operations
+  { operationId, type: "MOVE_CARD", cardId, toColumnId, afterCardId }
+  → 200 { version, patch }
+  → 409 { version, currentOrder }      ← конфликт: клиент пересобирается,
+                                          полная перезагрузка не нужна
+
+WS   /realtime?boardId=…              → события с монотонным seq
+GET  /api/boards/:id/events?since=seq → добор пропущенного при реконнекте</code></pre>
+  <p>Клиент отправляет <strong>намерение</strong> («после карточки X»), а не вычисленное состояние. Если X к этому моменту сдвинулась, сервер сам скорректирует результат и вернёт истину — вместо того чтобы записать заведомо неверную позицию.</p>
+</section>
+
+<!-- ============ 5 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">05</span><h2>Деплой: одна VM и Kubernetes из одного кода</h2></div>
+  <p>Требование «и на сервере, и в кубере» решается не двумя сборками, а дисциплиной 12-factor: одни и те же образы, вся разница — в способе запуска и в конфигурации через переменные окружения.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Правило</span>
+    <p>Собирается <strong>один образ</strong>. Compose и Helm-чарт получают его без пересборки, вся разница — в переменных окружения и в том, кто запускает миграции. Никаких <code>Dockerfile.k8s</code>: расхождение между профилями появляется в тот же день, когда появляется второй Dockerfile.</p>
+  </div>
+
+  <h3>Профиль A · одна машина</h3>
+  <p>При 130 пользователях это <strong>основной, а не пилотный сценарий</strong>. Один <code>docker-compose.yml</code> из трёх сервисов: приложение, PostgreSQL, обратный прокси с автоматическим TLS. Всё помещается на 4 vCPU и 8 ГБ с двукратным запасом.</p>
+<pre><code>services:
+  app:                    # один образ: API + WS + воркер + планировщик
+    image: registry.example.ru/board/app:1.4.0
+    environment:
+      BASE_URL: https://board.example.ru      # ← источник половины проблем, см. ниже
+      DATABASE_URL: postgres://app:…@db:5432/board
+      STORAGE: file:///data/attachments
+    volumes: [attachments:/data/attachments]
+    depends_on: [db]
+  db:
+    image: postgres:16
+    volumes: [pgdata:/var/lib/postgresql/data]
+  proxy:
+    image: caddy:2           # TLS и WebSocket-upgrade из коробки
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile, caddy:/data]</code></pre>
+  <p>Резервное копирование — <code>pg_dump</code> по расписанию плюс архив тома с вложениями, с выгрузкой за пределы машины. <strong>Проверять восстановление, а не только создание копий</strong>: непроверенный бэкап — это не бэкап, а при единственном сервере восстанавливаться будет неоткуда.</p>
+  <div class="note warn">
+    <span class="lbl mono">Грабли, которые ждут именно здесь</span>
+    <p>WebSocket за обратным прокси. Приложение строит адрес соединения из <code>BASE_URL</code>: ошибка в нём даёт не понятную ошибку, а вечный спиннер — клиент стучится не туда. В nginx нужен отдельный блок для WS с <code>Upgrade</code> и <code>Connection: upgrade</code>, а приложению — доверие к заголовкам прокси. На этом спотыкаются все, кто ставит Planka; закладывать проверку в установщик.</p>
+  </div>
+
+  <h3>Профиль B · Kubernetes</h3>
+  <p>Kubernetes здесь нужен не для масштабирования, а по одной из двух причин: у клиента уже есть кластер и всё ставится только туда, либо нужны обновления без простоя и автоматическое восстановление после падения узла. Чарт получается коротким — семь шаблонов.</p>
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Раскладка по кластеру</caption>
+      <thead><tr><th style="width:20%">Компонент</th><th style="width:24%">Как разворачивается</th><th>Существенные детали</th></tr></thead>
+      <tbody>
+        <tr><td>Приложение</td><td>Deployment, <strong>2 реплики, без HPA</strong></td><td>Две реплики — чтобы роллинг-апдейт проходил без простоя. PodDisruptionBudget с <code>minAvailable: 1</code>. Автомасштабирование добавит только источник неожиданностей.</td></tr>
+        <tr><td>WebSocket</td><td>Тот же Deployment, тот же порт</td><td>Session affinity не нужна. На Ingress поднять <code>proxy-read-timeout</code> (иначе nginx рвёт простаивающие соединения), задать <code>terminationGracePeriodSeconds</code> около 60 секунд и корректно закрывать соединения при остановке, чтобы клиенты переподключились без потери событий.</td></tr>
+        <tr><td>Планировщик</td><td>Внутри тех же подов</td><td>Лидер выбирается через advisory-lock в PostgreSQL. Отдельный Deployment на одну реплику — тоже рабочий вариант, но это лишний шаблон.</td></tr>
+        <tr><td><strong>Миграции</strong></td><td><strong>Helm hook <code>pre-upgrade</code>, Job, 1 экземпляр</strong></td><td class="risk"><strong>Никогда не в entrypoint приложения.</strong> Работает на одной реплике и разносит базу на двух. Plane публично описал этот инцидент: значение <code>replicas: 3</code> привело к тому, что три пода одновременно запустили миграции.</td></tr>
+        <tr><td>PostgreSQL</td><td>CloudNativePG, <code>Cluster</code> на 1–2 экземпляра</td><td>Оператор берётся <strong>ради резервных копий и восстановления на точку во времени</strong>, а не ради HA: непрерывная архивация WAL в объектное хранилище настраивается декларативно, а голый StatefulSet этого не даёт вовсе. Три экземпляра и PgBouncer на таком масштабе не нужны.</td></tr>
+        <tr><td>Вложения</td><td>PVC (ReadWriteOnce) или S3</td><td>При двух репликах общий том потребует ReadWriteMany, что есть не в каждом кластере. Проще: включить S3-реализацию хранилища и поставить MinIO одним подом — либо оставить одну реплику приложения и обычный том.</td></tr>
+        <tr><td>Секреты</td><td>Sealed-secrets или External Secrets</td><td>Не в <code>values.yaml</code>, не в git. Отдельная задача до первого продового деплоя.</td></tr>
+        <tr><td>Наблюдаемость</td><td>Prometheus + Grafana</td><td>Достаточно четырёх показателей: p95 задержки операции перемещения, число WS-соединений, глубина очереди задач, свежесть последней резервной копии.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note risk">
+    <span class="lbl mono">Три ошибки, которые будут стоить дороже всего</span>
+    <ol style="margin-bottom:0">
+      <li><strong>Миграции в старте приложения.</strong> Не зависит от масштаба: двух реплик достаточно, чтобы уронить базу. Проверено чужим опытом.</li>
+      <li><strong>Непроверенное восстановление из резервной копии.</strong> При одной инсталляции и одной базе это единственный настоящий риск потери данных — куда более вероятный, чем любая перегрузка.</li>
+      <li><strong>Ошибка в <code>BASE_URL</code> за обратным прокси.</strong> Даёт не понятную ошибку, а вечный спиннер: клиент открывает WebSocket не по тому адресу. Проверять при установке автоматически.</li>
+    </ol>
+  </div>
+
+  <div class="note">
+    <span class="lbl mono">Запас на будущее</span>
+    <p>Если через несколько лет пользователей станет тысяча, ломать придётся ровно две вещи: вынести воркер в отдельный Deployment и заменить <code>LISTEN/NOTIFY</code> на Redis pub/sub. Оба изменения локальны — по одному модулю на каждое — потому что интерфейсы «очередь задач» и «шина событий» с самого начала спрятаны за абстракциями. Закладывать распределённую архитектуру заранее ради этого не нужно.</p>
+  </div>
+
+  <h3>Коробка для российского рынка</h3>
+  <ul>
+    <li><strong>Air-gapped-установка.</strong> Образы отгружаются архивом в приватный registry, Helm-чарт — в OCI-registry. Никаких обращений в интернет на старте: клиент из госсектора этого просто не даст.</li>
+    <li><strong>Реестр отечественного ПО.</strong> Класс 05.05, вход по 188-ФЗ. Без него закрыт весь сегмент 44-ФЗ и 223-ФЗ. Требует юридической подготовки заранее, а не после релиза.</li>
+    <li><strong>ФЗ-152.</strong> Хранение персональных данных в РФ; для коробки выполняется автоматически, для облака — размещением. Это ровно тот аргумент, которым продают Kaiten, YouGile и Shtab.</li>
+    <li><strong>OIDC/SSO, аудит, двухфакторная аутентификация, ролевая модель.</strong> В опубликованных рейтингах российских трекеров это отдельные критерии оценки — то есть по ним прямо сравнивают при выборе.</li>
+  </ul>
+</section>
+
+<!-- ============ 6 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">06</span><h2>План работ</h2></div>
+  <p>Порядок выбран так, чтобы каждый этап заканчивался работающей системой, а рискованные решения принимались как можно раньше.</p>
+
+  <div class="stages wide">
+    <div class="stage">
+      <div class="st mono">Этап 0<em>2–3 недели</em></div>
+      <div>
+        <h3>Вертикальный срез</h3>
+        <p>Схема БД со всеми необратимыми решениями (LexoRank, <code>card_events</code>, кастомные поля, <code>org_id</code>). Авторизация, доски, колонки, карточки, drag&amp;drop с оптимистичным применением. Compose-сборка на одной VM. Один пользователь, без realtime.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="st mono">Этап 1<em>4–6 недель</em></div>
+      <div>
+        <h3>Многопользовательский режим</h3>
+        <p>WebSocket в том же процессе, fan-out через <code>LISTEN/NOTIFY</code>, реконсиляция по 409, реконнект с добором событий. Права и роли, комментарии, вложения, метки, сроки, поиск, импорт из Trello и CSV. С этого момента продуктом можно пользоваться всерьёз.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="st mono">Этап 2<em>4–6 недель</em></div>
+      <div>
+        <h3>Канбан как метод</h3>
+        <p>WIP-лимиты, swimlanes, сохранённые фильтры и сводки. Аналитика потока целиком из <code>card_events</code>: CFD, cycle time с перцентилями, throughput, старение, прогноз Монте-Карло. Движок автоматизаций и уведомления.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="st mono">Этап 3<em>3–4 недели</em></div>
+      <div>
+        <h3>Промышленная эксплуатация</h3>
+        <p>Helm-чарт: CloudNativePG с архивацией WAL, миграции через hook, PDB, секреты, четыре метрики и дашборд. Проверенная процедура восстановления из копии. OIDC/SSO, аудит-лог, экспорт данных, air-gapped-установка и обновление.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="st mono">Этап 4<em>дальше</em></div>
+      <div>
+        <h3>Дифференциация</h3>
+        <p>Выбранное позиционирование из раздела 02: чат внутри задачи, локальная реплика с офлайном по модели Linear, документы на Yjs, мобильные приложения. Здесь нужен выбор, а не всё сразу.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">07</span><h2>Что решить до первой строчки кода</h2></div>
+  <p>Эти вопросы меняют архитектуру, а не бэклог. Ответ на каждый нужен до этапа&nbsp;0.</p>
+  <ol class="qlist">
+    <li><strong>Кто покупатель.</strong> Малые команды по модели YouGile (простота, самообслуживание, дешёвый вход) или корпорации и госсектор (коробка, SSO, аудит, реестр)? Это разные продукты, и совместить их на старте не выйдет.</li>
+    <li><strong>Облако или коробка первично.</strong> Если коробка — число сервисов становится продуктовым ограничением, и надо целиться в модель Vikunja: один артефакт, минимум зависимостей.</li>
+    <li><strong>Открытый код или проприетарный.</strong> Определяет, какие проекты можно читать, а какие нельзя даже открывать: AGPL у Plane и Vikunja распространяется и на использование по сети.</li>
+    <li><strong>Стек бэкенда — TypeScript или Go.</strong> Зависит от команды. TS даёт общие типы с фронтом, Go — минимальный след в коробке.</li>
+    <li><s style="color:var(--ink-3)"><strong>Порядок величин.</strong></s> <strong>Отвечено: до 130 пользователей.</strong> Отсюда монолит, единственное хранилище и отсутствие масштабирующей инфраструктуры — см. раздел&nbsp;01a.</li>
+    <li><strong>Одна организация или много.</strong> Продукт для одной компании на 130 человек и мультиарендная платформа с сотней таких компаний — разные требования к изоляции данных и биллингу. Поле <code>org_id</code> в схеме стоит оставить в любом случае: сейчас оно бесплатно, потом — миграция всех таблиц.</li>
+    <li><strong>Дифференциатор.</strong> Скорость интерфейса, аналитика потока или коммуникация внутри задачи? Один, максимум два — иначе получится ещё один средний трекер в списке из шестнадцати.</li>
+  </ol>
+  <div class="note">
+    <span class="lbl mono">Что можно начинать параллельно с ответами</span>
+    <p>Схема БД, алгоритм упорядочивания, контракт операций и скелет деплоя не зависят ни от одного из шести вопросов. Этап&nbsp;0 можно запускать сразу — он одинаков для любого из вариантов позиционирования.</p>
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">08</span><h2>Источники</h2></div>
+  <ul class="src">
+    <li>Plane — <a href="https://developers.plane.so/self-hosting/self-hosting-101">документация по self-hosting</a> и <a href="https://plane.so/blog/streamlining-self-hosting-managing-100k-docker-44000-kubernetes-deploys">разбор 100&nbsp;000 Docker- и 44&nbsp;000 K8s-развёртываний</a> (в том числе инцидент с миграциями на трёх репликах)</li>
+    <li><a href="https://frontend.icodeit.com.au/case-studies/board-application">Board Application: Frontend Architecture</a> — детальный разбор нормализованного состояния, очереди команд, идемпотентности и реконсиляции по 409</li>
+    <li><a href="https://github.com/wzhudev/reverse-linear-sync-engine">Reverse-engineering Linear sync engine</a> (подтверждён CTO Linear) и <a href="https://performance.dev/how-is-linear-so-fast-a-technical-breakdown">разбор производительности Linear</a></li>
+    <li><a href="https://nickmccleery.com/posts/08-kanban-indexing/">Kanban board column indexing</a>, <a href="https://www.figma.com/blog/realtime-editing-of-ordered-sequences/">Figma о дробной индексации</a>, <a href="https://yasoob.me/posts/how-to-efficiently-reorder-or-rerank-items-in-database/">разбор LexoRank</a></li>
+    <li><a href="https://cloudnative-pg.io/">CloudNativePG</a> — оператор PostgreSQL для Kubernetes: HA, failover, PITR, PgBouncer</li>
+    <li><a href="https://deepwiki.com/plankanban/planka">Архитектура Planka</a> и <a href="https://github.com/hcengineering/platform">Huly Platform</a> — два полюса по стоимости эксплуатации</li>
+    <li><a href="https://habr.com/ru/companies/kaiten/articles/1051904/">Kaiten: обзор отечественного ПО из списка Минцифры</a> — реестр, классы ПО, требования</li>
+    <li><a href="https://ru.yougile.com/product">YouGile — описание возможностей</a>; <a href="https://webask.io/blog/rossiyskie-task-trekery">сравнение восьми российских трекеров</a>; <a href="https://www.computerra.ru/334486/rejting-rossijskih-task-trekerov-2025/">рейтинг с критериями безопасности</a></li>
+    <li><a href="https://businessmap.io/kanban-resources/kanban-analytics">Kanban-метрики и отчётность</a>, <a href="https://www.scrum.org/resources/blog/4-key-flow-metrics-and-how-use-them-scrums-events">четыре ключевые метрики потока</a>, <a href="https://kanbantool.com/kanban-guide/statistical-forecasting">статистическое прогнозирование</a></li>
+  </ul>
+  <p class="tnote">Данные о тарифах, наличии коробочных версий и присутствии в реестре отечественного ПО актуальны на момент сбора (август 2026) и требуют проверки по официальным сайтам перед использованием в коммерческих материалах.</p>
+</section>
+
+</article>

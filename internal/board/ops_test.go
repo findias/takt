@@ -1,0 +1,286 @@
+package board
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"os"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Тесты работают против настоящей базы: почти вся логика операций живёт
+// в SQL и транзакциях, и подменять их заглушками — значит проверять
+// заглушки. Запуск:
+//
+//	make test-integration
+//
+// Без TEST_DATABASE_URL тесты пропускаются, чтобы `go test ./...` оставался
+// зелёным на машине без docker.
+func testPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	url := os.Getenv("TEST_DATABASE_URL")
+	if url == "" {
+		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
+	}
+	pool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		t.Fatalf("подключение к тестовой базе: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
+}
+
+type fixture struct {
+	svc      *Service
+	orgID    string
+	actorID  string
+	boardID  string
+	columnA  string
+	columnB  string
+	ctx      context.Context
+	t        *testing.T
+	sequence int
+}
+
+func newFixture(t *testing.T) *fixture {
+	t.Helper()
+	pool := testPool(t)
+	ctx := context.Background()
+	svc := New(pool)
+
+	var orgID, actorID string
+	err := pool.QueryRow(ctx, `insert into orgs (name) values ('Тест') returning id`).Scan(&orgID)
+	if err != nil {
+		t.Fatalf("создание организации: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `delete from orgs where id = $1`, orgID)
+	})
+
+	err = pool.QueryRow(ctx, `
+		insert into users (org_id, email, name, password_hash, role)
+		values ($1, $2, 'Тестовый', 'x', 'owner') returning id`,
+		orgID, uuid.NewString()+"@example.test").Scan(&actorID)
+	if err != nil {
+		t.Fatalf("создание пользователя: %v", err)
+	}
+
+	b, err := svc.Create(ctx, orgID, "Доска")
+	if err != nil {
+		t.Fatalf("создание доски: %v", err)
+	}
+	snap, err := svc.Snapshot(ctx, orgID, b.ID)
+	if err != nil {
+		t.Fatalf("снимок доски: %v", err)
+	}
+	if len(snap.Columns) < 2 {
+		t.Fatalf("ожидались колонки по умолчанию, получено %d", len(snap.Columns))
+	}
+
+	return &fixture{
+		svc: svc, orgID: orgID, actorID: actorID, boardID: b.ID,
+		columnA: snap.Columns[0].ID, columnB: snap.Columns[1].ID,
+		ctx: ctx, t: t,
+	}
+}
+
+func (f *fixture) apply(kind string, payload any) (Result, error) {
+	f.t.Helper()
+	return f.applyWithID(uuid.NewString(), kind, payload)
+}
+
+func (f *fixture) applyWithID(opID, kind string, payload any) (Result, error) {
+	f.t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return f.svc.Apply(f.ctx, f.orgID, f.actorID, f.boardID,
+		Request{OperationID: opID, Type: kind, Payload: raw})
+}
+
+func (f *fixture) mustApply(kind string, payload any) Result {
+	f.t.Helper()
+	res, err := f.apply(kind, payload)
+	if err != nil {
+		f.t.Fatalf("операция %s не выполнилась: %v", kind, err)
+	}
+	return res
+}
+
+// titles возвращает названия карточек колонки в порядке позиций.
+func (f *fixture) titles(columnID string) []string {
+	f.t.Helper()
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.boardID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	out := []string{}
+	for _, c := range snap.Cards {
+		if c.ColumnID == columnID {
+			out = append(out, c.Title)
+		}
+	}
+	return out
+}
+
+func (f *fixture) createCard(title, columnID string) string {
+	f.t.Helper()
+	res := f.mustApply("CREATE_CARD", map[string]any{"columnId": columnID, "title": title})
+	return res.Patch.Cards[0].ID
+}
+
+func equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestCreateAppendsToEndByDefault(t *testing.T) {
+	f := newFixture(t)
+	want := []string{"Первая", "Вторая", "Третья"}
+	for _, title := range want {
+		f.createCard(title, f.columnA)
+	}
+	if got := f.titles(f.columnA); !equal(got, want) {
+		t.Errorf("порядок карточек %v, ожидался %v", got, want)
+	}
+}
+
+func TestPlacement(t *testing.T) {
+	f := newFixture(t)
+	first := f.createCard("Первая", f.columnA)
+	f.createCard("Вторая", f.columnA)
+	third := f.createCard("Третья", f.columnA)
+
+	f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": third, "toColumnId": f.columnA, "place": "start"})
+	if got := f.titles(f.columnA); !equal(got, []string{"Третья", "Первая", "Вторая"}) {
+		t.Fatalf("после place=start порядок %v", got)
+	}
+
+	f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": third, "toColumnId": f.columnA, "place": "after", "afterCardId": first})
+	if got := f.titles(f.columnA); !equal(got, []string{"Первая", "Третья", "Вторая"}) {
+		t.Fatalf("после place=after порядок %v", got)
+	}
+
+	f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": third, "toColumnId": f.columnB, "place": "end"})
+	if got := f.titles(f.columnA); !equal(got, []string{"Первая", "Вторая"}) {
+		t.Errorf("карточка не покинула исходную колонку: %v", got)
+	}
+	if got := f.titles(f.columnB); !equal(got, []string{"Третья"}) {
+		t.Errorf("карточка не появилась в целевой колонке: %v", got)
+	}
+}
+
+// Повтор операции — обычное дело: клиент не дождался ответа и отправил
+// её заново. Второй раз она выполняться не должна.
+func TestOperationIsIdempotent(t *testing.T) {
+	f := newFixture(t)
+	opID := uuid.NewString()
+	payload := map[string]any{"columnId": f.columnA, "title": "Единственная"}
+
+	first, err := f.applyWithID(opID, "CREATE_CARD", payload)
+	if err != nil {
+		t.Fatalf("первая попытка: %v", err)
+	}
+	second, err := f.applyWithID(opID, "CREATE_CARD", payload)
+	if err != nil {
+		t.Fatalf("повтор: %v", err)
+	}
+
+	if first.Version != second.Version {
+		t.Errorf("версия доски выросла на повторе: %d → %d", first.Version, second.Version)
+	}
+	if first.Patch.Cards[0].ID != second.Patch.Cards[0].ID {
+		t.Error("повтор вернул другую карточку")
+	}
+	if got := f.titles(f.columnA); len(got) != 1 {
+		t.Errorf("создано %d карточек вместо одной: %v", len(got), got)
+	}
+}
+
+// Опорная карточка исчезла между тем, как клиент отрисовал доску, и тем,
+// как операция дошла до сервера. Это конфликт, а не ошибка сервера:
+// клиент должен получить текущий порядок и пересобраться.
+func TestStaleAnchorReturnsConflictWithCurrentOrder(t *testing.T) {
+	f := newFixture(t)
+	anchor := f.createCard("Опора", f.columnA)
+	moving := f.createCard("Подвижная", f.columnA)
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": anchor})
+
+	_, err := f.apply("MOVE_CARD", map[string]any{
+		"cardId": moving, "toColumnId": f.columnA, "place": "after", "afterCardId": anchor})
+
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("ожидался конфликт, получено: %v", err)
+	}
+	if conflict.Version == 0 {
+		t.Error("в конфликте не проставлена версия доски")
+	}
+	if len(conflict.Order) != 1 || conflict.Order[0].ID != moving {
+		t.Errorf("в конфликте неверный текущий порядок: %+v", conflict.Order)
+	}
+}
+
+func TestArchivedCardDisappearsButEventsRemain(t *testing.T) {
+	f := newFixture(t)
+	id := f.createCard("Временная", f.columnA)
+	res := f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": id})
+
+	if len(res.Patch.RemovedCardIDs) != 1 || res.Patch.RemovedCardIDs[0] != id {
+		t.Errorf("патч не сообщил об удалении: %+v", res.Patch)
+	}
+	if got := f.titles(f.columnA); len(got) != 0 {
+		t.Errorf("карточка осталась на доске: %v", got)
+	}
+
+	var events int
+	err := f.svc.pool.QueryRow(f.ctx,
+		`select count(*) from card_events where card_id = $1`, id).Scan(&events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Мягкое удаление: журнал должен пережить карточку, иначе аналитика
+	// потока потеряет её жизненный цикл.
+	if events < 2 {
+		t.Errorf("в журнале %d событий, ожидались создание и архивация", events)
+	}
+}
+
+func TestBadRequestsAreRejected(t *testing.T) {
+	f := newFixture(t)
+	cases := []struct {
+		name    string
+		kind    string
+		payload map[string]any
+	}{
+		{"пустое название", "CREATE_CARD", map[string]any{"columnId": f.columnA, "title": "   "}},
+		{"неизвестный тип", "МОЖЕТ_БЫТЬ", map[string]any{}},
+		{"after без якоря", "CREATE_CARD", map[string]any{"columnId": f.columnA, "title": "x", "place": "after"}},
+		{"недопустимый place", "CREATE_CARD", map[string]any{"columnId": f.columnA, "title": "x", "place": "нигде"}},
+		{"колонка не указана", "CREATE_CARD", map[string]any{"title": "x"}},
+	}
+	for _, c := range cases {
+		if _, err := f.apply(c.kind, c.payload); !errors.Is(err, ErrBadRequest) {
+			t.Errorf("%s: ожидалась ErrBadRequest, получено %v", c.name, err)
+		}
+	}
+
+	if _, err := f.apply("MOVE_CARD", map[string]any{
+		"cardId": uuid.NewString(), "toColumnId": f.columnA}); err == nil {
+		t.Error("перемещение несуществующей карточки прошло без ошибки")
+	}
+}

@@ -1,0 +1,63 @@
+# Профиль A: одна машина. Три сервиса, из них один — разовый.
+#
+# Для публикации наружу поставьте перед app обратный прокси с TLS
+# (Caddy или nginx) и не забудьте два условия, на которых спотыкаются все:
+#   1. BASE_URL должен точно совпадать с адресом в браузере, без слэша
+#      на конце — из него клиент строит адрес WebSocket-соединения;
+#   2. прокси обязан пробрасывать заголовки Upgrade и Connection,
+#      иначе вместо ошибки вы получите вечный спиннер.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: board
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-board}
+      POSTGRES_DB: board
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U board -d board"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Миграции — отдельным шагом, ровно в одном экземпляре.
+  # В entrypoint приложения они работают на одной реплике и разносят базу
+  # на двух, когда обе стартуют одновременно.
+  migrate:
+    build: .
+    command: ["migrate"]
+    environment:
+      DATABASE_URL: postgres://board:${POSTGRES_PASSWORD:-board}@db:5432/board?sslmode=disable
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://board:${POSTGRES_PASSWORD:-board}@db:5432/board?sslmode=disable
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      LISTEN_ADDR: ":8080"
+      STORAGE: file:///data/attachments
+    volumes:
+      - attachments:/data/attachments
+    ports:
+      - "${PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  attachments:
