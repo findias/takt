@@ -341,6 +341,11 @@ export type Snapshot = {
 
 export type Person = { userId: string; name: string }
 
+/** Сохранённый вид: строка запроса, в которой уже лежат фильтры
+ *  и группировка. Вид — это сохранённая ссылка, второго представления
+ *  ему не нужно. */
+export type BoardView = { id: string; name: string; query: string }
+
 /** Метка организации. Цвет — имя оттенка из закрытого набора, а не
  *  значение: сырой цвет в тёмной теме начал бы светиться. */
 export type Label = { id: string; name: string; tone: LabelTone }
@@ -507,6 +512,13 @@ export const api = {
   grantObservation: (userId: string, teamId: string | null) =>
     request<Observer>('POST', '/api/observers', { userId, teamId }),
   revokeObservation: (id: string) => request<void>('DELETE', `/api/observers/${id}`),
+
+  /** Сохранённые виды доски — «фильтры плюс группировка» одним нажатием. */
+  listViews: (boardId: string) =>
+    request<{ views: BoardView[] }>('GET', `/api/boards/${boardId}/views`),
+  saveView: (boardId: string, name: string, query: string) =>
+    request<BoardView>('POST', `/api/boards/${boardId}/views`, { name, query }),
+  deleteView: (id: string) => request<void>('DELETE', `/api/views/${id}`),
 
   listLabels: () => request<{ labels: Label[]; tones: LabelTone[] }>('GET', '/api/labels'),
   createLabel: (name: string, tone: LabelTone) =>

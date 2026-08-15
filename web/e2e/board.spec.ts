@@ -399,3 +399,68 @@ test('группировка раскладывает доску по дорож
   await expect(page.locator('.swimlane')).toHaveCount(1)
   expect(page.url()).not.toContain('group=')
 })
+
+test('колонку можно свернуть, и это переживает перезагрузку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со сворачиванием')
+  await addCard(page, 'Готово', 'Уже сделано')
+
+  const done = page.getByRole('region', { name: 'Готово' })
+  await expect(done.getByRole('group', { name: /Уже сделано/ })).toBeVisible()
+
+  await done.getByRole('button', { name: 'Свернуть «Готово»' }).click()
+
+  // Карточек не видно, а счётчик остался: свёрнутая колонка не должна
+  // становиться слепым пятном.
+  await expect(done.getByRole('group', { name: /Уже сделано/ })).toBeHidden()
+  await expect(done.getByRole('button', { name: /Развернуть «Готово»/ })).toBeVisible()
+  await expect(done.getByRole('button', { name: 'Добавить карточку' })).toHaveCount(0)
+
+  // Личное предпочтение смотрящего: не в адресе, но переживает
+  // перезагрузку.
+  expect(page.url()).not.toContain('collapsed')
+  await page.reload()
+  await expect(
+    page.getByRole('region', { name: 'Готово' }).getByRole('button', { name: /Развернуть/ }),
+  ).toBeVisible({ timeout: 10_000 })
+
+  await page.getByRole('region', { name: 'Готово' }).getByRole('button', { name: /Развернуть/ }).click()
+  await expect(
+    page.getByRole('region', { name: 'Готово' }).getByRole('group', { name: /Уже сделано/ }),
+  ).toBeVisible()
+})
+
+test('настроенный вид сохраняется и открывается одним нажатием', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с видами')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Договор аренды')
+
+  // Пока ничего не настроено, сохранять нечего: вид «доска как есть»
+  // не нужен никому.
+  await expect(page.getByRole('button', { name: 'Сохранить вид' })).toHaveCount(0)
+
+  await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('договор')
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Сохранить вид' }).click()
+  await page.getByLabel('Название вида').fill('Только договоры')
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  // Точное имя: рядом стоит кнопка «Забыть вид «Только договоры»»,
+  // и по подстроке нашлись бы обе.
+  await expect(page.getByRole('button', { name: 'Только договоры', exact: true })).toBeVisible()
+
+  // Сбрасываем фильтр и открываем вид заново — это и есть весь его смысл.
+  await page.getByRole('button', { name: 'Показать все' }).click()
+  await expect(cardIn(page, 'Очередь', 'Согласовать смету')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Только договоры', exact: true }).click()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+  await expect(cardIn(page, 'Очередь', 'Договор аренды')).toBeVisible()
+
+  // Вид живёт на сервере, а не в браузере: переживает перезагрузку.
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Только договоры', exact: true })).toBeVisible({
+    timeout: 10_000,
+  })
+})

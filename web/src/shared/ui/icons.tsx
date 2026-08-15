@@ -85,6 +85,14 @@ export function ChevronLeftIcon(props: IconProps) {
   )
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  )
+}
+
 export function SearchIcon(props: IconProps) {
   return (
     <Icon {...props}>

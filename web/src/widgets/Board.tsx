@@ -28,10 +28,13 @@ import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Avatar } from '../shared/ui/Avatar.tsx'
+import { IconButton } from '../shared/ui/Button.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
-import { setQuery, useQuery } from '../shared/router/index.ts'
+import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
+import { Views } from '../features/board/Views.tsx'
+import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
 import type { Grouping } from '../features/board/grouping.ts'
 import { Menu } from '../shared/ui/Menu.tsx'
@@ -39,6 +42,7 @@ import { useToast } from '../shared/ui/Toast.tsx'
 import {
   ArchiveIcon,
   ChevronLeftIcon,
+  ChevronRightIcon,
   EditIcon,
   FlowIcon,
   MoreIcon,
@@ -93,6 +97,7 @@ export function Board({
   const setOpenCard = onCard
   const [showFlow, setShowFlow] = useState(false)
   const [showAccess, setShowAccess] = useState(false)
+  const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
   // Видимость доски показывается в шапке: «доску видят не те» — это то,
   // что замечают, глядя на доску, а не на её строку в списке.
   const [access, setAccess] = useState<Access | null>(null)
@@ -286,6 +291,8 @@ export function Board({
             columnId={columnId}
             column={base.columns[columnId]}
             cardIds={groupOrder[columnId] ?? []}
+            collapsed={collapsed.has(columnId)}
+            onToggleCollapsed={() => toggleColumn(columnId)}
             cards={base.cards}
             unit={unit}
             sleDays={base.info.sleDays}
@@ -354,6 +361,11 @@ export function Board({
           labels={base.labels}
           hidden={hidden}
           onChange={setFilters}
+        />
+        <Views
+          boardId={boardId}
+          query={query.toString()}
+          onOpen={(saved) => navigate(`${boardPath(boardId)}${saved ? `?${saved}` : ''}`)}
         />
         <select
           className="grouping"
@@ -481,6 +493,9 @@ type ColumnProps = {
   columnId: string
   name: string
   column: Column
+  /** Свёрнутая колонка занимает полосу шириной с заголовок. */
+  collapsed: boolean
+  onToggleCollapsed: () => void
   cardIds: string[]
   cards: BaseState['cards']
   unit: EstimateUnit
@@ -522,7 +537,10 @@ function ColumnView(props: ColumnProps) {
   }, [props.columnId])
 
   return (
-    <section className={`column${over ? ' column--over' : ''}`} aria-label={props.name}>
+    <section
+      className={`column${over ? ' column--over' : ''}${props.collapsed ? ' column--collapsed' : ''}`}
+      aria-label={props.name}
+    >
       <header className="column-header">
         {/* Название и счётчик — одна мысль «в этой колонке столько
             работы», поэтому стоят рядом. Раньше счётчик висел посередине
@@ -536,16 +554,29 @@ function ColumnView(props: ColumnProps) {
             onSetLimit={props.onSetLimit}
           />
         </div>
-        <button
-          className="link column-settings-toggle"
-          aria-expanded={settings}
-          onClick={() => setSettings((v) => !v)}
-        >
-          Разметка
-        </button>
+        <div className="row row--tight">
+          {!props.collapsed && (
+            <button
+              className="link column-settings-toggle"
+              aria-expanded={settings}
+              onClick={() => setSettings((v) => !v)}
+            >
+              Разметка
+            </button>
+          )}
+          {/* Сворачивание — личное предпочтение смотрящего, поэтому оно
+              не в адресе и не на сервере: «Готово» мешает одному
+              и нужна другому. */}
+          <IconButton
+            label={props.collapsed ? `Развернуть «${props.name}»` : `Свернуть «${props.name}»`}
+            onClick={props.onToggleCollapsed}
+          >
+            {props.collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </IconButton>
+        </div>
       </header>
 
-      {flowMarks(props.column).length > 0 && (
+      {!props.collapsed && flowMarks(props.column).length > 0 && (
         <div className="card-marks">
           {flowMarks(props.column).map((m) => (
             <span key={m} className="mark">
@@ -554,14 +585,14 @@ function ColumnView(props: ColumnProps) {
           ))}
         </div>
       )}
-      {props.column.policy && !settings && (
+      {!props.collapsed && props.column.policy && !settings && (
         <p className="muted small column-policy">{props.column.policy}</p>
       )}
-      {settings && (
+      {!props.collapsed && settings && (
         <ColumnSettings column={props.column} onUpdate={props.onUpdateColumn} />
       )}
 
-      <div className="cards" ref={dropRef}>
+      <div className="cards" ref={dropRef} hidden={props.collapsed}>
         {props.cardIds.map((cardId) => (
           <CardView
             key={cardId}
@@ -599,10 +630,12 @@ function ColumnView(props: ColumnProps) {
           }}
         />
       ) : (
-        <button className="add" onClick={() => setAdding(true)}>
-          <PlusIcon />
-        Добавить карточку
-        </button>
+        !props.collapsed && (
+          <button className="add" onClick={() => setAdding(true)}>
+            <PlusIcon />
+            Добавить карточку
+          </button>
+        )
       )}
     </section>
   )

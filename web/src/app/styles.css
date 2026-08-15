@@ -135,6 +135,13 @@
 * {
   box-sizing: border-box;
 }
+/* Атрибут hidden обязан прятать. Собственный display в правиле его
+   перебивает — на этом спотыкаются все, и мы споткнулись: свёрнутая
+   колонка продолжала показывать карточки, потому что у списка задан
+   display: flex. */
+[hidden] {
+  display: none !important;
+}
 body {
   margin: 0;
   background: var(--paper);
@@ -1376,6 +1383,44 @@ textarea.description {
 .card-head .card-title {
   flex: 1;
   min-width: 0;
+}
+
+/* Сохранённые виды. Кнопка «забыть» появляется при наведении: постоянный
+   крестик у каждого вида превращает полосу в ряд крестиков. */
+.view {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.view .btn--icon {
+  opacity: 0;
+}
+.view:hover .btn--icon,
+.view:focus-within .btn--icon {
+  opacity: 1;
+}
+.view-open {
+  border: none;
+}
+
+/* Свёрнутая колонка. Узкая полоса с названием и счётчиком: сколько
+   там работы, видно и в свёрнутом виде — иначе сворачивание превращает
+   колонку в слепое пятно. Кнопка «добавить» скрывается: заводить
+   карточку туда, куда не смотришь, незачем. */
+.column--collapsed {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.column--collapsed .column-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.column--collapsed .add,
+.column--collapsed .column-policy,
+.column--collapsed .card-marks {
+  display: none;
 }
 
 /* Дорожки. Когда группировки нет, дорожка одна и выглядит как прежняя

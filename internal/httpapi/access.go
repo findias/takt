@@ -34,6 +34,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/labels", s.authed(s.handleListLabels))
 	mux.HandleFunc("POST /api/labels", s.authed(s.handleCreateLabel))
 	mux.HandleFunc("DELETE /api/labels/{id}", s.authed(s.handleArchiveLabel))
+	mux.HandleFunc("GET /api/boards/{id}/views", s.authed(s.handleListViews))
+	mux.HandleFunc("POST /api/boards/{id}/views", s.authed(s.handleSaveView))
+	mux.HandleFunc("DELETE /api/views/{id}", s.authed(s.handleDeleteView))
 	mux.HandleFunc("PUT /api/boards/{id}/sle", s.authed(s.handleSetSLE))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
@@ -236,6 +239,47 @@ func (s *Server) handleCloseIteration(w http.ResponseWriter, r *http.Request, p 
 // Свои поля заводятся на организацию, а не на доску: одинаково названное
 // поле на двух досках — это одно поле, иначе сводный отчёт складывает
 // разные сущности с общим названием.
+// Сохранённые виды: «фильтры плюс группировка», настроенные один раз.
+// Свои у каждого — чужие не показываются вовсе: это не секрет,
+// но и не общее знание, а список чужих фильтров рассказывает, кто чем
+// занят.
+func (s *Server) handleListViews(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	views, err := s.boards.Views(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failAccess(w, "виды доски", err) {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"views": views})
+}
+
+func (s *Server) handleSaveView(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Name  string `json:"name"`
+		Query string `json:"query"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	view, err := s.boards.SaveView(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Name, req.Query)
+	switch {
+	case errors.Is(err, board.ErrViewExists):
+		writeError(w, http.StatusConflict, board.ErrViewExists.Error())
+	case err != nil:
+		if s.failAccess(w, "сохранение вида", err) {
+			return
+		}
+	default:
+		writeJSON(w, http.StatusCreated, view)
+	}
+}
+
+func (s *Server) handleDeleteView(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if s.failAccess(w, "удаление вида",
+		s.boards.DeleteView(r.Context(), p.OrgID, p.ID, r.PathValue("id"))) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Метки заводятся на организацию, как и свои поля: одинаково названная
 // метка на двух досках — это одна метка, иначе фильтр по организации
 // собирать не из чего.
