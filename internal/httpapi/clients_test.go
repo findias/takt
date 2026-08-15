@@ -190,3 +190,135 @@ func (a *api) mustToken(token, method, path string, body any, want int) []byte {
 	}
 	return raw
 }
+
+// Контракт для тех, кто снаружи: версия в адресе, коды ошибок, предел
+// частоты и безопасный повтор.
+func TestVersionedPathAndErrorCodes(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	_, token := owner.apiClient("Интеграция", "boards:read")
+
+	// Адрес с версией — обещание чужим; внутренний путь остаётся своим.
+	code, _ := a.withToken(token, "GET", "/api/v1/boards", nil)
+	if code != http.StatusOK {
+		t.Fatalf("версионированный путь: код %d, ожидался 200", code)
+	}
+
+	// У ошибки есть машиночитаемый код рядом с текстом: текст пишется
+	// для человека и может меняться, код — нет.
+	_, raw := a.withToken(token, "GET", "/api/v1/boards/"+uuid.NewString(), nil)
+	if got, _ := field(t, raw, "code").(string); got != "not_found" {
+		t.Errorf("код ошибки %q, ожидался not_found; тело: %s", got, raw)
+	}
+	_, raw = a.withToken(token, "GET", "/api/v1/audit", nil)
+	if got, _ := field(t, raw, "code").(string); got != "forbidden" {
+		t.Errorf("код отказа %q, ожидался forbidden; тело: %s", got, raw)
+	}
+	_, raw = a.withToken("выдумка", "GET", "/api/v1/boards", nil)
+	if got, _ := field(t, raw, "code").(string); got != "unauthenticated" {
+		t.Errorf("код неавторизованного %q; тело: %s", got, raw)
+	}
+}
+
+// Повтор изменяющего вызова не должен заводить вторую доску.
+func TestIdempotencyKeyReplaysTheSameAnswer(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	_, token := owner.apiClient("Интеграция", "boards:read", "boards:write")
+	key := uuid.NewString()
+
+	first := a.withKey(token, key, "POST", "/api/v1/boards", map[string]any{"name": "Одна"})
+	second := a.withKey(token, key, "POST", "/api/v1/boards", map[string]any{"name": "Одна"})
+
+	if string(first) != string(second) {
+		t.Fatalf("повтор вернул другой ответ:\n%s\n%s", first, second)
+	}
+
+	raw := a.mustToken(token, "GET", "/api/v1/boards", nil, http.StatusOK)
+	var list struct {
+		Boards []struct{ Name string } `json:"boards"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Boards) != 1 {
+		t.Fatalf("после повтора досок %d, ожидалась одна: %+v", len(list.Boards), list.Boards)
+	}
+
+	// Тот же ключ к другому вызову — ошибка клиента, а не просьба
+	// вернуть прошлое.
+	req := a.requestWithKey(token, key, "POST", "/api/v1/teams", map[string]any{"name": "Команда"})
+	if req.code != http.StatusConflict {
+		t.Errorf("ключ, использованный для другого вызова: код %d, ожидался 409", req.code)
+	}
+	if got, _ := field(t, req.body, "code").(string); got != "idempotency_key_reused" {
+		t.Errorf("код ошибки %q; тело: %s", got, req.body)
+	}
+}
+
+type keyed struct {
+	code int
+	body []byte
+}
+
+func (a *api) requestWithKey(token, key, method, path string, body any) keyed {
+	a.t.Helper()
+	raw, err := json.Marshal(body)
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	req, err := http.NewRequest(method, a.server.URL+path, strings.NewReader(string(raw)))
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	req.Header.Set("content-type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Idempotency-Key", key)
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		a.t.Fatalf("%s %s: %v", method, path, err)
+	}
+	defer resp.Body.Close()
+	answer, _ := io.ReadAll(resp.Body)
+	return keyed{code: resp.StatusCode, body: answer}
+}
+
+func (a *api) withKey(token, key, method, path string, body any) []byte {
+	a.t.Helper()
+	got := a.requestWithKey(token, key, method, path, body)
+	if got.code != http.StatusCreated {
+		a.t.Fatalf("%s %s с ключом повтора: код %d; тело: %s", method, path, got.code, got.body)
+	}
+	return got.body
+}
+
+// Описание контракта читается без ключа: требовать вход, чтобы прочитать,
+// как войти, — замкнутый круг.
+func TestContractIsPublishedAndValid(t *testing.T) {
+	a := newAPI(t)
+	code, raw := a.session().do("GET", "/api/v1/openapi.json", nil)
+	if code != http.StatusOK {
+		t.Fatalf("описание контракта: код %d", code)
+	}
+
+	var doc struct {
+		OpenAPI string `json:"openapi"`
+		Info    struct {
+			Version string `json:"version"`
+		} `json:"info"`
+		Paths map[string]map[string]any `json:"paths"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("описание не разбирается: %v", err)
+	}
+	if doc.OpenAPI == "" || doc.Info.Version != "v1" {
+		t.Errorf("описание без версии: %+v", doc)
+	}
+	// Описание обязано покрывать то, ради чего оно вообще есть.
+	for _, path := range []string{"/boards", "/boards/{id}/operations", "/audit"} {
+		if _, ok := doc.Paths[path]; !ok {
+			t.Errorf("в описании нет %s", path)
+		}
+	}
+}

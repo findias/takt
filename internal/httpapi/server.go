@@ -23,26 +23,28 @@ import (
 )
 
 type Server struct {
-	cfg    config.Config
-	db     *store.Store
-	boards *board.Service
-	orgs   *org.Service
-	teams  *team.Service
-	client *apiclient.Service
-	audit  *audit.Service
-	log    *slog.Logger
+	cfg     config.Config
+	db      *store.Store
+	boards  *board.Service
+	orgs    *org.Service
+	teams   *team.Service
+	client  *apiclient.Service
+	limiter *limiter
+	audit   *audit.Service
+	log     *slog.Logger
 }
 
 func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 	return &Server{
-		cfg:    cfg,
-		db:     db,
-		boards: board.New(db),
-		orgs:   org.New(db),
-		teams:  team.New(db),
-		client: apiclient.New(db),
-		audit:  audit.New(db),
-		log:    log,
+		cfg:     cfg,
+		db:      db,
+		boards:  board.New(db),
+		orgs:    org.New(db),
+		teams:   team.New(db),
+		client:  apiclient.New(db),
+		limiter: newLimiter(),
+		audit:   audit.New(db),
+		log:     log,
 	}
 }
 
@@ -76,6 +78,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerAccessRoutes(mux)
 	s.registerFeedRoutes(mux)
 	s.registerClientRoutes(mux)
+	s.registerContractRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))
@@ -86,7 +89,10 @@ func (s *Server) Handler() http.Handler {
 	if s.cfg.WebDir != "" {
 		mux.Handle("/", s.staticHandler())
 	}
-	return logRequests(s.log, mux)
+	// Порядок обёрток: сперва версия — она переписывает путь, — потом
+	// предел частоты, потом запись в лог. Иначе в логе оказался бы путь,
+	// которого в маршрутах нет.
+	return logRequests(s.log, versioned(s.limited(mux)))
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +139,9 @@ func (s *Server) authed(next func(http.ResponseWriter, *http.Request, auth.Princ
 				writeError(w, http.StatusUnauthorized, "ключ недействителен")
 				return
 			}
-			next(w, r.WithContext(context.WithValue(r.Context(), scopesKey{}, scopes)), principal)
+			s.withIdempotency(w,
+				r.WithContext(context.WithValue(r.Context(), scopesKey{}, scopes)),
+				principal, next)
 			return
 		}
 
@@ -670,8 +678,37 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
+// writeError отвечает ошибкой с машиночитаемым кодом рядом с текстом.
+//
+// Текст пишется для человека и может меняться — на нём нельзя строить
+// разбор ответа. Код не меняется никогда: интеграция ветвится по нему.
 func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+	writeCoded(w, status, codeFor(status), message)
+}
+
+func writeCoded(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]string{"error": message, "code": code})
+}
+
+// codeFor — код по умолчанию для кода состояния. Отдельные случаи
+// называются точнее там, где это помогает решить, что делать дальше.
+func codeFor(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "bad_request"
+	case http.StatusUnauthorized:
+		return "unauthenticated"
+	case http.StatusForbidden:
+		return "forbidden"
+	case http.StatusNotFound:
+		return "not_found"
+	case http.StatusConflict:
+		return "conflict"
+	case http.StatusTooManyRequests:
+		return "too_many_requests"
+	default:
+		return "internal"
+	}
 }
 
 // isUserError отличает ошибку ввода от поломки: первую можно показать

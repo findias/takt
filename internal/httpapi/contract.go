@@ -1,0 +1,237 @@
+package httpapi
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/konkov/agile/internal/auth"
+)
+
+// Контракт для тех, кто подключается снаружи.
+//
+// Внутри приложения контракта нет и быть не должно: браузерный клиент
+// едет в одном образе с сервером и меняется вместе с ним. А интеграция
+// живёт отдельно, обновляется когда захочет её владелец и имеет право
+// на обещания: адрес с версией, предсказуемые коды ошибок, известные
+// пределы частоты и безопасный повтор.
+
+// Version — версия внешнего контракта. Меняется только когда ломается
+// совместимость; добавление полей ломающим изменением не считается,
+// и клиент обязан переживать незнакомые поля.
+const Version = "v1"
+
+// versioned пропускает /api/v1/… внутрь как /api/…
+//
+// Внутренние пути остаются без версии намеренно: свой же клиент не должен
+// делать вид, что он посторонний. Версия — обещание чужим.
+func versioned(next http.Handler) http.Handler {
+	prefix := "/api/" + Version + "/"
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			r = r.Clone(r.Context())
+			r.URL.Path = "/api/" + strings.TrimPrefix(r.URL.Path, prefix)
+			w.Header().Set("API-Version", Version)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// --- ограничение частоты ---
+
+// Предел на ключ: интеграция, упершаяся в него, должна замедлиться,
+// а не получить отказ навсегда. Считается ведром с постоянным доливом:
+// короткие всплески проходят, ровный перебор — нет.
+const (
+	rateBurst  = 120 // столько запросов подряд можно
+	ratePerSec = 2.0 // и столько доливается каждую секунду
+	rateForget = 30 * time.Minute
+)
+
+type bucket struct {
+	tokens float64
+	seen   time.Time
+}
+
+// limiter живёт в памяти процесса — как и весь остальной сервер: у нас
+// один процесс на установку, и отдельное хранилище ради счётчика было бы
+// лишней движущейся частью.
+type limiter struct {
+	mu      sync.Mutex
+	buckets map[string]*bucket
+}
+
+func newLimiter() *limiter { return &limiter{buckets: map[string]*bucket{}} }
+
+// allow отвечает, пропускать ли запрос, и сколько запросов осталось.
+func (l *limiter) allow(key string) (bool, int) {
+	now := time.Now()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	b, ok := l.buckets[key]
+	if !ok {
+		b = &bucket{tokens: rateBurst, seen: now}
+		l.buckets[key] = b
+	}
+	b.tokens = min(rateBurst, b.tokens+now.Sub(b.seen).Seconds()*ratePerSec)
+	b.seen = now
+
+	// Заброшенные вёдра выкидываем здесь же: отдельный сборщик ради
+	// десятка ключей на организацию — лишняя движущаяся часть.
+	for k, old := range l.buckets {
+		if now.Sub(old.seen) > rateForget {
+			delete(l.buckets, k)
+		}
+	}
+
+	if b.tokens < 1 {
+		return false, 0
+	}
+	b.tokens--
+	return true, int(b.tokens)
+}
+
+// limited ограничивает частоту запросов сервисных клиентов. Человек
+// за браузером под ограничение не попадает: он и не может настучать
+// быстрее, чем нажимает.
+func (s *Server) limited(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, ok := bearer(r)
+		if !ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		allowed, left := s.limiter.allow(token)
+		w.Header().Set("RateLimit-Limit", strconv.Itoa(rateBurst))
+		w.Header().Set("RateLimit-Remaining", strconv.Itoa(left))
+		if !allowed {
+			// Секунда — время, за которое доливается больше одного
+			// запроса. Просить подождать дольше незачем.
+			w.Header().Set("Retry-After", "1")
+			writeCoded(w, http.StatusTooManyRequests, "too_many_requests",
+				"слишком часто, попробуйте через секунду")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// --- безопасный повтор ---
+
+// withIdempotency отдаёт запомненный ответ, если тот же ключ повтора уже
+// приходил, и запоминает ответ, если не приходил.
+//
+// Только для сервисных клиентов: у человека за браузером повтор — это
+// нажатие кнопки, и там своя логика. Интеграция же обязана уметь
+// повторять, не спрашивая разрешения: ответ теряется в сети регулярно,
+// и «попробую ещё раз» не должно означать «заведу вторую доску».
+func (s *Server) withIdempotency(
+	w http.ResponseWriter, r *http.Request, p auth.Principal,
+	next func(http.ResponseWriter, *http.Request, auth.Principal),
+) {
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if key == "" || r.Method == http.MethodGet || r.Method == http.MethodHead {
+		next(w, r, p)
+		return
+	}
+
+	stored, err := s.replay(r, p, key)
+	if err != nil {
+		s.fail(w, "ключ повтора", err)
+		return
+	}
+	if stored != nil {
+		// Ключ, предъявленный к другому вызову, — ошибка клиента,
+		// а не просьба вернуть прошлое: молча отдать чужой ответ значило
+		// бы соврать.
+		if stored.method != r.Method || stored.path != r.URL.Path {
+			writeCoded(w, http.StatusConflict, "idempotency_key_reused",
+				"этот ключ повтора уже использован для другого запроса")
+			return
+		}
+		w.Header().Set("Idempotent-Replay", "true")
+		w.Header().Set("content-type", "application/json; charset=utf-8")
+		w.WriteHeader(stored.status)
+		_, _ = w.Write(stored.body)
+		return
+	}
+
+	recorder := &recordingWriter{ResponseWriter: w, status: http.StatusOK}
+	next(recorder, r, p)
+
+	// Запоминается только удавшееся: отказ повторять не только можно,
+	// но и нужно — он мог быть вызван временной причиной.
+	if recorder.status < 200 || recorder.status >= 300 {
+		return
+	}
+	if err := s.remember(r, p, key, recorder.status, recorder.body); err != nil {
+		s.log.Error("ключ повтора не сохранён", "ключ", key, "err", err)
+	}
+}
+
+type storedResponse struct {
+	method string
+	path   string
+	status int
+	body   []byte
+}
+
+func (s *Server) replay(r *http.Request, p auth.Principal, key string) (*storedResponse, error) {
+	var found *storedResponse
+	err := s.db.InTenant(r.Context(), p.OrgID, p.ID, func(tx pgx.Tx) error {
+		var out storedResponse
+		var body []byte
+		err := tx.QueryRow(r.Context(), `
+			select method, path, status, body
+			  from api_idempotency where key = $1`, key).
+			Scan(&out.method, &out.path, &out.status, &body)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		out.body = body
+		found = &out
+		return nil
+	})
+	return found, err
+}
+
+func (s *Server) remember(r *http.Request, p auth.Principal, key string, status int, body []byte) error {
+	return s.db.InTenant(r.Context(), p.OrgID, p.ID, func(tx pgx.Tx) error {
+		// Гонка двух одинаковых запросов разрешается в пользу первого:
+		// второй просто не запомнится, а его собственный ответ уже ушёл.
+		_, err := tx.Exec(r.Context(), `
+			insert into api_idempotency (org_id, key, method, path, status, body)
+			values ($1, $2, $3, $4, $5, $6)
+			on conflict (org_id, key) do nothing`,
+			p.OrgID, key, r.Method, r.URL.Path, status, string(body))
+		return err
+	})
+}
+
+// recordingWriter запоминает ответ, продолжая отдавать его наружу:
+// повтор обязан вернуть ровно то же, что вернул первый вызов.
+type recordingWriter struct {
+	http.ResponseWriter
+	status int
+	body   []byte
+}
+
+func (w *recordingWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *recordingWriter) Write(b []byte) (int, error) {
+	w.body = append(w.body, b...)
+	return w.ResponseWriter.Write(b)
+}

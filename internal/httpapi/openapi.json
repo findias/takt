@@ -1,0 +1,229 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Канбан-доска: интеграционный контракт",
+    "version": "v1",
+    "description": "Контракт для внешних интеграций. Путь без версии (/api/…) принадлежит браузерному клиенту, который едет в одном образе с сервером, и меняется вместе с ним без предупреждения. Интеграции обязаны ходить по /api/v1/… — здесь обещания: ломающее изменение потребует новой версии, добавление полей ломающим не считается, и клиент обязан переживать незнакомые поля."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "security": [{ "bearer": [] }],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Ключ сервисного клиента. Заводится владельцем организации, показывается один раз, принимается только заголовком: адреса попадают в логи прокси и в историю браузера."
+      }
+    },
+    "parameters": {
+      "before": {
+        "name": "before",
+        "in": "query",
+        "schema": { "type": "integer" },
+        "description": "Курсор: показать то, что старше записи с этим номером. Ленты листаются курсором, а не номером страницы — журнал только дописывается, и смещение по номеру показывало бы одно и то же дважды."
+      },
+      "idempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "schema": { "type": "string" },
+        "description": "Ключ безопасного повтора. Первый вызов выполняется, его ответ запоминается; повтор с тем же ключом возвращает тот же ответ, не трогая данные. Тот же ключ к другому вызову — ошибка (idempotency_key_reused)."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error", "code"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Текст для человека. Может меняться — разбирать его нельзя."
+          },
+          "code": {
+            "type": "string",
+            "description": "Машиночитаемая причина. Не меняется: ветвиться следует по ней.",
+            "enum": [
+              "bad_request",
+              "unauthenticated",
+              "forbidden",
+              "not_found",
+              "conflict",
+              "too_many_requests",
+              "idempotency_key_reused",
+              "internal"
+            ]
+          }
+        }
+      },
+      "Board": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "version": {
+            "type": "integer",
+            "description": "Растёт с каждой операцией. По нему разрешаются конфликты."
+          }
+        }
+      },
+      "Operation": {
+        "type": "object",
+        "required": ["operationId", "type", "payload"],
+        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз.",
+        "properties": {
+          "operationId": { "type": "string", "format": "uuid" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CREATE_CARD",
+              "MOVE_CARD",
+              "UPDATE_CARD",
+              "ARCHIVE_CARD",
+              "CREATE_COLUMN",
+              "RENAME_COLUMN",
+              "UPDATE_COLUMN",
+              "LINK_CARDS",
+              "UNLINK_CARDS",
+              "BLOCK_CARD",
+              "UNBLOCK_CARD",
+              "SET_CARD_FIELD",
+              "ADD_TO_ITERATION",
+              "REMOVE_FROM_ITERATION"
+            ]
+          },
+          "payload": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
+    "responses": {
+      "TooManyRequests": {
+        "description": "Слишком часто. Заголовок Retry-After говорит, сколько ждать; RateLimit-Remaining — сколько запросов осталось.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/boards": {
+      "get": {
+        "summary": "Доски, доступные ключу",
+        "description": "Разрешение boards:read. Видно ровно то, что видно служебной личности ключа: изоляция та же, что у человека.",
+        "responses": {
+          "200": {
+            "description": "Список",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "boards": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Board" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "post": {
+        "summary": "Завести доску",
+        "description": "Разрешение boards:write.",
+        "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": { "name": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Заведена",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Board" } }
+            }
+          },
+          "403": {
+            "description": "Ключу не выдано разрешение",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/boards/{id}": {
+      "get": {
+        "summary": "Доска целиком",
+        "description": "Колонки, карточки, связи, итерации, свои поля и их значения — одним ответом. Постранично доска не отдаётся: колонка в сотни карточек это организационная патология, а не сценарий.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Снимок доски" },
+          "404": {
+            "description": "Доски нет либо она недоступна — эти случаи неразличимы намеренно",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
+    "/boards/{id}/operations": {
+      "post": {
+        "summary": "Применить операцию к доске",
+        "description": "Разрешение boards:write. Ответ 409 несёт текущий порядок затронутой колонки: клиент пересобирается точечно, без перезагрузки доски.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Operation" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Применено: версия доски и патч" },
+          "409": {
+            "description": "Конфликт: операция опиралась на устаревшее представление доски"
+          }
+        }
+      }
+    },
+    "/boards/{id}/events": {
+      "get": {
+        "summary": "Лента событий доски",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "cardId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/before" }
+        ],
+        "responses": { "200": { "description": "События и курсор next" } }
+      }
+    },
+    "/teams": {
+      "get": {
+        "summary": "Дерево подразделений",
+        "description": "Разрешение structure:read. Дерево отдаётся плоским списком: у узла есть parentId и глубина.",
+        "responses": { "200": { "description": "Список подразделений" } }
+      }
+    },
+    "/audit": {
+      "get": {
+        "summary": "Журнал административных действий",
+        "description": "Разрешение audit:read. Журнал только дописывается; недоступность выглядит как пустая лента, а не как отказ.",
+        "parameters": [{ "$ref": "#/components/parameters/before" }],
+        "responses": { "200": { "description": "Записи и курсор next" } }
+      }
+    }
+  }
+}
