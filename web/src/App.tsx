@@ -62,9 +62,13 @@ export function App() {
       />
     )
 
+  // Рабочие экраны живут во всю ширину окна: доски, команда и структура —
+  // это работа, а не диалог. Карточка по центру осталась там, где ей
+  // и место, — на входе и в приглашении: там показывают одну форму,
+  // и всё остальное только мешало бы.
   return (
-    <div className="centered">
-      <div className="panel">
+    <div className="app">
+      <div className="app-shell">
         <OrgHeader
           principal={principal}
           onSwitched={(p) => {
@@ -76,7 +80,7 @@ export function App() {
           }}
         />
 
-        <nav className="tabs">
+        <nav className="tabs" aria-label="Разделы">
           <button
             className={tab === 'boards' ? 'tab tab--active' : 'tab'}
             onClick={() => setTab('boards')}
@@ -97,9 +101,11 @@ export function App() {
           </button>
         </nav>
 
-        {tab === 'boards' && <BoardList principal={principal} onOpen={setBoardId} />}
-        {tab === 'team' && <Team principal={principal} />}
-        {tab === 'structure' && <Structure principal={principal} />}
+        <main className="app-main">
+          {tab === 'boards' && <BoardList principal={principal} onOpen={setBoardId} />}
+          {tab === 'team' && <Team principal={principal} />}
+          {tab === 'structure' && <Structure principal={principal} />}
+        </main>
       </div>
     </div>
   )

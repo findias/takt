@@ -100,8 +100,11 @@ export function Panel({
       aria-label={label}
       tabIndex={modal ? -1 : undefined}
     >
-      <header className="row row--between">
-        <h2 className="section-title">{title}</h2>
+      <header className="panel-head">
+        {/* Название карточки — заголовок, а не подпись раздела. Раньше
+            он шёл тем же мелким капслоком, что и «ПОДЗАДАЧИ», и читался
+            как служебная метка. */}
+        <h2 className="panel-title">{title}</h2>
         <div className="row row--tight">
           {actions}
           <select

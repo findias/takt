@@ -147,7 +147,7 @@ export function BoardList({
             placeholder="Название новой доски"
             onChange={(e) => setName(e.target.value)}
           />
-          <button type="submit" disabled={!name.trim()}>
+          <button className="primary" type="submit" disabled={!name.trim()}>
             Создать
           </button>
         </form>

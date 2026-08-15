@@ -18,6 +18,7 @@ import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
 import { Flow } from './Flow'
+import { Appearance } from './Appearance'
 import { useBoard } from './useBoard'
 
 export function Board({
@@ -183,6 +184,12 @@ export function Board({
             сохраняем… {board.pending}
           </span>
         )}
+        {/* Тема и плотность живут и здесь. Плотность нужна ровно там, где
+            много карточек, то есть на доске, — а переключатель до сих пор
+            стоял только в списке досок, где он бесполезен. */}
+        <div className="board-header-tail">
+          <Appearance />
+        </div>
       </header>
 
       <div className="notices">
@@ -206,24 +213,31 @@ export function Board({
         ))}
       </div>
 
-      <div className="row row--between">
-        <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
-        <button
-          className="link"
-          onClick={() => {
-            // Две панели разом перекрывают друг друга, а в модальном
-            // режиме ещё и спорят за фокус. Открываем по одной.
-            setOpenCard(null)
-            setShowFlow((v) => !v)
-          }}
-        >
-          Поток
-        </button>
+      {/* Одна полоса, а не три: подсказка о потоке, итерации и переход
+          к потоку — это всё «про доску целиком», и разносить их
+          по отдельным строкам значит съедать высоту у самих колонок. */}
+      <div className="board-toolbar">
+        <div className="row row--between">
+          <div className="row">
+            <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+            <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
+          </div>
+          <button
+            className="link"
+            onClick={() => {
+              // Две панели разом перекрывают друг друга, а в модальном
+              // режиме ещё и спорят за фокус. Открываем по одной.
+              setOpenCard(null)
+              setShowFlow((v) => !v)
+            }}
+          >
+            Поток
+          </button>
+        </div>
       </div>
-      <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
 
       {Object.keys(base.cards).length === 0 && (
-        <div className="note empty-board" role="note">
+        <div className="note empty-board board-toolbar" role="note">
           <p className="small">
             <strong>На доске ещё нет карточек.</strong> Это не поломка —
             просто здесь пока ничего не заводили.
@@ -340,13 +354,18 @@ function ColumnView(props: ColumnProps) {
   return (
     <section className={`column${over ? ' column--over' : ''}`} aria-label={props.name}>
       <header className="column-header">
-        <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
-        <ColumnCount
-          count={props.cardIds.length}
-          limit={props.column.wipLimit}
-          hard={props.column.wipLimitHard}
-          onSetLimit={props.onSetLimit}
-        />
+        {/* Название и счётчик — одна мысль «в этой колонке столько
+            работы», поэтому стоят рядом. Раньше счётчик висел посередине
+            заголовка и читался как случайное число. */}
+        <div className="row row--tight">
+          <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
+          <ColumnCount
+            count={props.cardIds.length}
+            limit={props.column.wipLimit}
+            hard={props.column.wipLimitHard}
+            onSetLimit={props.onSetLimit}
+          />
+        </div>
         <button
           className="link column-settings-toggle"
           aria-expanded={settings}

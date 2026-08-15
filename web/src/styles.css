@@ -167,6 +167,25 @@ button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+/* Иерархия действий. На экране всегда одно главное действие, и оно
+   обязано отличаться: серая кнопка среди серых кнопок означает, что
+   выбирать предлагают самостоятельно. Второстепенные остаются
+   обычными — акцент теряет смысл, если акцентировано всё. */
+button.primary,
+a.button--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+}
+button.primary:hover:not(:disabled),
+a.button--primary:hover {
+  filter: brightness(1.08);
+}
+button.primary:disabled {
+  opacity: 0.45;
+}
+
 button.link {
   border: none;
   background: none;
@@ -237,12 +256,95 @@ label {
   font-size: var(--text-sm);
   color: var(--ink-2);
 }
+/* Подпись под полем ввода стоит сверху, а у флажка — рядом: иначе
+   получается пустой квадрат с надписью под ним, и непонятно, к чему
+   она относится. Правило одно на все флажки: заводить для этого
+   отдельный класс и вспоминать о нём каждый раз — значит однажды
+   не вспомнить. */
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+input[type='checkbox'],
+input[type='radio'] {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  /* Флажок мельче цели нажатия по WCAG; растим сам глиф, а не подпись. */
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  accent-color: var(--accent);
+}
 
 .centered {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: var(--space-8) var(--space-4);
+}
+
+/* Каркас рабочих экранов.
+ *
+ * Раньше доски, команда и структура жили в той же карточке по центру,
+ * что и форма входа: приложение выглядело диалогом посреди пустого
+ * экрана, а половина ширины монитора не использовалась вовсе.
+ * Карточка по центру осталась там, где она уместна, — на входе
+ * и в приглашении, где показывают одну форму.
+ *
+ * Предел ширины есть: строка в тысячу пикселей нечитаема, и списку
+ * команды столько не нужно. Доска — исключение, у неё своя раскладка
+ * во всю ширину. */
+.app {
+  min-height: 100vh;
+  background: var(--paper);
+}
+.app-shell {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* Разделы рабочих экранов — карточки, а не сплошной поток. Настройки,
+   ключи, выгрузка и журнал — разные разговоры, и разделять их пустотой
+   недостаточно: на длинной странице глаз теряет, где кончается один
+   и начинается другой. */
+.app-main > section,
+.app-main > div > section {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+/* Поле ввода во всю ширину экрана нечитаемо и выглядит как ошибка
+   вёрстки: почта и название короткие, и растягивать их на тысячу
+   пикселей незачем. Ограничение снимается там, где ширина осмысленна, —
+   в описании и в обсуждении. */
+.app-main input:not([type='checkbox']):not([type='radio']),
+.app-main select {
+  max-width: 26rem;
+}
+.app-main textarea {
+  max-width: 44rem;
+}
+/* Ряды кнопок и полей внутри разделов выравниваются по левому краю:
+   одинокая ссылка посередине читается как заголовок, а не как действие. */
+.app-main .row {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 40rem) {
+  .app-shell {
+    padding: var(--space-4) var(--space-3) var(--space-6);
+  }
 }
 .panel {
   background: var(--surface);
@@ -421,9 +523,26 @@ select {
 /* --- доска --- */
 
 .board-screen {
-  min-height: 100vh;
+  /* Ровно высота окна, а не минимум: колонки тянутся до низа и листаются
+     внутри себя. Иначе доска висит в верхней трети экрана, а прокрутка
+     уводит вместе с колонками и шапку. */
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+/* Полосы над доской — «Поток», итерации, объяснение пустой доски —
+   раньше шли без полей и липли к левому краю окна. */
+.board-toolbar {
+  padding: 0 var(--space-4);
+}
+/* Объяснение пустой доски не растягивается на всю ширину монитора:
+   строка в полтора метра читается хуже, чем короткая. */
+.board-toolbar.empty-board {
+  max-width: 46rem;
+}
+.board-toolbar:first-of-type {
+  padding-top: var(--space-3);
 }
 .board-header {
   display: flex;
@@ -432,6 +551,11 @@ select {
   padding: var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--rule);
   background: var(--surface);
+}
+/* Настройки вида отжимаются к правому краю шапки: слева — где мы,
+   справа — чем управляем. */
+.board-header-tail {
+  margin-left: auto;
 }
 .version,
 .pending {
@@ -481,11 +605,14 @@ select {
 
 .columns {
   flex: 1;
+  min-height: 0;
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   overflow-x: auto;
-  align-items: flex-start;
+  /* Колонки одной высоты и до низа экрана: бросать карточку в конец
+     короткой колонки иначе некуда — цель размером с её содержимое. */
+  align-items: stretch;
 }
 .column {
   /* Колонка — контейнер: карточка внутри неё описывается через
@@ -498,12 +625,12 @@ select {
   flex: 0 0 17.5rem;
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: var(--space-2);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: calc(100vh - 6rem);
+  min-height: 0;
 }
 .column--over {
   border-color: var(--accent);
@@ -513,6 +640,10 @@ select {
   border-style: dashed;
   color: var(--ink-3);
   align-items: stretch;
+  /* По содержимому, а не во всю высоту: пустой пунктирный прямоугольник
+     во весь экран выглядит как ошибка отрисовки, а не как приглашение
+     завести колонку. */
+  align-self: flex-start;
   min-height: 3rem;
 }
 .column-header {
@@ -560,8 +691,12 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  overflow-y: auto;
+  /* Листается содержимое колонки, а не вся доска: заголовок колонки
+     и кнопка «добавить» остаются на виду. flex: 1 нужен, чтобы пустая
+     колонка тоже была целью для броска во всю свою высоту. */
+  flex: 1;
   min-height: 2.5rem;
+  overflow-y: auto;
   padding: 0;
 }
 .empty {
@@ -575,7 +710,11 @@ select {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  /* Лёгкий подъём: карточка обязана читаться как предмет, который берут
+     рукой, а не как строка списка. Тень едва заметна и в тёмной теме
+     переопределена — на тёмном фоне прежняя не работает. */
+  box-shadow: var(--shadow);
   cursor: grab;
   display: flex;
   flex-direction: column;
@@ -625,6 +764,14 @@ select {
 .card-actions {
   display: none;
   gap: var(--space-1);
+  /* Ряд действий не помещался в ширину колонки и обрезался: было видно
+     «Откры», «Переиме», «Удалит». Перенос по строкам вместо обрезки —
+     действие, которое не прочитать, всё равно что отсутствует. */
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--rule);
 }
 .card:hover .card-actions,
 .card:focus-within .card-actions {
@@ -731,6 +878,26 @@ select {
   padding: var(--space-4);
   /* Затемнение говорит то же, что и aria-modal: доска сейчас не ваша. */
   background: rgb(0 0 0 / 0.35);
+}
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+.panel-title {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0;
+  /* Длинное название переносится, а не растягивает шапку: место справа
+     занято управлением режимом. */
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .panel-card {
   overflow-y: auto;
@@ -969,7 +1136,10 @@ textarea.description {
 .card-move {
   font-size: var(--text-xs);
   min-height: var(--target);
-  max-width: 8rem;
+  /* Занимает всю строку: список колонок с длинными названиями в восьми
+     ремах превращается в многоточие, и выбирать приходится наугад. */
+  flex: 1 0 100%;
+  max-width: 100%;
 }
 
 /* --- Узкий экран --- */

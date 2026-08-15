@@ -240,6 +240,9 @@ function Clients() {
             placeholder="Для чего ключ"
             onChange={(e) => setName(e.target.value)}
           />
+          <label className="small">
+            Действует до
+          </label>
           <input
             type="date"
             value={expires}

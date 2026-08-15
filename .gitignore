@@ -12,3 +12,6 @@
 # ровно до починки.
 /web/test-results/
 /web/playwright-report/
+# Снимки экранов: делаются командой npm run screens и живут ровно
+# до следующего разбора.
+/web/screenshots/

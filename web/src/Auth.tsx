@@ -105,7 +105,7 @@ export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
 
         {error && <p className="error">{error}</p>}
 
-        <button type="submit" disabled={busy}>
+        <button className="primary" type="submit" disabled={busy}>
           {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Создать организацию'}
         </button>
         <button
