@@ -17,6 +17,7 @@ import type { Card, Column, ColumnKind, EstimateUnit, Iteration } from './api'
 import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
+import { Flow } from './Flow'
 import { useBoard } from './useBoard'
 
 export function Board({
@@ -33,6 +34,7 @@ export function Board({
   const board = useBoard(boardId)
   const [announcement, setAnnouncement] = useState('')
   const [openCard, setOpenCard] = useState<string | null>(null)
+  const [showFlow, setShowFlow] = useState(false)
 
   const { base, order, moveCard } = board
 
@@ -154,7 +156,12 @@ export function Board({
         ))}
       </div>
 
-      <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+      <div className="row row--between">
+        <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+        <button className="link" onClick={() => setShowFlow((v) => !v)}>
+          Поток
+        </button>
+      </div>
       <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
 
       <div className="columns">
@@ -179,6 +186,8 @@ export function Board({
         ))}
         <NewColumn onCreate={(name) => void board.createColumn(name)} />
       </div>
+
+      {showFlow && <Flow boardId={boardId} onClose={() => setShowFlow(false)} />}
 
       {openCard && base.cards[openCard] && (
         <CardPanel

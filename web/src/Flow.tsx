@@ -1,0 +1,184 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api } from './api'
+import type { FlowReport } from './api'
+
+/**
+ * Метрики потока.
+ *
+ * Показываются проценты, а не средние: у времени цикла всегда длинный
+ * хвост, и среднее по нему не отвечает ни на один вопрос. Рядом со всяким
+ * числом — на скольких карточках оно посчитано: проценты по трём
+ * карточкам не проценты, и делать вид, что проценты, нельзя.
+ */
+export function Flow({ boardId, onClose }: { boardId: string; onClose: () => void }) {
+  const [report, setReport] = useState<FlowReport | null>(null)
+  const [days, setDays] = useState(90)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    api
+      .metrics(boardId, days)
+      .then(setReport)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось посчитать'))
+  }, [boardId, days])
+
+  useEffect(load, [load])
+
+  if (error) return <div className="panel-card">{error}</div>
+  if (!report) return <div className="panel-card">Считаем…</div>
+
+  return (
+    <aside className="panel-card" aria-label="Поток">
+      <header className="row row--between">
+        <h2 className="section-title">Поток</h2>
+        <div className="row row--tight">
+          <select
+            value={days}
+            aria-label="За сколько дней"
+            onChange={(e) => setDays(Number(e.target.value))}
+          >
+            <option value={28}>4 недели</option>
+            <option value={90}>3 месяца</option>
+            <option value={180}>полгода</option>
+          </select>
+          <button className="link" onClick={onClose}>
+            Закрыть
+          </button>
+        </div>
+      </header>
+
+      <section className="stack">
+        <h3 className="section-title">Время цикла</h3>
+        {report.cycleTime === null ? (
+          <p className="muted small">
+            Ни одна карточка не доведена до конца за это время. Считать не из чего —
+            и любое число здесь было бы выдумкой.
+          </p>
+        ) : (
+          <>
+            <div className="row row--tight">
+              <Figure label="половина за" value={`${round(report.cycleTime.p50)} дн.`} />
+              <Figure label="85 из 100 за" value={`${round(report.cycleTime.p85)} дн.`} />
+              <Figure label="95 из 100 за" value={`${round(report.cycleTime.p95)} дн.`} />
+            </div>
+            <p className="muted small">
+              Посчитано по {report.cycleTime.count}{' '}
+              {plural(report.cycleTime.count, 'карточке', 'карточкам', 'карточкам')}
+              {report.cycleTime.count < 10 && ' — слишком мало, чтобы на это опираться'}.
+            </p>
+          </>
+        )}
+      </section>
+
+      <section className="stack">
+        <h3 className="section-title">Что идёт сейчас</h3>
+        <p className="muted small">
+          В работе {report.wip}. Возраст важнее времени цикла: время цикла говорит
+          о прошлом, возраст — о том, что застряло прямо сейчас.
+        </p>
+        {report.aging.length === 0 ? (
+          <p className="muted small">Ничего не начато.</p>
+        ) : (
+          <ul className="member-list">
+            {report.aging.map((card) => (
+              <li key={card.id}>
+                <div className="member-who">
+                  <span>
+                    {card.blocked && <span aria-label="заблокирована">⛔ </span>}
+                    {card.title}
+                  </span>
+                  <span className="muted small">{card.column}</span>
+                </div>
+                <span className={overdue(card.days, report) ? 'role-chip' : 'muted small'}>
+                  {round(card.days)} дн.
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="stack">
+        <h3 className="section-title">Пропускная способность</h3>
+        <Bars values={report.throughput.map((w) => w.count)} labels={report.throughput.map((w) => w.week)} />
+        <p className="muted small">
+          По неделям, только доведённое до конца.
+          {report.discarded > 0 &&
+            ` Ещё ${report.discarded} убрано с доски незавершёнными — в счёт они не идут.`}
+        </p>
+      </section>
+
+      {report.forecast && (
+        <section className="stack">
+          <h3 className="section-title">Сколько займёт</h3>
+          <table className="figures">
+            <thead>
+              <tr>
+                <th>карточек</th>
+                <th>половина</th>
+                <th>85 из 100</th>
+                <th>95 из 100</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.forecast.map((point) => (
+                <tr key={point.cards}>
+                  <td>{point.cards}</td>
+                  <td>{point.p50} дн.</td>
+                  <td>{point.p85} дн.</td>
+                  <td>{point.p95} дн.</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted small">
+            Прогноз складывает случайные недели из прошлого — тысяча испытаний.
+            Он говорит только одно: что будет, если дальше будет как было.
+          </p>
+        </section>
+      )}
+    </aside>
+  )
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="figure">
+      <span className="figure-value">{value}</span>
+      <span className="muted small">{label}</span>
+    </div>
+  )
+}
+
+/** Столбики без библиотеки: график из десятка значений — это десяток
+ *  прямоугольников, и тащить ради них зависимость незачем. */
+function Bars({ values, labels }: { values: number[]; labels: string[] }) {
+  const top = Math.max(1, ...values)
+  return (
+    <div className="bars" role="img" aria-label={`Пропускная способность: ${values.join(', ')}`}>
+      {values.map((value, i) => (
+        <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
+          <div className="bar-fill" style={{ height: `${(value / top) * 100}%` }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Карточка старше 85-го процента — та, ради которой этот экран открывают. */
+function overdue(days: number, report: FlowReport): boolean {
+  return report.cycleTime !== null && days > report.cycleTime.p85
+}
+
+function round(value: number): string {
+  return value < 10 ? value.toFixed(1) : String(Math.round(value))
+}
+
+function plural(n: number, one: string, few: string, many: string): string {
+  const mod100 = n % 100
+  const mod10 = n % 10
+  if (mod100 >= 11 && mod100 <= 14) return many
+  if (mod10 === 1) return one
+  if (mod10 >= 2 && mod10 <= 4) return few
+  return many
+}

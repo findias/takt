@@ -167,6 +167,23 @@ export const SCOPE_NAMES: Record<string, string> = {
   'audit:read': 'Читать журнал',
 }
 
+/** Метрики потока. Считаются из отметок карточки, ничего не хранится
+ *  посчитанным: хранимый показатель — это поле, которое никто
+ *  не обновляет. */
+export type FlowReport = {
+  days: number
+  /** Проценты, а не среднее: у времени цикла всегда длинный хвост. */
+  cycleTime: { p50: number; p85: number; p95: number; count: number } | null
+  throughput: { week: string; count: number }[]
+  wip: number
+  aging: { id: string; title: string; column: string; days: number; blocked: boolean }[]
+  flow: { day: string; queued: number; inProgress: number; done: number }[]
+  forecast: { cards: number; p50: number; p85: number; p95: number }[] | null
+  /** Выброшенные не входят в пропускную способность — но молчать об их
+   *  числе значит скрывать половину картины. */
+  discarded: number
+}
+
 export type Visibility = 'org' | 'team' | 'private'
 
 export const VISIBILITY_NAMES: Record<Visibility, string> = {
@@ -452,6 +469,9 @@ export const api = {
   /** Прежние версии текста: «изменено» без них бесполезно. */
   commentRevisions: (commentId: string) =>
     request<{ revisions: string[] }>('GET', `/api/comments/${commentId}/revisions`),
+
+  metrics: (boardId: string, days = 90) =>
+    request<FlowReport>('GET', `/api/boards/${boardId}/metrics?days=${days}`),
 
   listFields: () => request<{ fields: CardField[] }>('GET', '/api/fields'),
   createField: (name: string, kind: FieldKind, options: string[]) =>

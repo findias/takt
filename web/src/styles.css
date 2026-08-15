@@ -710,3 +710,54 @@ textarea.description {
   padding-left: 0.8rem;
   border-left: 1px solid var(--rule);
 }
+
+/* --- Метрики потока --- */
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 0.7rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+.figure-value {
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+/* Столбики без библиотеки: график из десятка значений — это десяток
+   прямоугольников, и тащить ради них зависимость незачем. */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 4rem;
+}
+.bar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: var(--surface-2);
+  border-radius: 2px;
+}
+.bar-fill {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  min-height: 1px;
+}
+
+.figures {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.figures th,
+.figures td {
+  text-align: left;
+  padding: 0.2rem 0.8rem 0.2rem 0;
+}
+.figures th {
+  font-weight: 400;
+  color: var(--ink-3);
+}
