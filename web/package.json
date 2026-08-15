@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --test 'src/**/*.test.ts' && vitest run",
     "test:dom": "vitest run",
-    "test:e2e": "npm run build && playwright test e2e/board.spec.ts",
+    "test:e2e": "npm run build && playwright test e2e/board.spec.ts e2e/a11y.spec.ts",
     "screens": "npm run build && playwright test e2e/screens.spec.ts",
     "preview": "vite preview"
   },

@@ -52,7 +52,10 @@
   --surface-2: #e9edeb;
   --ink: #16201e;
   --ink-2: #4a5854;
-  --ink-3: #7a8783;
+  /* Проверено расчётом контраста: прежний #7a8783 давал 3.2 на фоне
+     колонки — ниже AA (4.5) для обычного текста, а им набраны как раз
+     подписи и пояснения, то есть самый мелкий текст на экране. */
+  --ink-3: #5e6d69;
   --rule: #d4dad7;
   --accent: #0e6f5c;
   --accent-soft: #dcebe5;
@@ -69,7 +72,7 @@
     --surface-2: #1e2826;
     --ink: #e6edea;
     --ink-2: #aebcb7;
-    --ink-3: #7b8a85;
+    --ink-3: #8b9a95;
     --rule: #27322f;
     --accent: #52c1a4;
     --accent-soft: #122c25;
@@ -87,7 +90,7 @@
   --surface-2: #1e2826;
   --ink: #e6edea;
   --ink-2: #aebcb7;
-  --ink-3: #7b8a85;
+  --ink-3: #8b9a95;
   --rule: #27322f;
   --accent: #52c1a4;
   --accent-soft: #122c25;
@@ -272,9 +275,12 @@ input[type='radio'] {
   width: auto;
   min-height: 0;
   margin: 0;
-  /* Флажок мельче цели нажатия по WCAG; растим сам глиф, а не подпись. */
-  inline-size: 1.1rem;
-  block-size: 1.1rem;
+  /* Цель нажатия по WCAG 2.5.8 — 24×24, и считается она по самому
+     элементу управления, а не по подписи рядом. Родной флажок мельче,
+     поэтому растим его. Верхняя граница нужна для сенсорного экрана:
+     там --target равен 44, и флажок такого размера выглядит кнопкой. */
+  inline-size: min(var(--target), 28px);
+  block-size: min(var(--target), 28px);
   accent-color: var(--accent);
 }
 
@@ -691,6 +697,9 @@ select {
 .count {
   font-family: ui-monospace, Menlo, monospace;
   font-size: var(--text-xs);
+  /* Счётчик — это кнопка: по ней ставят лимит колонки. Цифра шириной
+     в пятнадцать пикселей цель нажатия по WCAG 2.5.8 не проходит. */
+  min-width: var(--target);
   color: var(--ink-3);
   border: none;
   background: none;
