@@ -17,6 +17,7 @@ import (
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/config"
+	"github.com/konkov/agile/internal/export"
 	"github.com/konkov/agile/internal/metrics"
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/realtime"
@@ -37,6 +38,7 @@ type Server struct {
 	hub     *realtime.Hub
 	limiter *limiter
 	audit   *audit.Service
+	export  *export.Service
 	log     *slog.Logger
 }
 
@@ -53,6 +55,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 		hub:     hub,
 		limiter: newLimiter(),
 		audit:   audit.New(db),
+		export:  export.New(db),
 		log:     log,
 	}
 }
@@ -91,6 +94,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerWebhookRoutes(mux)
 	s.registerMetricsRoutes(mux)
 	s.registerStreamRoutes(mux)
+	s.registerExportRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))

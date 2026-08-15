@@ -134,6 +134,8 @@ export function Team({ principal }: { principal: Principal }) {
 
       {isOwner && <Clients />}
 
+      {isOwner && <Export />}
+
       <AuditFeed />
     </div>
   )
@@ -378,6 +380,46 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
           </button>
         </form>
       )}
+    </section>
+  )
+}
+
+/**
+ * Выгрузка данных организации.
+ *
+ * Обычная ссылка, а не кнопка с запросом: браузер умеет качать поток
+ * сам, а собрать ответ в память ради «красивой» кнопки значит уронить
+ * выгрузку ровно у той организации, ради которой она и нужна.
+ *
+ * Про журнал сказано отдельным флажком и словами: он больше всего
+ * остального вместе взятого, и человек должен решать это заранее,
+ * а не после получаса ожидания.
+ */
+function Export() {
+  const [withAudit, setWithAudit] = useState(false)
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Выгрузка</h2>
+      <p className="muted small">
+        Всё, что накопила организация: команды, доски, карточки, обсуждения,
+        итерации и настройки. Секреты — подписи вебхуков и ключи доступа —
+        в файл не попадают: восстановить по ним нечего, а потерять файл
+        значило бы потерять доступ.
+      </p>
+      <label className="row row--tight">
+        <input
+          type="checkbox"
+          checked={withAudit}
+          onChange={(e) => setWithAudit(e.target.checked)}
+        />
+        <span className="small">Добавить журнал действий — он обычно больше всего остального</span>
+      </label>
+      <p>
+        <a className="button" href={`/api/export${withAudit ? '?audit=1' : ''}`} download>
+          Скачать файл
+        </a>
+      </p>
     </section>
   )
 }
