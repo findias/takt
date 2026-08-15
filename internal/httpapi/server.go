@@ -65,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/invites/{token}/accept", s.handleAcceptInvite)
 
 	s.registerTeamRoutes(mux)
+	s.registerAccessRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.authed(s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.authed(s.handleCreateBoard))
