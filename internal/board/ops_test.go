@@ -353,3 +353,53 @@ func TestSameOperationIdInTwoOrgsDoesNotCollide(t *testing.T) {
 		t.Errorf("во второй организации %v", got)
 	}
 }
+
+// Отмена: карточку, убранную с доски, можно вернуть.
+//
+// Диалог «вы уверены?» перед архивацией был бы вопросом, ответ на который
+// известен заранее; вместо него — обратимость. Проверяется, что возврат
+// именно возвращает: карточка снова на доске, и исход с неё снят —
+// вернувшаяся работа не является ни сделанной, ни выброшенной.
+func TestArchivedCardComesBack(t *testing.T) {
+	f := newFixture(t)
+	cardID := f.createCard("Передумали", f.columnA)
+
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": cardID})
+	if got := len(f.titles(f.columnA)); got != 0 {
+		t.Fatalf("после архивации на доске %d карточек", got)
+	}
+
+	res := f.mustApply("RESTORE_CARD", map[string]any{"cardId": cardID})
+	if len(res.Patch.Cards) != 1 || res.Patch.Cards[0].ID != cardID {
+		t.Fatalf("возврат не прислал карточку: %+v", res.Patch)
+	}
+	if got := f.titles(f.columnA); len(got) != 1 || got[0] != "Передумали" {
+		t.Errorf("на доске %v", got)
+	}
+
+	// Исход снят: иначе вернувшаяся карточка так и осталась бы
+	// «выброшенной» и испортила бы пропускную способность молча.
+	for _, c := range f.snapshot().Cards {
+		if c.ID == cardID && c.Outcome != nil {
+			t.Errorf("исход остался: %q", *c.Outcome)
+		}
+	}
+}
+
+// Повтор отмены безобиден: сообщение с кнопкой живёт десять секунд,
+// и нажать дважды — обычное дело.
+func TestRestoringTwiceIsHarmless(t *testing.T) {
+	f := newFixture(t)
+	cardID := f.createCard("Дважды", f.columnA)
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": cardID})
+	f.mustApply("RESTORE_CARD", map[string]any{"cardId": cardID})
+
+	_, err := f.apply("RESTORE_CARD", map[string]any{"cardId": cardID})
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("повторный возврат ответил %v, ожидался конфликт с объяснением", err)
+	}
+	if got := len(f.titles(f.columnA)); got != 1 {
+		t.Errorf("после повтора на доске %d карточек", got)
+	}
+}

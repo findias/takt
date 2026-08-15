@@ -326,3 +326,57 @@ describe('поток изменений', () => {
     expect(source?.closed).toBe(true)
   })
 })
+
+describe('изменение карточки', () => {
+  // Раньше правка ждала ответа сервера: «пользователь всё равно печатает».
+  // Тридцать миллисекунд незаметны, двести на медленной сети — нет:
+  // поле возвращается к прежнему значению, и человек печатает заново.
+  it('видно сразу, до ответа сервера', async () => {
+    let answer: (value: unknown) => void = () => {}
+    operation.mockImplementation(() => new Promise((resolve) => (answer = resolve)))
+
+    const view = await loaded()
+    act(() => void view.result.current.renameCard('первая', 'Переименована'))
+
+    expect(view.result.current.base?.cards['первая'].title).toBe('Переименована')
+
+    await act(async () => {
+      answer({ version: 2, patch: { cards: [{ ...card('первая', COL_A, 'a0'), title: 'Переименована' }] } })
+    })
+    await waitFor(() => expect(view.result.current.base?.info.version).toBe(2))
+  })
+
+  // Откат точечный: пока запрос шёл, доска могла уехать от чужих
+  // изменений, и возвращать её целиком значило бы стирать чужую работу.
+  it('при отказе возвращает прежнее значение и говорит словами', async () => {
+    operation.mockRejectedValueOnce(new NetworkError('Нет связи'))
+
+    const view = await loaded()
+    await act(async () => {
+      await view.result.current.renameCard('первая', 'Не сохранится')
+    })
+
+    expect(view.result.current.base?.cards['первая'].title).toBe('первая')
+    expect(said.at(-1)?.text).toMatch(/Не удалось переименовать/)
+  })
+
+  // Отмена вместо подтверждения: обычный случай проходит без лишнего
+  // нажатия, редкая ошибка исправляется одним.
+  it('убранная карточка предлагает вернуть себя', async () => {
+    operation.mockResolvedValue({ version: 2, patch: { removedCardIds: ['первая'] } })
+
+    const view = await loaded()
+    await act(async () => {
+      await view.result.current.archiveCard('первая')
+    })
+
+    const message = said.at(-1)
+    expect(message?.text).toMatch(/«первая» убрана в архив/)
+    expect(message?.action?.label).toBe('Вернуть')
+
+    operation.mockClear()
+    await act(async () => message?.action?.onAct())
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    expect(operation.mock.calls[0][2]).toBe('RESTORE_CARD')
+  })
+})

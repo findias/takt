@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, NetworkError, api } from '../../shared/api/index.ts'
-import type { ColumnKind, Conflict, LinkKind, Placement } from '../../shared/api/index.ts'
+import type { Card, ColumnKind, Conflict, LinkKind, Placement } from '../../shared/api/index.ts'
 
 /** Подмножество свойств колонки, которое меняет одна операция. */
 export type ColumnPatch = {
@@ -43,6 +43,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // с ней переподписывается поток — и мы теряем события ровно тогда,
   // когда их больше всего.
   const latest = useRef<number | null>(null)
+  const titles = useRef(new Map<string, string>())
+  // Зеркало снимка. Нужно, чтобы прочитать прежнее значение до изменения:
+  // читать его внутри обновления состояния нельзя — обновление
+  // выполняется позже, и при быстром отказе откатывать оказывается нечего.
+  const shown = useRef<BaseState | null>(null)
 
   const reload = useCallback(async () => {
     if (!boardId) return
@@ -141,6 +146,12 @@ export function useBoard(boardId: string | null, notify: Notify) {
     latest.current = base?.info.version ?? null
   }, [base?.info.version])
 
+  useEffect(() => {
+    shown.current = base
+    if (!base) return
+    for (const card of Object.values(base.cards)) titles.current.set(card.id, card.title)
+  }, [base])
+
   const catchUp = useCallback(async () => {
     if (!boardId) return
     const from = latest.current
@@ -228,9 +239,50 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [],
   )
 
-  // Создание, переименование и удаление ждут ответа сервера: пользователь
-  // в этот момент печатает или подтверждает, и 30 миллисекунд незаметны.
-  // Мгновенным должно быть перетаскивание — его и делаем оптимистичным.
+  /**
+   * Изменение карточки, видимое сразу.
+   *
+   * Раньше переименование, описание и оценка ждали ответа сервера:
+   * «пользователь всё равно печатает, тридцать миллисекунд незаметны».
+   * Тридцать — да, а двести на медленной сети — нет: поле возвращается
+   * к прежнему значению и человек начинает печатать заново.
+   *
+   * Откат точечный, а не «вернуть весь снимок»: пока запрос идёт, доска
+   * могла уехать от чужих изменений, и возвращать её целиком значило бы
+   * стирать чужую работу. Возвращаем ровно ту карточку, которую трогали.
+   */
+  const patchCard = useCallback(
+    async (cardId: string, change: Partial<Card>, type: string, payload: unknown, failureText: string) => {
+      if (!boardId) return
+      const previous = shown.current?.cards[cardId] ?? null
+      setBase((current) => {
+        if (!current) return current
+        const card = current.cards[cardId]
+        if (!card) return current
+        return { ...current, cards: { ...current.cards, [cardId]: { ...card, ...change } } }
+      })
+
+      try {
+        const result = await api.operation(boardId, crypto.randomUUID(), type, payload)
+        setBase((current) => (current ? applyPatch(current, result) : current))
+      } catch (e) {
+        if (previous) {
+          setBase((current) =>
+            current ? { ...current, cards: { ...current.cards, [cardId]: previous } } : current,
+          )
+        }
+        notify({
+          text: e instanceof Error ? `${failureText}: ${e.message}` : failureText,
+          tone: 'warning',
+        })
+      }
+    },
+    [boardId, notify],
+  )
+
+  // Создание и работа со структурой доски по-прежнему ждут ответа:
+  // у новой карточки нет идентификатора до ответа сервера, а колонки
+  // заводят раз в месяц.
   const run = useCallback(
     async (type: string, payload: unknown, failureText: string) => {
       if (!boardId) return
@@ -247,6 +299,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [boardId, notify],
   )
 
+  // Название нужно сообщению об отмене, а к моменту показа карточки
+  // на доске уже нет. Читаем через ref, чтобы не тащить весь снимок
+  // в зависимости обработчика.
+  const titleOf = useCallback((cardId: string) => titles.current.get(cardId) ?? null, [])
+
   const createCard = useCallback(
     (columnId: string, title: string) =>
       run('CREATE_CARD', { columnId, title, place: 'end' }, 'Не удалось создать карточку'),
@@ -254,12 +311,32 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
   const renameCard = useCallback(
     (cardId: string, title: string) =>
-      run('UPDATE_CARD', { cardId, title }, 'Не удалось переименовать карточку'),
-    [run],
+      patchCard(cardId, { title }, 'UPDATE_CARD', { cardId, title },
+        'Не удалось переименовать карточку'),
+    [patchCard],
   )
+  /**
+   * Убрать карточку — с возможностью вернуть.
+   *
+   * Диалог «вы уверены?» здесь был бы вопросом, ответ на который в девяти
+   * случаях из десяти известен: его закрывают не читая. Дешевле сделать
+   * действие обратимым и предложить отмену — обычный случай проходит без
+   * лишнего нажатия, редкая ошибка исправляется одним.
+   */
   const archiveCard = useCallback(
-    (cardId: string) => run('ARCHIVE_CARD', { cardId }, 'Не удалось удалить карточку'),
-    [run],
+    async (cardId: string) => {
+      const title = titleOf(cardId)
+      await run('ARCHIVE_CARD', { cardId }, 'Не удалось убрать карточку')
+      notify({
+        text: title ? `«${title}» убрана в архив` : 'Карточка убрана в архив',
+        tone: 'info',
+        action: {
+          label: 'Вернуть',
+          onAct: () => void run('RESTORE_CARD', { cardId }, 'Не удалось вернуть карточку'),
+        },
+      })
+    },
+    [run, notify, titleOf],
   )
   const createColumn = useCallback(
     (name: string) => run('CREATE_COLUMN', { name }, 'Не удалось создать колонку'),
@@ -274,14 +351,16 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // переименование стирало бы оценку.
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
-      run('UPDATE_CARD', { cardId, estimate }, 'Не удалось сохранить оценку'),
-    [run],
+      patchCard(cardId, { estimate }, 'UPDATE_CARD', { cardId, estimate },
+        'Не удалось сохранить оценку'),
+    [patchCard],
   )
 
   const describeCard = useCallback(
     (cardId: string, description: string) =>
-      run('UPDATE_CARD', { cardId, description }, 'Не удалось сохранить описание'),
-    [run],
+      patchCard(cardId, { description }, 'UPDATE_CARD', { cardId, description },
+        'Не удалось сохранить описание'),
+    [patchCard],
   )
 
   // Связи и блокировки меняют больше, чем возвращает патч: прогресс

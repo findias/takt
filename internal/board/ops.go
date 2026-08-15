@@ -332,6 +332,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return updateCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ARCHIVE_CARD":
 		return archiveCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "RESTORE_CARD":
+		return restoreCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "CREATE_COLUMN":
 		return createColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "RENAME_COLUMN":
@@ -608,6 +610,54 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 	return Patch{RemovedCardIDs: []string{id}}, nil
+}
+
+// restoreCard возвращает карточку на доску.
+//
+// Нужна ради отмены: убрать карточку — обычное действие, и спрашивать
+// перед ним «вы уверены?» значит ставить вопрос там, где в девяти
+// случаях из десяти ответ известен. Дешевле разрешить вернуть.
+//
+// Исход снимается вместе с архивацией: карточка, вернувшаяся на доску,
+// не является ни сделанной, ни выброшенной — работа над ней продолжается.
+// Оставить «discarded» значило бы испортить пропускную способность
+// молча.
+func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
+	var p archiveCardPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор RESTORE_CARD: %v", err)
+	}
+
+	var columnID string
+	err := tx.QueryRow(ctx, `
+		update cards
+		   set archived_at = null,
+		       outcome     = case when outcome = 'discarded' then null else outcome end,
+		       version     = version + 1
+		 where id = $1 and board_id = $2 and archived_at is not null
+		 returning column_id`, p.CardID, boardID).Scan(&columnID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Карточки нет или она и так на доске: повтор отмены безобиден.
+		return Patch{}, conflictf("", "карточка уже на доске")
+	}
+	if err != nil {
+		return Patch{}, err
+	}
+
+	card, err := scanCard(tx.QueryRow(ctx,
+		`select `+cardFields+` from cards where id = $1`, p.CardID))
+	if err != nil {
+		return Patch{}, err
+	}
+	col, err := loadColumn(ctx, tx, boardID, columnID)
+	if err != nil {
+		return Patch{}, err
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "restored", nil, &columnID,
+		map[string]any{"to": columnFact(col)}); err != nil {
+		return Patch{}, err
+	}
+	return Patch{Cards: []Card{card}}, nil
 }
 
 // --- операции над колонками ---
