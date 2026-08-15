@@ -52,6 +52,57 @@ export const ROLE_NAMES: Record<Role, string> = {
   viewer: 'Наблюдатель',
 }
 
+/** Подразделение. Дерево строится по parentId; depth приходит с сервера,
+ *  чтобы показать, что глубже вкладывать уже нельзя. */
+export type Team = {
+  id: string
+  name: string
+  parentId: string | null
+  depth: number
+  members: number
+  boards: number
+}
+
+export type TeamMember = {
+  userId: string
+  name: string
+  email: string
+  role: TeamRole
+  addedAt: string
+}
+
+export type TeamRole = 'lead' | 'member'
+
+export const TEAM_ROLE_NAMES: Record<TeamRole, string> = {
+  lead: 'Ведущий',
+  member: 'Участник',
+}
+
+/** Наблюдение за поддеревом; без команды — за всей организацией. */
+export type Observer = {
+  id: string
+  userId: string
+  name: string
+  email: string
+  teamId: string | null
+  teamName: string | null
+}
+
+export type Visibility = 'org' | 'team' | 'private'
+
+export const VISIBILITY_NAMES: Record<Visibility, string> = {
+  org: 'Всей организации',
+  team: 'Своей команде',
+  private: 'Только вписанным',
+}
+
+export type BoardAccess = {
+  visibility: Visibility
+  teamId: string | null
+  teamName: string | null
+  members: { userId: string; name: string; email: string }[]
+}
+
 export type BoardInfo = { id: string; name: string; version: number }
 /** Вид колонки. Границы потока задаются отдельно: очередей и стадий работы
  *  бывает много, а началом и концом объявляются конкретные колонки. */
@@ -174,6 +225,35 @@ export const api = {
   inviteInfo: (token: string) => request<InviteInfo>('GET', `/api/invites/${token}/info`),
   acceptInvite: (token: string, account?: { name: string; password: string }) =>
     request<Principal>('POST', `/api/invites/${token}/accept`, account ?? {}),
+
+  listTeams: () => request<{ teams: Team[] }>('GET', '/api/teams'),
+  createTeam: (name: string, parentId: string | null) =>
+    request<Team>('POST', '/api/teams', { name, parentId }),
+  renameTeam: (id: string, name: string) => request<void>('PATCH', `/api/teams/${id}`, { name }),
+  /** Перенос: родитель или явный корень — «оставить как есть» выражается
+   *  тем, что запрос вообще не отправляется. */
+  moveTeam: (id: string, parentId: string | null) =>
+    request<void>('PATCH', `/api/teams/${id}`, parentId ? { parentId } : { root: true }),
+  archiveTeam: (id: string) => request<void>('DELETE', `/api/teams/${id}`),
+
+  teamMembers: (id: string) => request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),
+  addTeamMember: (id: string, userId: string, role: TeamRole) =>
+    request<void>('PUT', `/api/teams/${id}/members/${userId}`, { role }),
+  removeTeamMember: (id: string, userId: string) =>
+    request<void>('DELETE', `/api/teams/${id}/members/${userId}`),
+
+  listObservers: () => request<{ observers: Observer[] }>('GET', '/api/observers'),
+  grantObservation: (userId: string, teamId: string | null) =>
+    request<Observer>('POST', '/api/observers', { userId, teamId }),
+  revokeObservation: (id: string) => request<void>('DELETE', `/api/observers/${id}`),
+
+  boardAccess: (boardId: string) => request<BoardAccess>('GET', `/api/boards/${boardId}/access`),
+  setBoardAccess: (boardId: string, visibility: Visibility, teamId: string | null) =>
+    request<void>('PUT', `/api/boards/${boardId}/access`, { visibility, teamId }),
+  addBoardMember: (boardId: string, userId: string) =>
+    request<void>('PUT', `/api/boards/${boardId}/members/${userId}`),
+  removeBoardMember: (boardId: string, userId: string) =>
+    request<void>('DELETE', `/api/boards/${boardId}/members/${userId}`),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
   createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
-import type { BoardInfo, Principal } from './api'
+import type { BoardInfo, Member, Principal, Team } from './api'
+import { BoardAccess } from './BoardAccess'
 
 export function BoardList({
   principal,
@@ -12,6 +13,11 @@ export function BoardList({
   const [boards, setBoards] = useState<BoardInfo[] | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [openAccess, setOpenAccess] = useState<string | null>(null)
+  // Люди и подразделения нужны только настройке доступа, поэтому берутся
+  // один раз на список, а не по разу на каждую доску.
+  const [people, setPeople] = useState<Member[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const canEdit = principal.role !== 'viewer'
 
   const load = useCallback(() => {
@@ -24,6 +30,19 @@ export function BoardList({
 
   // Перезагружаем при смене организации: доски у каждой свои.
   useEffect(load, [load, principal.orgId])
+
+  useEffect(() => {
+    setOpenAccess(null)
+    Promise.all([api.team(), api.listTeams()])
+      .then(([org, t]) => {
+        setPeople(org.members)
+        setTeams(t.teams)
+      })
+      .catch(() => {
+        setPeople([])
+        setTeams([])
+      })
+  }, [principal.orgId])
 
   return (
     <div className="stack">
@@ -38,7 +57,25 @@ export function BoardList({
       <ul className="board-list">
         {boards?.map((b) => (
           <li key={b.id}>
-            <button onClick={() => onOpen(b.id)}>{b.name}</button>
+            <div className="row row--between">
+              <button onClick={() => onOpen(b.id)}>{b.name}</button>
+              <button
+                className="link"
+                aria-expanded={openAccess === b.id}
+                onClick={() => setOpenAccess((v) => (v === b.id ? null : b.id))}
+              >
+                Доступ
+              </button>
+            </div>
+            {openAccess === b.id && (
+              <BoardAccess
+                boardId={b.id}
+                people={people}
+                teams={teams}
+                canEdit={canEdit}
+                onClose={() => setOpenAccess(null)}
+              />
+            )}
           </li>
         ))}
       </ul>

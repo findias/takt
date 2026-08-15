@@ -5,6 +5,7 @@ import { Board } from './Board'
 import { Auth } from './Auth'
 import { InviteScreen } from './Invite'
 import { Team } from './Team'
+import { Structure } from './Structure'
 import { BoardList } from './BoardList'
 
 /** Приглашение приходит ссылкой вида /invite/<токен>. */
@@ -18,7 +19,7 @@ export function App() {
   const [checking, setChecking] = useState(true)
   const [invite, setInvite] = useState<string | null>(inviteTokenFromLocation())
   const [boardId, setBoardId] = useState<string | null>(null)
-  const [tab, setTab] = useState<'boards' | 'team'>('boards')
+  const [tab, setTab] = useState<'boards' | 'team' | 'structure'>('boards')
 
   useEffect(() => {
     api
@@ -79,13 +80,17 @@ export function App() {
           >
             Команда
           </button>
+          <button
+            className={tab === 'structure' ? 'tab tab--active' : 'tab'}
+            onClick={() => setTab('structure')}
+          >
+            Структура
+          </button>
         </nav>
 
-        {tab === 'boards' ? (
-          <BoardList principal={principal} onOpen={setBoardId} />
-        ) : (
-          <Team principal={principal} />
-        )}
+        {tab === 'boards' && <BoardList principal={principal} onOpen={setBoardId} />}
+        {tab === 'team' && <Team principal={principal} />}
+        {tab === 'structure' && <Structure principal={principal} />}
       </div>
     </div>
   )
