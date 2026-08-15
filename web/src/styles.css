@@ -1038,6 +1038,13 @@ textarea.description {
   background: var(--surface-2);
   color: var(--ink-3);
 }
+.mark--aging {
+  /* Возраст сверх обещания — предупреждение, а не запрет: работа идёт,
+     но идёт дольше, чем доска обещала. Цвет тот же, что у превышенного
+     лимита, — это про одно и то же: перегруз, который надо увидеть. */
+  color: var(--warn);
+  background: var(--warn-soft);
+}
 .mark--blocked {
   background: var(--warn-soft);
   color: var(--warn);

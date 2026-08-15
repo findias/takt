@@ -200,7 +200,14 @@ export type BoardAccess = {
   members: { userId: string; name: string; email: string }[]
 }
 
-export type BoardInfo = { id: string; name: string; version: number }
+export type BoardInfo = {
+  id: string
+  name: string
+  version: number
+  /** Обещание доски: «85% работы проходит доску за 8 дней». Пусто — обещания нет. */
+  sleDays: number | null
+  sleProbability: number
+}
 /** Вид колонки. Границы потока задаются отдельно: очередей и стадий работы
  *  бывает много, а началом и концом объявляются конкретные колонки. */
 export type ColumnKind = 'queue' | 'in_progress' | 'done'
@@ -453,6 +460,8 @@ export const api = {
   revokeObservation: (id: string) => request<void>('DELETE', `/api/observers/${id}`),
 
   boardAccess: (boardId: string) => request<BoardAccess>('GET', `/api/boards/${boardId}/access`),
+  setSLE: (boardId: string, days: number | null, probability: number) =>
+    request<void>('PUT', `/api/boards/${boardId}/sle`, { days, probability }),
   setBoardAccess: (boardId: string, visibility: Visibility, teamId: string | null) =>
     request<void>('PUT', `/api/boards/${boardId}/access`, { visibility, teamId }),
   addBoardMember: (boardId: string, userId: string) =>

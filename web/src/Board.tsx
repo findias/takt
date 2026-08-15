@@ -10,7 +10,7 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
+import { agingLabel, flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
 import type { BaseState } from './boardModel.ts'
 import { api } from './api'
 import type {
@@ -294,6 +294,7 @@ export function Board({
             cardIds={order[columnId] ?? []}
             cards={base.cards}
             unit={unit}
+            sleDays={base.info.sleDays}
             columns={base.columnIds.map((id) => base.columns[id])}
             onMoveToColumn={moveToColumn}
             onOpenCard={(id) => {
@@ -312,7 +313,15 @@ export function Board({
         <NewColumn onCreate={(name) => void board.createColumn(name)} />
       </div>
 
-      {showFlow && <Flow boardId={boardId} onClose={() => setShowFlow(false)} />}
+      {showFlow && (
+        <Flow
+          boardId={boardId}
+          sleDays={base.info.sleDays}
+          sleProbability={base.info.sleProbability}
+          onClose={() => setShowFlow(false)}
+          onPromise={board.reload}
+        />
+      )}
 
       {showAccess && (
         <AccessPanel
@@ -363,6 +372,7 @@ type ColumnProps = {
   cardIds: string[]
   cards: BaseState['cards']
   unit: EstimateUnit
+  sleDays: number | null
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -442,6 +452,7 @@ function ColumnView(props: ColumnProps) {
             columnId={props.columnId}
             card={props.cards[cardId]}
             unit={props.unit}
+            sleDays={props.sleDays}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={() => props.onOpenCard(cardId)}
@@ -479,6 +490,8 @@ type CardProps = {
   columnId: string
   card: Card | undefined
   unit: EstimateUnit
+  /** Обещание доски: с ним сравнивается возраст карточки. */
+  sleDays: number | null
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpen: () => void
@@ -492,6 +505,7 @@ function CardView({
   columnId,
   card,
   unit,
+  sleDays,
   columns,
   onMoveToColumn,
   onOpen,
@@ -527,6 +541,11 @@ function CardView({
       }),
     )
   }, [cardId, columnId])
+
+  // Возраст против обещания доски — единственный случай, когда карточка
+  // получает третью метку. Считается на отрисовке: хранить «просрочена»
+  // значит завести поле, которое устаревает само по себе.
+  const aging = card ? agingLabel(card, sleDays) : null
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!(e.ctrlKey || e.metaKey)) return
@@ -568,8 +587,13 @@ function CardView({
           <span className="card-title" onDoubleClick={() => setEditing(true)}>
             {title}
           </span>
-          {card && (card.blocked || card.progress) && (
+          {card && (card.blocked || card.progress || aging) && (
             <div className="card-marks">
+              {aging && (
+                <span className="mark mark--aging" title="Возраст считается от начала работы">
+                  {aging}
+                </span>
+              )}
               {card.blocked && (
                 <span className="mark mark--blocked" title={card.blocked.reason}>
                   {/* Глиф прячем: скринридер прочитает ⛔ как «знак въезд

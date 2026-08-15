@@ -62,7 +62,7 @@ function card(id: string, columnId: string, position: string): Card {
 
 function board(version = 1): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version },
+    board: { id: 'board', name: 'Доска', version, sleDays: null, sleProbability: 85 },
     columns: [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1')],
     cards: [card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')],
     links: [],

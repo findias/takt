@@ -11,7 +11,20 @@ import type { FlowReport } from './api'
  * числом — на скольких карточках оно посчитано: проценты по трём
  * карточкам не проценты, и делать вид, что проценты, нельзя.
  */
-export function Flow({ boardId, onClose }: { boardId: string; onClose: () => void }) {
+export function Flow({
+  boardId,
+  sleDays,
+  sleProbability,
+  onClose,
+  onPromise,
+}: {
+  boardId: string
+  sleDays: number | null
+  sleProbability: number
+  onClose: () => void
+  /** Обещание изменилось — доске стоит перечитать себя. */
+  onPromise: () => void
+}) {
   const [report, setReport] = useState<FlowReport | null>(null)
   const [days, setDays] = useState(90)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +65,14 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
       {!report && <p className="muted small">Считаем…</p>}
       {report && (
         <>
+
+      <Promise
+        boardId={boardId}
+        days={sleDays}
+        probability={sleProbability}
+        suggestion={report.cycleTime ? Math.ceil(report.cycleTime.p85) : null}
+        onChanged={onPromise}
+      />
 
       <section className="stack">
         <h3 className="section-title">Время цикла</h3>
@@ -206,3 +227,86 @@ function plural(n: number, one: string, few: string, many: string): string {
   if (mod10 >= 2 && mod10 <= 4) return few
   return many
 }
+
+/**
+ * Обещание доски.
+ *
+ * Kanban Guide требует его как элемент определения потока и говорит, что
+ * оно выводится из истории, но однажды посчитанное — становится обещанием
+ * и живёт на доске. Поэтому «взять из истории» — кнопка, а не поведение:
+ * автоматический пересчёт вернул бы плавающее мерило, из-за которого
+ * ухудшения не видно.
+ */
+function Promise_({
+  boardId,
+  days,
+  probability,
+  suggestion,
+  onChanged,
+}: {
+  boardId: string
+  days: number | null
+  probability: number
+  suggestion: number | null
+  onChanged: () => void
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const save = (next: number | null) => {
+    setBusy(true)
+    setError(null)
+    api
+      .setSLE(boardId, next, probability)
+      .then(onChanged)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+      .finally(() => setBusy(false))
+  }
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">Обещание доски</h3>
+      {error && <p className="error">{error}</p>}
+      {days === null ? (
+        <p className="muted small">
+          Обещания нет. Доска без истории обещать и не может — но как только
+          появятся доведённые до конца карточки, обещание стоит назвать:
+          с ним сравнивается возраст того, что идёт сейчас.
+        </p>
+      ) : (
+        <p className="small">
+          <strong>
+            {probability}% работы проходит доску за {days}{' '}
+            {plural(days, 'день', 'дня', 'дней')}
+          </strong>
+          . С этим сроком сравнивается возраст карточек: перешагнувшая его
+          получает метку прямо на доске.
+        </p>
+      )}
+      {/* Пустой ряд оставлял в панели необъяснимый промежуток: кнопок
+          в нём нет, пока обещать нечего и снимать нечего. */}
+      {(days !== null || (suggestion !== null && suggestion !== days)) && (
+      <div className="row row--tight">
+        {suggestion !== null && suggestion !== days && (
+          <button disabled={busy} onClick={() => save(suggestion)}>
+            {days === null ? 'Взять из истории' : 'Обновить по истории'}: {suggestion}{' '}
+            {plural(suggestion, 'день', 'дня', 'дней')}
+          </button>
+        )}
+        {days !== null && (
+          <button className="link" disabled={busy} onClick={() => save(null)}>
+            Снять обещание
+          </button>
+        )}
+      </div>
+      )}
+      {suggestion === null && days === null && (
+        <p className="muted small">
+          Взять из истории пока нечего: ни одна карточка не доведена до конца.
+        </p>
+      )}
+    </section>
+  )
+}
+
+const Promise = Promise_

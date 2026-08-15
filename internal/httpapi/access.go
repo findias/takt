@@ -31,6 +31,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/fields", s.authed(s.handleListFields))
 	mux.HandleFunc("POST /api/fields", s.authed(s.handleCreateField))
 	mux.HandleFunc("DELETE /api/fields/{id}", s.authed(s.handleArchiveField))
+	mux.HandleFunc("PUT /api/boards/{id}/sle", s.authed(s.handleSetSLE))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
@@ -155,6 +156,34 @@ func (s *Server) handleRestoreBoard(w http.ResponseWriter, r *http.Request, p au
 	}
 	err := s.boards.Restore(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
 	if s.failAccess(w, "возврат доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Обещание доски: «85% работы проходит доску за 8 дней». Пустое значение
+// снимает обещание.
+func (s *Server) handleSetSLE(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Days        *int `json:"days"`
+		Probability *int `json:"probability"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	// Вероятность по умолчанию — та, о которой говорит руководство
+	// в своём же примере: «85% of work items will be finished in eight
+	// days or less».
+	probability := 85
+	if req.Probability != nil {
+		probability = *req.Probability
+	}
+	err := s.boards.SetSLE(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Days, probability)
+	if s.failAccess(w, "обещание доски", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

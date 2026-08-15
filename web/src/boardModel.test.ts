@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  agingLabel,
   applyPatch,
   flowIssues,
   flowMarks,
@@ -57,7 +58,7 @@ function column(id: string, name: string, position: string, kind: ColumnKind): C
 
 function snapshot(cards: Card[]): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version: 1 },
+    board: { id: 'board', name: 'Доска', version: 1, sleDays: null, sleProbability: 85 },
     links: [],
     linked: [],
     iterations: [],
@@ -262,4 +263,33 @@ test('финиш раньше начала — почти наверняка о�
   const issues = flowIssues(columns)
   assert.equal(issues.length, 1)
   assert.ok(issues[0].includes('раньше начала'))
+})
+
+// Возраст против обещания: метка появляется только у той работы, которая
+// идёт дольше обещанного, — и только пока она идёт.
+test('метка возраста появляется, когда карточка перешагнула обещание', () => {
+  const now = Date.parse('2026-08-15T12:00:00Z')
+  const started = (days: number) =>
+    new Date(now - days * 86_400_000).toISOString()
+
+  assert.equal(agingLabel({ startedAt: started(3), finishedAt: null }, 8, now), null)
+  assert.match(
+    agingLabel({ startedAt: started(9), finishedAt: null }, 8, now) ?? '',
+    /Идёт 9 дн\. — дольше обещанных 8/,
+  )
+})
+
+test('без обещания, до начала и после конца метки нет', () => {
+  const now = Date.parse('2026-08-15T12:00:00Z')
+  const long = new Date(now - 40 * 86_400_000).toISOString()
+
+  // Обещания нет — сравнивать не с чем.
+  assert.equal(agingLabel({ startedAt: long, finishedAt: null }, null, now), null)
+  // Работа ещё не начиналась: возраст считается от начала, а не от заведения.
+  assert.equal(agingLabel({ startedAt: null, finishedAt: null }, 8, now), null)
+  // Работа доведена до конца — стареть уже нечему.
+  assert.equal(
+    agingLabel({ startedAt: long, finishedAt: new Date(now).toISOString() }, 8, now),
+    null,
+  )
 })

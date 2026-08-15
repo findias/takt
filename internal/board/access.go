@@ -193,6 +193,37 @@ func translateAccess(err error) error {
 	return err
 }
 
+// SetSLE записывает обещание доски: за сколько дней работа её проходит
+// и с какой вероятностью.
+//
+// Отдельным вызовом, а не операцией над доской: обещание не меняет
+// ни порядок карточек, ни их состав, и проводить его через тот же канал
+// значило бы делать вид, что меняет. Пустое значение убирает обещание —
+// доска, у которой ещё нет истории, обещать не может.
+func (s *Service) SetSLE(ctx context.Context, orgID, actorID, boardID string, days *int, probability int) error {
+	if days != nil && *days <= 0 {
+		return badRequestf("срок обещания считается в днях и не бывает нулевым")
+	}
+	if probability < 50 || probability > 99 {
+		return badRequestf("вероятность обещания — от 50 до 99 процентов")
+	}
+	return translateAccess(s.db.InScope(ctx,
+		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, `
+				update boards set sle_days = $2, sle_probability = $3
+				 where id = $1 and archived_at is null`, boardID, days, probability)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				// Либо доски нет, либо она не досталась на запись —
+				// различает это общий разбор ниже.
+				return ErrNotFound
+			}
+			return nil
+		}))
+}
+
 // --- архив ---
 
 // Archive убирает доску с глаз, не удаляя её. Журнал переходов и все

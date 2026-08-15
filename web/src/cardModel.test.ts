@@ -48,7 +48,7 @@ function foreign(id: string, title: string, extra: Partial<LinkedCard> = {}): Li
 
 function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseState {
   return {
-    info: { id: 'board', name: 'Доска', version: 1 },
+    info: { id: 'board', name: 'Доска', version: 1, sleDays: null, sleProbability: 85 },
     columnIds: ['col'],
     columns: {},
     cards: Object.fromEntries(cards.map((c) => [c.id, c])),

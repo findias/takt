@@ -280,3 +280,27 @@ export function flowIssues(columns: Column[]): string[] {
   }
   return issues
 }
+
+/**
+ * Возраст карточки против обещания доски.
+ *
+ * Kanban Guide требует не давать работе стареть незаметно и сравнивать
+ * возраст именно с обещанием: «ensuring work items do not age
+ * unnecessarily, using the SLE as a reference». Сравнивать с текущим
+ * процентилем нельзя — он считается по завершённым и едет вместе с ними,
+ * то есть меряет тем же тестом, из которого сделан.
+ *
+ * Метка появляется только у перешагнувшей обещание: постоянный счётчик
+ * возраста на каждой карточке — это ещё одно поле, которое перестают
+ * замечать через день.
+ */
+export function agingLabel(
+  card: Pick<Card, 'startedAt' | 'finishedAt'>,
+  sleDays: number | null,
+  now: number = Date.now(),
+): string | null {
+  if (!sleDays || !card.startedAt || card.finishedAt) return null
+  const days = (now - Date.parse(card.startedAt)) / 86_400_000
+  if (!(days > sleDays)) return null
+  return `Идёт ${Math.floor(days)} дн. — дольше обещанных ${sleDays}`
+}

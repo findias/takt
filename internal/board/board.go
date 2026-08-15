@@ -28,6 +28,16 @@ type Info struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Version int64  `json:"version"`
+	// Обещание доски: «85% работы проходит доску за 8 дней». Пусто —
+	// обещания нет, и это честное состояние: доска без истории обещать
+	// не может.
+	//
+	// Хранится, а не считается на лету. Процентиль по истории едет вместе
+	// с работой: команда, у которой дела пошли хуже, увидела бы выросший
+	// процентиль и не заметила ухудшения. Обещание между пересмотрами
+	// неподвижно, и по нему видно, что стало хуже.
+	SLEDays        *int `json:"sleDays"`
+	SLEProbability int  `json:"sleProbability"`
 }
 
 // Вид колонки. Очередей и стадий работы на доске бывает много, поэтому вид
@@ -211,7 +221,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 	out := []Info{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select id, name, version
+			select id, name, version, sle_days, sle_probability
 			  from boards
 			 where archived_at is null
 			 order by created_at`)
@@ -221,7 +231,8 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		defer rows.Close()
 		for rows.Next() {
 			var b Info
-			if err := rows.Scan(&b.ID, &b.Name, &b.Version); err != nil {
+			if err := rows.Scan(&b.ID, &b.Name, &b.Version,
+				&b.SLEDays, &b.SLEProbability); err != nil {
 				return err
 			}
 			out = append(out, b)
@@ -251,8 +262,8 @@ func (s *Service) Create(ctx context.Context, orgID, userID, name string) (Info,
 
 		err = tx.QueryRow(ctx, `
 			insert into boards (org_id, project_id, name) values ($1, $2, $3)
-			returning id, name, version`, orgID, projectID, name).
-			Scan(&b.ID, &b.Name, &b.Version)
+			returning id, name, version, sle_days, sle_probability`, orgID, projectID, name).
+			Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability)
 		if err != nil {
 			return err
 		}
@@ -290,9 +301,10 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 	var snap Snapshot
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			select id, name, version from boards
+			select id, name, version, sle_days, sle_probability from boards
 			 where id = $1 and archived_at is null`, boardID).
-			Scan(&snap.Board.ID, &snap.Board.Name, &snap.Board.Version)
+			Scan(&snap.Board.ID, &snap.Board.Name, &snap.Board.Version,
+				&snap.Board.SLEDays, &snap.Board.SLEProbability)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Доска чужой организации неотличима от несуществующей —
 			// и это правильный ответ: подтверждать её существование
