@@ -227,3 +227,44 @@ export function parseLimitDraft(
   if (!Number.isInteger(next) || next < 1 || next === current) return { change: false }
   return { change: true, limit: next }
 }
+
+/** Подписи разметки колонки: что она означает для потока. */
+export function flowMarks(column: Column): string[] {
+  const marks: string[] = []
+  if (column.isStartedPoint) marks.push('начало работы')
+  if (column.isFinishedPoint) marks.push('финиш')
+  if (column.wipLimitHard && column.wipLimit !== null) marks.push('жёсткий лимит')
+  return marks
+}
+
+/**
+ * Чего не хватает доске, чтобы считались метрики потока.
+ *
+ * Журнал переходов копится с первого дня, но по нему нельзя посчитать ни
+ * время цикла, ни возраст карточки, пока не сказано, какой переход означает
+ * «работа началась», а какой — «работа закончена». Разметить колонки можно
+ * когда угодно, а ответить за прошлое — нет: события, записанные до
+ * разметки, так и останутся без ответа. Поэтому об этом лучше сказать
+ * сразу, а не в тот день, когда впервые понадобится отчёт.
+ */
+export function flowIssues(columns: Column[]): string[] {
+  const live = columns.filter((c) => c.kind !== undefined)
+  if (live.length === 0) return []
+
+  const issues: string[] = []
+  if (!live.some((c) => c.isStartedPoint)) {
+    issues.push('Не отмечено начало работы: время цикла и возраст карточек не посчитаются')
+  }
+  if (!live.some((c) => c.isFinishedPoint)) {
+    issues.push('Не отмечен финиш: пропускная способность и время цикла не посчитаются')
+  }
+
+  // Финиш левее начала — не запрет, а почти наверняка ошибка разметки:
+  // работа считалась бы законченной раньше, чем началась.
+  const start = live.findIndex((c) => c.isStartedPoint)
+  const finish = live.findIndex((c) => c.isFinishedPoint)
+  if (start >= 0 && finish >= 0 && finish < start) {
+    issues.push('Финиш стоит раньше начала работы: проверьте разметку колонок')
+  }
+  return issues
+}

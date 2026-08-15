@@ -627,3 +627,26 @@ textarea.description {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* --- Разметка колонки --- */
+
+.column-settings {
+  margin: 0.3rem 0 0.6rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+.column-settings label {
+  cursor: pointer;
+}
+.column-settings-toggle {
+  font-size: 0.8rem;
+}
+/* Правило входа — не украшение, а то, о чём договорились: оно должно быть
+   видно, когда карточку тащат в колонку, а не спрятано в настройках. */
+.column-policy {
+  margin: 0.2rem 0 0.4rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--rule);
+}

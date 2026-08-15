@@ -10,9 +10,10 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { limitLabel, parseLimitDraft } from './boardModel.ts'
+import { flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
 import type { BaseState } from './boardModel.ts'
-import type { Card } from './api'
+import type { Card, Column, ColumnKind } from './api'
+import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
 import { useBoard } from './useBoard'
@@ -142,14 +143,15 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
         ))}
       </div>
 
+      <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+
       <div className="columns">
         {base.columnIds.map((columnId) => (
           <ColumnView
             key={columnId}
             name={base.columns[columnId].name}
             columnId={columnId}
-            wipLimit={base.columns[columnId].wipLimit}
-            wipLimitHard={base.columns[columnId].wipLimitHard}
+            column={base.columns[columnId]}
             cardIds={order[columnId] ?? []}
             cards={base.cards}
             onOpenCard={setOpenCard}
@@ -157,6 +159,7 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
             onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
+            onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
             onRenameCard={(cardId, title) => void board.renameCard(cardId, title)}
             onArchiveCard={(cardId) => void board.archiveCard(cardId)}
           />
@@ -188,8 +191,7 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
 type ColumnProps = {
   columnId: string
   name: string
-  wipLimit: number | null
-  wipLimitHard: boolean
+  column: Column
   cardIds: string[]
   cards: BaseState['cards']
   onOpenCard: (cardId: string) => void
@@ -197,6 +199,7 @@ type ColumnProps = {
   onCreateCard: (title: string) => void
   onRenameColumn: (name: string) => void
   onSetLimit: (limit: number | null) => void
+  onUpdateColumn: (patch: ColumnPatch) => void
   onRenameCard: (cardId: string, title: string) => void
   onArchiveCard: (cardId: string) => void
 }
@@ -205,6 +208,7 @@ function ColumnView(props: ColumnProps) {
   const dropRef = useRef<HTMLDivElement>(null)
   const [over, setOver] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [settings, setSettings] = useState(false)
 
   useEffect(() => {
     const element = dropRef.current
@@ -225,11 +229,34 @@ function ColumnView(props: ColumnProps) {
         <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
         <ColumnCount
           count={props.cardIds.length}
-          limit={props.wipLimit}
-          hard={props.wipLimitHard}
+          limit={props.column.wipLimit}
+          hard={props.column.wipLimitHard}
           onSetLimit={props.onSetLimit}
         />
+        <button
+          className="link column-settings-toggle"
+          aria-expanded={settings}
+          onClick={() => setSettings((v) => !v)}
+        >
+          Разметка
+        </button>
       </header>
+
+      {flowMarks(props.column).length > 0 && (
+        <div className="card-marks">
+          {flowMarks(props.column).map((m) => (
+            <span key={m} className="mark">
+              {m}
+            </span>
+          ))}
+        </div>
+      )}
+      {props.column.policy && !settings && (
+        <p className="muted small column-policy">{props.column.policy}</p>
+      )}
+      {settings && (
+        <ColumnSettings column={props.column} onUpdate={props.onUpdateColumn} />
+      )}
 
       <div className="cards" ref={dropRef}>
         {props.cardIds.map((cardId) => (
@@ -558,5 +585,97 @@ function EditableText({
         }
       }}
     />
+  )
+}
+
+/**
+ * Разметка колонки: чем она является для потока.
+ *
+ * Вид колонки и точки старта и финиша — не одно и то же. Очередей и стадий
+ * работы бывает много, а границами потока объявляются конкретные: время
+ * цикла считается между ними, и переставить их задним числом нельзя так,
+ * чтобы прошлые события пересчитались правильно.
+ */
+function ColumnSettings({
+  column,
+  onUpdate,
+}: {
+  column: Column
+  onUpdate: (patch: ColumnPatch) => void
+}) {
+  const [policy, setPolicy] = useState(column.policy)
+  useEffect(() => setPolicy(column.policy), [column.policy])
+
+  return (
+    <div className="column-settings stack">
+      <label className="row row--tight">
+        <span className="muted small">Вид</span>
+        <select
+          value={column.kind}
+          aria-label={`Вид колонки «${column.name}»`}
+          onChange={(e) => onUpdate({ kind: e.target.value as ColumnKind })}
+        >
+          <option value="queue">Очередь</option>
+          <option value="in_progress">Работа</option>
+          <option value="done">Готово</option>
+        </select>
+      </label>
+
+      <label className="row row--tight">
+        <input
+          type="checkbox"
+          checked={column.isStartedPoint}
+          onChange={(e) => onUpdate({ isStartedPoint: e.target.checked })}
+        />
+        <span className="small">Здесь работа начинается</span>
+      </label>
+      <label className="row row--tight">
+        <input
+          type="checkbox"
+          checked={column.isFinishedPoint}
+          onChange={(e) => onUpdate({ isFinishedPoint: e.target.checked })}
+        />
+        <span className="small">Здесь работа заканчивается</span>
+      </label>
+      <label className="row row--tight">
+        <input
+          type="checkbox"
+          checked={column.wipLimitHard}
+          disabled={column.wipLimit === null}
+          onChange={(e) => onUpdate({ wipLimitHard: e.target.checked })}
+        />
+        <span className="small">
+          Жёсткий лимит{column.wipLimit === null ? ' (сначала задайте лимит)' : ''}
+        </span>
+      </label>
+
+      <textarea
+        className="description"
+        rows={2}
+        value={policy}
+        placeholder="Правило входа: что должно быть сделано, чтобы карточка попала сюда"
+        aria-label={`Правило входа в колонку «${column.name}»`}
+        onChange={(e) => setPolicy(e.target.value)}
+        onBlur={() => policy !== column.policy && onUpdate({ policy })}
+      />
+    </div>
+  )
+}
+
+/**
+ * Чего не хватает доске для метрик потока. Показывается один раз сверху,
+ * а не на каждой колонке: это свойство доски целиком.
+ */
+function FlowHint({ columns }: { columns: Column[] }) {
+  const issues = flowIssues(columns)
+  if (issues.length === 0) return null
+  return (
+    <div className="note" role="note">
+      {issues.map((text) => (
+        <p key={text} className="small">
+          {text}
+        </p>
+      ))}
+    </div>
   )
 }

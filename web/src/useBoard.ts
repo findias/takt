@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, NetworkError, api } from './api'
-import type { Conflict, LinkKind, Placement } from './api'
+import type { ColumnKind, Conflict, LinkKind, Placement } from './api'
+
+/** Подмножество свойств колонки, которое меняет одна операция. */
+export type ColumnPatch = {
+  kind?: ColumnKind
+  isStartedPoint?: boolean
+  isFinishedPoint?: boolean
+  policy?: string
+  wipLimitHard?: boolean
+}
 import {
   applyPatch,
   fromSnapshot,
@@ -209,6 +218,15 @@ export function useBoard(boardId: string | null) {
     [runAndReload],
   )
 
+  // Разметка колонки: вид, точки потока, политика входа, жёсткость лимита.
+  // Не присланное поле не меняется — так устроена операция, — поэтому здесь
+  // передаётся ровно то, что человек тронул.
+  const updateColumn = useCallback(
+    (columnId: string, patch: ColumnPatch) =>
+      run('UPDATE_COLUMN', { columnId, ...patch }, 'Не удалось изменить колонку'),
+    [run],
+  )
+
   // null снимает лимит. Отсутствие поля ничего не меняет, поэтому «снять»
   // и «не трогать» приходится различать явно.
   const setColumnLimit = useCallback(
@@ -237,6 +255,7 @@ export function useBoard(boardId: string | null) {
     unblockCard,
     createColumn,
     renameColumn,
+    updateColumn,
     setColumnLimit,
   }
 }

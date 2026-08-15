@@ -9,6 +9,8 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   applyPatch,
+  flowIssues,
+  flowMarks,
   fromSnapshot,
   limitLabel,
   parseLimitDraft,
@@ -212,4 +214,47 @@ test('пустое поле снимает лимит, а мусор ничег�
   }
   // Повтор текущего значения — тоже ничего.
   assert.deepEqual(parseLimitDraft('3', 3), { change: false })
+})
+
+test('разметка колонки описывается подписями', () => {
+  const plain = column(COL_A, 'Очередь', 'a0', 'queue')
+  assert.deepEqual(flowMarks(plain), [])
+
+  const work = { ...column(COL_B, 'В работе', 'a1', 'in_progress'), isStartedPoint: true }
+  assert.deepEqual(flowMarks(work), ['начало работы'])
+
+  // Жёсткий лимит без самого лимита ничего не значит и не показывается.
+  assert.deepEqual(flowMarks({ ...work, wipLimitHard: true }), ['начало работы'])
+  assert.deepEqual(flowMarks({ ...work, wipLimitHard: true, wipLimit: 3 }), [
+    'начало работы',
+    'жёсткий лимит',
+  ])
+})
+
+test('доска без точек потока сообщает, чего в ней не посчитать', () => {
+  const columns = [
+    column(COL_A, 'Очередь', 'a0', 'queue'),
+    column(COL_B, 'В работе', 'a1', 'in_progress'),
+  ]
+  const issues = flowIssues(columns)
+  assert.equal(issues.length, 2, `ожидались две жалобы, получено: ${issues.join('; ')}`)
+  assert.ok(issues.some((i) => i.includes('начало работы')))
+  assert.ok(issues.some((i) => i.includes('финиш')))
+
+  const marked = [
+    columns[0],
+    { ...columns[1], isStartedPoint: true },
+    { ...column('col-c', 'Готово', 'a2', 'done'), isFinishedPoint: true },
+  ]
+  assert.deepEqual(flowIssues(marked), [])
+})
+
+test('финиш раньше начала — почти наверняка ошибка разметки', () => {
+  const columns = [
+    { ...column(COL_A, 'Готово', 'a0', 'done'), isFinishedPoint: true },
+    { ...column(COL_B, 'В работе', 'a1', 'in_progress'), isStartedPoint: true },
+  ]
+  const issues = flowIssues(columns)
+  assert.equal(issues.length, 1)
+  assert.ok(issues[0].includes('раньше начала'))
 })
