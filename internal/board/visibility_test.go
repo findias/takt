@@ -19,7 +19,7 @@ import (
 
 // addMember заводит ещё одного человека в уже существующей организации.
 // users и memberships под RLS не попадают, поэтому пишем напрямую.
-func addMember(t *testing.T, db *store.Store, orgID, role string, viewAll bool) string {
+func addMember(t *testing.T, db *store.Store, orgID, role string) string {
 	t.Helper()
 	ctx := context.Background()
 	suffix := uuid.NewString()
@@ -37,12 +37,59 @@ func addMember(t *testing.T, db *store.Store, orgID, role string, viewAll bool) 
 	})
 
 	_, err = db.Pool.Exec(ctx, `
-		insert into memberships (org_id, user_id, role, view_all)
-		values ($1, $2, $3, $4)`, orgID, userID, role, viewAll)
+		insert into memberships (org_id, user_id, role) values ($1, $2, $3)`,
+		orgID, userID, role)
 	if err != nil {
 		t.Fatalf("создание членства: %v", err)
 	}
 	return userID
+}
+
+// observes ставит человека наблюдателем: над одним поддеревом, если задана
+// команда, или над всей организацией, если нет. Раздаёт наблюдение только
+// владелец, поэтому запись идёт от имени владельца фикстуры.
+func (f *fixture) observes(userID string, teamID *string) {
+	f.t.Helper()
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`insert into observers (org_id, user_id, team_id) values ($1, $2, $3)`,
+			f.orgID, userID, teamID)
+		return err
+	})
+}
+
+// team заводит команду, при необходимости внутри другой.
+func (f *fixture) team(name string, parent *string) string {
+	f.t.Helper()
+	var id string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx,
+			`insert into teams (org_id, name, parent_id) values ($1, $2, $3)
+			 returning id`, f.orgID, name, parent).Scan(&id)
+	})
+	return id
+}
+
+// joins вписывает человека в команду.
+func (f *fixture) joins(userID, teamID string) {
+	f.t.Helper()
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`insert into team_members (org_id, team_id, user_id) values ($1, $2, $3)`,
+			f.orgID, teamID, userID)
+		return err
+	})
+}
+
+// assignBoard отдаёт доску фикстуры команде.
+func (f *fixture) assignBoard(teamID string) {
+	f.t.Helper()
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update boards set team_id = $2, visibility = 'team' where id = $1`,
+			f.boardID, teamID)
+		return err
+	})
 }
 
 // sees отвечает, видит ли человек доску фикстуры — и списком, и по прямому
@@ -169,9 +216,10 @@ func TestPoliciesAreEvaluatedOncePerQuery(t *testing.T) {
 
 func TestTeamBoardIsVisibleOnlyToItsTeamAndObservers(t *testing.T) {
 	f := newFixture(t)
-	insider := addMember(t, f.svc.db, f.orgID, "member", false)
-	outsider := addMember(t, f.svc.db, f.orgID, "member", false)
-	observer := addMember(t, f.svc.db, f.orgID, "member", true)
+	insider := addMember(t, f.svc.db, f.orgID, "member")
+	outsider := addMember(t, f.svc.db, f.orgID, "member")
+	observer := addMember(t, f.svc.db, f.orgID, "member")
+	f.observes(observer, nil)
 
 	// До перевода в командную доска открыта всей организации — иначе
 	// миграция прятала бы задним числом то, что уже было видно.
@@ -179,24 +227,9 @@ func TestTeamBoardIsVisibleOnlyToItsTeamAndObservers(t *testing.T) {
 		t.Fatal("доска по умолчанию не видна участнику организации")
 	}
 
-	var teamID string
-	f.inTenant(func(tx pgx.Tx) error {
-		if err := tx.QueryRow(f.ctx,
-			`insert into teams (org_id, name) values ($1, 'Найм') returning id`,
-			f.orgID).Scan(&teamID); err != nil {
-			return err
-		}
-		_, err := tx.Exec(f.ctx,
-			`insert into team_members (org_id, team_id, user_id) values ($1, $2, $3)`,
-			f.orgID, teamID, insider)
-		return err
-	})
-	f.inTenant(func(tx pgx.Tx) error {
-		_, err := tx.Exec(f.ctx,
-			`update boards set team_id = $2, visibility = 'team' where id = $1`,
-			f.boardID, teamID)
-		return err
-	})
+	teamID := f.team("Найм", nil)
+	f.joins(insider, teamID)
+	f.assignBoard(teamID)
 
 	if f.sees(outsider) {
 		t.Error("командная доска осталась видна постороннему в организации")
@@ -215,8 +248,9 @@ func TestTeamBoardIsVisibleOnlyToItsTeamAndObservers(t *testing.T) {
 
 func TestPrivateBoardIsHiddenEvenFromObserverAndOwner(t *testing.T) {
 	f := newFixture(t)
-	named := addMember(t, f.svc.db, f.orgID, "member", false)
-	observer := addMember(t, f.svc.db, f.orgID, "member", true)
+	named := addMember(t, f.svc.db, f.orgID, "member")
+	observer := addMember(t, f.svc.db, f.orgID, "member")
+	f.observes(observer, nil)
 
 	// Порядок здесь не произвольный: закрыть доску можно только вокруг
 	// себя, поэтому владелец вписывает в неё и себя тоже.
@@ -262,7 +296,7 @@ func TestPrivateBoardIsHiddenEvenFromObserverAndOwner(t *testing.T) {
 // никто, включая владельца организации.
 func TestBoardCannotBeClosedAroundSomeoneElse(t *testing.T) {
 	f := newFixture(t)
-	named := addMember(t, f.svc.db, f.orgID, "member", false)
+	named := addMember(t, f.svc.db, f.orgID, "member")
 
 	f.inTenant(func(tx pgx.Tx) error {
 		_, err := tx.Exec(f.ctx,
@@ -289,8 +323,8 @@ func TestBoardCannotBeClosedAroundSomeoneElse(t *testing.T) {
 // читается, чем занята организация.
 func TestBoardRosterIsNotReadableByOutsiders(t *testing.T) {
 	f := newFixture(t)
-	named := addMember(t, f.svc.db, f.orgID, "member", false)
-	outsider := addMember(t, f.svc.db, f.orgID, "member", false)
+	named := addMember(t, f.svc.db, f.orgID, "member")
+	outsider := addMember(t, f.svc.db, f.orgID, "member")
 
 	f.inTenant(func(tx pgx.Tx) error {
 		_, err := tx.Exec(f.ctx,
