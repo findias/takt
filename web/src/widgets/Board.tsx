@@ -4,12 +4,7 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { flowIssues } from '../entities/board/model.ts'
 import { api } from '../shared/api/index.ts'
-import type {
-  BoardAccess as Access,
-  Column,
-  EstimateUnit,
-  Iteration,
-} from '../shared/api/index.ts'
+import type { BoardAccess as Access, Column, EstimateUnit, Iteration } from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
@@ -23,8 +18,14 @@ import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palett
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { nextCard } from '../features/board/navigation.ts'
+import { parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
-import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
+import {
+  GROUPING_NAMES,
+  groupingToQuery,
+  groupsOf,
+  parseGrouping,
+} from '../features/board/grouping.ts'
 import type { Grouping } from '../features/board/grouping.ts'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
@@ -418,6 +419,10 @@ export function Board({
   // меняется хотя бы номер версии, то есть каждый раз.
   const columnIds = base?.columnIds
   const columnsById = base?.columns
+  // Кто чья подзадача — один раз на доску: строка «часть такой-то
+  // задачи» на карточке нужна всем карточкам сразу.
+  const parents = useMemo(() => (base ? parentsOf(base) : {}), [base])
+
   const columnList = useMemo(
     () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
     [columnIds, columnsById],
@@ -426,7 +431,11 @@ export function Board({
   if (board.loadError) {
     return (
       <div className="board-screen">
-        <ErrorState what="загрузить доску" error={board.loadError} onRetry={() => void board.reload()} />
+        <ErrorState
+          what="загрузить доску"
+          error={board.loadError}
+          onRetry={() => void board.reload()}
+        />
       </div>
     )
   }
@@ -450,37 +459,37 @@ export function Board({
 
   const renderColumns = (groupOrder: Record<string, string[]>) =>
     shownColumns.map((columnId) => (
-          <ColumnView
-            key={columnId}
-            name={base.columns[columnId].name}
-            columnId={columnId}
-            column={base.columns[columnId]}
-            cardIds={groupOrder[columnId] ?? []}
-            collapsed={collapsed.has(columnId)}
-            onToggleCollapsed={() => toggleColumn(columnId)}
-            cards={base.cards}
-            unit={unit}
-            sleDays={base.info.sleDays}
-            people={base.people}
-            onAssign={assignCard}
-            justMoved={justMoved}
-            labels={base.labels}
-            cardLabels={base.cardLabels}
-            onLabel={toggleLabel}
-            columns={columnList}
-            onMoveToColumn={moveToColumn}
-            onOpenCard={showCard}
-            onMoveByKeyboard={moveByKeyboard}
-            onNavigate={navigateCards}
-            onCreateCard={(title) => void board.createCard(columnId, title)}
-            onRenameColumn={(name) => void board.renameColumn(columnId, name)}
-            onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
-            onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
-            onRenameCard={renameCard}
-            onArchiveCard={archiveCard}
-          />
+      <ColumnView
+        key={columnId}
+        name={base.columns[columnId].name}
+        columnId={columnId}
+        column={base.columns[columnId]}
+        cardIds={groupOrder[columnId] ?? []}
+        collapsed={collapsed.has(columnId)}
+        onToggleCollapsed={() => toggleColumn(columnId)}
+        cards={base.cards}
+        unit={unit}
+        sleDays={base.info.sleDays}
+        people={base.people}
+        onAssign={assignCard}
+        justMoved={justMoved}
+        labels={base.labels}
+        cardLabels={base.cardLabels}
+        parents={parents}
+        onLabel={toggleLabel}
+        columns={columnList}
+        onMoveToColumn={moveToColumn}
+        onOpenCard={showCard}
+        onMoveByKeyboard={moveByKeyboard}
+        onNavigate={navigateCards}
+        onCreateCard={(title) => void board.createCard(columnId, title)}
+        onRenameColumn={(name) => void board.renameColumn(columnId, name)}
+        onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
+        onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
+        onRenameCard={renameCard}
+        onArchiveCard={archiveCard}
+      />
     ))
-
 
   return (
     <div className="board-screen">
@@ -578,13 +587,13 @@ export function Board({
       {Object.keys(base.cards).length === 0 && (
         <div className="note empty-board board-toolbar" role="note">
           <p className="small">
-            <strong>На доске ещё нет карточек.</strong> Это не поломка —
-            просто здесь пока ничего не заводили.
+            <strong>На доске ещё нет карточек.</strong> Это не поломка — просто здесь пока ничего не
+            заводили.
           </p>
           <p className="muted small">
-            Заведите первую в колонке «{base.columns[base.columnIds[0]]?.name ?? 'первой'}».
-            Дальше её можно перетащить мышью, перенести кнопкой на самой карточке
-            или клавишами: Ctrl со стрелками.
+            Заведите первую в колонке «{base.columns[base.columnIds[0]]?.name ?? 'первой'}». Дальше
+            её можно перетащить мышью, перенести кнопкой на самой карточке или клавишами: Ctrl со
+            стрелками.
           </p>
         </div>
       )}
@@ -664,6 +673,7 @@ export function Board({
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}
           onEstimate={(id, value) => void board.estimateCard(id, value)}
+          onOpenCard={showCard}
           onSubtask={(parentCardId, title) => void board.createSubtask(parentCardId, title)}
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}

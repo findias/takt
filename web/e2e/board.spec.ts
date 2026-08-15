@@ -596,7 +596,7 @@ test('подзадача заводится из карточки одним п�
   // Она сразу видна и в списке подзадач, и на самой доске: это одна
   // и та же карточка, а не запись внутри родителя.
   await expect(page.getByRole('complementary').getByText('Прогнать тесты')).toBeVisible()
-  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1' })).toBeVisible()
+  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
   await expect(cardIn(page, 'Очередь', 'Прогнать тесты')).toBeVisible()
@@ -605,5 +605,25 @@ test('подзадача заводится из карточки одним п�
   // в память вкладки.
   await page.reload()
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
-  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1' })).toBeVisible()
+  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
+
+  // Связь проходится в обе стороны: из родителя — в подзадачу,
+  // из подзадачи — обратно. До этого связь было видно, но пройти по ней
+  // можно было только поиском по доске.
+  await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты' }).click()
+  await expect(page.getByRole('heading', { name: 'Прогнать тесты' })).toBeVisible()
+  await page.getByRole('complementary').getByRole('button', { name: 'Выпустить релиз' }).click()
+  await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // А на самой доске подзадача говорит, чья она часть, — и по этой
+  // строке тоже можно перейти к родителю.
+  const subtask = cardIn(page, 'Очередь', 'Прогнать тесты')
+  await expect(subtask.getByRole('button', { name: 'Выпустить релиз' })).toBeVisible()
+  // Родитель показывает разбиение полосой прогресса.
+  await expect(
+    cardIn(page, 'Очередь', 'Выпустить релиз').getByRole('progressbar', {
+      name: 'Подзадачи: готово 0 из 1',
+    }),
+  ).toBeVisible()
 })

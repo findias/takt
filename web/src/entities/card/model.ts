@@ -35,6 +35,32 @@ export type CardDetails = {
   related: Related[]
 }
 
+/**
+ * Кто чья подзадача: cardId → родитель.
+ *
+ * Считается один раз на доску, а не отдельно для каждой карточки:
+ * на пятистах карточках обход всех связей на каждую карточку — это
+ * пятьсот обходов ради строки в две трети сантиметра.
+ *
+ * Родитель может лежать на другой доске: тогда берётся имя из списка
+ * связанных карточек. Показывать «часть неизвестно чего» нельзя —
+ * такая подпись хуже её отсутствия.
+ */
+export function parentsOf(
+  base: BaseState,
+): Record<string, { id: string; title: string; onThisBoard: boolean }> {
+  const parents: Record<string, { id: string; title: string; onThisBoard: boolean }> = {}
+  for (const link of base.links) {
+    if (link.kind !== 'subtask') continue
+    const own = base.cards[link.fromCard]
+    const foreign = base.linked[link.fromCard]
+    const title = own?.title ?? foreign?.title
+    if (!title) continue
+    parents[link.toCard] = { id: link.fromCard, title, onThisBoard: Boolean(own) }
+  }
+  return parents
+}
+
 export function cardDetails(base: BaseState, cardId: string): CardDetails | null {
   const card = base.cards[cardId]
   if (!card) return null

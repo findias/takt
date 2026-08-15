@@ -40,6 +40,7 @@ export function CardPanel({
   onClose,
   onDescribe,
   onEstimate,
+  onOpenCard,
   onSubtask,
   onLink,
   onUnlink,
@@ -57,6 +58,8 @@ export function CardPanel({
   onClose: () => void
   onDescribe: (cardId: string, description: string) => void
   onEstimate: (cardId: string, estimate: number | null) => void
+  /** Открыть другую карточку этой же доски — по связи. */
+  onOpenCard: (cardId: string) => void
   /** Завести новую подзадачу: название — всё, что нужно спросить. */
   onSubtask: (parentCardId: string, title: string) => void
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
@@ -131,6 +134,7 @@ export function CardPanel({
           <RelatedRow
             related={details.parent}
             canEdit={canEdit}
+            onOpen={onOpenCard}
             onRemove={() => onUnlink(details.parent!.id, card.id, 'subtask')}
           />
         </section>
@@ -166,6 +170,7 @@ export function CardPanel({
             key={s.id}
             related={s}
             canEdit={canEdit}
+            onOpen={onOpenCard}
             onRemove={() => onUnlink(card.id, s.id, 'subtask')}
           />
         ))}
@@ -197,6 +202,7 @@ export function CardPanel({
               related={r}
               canEdit={canEdit}
               showKind
+              onOpen={onOpenCard}
               onRemove={() => onUnlink(card.id, r.id, r.kind)}
             />
           ))}
@@ -206,27 +212,51 @@ export function CardPanel({
   )
 }
 
+/**
+ * Строка связанной карточки.
+ *
+ * Название — кнопка, если карточка на этой доске: связь должна
+ * проходиться в обе стороны. Раньше из подзадачи было видно родителя,
+ * но добраться до него можно было только поиском по доске — то есть
+ * связь показывалась, но не работала.
+ *
+ * Карточку с чужой доски открыть отсюда нельзя: она живёт в другом
+ * адресе, и «открытие», которое унесёт с текущей доски, — это не то,
+ * чего ждут от строки в списке.
+ */
 function RelatedRow({
   related,
   canEdit,
   showKind,
+  onOpen,
   onRemove,
 }: {
   related: Related
   canEdit: boolean
   showKind?: boolean
+  onOpen?: (cardId: string) => void
   onRemove: () => void
 }) {
+  const title = (
+    <>
+      {related.done && <span aria-hidden="true">✓ </span>}
+      {related.done && <span className="sr-only">Готово. </span>}
+      {related.blocked && <span aria-hidden="true">⛔ </span>}
+      {related.blocked && <span className="sr-only">Заблокирована. </span>}
+      {related.title}
+    </>
+  )
+
   return (
     <div className={`related${related.reachable ? '' : ' related--hidden'}`}>
       <div className="member-who">
-        <span>
-          {related.done && <span aria-hidden="true">✓ </span>}
-          {related.done && <span className="sr-only">Готово. </span>}
-          {related.blocked && <span aria-hidden="true">⛔ </span>}
-          {related.blocked && <span className="sr-only">Заблокирована. </span>}
-          {related.title}
-        </span>
+        {related.onThisBoard && onOpen ? (
+          <button className="link related-open" onClick={() => onOpen(related.id)}>
+            {title}
+          </button>
+        ) : (
+          <span>{title}</span>
+        )}
         <span className="muted small">
           {showKind ? `${LINK_KIND_NAMES[related.kind]} · ` : ''}
           {related.where}

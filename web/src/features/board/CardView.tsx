@@ -9,7 +9,7 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
-import { progressLabel } from '../../entities/card/model.ts'
+import { progressLabel, progressRatio } from '../../entities/card/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
@@ -47,6 +47,8 @@ type CardProps = {
   onAssign: (cardId: string, assigneeId: string | null) => void
   labels: Label[]
   cardLabels: string[]
+  /** Родительская задача, если карточка — чья-то подзадача. */
+  parent?: { id: string; title: string; onThisBoard: boolean }
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
@@ -71,6 +73,7 @@ function CardViewInner({
   onAssign,
   labels,
   cardLabels,
+  parent,
   onLabel,
   columns,
   onMoveToColumn,
@@ -220,6 +223,24 @@ function CardViewInner({
         />
       ) : (
         <>
+          {/* Чья это часть — над названием, а не под ним: сначала
+              «где я», потом «что делать». Раньше об этом можно было
+              узнать, только открыв карточку, и подзадача на доске
+              выглядела самостоятельной работой. */}
+          {parent && (
+            <p className="card-parent">
+              <span aria-hidden="true">↳ </span>
+              {parent.onThisBoard ? (
+                <button className="link" onClick={() => onOpen(parent.id)}>
+                  {parent.title}
+                </button>
+              ) : (
+                // Родитель на чужой доске: назвать можем, открыть — нет.
+                <span className="muted">{parent.title}</span>
+              )}
+            </p>
+          )}
+
           <div className="card-head">
             {/* Заголовок — кнопка: у нажимаемой карточки должна быть
                 явная цель и для скринридера, и для клавиатуры. Двойного
@@ -260,11 +281,28 @@ function CardViewInner({
                   Заблокирована: {card.blocked.reason}
                 </span>
               )}
-              {progressLabel(card, unit) && (
-                <span className="mark">{progressLabel(card, unit)}</span>
-              )}
             </div>
           )}
+          {/* Подзадачи — полосой, а не строчкой среди пометок: «0 из 1»
+              в общем ряду читалось как ещё одна пометка, и по доске
+              нельзя было понять, у каких задач работа разбита и как
+              далеко она ушла. */}
+          {card?.progress && card.progress.total > 0 && (
+            <div className="card-progress">
+              <div
+                className="progress"
+                role="progressbar"
+                aria-valuenow={card.progress.done}
+                aria-valuemin={0}
+                aria-valuemax={card.progress.total}
+                aria-label={`Подзадачи: готово ${progressLabel(card, unit)}`}
+              >
+                <div className="progress-fill" style={{ width: `${progressRatio(card) * 100}%` }} />
+              </div>
+              <span className="muted small">{progressLabel(card, unit)}</span>
+            </div>
+          )}
+
           <div className="card-actions">
             {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
                 не помещались и обрезались до «Откры», «Переиме», «Удалит».

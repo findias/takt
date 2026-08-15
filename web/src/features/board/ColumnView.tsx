@@ -4,12 +4,7 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { flowMarks, limitLabel, parseLimitDraft } from '../../entities/board/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
-import type {
-  Column,
-  ColumnKind,
-  EstimateUnit,
-  Label,
-} from '../../shared/api/index.ts'
+import type { Column, ColumnKind, EstimateUnit, Label } from '../../shared/api/index.ts'
 import { IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/icons.tsx'
@@ -44,6 +39,8 @@ type ColumnProps = {
   justMoved: string | null
   labels: Label[]
   cardLabels: Record<string, string[]>
+  /** cardId → родительская задача, если карточка чья-то подзадача. */
+  parents: Record<string, { id: string; title: string; onThisBoard: boolean }>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
@@ -110,12 +107,12 @@ export function ColumnView(props: ColumnProps) {
       // и тащить снова.
       autoScrollForElements({ element }),
       dropTargetForElements({
-      element,
-      canDrop: ({ source }) => source.data.kind === 'card',
-      getData: () => ({ kind: 'column', columnId: props.columnId }),
-      onDragEnter: () => setOver(true),
-      onDragLeave: () => setOver(false),
-      onDrop: () => setOver(false),
+        element,
+        canDrop: ({ source }) => source.data.kind === 'card',
+        getData: () => ({ kind: 'column', columnId: props.columnId }),
+        onDragEnter: () => setOver(true),
+        onDragLeave: () => setOver(false),
+        onDrop: () => setOver(false),
       }),
     )
   }, [props.columnId])
@@ -203,6 +200,7 @@ export function ColumnView(props: ColumnProps) {
             flash={props.justMoved === cardId}
             labels={props.labels}
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
+            parent={props.parents[cardId]}
             onLabel={props.onLabel}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
@@ -230,9 +228,7 @@ export function ColumnView(props: ColumnProps) {
         )}
 
         {props.cardIds.length === 0 && (
-          <p className="empty">
-            Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.
-          </p>
+          <p className="empty">Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.</p>
         )}
       </div>
 

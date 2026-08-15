@@ -1038,6 +1038,44 @@ textarea.description {
   transition: width 0.2s ease;
 }
 
+/* Разбитая работа видна с доски. Полоса узкая и без подписи «подзадачи»:
+   место в карточке дороже слова, а смысл читается из самой полосы
+   и числа рядом. */
+.card-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.card-progress .progress {
+  flex: 1;
+  height: 0.25rem;
+}
+
+/* Родительская задача — строкой над названием, мельче и тише его:
+   это подпись «где я», а не второе название. */
+.card-parent {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.card-parent .link {
+  font-size: inherit;
+  color: var(--ink-3);
+  text-align: left;
+  min-height: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-parent .link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 .related {
   display: flex;
   align-items: center;
