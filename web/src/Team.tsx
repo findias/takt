@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from './api'
-import type { Invite, Member, Principal, Role } from './api'
+import type { AuditEntry, Invite, Member, Principal, Role } from './api'
+import { actorText, auditText, timeText } from './feedModel'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -118,7 +119,63 @@ export function Team({ principal }: { principal: Principal }) {
           )}
         </section>
       )}
+
+      <AuditFeed />
     </div>
+  )
+}
+
+/**
+ * Журнал административных действий.
+ *
+ * Читают его владелец организации и наблюдатель всей организации; всем
+ * остальным приходит пустая лента, и раздел просто не появляется. Отказ
+ * здесь был бы хуже: он подтверждал бы, что журнал есть и в нём что-то
+ * лежит.
+ */
+function AuditFeed() {
+  const [entries, setEntries] = useState<AuditEntry[]>([])
+  const [next, setNext] = useState<number | null>(null)
+  const [loaded, setLoaded] = useState(false)
+
+  const load = useCallback((before?: number) => {
+    api
+      .audit(before)
+      .then((page) => {
+        setEntries((current) => (before ? [...current, ...page.entries] : page.entries))
+        setNext(page.next)
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [])
+
+  useEffect(() => load(), [load])
+
+  if (!loaded || entries.length === 0) return null
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Что происходило</h2>
+      <p className="muted small">
+        Журнал ведёт база, а не приложение: изменение, сделанное в обход интерфейса,
+        попадает сюда наравне с остальными. Записи только дописываются.
+      </p>
+      <ul className="feed">
+        {entries.map((e) => (
+          <li key={e.id}>
+            <span>{auditText(e)}</span>
+            <span className="muted small">
+              {actorText(e.actor)} · {timeText(e.at)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {next !== null && (
+        <button className="link" onClick={() => load(next)}>
+          Показать раньше
+        </button>
+      )}
+    </section>
   )
 }
 

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/konkov/agile/internal/audit"
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/config"
@@ -24,6 +25,7 @@ type Server struct {
 	boards *board.Service
 	orgs   *org.Service
 	teams  *team.Service
+	audit  *audit.Service
 	log    *slog.Logger
 }
 
@@ -34,6 +36,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 		boards: board.New(db),
 		orgs:   org.New(db),
 		teams:  team.New(db),
+		audit:  audit.New(db),
 		log:    log,
 	}
 }
@@ -66,6 +69,7 @@ func (s *Server) Handler() http.Handler {
 
 	s.registerTeamRoutes(mux)
 	s.registerAccessRoutes(mux)
+	s.registerFeedRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.authed(s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.authed(s.handleCreateBoard))

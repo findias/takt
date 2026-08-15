@@ -650,3 +650,23 @@ textarea.description {
   padding-left: 0.5rem;
   border-left: 2px solid var(--rule);
 }
+
+/* --- Ленты --- */
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.feed li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.feed li:last-child {
+  border-bottom: none;
+}

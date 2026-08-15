@@ -107,7 +107,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	tag, err := tx.Exec(ctx, `
 		insert into operations (operation_id, org_id, actor_id, board_id, kind, result)
 		values ($1, $2, $3, $4, $5, '{}'::jsonb)
-		on conflict (operation_id) do nothing`,
+		on conflict (org_id, operation_id) do nothing`,
 		req.OperationID, orgID, actorID, boardID, req.Type)
 	if err != nil {
 		return Result{}, fmt.Errorf("резервирование операции: %w", err)

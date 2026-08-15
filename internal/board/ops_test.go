@@ -322,3 +322,34 @@ func TestBadRequestsAreRejected(t *testing.T) {
 		t.Error("перемещение несуществующей карточки прошло без ошибки")
 	}
 }
+
+// Идентификатор операции придумывает клиент, а таких клиентов много.
+// Пока ключ был глобальным, повтор чужого идентификатора из другой
+// организации ломал операцию: вставка натыкалась на невидимую строку,
+// код читал это как «уже выполнено» и не находил сохранённого результата.
+func TestSameOperationIdInTwoOrgsDoesNotCollide(t *testing.T) {
+	first := newFixture(t)
+	second := newFixture(t)
+	shared := uuid.NewString()
+
+	one, err := first.applyWithID(shared, "CREATE_CARD",
+		map[string]any{"columnId": first.columnA, "title": "Своя"})
+	if err != nil {
+		t.Fatalf("первая организация: %v", err)
+	}
+	two, err := second.applyWithID(shared, "CREATE_CARD",
+		map[string]any{"columnId": second.columnA, "title": "Тоже своя"})
+	if err != nil {
+		t.Fatalf("вторая организация с тем же идентификатором: %v", err)
+	}
+
+	if one.Patch.Cards[0].ID == two.Patch.Cards[0].ID {
+		t.Error("организации получили одну и ту же карточку")
+	}
+	if got := first.titles(first.columnA); len(got) != 1 || got[0] != "Своя" {
+		t.Errorf("в первой организации %v", got)
+	}
+	if got := second.titles(second.columnA); len(got) != 1 || got[0] != "Тоже своя" {
+		t.Errorf("во второй организации %v", got)
+	}
+}

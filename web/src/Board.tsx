@@ -170,6 +170,7 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
       {openCard && base.cards[openCard] && (
         <CardPanel
           base={base}
+          boardId={boardId}
           cardId={openCard}
           canEdit
           onClose={() => setOpenCard(null)}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { LINK_KIND_NAMES } from './api'
-import type { LinkKind } from './api'
+import { LINK_KIND_NAMES, api } from './api'
+import type { BoardEvent, LinkKind } from './api'
+import { actorText, eventText, timeText } from './feedModel'
 import type { BaseState } from './boardModel'
 import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from './cardModel'
 import type { Related } from './cardModel'
@@ -15,6 +16,7 @@ import type { Related } from './cardModel'
  */
 export function CardPanel({
   base,
+  boardId,
   cardId,
   canEdit,
   onClose,
@@ -25,6 +27,7 @@ export function CardPanel({
   onUnblock,
 }: {
   base: BaseState
+  boardId: string
   cardId: string
   canEdit: boolean
   onClose: () => void
@@ -124,6 +127,8 @@ export function CardPanel({
           />
         )}
       </section>
+
+      <History boardId={boardId} cardId={card.id} version={card.version} />
 
       {details.related.length > 0 && (
         <section className="stack">
@@ -292,5 +297,55 @@ function LinkPicker({
         ))}
       </select>
     </div>
+  )
+}
+
+/**
+ * История карточки.
+ *
+ * Читается отдельным запросом, а не приходит в снимке: у доски событий
+ * тысячи, а нужны они на одной карточке и по требованию. Перечитывается
+ * при изменении карточки — версия для того и есть.
+ */
+function History({
+  boardId,
+  cardId,
+  version,
+}: {
+  boardId: string
+  cardId: string
+  version: number
+}) {
+  const [events, setEvents] = useState<BoardEvent[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    api
+      .boardEvents(boardId, cardId)
+      .then((feed) => alive && setEvents(feed.events))
+      .catch(() => alive && setFailed(true))
+    return () => {
+      alive = false
+    }
+  }, [boardId, cardId, version])
+
+  if (failed) return <p className="muted small">Историю не удалось прочитать.</p>
+  if (!events) return <p className="muted small">Загружаем историю…</p>
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">История</h3>
+      <ul className="feed">
+        {events.map((e) => (
+          <li key={e.id}>
+            <span>{eventText(e)}</span>
+            <span className="muted small">
+              {actorText(e.actor)} · {timeText(e.at)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

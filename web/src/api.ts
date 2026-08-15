@@ -88,6 +88,34 @@ export type Observer = {
   teamName: string | null
 }
 
+/** Событие журнала переходов. */
+export type BoardEvent = {
+  id: number
+  cardId: string
+  /** Название карточки текущее, а не на момент события: иначе в ленте
+   *  доски не понять, о чём речь. */
+  cardTitle: string
+  actor: string | null
+  type: string
+  payload: Record<string, unknown>
+  at: string
+}
+
+export type Feed = { events: BoardEvent[]; next: number | null }
+
+/** Запись административного журнала. */
+export type AuditEntry = {
+  id: number
+  actor: string | null
+  action: 'insert' | 'update' | 'delete'
+  subject: string
+  subjectId: string | null
+  payload: Record<string, unknown>
+  at: string
+}
+
+export type AuditPage = { entries: AuditEntry[]; next: number | null }
+
 export type Visibility = 'org' | 'team' | 'private'
 
 export const VISIBILITY_NAMES: Record<Visibility, string> = {
@@ -290,6 +318,20 @@ export const api = {
     request<void>('PUT', `/api/boards/${boardId}/members/${userId}`),
   removeBoardMember: (boardId: string, userId: string) =>
     request<void>('DELETE', `/api/boards/${boardId}/members/${userId}`),
+
+  /** Ленты листаются курсором: журнал растёт, и смещение по номеру
+   *  страницы показывало бы одно и то же дважды. */
+  boardEvents: (boardId: string, cardId?: string, before?: number) =>
+    request<Feed>(
+      'GET',
+      `/api/boards/${boardId}/events?` +
+        new URLSearchParams({
+          ...(cardId ? { cardId } : {}),
+          ...(before ? { before: String(before) } : {}),
+        }).toString(),
+    ),
+  audit: (before?: number) =>
+    request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
   createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),
