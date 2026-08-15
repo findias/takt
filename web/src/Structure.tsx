@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { TEAM_ROLE_NAMES, api } from './api'
-import type { Member, Observer, Principal, Team, TeamMember, TeamRole } from './api'
+import type {
+  Member,
+  Observer,
+  Principal,
+  Team,
+  TeamAdmin,
+  TeamMember,
+  TeamRole,
+} from './api'
 import { allowedParents, buildTree, canNestInside, counters } from './structureModel'
 import type { TreeNode } from './structureModel'
 
@@ -16,15 +24,17 @@ export function Structure({ principal }: { principal: Principal }) {
   const [teams, setTeams] = useState<Team[] | null>(null)
   const [people, setPeople] = useState<Member[]>([])
   const [observers, setObservers] = useState<Observer[]>([])
+  const [admins, setAdmins] = useState<TeamAdmin[]>([])
   const [error, setError] = useState<string | null>(null)
   const isOwner = principal.role === 'owner'
 
   const load = useCallback(() => {
-    Promise.all([api.listTeams(), api.team(), api.listObservers()])
-      .then(([t, org, obs]) => {
+    Promise.all([api.listTeams(), api.team(), api.listObservers(), api.listAdmins()])
+      .then(([t, org, obs, adm]) => {
         setTeams(t.teams)
         setPeople(org.members)
         setObservers(obs.observers)
+        setAdmins(adm.admins)
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить структуру'))
   }, [])
@@ -70,6 +80,14 @@ export function Structure({ principal }: { principal: Principal }) {
           ))}
         </ul>
       </section>
+
+      <Administration
+        admins={admins}
+        teams={teams}
+        people={people}
+        isOwner={isOwner}
+        onAct={act}
+      />
 
       <Observation
         observers={observers}
@@ -379,6 +397,95 @@ function Observation({
           </select>
           <button type="submit" disabled={!userId}>
             Выдать
+          </button>
+        </form>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Кто за что отвечает.
+ *
+ * Администратор подразделения заводит команды под собой, вписывает в них
+ * людей и распоряжается досками своей области — и не трогает соседнюю.
+ * Раздаёт это только владелец организации: полномочие, размножающее само
+ * себя, перестаёт быть ограниченным.
+ */
+function Administration({
+  admins,
+  teams,
+  people,
+  isOwner,
+  onAct,
+}: {
+  admins: TeamAdmin[]
+  teams: Team[]
+  people: Member[]
+  isOwner: boolean
+  onAct: (p: Promise<unknown>) => void
+}) {
+  const [userId, setUserId] = useState('')
+  const [teamId, setTeamId] = useState('')
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Кто за что отвечает</h2>
+      <p className="muted small">
+        Администратор подразделения заводит отделы под собой, вписывает людей
+        и распоряжается досками своей области. Корневые подразделения и раздачу
+        полномочий владелец организации оставляет за собой.
+      </p>
+
+      {admins.length === 0 ? (
+        <p className="muted small">Никто не назначен.</p>
+      ) : (
+        <ul className="member-list">
+          {admins.map((a) => (
+            <li key={a.id}>
+              <div className="member-who">
+                <span>{a.name}</span>
+                <span className="muted small">Подразделение «{a.teamName}»</span>
+              </div>
+              {isOwner && (
+                <button className="link" onClick={() => onAct(api.revokeAdmin(a.id))}>
+                  Снять
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isOwner && people.length > 0 && teams.length > 0 && (
+        <form
+          className="row"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!userId || !teamId) return
+            onAct(api.grantAdmin(userId, teamId))
+            setUserId('')
+            setTeamId('')
+          }}
+        >
+          <select value={userId} onChange={(e) => setUserId(e.target.value)} aria-label="Кому">
+            <option value="">Кому…</option>
+            {people.map((p) => (
+              <option key={p.userId} value={p.userId}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label="За что">
+            <option value="">За какое подразделение…</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" disabled={!userId || !teamId}>
+            Назначить
           </button>
         </form>
       )}

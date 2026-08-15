@@ -25,8 +25,14 @@ func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/teams/{id}/members/{userId}", s.owner(s.handleAddTeamMember))
 	mux.HandleFunc("DELETE /api/teams/{id}/members/{userId}", s.owner(s.handleRemoveTeamMember))
 
+	mux.HandleFunc("GET /api/team-admins", s.authed(s.handleListAdmins))
+	mux.HandleFunc("POST /api/team-admins", s.owner(s.handleGrantAdmin))
+	mux.HandleFunc("DELETE /api/team-admins/{id}", s.owner(s.handleRevokeAdmin))
+
 	mux.HandleFunc("GET /api/observers", s.authed(s.handleListObservers))
-	mux.HandleFunc("POST /api/observers", s.owner(s.handleGrantObservation))
+	// Наблюдение за поддеревом выдаёт и администратор этого поддерева,
+	// поэтому маршрут не требует владельца: решает политика.
+	mux.HandleFunc("POST /api/observers", s.authed(s.handleGrantObservation))
 	mux.HandleFunc("DELETE /api/observers/{id}", s.owner(s.handleRevokeObservation))
 }
 
@@ -190,4 +196,40 @@ func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 		s.fail(w, what, err)
 	}
 	return true
+}
+
+func (s *Server) handleListAdmins(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	admins, err := s.teams.Admins(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "список администраторов", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"admins": admins})
+}
+
+func (s *Server) handleGrantAdmin(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		UserID string `json:"userId"`
+		TeamID string `json:"teamId"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.UserID == "" || req.TeamID == "" {
+		writeError(w, http.StatusBadRequest, "нужны человек и подразделение")
+		return
+	}
+	a, err := s.teams.GrantAdmin(r.Context(), p.OrgID, p.ID, req.UserID, req.TeamID)
+	if s.failTeam(w, "назначение администратора", err) {
+		return
+	}
+	writeJSON(w, http.StatusCreated, a)
+}
+
+func (s *Server) handleRevokeAdmin(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	err := s.teams.RevokeAdmin(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failTeam(w, "снятие администратора", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

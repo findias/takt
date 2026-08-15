@@ -290,6 +290,74 @@ func (s *Service) Revoke(ctx context.Context, orgID, actorID, observerID string)
 		`delete from observers where id = $1`, observerID)
 }
 
+// --- администраторы подразделений ---
+
+// Admin — кто отвечает за поддерево. Полномочие над узлом, а не свойство
+// человека: один и тот же человек бывает администратором направления
+// и рядовым участником соседнего, а роль у него одна.
+type Admin struct {
+	ID       string `json:"id"`
+	UserID   string `json:"userId"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	TeamID   string `json:"teamId"`
+	TeamName string `json:"teamName"`
+}
+
+func (s *Service) Admins(ctx context.Context, orgID, userID string) ([]Admin, error) {
+	out := []Admin{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select a.id, u.id, u.name, u.email, t.id, t.name
+			  from team_admins a
+			  join users u on u.id = a.user_id
+			  join teams t on t.id = a.team_id
+			 order by t.name, u.name`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a Admin
+			if err := rows.Scan(&a.ID, &a.UserID, &a.Name, &a.Email,
+				&a.TeamID, &a.TeamName); err != nil {
+				return err
+			}
+			out = append(out, a)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
+// GrantAdmin ставит человека отвечать за подразделение вместе с его
+// поддеревом. Раздаёт это только владелец организации: полномочие,
+// размножающее само себя, перестаёт быть ограниченным.
+func (s *Service) GrantAdmin(ctx context.Context, orgID, actorID, userID, teamID string) (Admin, error) {
+	var a Admin
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
+			insert into team_admins (org_id, user_id, team_id, granted_by)
+			values ($1, $2, $3, $4) returning id`,
+			orgID, userID, teamID, actorID).Scan(&a.ID)
+		if err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `
+			select u.id, u.name, u.email, t.id, t.name
+			  from team_admins a
+			  join users u on u.id = a.user_id
+			  join teams t on t.id = a.team_id
+			 where a.id = $1`, a.ID).
+			Scan(&a.UserID, &a.Name, &a.Email, &a.TeamID, &a.TeamName)
+	})
+	return a, translate(err)
+}
+
+func (s *Service) RevokeAdmin(ctx context.Context, orgID, actorID, adminID string) error {
+	return s.exec(ctx, orgID, actorID, `delete from team_admins where id = $1`, adminID)
+}
+
 // --- служебное ---
 
 func (s *Service) exec(ctx context.Context, orgID, actorID, sql string, args ...any) error {
@@ -320,8 +388,8 @@ func translate(err error) error {
 			return ErrForbidden
 		case "23503": // foreign_key_violation: нет такого родителя
 			return ErrNotFound
-		case "23505": // unique_violation: наблюдение уже выдано
-			return &TreeError{Reason: "такое наблюдение уже выдано"}
+		case "23505": // unique_violation: полномочие уже выдано
+			return &TreeError{Reason: "такое полномочие уже выдано"}
 		}
 	}
 	return err

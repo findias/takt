@@ -284,3 +284,91 @@ func TestOnlyOwnerChangesStructure(t *testing.T) {
 		t.Errorf("рядовой участник не видит структуру: %v, %d", err, len(list))
 	}
 }
+
+// Администратор подразделения — главный пробел, ради которого всё это
+// заводилось: до него раздавать доступ мог только владелец организации,
+// а в дереве из пяти уровней это неработоспособно.
+func TestSubtreeAdminManagesOnlyItsOwnBranch(t *testing.T) {
+	f := newFixture(t)
+	company := f.create("Компания", nil)
+	dev := f.create("Разработка", &company.ID)
+	platform := f.create("Платформа", &dev.ID)
+	sales := f.create("Продажи", &company.ID)
+
+	head := f.user("member")
+	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, f.owner, head, dev.ID); err != nil {
+		t.Fatalf("назначение администратора: %v", err)
+	}
+
+	// В своей области: завести отдел, вписать человека, выдать наблюдение.
+	inside, err := f.svc.Create(f.ctx, f.orgID, head, "Ядро", &platform.ID)
+	if err != nil {
+		t.Fatalf("администратор не завёл отдел в своей области: %v", err)
+	}
+	if err := f.svc.AddMember(f.ctx, f.orgID, head, inside.ID, head, "lead"); err != nil {
+		t.Errorf("администратор не вписал человека в свой отдел: %v", err)
+	}
+	if _, err := f.svc.Grant(f.ctx, f.orgID, head, head, &dev.ID); err != nil {
+		t.Errorf("администратор не выдал наблюдение за своей областью: %v", err)
+	}
+
+	// В соседней — ничего.
+	if _, err := f.svc.Create(f.ctx, f.orgID, head, "Свой отдел", &sales.ID); !errors.Is(err, ErrForbidden) {
+		t.Errorf("администратор завёл отдел в соседнем направлении: %v", err)
+	}
+	if err := f.svc.Rename(f.ctx, f.orgID, head, sales.ID, "Перехвачено"); err == nil {
+		t.Error("администратор переименовал соседнее направление")
+	}
+	if err := f.svc.AddMember(f.ctx, f.orgID, head, sales.ID, head, "member"); err == nil {
+		t.Error("администратор вписал себя в соседнее направление")
+	}
+
+	// Корень заводит только владелец: у нового корня нет предка, а значит
+	// нет и того, кто мог бы за него отвечать.
+	if _, err := f.svc.Create(f.ctx, f.orgID, head, "Новое направление", nil); !errors.Is(err, ErrForbidden) {
+		t.Errorf("администратор завёл корневое подразделение: %v", err)
+	}
+
+	// И не раздаёт полномочия дальше: иначе власть размножала бы сама себя.
+	other := f.user("member")
+	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, head, other, platform.ID); !errors.Is(err, ErrForbidden) {
+		t.Errorf("администратор назначил администратора: %v", err)
+	}
+
+	// Наблюдение за всей организацией шире любой области и остаётся
+	// за владельцем.
+	if _, err := f.svc.Grant(f.ctx, f.orgID, head, head, nil); !errors.Is(err, ErrForbidden) {
+		t.Errorf("администратор выдал наблюдение за всей организацией: %v", err)
+	}
+}
+
+func TestAdminGrantIsListedAndRevoked(t *testing.T) {
+	f := newFixture(t)
+	dev := f.create("Разработка", nil)
+	head := f.user("member")
+
+	a, err := f.svc.GrantAdmin(f.ctx, f.orgID, f.owner, head, dev.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.TeamName != "Разработка" {
+		t.Errorf("полномочие без подразделения: %+v", a)
+	}
+
+	var tree *TreeError
+	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, f.owner, head, dev.ID); !errors.As(err, &tree) {
+		t.Errorf("повторное назначение: %v", err)
+	}
+
+	list, err := f.svc.Admins(f.ctx, f.orgID, f.owner)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("список администраторов: %v, %d", err, len(list))
+	}
+
+	if err := f.svc.RevokeAdmin(f.ctx, f.orgID, f.owner, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.RevokeAdmin(f.ctx, f.orgID, f.owner, a.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("повторное снятие: %v", err)
+	}
+}

@@ -84,6 +84,18 @@ export const TEAM_ROLE_NAMES: Record<TeamRole, string> = {
   member: 'Участник',
 }
 
+/** Кто отвечает за поддерево. Полномочие над узлом, а не свойство
+ *  человека: один и тот же человек бывает администратором направления
+ *  и рядовым участником соседнего, а роль у него одна. */
+export type TeamAdmin = {
+  id: string
+  userId: string
+  name: string
+  email: string
+  teamId: string
+  teamName: string
+}
+
 /** Наблюдение за поддеревом; без команды — за всей организацией. */
 export type Observer = {
   id: string
@@ -370,6 +382,11 @@ export const api = {
     request<void>('PUT', `/api/teams/${id}/members/${userId}`, { role }),
   removeTeamMember: (id: string, userId: string) =>
     request<void>('DELETE', `/api/teams/${id}/members/${userId}`),
+
+  listAdmins: () => request<{ admins: TeamAdmin[] }>('GET', '/api/team-admins'),
+  grantAdmin: (userId: string, teamId: string) =>
+    request<TeamAdmin>('POST', '/api/team-admins', { userId, teamId }),
+  revokeAdmin: (id: string) => request<void>('DELETE', `/api/team-admins/${id}`),
 
   listObservers: () => request<{ observers: Observer[] }>('GET', '/api/observers'),
   grantObservation: (userId: string, teamId: string | null) =>
