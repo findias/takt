@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useEscape } from './useEscape'
+import { Panel, usePanelMode } from './Panel'
 import { api } from './api'
 import type { FlowReport } from './api'
 
@@ -23,31 +23,35 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
       .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось посчитать'))
   }, [boardId, days])
 
-  useEffect(load, [load])
-  useEscape(onClose)
+  const [mode, setMode] = usePanelMode()
 
-  if (error) return <div className="panel-card">{error}</div>
-  if (!report) return <div className="panel-card">Считаем…</div>
+  useEffect(load, [load])
+
+  const days_ = (
+    <select
+      value={days}
+      aria-label="За сколько дней"
+      onChange={(e) => setDays(Number(e.target.value))}
+    >
+      <option value={28}>4 недели</option>
+      <option value={90}>3 месяца</option>
+      <option value={180}>полгода</option>
+    </select>
+  )
 
   return (
-    <aside className="panel-card" aria-label="Поток">
-      <header className="row row--between">
-        <h2 className="section-title">Поток</h2>
-        <div className="row row--tight">
-          <select
-            value={days}
-            aria-label="За сколько дней"
-            onChange={(e) => setDays(Number(e.target.value))}
-          >
-            <option value={28}>4 недели</option>
-            <option value={90}>3 месяца</option>
-            <option value={180}>полгода</option>
-          </select>
-          <button className="link" onClick={onClose}>
-            Закрыть
-          </button>
-        </div>
-      </header>
+    <Panel
+      mode={mode}
+      onMode={setMode}
+      title="Поток"
+      label="Метрики потока"
+      onClose={onClose}
+      actions={days_}
+    >
+      {error && <p className="error">{error}</p>}
+      {!report && <p className="muted small">Считаем…</p>}
+      {report && (
+        <>
 
       <section className="stack">
         <h3 className="section-title">Время цикла</h3>
@@ -138,9 +142,11 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
             Прогноз складывает случайные недели из прошлого — тысяча испытаний.
             Он говорит только одно: что будет, если дальше будет как было.
           </p>
-        </section>
+          </section>
+        )}
+        </>
       )}
-    </aside>
+    </Panel>
   )
 }
 

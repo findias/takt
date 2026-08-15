@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useEscape } from './useEscape'
+import { Panel, usePanelMode } from './Panel'
 import { LINK_KIND_NAMES, api } from './api'
 import type {
   BoardEvent,
@@ -58,7 +58,7 @@ export function CardPanel({
   /** null снимает поле. */
   onField: (cardId: string, fieldId: string, value: string | number | boolean | null) => void
 }) {
-  useEscape(onClose)
+  const [mode, setMode] = usePanelMode()
 
   const details = cardDetails(base, cardId)
   if (!details) return null
@@ -66,13 +66,13 @@ export function CardPanel({
   const label = progressLabel(card, unit)
 
   return (
-    <aside className="panel-card" aria-label={`Карточка «${card.title}»`}>
-      <header className="row row--between">
-        <h2 className="section-title">{card.title}</h2>
-        <button className="link" onClick={onClose}>
-          Закрыть
-        </button>
-      </header>
+    <Panel
+      mode={mode}
+      onMode={setMode}
+      title={card.title}
+      label={`Карточка «${card.title}»`}
+      onClose={onClose}
+    >
 
       {card.blocked ? (
         <div className="blocked">
@@ -190,7 +190,7 @@ export function CardPanel({
           ))}
         </section>
       )}
-    </aside>
+    </Panel>
   )
 }
 

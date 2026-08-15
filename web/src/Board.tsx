@@ -208,7 +208,15 @@ export function Board({
 
       <div className="row row--between">
         <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
-        <button className="link" onClick={() => setShowFlow((v) => !v)}>
+        <button
+          className="link"
+          onClick={() => {
+            // Две панели разом перекрывают друг друга, а в модальном
+            // режиме ещё и спорят за фокус. Открываем по одной.
+            setOpenCard(null)
+            setShowFlow((v) => !v)
+          }}
+        >
           Поток
         </button>
       </div>
@@ -240,7 +248,10 @@ export function Board({
             unit={unit}
             columns={base.columnIds.map((id) => base.columns[id])}
             onMoveToColumn={moveToColumn}
-            onOpenCard={setOpenCard}
+            onOpenCard={(id) => {
+              setShowFlow(false)
+              setOpenCard(id)
+            }}
             onMoveByKeyboard={moveByKeyboard}
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
