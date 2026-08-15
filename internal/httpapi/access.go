@@ -23,6 +23,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
+	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
+	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
+		s.authed(s.handleCloseIteration))
 }
 
 func (s *Server) handleBoardAccess(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -92,6 +95,9 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
+	case errors.Is(err, board.ErrIterationClosed),
+		errors.Is(err, board.ErrCardInAnotherIteration):
+		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, board.ErrTeamRequired):
 		writeError(w, http.StatusBadRequest, board.ErrTeamRequired.Error())
 	case errors.Is(err, board.ErrBadRequest):
@@ -133,6 +139,47 @@ func (s *Server) handleRestoreBoard(w http.ResponseWriter, r *http.Request, p au
 	}
 	err := s.boards.Restore(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
 	if s.failAccess(w, "возврат доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Итерация заводится и закрывается отдельными вызовами, а не операцией
+// над доской: она не меняет ни порядок карточек, ни версию доски, и
+// проводить её через тот же канал значило бы делать вид, что меняет.
+func (s *Server) handleCreateIteration(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Name     string `json:"name"`
+		Goal     string `json:"goal"`
+		StartsOn string `json:"startsOn"`
+		EndsOn   string `json:"endsOn"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	it, err := s.boards.CreateIteration(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), req.Name, req.Goal, req.StartsOn, req.EndsOn)
+	if s.failAccess(w, "создание итерации", err) {
+		return
+	}
+	writeJSON(w, http.StatusCreated, it)
+}
+
+// Обратного действия у закрытия нет намеренно: закрытие — утверждение
+// «вот что было сделано», и переоткрытие превратило бы отчёты
+// в движущуюся мишень.
+func (s *Server) handleCloseIteration(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	err := s.boards.CloseIteration(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), r.PathValue("iterationId"))
+	if s.failAccess(w, "закрытие итерации", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

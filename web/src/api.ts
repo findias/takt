@@ -201,12 +201,27 @@ export type LinkedCard = {
   blocked: boolean
 }
 
+/** Итерация доски. Вхождение карточки — интервал, а не поле, поэтому
+ *  «что было в итерации тогда» читается отдельно от «что в ней сейчас». */
+export type Iteration = {
+  id: string
+  name: string
+  goal: string
+  startsOn: string
+  endsOn: string
+  closedAt: string | null
+  cardCount: number
+}
+
 export type Snapshot = {
   board: BoardInfo
   columns: Column[]
   cards: Card[]
   links: Link[]
   linked: LinkedCard[]
+  iterations: Iteration[]
+  /** cardId → iterationId для открытых вхождений. */
+  cardIterations: Record<string, string>
 }
 
 export type Patch = {
@@ -343,6 +358,13 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
+  createIteration: (boardId: string, body: { name: string; goal: string; startsOn: string; endsOn: string }) =>
+    request<Iteration>('POST', `/api/boards/${boardId}/iterations`, body),
+  /** Обратного действия нет намеренно: закрытие — утверждение о том, что
+   *  было сделано, и переоткрытие превратило бы отчёты в движущуюся мишень. */
+  closeIteration: (boardId: string, iterationId: string) =>
+    request<void>('POST', `/api/boards/${boardId}/iterations/${iterationId}/close`),
+
   archivedBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards/archived'),
   /** Убирает доску с глаз, не удаляя: карточки и журнал остаются, по ним
    *  считается поток. Поэтому у действия есть обратное. */

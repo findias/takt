@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { LINK_KIND_NAMES, api } from './api'
-import type { BoardEvent, EstimateUnit, LinkKind } from './api'
+import type { BoardEvent, EstimateUnit, Iteration, LinkKind } from './api'
 import { actorText, eventText, timeText } from './feedModel'
 import type { BaseState } from './boardModel'
 import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from './cardModel'
@@ -27,6 +27,7 @@ export function CardPanel({
   onUnlink,
   onBlock,
   onUnblock,
+  onIteration,
 }: {
   base: BaseState
   boardId: string
@@ -40,6 +41,8 @@ export function CardPanel({
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
+  /** null убирает карточку из текущей итерации. */
+  onIteration: (cardId: string, iterationId: string | null) => void
 }) {
   const details = cardDetails(base, cardId)
   if (!details) return null
@@ -71,6 +74,13 @@ export function CardPanel({
       ) : (
         canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
       )}
+
+      <IterationPicker
+        iterations={base.iterations}
+        current={base.cardIterations[card.id] ?? null}
+        canEdit={canEdit}
+        onChange={(id) => onIteration(card.id, id)}
+      />
 
       <Estimate
         value={card.estimate}
@@ -189,6 +199,58 @@ function RelatedRow({
         </button>
       )}
     </div>
+  )
+}
+
+/**
+ * Итерация карточки.
+ *
+ * Предлагаются только открытые: закрытая итерация — утверждение о том, что
+ * было сделано, и дописывать в неё задним числом нельзя. Текущая итерация
+ * показывается всегда, даже закрытая, иначе карточка выглядела бы ничьей.
+ */
+function IterationPicker({
+  iterations,
+  current,
+  canEdit,
+  onChange,
+}: {
+  iterations: Iteration[]
+  current: string | null
+  canEdit: boolean
+  onChange: (iterationId: string | null) => void
+}) {
+  const open = iterations.filter((i) => i.closedAt === null)
+  const currentIteration = iterations.find((i) => i.id === current)
+  if (open.length === 0 && !currentIteration) return null
+
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        Итерация: {currentIteration ? currentIteration.name : 'не назначена'}
+      </p>
+    )
+  }
+
+  return (
+    <label className="row row--tight">
+      <span className="muted small">Итерация</span>
+      <select
+        value={current ?? ''}
+        aria-label="Итерация карточки"
+        onChange={(e) => onChange(e.target.value || null)}
+      >
+        <option value="">Без итерации</option>
+        {currentIteration?.closedAt && (
+          <option value={currentIteration.id}>{currentIteration.name} (закрыта)</option>
+        )}
+        {open.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

@@ -55,6 +55,8 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
     order: { col: cards.map((c) => c.id) },
     links,
     linked: Object.fromEntries(linked.map((c) => [c.id, c])),
+    iterations: [],
+    cardIterations: {},
   } as BaseState
 }
 

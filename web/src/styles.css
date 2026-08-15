@@ -674,3 +674,15 @@ textarea.description {
 .estimate-input {
   width: 5rem;
 }
+
+.iterations {
+  margin: 0.3rem 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.iterations .mark {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}

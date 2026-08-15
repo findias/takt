@@ -60,6 +60,8 @@ function snapshot(cards: Card[]): Snapshot {
     board: { id: 'board', name: 'Доска', version: 1 },
     links: [],
     linked: [],
+    iterations: [],
+    cardIterations: {},
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),

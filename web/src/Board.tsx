@@ -12,7 +12,8 @@ import {
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
 import type { BaseState } from './boardModel.ts'
-import type { Card, Column, ColumnKind, EstimateUnit } from './api'
+import { api } from './api'
+import type { Card, Column, ColumnKind, EstimateUnit, Iteration } from './api'
 import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
@@ -152,6 +153,7 @@ export function Board({
       </div>
 
       <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+      <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
 
       <div className="columns">
         {base.columnIds.map((columnId) => (
@@ -190,6 +192,13 @@ export function Board({
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={(id, reason) => void board.blockCard(id, reason)}
           onUnblock={(id) => void board.unblockCard(id)}
+          onIteration={(id, iterationId) => {
+            const current = base.cardIterations[id]
+            // Перенос — это выход из одного и вход в другой, и оба факта
+            // остаются в истории: карточка не может идти в двух сразу.
+            if (current) void board.removeFromIteration(id, current)
+            if (iterationId) void board.addToIteration(id, iterationId)
+          }}
         />
       )}
 
@@ -702,6 +711,91 @@ function FlowHint({ columns }: { columns: Column[] }) {
           {text}
         </p>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Итерации доски.
+ *
+ * Закрытие необратимо, поэтому спрашивается подтверждением: это
+ * утверждение «вот что было сделано», а не отметка о прочтении.
+ */
+function Iterations({
+  boardId,
+  iterations,
+  onChanged,
+}: {
+  boardId: string
+  iterations: Iteration[]
+  onChanged: () => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const open = iterations.filter((i) => i.closedAt === null)
+
+  const act = (p: Promise<unknown>) => {
+    setError(null)
+    p.then(onChanged).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+  }
+
+  return (
+    <div className="iterations">
+      {error && <p className="error">{error}</p>}
+      <div className="row row--tight">
+        {open.length === 0 && !adding && <span className="muted small">Итераций нет</span>}
+        {open.map((i) => (
+          <span key={i.id} className="mark" title={i.goal}>
+            {i.name} · {i.startsOn}—{i.endsOn} · {i.cardCount}
+            <button
+              className="link"
+              onClick={() => {
+                if (window.confirm(`Закрыть «${i.name}»? Состав замрёт, вернуть нельзя.`)) {
+                  act(api.closeIteration(boardId, i.id))
+                }
+              }}
+            >
+              закрыть
+            </button>
+          </span>
+        ))}
+        {!adding && (
+          <button className="link" onClick={() => setAdding(true)}>
+            + итерация
+          </button>
+        )}
+      </div>
+
+      {adding && (
+        <form
+          className="row row--tight"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const form = e.currentTarget
+            const data = new FormData(form)
+            const name = String(data.get('name') ?? '').trim()
+            if (!name) return
+            act(
+              api.createIteration(boardId, {
+                name,
+                goal: String(data.get('goal') ?? ''),
+                startsOn: String(data.get('startsOn') ?? ''),
+                endsOn: String(data.get('endsOn') ?? ''),
+              }),
+            )
+            setAdding(false)
+          }}
+        >
+          <input name="name" autoFocus placeholder="Название" required />
+          <input name="startsOn" type="date" required aria-label="Начало" />
+          <input name="endsOn" type="date" required aria-label="Конец" />
+          <input name="goal" placeholder="Цель" />
+          <button type="submit">Создать</button>
+          <button type="button" className="link" onClick={() => setAdding(false)}>
+            Отмена
+          </button>
+        </form>
+      )}
     </div>
   )
 }

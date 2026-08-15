@@ -164,6 +164,12 @@ type Snapshot struct {
 	// правильный ответ — существование связи скрывать незачем, а вот
 	// содержимое недоступной доски раскрывать нельзя.
 	Linked []LinkedCard `json:"linked"`
+	// Итерации доски и текущее вхождение карточек. Состав на прошлые
+	// моменты живёт в интервалах и читается отдельным запросом — снимку
+	// доски он не нужен, ему нужно «сейчас».
+	Iterations []Iteration `json:"iterations"`
+	// cardId → iterationId для открытых вхождений.
+	CardIterations map[string]string `json:"cardIterations"`
 }
 
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
@@ -329,7 +335,10 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 		}
 		cardRows.Close()
 
-		return enrich(ctx, tx, boardID, &snap)
+		if err := enrich(ctx, tx, boardID, &snap); err != nil {
+			return err
+		}
+		return loadIterations(ctx, tx, boardID, &snap)
 	})
 	return snap, err
 }
@@ -462,7 +471,63 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		}
 		snap.Linked = append(snap.Linked, c)
 	}
-	return foreignRows.Err()
+	if err := foreignRows.Err(); err != nil {
+		return err
+	}
+	foreignRows.Close()
+
+	return nil
+}
+
+// loadIterations читает итерации доски и текущие вхождения карточек.
+//
+// Отдельной функцией, а не хвостом enrich: там есть ранний выход для
+// доски без связей, и итерации на такой доске просто не доходили бы
+// до ответа. Тест это и поймал.
+func loadIterations(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) error {
+	iterRows, err := tx.Query(ctx, `
+		select `+iterationFields+`,
+		       (select count(*) from iteration_cards ic
+		         where ic.iteration_id = i.id and ic.removed_at is null)
+		  from iterations i
+		 where i.board_id = $1
+		 order by i.starts_on desc, i.created_at desc`, boardID)
+	if err != nil {
+		return err
+	}
+	defer iterRows.Close()
+	snap.Iterations = []Iteration{}
+	for iterRows.Next() {
+		var it Iteration
+		if err := iterRows.Scan(&it.ID, &it.Name, &it.Goal, &it.StartsOn,
+			&it.EndsOn, &it.ClosedAt, &it.CardCount); err != nil {
+			return err
+		}
+		snap.Iterations = append(snap.Iterations, it)
+	}
+	if err := iterRows.Err(); err != nil {
+		return err
+	}
+	iterRows.Close()
+
+	memberRows, err := tx.Query(ctx, `
+		select ic.card_id, ic.iteration_id
+		  from iteration_cards ic
+		  join iterations i on i.id = ic.iteration_id
+		 where i.board_id = $1 and ic.removed_at is null`, boardID)
+	if err != nil {
+		return err
+	}
+	defer memberRows.Close()
+	snap.CardIterations = map[string]string{}
+	for memberRows.Next() {
+		var cardID, iterationID string
+		if err := memberRows.Scan(&cardID, &iterationID); err != nil {
+			return err
+		}
+		snap.CardIterations[cardID] = iterationID
+	}
+	return memberRows.Err()
 }
 
 // CardOrder — текущий порядок колонки, который возвращается клиенту

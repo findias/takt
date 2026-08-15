@@ -553,6 +553,11 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrBadRequest):
 		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, board.ErrIterationClosed),
+		errors.Is(err, board.ErrCardInAnotherIteration):
+		// Не сбой и не ошибка запроса: правило итерации, о котором надо
+		// сказать словами. Повтор того же запроса не поможет.
+		writeError(w, http.StatusConflict, err.Error())
 	default:
 		var conflict *board.ConflictError
 		if errors.As(err, &conflict) {

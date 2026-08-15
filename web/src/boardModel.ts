@@ -13,6 +13,7 @@ import type {
   BoardInfo,
   Card,
   Column,
+  Iteration,
   Link,
   LinkedCard,
   Placement,
@@ -32,6 +33,9 @@ export type BaseState = {
   /** Карточки с других досок, на которые ведут связи: id → карточка.
    *  Связь без этого — голый идентификатор, показать по нему нечего. */
   linked: Record<string, LinkedCard>
+  iterations: Iteration[]
+  /** cardId → iterationId, только открытые вхождения. */
+  cardIterations: Record<string, string>
 }
 
 export type MoveCommand = {
@@ -69,6 +73,8 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     order,
     links: snap.links,
     linked,
+    iterations: snap.iterations,
+    cardIterations: snap.cardIterations,
   }
 }
 

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // Доступ к доске через HTTP: команда, видимость, поимённый состав.
@@ -164,5 +166,71 @@ func TestBoardIsArchivedAndRestoredOverHTTP(t *testing.T) {
 	// Повтор ничего не меняет и говорит об этом.
 	if code, _ := owner.do("POST", "/api/boards/"+boardID+"/restore", nil); code != http.StatusNotFound {
 		t.Errorf("повторный возврат: код %d, ожидался 404", code)
+	}
+}
+
+// Итерации через HTTP. Проверяется то же, что и на сервисе, но здесь
+// важнее форма отказа: правило итерации — конфликт с объяснением,
+// а не пятисотка.
+func TestIterationOverHTTP(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	boardID := owner.board("Найм")
+
+	raw := owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	var snap struct {
+		Columns []struct{ ID string } `json:"columns"`
+	}
+	if err := json.Unmarshal(raw, &snap); err != nil {
+		t.Fatal(err)
+	}
+
+	raw = owner.mustDo("POST", "/api/boards/"+boardID+"/iterations", map[string]any{
+		"name": "Спринт 1", "goal": "Довести до стенда",
+		"startsOn": "2026-08-01", "endsOn": "2026-08-14",
+	}, http.StatusCreated)
+	iterationID, _ := field(t, raw, "id").(string)
+	if iterationID == "" {
+		t.Fatalf("итерация не вернула идентификатор: %s", raw)
+	}
+
+	// Конец раньше начала — ошибка клиента, а не сбой.
+	if code, _ := owner.do("POST", "/api/boards/"+boardID+"/iterations", map[string]any{
+		"name": "Задом наперёд", "startsOn": "2026-08-14", "endsOn": "2026-08-01",
+	}); code != http.StatusBadRequest {
+		t.Errorf("итерация с концом раньше начала: код %d, ожидался 400", code)
+	}
+
+	card := owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "CREATE_CARD",
+		"payload":     map[string]any{"columnId": snap.Columns[0].ID, "title": "Задача"},
+	}, http.StatusOK)
+	cardID, _ := field(t, card, "patch", "cards").([]any)[0].(map[string]any)["id"].(string)
+
+	owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "ADD_TO_ITERATION",
+		"payload":     map[string]any{"cardId": cardID, "iterationId": iterationID},
+	}, http.StatusOK)
+
+	raw = owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	if got := field(t, raw, "cardIterations", cardID); got != iterationID {
+		t.Errorf("снимок не показывает вхождение карточки в итерацию: %v", got)
+	}
+
+	owner.mustDo("POST", "/api/boards/"+boardID+"/iterations/"+iterationID+"/close",
+		nil, http.StatusNoContent)
+
+	code, body := owner.do("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "ADD_TO_ITERATION",
+		"payload":     map[string]any{"cardId": cardID, "iterationId": iterationID},
+	})
+	if code != http.StatusConflict {
+		t.Fatalf("добавление в закрытую итерацию: код %d, ожидался 409; тело: %s", code, body)
+	}
+	if msg, _ := field(t, body, "error").(string); msg == "" {
+		t.Error("отказ пришёл без объяснения")
 	}
 }

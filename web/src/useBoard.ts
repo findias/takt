@@ -206,6 +206,21 @@ export function useBoard(boardId: string | null) {
     [run, reload],
   )
 
+  // Итерация не меняет ни порядок карточек, ни версию доски, но меняет
+  // состав, который показывает снимок, — поэтому после неё перечитываем.
+  const addToIteration = useCallback(
+    (cardId: string, iterationId: string) =>
+      runAndReload('ADD_TO_ITERATION', { cardId, iterationId },
+        'Не удалось добавить в итерацию'),
+    [runAndReload],
+  )
+  const removeFromIteration = useCallback(
+    (cardId: string, iterationId: string) =>
+      runAndReload('REMOVE_FROM_ITERATION', { cardId, iterationId },
+        'Не удалось убрать из итерации'),
+    [runAndReload],
+  )
+
   const linkCards = useCallback(
     (fromCard: string, toCard: string, kind: LinkKind) =>
       runAndReload('LINK_CARDS', { fromCard, toCard, kind }, 'Не удалось связать карточки'),
@@ -262,6 +277,8 @@ export function useBoard(boardId: string | null) {
     unlinkCards,
     blockCard,
     unblockCard,
+    addToIteration,
+    removeFromIteration,
     createColumn,
     renameColumn,
     updateColumn,
