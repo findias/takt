@@ -71,6 +71,16 @@ func (s *Service) Create(ctx context.Context, name, ownerUserID string) (auth.Me
 		if err != nil {
 			return err
 		}
+		// Единственное место, где область выставляется посреди транзакции:
+		// до вставки арендатора не существует, а членство уже должно
+		// попасть в журнал именным.
+		if _, err = tx.Exec(ctx, `
+			select set_config('app.current_org', $1, true),
+			       set_config('app.current_user', $2, true)`,
+			m.OrgID, ownerUserID); err != nil {
+			return err
+		}
+
 		m.Role = auth.RoleOwner
 		_, err = tx.Exec(ctx,
 			`insert into memberships (org_id, user_id, role) values ($1, $2, 'owner')`,
@@ -104,11 +114,11 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 }
 
 // SetRole меняет роль участника.
-func (s *Service) SetRole(ctx context.Context, orgID, userID, role string) error {
+func (s *Service) SetRole(ctx context.Context, orgID, actorID, userID, role string) error {
 	if role != auth.RoleOwner && role != auth.RoleMember && role != auth.RoleViewer {
 		return fmt.Errorf("неизвестная роль %q", role)
 	}
-	return s.db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		if role != auth.RoleOwner {
 			if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
 				return err
@@ -129,8 +139,8 @@ func (s *Service) SetRole(ctx context.Context, orgID, userID, role string) error
 
 // Remove исключает человека из организации. Личность и её членство
 // в других организациях не затрагиваются.
-func (s *Service) Remove(ctx context.Context, orgID, userID string) error {
-	return s.db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
+func (s *Service) Remove(ctx context.Context, orgID, actorID, userID string) error {
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
 			return err
 		}
@@ -212,7 +222,7 @@ func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, bas
 	}
 
 	var inv Invite
-	err = s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
+	err = s.db.InTenant(ctx, orgID, invitedBy, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 			values ($1, $2, $3, $4, $5, $6)
@@ -252,8 +262,8 @@ func (s *Service) PendingInvites(ctx context.Context, orgID string) ([]Invite, e
 	return out, err
 }
 
-func (s *Service) RevokeInvite(ctx context.Context, orgID, inviteID string) error {
-	return s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
+func (s *Service) RevokeInvite(ctx context.Context, orgID, actorID, inviteID string) error {
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
 			`update invites set revoked_at = now()
 			  where id = $1 and accepted_at is null and revoked_at is null`, inviteID)
@@ -321,6 +331,16 @@ func (s *Service) Accept(ctx context.Context, token, userID string) (auth.Member
 			return ErrInviteInvalid
 		}
 		if err != nil {
+			return err
+		}
+
+		// Область открывалась токеном, а не организацией: до чтения
+		// приглашения ни арендатор, ни человек не были известны. Теперь
+		// известны оба, и принятие приглашения попадёт в журнал именным.
+		if _, err = tx.Exec(ctx, `
+			select set_config('app.current_org', $1, true),
+			       set_config('app.current_user', $2, true)`,
+			orgID, userID); err != nil {
 			return err
 		}
 

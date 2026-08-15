@@ -348,7 +348,7 @@ func (s *Server) handleInvite(w http.ResponseWriter, r *http.Request, p auth.Pri
 }
 
 func (s *Server) handleRevokeInvite(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	err := s.orgs.RevokeInvite(r.Context(), p.OrgID, r.PathValue("id"))
+	err := s.orgs.RevokeInvite(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
 	if errors.Is(err, org.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "приглашение не найдено")
 		return
@@ -367,12 +367,12 @@ func (s *Server) handleSetRole(w http.ResponseWriter, r *http.Request, p auth.Pr
 	if !decode(w, r, &req) {
 		return
 	}
-	err := s.orgs.SetRole(r.Context(), p.OrgID, r.PathValue("userId"), req.Role)
+	err := s.orgs.SetRole(r.Context(), p.OrgID, p.ID, r.PathValue("userId"), req.Role)
 	s.writeMembershipResult(w, err, "смена роли")
 }
 
 func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	err := s.orgs.Remove(r.Context(), p.OrgID, r.PathValue("userId"))
+	err := s.orgs.Remove(r.Context(), p.OrgID, p.ID, r.PathValue("userId"))
 	s.writeMembershipResult(w, err, "исключение из команды")
 }
 
