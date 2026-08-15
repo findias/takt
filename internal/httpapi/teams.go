@@ -17,13 +17,15 @@ import (
 
 func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/teams", s.authed(s.handleListTeams))
-	mux.HandleFunc("POST /api/teams", s.owner(s.handleCreateTeam))
-	mux.HandleFunc("PATCH /api/teams/{id}", s.owner(s.handleUpdateTeam))
-	mux.HandleFunc("DELETE /api/teams/{id}", s.owner(s.handleArchiveTeam))
+	mux.HandleFunc("POST /api/teams", s.authed(s.handleCreateTeam))
+	mux.HandleFunc("PATCH /api/teams/{id}", s.authed(s.handleUpdateTeam))
+	mux.HandleFunc("DELETE /api/teams/{id}", s.authed(s.handleArchiveTeam))
 
 	mux.HandleFunc("GET /api/teams/{id}/members", s.authed(s.handleTeamMembers))
-	mux.HandleFunc("PUT /api/teams/{id}/members/{userId}", s.owner(s.handleAddTeamMember))
-	mux.HandleFunc("DELETE /api/teams/{id}/members/{userId}", s.owner(s.handleRemoveTeamMember))
+	// Состав подразделения меняет и его администратор, поэтому маршруты
+	// не требуют владельца: решает политика.
+	mux.HandleFunc("PUT /api/teams/{id}/members/{userId}", s.authed(s.handleAddTeamMember))
+	mux.HandleFunc("DELETE /api/teams/{id}/members/{userId}", s.authed(s.handleRemoveTeamMember))
 
 	mux.HandleFunc("GET /api/team-admins", s.authed(s.handleListAdmins))
 	mux.HandleFunc("POST /api/team-admins", s.owner(s.handleGrantAdmin))
@@ -114,17 +116,8 @@ func (s *Server) handleTeamMembers(w http.ResponseWriter, r *http.Request, p aut
 }
 
 func (s *Server) handleAddTeamMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	var req struct {
-		Role string `json:"role"`
-	}
-	if !decode(w, r, &req) {
-		return
-	}
-	if req.Role == "" {
-		req.Role = "member"
-	}
 	err := s.teams.AddMember(r.Context(), p.OrgID, p.ID,
-		r.PathValue("id"), r.PathValue("userId"), req.Role)
+		r.PathValue("id"), r.PathValue("userId"))
 	if s.failTeam(w, "добавление в команду", err) {
 		return
 	}

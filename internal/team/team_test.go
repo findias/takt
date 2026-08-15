@@ -178,23 +178,31 @@ func TestMembersComeOnlyFromTheOrganisation(t *testing.T) {
 	team := f.create("Найм", nil)
 	inside := f.user("member")
 
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, inside, "lead"); err != nil {
+	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, inside); err != nil {
 		t.Fatalf("добавление в команду: %v", err)
 	}
 	members, err := f.svc.Members(f.ctx, f.orgID, f.owner, team.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(members) != 1 || members[0].UserID != inside || members[0].Role != "lead" {
+	if len(members) != 1 || members[0].UserID != inside {
 		t.Fatalf("состав команды %+v", members)
 	}
-
-	// Повторное добавление меняет роль, а не ломается.
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, inside, "member"); err != nil {
-		t.Fatalf("смена роли в команде: %v", err)
+	// Ведущий — тот, у кого есть запись администратора на этом узле,
+	// а не пометка рядом с именем.
+	if members[0].Lead {
+		t.Errorf("рядовой участник помечен ведущим: %+v", members[0])
 	}
-	if members, _ = f.svc.Members(f.ctx, f.orgID, f.owner, team.ID); members[0].Role != "member" {
-		t.Errorf("роль не сменилась: %+v", members)
+	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, f.owner, inside, team.ID); err != nil {
+		t.Fatal(err)
+	}
+	if members, _ = f.svc.Members(f.ctx, f.orgID, f.owner, team.ID); !members[0].Lead {
+		t.Errorf("администратор узла не показан ведущим: %+v", members[0])
+	}
+
+	// Повторное добавление не ломается.
+	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, inside); err != nil {
+		t.Fatalf("повторное добавление: %v", err)
 	}
 
 	// Посторонний — тот, кого нет в организации.
@@ -209,7 +217,7 @@ func TestMembersComeOnlyFromTheOrganisation(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = f.db.Pool.Exec(context.Background(), `delete from users where id = $1`, outsider)
 	})
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, outsider, "member"); !errors.Is(err, ErrNotFound) {
+	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, outsider); !errors.Is(err, ErrNotFound) {
 		t.Errorf("посторонний принят в команду: %v", err)
 	}
 
@@ -305,7 +313,7 @@ func TestSubtreeAdminManagesOnlyItsOwnBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("администратор не завёл отдел в своей области: %v", err)
 	}
-	if err := f.svc.AddMember(f.ctx, f.orgID, head, inside.ID, head, "lead"); err != nil {
+	if err := f.svc.AddMember(f.ctx, f.orgID, head, inside.ID, head); err != nil {
 		t.Errorf("администратор не вписал человека в свой отдел: %v", err)
 	}
 	if _, err := f.svc.Grant(f.ctx, f.orgID, head, head, &dev.ID); err != nil {
@@ -319,7 +327,7 @@ func TestSubtreeAdminManagesOnlyItsOwnBranch(t *testing.T) {
 	if err := f.svc.Rename(f.ctx, f.orgID, head, sales.ID, "Перехвачено"); err == nil {
 		t.Error("администратор переименовал соседнее направление")
 	}
-	if err := f.svc.AddMember(f.ctx, f.orgID, head, sales.ID, head, "member"); err == nil {
+	if err := f.svc.AddMember(f.ctx, f.orgID, head, sales.ID, head); err == nil {
 		t.Error("администратор вписал себя в соседнее направление")
 	}
 

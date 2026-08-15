@@ -73,15 +73,11 @@ export type TeamMember = {
   userId: string
   name: string
   email: string
-  role: TeamRole
+  /** Ведущий — тот, у кого есть полномочие администратора именно на этом
+   *  узле. Отдельной пометки в составе нет: два поля, описывающие одно
+   *  и то же, рано или поздно расходятся. */
+  lead: boolean
   addedAt: string
-}
-
-export type TeamRole = 'lead' | 'member'
-
-export const TEAM_ROLE_NAMES: Record<TeamRole, string> = {
-  lead: 'Ведущий',
-  member: 'Участник',
 }
 
 /** Кто отвечает за поддерево. Полномочие над узлом, а не свойство
@@ -378,8 +374,8 @@ export const api = {
   archiveTeam: (id: string) => request<void>('DELETE', `/api/teams/${id}`),
 
   teamMembers: (id: string) => request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),
-  addTeamMember: (id: string, userId: string, role: TeamRole) =>
-    request<void>('PUT', `/api/teams/${id}/members/${userId}`, { role }),
+  addTeamMember: (id: string, userId: string) =>
+    request<void>('PUT', `/api/teams/${id}/members/${userId}`),
   removeTeamMember: (id: string, userId: string) =>
     request<void>('DELETE', `/api/teams/${id}/members/${userId}`),
 

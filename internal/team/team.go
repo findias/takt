@@ -63,10 +63,13 @@ type Team struct {
 }
 
 type Member struct {
-	UserID  string    `json:"userId"`
-	Name    string    `json:"name"`
-	Email   string    `json:"email"`
-	Role    string    `json:"role"`
+	UserID string `json:"userId"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	// Ведущий — тот, у кого есть запись администратора именно на этом
+	// узле. Отдельной пометки в составе нет намеренно: два поля,
+	// описывающие одно и то же, рано или поздно расходятся.
+	Lead    bool      `json:"lead"`
 	AddedAt time.Time `json:"addedAt"`
 }
 
@@ -130,18 +133,21 @@ func (s *Service) Rename(ctx context.Context, orgID, actorID, teamID, name strin
 	if name == "" {
 		return fmt.Errorf("у команды должно быть название")
 	}
-	return s.exec(ctx, orgID, actorID,
-		`update teams set name = $2 where id = $1 and archived_at is null`,
-		teamID, name)
+	return s.explain(ctx, orgID, actorID,
+		s.exec(ctx, orgID, actorID,
+			`update teams set name = $2 where id = $1 and archived_at is null`, teamID, name),
+		`select exists (select 1 from teams where id = $1 and archived_at is null)`, teamID)
 }
 
 // Move переносит подразделение под другого родителя; nil делает его
 // корневым. Перенос переписывает путь всему поддереву — это делает
 // триггер, и он же отвергает цикл и выход за предел глубины.
 func (s *Service) Move(ctx context.Context, orgID, actorID, teamID string, parentID *string) error {
-	return s.exec(ctx, orgID, actorID,
-		`update teams set parent_id = $2 where id = $1 and archived_at is null`,
-		teamID, parentID)
+	return s.explain(ctx, orgID, actorID,
+		s.exec(ctx, orgID, actorID,
+			`update teams set parent_id = $2 where id = $1 and archived_at is null`,
+			teamID, parentID),
+		`select exists (select 1 from teams where id = $1 and archived_at is null)`, teamID)
 }
 
 func (s *Service) Archive(ctx context.Context, orgID, actorID, teamID string) error {
@@ -179,7 +185,9 @@ func (s *Service) Members(ctx context.Context, orgID, userID, teamID string) ([]
 	out := []Member{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select u.id, u.name, u.email, tm.role, tm.added_at
+			select u.id, u.name, u.email, tm.added_at,
+			       exists (select 1 from team_admins a
+			                where a.team_id = tm.team_id and a.user_id = tm.user_id)
 			  from team_members tm join users u on u.id = tm.user_id
 			 where tm.team_id = $1
 			 order by tm.added_at`, teamID)
@@ -189,7 +197,7 @@ func (s *Service) Members(ctx context.Context, orgID, userID, teamID string) ([]
 		defer rows.Close()
 		for rows.Next() {
 			var m Member
-			if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.AddedAt); err != nil {
+			if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.AddedAt, &m.Lead); err != nil {
 				return err
 			}
 			out = append(out, m)
@@ -199,12 +207,11 @@ func (s *Service) Members(ctx context.Context, orgID, userID, teamID string) ([]
 	return out, err
 }
 
-// AddMember вписывает человека в подразделение. Роль `lead` сегодня
-// описательная: прав она не добавляет — см. ROADMAP, этап 4.2.
-func (s *Service) AddMember(ctx context.Context, orgID, actorID, teamID, userID, role string) error {
-	if role != "lead" && role != "member" {
-		return fmt.Errorf("неизвестная роль в команде %q", role)
-	}
+// AddMember вписывает человека в подразделение.
+//
+// Роли в составе нет: кто здесь распоряжается — вопрос с одним ответом,
+// и отвечает на него запись администратора, а не пометка рядом с именем.
+func (s *Service) AddMember(ctx context.Context, orgID, actorID, teamID, userID string) error {
 	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		// Человек обязан состоять в организации: команда — это структура
 		// внутри арендатора, а не способ пригласить постороннего.
@@ -220,17 +227,21 @@ func (s *Service) AddMember(ctx context.Context, orgID, actorID, teamID, userID,
 		}
 
 		_, err := tx.Exec(ctx, `
-			insert into team_members (org_id, team_id, user_id, role)
-			values ($1, $2, $3, $4)
-			on conflict (team_id, user_id) do update set role = excluded.role`,
-			orgID, teamID, userID, role)
+			insert into team_members (org_id, team_id, user_id)
+			values ($1, $2, $3)
+			on conflict (team_id, user_id) do nothing`,
+			orgID, teamID, userID)
 		return err
 	}))
 }
 
 func (s *Service) RemoveMember(ctx context.Context, orgID, actorID, teamID, userID string) error {
-	return s.exec(ctx, orgID, actorID,
-		`delete from team_members where team_id = $1 and user_id = $2`,
+	// Проверяем не команду, а само членство: убрать того, кого нет, —
+	// это «нечего убирать», а не «нельзя».
+	return s.explain(ctx, orgID, actorID,
+		s.exec(ctx, orgID, actorID,
+			`delete from team_members where team_id = $1 and user_id = $2`, teamID, userID),
+		`select exists (select 1 from team_members where team_id = $1 and user_id = $2)`,
 		teamID, userID)
 }
 
@@ -374,6 +385,28 @@ func (s *Service) exec(ctx context.Context, orgID, actorID, sql string, args ...
 		}
 		return nil
 	}))
+}
+
+// explain объясняет, почему изменение ничего не задело.
+//
+// Дерево видно всем, поэтому «не найдено» само по себе сбивает с толку:
+// человек видит подразделение в списке и получает ответ, что его нет.
+// Проверка отвечает на вопрос «а было ли что менять»: если было — значит
+// не хватило прав, и так и надо сказать.
+func (s *Service) explain(ctx context.Context, orgID, actorID string, err error, probe string, args ...any) error {
+	if !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	var exists bool
+	if failed := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, probe, args...).Scan(&exists)
+	}); failed != nil {
+		return err
+	}
+	if exists {
+		return ErrForbidden
+	}
+	return ErrNotFound
 }
 
 // translate переводит отказ ограничений дерева в ошибку с человеческим

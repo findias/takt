@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { TEAM_ROLE_NAMES, api } from './api'
+import { api } from './api'
 import type {
   Member,
   Observer,
@@ -7,7 +7,6 @@ import type {
   Team,
   TeamAdmin,
   TeamMember,
-  TeamRole,
 } from './api'
 import { allowedParents, buildTree, canNestInside, counters } from './structureModel'
 import type { TreeNode } from './structureModel'
@@ -219,7 +218,10 @@ function TeamMembers({
       {members === null ? (
         <p className="muted small">Загружаем…</p>
       ) : members.length === 0 ? (
-        <p className="muted small">Никого нет. Участник подразделения работает и во всех отделах под ним.</p>
+        <p className="muted small">
+          Никого нет. Участник подразделения работает и во всех отделах под ним,
+          а ведущим показывается тот, кто за подразделение отвечает.
+        </p>
       ) : (
         <ul className="member-list">
           {members.map((m) => (
@@ -228,25 +230,11 @@ function TeamMembers({
                 <span>{m.name}</span>
                 <span className="muted small">{m.email}</span>
               </div>
-              {isOwner ? (
-                <div className="row row--tight">
-                  <select
-                    value={m.role}
-                    aria-label={`Роль в подразделении: ${m.name}`}
-                    onChange={(e) => act(api.addTeamMember(teamId, m.userId, e.target.value as TeamRole))}
-                  >
-                    {(Object.keys(TEAM_ROLE_NAMES) as TeamRole[]).map((r) => (
-                      <option key={r} value={r}>
-                        {TEAM_ROLE_NAMES[r]}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="link" onClick={() => act(api.removeTeamMember(teamId, m.userId))}>
-                    Убрать
-                  </button>
-                </div>
-              ) : (
-                <span className="role-chip">{TEAM_ROLE_NAMES[m.role]}</span>
+              {m.lead && <span className="role-chip">Ведущий</span>}
+              {isOwner && (
+                <button className="link" onClick={() => act(api.removeTeamMember(teamId, m.userId))}>
+                  Убрать
+                </button>
               )}
             </li>
           ))}
@@ -258,7 +246,7 @@ function TeamMembers({
           value=""
           aria-label="Добавить в подразделение"
           onChange={(e) => {
-            if (e.target.value) act(api.addTeamMember(teamId, e.target.value, 'member'))
+            if (e.target.value) act(api.addTeamMember(teamId, e.target.value))
           }}
         >
           <option value="">Добавить человека…</option>
