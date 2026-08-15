@@ -16,12 +16,17 @@ export function BoardAccess({
   teams,
   canEdit,
   onClose,
+  onChanged,
 }: {
   boardId: string
   people: Member[]
   teams: Team[]
   canEdit: boolean
-  onClose: () => void
+  /** Есть там, где блок раскрывают внутри списка. В панели закрывать
+   *  нечего: у панели своя кнопка, и вторая рядом только путает. */
+  onClose?: () => void
+  /** Видимость поменялась — тому, кто показывает её рядом, стоит знать. */
+  onChanged?: () => void
 }) {
   const [access, setAccess] = useState<Access | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,10 +42,14 @@ export function BoardAccess({
 
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(() => {
+      load()
+      onChanged?.()
+    }).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
   }
 
   if (!access) return <div className="access">{error ?? 'Загружаем…'}</div>
+
 
   const outside = people.filter((p) => !access.members.some((m) => m.userId === p.userId))
 
@@ -90,9 +99,11 @@ export function BoardAccess({
           </select>
         )}
 
-        <button className="link" onClick={onClose}>
-          Закрыть
-        </button>
+        {onClose && (
+          <button className="link" onClick={onClose}>
+            Закрыть
+          </button>
+        )}
       </div>
 
       {access.visibility === 'private' && (

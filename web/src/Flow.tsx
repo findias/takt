@@ -107,12 +107,27 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
 
       <section className="stack">
         <h3 className="section-title">Пропускная способность</h3>
-        <Bars values={report.throughput.map((w) => w.count)} labels={report.throughput.map((w) => w.week)} />
-        <p className="muted small">
-          По неделям, только доведённое до конца.
-          {report.discarded > 0 &&
-            ` Ещё ${report.discarded} убрано с доски незавершёнными — в счёт они не идут.`}
-        </p>
+        {/* Пустая сетка столбиков читается как поломка графика, а не как
+            «нечего показывать». Пока ни одна карточка не доведена
+            до конца, честнее сказать это словами. */}
+        {report.throughput.some((w) => w.count > 0) ? (
+          <>
+            <Bars
+              values={report.throughput.map((w) => w.count)}
+              labels={report.throughput.map((w) => w.week)}
+            />
+            <p className="muted small">
+              По неделям, только доведённое до конца.
+              {report.discarded > 0 &&
+                ` Ещё ${report.discarded} убрано с доски незавершёнными — в счёт они не идут.`}
+            </p>
+          </>
+        ) : (
+          <p className="muted small">
+            Пока ничего не доведено до конца — считать нечего. Столбики появятся,
+            когда первая карточка дойдёт до колонки, отмеченной финишем.
+          </p>
+        )}
       </section>
 
       {report.forecast && (

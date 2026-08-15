@@ -13,12 +13,20 @@ import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge
 import { flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
 import type { BaseState } from './boardModel.ts'
 import { api } from './api'
-import type { Card, Column, ColumnKind, EstimateUnit, Iteration } from './api'
+import type {
+  BoardAccess as Access,
+  Card,
+  Column,
+  ColumnKind,
+  EstimateUnit,
+  Iteration,
+} from './api'
 import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
 import { Flow } from './Flow'
 import { Appearance } from './Appearance'
+import { AccessPanel, visibilityLabel } from './AccessPanel'
 import { useBoard } from './useBoard'
 
 export function Board({
@@ -54,6 +62,21 @@ export function Board({
   }, [])
   const [openCard, setOpenCard] = useState<string | null>(null)
   const [showFlow, setShowFlow] = useState(false)
+  const [showAccess, setShowAccess] = useState(false)
+  // Видимость доски показывается в шапке: «доску видят не те» — это то,
+  // что замечают, глядя на доску, а не на её строку в списке.
+  const [access, setAccess] = useState<Access | null>(null)
+
+  const loadAccess = useCallback(() => {
+    api
+      .boardAccess(boardId)
+      .then(setAccess)
+      // Молчаливый отказ намеренный: не сумели прочитать — подпись просто
+      // не появится, а работать доске это не мешает.
+      .catch(() => setAccess(null))
+  }, [boardId])
+
+  useEffect(loadAccess, [loadAccess])
 
   const { base, order, moveCard } = board
 
@@ -188,6 +211,17 @@ export function Board({
             много карточек, то есть на доске, — а переключатель до сих пор
             стоял только в списке досок, где он бесполезен. */}
         <div className="board-header-tail">
+          <button
+            className="link"
+            aria-expanded={showAccess}
+            onClick={() => {
+              setOpenCard(null)
+              setShowFlow(false)
+              setShowAccess((v) => !v)
+            }}
+          >
+            {visibilityLabel(access)}
+          </button>
           <Appearance />
         </div>
       </header>
@@ -279,6 +313,15 @@ export function Board({
       </div>
 
       {showFlow && <Flow boardId={boardId} onClose={() => setShowFlow(false)} />}
+
+      {showAccess && (
+        <AccessPanel
+          boardId={boardId}
+          canEdit
+          onClose={() => setShowAccess(false)}
+          onChanged={loadAccess}
+        />
+      )}
 
       {openCard && base.cards[openCard] && (
         <CardPanel

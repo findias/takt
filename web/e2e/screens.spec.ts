@@ -92,6 +92,12 @@ test('снимки экранов', async ({ page }) => {
   }
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
+  // Доступ к доске — прямо с доски.
+  await page.getByRole('button', { name: /Видна/ }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/09a-доступ.png` })
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
   // Поток.
   await page.getByRole('button', { name: 'Поток' }).click()
   await page.waitForTimeout(300)

@@ -897,6 +897,13 @@ select {
   background: var(--surface-2);
   border-radius: var(--radius);
 }
+/* В панели у блока уже есть и фон, и поля: вторая рамка внутри первой
+   выглядит как вложенное окно, которого нет. */
+.panel-card .access {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
 
 /* --- Карточка целиком --- */
 
@@ -1054,6 +1061,14 @@ textarea.description {
 }
 .column-settings-toggle {
   font-size: var(--text-sm);
+  /* Разметка колонки — второстепенное действие, а не приглашение. Три
+     зелёные ссылки в ряд поверх заголовков перетягивают внимание с самих
+     колонок; цветом отмечается то, что зовёт нажать. */
+  color: var(--ink-3);
+}
+.column-settings-toggle:hover,
+.column-settings-toggle[aria-expanded='true'] {
+  color: var(--accent);
 }
 /* Правило входа — не украшение, а то, о чём договорились: оно должно быть
    видно, когда карточку тащат в колонку, а не спрятано в настройках. */
