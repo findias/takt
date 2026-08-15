@@ -24,6 +24,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/httpapi"
 	"github.com/konkov/agile/internal/realtime"
+	"github.com/konkov/agile/internal/retention"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/webhook"
 )
@@ -111,6 +112,10 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	// у нас один образ на установку, и отдельный демон ради одной очереди
 	// стоил бы дороже, чем стоит.
 	go webhook.NewWorker(db, log).Run(ctx)
+
+	// Уборщик: служебные таблицы растут без предела, и ключи повтора
+	// недельной давности повторять уже некому.
+	go retention.NewWorker(db, log).Run(ctx)
 
 	go func() {
 		log.Info("сервер запущен", "адрес", cfg.ListenAddr, "baseURL", cfg.BaseURL)
