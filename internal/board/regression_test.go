@@ -1,6 +1,7 @@
 package board
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -38,5 +39,32 @@ func TestArchivedCardDoesNotHoldItsOrderKeyForever(t *testing.T) {
 	if _, err := f.apply("MOVE_CARD", map[string]any{
 		"cardId": fourth, "toColumnId": column, "place": "end"}); err != nil {
 		t.Errorf("перемещение в колонку с архивной карточкой: %v", err)
+	}
+}
+
+// Убранная в архив доска называется архивной, а не «не найденной».
+//
+// Разные положения дел требуют разных следующих шагов: несуществующую
+// доску искать бесполезно, архивную — достаточно вернуть одной кнопкой.
+// Пока их не различали, ссылка на убранную доску отвечала «не найдена»,
+// и человек шёл искать поломку там, где её нет.
+func TestArchivedBoardIsNamedArchived(t *testing.T) {
+	f := newFixture(t)
+
+	if err := f.svc.Archive(f.ctx, f.orgID, f.actorID, f.boardID); err != nil {
+		t.Fatalf("архивация доски: %v", err)
+	}
+
+	_, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, f.boardID)
+	if !errors.Is(err, ErrArchivedBoard) {
+		t.Fatalf("снимок архивной доски вернул %v, ожидалось «доска в архиве»", err)
+	}
+
+	// А чужая доска по-прежнему неотличима от несуществующей: различать
+	// можно только то, что человеку и так видно.
+	other := newFixture(t)
+	_, err = f.svc.Snapshot(f.ctx, f.orgID, f.actorID, other.boardID)
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("чужая доска вернула %v, ожидалось «не найдена»", err)
 	}
 }

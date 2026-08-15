@@ -648,6 +648,10 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 
 func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	snap, err := s.boards.Snapshot(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if errors.Is(err, board.ErrArchivedBoard) {
+		writeCoded(w, http.StatusNotFound, "board_archived", board.ErrArchivedBoard.Error())
+		return
+	}
 	if errors.Is(err, board.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "доска не найдена")
 		return

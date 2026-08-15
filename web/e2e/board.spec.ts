@@ -684,3 +684,26 @@ test('исполнителей у карточки может быть неск�
   await expect(card).toHaveCount(0)
   expect(who.email).toBeTruthy()
 })
+
+test('ссылка на убранную доску предлагает вернуть её, а не сообщает о поломке', async ({
+  page,
+}) => {
+  await register(page)
+  await createBoard(page, 'Доска под архив')
+  await addCard(page, 'Очередь', 'Тут была работа')
+  const boardUrl = page.url()
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Убрать доску «Доска под архив» в архив' }).click()
+  // Ждём, пока архивация доедет до сервера: иначе следующий переход
+  // успевает опередить запрос и проверяет живую доску.
+  await expect(page.getByRole('button', { name: 'Вернуть', exact: false }).first()).toBeVisible()
+
+  // Прежде здесь было «доска не найдена» — и человек шёл искать поломку
+  // там, где её нет.
+  await page.goto(boardUrl)
+  await expect(page.getByText('Доска в архиве')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Вернуть из архива' }).click()
+  await expect(cardIn(page, 'Очередь', 'Тут была работа')).toBeVisible()
+})

@@ -181,7 +181,10 @@ func TestBoardIsArchivedAndBroughtBack(t *testing.T) {
 			t.Error("архивная доска осталась в обычном списке")
 		}
 	}
-	if _, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, f.boardID); !errors.Is(err, ErrNotFound) {
+	// Архивная доска называется архивной, а не «не найденной»: это
+	// разные положения дел и разные следующие шаги — см.
+	// TestArchivedBoardIsNamedArchived.
+	if _, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, f.boardID); !errors.Is(err, ErrArchivedBoard) {
 		t.Errorf("снимок архивной доски: %v", err)
 	}
 

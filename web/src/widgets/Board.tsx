@@ -8,7 +8,8 @@ import type { BoardAccess as Access, Column, EstimateUnit, Iteration } from '../
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
-import { BoardSkeleton, ErrorState } from '../shared/ui/states.tsx'
+import { BoardSkeleton, EmptyState, ErrorState } from '../shared/ui/states.tsx'
+import { Button } from '../shared/ui/Button.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
@@ -428,6 +429,34 @@ export function Board({
     () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
     [columnIds, columnsById],
   )
+
+  // Доска в архиве — не поломка, а положение дел: сказать об этом надо
+  // словами и дать то единственное, что здесь делают. Прежде такая
+  // ссылка отвечала «доска не найдена», и человек шёл искать поломку
+  // там, где её нет.
+  if (board.archived) {
+    return (
+      <div className="board-screen">
+        <EmptyState
+          title="Доска в архиве"
+          action={
+            <Button
+              kind="primary"
+              onClick={async () => {
+                await api.restoreBoard(boardId)
+                await board.reload()
+              }}
+            >
+              Вернуть из архива
+            </Button>
+          }
+        >
+          Карточки и журнал целы — доска просто убрана с глаз. Вернуть её
+          можно прямо отсюда.
+        </EmptyState>
+      </div>
+    )
+  }
 
   if (board.loadError) {
     return (

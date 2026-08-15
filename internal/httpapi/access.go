@@ -108,6 +108,11 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		return false
 	case errors.Is(err, board.ErrNotFound):
 		writeError(w, http.StatusNotFound, "доска не найдена")
+	case errors.Is(err, board.ErrArchivedBoard):
+		// Свой код: клиенту нужно не «не найдено», а «верните из архива»,
+		// и разбирать это по тексту сообщения — способ сломать экран
+		// при первой же правке формулировки.
+		writeCoded(w, http.StatusNotFound, "board_archived", board.ErrArchivedBoard.Error())
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
 	case errors.Is(err, board.ErrReadOnlyBoard):

@@ -37,6 +37,10 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const [queue, setQueue] = useState<MoveCommand[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Убранная в архив доска — не ошибка, а положение дел, и лечится оно
+  // одной кнопкой. Отличаем по коду ответа, а не по тексту сообщения:
+  // разбирать текст значит сломать экран при первой правке формулировки.
+  const [archived, setArchived] = useState(false)
   const sending = useRef(false)
   // Зеркало версии доски. Нужно затем, чтобы догон не зависел от самого
   // снимка: иначе функция пересоздаётся на каждое изменение, а вместе
@@ -53,11 +57,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
     if (!boardId) return
     setLoading(true)
     setLoadError(null)
+    setArchived(false)
     try {
       const snap = await api.snapshot(boardId)
       setBase(fromSnapshot(snap))
       setQueue([])
     } catch (e) {
+      if (e instanceof ApiError && e.body?.code === 'board_archived') setArchived(true)
       setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить доску')
     } finally {
       setLoading(false)
@@ -561,6 +567,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     pending: queue.length,
     loading,
     loadError,
+    archived,
     reload,
     moveCard,
     createCard,
