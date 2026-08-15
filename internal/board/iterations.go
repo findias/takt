@@ -81,6 +81,19 @@ func (s *Service) CreateIteration(ctx context.Context, orgID, actorID, boardID, 
 
 	var it Iteration
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		// Доска должна быть видна. Без этой проверки вставка отлетает
+		// нарушением политики, то есть внутренней ошибкой вместо честного
+		// «не найдена»: снаружи это выглядит как сломанный сервер там,
+		// где на самом деле чужая доска.
+		var exists bool
+		if err := tx.QueryRow(ctx, `
+			select exists (select 1 from boards
+			                where id = $1 and archived_at is null)`, boardID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrNotFound
+		}
 		return tx.QueryRow(ctx, `
 			insert into iterations (org_id, board_id, name, goal, starts_on, ends_on)
 			values ($1, $2, $3, $4, $5::date, $6::date)
@@ -254,6 +267,9 @@ func translateIteration(err error) error {
 			return badRequestf("итерация не может кончаться раньше, чем началась")
 		case pgErr.Code == "22008" || pgErr.Code == "22007":
 			return badRequestf("непонятная дата")
+		case pgErr.Code == "42501":
+			// Политика отказала: доска видна, но не для записи.
+			return ErrReadOnlyBoard
 		}
 	}
 	return err

@@ -675,6 +675,10 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		writeJSON(w, http.StatusOK, result)
 	case errors.Is(err, board.ErrNotFound):
 		writeError(w, http.StatusNotFound, "доска не найдена")
+	case errors.Is(err, board.ErrReadOnlyBoard):
+		// Доску он видит, и притворяться, что её нет, поздно: так у
+		// наблюдателя поддерева.
+		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrBadRequest):
 		writeError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, board.ErrIterationClosed),

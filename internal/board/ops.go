@@ -98,8 +98,15 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		 where id = $1 and archived_at is null
 		 for update`, boardID).Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// Чужая доска неотличима от несуществующей — как и в Snapshot.
-		return Result{}, ErrNotFound
+		// Строки нет по одной из двух причин, и различить их важно.
+		// `for update` требует права на изменение, поэтому доска, доступная
+		// только на чтение, сюда тоже не попадает — а отвечать «не найдена»
+		// тому, кто эту доску прямо сейчас видит, значит отправить его
+		// искать несуществующую поломку.
+		//
+		// Второй запрос делается только на этом пути: платить за него
+		// в обычном случае незачем.
+		return Result{}, s.explainMissingBoard(ctx, orgID, actorID, boardID)
 	}
 	if err != nil {
 		return Result{}, err
@@ -174,6 +181,24 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	committed = true
 	return result, nil
+}
+
+// explainMissingBoard отвечает на вопрос, почему доска не досталась
+// на запись: её не видно вовсе или её видно, но менять нельзя.
+func (s *Service) explainMissingBoard(ctx context.Context, orgID, actorID, boardID string) error {
+	var visible bool
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			select exists (select 1 from boards
+			                where id = $1 and archived_at is null)`, boardID).Scan(&visible)
+	})
+	if err != nil {
+		return err
+	}
+	if visible {
+		return ErrReadOnlyBoard
+	}
+	return ErrNotFound
 }
 
 func (s *Service) storedResult(ctx context.Context, orgID, actorID, operationID string) (Result, error) {

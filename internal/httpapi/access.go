@@ -103,6 +103,8 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
+	case errors.Is(err, board.ErrReadOnlyBoard):
+		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrNotAuthor):
 		writeError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, board.ErrTooDeep):
