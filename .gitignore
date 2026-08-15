@@ -8,3 +8,7 @@
 /internal/httpapi/webdist/
 .env
 *.local
+# Следы упавших сквозных сценариев: скриншоты и трассировки. Полезны
+# ровно до починки.
+/web/test-results/
+/web/playwright-report/

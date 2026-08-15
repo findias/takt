@@ -353,7 +353,19 @@ export class NetworkError extends Error {
 
 const TIMEOUT_MS = 10_000
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/**
+ * keepalive — «доведи запрос до конца, даже если страницы уже нет».
+ *
+ * Нужен ровно операциям над доской. Перемещение применяется мгновенно,
+ * а уходит на сервер следом; человек, нажавший F5 сразу после переноса,
+ * иначе теряет своё действие — браузер отменяет незавершённый запрос
+ * вместе со страницей. Нашлось сквозным сценарием: перезагрузка сразу
+ * после переноса возвращала карточку на прежнее место.
+ *
+ * Остальным запросам это не нужно: их ответ читают тут же и без него
+ * ничего не происходит.
+ */
+async function request<T>(method: string, path: string, body?: unknown, keepalive = false): Promise<T> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   let response: Response
@@ -364,6 +376,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
       credentials: 'same-origin',
+      keepalive,
     })
   } catch (e) {
     throw new NetworkError(
@@ -502,9 +515,13 @@ export const api = {
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),
 
   operation: (boardId: string, operationId: string, type: string, payload: unknown) =>
-    request<OperationResult>('POST', `/api/boards/${boardId}/operations`, {
-      operationId,
-      type,
-      payload,
-    }),
+    request<OperationResult>(
+      'POST',
+      `/api/boards/${boardId}/operations`,
+      { operationId, type, payload },
+      // Операция доезжает до сервера, даже если страницу закрыли следом:
+      // тело крошечное, а потерянное действие человек воспринимает как
+      // «программа съела мою карточку».
+      true,
+    ),
 }
