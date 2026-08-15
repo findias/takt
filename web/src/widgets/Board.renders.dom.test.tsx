@@ -136,8 +136,8 @@ it('изменение одной карточки не перерисовыва
   await waitFor(() => expect(renders.count).toBe(CARDS.length))
 
   const before = renders.count
-  const title = screen.getByText('первая', { selector: '.card-title' })
-  await user.dblClick(title)
+  await user.click(screen.getByRole('button', { name: /Действия карточки «первая»/ }))
+  await user.click(screen.getByRole('menuitem', { name: 'Переименовать' }))
   await user.keyboard('{End} — правка{Enter}')
 
   await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))

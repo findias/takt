@@ -175,6 +175,27 @@ function CardViewInner({
     }
   }
 
+  /**
+   * Клик по карточке открывает её.
+   *
+   * Так устроены все доски, которыми пользуются: карточка выглядит как
+   * то, что можно нажать, — значит по нажатию должна открываться.
+   * До сих пор открывали через меню, и это первое, обо что спотыкался
+   * каждый, кто видел доску впервые.
+   *
+   * Не открываем в трёх случаях, и каждый из них настоящий: нажали
+   * на кнопку внутри карточки (у неё своё действие), выделяли текст
+   * мышью (человек читал, а не переходил), карточку тащат.
+   */
+  const onClick = (e: React.MouseEvent) => {
+    if (dragging || e.defaultPrevented) return
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, textarea, select, [role="menu"]')) return
+    const selection = window.getSelection()
+    if (selection && !selection.isCollapsed) return
+    onOpen(cardId)
+  }
+
   return (
     <article
       ref={ref}
@@ -187,6 +208,7 @@ function CardViewInner({
       // кто не видит экрана.
       aria-label={`Карточка «${title}». Стрелки — переход, Ctrl со стрелками — перенос, Enter — открыть, E — переименовать.`}
       onKeyDown={onKeyDown}
+      onClick={onClick}
     >
       {editing ? (
         <EditableText
@@ -202,9 +224,13 @@ function CardViewInner({
       ) : (
         <>
           <div className="card-head">
-            <span className="card-title" onDoubleClick={() => setEditing(true)}>
+            {/* Заголовок — кнопка: у нажимаемой карточки должна быть
+                явная цель и для скринридера, и для клавиатуры. Двойного
+                клика для переименования больше нет — он спорил
+                с открытием; переименование осталось в меню и на «E». */}
+            <button className="card-title" onClick={() => onOpen(cardId)}>
               {title}
-            </span>
+            </button>
             {/* Кто делает — самое частое, о чём спрашивают доску после
                 «что происходит». Инициалы читаются с одного взгляда
                 и занимают двадцать пикселей. */}

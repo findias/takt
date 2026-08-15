@@ -216,14 +216,8 @@ test('ссылка открывает доску и карточку, чужая
   await createBoard(page, 'Доска со ссылкой')
   await addCard(page, 'Очередь', 'Прислать коллеге')
 
-  // Карточка открывается — и адрес меняется вместе с ней.
-  // Действия карточки живут в меню: три подписи в ряд не помещались
-  // в ширину колонки и обрезались.
-  await cardIn(page, 'Очередь', 'Прислать коллеге').hover()
-  await cardIn(page, 'Очередь', 'Прислать коллеге')
-    .getByRole('button', { name: /Действия карточки/ })
-    .click()
-  await page.getByRole('menuitem', { name: 'Открыть' }).click()
+  // Карточка открывается нажатием — и адрес меняется вместе с ней.
+  await cardIn(page, 'Очередь', 'Прислать коллеге').click()
   await expect(page.getByRole('heading', { name: 'Прислать коллеге' })).toBeVisible()
   const cardUrl = page.url()
   expect(cardUrl).toMatch(/\/board\/[0-9a-f-]+\/card\/[0-9a-f-]+$/)
@@ -564,4 +558,24 @@ test('на узком экране показывается одна колон�
   await expect(page.getByRole('checkbox', { name: 'Заблокированные' })).toBeHidden()
   await expect(toggle).toHaveText(/Отбор · 1/)
   await phone.close()
+})
+
+test('нажатие открывает карточку, а нажатие на её кнопку — нет', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска нажатий')
+  await addCard(page, 'Очередь', 'Открыться по нажатию')
+  const card = cardIn(page, 'Очередь', 'Открыться по нажатию')
+
+  // Куда угодно по карточке: человек целится в карточку целиком,
+  // а не в её заголовок.
+  await card.click({ position: { x: 5, y: 5 } })
+  await expect(page.getByRole('heading', { name: 'Открыться по нажатию' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // У кнопки внутри карточки своё действие, и оно не должно тонуть
+  // в открытии: до этой проверки меню открывалось вместе с панелью.
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await expect(page.getByRole('menuitem', { name: 'Переименовать' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Открыться по нажатию' })).toHaveCount(0)
 })
