@@ -1,0 +1,16 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# Бюджет нарушений держит хотя бы одну живую реплику при осушении узла.
+# Без него обновление кластера уносит обе разом, и доска пропадает
+# в момент, когда никто ничего не выкладывал.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "board.fullname" . }}
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "board.selectorLabels" . | nindent 6 }}
+{{- end }}

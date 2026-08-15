@@ -1,0 +1,40 @@
+{{- if .Values.ingress.enabled }}
+{{- if not .Values.ingress.host }}
+{{- fail "нужен ingress.host" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "board.fullname" . }}
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ required "нужен ingress.tls.secretName" .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # Поток изменений идёт долгим соединением. Прокси с коротким
+          # таймаутом чтения рвёт его раз в минуту, и это выглядит
+          # как мигающая доска, а не как ошибка прокси, — поэтому
+          # таймауты задаются аннотациями входа, а не здесь.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "board.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

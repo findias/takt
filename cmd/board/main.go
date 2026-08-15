@@ -98,9 +98,10 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	hub := realtime.NewHub(db, log)
 	go hub.Run(ctx)
 
+	api := httpapi.New(cfg, db, log, hub)
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(cfg, db, log, hub).Handler(),
+		Handler:           api.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Долгий таймаут записи нужен будущим WebSocket-соединениям;
 		// обычные запросы ограничены таймаутом чтения заголовков.
@@ -126,7 +127,21 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	}()
 
 	<-ctx.Done()
-	log.Info("останавливаюсь, даю соединениям закрыться")
+
+	// Сперва сказать «мне больше не давайте», потом подождать, и только
+	// потом закрываться. Балансировщик узнаёт о неготовности не мгновенно;
+	// реплика, переставшая отвечать раньше, чем её вычеркнули из списка,
+	// выглядит у пользователя как пятисотые на ровном месте. Пауза здесь
+	// стоит несколько секунд простоя при выкладке и экономит их же
+	// в виде ошибок.
+	api.Drain()
+	log.Info("останавливаюсь: снят с балансировки, жду вычёркивания", "пауза", drainPause)
+	select {
+	case <-time.After(drainPause):
+	case <-hardStop():
+	}
+
+	log.Info("закрываю соединения")
 
 	// Запас на корректное закрытие: клиенты должны успеть переподключиться
 	// к другой реплике, не потеряв событий.
@@ -135,6 +150,21 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("не удалось остановиться мягко", "err", err)
 	}
+}
+
+// drainPause — сколько ждать между «я не готов» и закрытием соединений.
+// Пять секунд покрывают обычное время обновления списка адресов в
+// Kubernetes; terminationGracePeriodSeconds в чарте больше этой паузы
+// вместе с таймаутом остановки, иначе процесс убьют посреди неё.
+const drainPause = 5 * time.Second
+
+// hardStop — второй сигнал означает «хватит ждать». Тот, кто нажал Ctrl+C
+// дважды, просит остановиться сейчас, и заставлять его ждать паузу
+// на балансировку, которой на его машине нет, незачем.
+func hardStop() <-chan os.Signal {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	return ch
 }
 
 // checkMigrated не даёт приложению стартовать на непроинициализированной базе:

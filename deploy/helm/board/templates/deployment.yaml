@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "board.fullname" . }}
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "board.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Новый под поднимается до того, как убирается старый: обратной
+      # совместимости схемы мы придерживаемся, поэтому короткое
+      # сосуществование версий безопасно, а простоя при выкладке быть
+      # не должно.
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "board.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Смена строки подключения обязана перезапустить поды: иначе
+        # секрет уже новый, а процессы ходят по старому адресу и об этом
+        # никто не узнает до перезапуска по другой причине.
+        checksum/db: {{ printf "%s|%s" (include "board.secretName" .) .Values.database.url | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "board.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.runAsGroup }}
+        seccompProfile:
+          {{- toYaml .Values.securityContext.seccompProfile | nindent 10 }}
+      {{- if .Values.spreadAcrossNodes }}
+      # «По возможности», а не «строго»: в кластере из одного узла строгое
+      # требование оставило бы вторую реплику вечно ожидающей.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "board.selectorLabels" . | nindent 14 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: board
+          image: {{ include "board.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            {{- include "board.env" . | nindent 12 }}
+          # Три пробы, и у каждой своя работа.
+          #
+          # startup закрывает собой запуск: пока приложение ждёт базу,
+          # его не должны считать мёртвым. Она же снимает необходимость
+          # растягивать initialDelay у остальных.
+          #
+          # liveness спрашивает только «процесс жив» и базы не касается:
+          # проверять живость базой значит перезапустить все реплики разом,
+          # как только база моргнёт.
+          #
+          # readiness спрашивает «можно давать запросы» и базу проверяет.
+          # Она же гаснет первой при остановке — за несколько секунд
+          # до закрытия соединений.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            capabilities:
+              {{- toYaml .Values.securityContext.capabilities | nindent 14 }}
+          volumeMounts:
+            # Единственное, что процессу нужно писать, — временные файлы.
+            # Отдельный tmpfs позволяет оставить корень доступным только
+            # для чтения и при этом ничего не сломать.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi

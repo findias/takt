@@ -56,7 +56,9 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz || exit 1"]
+      # Готовность, а не живость: здесь по проверке решают, можно ли пускать
+      # трафик, а «процесс жив» на этот вопрос не отвечает.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readyz || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5

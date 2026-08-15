@@ -1,0 +1,57 @@
+{{- if .Values.migrations.enabled }}
+# Миграции — задача перед выкладкой, а не действие при старте приложения.
+#
+# Стартовать миграцию в каждом поде проще всего и работает ровно до второй
+# реплики: две одновременно стартующие реплики мигрируют базу параллельно,
+# и чем это кончится, зависит от везения. Хук pre-install/pre-upgrade
+# выполняет её один раз и до того, как поедут новые поды.
+#
+# hook-delete-policy: упавшая задача остаётся — по ней и смотрят, почему
+# не поехала выкладка. Удаляется она перед созданием следующей, а не после
+# провала.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "board.fullname" . }}-migrate
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.timeoutSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "board.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "board.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        seccompProfile:
+          {{- toYaml .Values.securityContext.seccompProfile | nindent 10 }}
+      containers:
+        - name: migrate
+          image: {{ include "board.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["migrate"]
+          env:
+            {{- include "board.env" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            capabilities:
+              {{- toYaml .Values.securityContext.capabilities | nindent 14 }}
+{{- end }}

@@ -1,0 +1,25 @@
+Доска установлена.
+
+Адрес: {{ .Values.baseURL }}
+{{- if not .Values.ingress.enabled }}
+
+Вход снаружи не настроен (ingress.enabled = false). Посмотреть локально:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "board.fullname" . }} 8080:{{ .Values.service.port }}
+{{- end }}
+
+Проверить, что реплики готовы:
+
+  kubectl --namespace {{ .Release.Namespace }} rollout status deploy/{{ include "board.fullname" . }}
+
+{{- if not .Values.database.existingSecret }}
+
+ВНИМАНИЕ: строка подключения взята из values и лежит в релизе.
+Так можно на стенде. Для боя заведите секрет заранее и укажите
+database.existingSecret — иначе пароль базы попадёт и в историю
+выкладок, и в вывод `helm get values`.
+{{- end }}
+
+Первый вошедший заводит организацию и становится её владельцем.
+Резервное копирование базы — на стороне заказчика: чарт базой
+не управляет намеренно.

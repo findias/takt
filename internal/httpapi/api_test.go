@@ -31,6 +31,9 @@ type api struct {
 	t      *testing.T
 	server *httptest.Server
 	client *http.Client
+	// impl — тот же сервер, но не через HTTP: нужен там, где проверяется
+	// его состояние, а не ответ на запрос (например, остановка).
+	impl *Server
 }
 
 func newAPI(t *testing.T) *api {
@@ -53,11 +56,11 @@ func newAPI(t *testing.T) *api {
 	go hub.Run(hubCtx)
 	t.Cleanup(stopHub)
 
-	srv := httptest.NewServer(
-		New(config.Config{BaseURL: "http://example.test"}, db, log, hub).Handler())
+	impl := New(config.Config{BaseURL: "http://example.test"}, db, log, hub)
+	srv := httptest.NewServer(impl.Handler())
 	t.Cleanup(srv.Close)
 
-	return &api{t: t, server: srv, client: srv.Client()}
+	return &api{t: t, server: srv, client: srv.Client(), impl: impl}
 }
 
 // session — отдельный клиент со своими cookie: так в одном тесте живут

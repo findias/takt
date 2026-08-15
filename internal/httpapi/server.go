@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 
 	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/audit"
@@ -39,7 +40,10 @@ type Server struct {
 	limiter *limiter
 	audit   *audit.Service
 	export  *export.Service
-	log     *slog.Logger
+	// draining — реплика получила сигнал остановки и больше не готова
+	// принимать новые запросы, хотя текущие ещё дорабатывает.
+	draining atomic.Bool
+	log      *slog.Logger
 }
 
 func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub) *Server {
@@ -63,7 +67,19 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /healthz", s.handleHealth)
+	// Две разные пробы, потому что вопросы разные.
+	//
+	// /healthz — «процесс жив». Базу он не трогает намеренно: если
+	// проверять ею живость, то моргнувшая база перезапустит все реплики
+	// разом, и к её возвращению они будут заняты рестартом. Лечение
+	// оказалось бы хуже болезни.
+	//
+	// /readyz — «можно давать запросы». Здесь база нужна: без неё
+	// осмысленного ответа не будет. И здесь же реплика говорит «уже нет»,
+	// когда получила сигнал остановки, — до того, как перестанет
+	// отвечать вовсе.
+	mux.HandleFunc("GET /healthz", s.handleLive)
+	mux.HandleFunc("GET /readyz", s.handleReady)
 
 	mux.HandleFunc("POST /api/auth/register", s.handleRegister)
 	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
@@ -111,13 +127,27 @@ func (s *Server) Handler() http.Handler {
 	return logRequests(s.log, versioned(s.limited(mux)))
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleLive(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	if s.draining.Load() {
+		writeError(w, http.StatusServiceUnavailable, "реплика останавливается")
+		return
+	}
 	if err := s.db.Pool.Ping(r.Context()); err != nil {
 		writeError(w, http.StatusServiceUnavailable, "база недоступна")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+// Drain переводит реплику в «запросов больше не давайте», не закрывая
+// текущие. Между этим и остановкой нужен запас: балансировщик узнаёт
+// о неготовности не мгновенно, и реплика, переставшая отвечать раньше,
+// чем её вычеркнули из списка, выглядит как пятисотые у пользователя.
+func (s *Server) Drain() { s.draining.Store(true) }
 
 // --- доступ ---
 
