@@ -69,10 +69,18 @@ test-web: ## Тесты клиентской модели доски
 e2e: db migrate ## Сквозные сценарии в настоящем браузере
 	cd web && npm run test:e2e
 
+.PHONY: load
+load: db migrate ## Поведение под нагрузкой (идёт минуты)
+	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \
+	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit' ./internal/board/ ./internal/httpapi/
+
 .PHONY: check
-check: ## Форматирование, vet и все тесты (кроме сквозных: см. make e2e)
+check: ## Форматирование, vet и все тесты (кроме сквозных и нагрузочных)
 	gofmt -l . | tee /dev/stderr | (! read)
 	go vet ./...
+	# Нагрузочные проверки под тегом сборки: обычный vet их не видит,
+	# и без этой строки они молча перестанут собираться.
+	go vet -tags load ./...
 	$(MAKE) test-integration
 	cd web && npx tsc -b && npm test
 
