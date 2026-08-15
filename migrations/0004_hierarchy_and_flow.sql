@@ -35,7 +35,13 @@ alter table cards
         check (outcome is null or outcome in ('done', 'discarded'));
 
 -- Уже завершённые карточки считаем сделанными: другого источника истины нет.
+--
+-- Политика арендатора снимается на время правки: миграция идёт под ролью
+-- приложения, которой видно только строки своей организации, а «своей»
+-- у неё сейчас нет. Иначе запрос прошёл бы, не тронув ни строки.
+alter table cards no force row level security;
 update cards set outcome = 'done' where finished_at is not null;
+alter table cards force row level security;
 
 -- Пропускная способность и время цикла читаются по этому индексу.
 create index cards_outcome_idx on cards (board_id, outcome, finished_at)

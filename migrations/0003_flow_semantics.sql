@@ -38,6 +38,15 @@ alter table board_columns
 
 -- Разметка уже существующих досок. Все они заведены по одному шаблону
 -- «очередь → работа → готово», поэтому крайние колонки читаются по позиции.
+--
+-- Политики арендатора на время правки снимаются: миграция идёт под ролью
+-- приложения, а той видно только строки своей организации — и «своей»
+-- у неё сейчас нет ни одной. Без этого запросы ниже прошли бы, не тронув
+-- ни строки, и разметка молча не случилась бы. Владельцу таблицы хватает
+-- «no force», суперправа не нужны.
+alter table board_columns no force row level security;
+alter table cards         no force row level security;
+alter table card_events   no force row level security;
 with ordered as (
     select id,
            row_number() over (partition by board_id order by position) as n,
@@ -92,3 +101,9 @@ update cards c
               from card_events e
              where e.card_id = c.id and e.type = 'moved'),
            c.created_at);
+
+-- Политики возвращаются на место: снимались они только на время правки
+-- данных, и оставить их снятыми значит отключить изоляцию арендаторов.
+alter table board_columns force row level security;
+alter table cards         force row level security;
+alter table card_events   force row level security;

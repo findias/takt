@@ -39,6 +39,27 @@ create index card_assignees_user_idx on card_assignees (org_id, user_id);
 
 -- Прежние назначения переезжают: исполнитель, проставленный до этой
 -- миграции, остаётся исполнителем и становится первым в списке.
+--
+-- Политика арендатора снимается на время переноса. Миграция идёт под
+-- ролью приложения, а ей видно только строки своей организации —
+-- и «своей» у неё сейчас нет ни одной. Без этого перенос прошёл бы,
+-- не тронув ни строки, и молча потерял бы всех исполнителей: колонка
+-- удаляется здесь же, восстанавливать было бы неоткуда. Так и вышло
+-- на стенде разработки, прежде чем это было замечено.
+alter table cards no force row level security;
+
+-- Проверка, что политики действительно сняты. Она сторожит не результат,
+-- а условие: считать «сколько строк было» бессмысленно — этот счёт идёт
+-- под теми же политиками и вернёт тот же ноль, что и сам перенос. Ровно
+-- на этом перенос однажды прошёл вхолостую и потерял исполнителей молча.
+do $$
+begin
+    if (select relforcerowsecurity from pg_class
+         where relname = 'cards' and relnamespace = 'public'::regnamespace) then
+        raise exception 'перенос пошёл бы вхолостую: политики на cards ещё действуют';
+    end if;
+end $$;
+
 insert into card_assignees (org_id, card_id, user_id, added_at)
 select org_id, id, assignee_id, coalesce(updated_at, created_at)
   from cards
@@ -46,6 +67,8 @@ select org_id, id, assignee_id, coalesce(updated_at, created_at)
 
 drop index if exists cards_assignee_idx;
 alter table cards drop column assignee_id;
+
+alter table cards force row level security;
 
 -- --- Доступ ---
 
