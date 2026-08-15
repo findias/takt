@@ -23,6 +23,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
+	mux.HandleFunc("GET /api/fields", s.authed(s.handleListFields))
+	mux.HandleFunc("POST /api/fields", s.authed(s.handleCreateField))
+	mux.HandleFunc("DELETE /api/fields/{id}", s.authed(s.handleArchiveField))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
@@ -95,6 +98,8 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
+	case errors.Is(err, board.ErrFieldExists):
+		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, board.ErrIterationClosed),
 		errors.Is(err, board.ErrCardInAnotherIteration):
 		writeError(w, http.StatusConflict, err.Error())
@@ -180,6 +185,52 @@ func (s *Server) handleCloseIteration(w http.ResponseWriter, r *http.Request, p 
 	err := s.boards.CloseIteration(r.Context(), p.OrgID, p.ID,
 		r.PathValue("id"), r.PathValue("iterationId"))
 	if s.failAccess(w, "закрытие итерации", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Свои поля заводятся на организацию, а не на доску: одинаково названное
+// поле на двух досках — это одно поле, иначе сводный отчёт складывает
+// разные сущности с общим названием.
+func (s *Server) handleListFields(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	fields, err := s.boards.Fields(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "список полей", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"fields": fields})
+}
+
+func (s *Server) handleCreateField(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Name    string   `json:"name"`
+		Kind    string   `json:"kind"`
+		Options []string `json:"options"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	field, err := s.boards.CreateField(r.Context(), p.OrgID, p.ID, req.Name, req.Kind, req.Options)
+	if s.failAccess(w, "создание поля", err) {
+		return
+	}
+	writeJSON(w, http.StatusCreated, field)
+}
+
+// Убранное поле не удаляет значения: поле заводили затем, чтобы данные
+// были, и стирать их вместе с определением нельзя.
+func (s *Server) handleArchiveField(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	err := s.boards.ArchiveField(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failAccess(w, "архивация поля", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

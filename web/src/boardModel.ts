@@ -12,7 +12,9 @@
 import type {
   BoardInfo,
   Card,
+  CardField,
   Column,
+  FieldValue,
   Iteration,
   Link,
   LinkedCard,
@@ -36,6 +38,8 @@ export type BaseState = {
   iterations: Iteration[]
   /** cardId → iterationId, только открытые вхождения. */
   cardIterations: Record<string, string>
+  fields: CardField[]
+  fieldValues: Record<string, FieldValue[]>
 }
 
 export type MoveCommand = {
@@ -75,6 +79,8 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     linked,
     iterations: snap.iterations,
     cardIterations: snap.cardIterations,
+    fields: snap.fields,
+    fieldValues: snap.fieldValues,
   }
 }
 

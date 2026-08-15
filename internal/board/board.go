@@ -170,6 +170,9 @@ type Snapshot struct {
 	Iterations []Iteration `json:"iterations"`
 	// cardId → iterationId для открытых вхождений.
 	CardIterations map[string]string `json:"cardIterations"`
+	// Свои поля организации и их значения: cardId → значения.
+	Fields      []Field                 `json:"fields"`
+	FieldValues map[string][]FieldValue `json:"fieldValues"`
 }
 
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
@@ -338,7 +341,10 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 		if err := enrich(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
-		return loadIterations(ctx, tx, boardID, &snap)
+		if err := loadIterations(ctx, tx, boardID, &snap); err != nil {
+			return err
+		}
+		return loadFields(ctx, tx, boardID, &snap)
 	})
 	return snap, err
 }

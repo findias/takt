@@ -208,6 +208,15 @@ export function useBoard(boardId: string | null) {
 
   // Итерация не меняет ни порядок карточек, ни версию доски, но меняет
   // состав, который показывает снимок, — поэтому после неё перечитываем.
+  // Пустое значение снимает поле: «поля нет» и «поле пустое» — одно и то
+  // же, и третьего состояния заводить незачем.
+  const setCardField = useCallback(
+    (cardId: string, fieldId: string, value: string | number | boolean | null) =>
+      runAndReload('SET_CARD_FIELD', { cardId, fieldId, value },
+        'Не удалось сохранить поле'),
+    [runAndReload],
+  )
+
   const addToIteration = useCallback(
     (cardId: string, iterationId: string) =>
       runAndReload('ADD_TO_ITERATION', { cardId, iterationId },
@@ -277,6 +286,7 @@ export function useBoard(boardId: string | null) {
     unlinkCards,
     blockCard,
     unblockCard,
+    setCardField,
     addToIteration,
     removeFromIteration,
     createColumn,

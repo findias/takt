@@ -213,6 +213,28 @@ export type Iteration = {
   cardCount: number
 }
 
+/** Своё поле карточки. Определения принадлежат организации: одинаково
+ *  названное поле на двух досках — это одно поле, иначе сводный отчёт
+ *  сложит разные сущности с общим названием. */
+export type FieldKind = 'text' | 'number' | 'date' | 'select' | 'checkbox'
+
+export const FIELD_KIND_NAMES: Record<FieldKind, string> = {
+  text: 'Текст',
+  number: 'Число',
+  date: 'Дата',
+  select: 'Выбор',
+  checkbox: 'Да или нет',
+}
+
+export type CardField = {
+  id: string
+  name: string
+  kind: FieldKind
+  options: string[]
+}
+
+export type FieldValue = { fieldId: string; value: string | number | boolean }
+
 export type Snapshot = {
   board: BoardInfo
   columns: Column[]
@@ -222,6 +244,9 @@ export type Snapshot = {
   iterations: Iteration[]
   /** cardId → iterationId для открытых вхождений. */
   cardIterations: Record<string, string>
+  fields: CardField[]
+  /** cardId → значения его полей. */
+  fieldValues: Record<string, FieldValue[]>
 }
 
 export type Patch = {
@@ -358,6 +383,12 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
+  listFields: () => request<{ fields: CardField[] }>('GET', '/api/fields'),
+  createField: (name: string, kind: FieldKind, options: string[]) =>
+    request<CardField>('POST', '/api/fields', { name, kind, options }),
+  /** Убирает поле из обихода, не трогая значения карточек. */
+  archiveField: (id: string) => request<void>('DELETE', `/api/fields/${id}`),
+
   createIteration: (boardId: string, body: { name: string; goal: string; startsOn: string; endsOn: string }) =>
     request<Iteration>('POST', `/api/boards/${boardId}/iterations`, body),
   /** Обратного действия нет намеренно: закрытие — утверждение о том, что

@@ -57,6 +57,8 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
     linked: Object.fromEntries(linked.map((c) => [c.id, c])),
     iterations: [],
     cardIterations: {},
+    fields: [],
+    fieldValues: {},
   } as BaseState
 }
 

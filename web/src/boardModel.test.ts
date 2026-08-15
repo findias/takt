@@ -62,6 +62,8 @@ function snapshot(cards: Card[]): Snapshot {
     linked: [],
     iterations: [],
     cardIterations: {},
+    fields: [],
+    fieldValues: {},
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),

@@ -223,6 +223,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return linkCards(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNLINK_CARDS":
 		return unlinkCards(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_CARD_FIELD":
+		return setCardField(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ADD_TO_ITERATION":
 		return addToIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "REMOVE_FROM_ITERATION":

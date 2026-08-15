@@ -192,6 +192,7 @@ export function Board({
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={(id, reason) => void board.blockCard(id, reason)}
           onUnblock={(id) => void board.unblockCard(id)}
+          onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
           onIteration={(id, iterationId) => {
             const current = base.cardIterations[id]
             // Перенос — это выход из одного и вход в другой, и оба факта

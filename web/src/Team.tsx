@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from './api'
-import type { AuditEntry, Invite, Member, Principal, Role } from './api'
+import { FIELD_KIND_NAMES } from './api'
+import type { AuditEntry, CardField, FieldKind, Invite, Member, Principal, Role } from './api'
 import { actorText, auditText, timeText } from './feedModel'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -120,8 +121,121 @@ export function Team({ principal }: { principal: Principal }) {
         </section>
       )}
 
+      <CardFields canEdit={principal.role !== 'viewer'} />
+
       <AuditFeed />
     </div>
+  )
+}
+
+/**
+ * Свои поля карточек.
+ *
+ * Определения принадлежат организации, а не доске: одинаково названное
+ * поле на двух досках — это одно поле, иначе сводный отчёт сложит разные
+ * сущности с общим названием. Поэтому и живут они здесь, а не на доске.
+ */
+function CardFields({ canEdit }: { canEdit: boolean }) {
+  const [fields, setFields] = useState<CardField[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [kind, setKind] = useState<FieldKind>('text')
+  const [options, setOptions] = useState('')
+
+  const load = useCallback(() => {
+    api
+      .listFields()
+      .then((r) => setFields(r.fields))
+      .catch(() => setFields([]))
+  }, [])
+
+  useEffect(load, [load])
+
+  const act = (p: Promise<unknown>) => {
+    setError(null)
+    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+  }
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Поля карточек</h2>
+      {error && <p className="error">{error}</p>}
+      {fields.length === 0 ? (
+        <p className="muted small">
+          Полей нет. Поле заводится на всю организацию: одинаково названное поле
+          на двух досках — это одно поле, иначе сводный отчёт складывает разное.
+        </p>
+      ) : (
+        <ul className="member-list">
+          {fields.map((f) => (
+            <li key={f.id}>
+              <div className="member-who">
+                <span>{f.name}</span>
+                <span className="muted small">
+                  {FIELD_KIND_NAMES[f.kind]}
+                  {f.options.length > 0 ? ` · ${f.options.join(', ')}` : ''}
+                </span>
+              </div>
+              {canEdit && (
+                <button
+                  className="link"
+                  title="Значения карточек останутся: поле заводили ради них"
+                  onClick={() => act(api.archiveField(f.id))}
+                >
+                  Убрать
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canEdit && (
+        <form
+          className="row row--tight"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!name.trim()) return
+            act(
+              api.createField(
+                name.trim(),
+                kind,
+                kind === 'select' ? options.split(',') : [],
+              ),
+            )
+            setName('')
+            setOptions('')
+          }}
+        >
+          <input
+            value={name}
+            placeholder="Название поля"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <select
+            value={kind}
+            aria-label="Вид поля"
+            onChange={(e) => setKind(e.target.value as FieldKind)}
+          >
+            {(Object.keys(FIELD_KIND_NAMES) as FieldKind[]).map((k) => (
+              <option key={k} value={k}>
+                {FIELD_KIND_NAMES[k]}
+              </option>
+            ))}
+          </select>
+          {kind === 'select' && (
+            <input
+              value={options}
+              placeholder="Варианты через запятую"
+              onChange={(e) => setOptions(e.target.value)}
+            />
+          )}
+          <button type="submit" disabled={!name.trim()}>
+            Завести
+          </button>
+        </form>
+      )}
+    </section>
   )
 }
 

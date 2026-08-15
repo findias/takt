@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { LINK_KIND_NAMES, api } from './api'
-import type { BoardEvent, EstimateUnit, Iteration, LinkKind } from './api'
+import type {
+  BoardEvent,
+  CardField,
+  EstimateUnit,
+  FieldValue,
+  Iteration,
+  LinkKind,
+} from './api'
 import { actorText, eventText, timeText } from './feedModel'
 import type { BaseState } from './boardModel'
 import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from './cardModel'
@@ -28,6 +35,7 @@ export function CardPanel({
   onBlock,
   onUnblock,
   onIteration,
+  onField,
 }: {
   base: BaseState
   boardId: string
@@ -43,6 +51,8 @@ export function CardPanel({
   onUnblock: (cardId: string) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
+  /** null снимает поле. */
+  onField: (cardId: string, fieldId: string, value: string | number | boolean | null) => void
 }) {
   const details = cardDetails(base, cardId)
   if (!details) return null
@@ -87,6 +97,13 @@ export function CardPanel({
         unit={unit}
         canEdit={canEdit}
         onSave={(value) => onEstimate(card.id, value)}
+      />
+
+      <Fields
+        fields={base.fields}
+        values={base.fieldValues[card.id] ?? []}
+        canEdit={canEdit}
+        onSet={(fieldId, value) => onField(card.id, fieldId, value)}
       />
 
       <Description
@@ -321,6 +338,133 @@ function Estimate({
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
       />
       <span className="muted small">{UNIT_SHORT[unit]}</span>
+    </label>
+  )
+}
+
+/**
+ * Свои поля карточки.
+ *
+ * Показываются все поля организации, а не только заполненные: иначе
+ * заполнить новое поле можно было бы, только зная о его существовании
+ * заранее. Пустое значение снимает поле — «поля нет» и «поле пустое»
+ * это одно и то же.
+ */
+function Fields({
+  fields,
+  values,
+  canEdit,
+  onSet,
+}: {
+  fields: CardField[]
+  values: FieldValue[]
+  canEdit: boolean
+  onSet: (fieldId: string, value: string | number | boolean | null) => void
+}) {
+  if (fields.length === 0) return null
+  const current = new Map(values.map((v) => [v.fieldId, v.value]))
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">Поля</h3>
+      {fields.map((field) => (
+        <FieldRow
+          key={field.id}
+          field={field}
+          value={current.get(field.id) ?? null}
+          canEdit={canEdit}
+          onSet={(value) => onSet(field.id, value)}
+        />
+      ))}
+    </section>
+  )
+}
+
+function FieldRow({
+  field,
+  value,
+  canEdit,
+  onSet,
+}: {
+  field: CardField
+  value: string | number | boolean | null
+  canEdit: boolean
+  onSet: (value: string | number | boolean | null) => void
+}) {
+  const [draft, setDraft] = useState(value === null ? '' : String(value))
+  useEffect(() => setDraft(value === null ? '' : String(value)), [value])
+
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        {field.name}: {value === null ? '—' : String(value)}
+      </p>
+    )
+  }
+
+  if (field.kind === 'checkbox') {
+    return (
+      <label className="row row--tight">
+        <input
+          type="checkbox"
+          checked={value === true}
+          onChange={(e) => onSet(e.target.checked ? true : null)}
+        />
+        <span className="small">{field.name}</span>
+      </label>
+    )
+  }
+
+  if (field.kind === 'select') {
+    return (
+      <label className="row row--tight">
+        <span className="muted small">{field.name}</span>
+        <select
+          value={typeof value === 'string' ? value : ''}
+          aria-label={field.name}
+          onChange={(e) => onSet(e.target.value || null)}
+        >
+          <option value="">—</option>
+          {field.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+    )
+  }
+
+  const commit = () => {
+    const trimmed = draft.trim()
+    if (trimmed === '') {
+      if (value !== null) onSet(null)
+      return
+    }
+    if (field.kind === 'number') {
+      const parsed = Number(trimmed.replace(',', '.'))
+      if (!Number.isFinite(parsed)) {
+        setDraft(value === null ? '' : String(value))
+        return
+      }
+      if (parsed !== value) onSet(parsed)
+      return
+    }
+    if (trimmed !== value) onSet(trimmed)
+  }
+
+  return (
+    <label className="row row--tight">
+      <span className="muted small">{field.name}</span>
+      <input
+        type={field.kind === 'date' ? 'date' : 'text'}
+        inputMode={field.kind === 'number' ? 'decimal' : undefined}
+        value={draft}
+        aria-label={field.name}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
     </label>
   )
 }
