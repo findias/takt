@@ -1,4 +1,7 @@
 /bin/
+# Комплект для закрытого контура: собирается из исходников (make bundle),
+# в репозитории ему делать нечего.
+/dist/
 /web/node_modules/
 /web/dist/
 /web/*.tsbuildinfo
