@@ -8,11 +8,10 @@ import type { Page } from '@playwright/test'
 // политиками. Каждая часть проверена по отдельности — здесь проверяется
 // стык, на котором уже ломались.
 //
-// Замечено сценарием и записано, чтобы не потерять: у доски нет своего
-// адреса. Приложение живёт по «/», доска открывается щелчком, и после
-// перезагрузки человек оказывается в списке досок. Прислать коллеге
-// ссылку на доску нельзя. Это не поломка, но и не мелочь; здесь тесты
-// открывают доску заново, как это делает человек.
+// У доски есть свой адрес, и это проверяется здесь же: перезагрузка
+// оставляет открытым то, что было открыто, а ссылка на карточку
+// открывает карточку. До появления маршрутов приложение жило по «/»,
+// и прислать коллеге ссылку было нельзя.
 
 type Newcomer = { email: string; password: string; org: string }
 
@@ -103,11 +102,12 @@ test('от входа до переставленной карточки', async
   await expect(cardIn(page, 'В работе', 'Собрать требования')).toBeVisible()
   await savedSince(page, beforeMove)
 
-  // Перезагрузка отвечает на главный вопрос: изменение доехало до базы
-  // или только до экрана.
+  // Перезагрузка отвечает на два вопроса сразу: доехало ли изменение
+  // до базы и остались ли мы там, где были.
+  const boardUrl = page.url()
   await page.reload()
-  await openBoard(page, 'Первая доска')
   await expect(cardIn(page, 'В работе', 'Собрать требования')).toBeVisible()
+  expect(page.url()).toBe(boardUrl)
 
   // И переживает выход с повторным входом — то есть лежит не в браузере.
   // Выход живёт в шапке списка досок: на самой доске в шапке только доска.
@@ -148,7 +148,6 @@ test('перетаскивание мышью переносит карточк�
   await expect(cardIn(page, 'В работе', 'Перетащить меня')).toBeVisible()
   await savedSince(page, beforeMove)
   await page.reload()
-  await openBoard(page, 'Доска с перетаскиванием')
   await expect(cardIn(page, 'В работе', 'Перетащить меня')).toBeVisible()
 })
 
@@ -175,7 +174,6 @@ test('перенос не теряется, если сразу перезагр
   // за такое-то время».
   await expect(async () => {
     await page.reload()
-    await openBoard(page, 'Доска с нетерпеливым')
     await expect(cardIn(page, 'В работе', 'Успеть до перезагрузки')).toBeVisible({
       timeout: 2_000,
     })
@@ -198,4 +196,37 @@ test('изменение доезжает до второй открытой д�
 
   await expect(cardIn(watcher, 'Очередь', 'Появись у соседа')).toBeVisible({ timeout: 15_000 })
   await second.close()
+})
+
+test('ссылка открывает доску и карточку, чужая — не открывает ничего', async ({ page, browser }) => {
+  await register(page)
+  await createBoard(page, 'Доска со ссылкой')
+  await addCard(page, 'Очередь', 'Прислать коллеге')
+
+  // Карточка открывается — и адрес меняется вместе с ней.
+  await cardIn(page, 'Очередь', 'Прислать коллеге').hover()
+  await cardIn(page, 'Очередь', 'Прислать коллеге')
+    .getByRole('button', { name: /Открыть/ })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Прислать коллеге' })).toBeVisible()
+  const cardUrl = page.url()
+  expect(cardUrl).toMatch(/\/board\/[0-9a-f-]+\/card\/[0-9a-f-]+$/)
+
+  // Та же ссылка в новой вкладке открывает ту же карточку.
+  const again = await browser.newContext({ storageState: undefined })
+  await again.close()
+  await page.goto('/')
+  await page.goto(cardUrl)
+  await expect(page.getByRole('heading', { name: 'Прислать коллеге' })).toBeVisible()
+
+  // А посторонний по той же ссылке не видит ни доски, ни карточки:
+  // проверка живёт здесь, а не только в тестах API, потому что раньше
+  // мы верили, что клиент покажет отказ, а не пустой экран.
+  const stranger = await browser.newContext()
+  const strangerPage = await stranger.newPage()
+  await register(strangerPage)
+  await strangerPage.goto(cardUrl)
+  await expect(strangerPage.getByText(/не найдена|Не удалось/)).toBeVisible()
+  await expect(strangerPage.getByRole('group', { name: /Карточка/ })).toHaveCount(0)
+  await stranger.close()
 })

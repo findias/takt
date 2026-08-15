@@ -101,7 +101,9 @@ afterEach(() => {
 })
 
 function show() {
-  return render(<Board boardId="board" unit="points" meId="я" onBack={() => {}} />)
+  return render(
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" onBack={() => {}} />,
+  )
 }
 
 describe('перенос карточки с клавиатуры', () => {

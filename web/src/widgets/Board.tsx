@@ -31,11 +31,17 @@ import { useBoard } from '../features/board/useBoard.ts'
 
 export function Board({
   boardId,
+  cardId,
+  onCard,
   unit,
   meId,
   onBack,
 }: {
   boardId: string
+  /** Какая карточка открыта — приходит из адреса, а не хранится здесь:
+   *  ссылку на карточку должно быть можно прислать. */
+  cardId: string | null
+  onCard: (cardId: string | null) => void
   unit: EstimateUnit
   meId: string
   onBack: () => void
@@ -60,7 +66,8 @@ export function Board({
       document.querySelector<HTMLElement>(`[data-card="${cardId}"]`)?.focus()
     }, 50)
   }, [])
-  const [openCard, setOpenCard] = useState<string | null>(null)
+  const openCard = cardId
+  const setOpenCard = onCard
   const [showFlow, setShowFlow] = useState(false)
   const [showAccess, setShowAccess] = useState(false)
   // Видимость доски показывается в шапке: «доску видят не те» — это то,

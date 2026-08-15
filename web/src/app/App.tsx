@@ -8,19 +8,20 @@ import { Team } from '../widgets/Team.tsx'
 import { Structure } from '../widgets/Structure.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
+import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 
-/** Приглашение приходит ссылкой вида /invite/<токен>. */
-function inviteTokenFromLocation(): string | null {
-  const match = window.location.pathname.match(/^\/invite\/(.+)$/)
-  return match ? match[1] : null
-}
+const TABS = [
+  ['boards', 'Доски'],
+  ['team', 'Команда'],
+  ['structure', 'Структура'],
+] as const
 
 export function App() {
   const [principal, setPrincipal] = useState<Principal | null>(null)
   const [checking, setChecking] = useState(true)
-  const [invite, setInvite] = useState<string | null>(inviteTokenFromLocation())
-  const [boardId, setBoardId] = useState<string | null>(null)
-  const [tab, setTab] = useState<'boards' | 'team' | 'structure'>('boards')
+  // Что открыто — состояние адреса, а не компонента: иначе ссылку
+  // на доску прислать нельзя, а перезагрузка возвращает в список.
+  const route = useRoute()
 
   useEffect(() => {
     api
@@ -30,35 +31,34 @@ export function App() {
       .finally(() => setChecking(false))
   }, [])
 
-  const clearInvite = useCallback(() => {
-    window.history.replaceState(null, '', '/')
-    setInvite(null)
-  }, [])
+  // Принятое приглашение заменяет адрес, а не добавляет в историю:
+  // возвращаться по «назад» к уже использованной ссылке некуда.
+  const leaveInvite = useCallback(() => navigate('/', { replace: true }), [])
 
-  if (invite) {
+  if (route.name === 'invite') {
     return (
       <InviteScreen
-        token={invite}
+        token={route.token}
         onJoined={(p) => {
           setPrincipal(p)
-          setBoardId(null)
-          setTab('boards')
-          clearInvite()
+          leaveInvite()
         }}
-        onCancel={clearInvite}
+        onCancel={leaveInvite}
       />
     )
   }
 
   if (checking) return <div className="centered">Проверяем сессию…</div>
   if (!principal) return <Auth onSignedIn={setPrincipal} />
-  if (boardId)
+  if (route.name === 'board')
     return (
       <Board
-        boardId={boardId}
+        boardId={route.boardId}
+        cardId={route.cardId}
+        onCard={(cardId) => navigate(boardPath(route.boardId, cardId))}
         unit={principal.estimateUnit}
         meId={principal.id}
-        onBack={() => setBoardId(null)}
+        onBack={() => navigate('/')}
       />
     )
 
@@ -73,7 +73,7 @@ export function App() {
           principal={principal}
           onSwitched={(p) => {
             setPrincipal(p)
-            setBoardId(null)
+            navigate('/')
           }}
           onSignOut={() => {
             void api.logout().finally(() => setPrincipal(null))
@@ -81,30 +81,24 @@ export function App() {
         />
 
         <nav className="tabs" aria-label="Разделы">
-          <button
-            className={tab === 'boards' ? 'tab tab--active' : 'tab'}
-            onClick={() => setTab('boards')}
-          >
-            Доски
-          </button>
-          <button
-            className={tab === 'team' ? 'tab tab--active' : 'tab'}
-            onClick={() => setTab('team')}
-          >
-            Команда
-          </button>
-          <button
-            className={tab === 'structure' ? 'tab tab--active' : 'tab'}
-            onClick={() => setTab('structure')}
-          >
-            Структура
-          </button>
+          {TABS.map(([name, title]) => (
+            <button
+              key={name}
+              className={route.name === name ? 'tab tab--active' : 'tab'}
+              aria-current={route.name === name ? 'page' : undefined}
+              onClick={() => navigate(name === 'boards' ? '/' : `/${name}`)}
+            >
+              {title}
+            </button>
+          ))}
         </nav>
 
         <main className="app-main">
-          {tab === 'boards' && <BoardList principal={principal} onOpen={setBoardId} />}
-          {tab === 'team' && <Team principal={principal} />}
-          {tab === 'structure' && <Structure principal={principal} />}
+          {route.name === 'boards' && (
+            <BoardList principal={principal} onOpen={(id) => navigate(boardPath(id))} />
+          )}
+          {route.name === 'team' && <Team principal={principal} />}
+          {route.name === 'structure' && <Structure principal={principal} />}
         </main>
       </div>
     </div>
