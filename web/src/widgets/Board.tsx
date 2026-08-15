@@ -421,7 +421,10 @@ export function Board({
       )}
 
       {groups.map((group) => (
-        <div className="swimlane" key={group.id}>
+        <div
+          className={grouping === 'none' ? 'swimlane swimlane--single' : 'swimlane'}
+          key={group.id}
+        >
           {grouping !== 'none' && (
             <div className="swimlane-head board-toolbar">
               <h2 className="swimlane-title">{group.title}</h2>

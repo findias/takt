@@ -1409,13 +1409,30 @@ textarea.description {
    колонку в слепое пятно. Кнопка «добавить» скрывается: заводить
    карточку туда, куда не смотришь, незачем. */
 .column--collapsed {
-  flex: 0 0 auto;
-  min-width: 0;
+  /* Узкая полоса с вертикальной надписью — так свёрнутую колонку
+     показывают везде, где её вообще показывают: горизонтальное название
+     в полосе шириной с кнопку не помещается и налезает на соседей. */
+  flex: 0 0 2.75rem;
+  align-items: center;
+  padding: var(--space-2) var(--space-1);
+  overflow: hidden;
 }
 .column--collapsed .column-header {
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
+}
+.column--collapsed .column-header > .row {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.column--collapsed .column-title {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 60vh;
 }
 .column--collapsed .add,
 .column--collapsed .column-policy,
@@ -1430,6 +1447,16 @@ textarea.description {
 .swimlane {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+/* Одна дорожка — это доска без группировки, и она обязана занимать всю
+   высоту: обёртка дорожки иначе съедает растягивание, и колонки
+   становятся высотой по содержимому.
+   
+   Класс, а не :only-of-type: тот смотрит на тип элемента, а рядом
+   в доске лежат другие div — полосы инструментов. */
+.swimlane--single {
+  flex: 1;
   min-height: 0;
 }
 .board-screen:has(.swimlane + .swimlane) {
