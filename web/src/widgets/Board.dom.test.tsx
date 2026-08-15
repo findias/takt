@@ -64,6 +64,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     startedAt: null,
     finishedAt: null,
     outcome: null,
+    assigneeId: null,
     estimate: null,
   }
 }
@@ -79,6 +80,7 @@ function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), 
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    people: [],
   }
 }
 

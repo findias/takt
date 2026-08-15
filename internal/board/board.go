@@ -94,6 +94,9 @@ type Card struct {
 	// Пропускная способность считается только по done, иначе выброшенные
 	// карточки завышают её и все прогнозы по ней.
 	Outcome *string `json:"outcome"`
+	// Кто делает. Пусто — никто не назначен, и это нормальное состояние:
+	// работа сначала появляется, потом обретает исполнителя.
+	AssigneeID *string `json:"assigneeId"`
 
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
@@ -153,13 +156,13 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, estimate, outcome`
+	column_entered_at, started_at, finished_at, estimate, outcome, assignee_id`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome)
+		&c.Estimate, &c.Outcome, &c.AssigneeID)
 	return c, err
 }
 
@@ -192,6 +195,10 @@ type Snapshot struct {
 	// Свои поля организации и их значения: cardId → значения.
 	Fields      []Field                 `json:"fields"`
 	FieldValues map[string][]FieldValue `json:"fieldValues"`
+	// Кого можно назначить и чьи имена показывать. Список маленький —
+	// установка рассчитана на сотню человек, — и он нужен на каждой доске:
+	// без него исполнитель на карточке остался бы идентификатором.
+	People []Person `json:"people"`
 }
 
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
@@ -365,6 +372,9 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 		if err := loadIterations(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
+		if err := loadPeople(ctx, tx, orgID, &snap); err != nil {
+			return err
+		}
 		return loadFields(ctx, tx, boardID, &snap)
 	})
 	return snap, err
@@ -511,6 +521,30 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 // Отдельной функцией, а не хвостом enrich: там есть ранний выход для
 // доски без связей, и итерации на такой доске просто не доходили бы
 // до ответа. Тест это и поймал.
+// loadPeople отдаёт тех, кого можно назначить. Список маленький —
+// установка рассчитана на сотню человек, — и без него исполнитель
+// на карточке остался бы идентификатором.
+func loadPeople(ctx context.Context, tx pgx.Tx, orgID string, snap *Snapshot) error {
+	snap.People = []Person{}
+	rows, err := tx.Query(ctx, `
+		select u.id, u.name
+		  from memberships m join users u on u.id = m.user_id
+		 where m.org_id = $1
+		 order by u.name`, orgID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p Person
+		if err := rows.Scan(&p.UserID, &p.Name); err != nil {
+			return err
+		}
+		snap.People = append(snap.People, p)
+	}
+	return rows.Err()
+}
+
 func loadIterations(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) error {
 	iterRows, err := tx.Query(ctx, `
 		select `+iterationFields+`,

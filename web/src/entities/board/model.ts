@@ -40,6 +40,8 @@ export type BaseState = {
   cardIterations: Record<string, string>
   fields: CardField[]
   fieldValues: Record<string, FieldValue[]>
+  /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
+  people: Record<string, string>
 }
 
 export type MoveCommand = {
@@ -69,8 +71,12 @@ export function fromSnapshot(snap: Snapshot): BaseState {
   const linked: Record<string, LinkedCard> = {}
   for (const card of snap.linked) linked[card.id] = card
 
+  const people: Record<string, string> = {}
+  for (const person of snap.people) people[person.userId] = person.name
+
   return {
     info: snap.board,
+    people,
     columnIds: sortedColumns.map((c) => c.id),
     columns,
     cards,

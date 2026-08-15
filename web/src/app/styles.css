@@ -1340,6 +1340,44 @@ textarea.description {
   flex: none;
 }
 
+/* Кто делает карточку. Инициалы, а не фотография: доска на сотню
+   человек, которые друг друга знают, а плитка аватаров съедает
+   плотность, ради которой доска и существует. */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--surface);
+  user-select: none;
+}
+/* Оттенки выводятся из имени и живут здесь, а не в поле «цвет
+   человека»: такое поле кто-то однажды должен заполнить, а потом
+   поддерживать. */
+.avatar--tone-0 { background: #0e6f5c; }
+.avatar--tone-1 { background: #2f6f9f; }
+.avatar--tone-2 { background: #6b5ca5; }
+.avatar--tone-3 { background: #a3506b; }
+.avatar--tone-4 { background: #a3671e; }
+.avatar--tone-5 { background: #4a7a2a; }
+.avatar--tone-6 { background: #2b7f7a; }
+.avatar--tone-7 { background: #8a5a2b; }
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.card-head .card-title {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Меню. Список открывается под кнопкой и перекрывает содержимое —
    отсюда z-index; больше ничего в интерфейсе так не всплывает. */
 .menu {

@@ -20,6 +20,7 @@ import {
 } from './model.ts'
 import type { MoveCommand } from './model.ts'
 import type { Card, Column, ColumnKind, Snapshot } from '../../shared/api/index.ts'
+import { initials } from '../../shared/lib/initials.ts'
 
 const COL_A = 'col-a'
 const COL_B = 'col-b'
@@ -36,6 +37,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     startedAt: null,
     finishedAt: null,
     outcome: null,
+    assigneeId: null,
     estimate: null,
   }
 }
@@ -65,6 +67,7 @@ function snapshot(cards: Card[]): Snapshot {
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    people: [],
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),
@@ -292,4 +295,14 @@ test('без обещания, до начала и после конца мет
     agingLabel({ startedAt: long, finishedAt: new Date(now).toISOString() }, 8, now),
     null,
   )
+})
+
+// Инициалы: то, чем подписана карточка.
+test('инициалы собираются из имени, а не из пробелов', () => {
+  assert.equal(initials('Мария Кузнецова'), 'МК')
+  assert.equal(initials('Иван'), 'ИВ')
+  // Лишние пробелы и второе имя не должны ломать подпись.
+  assert.equal(initials('  Пётр   Сергеевич Иванов '), 'ПС')
+  // Пустое имя бывает у неполных данных — показываем вопрос, а не пустоту.
+  assert.equal(initials('   '), '?')
 })

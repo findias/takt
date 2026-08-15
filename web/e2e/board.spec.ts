@@ -246,3 +246,38 @@ test('ссылка открывает доску и карточку, чужая
   await expect(strangerPage.getByRole('group', { name: /Карточка/ })).toHaveCount(0)
   await stranger.close()
 })
+
+test('карточка получает исполнителя, и это видно', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с исполнителем')
+  await addCard(page, 'Очередь', 'Кому-то делать')
+
+  const card = cardIn(page, 'Очередь', 'Кому-то делать')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+
+  // Инициалы — подпись под работой: доска отвечает на вопрос «кто это
+  // делает», ради которого её и открывают.
+  const avatar = card.locator('.avatar')
+  await expect(avatar).toBeVisible()
+  const initials = await avatar.textContent()
+  expect(initials?.trim().length).toBeGreaterThan(0)
+
+  // И это не украшение экрана: переживает перезагрузку. Ждём появления,
+  // а не мгновенного совпадения: после перезагрузки доска приходит
+  // запросом, и требовать её немедленно — значит проверять скорость сети.
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveText(
+    initials!.trim(),
+    { timeout: 10_000 },
+  )
+
+  // Снять исполнителя можно тем же меню.
+  await cardIn(page, 'Очередь', 'Кому-то делать').hover()
+  await cardIn(page, 'Очередь', 'Кому-то делать')
+    .getByRole('button', { name: /Действия карточки/ })
+    .click()
+  await page.getByRole('menuitem', { name: 'Снять исполнителя' }).click()
+  await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveCount(0)
+})

@@ -349,6 +349,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
   // null снимает оценку, отсутствие поля её не трогает: иначе
   // переименование стирало бы оценку.
+  const assignCard = useCallback(
+    (cardId: string, assigneeId: string | null) =>
+      patchCard(cardId, { assigneeId }, 'ASSIGN_CARD', { cardId, assigneeId },
+        'Не удалось назначить исполнителя'),
+    [patchCard],
+  )
+
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
       patchCard(cardId, { estimate }, 'UPDATE_CARD', { cardId, estimate },
@@ -449,6 +456,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     describeCard,
     estimateCard,
     archiveCard,
+    assignCard,
     linkCards,
     unlinkCards,
     blockCard,

@@ -28,6 +28,7 @@ function card(id: string, title: string, extra: Partial<Card> = {}): Card {
     startedAt: null,
     finishedAt: null,
     outcome: null,
+    assigneeId: null,
     estimate: null,
     ...extra,
   }
@@ -59,6 +60,7 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    people: {},
   } as BaseState
 }
 

@@ -26,6 +26,7 @@ import { progressLabel } from '../entities/card/model.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
+import { Avatar } from '../shared/ui/Avatar.tsx'
 import { Menu } from '../shared/ui/Menu.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
@@ -299,6 +300,8 @@ export function Board({
             cards={base.cards}
             unit={unit}
             sleDays={base.info.sleDays}
+            people={base.people}
+            onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
             columns={base.columnIds.map((id) => base.columns[id])}
             onMoveToColumn={moveToColumn}
             onOpenCard={(id) => {
@@ -377,6 +380,8 @@ type ColumnProps = {
   cards: BaseState['cards']
   unit: EstimateUnit
   sleDays: number | null
+  people: Record<string, string>
+  onAssign: (cardId: string, assigneeId: string | null) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -457,6 +462,8 @@ function ColumnView(props: ColumnProps) {
             card={props.cards[cardId]}
             unit={props.unit}
             sleDays={props.sleDays}
+            people={props.people}
+            onAssign={props.onAssign}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={() => props.onOpenCard(cardId)}
@@ -497,6 +504,9 @@ type CardProps = {
   unit: EstimateUnit
   /** Обещание доски: с ним сравнивается возраст карточки. */
   sleDays: number | null
+  /** userId → имя: карточка хранит идентификатор, показать надо имя. */
+  people: Record<string, string>
+  onAssign: (cardId: string, assigneeId: string | null) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpen: () => void
@@ -511,6 +521,8 @@ function CardView({
   card,
   unit,
   sleDays,
+  people,
+  onAssign,
   columns,
   onMoveToColumn,
   onOpen,
@@ -551,6 +563,7 @@ function CardView({
   // получает третью метку. Считается на отрисовке: хранить «просрочена»
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
+  const assigneeName = card?.assigneeId ? (people[card.assigneeId] ?? null) : null
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!(e.ctrlKey || e.metaKey)) return
@@ -589,9 +602,15 @@ function CardView({
         />
       ) : (
         <>
-          <span className="card-title" onDoubleClick={() => setEditing(true)}>
-            {title}
-          </span>
+          <div className="card-head">
+            <span className="card-title" onDoubleClick={() => setEditing(true)}>
+              {title}
+            </span>
+            {/* Кто делает — самое частое, о чём спрашивают доску после
+                «что происходит». Инициалы читаются с одного взгляда
+                и занимают двадцать пикселей. */}
+            {assigneeName && <Avatar name={assigneeName} />}
+          </div>
           {card && (card.blocked || card.progress || aging) && (
             <div className="card-marks">
               {aging && (
@@ -623,6 +642,22 @@ function CardView({
               items={[
                 { label: 'Открыть', icon: <OpenIcon />, onSelect: onOpen },
                 { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
+                ...Object.entries(people)
+                  .filter(([id]) => id !== card?.assigneeId)
+                  .map(([id, name]) => ({
+                    label: `Назначить: ${name}`,
+                    icon: <PeopleIcon />,
+                    onSelect: () => onAssign(cardId, id),
+                  })),
+                ...(card?.assigneeId
+                  ? [
+                      {
+                        label: 'Снять исполнителя',
+                        icon: <PeopleIcon />,
+                        onSelect: () => onAssign(cardId, null),
+                      },
+                    ]
+                  : []),
                 ...columns
                   .filter((c) => c.id !== columnId)
                   .map((c) => ({

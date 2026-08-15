@@ -251,6 +251,9 @@ export type Card = {
   outcome: 'done' | 'discarded' | null
   /** Оценка в единицах организации. Пусто — не оценена. */
   estimate: number | null
+  /** Кто делает. Пусто — никто не назначен, и это нормальное состояние:
+   *  работа сначала появляется, потом обретает исполнителя. */
+  assigneeId: string | null
   /** Прогресс по подзадачам; пусто, если подзадач нет. `byWeight`
    *  говорит, чем он измерен: суммой оценок или штуками. */
   progress?: { done: number; total: number; byWeight: boolean }
@@ -326,7 +329,12 @@ export type Snapshot = {
   fields: CardField[]
   /** cardId → значения его полей. */
   fieldValues: Record<string, FieldValue[]>
+  /** Кого можно назначить. Приезжает со снимком: иначе исполнитель
+   *  на карточке остался бы идентификатором. */
+  people: Person[]
 }
+
+export type Person = { userId: string; name: string }
 
 export type Patch = {
   cards?: Card[]
