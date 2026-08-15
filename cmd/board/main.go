@@ -24,6 +24,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/httpapi"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/webhook"
 )
 
 func main() {
@@ -98,6 +99,11 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 		WriteTimeout: 120 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
+
+	// Работник разбирает исходящий ящик вебхуков. Живёт в том же процессе:
+	// у нас один образ на установку, и отдельный демон ради одной очереди
+	// стоил бы дороже, чем стоит.
+	go webhook.NewWorker(db, log).Run(ctx)
 
 	go func() {
 		log.Info("сервер запущен", "адрес", cfg.ListenAddr, "baseURL", cfg.BaseURL)

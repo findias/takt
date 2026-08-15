@@ -20,6 +20,7 @@ import (
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/team"
+	"github.com/konkov/agile/internal/webhook"
 )
 
 type Server struct {
@@ -29,6 +30,7 @@ type Server struct {
 	orgs    *org.Service
 	teams   *team.Service
 	client  *apiclient.Service
+	hooks   *webhook.Service
 	limiter *limiter
 	audit   *audit.Service
 	log     *slog.Logger
@@ -42,6 +44,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 		orgs:    org.New(db),
 		teams:   team.New(db),
 		client:  apiclient.New(db),
+		hooks:   webhook.New(db),
 		limiter: newLimiter(),
 		audit:   audit.New(db),
 		log:     log,
@@ -79,6 +82,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerFeedRoutes(mux)
 	s.registerClientRoutes(mux)
 	s.registerContractRoutes(mux)
+	s.registerWebhookRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))

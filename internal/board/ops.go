@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/rank"
+	"github.com/konkov/agile/internal/webhook"
 )
 
 // Request — операция, присланная клиентом.
@@ -711,9 +713,24 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 			return err
 		}
 	}
-	_, err := tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		insert into card_events (org_id, board_id, card_id, actor_id, type, from_column, to_column, payload)
 		values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-		orgID, boardID, cardID, actorID, kind, from, to, string(body))
+		orgID, boardID, cardID, actorID, kind, from, to, string(body)); err != nil {
+		return err
+	}
+
+	// Подписчики узнают о событии из той же транзакции, в которой оно
+	// записано: доставка не может оказаться потерянной при записанном
+	// событии, а событие — записанным без доставки. Отправит её потом
+	// работник, поэтому чужой медленный сервер не задержит операцию.
+	err := webhook.Enqueue(ctx, tx, orgID, "card."+kind, map[string]any{
+		"event":   "card." + kind,
+		"boardId": boardID,
+		"cardId":  cardID,
+		"actorId": actorID,
+		"payload": json.RawMessage(body),
+		"at":      time.Now().UTC(),
+	})
 	return err
 }
