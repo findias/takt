@@ -100,6 +100,7 @@ test('снимки экранов', async ({ page }) => {
 
   // Экран команды и структуры.
   await page.getByRole('button', { name: '← Все доски' }).click()
+  await expect(page.getByRole('button', { name: 'Поставки', exact: true })).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/10-список-досок.png` })
   await page.getByRole('button', { name: 'Команда' }).click()
   await page.waitForTimeout(300)

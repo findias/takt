@@ -335,8 +335,7 @@ input[type='radio'] {
 .app-main textarea {
   max-width: 44rem;
 }
-/* Ряды кнопок и полей внутри разделов выравниваются по левому краю:
-   одинокая ссылка посередине читается как заголовок, а не как действие. */
+/* Ряды кнопок и полей внутри разделов переносятся, а не сжимаются. */
 .app-main .row {
   flex-wrap: wrap;
 }
@@ -364,6 +363,10 @@ input[type='radio'] {
 }
 .row {
   display: flex;
+  /* Направление задано явно. Без этого `label.row` оставался колонкой:
+     у `label` направление задано глобально, а класс его не перебивал —
+     и «Оценка» с полем выстраивались в столбик посреди панели. */
+  flex-direction: row;
   gap: var(--space-2);
   align-items: center;
 }
@@ -387,15 +390,44 @@ input[type='radio'] {
   flex-direction: column;
   gap: var(--space-2);
 }
-.board-list button {
-  width: 100%;
+/* Доска — строка списка, а не набор кнопок в пустоте: без границы
+   непонятно, где кончается одна доска и начинается следующая. */
+.board-list > li {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  background: var(--surface);
+}
+/* Название доски занимает всё свободное место, действия остаются
+   справа. Раньше кнопка растягивалась на всю строку и выдавливала
+   «Доступ» и «В архив» на следующую.
+   
+   Рамки у неё нет: строка списка уже обведена, и вторая рамка внутри
+   первой превращает название доски в поле ввода. */
+.board-list li > .row > button:not(.link) {
+  flex: 1;
   text-align: left;
+  font-weight: 600;
+  border-color: transparent;
+  background: none;
+}
+.board-list li > .row > button:not(.link):hover {
+  background: var(--surface-2);
+  border-color: transparent;
 }
 
 .stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+/* Кнопка в вертикальной стопке иначе растягивается во всю ширину,
+   а её подпись встаёт по центру — и действие читается как заголовок
+   раздела. Так было с «Показать архив» и «Отметить блокировку». */
+.stack > button,
+.panel-card > button,
+.panel-card > form > button {
+  align-self: flex-start;
 }
 .small {
   font-size: var(--text-sm);
