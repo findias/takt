@@ -370,3 +370,32 @@ test('фильтр по исполнителю показывает и то, ч�
   await expect(cardIn(page, 'Очередь', 'Ничья работа')).toBeVisible()
   await expect(page.getByRole('group', { name: /Моя работа/ })).toHaveCount(0)
 })
+
+test('группировка раскладывает доску по дорожкам и живёт в адресе', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с дорожками')
+  await addCard(page, 'Очередь', 'Моя работа')
+  await addCard(page, 'Очередь', 'Ничья работа')
+
+  const mine = cardIn(page, 'Очередь', 'Моя работа')
+  await mine.hover()
+  await mine.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await expect(mine.locator('.avatar')).toBeVisible()
+
+  await page.getByLabel('Группировка').selectOption('assignee')
+
+  // Дорожек две: своя и «ни на ком» — именно там теряется работа,
+  // поэтому она остаётся видимой всегда.
+  await expect(page.getByRole('heading', { name: 'Ни на ком' })).toBeVisible()
+  await expect(page.locator('.swimlane')).toHaveCount(2)
+
+  // Группировка — состояние адреса: вид посылают ссылкой.
+  expect(page.url()).toContain('group=assignee')
+  await page.reload()
+  await expect(page.locator('.swimlane')).toHaveCount(2)
+
+  await page.getByLabel('Группировка').selectOption('none')
+  await expect(page.locator('.swimlane')).toHaveCount(1)
+  expect(page.url()).not.toContain('group=')
+})

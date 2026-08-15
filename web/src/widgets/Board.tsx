@@ -32,6 +32,8 @@ import { FilterBar } from '../features/board/FilterBar.tsx'
 import { filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
+import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
+import type { Grouping } from '../features/board/grouping.ts'
 import { Menu } from '../shared/ui/Menu.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
@@ -139,6 +141,18 @@ export function Board({
     }
     return { order: next, hidden }
   }, [base, fullOrder, filters])
+
+  // Группировка — тоже состояние адреса: сгруппированный вид посылают
+  // ссылкой наравне с отфильтрованным.
+  const grouping = useMemo(() => parseGrouping(query), [query])
+  const setGrouping = useCallback(
+    (next: Grouping) => setQuery(groupingToQuery(next, query), { replace: true }),
+    [query],
+  )
+  const groups = useMemo(
+    () => (base ? groupsOf(base, order, grouping) : []),
+    [base, order, grouping],
+  )
 
   // Список людей для фильтра: в снимке они словарём, а выпадающему
   // списку нужен порядок.
@@ -262,6 +276,41 @@ export function Board({
   }
   if (!base) return <div className="centered">Загружаем доску…</div>
 
+  // Колонки рисуются для каждой дорожки: сами колонки одни и те же,
+  // разнится только набор карточек в них.
+  const renderColumns = (groupOrder: Record<string, string[]>) =>
+    base.columnIds.map((columnId) => (
+          <ColumnView
+            key={columnId}
+            name={base.columns[columnId].name}
+            columnId={columnId}
+            column={base.columns[columnId]}
+            cardIds={groupOrder[columnId] ?? []}
+            cards={base.cards}
+            unit={unit}
+            sleDays={base.info.sleDays}
+            people={base.people}
+            onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
+            labels={base.labels}
+            cardLabels={base.cardLabels}
+            onLabel={(cardId, labelId, on) => void board.toggleLabel(cardId, labelId, on)}
+            columns={base.columnIds.map((id) => base.columns[id])}
+            onMoveToColumn={moveToColumn}
+            onOpenCard={(id) => {
+              setShowFlow(false)
+              setOpenCard(id)
+            }}
+            onMoveByKeyboard={moveByKeyboard}
+            onCreateCard={(title) => void board.createCard(columnId, title)}
+            onRenameColumn={(name) => void board.renameColumn(columnId, name)}
+            onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
+            onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
+            onRenameCard={(cardId, title) => void board.renameCard(cardId, title)}
+            onArchiveCard={(cardId) => void board.archiveCard(cardId)}
+          />
+    ))
+
+
   return (
     <div className="board-screen">
       <header className="board-header">
@@ -298,7 +347,7 @@ export function Board({
         </div>
       </header>
 
-      <div className="board-toolbar">
+      <div className="board-toolbar filters-line">
         <FilterBar
           filters={filters}
           people={peopleList}
@@ -306,6 +355,18 @@ export function Board({
           hidden={hidden}
           onChange={setFilters}
         />
+        <select
+          className="grouping"
+          value={grouping}
+          aria-label="Группировка"
+          onChange={(e) => setGrouping(e.target.value as Grouping)}
+        >
+          {(Object.keys(GROUPING_NAMES) as Grouping[]).map((g) => (
+            <option key={g} value={g}>
+              {GROUPING_NAMES[g]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Одна полоса, а не три: подсказка о потоке, итерации и переход
@@ -347,39 +408,22 @@ export function Board({
         </div>
       )}
 
-      <div className="columns">
-        {base.columnIds.map((columnId) => (
-          <ColumnView
-            key={columnId}
-            name={base.columns[columnId].name}
-            columnId={columnId}
-            column={base.columns[columnId]}
-            cardIds={order[columnId] ?? []}
-            cards={base.cards}
-            unit={unit}
-            sleDays={base.info.sleDays}
-            people={base.people}
-            onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
-            labels={base.labels}
-            cardLabels={base.cardLabels}
-            onLabel={(cardId, labelId, on) => void board.toggleLabel(cardId, labelId, on)}
-            columns={base.columnIds.map((id) => base.columns[id])}
-            onMoveToColumn={moveToColumn}
-            onOpenCard={(id) => {
-              setShowFlow(false)
-              setOpenCard(id)
-            }}
-            onMoveByKeyboard={moveByKeyboard}
-            onCreateCard={(title) => void board.createCard(columnId, title)}
-            onRenameColumn={(name) => void board.renameColumn(columnId, name)}
-            onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
-            onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
-            onRenameCard={(cardId, title) => void board.renameCard(cardId, title)}
-            onArchiveCard={(cardId) => void board.archiveCard(cardId)}
-          />
-        ))}
-        <NewColumn onCreate={(name) => void board.createColumn(name)} />
-      </div>
+      {groups.map((group) => (
+        <div className="swimlane" key={group.id}>
+          {grouping !== 'none' && (
+            <div className="swimlane-head board-toolbar">
+              <h2 className="swimlane-title">{group.title}</h2>
+              <span className="muted small">{group.count}</span>
+            </div>
+          )}
+          <div className="columns">
+            {renderColumns(group.order)}
+            {grouping === 'none' && (
+              <NewColumn onCreate={(name) => void board.createColumn(name)} />
+            )}
+          </div>
+        </div>
+      ))}
 
       {showFlow && (
         <Flow

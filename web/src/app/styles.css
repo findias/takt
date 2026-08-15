@@ -1378,9 +1378,52 @@ textarea.description {
   min-width: 0;
 }
 
+/* Дорожки. Когда группировки нет, дорожка одна и выглядит как прежняя
+   доска: колонки во всю высоту. Когда есть — дорожки идут одна
+   под другой, и высота у колонок по содержимому, иначе на экран
+   помещалась бы ровно одна группа. */
+.swimlane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.board-screen:has(.swimlane + .swimlane) {
+  overflow-y: auto;
+}
+.board-screen:has(.swimlane + .swimlane) .columns {
+  flex: none;
+  align-items: flex-start;
+}
+.board-screen:has(.swimlane + .swimlane) .column {
+  max-height: 60vh;
+}
+.swimlane-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+}
+.swimlane-title {
+  font-size: var(--text);
+  font-weight: 650;
+  margin: 0;
+}
+.grouping {
+  /* Стоит в том же ряду, что и фильтры: это соседняя настройка вида,
+     и отрывать её вниз незачем. Прижимать вправо через margin нельзя —
+     при переносе строки она уезжает влево и выглядит потерянной. */
+  flex: none;
+}
+
 /* Полоса фильтров. Всегда на виду, а не за кнопкой: спрятанный фильтр —
    это фильтр, о котором забывают, а забытый фильтр показывает доску
    не целиком и об этом не сообщает. */
+.filters-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
 .filters {
   flex-wrap: wrap;
   padding-bottom: var(--space-2);
