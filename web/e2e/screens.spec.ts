@@ -84,6 +84,7 @@ test('снимки экранов', async ({ page }) => {
   await card.click()
   await page.getByLabel('Название подзадачи').fill('Свести смету с прошлым годом')
   await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByLabel('Добавить исполнителя').selectOption({ index: 1 })
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/07-панель-сбоку.png` })
 

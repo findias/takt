@@ -32,12 +32,15 @@ function card(over: Partial<Card> = {}): Card {
     finishedAt: null,
     outcome: null,
     estimate: null,
-    assigneeId: null,
     ...over,
   }
 }
 
-const ctx = { labelsOf: () => [] as string[], sleDays: null }
+const ctx = {
+  labelsOf: () => [] as string[],
+  assigneesOf: () => [] as string[],
+  sleDays: null,
+}
 
 test('пустой фильтр никого не отсеивает и знает, что он пустой', () => {
   assert.equal(isEmpty(EMPTY), true)
@@ -83,21 +86,28 @@ test('поиск идёт и по названию, и по описанию', (
   )
 })
 
-test('исполнитель: конкретный и «ни на ком»', () => {
+test('исполнитель: конкретный, один из нескольких и «ни на ком»', () => {
+  const withPeople = (ids: string[]) => ({ ...ctx, assigneesOf: () => ids })
   const mine = { ...EMPTY, assignee: 'u-1' }
-  assert.equal(matches(card({ assigneeId: 'u-1' }), mine, ctx), true)
-  assert.equal(matches(card({ assigneeId: 'u-2' }), mine, ctx), false)
+
+  assert.equal(matches(card(), mine, withPeople(['u-1'])), true)
+  assert.equal(matches(card(), mine, withPeople(['u-2'])), false)
   assert.equal(matches(card(), mine, ctx), false)
+
+  // «На мне» значит «я среди исполнителей»: карточку, которую делают
+  // вдвоём, обязан видеть каждый из двоих — иначе фильтр «моё» прячет
+  // ровно ту работу, о которой договорились вместе.
+  assert.equal(matches(card(), mine, withPeople(['u-2', 'u-1'])), true)
 
   // Работа без исполнителя и есть то, что теряется, — её надо уметь
   // спросить отдельно.
   const nobody = { ...EMPTY, assignee: UNASSIGNED }
   assert.equal(matches(card(), nobody, ctx), true)
-  assert.equal(matches(card({ assigneeId: 'u-1' }), nobody, ctx), false)
+  assert.equal(matches(card(), nobody, withPeople(['u-1'])), false)
 })
 
 test('метки складываются по И, а не по ИЛИ', () => {
-  const withLabels = (ids: string[]) => ({ labelsOf: () => ids, sleDays: null })
+  const withLabels = (ids: string[]) => ({ ...ctx, labelsOf: () => ids })
   const f = { ...EMPTY, labels: ['срочно', 'снаружи'] }
 
   assert.equal(matches(card(), f, withLabels(['срочно', 'снаружи', 'ещё'])), true)
@@ -121,13 +131,13 @@ test('блокировка и возраст сверх обещания', () =>
   const now = Date.parse('2026-08-15T12:00:00Z')
   const started = (days: number) => new Date(now - days * 86_400_000).toISOString()
   const aging = { ...EMPTY, aging: true }
-  const withSle = { labelsOf: () => [] as string[], sleDays: 8, now }
+  const withSle = { ...ctx, sleDays: 8, now }
 
   assert.equal(matches(card({ startedAt: started(9) }), aging, withSle), true)
   assert.equal(matches(card({ startedAt: started(3) }), aging, withSle), false)
   // Без обещания сравнивать не с чем — и «стареющих» не бывает.
   assert.equal(
-    matches(card({ startedAt: started(40) }), aging, { labelsOf: () => [], sleDays: null, now }),
+    matches(card({ startedAt: started(40) }), aging, { ...ctx, now }),
     false,
   )
 })

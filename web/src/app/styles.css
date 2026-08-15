@@ -1493,6 +1493,34 @@ textarea.description {
 /* Кто делает карточку. Инициалы, а не фотография: доска на сотню
    человек, которые друг друга знают, а плитка аватаров съедает
    плотность, ради которой доска и существует. */
+/* Исполнители стопкой: они читаются как одна группа «кто делает»,
+   а не как несколько отдельных значков. Небольшой нахлёст экономит
+   ширину карточки, обводка цветом карточки отделяет соседей. */
+.avatars {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+.avatars > * + * {
+  margin-left: -0.35rem;
+}
+.avatars > * {
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.avatar--more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
 .avatar {
   display: inline-flex;
   align-items: center;

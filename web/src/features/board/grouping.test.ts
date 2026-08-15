@@ -26,7 +26,6 @@ function card(id: string, over: Partial<Card> = {}): Card {
     finishedAt: null,
     outcome: null,
     estimate: null,
-    assigneeId: null,
     ...over,
   }
 }
@@ -50,6 +49,7 @@ function state(cards: Card[], over: Partial<BaseState> = {}): BaseState {
       { id: 'l-2', name: 'Снаружи', tone: 'blue' },
     ],
     cardLabels: {},
+    cardAssignees: {},
     ...over,
   } as BaseState
 }
@@ -71,7 +71,7 @@ test('без группировки доска остаётся одной до�
 })
 
 test('по исполнителю: своя дорожка и «ни на ком»', () => {
-  const base = state([card('моя', { assigneeId: 'u-1' }), card('ничья')])
+  const base = state([card('моя'), card('ничья')], { cardAssignees: { моя: ['u-1'] } })
   const groups = groupsOf(base, base.order, 'assignee')
 
   assert.deepEqual(
@@ -85,11 +85,31 @@ test('по исполнителю: своя дорожка и «ни на ком
   assert.equal(groups.at(-1)?.id, 'none')
 })
 
+test('карточку, которую делают вдвоём, видно в дорожке каждого', () => {
+  // Иначе один из двоих не найдёт в своей дорожке работу, о которой
+  // они договорились вместе, — а дорожка отвечает на вопрос «что на
+  // мне», а не «чья это карточка целиком».
+  const base = state([card('вместе')], {
+    people: { 'u-1': 'Мария Кузнецова', 'u-2': 'Иван Петров' },
+    cardAssignees: { вместе: ['u-1', 'u-2'] },
+  })
+  const groups = groupsOf(base, base.order, 'assignee')
+
+  // Порядок дорожек — по именам, поэтому сравниваем состав.
+  assert.deepEqual(
+    groups
+      .filter((g) => g.count > 0)
+      .map((g) => g.title)
+      .sort(),
+    ['Иван Петров', 'Мария Кузнецова'],
+  )
+})
+
 test('«ни на ком» остаётся, даже когда она пуста', () => {
   // Иначе исчезнувшая группа читается как «всё разобрано», а на деле
   // её просто нечем показать — и следующая же неназначенная карточка
   // появится там, куда никто не смотрит.
-  const base = state([card('моя', { assigneeId: 'u-1' })])
+  const base = state([card('моя')], { cardAssignees: { моя: ['u-1'] } })
   const groups = groupsOf(base, base.order, 'assignee')
   assert.equal(groups.some((g) => g.id === 'none'), true)
 })

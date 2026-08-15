@@ -273,12 +273,13 @@ test('карточка получает исполнителя, и это вид
     { timeout: 10_000 },
   )
 
-  // Снять исполнителя можно тем же меню.
+  // Снять — тем же пунктом меню, что и назначить: два списка
+  // «назначить» и «снять» вдвое длиннее и заставляют помнить, кто где.
   await cardIn(page, 'Очередь', 'Кому-то делать').hover()
   await cardIn(page, 'Очередь', 'Кому-то делать')
     .getByRole('button', { name: /Действия карточки/ })
     .click()
-  await page.getByRole('menuitem', { name: 'Снять исполнителя' }).click()
+  await page.getByRole('menuitem', { name: /Снять: / }).first().click()
   await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveCount(0)
 })
 
@@ -626,4 +627,60 @@ test('подзадача заводится из карточки одним п�
       name: 'Подзадачи: готово 0 из 1',
     }),
   ).toBeVisible()
+})
+
+test('исполнителей у карточки может быть несколько', async ({ page, browser }) => {
+  const who = await register(page)
+  await createBoard(page, 'Доска вдвоём')
+  await addCard(page, 'Очередь', 'Делать вдвоём')
+
+  // Второй человек в организации: без него «несколько» проверить не на ком.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page
+    .getByRole('textbox', { name: 'Почта коллеги' })
+    .fill(`vtoroy-${Math.random().toString(36).slice(2, 8)}@example.test`)
+  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  // Ссылка лежит в поле рядом с кнопкой «Скопировать»: её и читаем.
+  const invite = await page.locator('input[readonly]').first().inputValue()
+  expect(invite, 'ссылка приглашения').toContain('/invite/')
+
+  const second = await browser.newContext()
+  const secondPage = await second.newPage()
+  await secondPage.goto(invite!.trim())
+  await secondPage.getByLabel('Как вас зовут').fill('Иван Петров')
+  await secondPage.getByLabel('Пароль').fill('parol12345')
+  await secondPage.getByRole('button', { name: /Принять|Присоединиться/ }).click()
+  await expect(secondPage.getByRole('button', { name: 'Доска вдвоём' }).first()).toBeVisible()
+  await second.close()
+
+  // Назначаем обоих — из панели карточки.
+  await page.goto('/')
+  await openBoard(page, 'Доска вдвоём')
+  await cardIn(page, 'Очередь', 'Делать вдвоём').click()
+  await page.getByLabel('Добавить исполнителя').selectOption({ label: 'Проверяющий' })
+  await page.getByLabel('Добавить исполнителя').selectOption({ label: 'Иван Петров' })
+
+  // Оба в списке «кто делает» — и никого из них больше не предлагают
+  // добавить: список исполнителей и список свободных не пересекаются.
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText('Проверяющий').first()).toBeVisible()
+  await expect(panel.getByText('Иван Петров').first()).toBeVisible()
+  await expect(page.getByLabel('Добавить исполнителя')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // На доске видны оба — и назначение пережило перезагрузку.
+  await page.reload()
+  const card = cardIn(page, 'Очередь', 'Делать вдвоём')
+  await expect(card.getByTitle('Проверяющий')).toBeVisible()
+  await expect(card.getByTitle('Иван Петров')).toBeVisible()
+
+  // Фильтр «на мне» показывает работу, о которой договорились вдвоём:
+  // иначе один из двоих не найдёт её у себя.
+  await page.getByLabel('Исполнитель').selectOption({ label: 'Иван Петров' })
+  await expect(card).toBeVisible()
+
+  await page.getByLabel('Исполнитель').selectOption({ label: 'Ни на ком' })
+  await expect(card).toHaveCount(0)
+  expect(who.email).toBeTruthy()
 })

@@ -398,16 +398,46 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [boardId, notify],
   )
 
+  /**
+   * Назначить или снять исполнителя.
+   *
+   * Устроено как метки, и по той же причине: исполнителей несколько,
+   * список приходит с сервера целиком, а на экране изменение должно
+   * появляться сразу — назначение делают в разговоре, и ждать ответа
+   * сервера там нечего. При отказе список возвращается к прежнему,
+   * прочитанному из зеркала: к моменту отказа состояние уже другое.
+   */
   const assignCard = useCallback(
-    (cardId: string, assigneeId: string | null) =>
-      patchCard(
-        cardId,
-        { assigneeId },
-        'ASSIGN_CARD',
-        { cardId, assigneeId },
-        'Не удалось назначить исполнителя',
-      ),
-    [patchCard],
+    async (cardId: string, userId: string, on: boolean) => {
+      if (!boardId) return
+      const previous = shown.current?.cardAssignees[cardId] ?? []
+      setBase((current) => {
+        if (!current) return current
+        const now = current.cardAssignees[cardId] ?? []
+        const next = on ? [...new Set([...now, userId])] : now.filter((id) => id !== userId)
+        return { ...current, cardAssignees: { ...current.cardAssignees, [cardId]: next } }
+      })
+      try {
+        await api.operation(boardId, crypto.randomUUID(), on ? 'ASSIGN_CARD' : 'UNASSIGN_CARD', {
+          cardId,
+          userId,
+        })
+      } catch (e) {
+        setBase((current) =>
+          current
+            ? { ...current, cardAssignees: { ...current.cardAssignees, [cardId]: previous } }
+            : current,
+        )
+        notify({
+          text:
+            e instanceof Error
+              ? `Не удалось изменить исполнителей: ${e.message}`
+              : 'Не удалось изменить исполнителей',
+          tone: 'warning',
+        })
+      }
+    },
+    [boardId, notify],
   )
 
   const estimateCard = useCallback(

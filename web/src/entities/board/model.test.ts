@@ -37,7 +37,6 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     startedAt: null,
     finishedAt: null,
     outcome: null,
-    assigneeId: null,
     estimate: null,
   }
 }
@@ -70,6 +69,7 @@ function snapshot(cards: Card[]): Snapshot {
     people: [],
     labels: [],
     cardLabels: {},
+    cardAssignees: {},
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),

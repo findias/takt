@@ -251,9 +251,6 @@ export type Card = {
   outcome: 'done' | 'discarded' | null
   /** Оценка в единицах организации. Пусто — не оценена. */
   estimate: number | null
-  /** Кто делает. Пусто — никто не назначен, и это нормальное состояние:
-   *  работа сначала появляется, потом обретает исполнителя. */
-  assigneeId: string | null
   /** Прогресс по подзадачам; пусто, если подзадач нет. `byWeight`
    *  говорит, чем он измерен: суммой оценок или штуками. */
   progress?: { done: number; total: number; byWeight: boolean }
@@ -337,6 +334,9 @@ export type Snapshot = {
    *  карточках оно висит. */
   labels: Label[]
   cardLabels: Record<string, string[]>
+  /** Кто над чем работает: cardId → люди в порядке назначения.
+   *  Первый — тот, кого назначили первым: порядок несёт смысл. */
+  cardAssignees: Record<string, string[]>
 }
 
 export type Person = { userId: string; name: string }
@@ -349,15 +349,7 @@ export type BoardView = { id: string; name: string; query: string }
 /** Метка организации. Цвет — имя оттенка из закрытого набора, а не
  *  значение: сырой цвет в тёмной теме начал бы светиться. */
 export type Label = { id: string; name: string; tone: LabelTone }
-export type LabelTone =
-  | 'slate'
-  | 'green'
-  | 'blue'
-  | 'violet'
-  | 'rose'
-  | 'amber'
-  | 'teal'
-  | 'brown'
+export type LabelTone = 'slate' | 'green' | 'blue' | 'violet' | 'rose' | 'amber' | 'teal' | 'brown'
 
 export const TONE_NAMES: Record<LabelTone, string> = {
   slate: 'Серый',
@@ -374,6 +366,7 @@ export type Patch = {
   /** Метки карточки целиком: «вот как теперь», а не «добавили такую-то».
    *  Такой патч можно применить дважды без вреда. */
   cardLabels?: Record<string, string[]>
+  cardAssignees?: Record<string, string[]>
   cards?: Card[]
   columns?: Column[]
   removedCardIds?: string[]
@@ -381,9 +374,7 @@ export type Patch = {
 export type OperationResult = { version: number; patch: Patch }
 
 export type Placement =
-  | { place: 'start' }
-  | { place: 'end' }
-  | { place: 'after'; afterCardId: string }
+  { place: 'start' } | { place: 'end' } | { place: 'after'; afterCardId: string }
 
 /** Конфликт: операция опиралась на устаревшее представление доски. */
 export type Conflict = {
@@ -426,7 +417,12 @@ const TIMEOUT_MS = 10_000
  * Остальным запросам это не нужно: их ответ читают тут же и без него
  * ничего не происходит.
  */
-async function request<T>(method: string, path: string, body?: unknown, keepalive = false): Promise<T> {
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  keepalive = false,
+): Promise<T> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   let response: Response
@@ -492,7 +488,8 @@ export const api = {
     request<void>('PATCH', `/api/teams/${id}`, parentId ? { parentId } : { root: true }),
   archiveTeam: (id: string) => request<void>('DELETE', `/api/teams/${id}`),
 
-  teamMembers: (id: string) => request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),
+  teamMembers: (id: string) =>
+    request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),
   addTeamMember: (id: string, userId: string) =>
     request<void>('PUT', `/api/teams/${id}/members/${userId}`),
   removeTeamMember: (id: string, userId: string) =>
@@ -555,7 +552,13 @@ export const api = {
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
   comments: (boardId: string, cardId: string) =>
     request<{ comments: Comment[] }>('GET', `/api/boards/${boardId}/cards/${cardId}/comments`),
-  addComment: (boardId: string, cardId: string, body: string, parentId: string | null, mentions: string[]) =>
+  addComment: (
+    boardId: string,
+    cardId: string,
+    body: string,
+    parentId: string | null,
+    mentions: string[],
+  ) =>
     request<Comment>('POST', `/api/boards/${boardId}/cards/${cardId}/comments`, {
       body,
       parentId,
@@ -577,8 +580,10 @@ export const api = {
   /** Убирает поле из обихода, не трогая значения карточек. */
   archiveField: (id: string) => request<void>('DELETE', `/api/fields/${id}`),
 
-  createIteration: (boardId: string, body: { name: string; goal: string; startsOn: string; endsOn: string }) =>
-    request<Iteration>('POST', `/api/boards/${boardId}/iterations`, body),
+  createIteration: (
+    boardId: string,
+    body: { name: string; goal: string; startsOn: string; endsOn: string },
+  ) => request<Iteration>('POST', `/api/boards/${boardId}/iterations`, body),
   /** Обратного действия нет намеренно: закрытие — утверждение о том, что
    *  было сделано, и переоткрытие превратило бы отчёты в движущуюся мишень. */
   closeIteration: (boardId: string, iterationId: string) =>

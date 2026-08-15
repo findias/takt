@@ -162,6 +162,7 @@ export function Board({
     if (!base || isEmpty(filters)) return { order: fullOrder, hidden: 0 }
     const context = {
       labelsOf: (cardId: string) => base.cardLabels[cardId] ?? [],
+      assigneesOf: (cardId: string) => base.cardAssignees[cardId] ?? [],
       sleDays: base.info.sleDays,
     }
     const next: Record<string, string[]> = {}
@@ -397,7 +398,7 @@ export function Board({
   // заново на каждую отрисовку, и обработчики вместе с ним.
   const { assignCard: assign, toggleLabel: label, renameCard: rename, archiveCard: archive } = board
   const assignCard = useCallback(
-    (cardId: string, assigneeId: string | null) => void assign(cardId, assigneeId),
+    (cardId: string, userId: string, on: boolean) => void assign(cardId, userId, on),
     [assign],
   )
   const toggleLabel = useCallback(
@@ -475,6 +476,7 @@ export function Board({
         justMoved={justMoved}
         labels={base.labels}
         cardLabels={base.cardLabels}
+        cardAssignees={base.cardAssignees}
         parents={parents}
         onLabel={toggleLabel}
         columns={columnList}
@@ -674,6 +676,7 @@ export function Board({
           onDescribe={(id, text) => void board.describeCard(id, text)}
           onEstimate={(id, value) => void board.estimateCard(id, value)}
           onOpenCard={showCard}
+          onAssign={assignCard}
           onSubtask={(parentCardId, title) => void board.createSubtask(parentCardId, title)}
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}

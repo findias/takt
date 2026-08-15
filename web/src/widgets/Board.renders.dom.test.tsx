@@ -77,7 +77,6 @@ function card(id: string, position: string, title = id): Card {
     startedAt: null,
     finishedAt: null,
     outcome: null,
-    assigneeId: null,
     estimate: null,
   }
 }
@@ -98,6 +97,7 @@ function board(): Snapshot {
     people: [],
     labels: [],
     cardLabels: {},
+    cardAssignees: {},
   }
 }
 

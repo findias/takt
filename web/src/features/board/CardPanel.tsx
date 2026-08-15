@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
+import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { PlusIcon } from '../../shared/ui/icons.tsx'
 import { LINK_KIND_NAMES, api } from '../../shared/api/index.ts'
@@ -41,6 +42,7 @@ export function CardPanel({
   onDescribe,
   onEstimate,
   onOpenCard,
+  onAssign,
   onSubtask,
   onLink,
   onUnlink,
@@ -60,6 +62,8 @@ export function CardPanel({
   onEstimate: (cardId: string, estimate: number | null) => void
   /** Открыть другую карточку этой же доски — по связи. */
   onOpenCard: (cardId: string) => void
+  /** on = назначить, off = снять. */
+  onAssign: (cardId: string, userId: string, on: boolean) => void
   /** Завести новую подзадачу: название — всё, что нужно спросить. */
   onSubtask: (parentCardId: string, title: string) => void
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
@@ -106,6 +110,13 @@ export function CardPanel({
         current={base.cardIterations[card.id] ?? null}
         canEdit={canEdit}
         onChange={(id) => onIteration(card.id, id)}
+      />
+
+      <Assignees
+        people={base.people}
+        assignees={base.cardAssignees[card.id] ?? []}
+        canEdit={canEdit}
+        onAssign={(userId, on) => onAssign(card.id, userId, on)}
       />
 
       <Estimate
@@ -593,6 +604,73 @@ function BlockForm({ onBlock }: { onBlock: (reason: string) => void }) {
         Отмена
       </button>
     </form>
+  )
+}
+
+/**
+ * Кто делает.
+ *
+ * Список, а не одно поле: пара за одной задачей, смежник на день,
+ * проверяющий — всё это обычная работа, и до сих пор про неё
+ * приходилось врать, дописывая людей в описание, где их не найдёт
+ * ни фильтр, ни отчёт.
+ *
+ * Порядок — назначения, а не алфавитный: первым стоит тот, кто взялся
+ * первым, и это единственное, чем список отвечает на вопрос
+ * «кто отвечает».
+ */
+function Assignees({
+  people,
+  assignees,
+  canEdit,
+  onAssign,
+}: {
+  people: Record<string, string>
+  assignees: string[]
+  canEdit: boolean
+  onAssign: (userId: string, on: boolean) => void
+}) {
+  const free = Object.entries(people).filter(([id]) => !assignees.includes(id))
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">Кто делает</h3>
+
+      {assignees.length === 0 && (
+        <p className="muted small">
+          Пока никто. Работа сначала появляется, потом обретает исполнителя.
+        </p>
+      )}
+
+      {assignees.map((id) => (
+        <div className="related" key={id}>
+          <div className="row row--tight">
+            <Avatar name={people[id] ?? 'Кто-то'} />
+            <span>{people[id] ?? 'Кто-то'}</span>
+          </div>
+          {canEdit && (
+            <button className="link" onClick={() => onAssign(id, false)}>
+              Снять
+            </button>
+          )}
+        </div>
+      ))}
+
+      {canEdit && free.length > 0 && (
+        <select
+          value=""
+          aria-label="Добавить исполнителя"
+          onChange={(e) => e.target.value && onAssign(e.target.value, true)}
+        >
+          <option value="">Добавить исполнителя…</option>
+          {free.map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+        </select>
+      )}
+    </section>
   )
 }
 

@@ -94,10 +94,6 @@ type Card struct {
 	// Пропускная способность считается только по done, иначе выброшенные
 	// карточки завышают её и все прогнозы по ней.
 	Outcome *string `json:"outcome"`
-	// Кто делает. Пусто — никто не назначен, и это нормальное состояние:
-	// работа сначала появляется, потом обретает исполнителя.
-	AssigneeID *string `json:"assigneeId"`
-
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
@@ -156,13 +152,13 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, estimate, outcome, assignee_id`
+	column_entered_at, started_at, finished_at, estimate, outcome`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.AssigneeID)
+		&c.Estimate, &c.Outcome)
 	return c, err
 }
 
@@ -201,6 +197,10 @@ type Snapshot struct {
 	Labels []Label `json:"labels"`
 	// cardId → labelId
 	CardLabels map[string][]string `json:"cardLabels"`
+	// Кто над чем работает: cardId → люди в порядке назначения.
+	// Первый в списке — тот, кого назначили первым; порядок несёт
+	// смысл и потому сохраняется.
+	CardAssignees map[string][]string `json:"cardAssignees"`
 	// Кого можно назначить и чьи имена показывать. Список маленький —
 	// установка рассчитана на сотню человек, — и он нужен на каждой доске:
 	// без него исполнитель на карточке остался бы идентификатором.
@@ -379,6 +379,9 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 			return err
 		}
 		if err := loadPeople(ctx, tx, orgID, &snap); err != nil {
+			return err
+		}
+		if err := loadAssignees(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
 		if err := loadLabels(ctx, tx, boardID, &snap); err != nil {

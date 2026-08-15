@@ -1,17 +1,49 @@
 package board
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/google/uuid"
 )
 
-// Исполнитель карточки.
+// Исполнители карточки.
 //
-// Проверяется не «поле сохраняется», а границы: назначить можно только
+// Проверяется не «поле сохраняется», а границы: исполнителей может быть
+// несколько и порядок назначения сохраняется, назначить можно только
 // участника организации, снять — всегда, а уход человека из организации
 // не должен стирать подпись под работой, которую он делал.
+
+// inviteMember заводит второго участника той же организации: без него
+// «несколько исполнителей» проверить не на ком.
+func (f *fixture) inviteMember(name string) string {
+	f.t.Helper()
+	var userID string
+	err := f.svc.db.Pool.QueryRow(f.ctx, `
+		insert into users (email, name, password_hash)
+		values ($1, $2, 'x') returning id`,
+		uuid.NewString()+"@example.test", name).Scan(&userID)
+	if err != nil {
+		f.t.Fatalf("создание участника: %v", err)
+	}
+	f.t.Cleanup(func() {
+		_, _ = f.svc.db.Pool.Exec(context.Background(), `delete from users where id = $1`, userID)
+	})
+	if _, err := f.svc.db.Pool.Exec(f.ctx,
+		`insert into memberships (org_id, user_id, role) values ($1, $2, 'member')`,
+		f.orgID, userID); err != nil {
+		f.t.Fatalf("создание членства: %v", err)
+	}
+	return userID
+}
+
+// assignees читает исполнителей карточки из снимка доски: снимок — то,
+// что видит клиент, и проверять надо именно его.
+func (f *fixture) assignees(cardID string) []string {
+	f.t.Helper()
+	return f.snapshot().CardAssignees[cardID]
+}
 
 func TestCardGetsAndLosesAssignee(t *testing.T) {
 	f := newFixture(t)
@@ -19,24 +51,58 @@ func TestCardGetsAndLosesAssignee(t *testing.T) {
 
 	// По умолчанию никого: работа сначала появляется, потом обретает
 	// исполнителя.
-	if got := f.card(cardID).AssigneeID; got != nil {
-		t.Fatalf("у новой карточки уже есть исполнитель: %v", *got)
+	if got := f.assignees(cardID); len(got) != 0 {
+		t.Fatalf("у новой карточки уже есть исполнители: %v", got)
 	}
 
 	res := f.mustApply("ASSIGN_CARD", map[string]any{
-		"cardId": cardID, "assigneeId": f.actorID,
+		"cardId": cardID, "userId": f.actorID,
 	})
-	if len(res.Patch.Cards) != 1 || res.Patch.Cards[0].AssigneeID == nil {
+	if got := res.Patch.CardAssignees[cardID]; len(got) != 1 || got[0] != f.actorID {
 		t.Fatalf("патч без исполнителя: %+v", res.Patch)
 	}
-	if got := f.card(cardID).AssigneeID; got == nil || *got != f.actorID {
+	if got := f.assignees(cardID); len(got) != 1 || got[0] != f.actorID {
 		t.Errorf("исполнитель не сохранился: %v", got)
 	}
 
-	// Снятие — то же назначение, только никому.
-	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "assigneeId": nil})
-	if got := f.card(cardID).AssigneeID; got != nil {
-		t.Errorf("исполнитель не снялся: %v", *got)
+	// Повтор безобиден: список тот же, а не два одинаковых человека.
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
+	if got := f.assignees(cardID); len(got) != 1 {
+		t.Errorf("повторное назначение задвоило исполнителя: %v", got)
+	}
+
+	f.mustApply("UNASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
+	if got := f.assignees(cardID); len(got) != 0 {
+		t.Errorf("исполнитель не снялся: %v", got)
+	}
+
+	// Снятие того, кого не назначали, — не ошибка: результат тот же,
+	// которого просили.
+	f.mustApply("UNASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
+}
+
+// Несколько исполнителей — то, ради чего заведён список: пара за одной
+// задачей, смежник на день, проверяющий. Порядок назначения сохраняется:
+// первым в списке остаётся тот, кто взялся первым, и это единственное,
+// чем список отвечает на вопрос «кто отвечает».
+func TestCardKeepsSeveralAssigneesInOrder(t *testing.T) {
+	f := newFixture(t)
+	cardID := f.createCard("Делать вдвоём", f.columnA)
+	second := f.inviteMember("Второй исполнитель")
+
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": second})
+
+	got := f.assignees(cardID)
+	if len(got) != 2 || got[0] != f.actorID || got[1] != second {
+		t.Fatalf("исполнители %v, ожидались %s и %s именно в этом порядке",
+			got, f.actorID, second)
+	}
+
+	// Снятие одного оставляет второго — и не меняет порядок остальных.
+	f.mustApply("UNASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
+	if got := f.assignees(cardID); len(got) != 1 || got[0] != second {
+		t.Errorf("после снятия первого осталось %v, ожидался %s", got, second)
 	}
 }
 
@@ -49,18 +115,18 @@ func TestAssigneeMustBeInTheOrganisation(t *testing.T) {
 	cardID := f.createCard("Своя работа", f.columnA)
 
 	_, err := f.apply("ASSIGN_CARD", map[string]any{
-		"cardId": cardID, "assigneeId": other.actorID,
+		"cardId": cardID, "userId": other.actorID,
 	})
 	if !errors.Is(err, ErrBadRequest) {
 		t.Fatalf("назначен посторонний, ошибка: %v", err)
 	}
-	if got := f.card(cardID).AssigneeID; got != nil {
-		t.Errorf("исполнителем стал посторонний: %v", *got)
+	if got := f.assignees(cardID); len(got) != 0 {
+		t.Errorf("исполнителем стал посторонний: %v", got)
 	}
 
 	// И несуществующего человека — тоже нельзя.
 	_, err = f.apply("ASSIGN_CARD", map[string]any{
-		"cardId": cardID, "assigneeId": uuid.NewString(),
+		"cardId": cardID, "userId": uuid.NewString(),
 	})
 	if !errors.Is(err, ErrBadRequest) {
 		t.Errorf("назначен несуществующий человек, ошибка: %v", err)
@@ -72,7 +138,7 @@ func TestAssigneeMustBeInTheOrganisation(t *testing.T) {
 func TestLeavingTheOrganisationKeepsTheSignature(t *testing.T) {
 	f := newFixture(t)
 	cardID := f.createCard("Сделал и ушёл", f.columnA)
-	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "assigneeId": f.actorID})
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": f.actorID})
 
 	// Участие снимается напрямую: так делает исключение из организации.
 	// Возвращаем его тут же — иначе читать доску станет некому: без
@@ -91,7 +157,7 @@ func TestLeavingTheOrganisationKeepsTheSignature(t *testing.T) {
 	// Главное: удаление участия не потянуло за собой исполнителя.
 	// Внешний ключ на memberships сделал бы именно это — и история
 	// работы лишилась бы ответа на вопрос «кто её делал».
-	if got := f.card(cardID).AssigneeID; got == nil || *got != f.actorID {
+	if got := f.assignees(cardID); len(got) != 1 || got[0] != f.actorID {
 		t.Errorf("подпись под работой исчезла вместе с участием: %v", got)
 	}
 }

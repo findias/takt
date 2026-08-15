@@ -46,6 +46,9 @@ export type BaseState = {
   /** Словарь меток и то, что чем помечено. */
   labels: Label[]
   cardLabels: Record<string, string[]>
+  /** cardId → исполнители в порядке назначения. Первый — тот, кто взялся
+   *  первым: порядок несёт смысл и потому сохраняется. */
+  cardAssignees: Record<string, string[]>
 }
 
 export type MoveCommand = {
@@ -83,6 +86,7 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     people,
     labels: snap.labels,
     cardLabels: snap.cardLabels,
+    cardAssignees: snap.cardAssignees,
     columnIds: sortedColumns.map((c) => c.id),
     columns,
     cards,
@@ -134,9 +138,7 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     columns[column.id] = column
     if (isNew) {
       touch(column.id)
-      columnIds = [...columnIds, column.id].sort((a, b) =>
-        byPosition(columns[a], columns[b]),
-      )
+      columnIds = [...columnIds, column.id].sort((a, b) => byPosition(columns[a], columns[b]))
     }
   }
 
@@ -168,6 +170,11 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     cardLabels = { ...cardLabels, ...result.patch.cardLabels }
   }
 
+  let cardAssignees = base.cardAssignees
+  if (result.patch.cardAssignees) {
+    cardAssignees = { ...cardAssignees, ...result.patch.cardAssignees }
+  }
+
   return {
     ...base,
     info: { ...base.info, version: result.version },
@@ -176,6 +183,7 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     cards,
     order: touched.size > 0 ? order : base.order,
     cardLabels,
+    cardAssignees,
   }
 }
 
@@ -266,10 +274,7 @@ export function reconcileColumn(
  * счётчик. Отказывает в переполнении только жёсткий лимит, и делает это
  * сервер.
  */
-export function limitLabel(
-  count: number,
-  limit: number | null,
-): { label: string; over: boolean } {
+export function limitLabel(count: number, limit: number | null): { label: string; over: boolean } {
   if (limit === null) return { label: String(count), over: false }
   return { label: `${count}/${limit}`, over: count > limit }
 }

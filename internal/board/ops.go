@@ -39,6 +39,8 @@ type Patch struct {
 	// патчем, который надо применять по порядку, и патчем, который можно
 	// применить дважды без вреда.
 	CardLabels map[string][]string `json:"cardLabels,omitempty"`
+	// Исполнители карточки — тоже списком целиком и по той же причине.
+	CardAssignees map[string][]string `json:"cardAssignees,omitempty"`
 }
 
 type Result struct {
@@ -341,6 +343,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return restoreCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ASSIGN_CARD":
 		return assignCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "UNASSIGN_CARD":
+		return unassignCard(ctx, tx, orgID, boardID, req.Payload)
 	case "LABEL_CARD":
 		return labelCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNLABEL_CARD":
@@ -684,56 +688,6 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"to": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{card}}, nil
-}
-
-type assignCardPayload struct {
-	CardID string `json:"cardId"`
-	// Пусто — снять исполнителя. Отдельного действия «снять» нет: это
-	// то же назначение, только никому.
-	AssigneeID *string `json:"assigneeId"`
-}
-
-// assignCard назначает исполнителя или снимает его.
-//
-// Проверка «состоит в организации» делается здесь, а не внешним ключом:
-// ключ на memberships пришлось бы каскадно чистить при исключении
-// человека, то есть переписывать историю. Здесь же отказ объясним:
-// назначить можно только того, кто в организации есть.
-//
-// Назначение не событие потока: оно не меняет ни колонку, ни отметки
-// работы, и класть его в журнал переходов значило бы засорять то,
-// из чего считаются метрики.
-func assignCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
-	var p assignCardPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		return Patch{}, badRequestf("разбор ASSIGN_CARD: %v", err)
-	}
-
-	if p.AssigneeID != nil {
-		var member bool
-		if err := tx.QueryRow(ctx, `
-			select exists (select 1 from memberships
-			                where org_id = $1 and user_id = $2)`,
-			orgID, *p.AssigneeID).Scan(&member); err != nil {
-			return Patch{}, err
-		}
-		if !member {
-			return Patch{}, badRequestf("назначить можно только участника организации")
-		}
-	}
-
-	card, err := scanCard(tx.QueryRow(ctx, `
-		update cards set assignee_id = $3, version = version + 1
-		 where id = $1 and board_id = $2 and archived_at is null
-		 returning `+cardFields, p.CardID, boardID, p.AssigneeID))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Patch{}, conflictf("", "карточки нет на доске")
-	}
-	if err != nil {
-		return Patch{}, err
-	}
-	_ = actorID
 	return Patch{Cards: []Card{card}}, nil
 }
 

@@ -14,6 +14,8 @@ import type { ColumnPatch } from './useBoard.ts'
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
 const NO_LABELS: string[] = []
+/** По той же причине — общий пустой список исполнителей. */
+const NO_ASSIGNEES: string[] = []
 
 /**
  * Колонка доски вместе со своими карточками.
@@ -34,7 +36,9 @@ type ColumnProps = {
   unit: EstimateUnit
   sleDays: number | null
   people: Record<string, string>
-  onAssign: (cardId: string, assigneeId: string | null) => void
+  /** cardId → исполнители в порядке назначения. */
+  cardAssignees: Record<string, string[]>
+  onAssign: (cardId: string, userId: string, on: boolean) => void
   /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
   justMoved: string | null
   labels: Label[]
@@ -196,6 +200,7 @@ export function ColumnView(props: ColumnProps) {
             unit={props.unit}
             sleDays={props.sleDays}
             people={props.people}
+            assignees={props.cardAssignees[cardId] ?? NO_ASSIGNEES}
             onAssign={props.onAssign}
             flash={props.justMoved === cardId}
             labels={props.labels}

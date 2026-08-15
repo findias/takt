@@ -57,7 +57,6 @@ function card(id: string, columnId: string, position: string): Card {
     startedAt: null,
     finishedAt: null,
     outcome: null,
-    assigneeId: null,
     estimate: null,
   }
 }
@@ -76,6 +75,7 @@ function board(version = 1): Snapshot {
     people: [],
     labels: [],
     cardLabels: {},
+    cardAssignees: {},
   }
 }
 

@@ -44,7 +44,11 @@ type CardProps = {
   flash: boolean
   /** userId → имя: карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
-  onAssign: (cardId: string, assigneeId: string | null) => void
+  /** Кто делает: идентификаторы в порядке назначения. */
+  assignees: string[]
+  /** on = назначить, off = снять: исполнителей несколько, и «назначить
+   *  никому» больше не имеет смысла. */
+  onAssign: (cardId: string, userId: string, on: boolean) => void
   labels: Label[]
   cardLabels: string[]
   /** Родительская задача, если карточка — чья-то подзадача. */
@@ -70,6 +74,7 @@ function CardViewInner({
   sleDays,
   flash,
   people,
+  assignees,
   onAssign,
   labels,
   cardLabels,
@@ -136,7 +141,11 @@ function CardViewInner({
   // получает третью метку. Считается на отрисовке: хранить «просрочена»
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
-  const assigneeName = card?.assigneeId ? (people[card.assigneeId] ?? null) : null
+  // Двое — обычный случай, четверо — уже толпа: показываем троих
+  // и число остальных, как и с метками. Порядок — назначения: первым
+  // стоит тот, кто взялся первым.
+  const shownAssignees = assignees.slice(0, 3)
+  const hiddenAssignees = assignees.length - shownAssignees.length
   const own = labels.filter((l) => cardLabels.includes(l.id))
   const shownLabels = own.slice(0, 3)
   const hiddenLabels = own.length - shownLabels.length
@@ -252,7 +261,18 @@ function CardViewInner({
             {/* Кто делает — самое частое, о чём спрашивают доску после
                 «что происходит». Инициалы читаются с одного взгляда
                 и занимают двадцать пикселей. */}
-            {assigneeName && <Avatar name={assigneeName} />}
+            {shownAssignees.length > 0 && (
+              <div className="avatars">
+                {shownAssignees.map((id) => (
+                  <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                ))}
+                {hiddenAssignees > 0 && (
+                  <span className="avatar avatar--more" title={`и ещё ${hiddenAssignees}`}>
+                    +{hiddenAssignees}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           {/* Метки — до трёх видимых. Дальше счётчик: четыре цветных
               чипа занимают строку целиком и перестают читаться. */}
@@ -314,13 +334,14 @@ function CardViewInner({
               items={[
                 { label: 'Открыть', icon: <OpenIcon />, onSelect: () => onOpen(cardId) },
                 { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
-                ...Object.entries(people)
-                  .filter(([id]) => id !== card?.assigneeId)
-                  .map(([id, name]) => ({
-                    label: `Назначить: ${name}`,
-                    icon: <PeopleIcon />,
-                    onSelect: () => onAssign(cardId, id),
-                  })),
+                // Один пункт на человека, и он же снимает: два списка
+                // «назначить» и «снять» вдвое длиннее и заставляют
+                // помнить, кто где.
+                ...Object.entries(people).map(([id, name]) => ({
+                  label: assignees.includes(id) ? `Снять: ${name}` : `Назначить: ${name}`,
+                  icon: <PeopleIcon />,
+                  onSelect: () => onAssign(cardId, id, !assignees.includes(id)),
+                })),
                 ...labels.map((label) => ({
                   label: cardLabels.includes(label.id)
                     ? `Снять метку «${label.name}»`
@@ -328,15 +349,6 @@ function CardViewInner({
                   icon: <TagIcon />,
                   onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
                 })),
-                ...(card?.assigneeId
-                  ? [
-                      {
-                        label: 'Снять исполнителя',
-                        icon: <PeopleIcon />,
-                        onSelect: () => onAssign(cardId, null),
-                      },
-                    ]
-                  : []),
                 ...columns
                   .filter((c) => c.id !== columnId)
                   .map((c) => ({

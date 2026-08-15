@@ -97,6 +97,8 @@ export function filtersToQuery(f: Filters, base?: URLSearchParams): URLSearchPar
 /** Что нужно знать о карточке сверх её самой, чтобы решить судьбу. */
 export type FilterContext = {
   labelsOf: (cardId: string) => string[]
+  /** Исполнители карточки: их несколько, и «на мне» значит «я среди них». */
+  assigneesOf: (cardId: string) => string[]
   sleDays: number | null
   now?: number
 }
@@ -108,10 +110,13 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
     if (!haystack.includes(text)) return false
   }
 
-  if (f.assignee === UNASSIGNED) {
-    if (card.assigneeId) return false
-  } else if (f.assignee && card.assigneeId !== f.assignee) {
-    return false
+  if (f.assignee) {
+    const own = ctx.assigneesOf(card.id)
+    // «Ни на ком» — тоже ответ на вопрос «чьё это»: работа без
+    // исполнителя и есть то, что теряется.
+    if (f.assignee === UNASSIGNED ? own.length > 0 : !own.includes(f.assignee)) {
+      return false
+    }
   }
 
   if (f.labels.length > 0) {

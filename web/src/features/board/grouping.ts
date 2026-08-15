@@ -89,8 +89,13 @@ export function groupsOf(
 
       const keys: [string, string][] = []
       if (grouping === 'assignee') {
-        const id = card.assigneeId
-        keys.push(id ? [id, base.people[id] ?? 'Кто-то'] : ['none', emptyTitle])
+        // Исполнителей может быть несколько — тогда карточка попадает
+        // в дорожку каждого. Так же ведёт себя группировка по меткам,
+        // и по той же причине: дорожка отвечает на вопрос «что на мне»,
+        // а не «чья это карточка целиком».
+        const own = base.cardAssignees[cardId] ?? []
+        if (own.length === 0) keys.push(['none', emptyTitle])
+        for (const id of own) keys.push([id, base.people[id] ?? 'Кто-то'])
       } else if (grouping === 'label') {
         const own = base.cardLabels[cardId] ?? []
         if (own.length === 0) keys.push(['none', emptyTitle])
