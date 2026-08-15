@@ -174,3 +174,37 @@ export function reconcileColumn(
   order[columnId] = currentOrder.map((e) => e.id)
   return { ...base, cards, order }
 }
+
+/** Как показать счётчик колонки: число или «сколько/лимит», и превышен ли он.
+ *
+ * Превышение — сигнал команде, а не запрет: мягкий лимит только красит
+ * счётчик. Отказывает в переполнении только жёсткий лимит, и делает это
+ * сервер.
+ */
+export function limitLabel(
+  count: number,
+  limit: number | null,
+): { label: string; over: boolean } {
+  if (limit === null) return { label: String(count), over: false }
+  return { label: `${count}/${limit}`, over: count > limit }
+}
+
+/** Что означает введённое в поле лимита значение.
+ *
+ * Пустая строка снимает лимит — иначе его нельзя было бы убрать. Мусор
+ * и значения меньше единицы игнорируются молча: пользователь ещё печатает,
+ * ругаться на промежуточное состояние незачем. Совпадение с текущим
+ * значением тоже ничего не меняет — лишняя операция не нужна.
+ */
+export function parseLimitDraft(
+  draft: string,
+  current: number | null,
+): { change: false } | { change: true; limit: number | null } {
+  const trimmed = draft.trim()
+  if (trimmed === '') {
+    return current === null ? { change: false } : { change: true, limit: null }
+  }
+  const next = Number(trimmed)
+  if (!Number.isInteger(next) || next < 1 || next === current) return { change: false }
+  return { change: true, limit: next }
+}

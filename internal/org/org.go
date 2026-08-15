@@ -212,7 +212,7 @@ func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, bas
 	}
 
 	var inv Invite
-	err = s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err = s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 			values ($1, $2, $3, $4, $5, $6)
@@ -230,7 +230,7 @@ func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, bas
 // PendingInvites возвращает неиспользованные приглашения организации.
 func (s *Service) PendingInvites(ctx context.Context, orgID string) ([]Invite, error) {
 	out := []Invite{}
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			select id, email, role, expires_at, created_at
 			  from invites
@@ -253,7 +253,7 @@ func (s *Service) PendingInvites(ctx context.Context, orgID string) ([]Invite, e
 }
 
 func (s *Service) RevokeInvite(ctx context.Context, orgID, inviteID string) error {
-	return s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	return s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
 			`update invites set revoked_at = now()
 			  where id = $1 and accepted_at is null and revoked_at is null`, inviteID)

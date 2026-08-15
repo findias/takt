@@ -21,18 +21,18 @@ func TestTenantsDoNotSeeEachOthersBoards(t *testing.T) {
 	ctx := context.Background()
 	svc := New(db)
 
-	orgA, _ := newTenant(t, db)
-	orgB, _ := newTenant(t, db)
+	orgA, userA := newTenant(t, db)
+	orgB, userB := newTenant(t, db)
 
-	boardA, err := svc.Create(ctx, orgA, "Доска А")
+	boardA, err := svc.Create(ctx, orgA, userA, "Доска А")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Create(ctx, orgB, "Доска Б"); err != nil {
+	if _, err := svc.Create(ctx, orgB, userB, "Доска Б"); err != nil {
 		t.Fatal(err)
 	}
 
-	listA, err := svc.List(ctx, orgA)
+	listA, err := svc.List(ctx, orgA, userA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestTenantsDoNotSeeEachOthersBoards(t *testing.T) {
 
 	// Подставляем чужой идентификатор доски, зная его точно, — так выглядит
 	// самая частая попытка выйти за пределы своей организации.
-	if _, err := svc.Snapshot(ctx, orgB, boardA.ID); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.Snapshot(ctx, orgB, userB, boardA.ID); !errors.Is(err, ErrNotFound) {
 		t.Errorf("чужая доска открылась по прямому идентификатору: %v", err)
 	}
 }
@@ -55,11 +55,11 @@ func TestOperationOnForeignBoardIsRejected(t *testing.T) {
 	orgA, userA := newTenant(t, db)
 	orgB, userB := newTenant(t, db)
 
-	boardA, err := svc.Create(ctx, orgA, "Доска А")
+	boardA, err := svc.Create(ctx, orgA, userA, "Доска А")
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapA, err := svc.Snapshot(ctx, orgA, boardA.ID)
+	snapA, err := svc.Snapshot(ctx, orgA, userA, boardA.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestOperationOnForeignBoardIsRejected(t *testing.T) {
 		t.Errorf("операция по чужой доске не отклонена: %v", err)
 	}
 
-	snapA, err = svc.Snapshot(ctx, orgA, boardA.ID)
+	snapA, err = svc.Snapshot(ctx, orgA, userA, boardA.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,8 +100,8 @@ func TestQueryWithoutTenantScopeSeesNothing(t *testing.T) {
 	ctx := context.Background()
 	svc := New(db)
 
-	orgA, _ := newTenant(t, db)
-	if _, err := svc.Create(ctx, orgA, "Доска А"); err != nil {
+	orgA, userA := newTenant(t, db)
+	if _, err := svc.Create(ctx, orgA, userA, "Доска А"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,10 +121,10 @@ func TestInsertIntoForeignTenantIsBlocked(t *testing.T) {
 	db := testStore(t)
 	ctx := context.Background()
 
-	orgA, _ := newTenant(t, db)
-	orgB, _ := newTenant(t, db)
+	orgA, userA := newTenant(t, db)
+	orgB, userB := newTenant(t, db)
 
-	err := db.InTenant(ctx, orgB, func(tx pgx.Tx) error {
+	err := db.InTenant(ctx, orgB, userB, func(tx pgx.Tx) error {
 		var projectID string
 		if err := tx.QueryRow(ctx,
 			`insert into projects (org_id, name) values ($1, 'Свой') returning id`,
@@ -142,7 +142,7 @@ func TestInsertIntoForeignTenantIsBlocked(t *testing.T) {
 	}
 
 	svc := New(db)
-	listA, err := svc.List(ctx, orgA)
+	listA, err := svc.List(ctx, orgA, userA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,9 @@ func TestInviteTokenScopeOpensSingleRow(t *testing.T) {
 
 	insert := func(orgID, userID, hash string) {
 		t.Helper()
-		err := db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+		// Приглашение заводится в области организации без личности: оно
+		// адресовано тому, кого в организации ещё нет.
+		err := db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `
 				insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 				values ($1, $2, 'member', $3, $4, now() + interval '1 day')`,

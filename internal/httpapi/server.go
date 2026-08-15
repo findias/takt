@@ -480,7 +480,7 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 // --- доски ---
 
 func (s *Server) handleListBoards(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	boards, err := s.boards.List(r.Context(), p.OrgID)
+	boards, err := s.boards.List(r.Context(), p.OrgID, p.ID)
 	if err != nil {
 		s.fail(w, "список досок", err)
 		return
@@ -504,7 +504,7 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 		writeError(w, http.StatusBadRequest, "у доски должно быть название")
 		return
 	}
-	b, err := s.boards.Create(r.Context(), p.OrgID, req.Name)
+	b, err := s.boards.Create(r.Context(), p.OrgID, p.ID, req.Name)
 	if err != nil {
 		s.fail(w, "создание доски", err)
 		return
@@ -513,7 +513,7 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 }
 
 func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	snap, err := s.boards.Snapshot(r.Context(), p.OrgID, r.PathValue("id"))
+	snap, err := s.boards.Snapshot(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
 	if errors.Is(err, board.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "доска не найдена")
 		return

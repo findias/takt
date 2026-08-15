@@ -375,6 +375,20 @@ select {
   font-family: ui-monospace, Menlo, monospace;
   font-size: 0.75rem;
   color: var(--ink-3);
+  border: none;
+  background: none;
+  padding: 0.1em 0.25em;
+  cursor: pointer;
+}
+/* Превышение лимита — сигнал команде, а не запрет: работать он не мешает. */
+.count--over {
+  color: var(--risk, #a33d1e);
+  font-weight: 650;
+}
+.count-edit {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.75rem;
+  width: 3.5rem;
 }
 .inline-edit {
   border: none;

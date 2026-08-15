@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,11 +21,40 @@ type Info struct {
 	Version int64  `json:"version"`
 }
 
+// Вид колонки. Очередей и стадий работы на доске бывает много, поэтому вид
+// колонки и границы потока — разные вещи: границы отмечаются отдельно,
+// признаками IsStartedPoint и IsFinishedPoint.
+const (
+	KindQueue      = "queue"
+	KindInProgress = "in_progress"
+	KindDone       = "done"
+)
+
 type Column struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Position string `json:"position"`
-	WIPLimit *int   `json:"wipLimit"`
+	Kind     string `json:"kind"`
+	// Точки старта и финиша задают, что считать началом и концом работы.
+	// Без них не определены ни время цикла, ни возраст карточки.
+	IsStartedPoint  bool   `json:"isStartedPoint"`
+	IsFinishedPoint bool   `json:"isFinishedPoint"`
+	Policy          string `json:"policy"`
+	WIPLimit        *int   `json:"wipLimit"`
+	// Мягкий лимит только подсвечивается; жёсткий отвечает конфликтом.
+	WIPLimitHard bool `json:"wipLimitHard"`
+}
+
+// columnFields — общий список полей колонки. Он повторяется в полудюжине
+// запросов, и разъехавшийся порядок полей здесь ловится только в рантайме.
+const columnFields = `id, name, position, kind, is_started_point,
+	is_finished_point, policy, wip_limit, wip_limit_hard`
+
+func scanColumn(row pgx.Row) (Column, error) {
+	var c Column
+	err := row.Scan(&c.ID, &c.Name, &c.Position, &c.Kind, &c.IsStartedPoint,
+		&c.IsFinishedPoint, &c.Policy, &c.WIPLimit, &c.WIPLimitHard)
+	return c, err
 }
 
 type Card struct {
@@ -34,6 +64,71 @@ type Card struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Version     int64  `json:"version"`
+	// Отметки потока. ColumnEnteredAt — не время создания карточки:
+	// из него считается старение в текущей колонке.
+	ColumnEnteredAt time.Time  `json:"columnEnteredAt"`
+	StartedAt       *time.Time `json:"startedAt"`
+	FinishedAt      *time.Time `json:"finishedAt"`
+	// Исход работы: done или discarded. Пока работа идёт — пусто.
+	// Пропускная способность считается только по done, иначе выброшенные
+	// карточки завышают её и все прогнозы по ней.
+	Outcome *string `json:"outcome"`
+
+	// Ниже — вычисляемое, в таблице карточек этого нет.
+
+	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
+	// руками — значит завести поле, которое никто не обновляет.
+	Progress *Progress `json:"progress,omitempty"`
+	// Открытая блокировка, если есть.
+	Blocked *Block `json:"blocked,omitempty"`
+}
+
+// Progress — доля завершённых подзадач. Считается запросом, а не хранится:
+// иначе пришлось бы поддерживать счётчики в согласованном состоянии при
+// каждом изменении любой подзадачи, в том числе на чужой доске.
+type Progress struct {
+	Done  int `json:"done"`
+	Total int `json:"total"`
+}
+
+// Block — интервал блокировки. Именно интервал, а не флаг: из булева поля
+// не посчитать ни время разрешения блокировок, ни эффективность потока,
+// и восстановить это задним числом неоткуда.
+type Block struct {
+	ID        string    `json:"id"`
+	Reason    string    `json:"reason"`
+	BlockedAt time.Time `json:"blockedAt"`
+}
+
+// Link — связь между карточками.
+type Link struct {
+	FromCard string `json:"fromCard"`
+	ToCard   string `json:"toCard"`
+	Kind     string `json:"kind"`
+}
+
+// Виды связей. subtask — дерево (у карточки один родитель), blocks и
+// relates — произвольный граф.
+const (
+	LinkSubtask = "subtask"
+	LinkBlocks  = "blocks"
+	LinkRelates = "relates"
+)
+
+// MaxSubtaskDepth ограничивает глубину дерева подзадач. Предел нужен не
+// ради красоты: без него обход дерева не ограничен, а цена ошибки в связях
+// растёт вместе с глубиной. Azure DevOps держит планку «меньше 14»,
+// GitHub — 8; на нашем масштабе хватает пяти.
+const MaxSubtaskDepth = 5
+
+const cardFields = `id, column_id, position, title, description, version,
+	column_entered_at, started_at, finished_at, outcome`
+
+func scanCard(row pgx.Row) (Card, error) {
+	var c Card
+	err := row.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description,
+		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt, &c.Outcome)
+	return c, err
 }
 
 // Snapshot — полный слепок доски. На нашем масштабе доска отдаётся одним
@@ -43,6 +138,10 @@ type Snapshot struct {
 	Board   Info     `json:"board"`
 	Columns []Column `json:"columns"`
 	Cards   []Card   `json:"cards"`
+	// Связи карточек доски с любыми другими — в том числе с карточками
+	// на досках других команд. Клиенту нужны обе стороны, чтобы показать
+	// подзадачу, которую делает кто-то ещё.
+	Links []Link `json:"links"`
 }
 
 type Service struct {
@@ -56,9 +155,9 @@ func New(db *store.Store) *Service { return &Service{db: db} }
 // а не как единственная линия обороны.
 
 // List возвращает доски организации.
-func (s *Service) List(ctx context.Context, orgID string) ([]Info, error) {
+func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error) {
 	out := []Info{}
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			select id, name, version
 			  from boards
@@ -81,9 +180,9 @@ func (s *Service) List(ctx context.Context, orgID string) ([]Info, error) {
 }
 
 // Create заводит доску с тремя колонками потока по умолчанию.
-func (s *Service) Create(ctx context.Context, orgID, name string) (Info, error) {
+func (s *Service) Create(ctx context.Context, orgID, userID, name string) (Info, error) {
 	var b Info
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		var projectID string
 		err := tx.QueryRow(ctx, `
 			select id from projects
@@ -106,15 +205,25 @@ func (s *Service) Create(ctx context.Context, orgID, name string) (Info, error) 
 			return err
 		}
 
-		defaults := []string{"Очередь", "В работе", "Готово"}
+		// Колонки по умолчанию сразу размечены: без точек старта и финиша
+		// журнал переходов копится, а метрики потока по нему не считаются.
+		defaults := []Column{
+			{Name: "Очередь", Kind: KindQueue},
+			{Name: "В работе", Kind: KindInProgress, IsStartedPoint: true},
+			{Name: "Готово", Kind: KindDone, IsFinishedPoint: true},
+		}
 		positions, err := rank.NBetween("", "", len(defaults))
 		if err != nil {
 			return err
 		}
-		for i, columnName := range defaults {
+		for i, column := range defaults {
 			_, err = tx.Exec(ctx, `
-				insert into board_columns (org_id, board_id, name, position)
-				values ($1, $2, $3, $4)`, orgID, b.ID, columnName, positions[i])
+				insert into board_columns
+					(org_id, board_id, name, position, kind,
+					 is_started_point, is_finished_point)
+				values ($1, $2, $3, $4, $5, $6, $7)`,
+				orgID, b.ID, column.Name, positions[i], column.Kind,
+				column.IsStartedPoint, column.IsFinishedPoint)
 			if err != nil {
 				return err
 			}
@@ -125,9 +234,9 @@ func (s *Service) Create(ctx context.Context, orgID, name string) (Info, error) 
 }
 
 // Snapshot читает доску целиком вместе с её версией.
-func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot, error) {
+func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (Snapshot, error) {
 	var snap Snapshot
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			select id, name, version from boards
 			 where id = $1 and archived_at is null`, boardID).
@@ -143,7 +252,7 @@ func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot
 		}
 
 		colRows, err := tx.Query(ctx, `
-			select id, name, position, wip_limit
+			select `+columnFields+`
 			  from board_columns
 			 where board_id = $1 and archived_at is null
 			 order by position`, boardID)
@@ -153,8 +262,8 @@ func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot
 		defer colRows.Close()
 		snap.Columns = []Column{}
 		for colRows.Next() {
-			var c Column
-			if err := colRows.Scan(&c.ID, &c.Name, &c.Position, &c.WIPLimit); err != nil {
+			c, err := scanColumn(colRows)
+			if err != nil {
 				return err
 			}
 			snap.Columns = append(snap.Columns, c)
@@ -165,7 +274,7 @@ func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot
 		colRows.Close()
 
 		cardRows, err := tx.Query(ctx, `
-			select id, column_id, position, title, description, version
+			select `+cardFields+`
 			  from cards
 			 where board_id = $1 and archived_at is null
 			 order by column_id, position`, boardID)
@@ -175,15 +284,103 @@ func (s *Service) Snapshot(ctx context.Context, orgID, boardID string) (Snapshot
 		defer cardRows.Close()
 		snap.Cards = []Card{}
 		for cardRows.Next() {
-			var c Card
-			if err := cardRows.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version); err != nil {
+			c, err := scanCard(cardRows)
+			if err != nil {
 				return err
 			}
 			snap.Cards = append(snap.Cards, c)
 		}
-		return cardRows.Err()
+		if err := cardRows.Err(); err != nil {
+			return err
+		}
+		cardRows.Close()
+
+		return enrich(ctx, tx, boardID, &snap)
 	})
 	return snap, err
+}
+
+// enrich дочитывает то, чего нет в самой карточке: прогресс по подзадачам,
+// открытые блокировки и связи. Три коротких запроса на доску вместо запроса
+// на карточку — на нашем масштабе это дешевле любого кэша.
+func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) error {
+	byID := make(map[string]*Card, len(snap.Cards))
+	for i := range snap.Cards {
+		byID[snap.Cards[i].ID] = &snap.Cards[i]
+	}
+
+	// Прогресс. Подзадачи намеренно не ограничены доской родителя: смысл
+	// связи в том и состоит, что работу может делать другая команда.
+	progressRows, err := tx.Query(ctx, `
+		select l.from_card,
+		       count(*)                                        as total,
+		       count(*) filter (where c.outcome = 'done')      as done
+		  from card_links l
+		  join cards c on c.id = l.to_card and c.archived_at is null
+		 where l.kind = 'subtask'
+		   and l.from_card in (select id from cards
+		                        where board_id = $1 and archived_at is null)
+		 group by l.from_card`, boardID)
+	if err != nil {
+		return err
+	}
+	defer progressRows.Close()
+	for progressRows.Next() {
+		var id string
+		var p Progress
+		if err := progressRows.Scan(&id, &p.Total, &p.Done); err != nil {
+			return err
+		}
+		if card := byID[id]; card != nil {
+			card.Progress = &p
+		}
+	}
+	if err := progressRows.Err(); err != nil {
+		return err
+	}
+	progressRows.Close()
+
+	blockRows, err := tx.Query(ctx, `
+		select b.card_id, b.id, b.reason, b.blocked_at
+		  from card_blocks b
+		  join cards c on c.id = b.card_id
+		 where c.board_id = $1 and b.unblocked_at is null`, boardID)
+	if err != nil {
+		return err
+	}
+	defer blockRows.Close()
+	for blockRows.Next() {
+		var cardID string
+		var b Block
+		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt); err != nil {
+			return err
+		}
+		if card := byID[cardID]; card != nil {
+			card.Blocked = &b
+		}
+	}
+	if err := blockRows.Err(); err != nil {
+		return err
+	}
+	blockRows.Close()
+
+	linkRows, err := tx.Query(ctx, `
+		select from_card, to_card, kind from card_links
+		 where from_card in (select id from cards where board_id = $1)
+		    or to_card   in (select id from cards where board_id = $1)`, boardID)
+	if err != nil {
+		return err
+	}
+	defer linkRows.Close()
+	snap.Links = []Link{}
+	for linkRows.Next() {
+		var l Link
+		if err := linkRows.Scan(&l.FromCard, &l.ToCard, &l.Kind); err != nil {
+			return err
+		}
+		snap.Links = append(snap.Links, l)
+	}
+	return linkRows.Err()
 }
 
 // CardOrder — текущий порядок колонки, который возвращается клиенту

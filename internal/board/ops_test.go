@@ -90,11 +90,11 @@ func newFixture(t *testing.T) *fixture {
 	svc := New(db)
 	orgID, actorID := newTenant(t, db)
 
-	b, err := svc.Create(ctx, orgID, "Доска")
+	b, err := svc.Create(ctx, orgID, actorID, "Доска")
 	if err != nil {
 		t.Fatalf("создание доски: %v", err)
 	}
-	snap, err := svc.Snapshot(ctx, orgID, b.ID)
+	snap, err := svc.Snapshot(ctx, orgID, actorID, b.ID)
 	if err != nil {
 		t.Fatalf("снимок доски: %v", err)
 	}
@@ -106,6 +106,27 @@ func newFixture(t *testing.T) *fixture {
 		svc: svc, orgID: orgID, actorID: actorID, boardID: b.ID,
 		columnA: snap.Columns[0].ID, columnB: snap.Columns[1].ID,
 		ctx: ctx, t: t,
+	}
+}
+
+// snapshot читает доску фикстуры от имени её владельца. Видимость доски
+// считается по человеку, поэтому безличного снимка у теста быть не может.
+func (f *fixture) snapshot() Snapshot {
+	f.t.Helper()
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, f.boardID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return snap
+}
+
+// inTenant выполняет запрос к базе от имени владельца фикстуры — для
+// проверок того, чего не видно в снимке доски: журнала, интервалов,
+// исхода архивной карточки.
+func (f *fixture) inTenant(fn func(pgx.Tx) error) {
+	f.t.Helper()
+	if err := f.svc.db.InTenant(f.ctx, f.orgID, f.actorID, fn); err != nil {
+		f.t.Fatal(err)
 	}
 }
 
@@ -136,12 +157,8 @@ func (f *fixture) mustApply(kind string, payload any) Result {
 // titles возвращает названия карточек колонки в порядке позиций.
 func (f *fixture) titles(columnID string) []string {
 	f.t.Helper()
-	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.boardID)
-	if err != nil {
-		f.t.Fatal(err)
-	}
 	out := []string{}
-	for _, c := range snap.Cards {
+	for _, c := range f.snapshot().Cards {
 		if c.ColumnID == columnID {
 			out = append(out, c.Title)
 		}
@@ -270,13 +287,10 @@ func TestArchivedCardDisappearsButEventsRemain(t *testing.T) {
 	}
 
 	var events int
-	err := f.svc.db.InTenant(f.ctx, f.orgID, func(tx pgx.Tx) error {
+	f.inTenant(func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
 			`select count(*) from card_events where card_id = $1`, id).Scan(&events)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	// Мягкое удаление: журнал должен пережить карточку, иначе аналитика
 	// потока потеряет её жизненный цикл.
 	if events < 2 {

@@ -56,6 +56,11 @@ func (s *Store) Close() { s.Pool.Close() }
 type Scope struct {
 	// OrgID открывает данные одной организации.
 	OrgID string
+	// UserID — от чьего имени идёт транзакция. Организации мало: внутри неё
+	// доски бывают командными и закрытыми, и видимость считается по человеку.
+	// Пустое значение оставляет доступной только то, что открыто всей
+	// организации, — то есть фоновые задачи не видят чужих командных досок.
+	UserID string
 	// InviteToken открывает одну строку приглашения по хешу его токена.
 	// Приглашение открывают по секретной ссылке, когда организация ещё
 	// неизвестна, а у человека может не быть аккаунта.
@@ -74,8 +79,9 @@ func (s *Store) BeginScope(ctx context.Context, scope Scope) (pgx.Tx, error) {
 	}
 	_, err = tx.Exec(ctx, `
 		select set_config('app.current_org', $1, true),
-		       set_config('app.invite_token', $2, true)`,
-		scope.OrgID, scope.InviteToken)
+		       set_config('app.current_user', $2, true),
+		       set_config('app.invite_token', $3, true)`,
+		scope.OrgID, scope.UserID, scope.InviteToken)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("установка области видимости: %w", err)
@@ -97,14 +103,19 @@ func (s *Store) InScope(ctx context.Context, scope Scope, fn func(pgx.Tx) error)
 	return tx.Commit(ctx)
 }
 
-// BeginTenant открывает транзакцию, внутри которой база видит данные только
-// одной организации.
-func (s *Store) BeginTenant(ctx context.Context, orgID string) (pgx.Tx, error) {
-	return s.BeginScope(ctx, Scope{OrgID: orgID})
+// BeginTenant открывает транзакцию от имени человека внутри организации.
+func (s *Store) BeginTenant(ctx context.Context, orgID, userID string) (pgx.Tx, error) {
+	return s.BeginScope(ctx, Scope{OrgID: orgID, UserID: userID})
 }
 
-// InTenant выполняет fn в транзакции с областью организации.
-func (s *Store) InTenant(ctx context.Context, orgID string, fn func(pgx.Tx) error) error {
+// InTenant выполняет fn в транзакции от имени человека внутри организации.
+func (s *Store) InTenant(ctx context.Context, orgID, userID string, fn func(pgx.Tx) error) error {
+	return s.InScope(ctx, Scope{OrgID: orgID, UserID: userID}, fn)
+}
+
+// InOrg — область всей организации без личности: только то, что открыто
+// всем. Для служебных задач, у которых нет действующего лица.
+func (s *Store) InOrg(ctx context.Context, orgID string, fn func(pgx.Tx) error) error {
 	return s.InScope(ctx, Scope{OrgID: orgID}, fn)
 }
 

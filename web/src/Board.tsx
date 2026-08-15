@@ -10,6 +10,7 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
+import { limitLabel, parseLimitDraft } from './boardModel.ts'
 import { useBoard } from './useBoard'
 
 export function Board({ boardId, onBack }: { boardId: string; onBack: () => void }) {
@@ -142,11 +143,14 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
             key={columnId}
             name={base.columns[columnId].name}
             columnId={columnId}
+            wipLimit={base.columns[columnId].wipLimit}
+            wipLimitHard={base.columns[columnId].wipLimitHard}
             cardIds={order[columnId] ?? []}
             titles={base.cards}
             onMoveByKeyboard={moveByKeyboard}
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
+            onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
             onRenameCard={(cardId, title) => void board.renameCard(cardId, title)}
             onArchiveCard={(cardId) => void board.archiveCard(cardId)}
           />
@@ -164,11 +168,14 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
 type ColumnProps = {
   columnId: string
   name: string
+  wipLimit: number | null
+  wipLimitHard: boolean
   cardIds: string[]
   titles: Record<string, { title: string }>
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onCreateCard: (title: string) => void
   onRenameColumn: (name: string) => void
+  onSetLimit: (limit: number | null) => void
   onRenameCard: (cardId: string, title: string) => void
   onArchiveCard: (cardId: string) => void
 }
@@ -195,7 +202,12 @@ function ColumnView(props: ColumnProps) {
     <section className={`column${over ? ' column--over' : ''}`} aria-label={props.name}>
       <header className="column-header">
         <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
-        <span className="count">{props.cardIds.length}</span>
+        <ColumnCount
+          count={props.cardIds.length}
+          limit={props.wipLimit}
+          hard={props.wipLimitHard}
+          onSetLimit={props.onSetLimit}
+        />
       </header>
 
       <div className="cards" ref={dropRef}>
@@ -392,6 +404,70 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
       />
       <button type="submit">Создать</button>
     </form>
+  )
+}
+
+/** Счётчик карточек, он же редактор лимита колонки.
+ *
+ *  Превышение подсвечивается, но работать не мешает: лимит нужен, чтобы
+ *  команда видела перегрузку. Запрещает превышение только жёсткий лимит,
+ *  и отказывает в этом сервер — здесь запрета нет намеренно.
+ *  Пустое поле снимает лимит. */
+function ColumnCount({
+  count,
+  limit,
+  hard,
+  onSetLimit,
+}: {
+  count: number
+  limit: number | null
+  hard: boolean
+  onSetLimit: (limit: number | null) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(limit === null ? '' : String(limit))
+  useEffect(() => setDraft(limit === null ? '' : String(limit)), [limit])
+
+  const commit = () => {
+    setEditing(false)
+    const parsed = parseLimitDraft(draft, limit)
+    if (parsed.change) onSetLimit(parsed.limit)
+  }
+
+  if (editing)
+    return (
+      <input
+        autoFocus
+        type="number"
+        min={1}
+        className="count-edit"
+        aria-label="Лимит карточек в колонке, пусто — без лимита"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') {
+            setDraft(limit === null ? '' : String(limit))
+            setEditing(false)
+          }
+        }}
+      />
+    )
+
+  const { label, over } = limitLabel(count, limit)
+  return (
+    <button
+      className={`count${over ? ' count--over' : ''}`}
+      onClick={() => setEditing(true)}
+      title={
+        limit === null
+          ? 'Карточек в колонке. Нажмите, чтобы задать лимит'
+          : `${count} из ${limit}${hard ? ', жёсткий лимит' : ''}. Нажмите, чтобы изменить`
+      }
+    >
+      {label}
+    </button>
   )
 }
 

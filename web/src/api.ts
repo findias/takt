@@ -53,7 +53,23 @@ export const ROLE_NAMES: Record<Role, string> = {
 }
 
 export type BoardInfo = { id: string; name: string; version: number }
-export type Column = { id: string; name: string; position: string; wipLimit: number | null }
+/** Вид колонки. Границы потока задаются отдельно: очередей и стадий работы
+ *  бывает много, а началом и концом объявляются конкретные колонки. */
+export type ColumnKind = 'queue' | 'in_progress' | 'done'
+
+export type Column = {
+  id: string
+  name: string
+  position: string
+  kind: ColumnKind
+  isStartedPoint: boolean
+  isFinishedPoint: boolean
+  policy: string
+  wipLimit: number | null
+  /** Мягкий лимит только подсвечивается, жёсткий отвечает конфликтом. */
+  wipLimitHard: boolean
+}
+
 export type Card = {
   id: string
   columnId: string
@@ -61,6 +77,10 @@ export type Card = {
   title: string
   description: string
   version: number
+  /** Момент входа в текущую колонку — из него считается старение карточки. */
+  columnEnteredAt: string
+  startedAt: string | null
+  finishedAt: string | null
 }
 
 export type Snapshot = { board: BoardInfo; columns: Column[]; cards: Card[] }

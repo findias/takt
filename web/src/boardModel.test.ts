@@ -7,23 +7,56 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyPatch, fromSnapshot, reconcileColumn, renderOrder } from './boardModel.ts'
+import {
+  applyPatch,
+  fromSnapshot,
+  limitLabel,
+  parseLimitDraft,
+  reconcileColumn,
+  renderOrder,
+} from './boardModel.ts'
 import type { MoveCommand } from './boardModel.ts'
-import type { Card, Snapshot } from './api.ts'
+import type { Card, Column, ColumnKind, Snapshot } from './api.ts'
 
 const COL_A = 'col-a'
 const COL_B = 'col-b'
 
 function card(id: string, columnId: string, position: string, title = id): Card {
-  return { id, columnId, position, title, description: '', version: 1 }
+  return {
+    id,
+    columnId,
+    position,
+    title,
+    description: '',
+    version: 1,
+    columnEnteredAt: '2026-08-14T12:00:00Z',
+    startedAt: null,
+    finishedAt: null,
+  }
+}
+
+// Порядок карточек не зависит от семантики колонки, поэтому здесь она
+// заполняется значениями по умолчанию — интересны только id и position.
+function column(id: string, name: string, position: string, kind: ColumnKind): Column {
+  return {
+    id,
+    name,
+    position,
+    kind,
+    isStartedPoint: false,
+    isFinishedPoint: false,
+    policy: '',
+    wipLimit: null,
+    wipLimitHard: false,
+  }
 }
 
 function snapshot(cards: Card[]): Snapshot {
   return {
     board: { id: 'board', name: 'Доска', version: 1 },
     columns: [
-      { id: COL_A, name: 'Очередь', position: 'a0', wipLimit: null },
-      { id: COL_B, name: 'В работе', position: 'a1', wipLimit: null },
+      column(COL_A, 'Очередь', 'a0', 'queue'),
+      column(COL_B, 'В работе', 'a1', 'in_progress'),
     ],
     cards,
   }
@@ -114,7 +147,7 @@ test('патч с новой колонкой добавляет её в пра�
   const base = fromSnapshot(snapshot([]))
   const next = applyPatch(base, {
     version: 2,
-    patch: { columns: [{ id: 'col-mid', name: 'Проверка', position: 'a0V', wipLimit: null }] },
+    patch: { columns: [column('col-mid', 'Проверка', 'a0V', 'in_progress')] },
   })
   assert.deepEqual(next.columnIds, [COL_A, 'col-mid', COL_B])
   assert.deepEqual(next.order['col-mid'], [])
@@ -153,4 +186,27 @@ test('карточка, перенесённая в другую колонку,
   assert.ok(next)
   assert.deepEqual(next.order[COL_A], ['1', '2'])
   assert.deepEqual(next.order[COL_B], [])
+})
+
+// --- лимит колонки ---
+
+test('счётчик показывает лимит и краснеет только при превышении', () => {
+  assert.deepEqual(limitLabel(3, null), { label: '3', over: false })
+  assert.deepEqual(limitLabel(2, 3), { label: '2/3', over: false })
+  assert.deepEqual(limitLabel(3, 3), { label: '3/3', over: false })
+  assert.deepEqual(limitLabel(4, 3), { label: '4/3', over: true })
+})
+
+test('пустое поле снимает лимит, а мусор ничего не меняет', () => {
+  assert.deepEqual(parseLimitDraft('', 3), { change: true, limit: null })
+  // Снимать нечего — операция не нужна.
+  assert.deepEqual(parseLimitDraft('   ', null), { change: false })
+  assert.deepEqual(parseLimitDraft('5', 3), { change: true, limit: 5 })
+  assert.deepEqual(parseLimitDraft(' 5 ', null), { change: true, limit: 5 })
+
+  for (const draft of ['0', '-2', '1.5', 'три', '2e3и']) {
+    assert.deepEqual(parseLimitDraft(draft, 3), { change: false }, `черновик ${draft}`)
+  }
+  // Повтор текущего значения — тоже ничего.
+  assert.deepEqual(parseLimitDraft('3', 3), { change: false })
 })

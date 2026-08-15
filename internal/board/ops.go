@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/rank"
 )
@@ -71,7 +72,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		return Result{}, badRequestf("не передан operationId")
 	}
 
-	tx, err := s.db.BeginTenant(ctx, orgID)
+	tx, err := s.db.BeginTenant(ctx, orgID, actorID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -81,6 +82,25 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 			_ = tx.Rollback(ctx)
 		}
 	}()
+
+	// Доска берётся первой, и порядок здесь существенный. Журнал операций
+	// под политикой видимости: запись в него для недоступной доски отлетает
+	// нарушением RLS — то есть внутренней ошибкой вместо честного «не
+	// найдена». Блокировка строки заодно сериализует и одновременный повтор
+	// той же операции: второй запрос дождётся и увидит уже занятый
+	// идентификатор.
+	var version int64
+	err = tx.QueryRow(ctx, `
+		select version from boards
+		 where id = $1 and archived_at is null
+		 for update`, boardID).Scan(&version)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Чужая доска неотличима от несуществующей — как и в Snapshot.
+		return Result{}, ErrNotFound
+	}
+	if err != nil {
+		return Result{}, err
+	}
 
 	// Резервируем идентификатор операции. Ноль затронутых строк означает,
 	// что эта операция уже выполнена — возвращаем сохранённый результат.
@@ -94,30 +114,24 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	if tag.RowsAffected() == 0 {
 		_ = tx.Rollback(ctx)
-		return s.storedResult(ctx, orgID, req.OperationID)
-	}
-
-	var version int64
-	err = tx.QueryRow(ctx, `
-		select version from boards
-		 where id = $1 and archived_at is null
-		 for update`, boardID).Scan(&version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Result{}, ErrNotFound
-	}
-	if err != nil {
-		return Result{}, err
+		return s.storedResult(ctx, orgID, actorID, req.OperationID)
 	}
 
 	patch, err := s.dispatch(ctx, tx, orgID, actorID, boardID, req)
 	if err != nil {
+		// Нечитаемый идентификатор — ошибка клиента, а не сбой сервера.
+		// Ловим здесь, чтобы не проверять формат uuid в каждой операции.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "22P02" {
+			return Result{}, badRequestf("некорректный идентификатор в операции %s", req.Type)
+		}
 		var conflict *ConflictError
 		if errors.As(err, &conflict) {
 			conflict.Version = version
 			if conflict.ColumnID != "" && conflict.Order == nil {
 				// читаем текущий порядок отдельным запросом: наша транзакция
 				// вот-вот откатится, а клиенту нужны актуальные данные
-				if order, oErr := s.columnOrderOutside(ctx, orgID, conflict.ColumnID); oErr == nil {
+				if order, oErr := s.columnOrderOutside(ctx, orgID, actorID, conflict.ColumnID); oErr == nil {
 					conflict.Order = order
 				}
 			}
@@ -150,9 +164,9 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	return result, nil
 }
 
-func (s *Service) storedResult(ctx context.Context, orgID, operationID string) (Result, error) {
+func (s *Service) storedResult(ctx context.Context, orgID, actorID, operationID string) (Result, error) {
 	var raw []byte
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`select result from operations where operation_id = $1`, operationID).Scan(&raw)
 	})
@@ -166,9 +180,9 @@ func (s *Service) storedResult(ctx context.Context, orgID, operationID string) (
 	return res, nil
 }
 
-func (s *Service) columnOrderOutside(ctx context.Context, orgID, columnID string) ([]CardOrder, error) {
+func (s *Service) columnOrderOutside(ctx context.Context, orgID, actorID, columnID string) ([]CardOrder, error) {
 	out := []CardOrder{}
-	err := s.db.InTenant(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			select id, position from cards
 			 where column_id = $1 and archived_at is null
@@ -203,6 +217,16 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return createColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "RENAME_COLUMN":
 		return renameColumn(ctx, tx, orgID, boardID, req.Payload)
+	case "UPDATE_COLUMN":
+		return updateColumn(ctx, tx, orgID, boardID, req.Payload)
+	case "LINK_CARDS":
+		return linkCards(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "UNLINK_CARDS":
+		return unlinkCards(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "BLOCK_CARD":
+		return blockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "UNBLOCK_CARD":
+		return unblockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	default:
 		return Patch{}, badRequestf("неизвестный тип операции %q", req.Type)
 	}
@@ -225,7 +249,11 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if p.Title == "" {
 		return Patch{}, badRequestf("у карточки должно быть название")
 	}
-	if err := requireColumn(ctx, tx, boardID, p.ColumnID); err != nil {
+	col, err := loadColumn(ctx, tx, boardID, p.ColumnID)
+	if err != nil {
+		return Patch{}, err
+	}
+	if err := enforceWIP(ctx, tx, col); err != nil {
 		return Patch{}, err
 	}
 
@@ -234,18 +262,23 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, err
 	}
 
-	var c Card
-	err = tx.QueryRow(ctx, `
-		insert into cards (org_id, board_id, column_id, position, title)
-		values ($1, $2, $3, $4, $5)
-		returning id, column_id, position, title, description, version`,
-		orgID, boardID, p.ColumnID, pos, p.Title).
-		Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version)
+	// Карточка, заведённая сразу в стадии работы, считается начатой в этот
+	// же момент: иначе её время цикла окажется меньше реального.
+	c, err := scanCard(tx.QueryRow(ctx, `
+		insert into cards (org_id, board_id, column_id, position, title,
+		                   started_at, finished_at)
+		values ($1, $2, $3, $4, $5,
+		        case when $6::bool then now() end,
+		        case when $7::bool then now() end)
+		returning `+cardFields,
+		orgID, boardID, p.ColumnID, pos, p.Title,
+		col.IsStartedPoint, col.IsFinishedPoint))
 	if err != nil {
 		return Patch{}, err
 	}
 
-	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "created", nil, &p.ColumnID, nil); err != nil {
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "created", nil, &p.ColumnID,
+		map[string]any{"to": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
 	return Patch{Cards: []Card{c}}, nil
@@ -262,12 +295,13 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор MOVE_CARD: %v", err)
 	}
-	if err := requireColumn(ctx, tx, boardID, p.ToColumnID); err != nil {
+	to, err := loadColumn(ctx, tx, boardID, p.ToColumnID)
+	if err != nil {
 		return Patch{}, err
 	}
 
 	var fromColumn string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		select column_id from cards
 		 where id = $1 and board_id = $2 and archived_at is null`,
 		p.CardID, boardID).Scan(&fromColumn)
@@ -277,27 +311,69 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 	if err != nil {
 		return Patch{}, err
 	}
+	from, err := loadColumn(ctx, tx, boardID, fromColumn)
+	if err != nil {
+		return Patch{}, err
+	}
+
+	// Лимит проверяется только на входе в колонку. Перестановка внутри неё
+	// не добавляет работы и не должна упираться в лимит — тем более что
+	// колонка могла переполниться раньше, пока лимит был мягким.
+	if fromColumn != p.ToColumnID {
+		if err := enforceWIP(ctx, tx, to); err != nil {
+			return Patch{}, err
+		}
+	}
 
 	pos, err := nextPosition(ctx, tx, p.ToColumnID, p.Placement, p.CardID)
 	if err != nil {
 		return Patch{}, err
 	}
 
-	var c Card
-	err = tx.QueryRow(ctx, `
+	// Отметки потока обновляются здесь же, одним запросом:
+	//   вход в колонку — только при смене колонки, иначе перестановка внутри
+	//     колонки обнуляла бы возраст карточки;
+	//   начало работы — один раз и навсегда;
+	//   завершение — снимается, если карточку забрали обратно в работу.
+	c, err := scanCard(tx.QueryRow(ctx, `
 		update cards
-		   set column_id = $2, position = $3, version = version + 1, updated_at = now()
+		   set column_id = $2,
+		       position  = $3,
+		       column_entered_at = case when column_id is distinct from $2
+		                                then now() else column_entered_at end,
+		       started_at  = case when $4::bool and started_at is null
+		                          then now() else started_at end,
+		       finished_at = case when $5::bool
+		                          then coalesce(finished_at, now()) else null end,
+		       -- Исход: пересечение точки финиша объявляет работу сделанной,
+		       -- возврат в работу снимает это объявление. Отказ от карточки
+		       -- ('discarded') отсюда не ставится — это отдельное намерение.
+		       outcome     = case when $5::bool then 'done'
+		                          when outcome = 'done' then null
+		                          else outcome end,
+		       version    = version + 1,
+		       updated_at = now()
 		 where id = $1
-		 returning id, column_id, position, title, description, version`,
-		p.CardID, p.ToColumnID, pos).
-		Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version)
+		 returning `+cardFields,
+		p.CardID, p.ToColumnID, pos, to.IsStartedPoint, to.IsFinishedPoint))
 	if err != nil {
 		return Patch{}, err
 	}
 
 	// Событие пишется на каждое перемещение, даже внутри одной колонки:
 	// именно из этого журнала потом считаются cycle time и диаграмма потока.
-	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "moved", &fromColumn, &p.ToColumnID, nil); err != nil {
+	// Имя и вид колонок кладутся снимком — переименование колонки не должно
+	// задним числом переписывать историю.
+	// Смысл перехода кладётся снимком вместе с ним: `kind` и точки потока —
+	// изменяемые поля, и переразметка доски иначе задним числом переписала бы
+	// весь исторический цикл.
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "moved", &fromColumn, &p.ToColumnID,
+		map[string]any{
+			"from":          columnFact(from),
+			"to":            columnFact(to),
+			"crossedStart":  to.IsStartedPoint && !from.IsStartedPoint,
+			"crossedFinish": to.IsFinishedPoint && !from.IsFinishedPoint,
+		}); err != nil {
 		return Patch{}, err
 	}
 	return Patch{Cards: []Card{c}}, nil
@@ -325,17 +401,15 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		p.Title = &trimmed
 	}
 
-	var c Card
-	err := tx.QueryRow(ctx, `
+	c, err := scanCard(tx.QueryRow(ctx, `
 		update cards
 		   set title       = coalesce($2, title),
 		       description = coalesce($3, description),
 		       version     = version + 1,
 		       updated_at  = now()
 		 where id = $1 and board_id = $4 and archived_at is null
-		 returning id, column_id, position, title, description, version`,
-		p.CardID, p.Title, p.Description, boardID).
-		Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description, &c.Version)
+		 returning `+cardFields,
+		p.CardID, p.Title, p.Description, boardID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, conflictf("", "карточка уже удалена")
 	}
@@ -365,9 +439,15 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 
 	// Мягкое удаление, а не DELETE: журнал событий должен продолжать
 	// ссылаться на карточку, иначе история потока рассыплется.
+	// Исход проставляется здесь же: карточка, убранная с доски незавершённой,
+	// — это отказ от работы, а не сделанная работа. Без этого различия
+	// пропускная способность считает выброшенное за сделанное.
 	var id, columnID string
 	err := tx.QueryRow(ctx, `
-		update cards set archived_at = now(), version = version + 1
+		update cards
+		   set archived_at = now(),
+		       outcome     = coalesce(outcome, 'discarded'),
+		       version     = version + 1
 		 where id = $1 and board_id = $2 and archived_at is null
 		 returning id, column_id`, p.CardID, boardID).Scan(&id, &columnID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -377,7 +457,12 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 
-	if err := logEvent(ctx, tx, orgID, boardID, id, actorID, "archived", &columnID, nil, nil); err != nil {
+	col, err := loadColumn(ctx, tx, boardID, columnID)
+	if err != nil {
+		return Patch{}, err
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, id, actorID, "archived", &columnID, nil,
+		map[string]any{"from": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
 	return Patch{RemovedCardIDs: []string{id}}, nil
@@ -427,12 +512,12 @@ func createColumn(ctx context.Context, tx pgx.Tx, orgID, boardID string, raw jso
 		return Patch{}, fmt.Errorf("вычисление позиции колонки: %w", err)
 	}
 
-	var c Column
-	err = tx.QueryRow(ctx, `
-		insert into board_columns (org_id, board_id, name, position)
-		values ($1, $2, $3, $4)
-		returning id, name, position, wip_limit`, orgID, boardID, p.Name, pos).
-		Scan(&c.ID, &c.Name, &c.Position, &c.WIPLimit)
+	// Новая колонка — стадия работы без границ потока: объявить её началом
+	// или концом можно потом, отдельным намерением.
+	c, err := scanColumn(tx.QueryRow(ctx, `
+		insert into board_columns (org_id, board_id, name, position, kind)
+		values ($1, $2, $3, $4, $5)
+		returning `+columnFields, orgID, boardID, p.Name, pos, KindInProgress))
 	if err != nil {
 		return Patch{}, err
 	}
@@ -444,22 +529,83 @@ type renameColumnPayload struct {
 	Name     string `json:"name"`
 }
 
+// renameColumn остаётся отдельной операцией: переименование — самое частое
+// изменение колонки, и клиенту незачем присылать ради него всю форму.
 func renameColumn(ctx context.Context, tx pgx.Tx, _, boardID string, raw json.RawMessage) (Patch, error) {
 	var p renameColumnPayload
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор RENAME_COLUMN: %v", err)
 	}
-	p.Name = strings.TrimSpace(p.Name)
-	if p.Name == "" {
-		return Patch{}, badRequestf("у колонки должно быть название")
+	return applyColumnUpdate(ctx, tx, boardID, updateColumnPayload{
+		ColumnID: p.ColumnID,
+		Name:     &p.Name,
+	})
+}
+
+// optionalInt различает «поле не прислали» и «прислали null». Для лимита
+// это разные намерения: не трогать и снять.
+type optionalInt struct {
+	Set   bool
+	Value *int
+}
+
+func (o *optionalInt) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
+}
+
+type updateColumnPayload struct {
+	ColumnID        string      `json:"columnId"`
+	Name            *string     `json:"name"`
+	Kind            *string     `json:"kind"`
+	IsStartedPoint  *bool       `json:"isStartedPoint"`
+	IsFinishedPoint *bool       `json:"isFinishedPoint"`
+	Policy          *string     `json:"policy"`
+	WIPLimit        optionalInt `json:"wipLimit"`
+	WIPLimitHard    *bool       `json:"wipLimitHard"`
+}
+
+func updateColumn(ctx context.Context, tx pgx.Tx, _, boardID string, raw json.RawMessage) (Patch, error) {
+	var p updateColumnPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор UPDATE_COLUMN: %v", err)
+	}
+	return applyColumnUpdate(ctx, tx, boardID, p)
+}
+
+func applyColumnUpdate(ctx context.Context, tx pgx.Tx, boardID string, p updateColumnPayload) (Patch, error) {
+	if p.Name != nil {
+		trimmed := strings.TrimSpace(*p.Name)
+		if trimmed == "" {
+			return Patch{}, badRequestf("у колонки должно быть название")
+		}
+		p.Name = &trimmed
+	}
+	if p.Kind != nil {
+		switch *p.Kind {
+		case KindQueue, KindInProgress, KindDone:
+		default:
+			return Patch{}, badRequestf("недопустимый вид колонки %q, ожидалось %s, %s или %s",
+				*p.Kind, KindQueue, KindInProgress, KindDone)
+		}
+	}
+	if p.WIPLimit.Set && p.WIPLimit.Value != nil && *p.WIPLimit.Value < 1 {
+		return Patch{}, badRequestf("лимит колонки должен быть положительным; чтобы снять лимит, пришлите null")
 	}
 
-	var c Column
-	err := tx.QueryRow(ctx, `
-		update board_columns set name = $3
+	c, err := scanColumn(tx.QueryRow(ctx, `
+		update board_columns
+		   set name              = coalesce($3, name),
+		       kind              = coalesce($4, kind),
+		       is_started_point  = coalesce($5, is_started_point),
+		       is_finished_point = coalesce($6, is_finished_point),
+		       policy            = coalesce($7, policy),
+		       wip_limit         = case when $8::bool then $9::int else wip_limit end,
+		       wip_limit_hard    = coalesce($10, wip_limit_hard)
 		 where id = $1 and board_id = $2 and archived_at is null
-		 returning id, name, position, wip_limit`, p.ColumnID, boardID, p.Name).
-		Scan(&c.ID, &c.Name, &c.Position, &c.WIPLimit)
+		 returning `+columnFields,
+		p.ColumnID, boardID, p.Name, p.Kind, p.IsStartedPoint, p.IsFinishedPoint,
+		p.Policy, p.WIPLimit.Set, p.WIPLimit.Value, p.WIPLimitHard))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, conflictf("", "колонка уже удалена")
 	}
@@ -471,23 +617,54 @@ func renameColumn(ctx context.Context, tx pgx.Tx, _, boardID string, raw json.Ra
 
 // --- вспомогательное ---
 
-func requireColumn(ctx context.Context, tx pgx.Tx, boardID, columnID string) error {
+// loadColumn читает колонку вместе с её правилами. Отдельной проверки
+// «существует ли колонка» больше нет: всякая операция, которой нужен этот
+// ответ, тут же нуждается и в виде колонки, и в её лимите.
+func loadColumn(ctx context.Context, tx pgx.Tx, boardID, columnID string) (Column, error) {
 	if columnID == "" {
-		return badRequestf("не указана колонка")
+		return Column{}, badRequestf("не указана колонка")
 	}
-	var exists bool
+	c, err := scanColumn(tx.QueryRow(ctx, `
+		select `+columnFields+`
+		  from board_columns
+		 where id = $1 and board_id = $2 and archived_at is null`, columnID, boardID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Column{}, conflictf("", "колонка не найдена на этой доске")
+	}
+	if err != nil {
+		return Column{}, err
+	}
+	return c, nil
+}
+
+// enforceWIP отвечает конфликтом, если карточка не помещается в колонку
+// с жёстким лимитом. Мягкий лимит здесь намеренно не делает ничего: он нужен,
+// чтобы команда видела перегрузку, а не чтобы мешать ей работать. Так же
+// устроены Jira, Azure DevOps и GitHub; жёсткий лимит — выбор колонки.
+func enforceWIP(ctx context.Context, tx pgx.Tx, col Column) error {
+	if col.WIPLimit == nil || !col.WIPLimitHard {
+		return nil
+	}
+	var count int
 	err := tx.QueryRow(ctx, `
-		select exists (
-			select 1 from board_columns
-			 where id = $1 and board_id = $2 and archived_at is null)`,
-		columnID, boardID).Scan(&exists)
+		select count(*) from cards
+		 where column_id = $1 and archived_at is null`, col.ID).Scan(&count)
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return conflictf("", "колонка не найдена на этой доске")
+	if count >= *col.WIPLimit {
+		return conflictf(col.ID,
+			"в колонке «%s» жёсткий лимит %d — сначала освободите место",
+			col.Name, *col.WIPLimit)
 	}
 	return nil
+}
+
+// columnFact — снимок колонки для журнала событий. Хранить только
+// идентификатор недостаточно: колонку переименуют или заархивируют, и
+// диаграмма потока за прошлые месяцы останется без подписей.
+func columnFact(c Column) map[string]any {
+	return map[string]any{"id": c.ID, "name": c.Name, "kind": c.Kind}
 }
 
 func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, kind string, from, to *string, payload map[string]any) error {

@@ -171,6 +171,13 @@ export function useBoard(boardId: string | null) {
       run('RENAME_COLUMN', { columnId, name }, 'Не удалось переименовать колонку'),
     [run],
   )
+  // null снимает лимит. Отсутствие поля ничего не меняет, поэтому «снять»
+  // и «не трогать» приходится различать явно.
+  const setColumnLimit = useCallback(
+    (columnId: string, wipLimit: number | null) =>
+      run('UPDATE_COLUMN', { columnId, wipLimit }, 'Не удалось изменить лимит колонки'),
+    [run],
+  )
 
   return {
     base,
@@ -187,5 +194,6 @@ export function useBoard(boardId: string | null) {
     archiveCard,
     createColumn,
     renameColumn,
+    setColumnLimit,
   }
 }
