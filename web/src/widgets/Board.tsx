@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
+import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
+import { preserveOffsetOnSource } from '@atlaskit/pragmatic-drag-and-drop/element/preserve-offset-on-source'
 import {
   draggable,
   dropTargetForElements,
@@ -93,6 +96,20 @@ export function Board({
   // Узел карточки перемонтируется в новой колонке, и фокус улетает
   // в body. Возвращаем его руками — иначе человек, работающий
   // с клавиатуры, теряет место после каждого переноса.
+  // Горизонтальная автопрокрутка живёт на контейнере колонок: там,
+  // где есть горизонтальная прокрутка, там и подвозить.
+  const columnsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = columnsRef.current
+    if (!element) return
+    return autoScrollForElements({ element })
+  }, [])
+
+  const flash = useCallback((cardId: string) => {
+    setJustMoved(cardId)
+    window.setTimeout(() => setJustMoved((current) => (current === cardId ? null : current)), 600)
+  }, [])
+
   const refocus = useCallback((cardId: string) => {
     window.setTimeout(() => {
       document.querySelector<HTMLElement>(`[data-card="${cardId}"]`)?.focus()
@@ -104,6 +121,10 @@ export function Board({
   const [showAccess, setShowAccess] = useState(false)
   const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
   const [palette, setPalette] = useState(false)
+  // Карточка, которую только что перенесли: она вспыхивает, чтобы глаз
+  // нашёл её на новом месте. Живёт полсекунды — это подсказка, а не
+  // состояние доски.
+  const [justMoved, setJustMoved] = useState<string | null>(null)
   usePaletteHotkey(useCallback(() => setPalette(true), []))
   // Видимость доски показывается в шапке: «доску видят не те» — это то,
   // что замечают, глядя на доску, а не на её строку в списке.
@@ -256,6 +277,10 @@ export function Board({
         const target = location.current.dropTargets[0]
         if (!target) return
         const cardId = source.data.cardId as string
+        // Вспышка на новом месте: карточка уехала, и глаз должен успеть
+        // её там найти. Это единственная анимация в интерфейсе, и она
+        // объясняет перемещение, а не украшает его.
+        flash(cardId)
 
         if (target.data.kind === 'column') {
           moveCard(cardId, target.data.columnId as string, { place: 'end' })
@@ -281,7 +306,7 @@ export function Board({
         }
       },
     })
-  }, [moveCard, order])
+  }, [moveCard, order, flash])
 
   // Перетаскивание — не единственный способ переместить карточку.
   // Тот же moveCard вызывается с клавиатуры, поэтому доска остаётся
@@ -297,6 +322,7 @@ export function Board({
         const next = base.columnIds[columnIndex + (direction === 'left' ? -1 : 1)]
         if (!next) return
         moveCard(cardId, next, { place: 'end' })
+        flash(cardId)
         announce(
           `Карточка «${card.title}» перенесена из «${base.columns[card.columnId].name}» ` +
             `в «${base.columns[next].name}», последняя из ${(order[next]?.length ?? 0) + 1}`,
@@ -316,13 +342,14 @@ export function Board({
         moveCard(cardId, card.columnId, { place: 'after', afterCardId: list[at + 1] })
       }
       const to = direction === 'up' ? at : at + 2
+      flash(cardId)
       announce(
         `Карточка «${card.title}» перенесена на позицию ${to} из ${list.length} ` +
           `в колонке «${base.columns[card.columnId].name}»`,
       )
       refocus(cardId)
     },
-    [base, order, moveCard, announce, refocus],
+    [base, order, moveCard, announce, refocus, flash],
   )
 
   /**
@@ -375,6 +402,7 @@ export function Board({
             sleDays={base.info.sleDays}
             people={base.people}
             onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
+            justMoved={justMoved}
             labels={base.labels}
             cardLabels={base.cardLabels}
             onLabel={(cardId, labelId, on) => void board.toggleLabel(cardId, labelId, on)}
@@ -503,6 +531,9 @@ export function Board({
         </div>
       )}
 
+      {/* Доска прокручивается вбок сама, когда карточку подносят к краю:
+          иначе перетащить в дальнюю колонку можно только в два приёма —
+          бросить, прокрутить, взять снова. */}
       {groups.map((group) => (
         <div
           className={grouping === 'none' ? 'swimlane swimlane--single' : 'swimlane'}
@@ -514,7 +545,7 @@ export function Board({
               <span className="muted small">{group.count}</span>
             </div>
           )}
-          <div className="columns">
+          <div className="columns" ref={columnsRef}>
             {renderColumns(group.order)}
             {grouping === 'none' && (
               <NewColumn onCreate={(name) => void board.createColumn(name)} />
@@ -590,6 +621,8 @@ type ColumnProps = {
   sleDays: number | null
   people: Record<string, string>
   onAssign: (cardId: string, assigneeId: string | null) => void
+  /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
+  justMoved: string | null
   labels: Label[]
   cardLabels: Record<string, string[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
@@ -615,14 +648,20 @@ function ColumnView(props: ColumnProps) {
   useEffect(() => {
     const element = dropRef.current
     if (!element) return
-    return dropTargetForElements({
+    return combine(
+      // Автопрокрутка списка: без неё карточку нельзя утащить ниже
+      // видимой части колонки — приходится бросать, прокручивать
+      // и тащить снова.
+      autoScrollForElements({ element }),
+      dropTargetForElements({
       element,
       canDrop: ({ source }) => source.data.kind === 'card',
       getData: () => ({ kind: 'column', columnId: props.columnId }),
       onDragEnter: () => setOver(true),
       onDragLeave: () => setOver(false),
       onDrop: () => setOver(false),
-    })
+      }),
+    )
   }, [props.columnId])
 
   return (
@@ -692,6 +731,7 @@ function ColumnView(props: ColumnProps) {
             sleDays={props.sleDays}
             people={props.people}
             onAssign={props.onAssign}
+            flash={props.justMoved === cardId}
             labels={props.labels}
             cardLabels={props.cardLabels[cardId] ?? []}
             onLabel={props.onLabel}
@@ -738,6 +778,7 @@ type CardProps = {
   unit: EstimateUnit
   /** Обещание доски: с ним сравнивается возраст карточки. */
   sleDays: number | null
+  flash: boolean
   /** userId → имя: карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
   onAssign: (cardId: string, assigneeId: string | null) => void
@@ -760,6 +801,7 @@ function CardView({
   card,
   unit,
   sleDays,
+  flash,
   people,
   onAssign,
   labels,
@@ -787,6 +829,26 @@ function CardView({
       draggable({
         element,
         getInitialData: () => data,
+        // Своё превью вместо браузерного. Браузер тащит полупрозрачный
+        // снимок всего узла — вместе с раскрытым меню и рамкой фокуса,
+        // если они были; получается мутный прямоугольник, по которому
+        // не видно, что именно летит. Тут летит сама карточка,
+        // уменьшенная и повёрнутая на пару градусов: наклон отличает
+        // «взятое в руку» от «лежащего на доске».
+        onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
+          setCustomNativeDragPreview({
+            nativeSetDragImage,
+            // Превью держится там, где карточку взяли: иначе она
+            // прыгает под курсор углом и ощущается вырванной.
+            getOffset: preserveOffsetOnSource({ element, input: location.current.input }),
+            render: ({ container }) => {
+              const copy = element.cloneNode(true) as HTMLElement
+              copy.classList.add('card--preview')
+              copy.style.width = `${element.offsetWidth}px`
+              container.append(copy)
+            },
+          })
+        },
         onDragStart: () => setDragging(true),
         onDrop: () => setDragging(false),
       }),
@@ -848,7 +910,7 @@ function CardView({
   return (
     <article
       ref={ref}
-      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}`}
+      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}`}
       tabIndex={0}
       data-card={cardId}
       role="group"

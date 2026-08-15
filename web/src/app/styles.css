@@ -1385,6 +1385,37 @@ textarea.description {
   min-width: 0;
 }
 
+/* Карточка в руке. Наклон в полтора градуса и тень отличают «взятое»
+   от «лежащего»: без них превью выглядит вторым экземпляром карточки,
+   и непонятно, какой из них настоящий. */
+.card--preview {
+  transform: rotate(1.5deg);
+  box-shadow: var(--shadow-drag);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+/* Вспышка после броска. Единственная анимация в интерфейсе, и она
+   объясняет перемещение: карточка уехала в другое место, и глаз должен
+   успеть её там найти. Тем, кто просил меньше движения, остаётся
+   проявление цвета — правило «заменять, а не выключать». */
+@keyframes card-flash {
+  from {
+    background: var(--accent-soft);
+  }
+  to {
+    background: var(--surface);
+  }
+}
+.card--flash {
+  animation: card-flash var(--slow) ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card--flash {
+    animation-duration: var(--fast);
+  }
+}
+
 /* Командная палитра. Окно у верхней трети экрана, а не по центру:
    список растёт вниз, и центрированное окно прыгало бы при каждом
    наборе буквы. */
