@@ -90,3 +90,34 @@ down: ## Остановить стек (данные сохраняются в �
 .PHONY: logs
 logs: ## Логи приложения
 	docker compose logs -f app
+
+# --- закрытый контур ---
+
+# Установка не должна требовать доступа в интернет. Всё, что для неё
+# нужно, — образ и чарт; ни того, ни другого не собрать на месте, потому
+# что сборка тянет зависимости. Поэтому собирается здесь, увозится файлом.
+#
+# Контрольные суммы обязательны: в закрытый контур файл едет через
+# посредников, и «тот ли это образ» — вопрос, который зададут.
+BUNDLE_VERSION ?= $(shell git describe --tags --always --dirty)
+BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
+
+.PHONY: bundle
+bundle: ## Собрать комплект для установки без доступа в интернет
+	@mkdir -p "$(BUNDLE_DIR)"
+	docker build -t board:$(BUNDLE_VERSION) .
+	docker save board:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/board-image.tar.gz"
+	# Версия чарта не переписывается версией сборки: helm требует semver,
+	# а описание сборки им быть не обязано. Комплект с чартом связывает
+	# тег образа, передаваемый при установке.
+	helm package deploy/helm/board -d "$(BUNDLE_DIR)" >/dev/null
+	cp README.md "$(BUNDLE_DIR)/"
+	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
+	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
+	@echo
+	@echo "комплект собран: $(BUNDLE_DIR)"
+	@echo "на месте:"
+	@echo "  sha256sum -c SHA256SUMS"
+	@echo "  docker load < board-image.tar.gz    # либо skopeo copy в своё зеркало"
+	@echo "  helm install board board-*.tgz --set image.tag=$(BUNDLE_VERSION) \\"
+	@echo "    --set baseURL=... --set database.existingSecret=board-db"

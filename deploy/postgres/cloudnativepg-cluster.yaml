@@ -1,0 +1,93 @@
+# Пример кластера базы с непрерывным архивированием.
+#
+# Это не часть чарта и не устанавливается вместе с ним: база у заказчика
+# своя, и подменять её нашим манифестом значило бы отвечать за чужую зону
+# ответственности. Пример — чтобы было видно, чего мы ждём от базы,
+# и чтобы восстановление на момент времени не проектировали в день аварии.
+#
+# CloudNativePG выбран для примера по одной причине: он заводит роль
+# приложения без прав суперпользователя. Для суперпользователя политики
+# Row-Level Security не действуют вообще, и вся изоляция организаций
+# молча исчезает — запросы работают, просто отдают лишнее. Приложение
+# проверяет это при старте и отказывается запускаться.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: board-db
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  bootstrap:
+    initdb:
+      database: board
+      owner: board
+      # Владелец базы, но не суперпользователь. Ровно это нам и нужно:
+      # миграции требуют владения таблицами, изоляция требует отсутствия
+      # BYPASSRLS.
+      secret:
+        name: board-db-owner
+
+  storage:
+    size: 50Gi
+
+  # Непрерывное архивирование: без него «резервная копия» означает
+  # «вчерашний вечер», а вопрос при аварии звучит «верните на 14:32».
+  #
+  # Адрес хранилища здесь — пример. В закрытом контуре это внутренний
+  # S3-совместимый узел; наружу ходить не нужно.
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://backups/board
+      s3Credentials:
+        accessKeyId:
+          name: board-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: board-backup
+          key: SECRET_ACCESS_KEY
+      wal:
+        # Сжатие включено: журнал предзаписи занимает больше самой базы
+        # у любой системы, где много пишут.
+        compression: gzip
+      data:
+        compression: gzip
+        immediateCheckpoint: true
+    # Сколько держать. Тридцать дней — обычный ответ на «когда заметят,
+    # что данные испортили»: месяц назад ошибку уже видно, полгода назад
+    # хранить незачем.
+    retentionPolicy: "30d"
+
+  # Раз в сутки полная копия; точка восстановления между ними обеспечена
+  # журналом предзаписи.
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: board-db-nightly
+spec:
+  schedule: "0 30 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: board-db
+---
+# Восстановление на момент времени — отдельный кластер, а не правка
+# существующего. Так сделано намеренно: восстанавливаясь поверх живого,
+# мы теряем возможность сравнить и вернуться, если восстановили не туда.
+#
+# apiVersion: postgresql.cnpg.io/v1
+# kind: Cluster
+# metadata:
+#   name: board-db-restored
+# spec:
+#   instances: 1
+#   bootstrap:
+#     recovery:
+#       source: board-db
+#       recoveryTarget:
+#         targetTime: "2026-08-15 14:32:00+03"
+#   externalClusters:
+#     - name: board-db
+#       barmanObjectStore:
+#         destinationPath: s3://backups/board
+#         s3Credentials: *(те же, что выше)*
