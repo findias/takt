@@ -686,3 +686,27 @@ textarea.description {
   gap: 0.4rem;
   align-items: center;
 }
+
+.comment {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.comment-body {
+  margin: 0.2rem 0 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+.comment--deleted {
+  font-style: italic;
+}
+/* Прежняя версия показывается приглушённо и с отбивкой: это уже не
+   разговор, а справка о том, что было написано до. */
+.comment--previous {
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--rule);
+}
+.replies {
+  margin-left: 1rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid var(--rule);
+}

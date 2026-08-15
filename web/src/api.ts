@@ -122,6 +122,22 @@ export type AuditEntry = {
 
 export type AuditPage = { entries: AuditEntry[]; next: number | null }
 
+/** Реплика обсуждения. Ветки глубиной в один уровень: ответ на ответ
+ *  читать невозможно. Удалённая реплика остаётся — на неё ссылаются
+ *  ответы, — но без текста. */
+export type Comment = {
+  id: string
+  cardId: string
+  parentId: string | null
+  author: string | null
+  authorId: string | null
+  body: string
+  createdAt: string
+  editedAt: string | null
+  deleted: boolean
+  mentions: string[]
+}
+
 export type Visibility = 'org' | 'team' | 'private'
 
 export const VISIBILITY_NAMES: Record<Visibility, string> = {
@@ -383,6 +399,21 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
+  comments: (boardId: string, cardId: string) =>
+    request<{ comments: Comment[] }>('GET', `/api/boards/${boardId}/cards/${cardId}/comments`),
+  addComment: (boardId: string, cardId: string, body: string, parentId: string | null, mentions: string[]) =>
+    request<Comment>('POST', `/api/boards/${boardId}/cards/${cardId}/comments`, {
+      body,
+      parentId,
+      mentions,
+    }),
+  editComment: (commentId: string, body: string) =>
+    request<void>('PATCH', `/api/comments/${commentId}`, { body }),
+  deleteComment: (commentId: string) => request<void>('DELETE', `/api/comments/${commentId}`),
+  /** Прежние версии текста: «изменено» без них бесполезно. */
+  commentRevisions: (commentId: string) =>
+    request<{ revisions: string[] }>('GET', `/api/comments/${commentId}/revisions`),
+
   listFields: () => request<{ fields: CardField[] }>('GET', '/api/fields'),
   createField: (name: string, kind: FieldKind, options: string[]) =>
     request<CardField>('POST', '/api/fields', { name, kind, options }),

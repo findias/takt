@@ -22,10 +22,12 @@ import { useBoard } from './useBoard'
 export function Board({
   boardId,
   unit,
+  meId,
   onBack,
 }: {
   boardId: string
   unit: EstimateUnit
+  meId: string
   onBack: () => void
 }) {
   const board = useBoard(boardId)
@@ -184,6 +186,7 @@ export function Board({
           boardId={boardId}
           cardId={openCard}
           unit={unit}
+          meId={meId}
           canEdit
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}

@@ -56,6 +56,7 @@ export function App() {
       <Board
         boardId={boardId}
         unit={principal.estimateUnit}
+        meId={principal.id}
         onBack={() => setBoardId(null)}
       />
     )

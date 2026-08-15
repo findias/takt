@@ -9,6 +9,7 @@ import type {
   LinkKind,
 } from './api'
 import { actorText, eventText, timeText } from './feedModel'
+import { Discussion } from './Discussion'
 import type { BaseState } from './boardModel'
 import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from './cardModel'
 import type { Related } from './cardModel'
@@ -26,6 +27,7 @@ export function CardPanel({
   boardId,
   cardId,
   unit,
+  meId,
   canEdit,
   onClose,
   onDescribe,
@@ -41,6 +43,7 @@ export function CardPanel({
   boardId: string
   cardId: string
   unit: EstimateUnit
+  meId: string
   canEdit: boolean
   onClose: () => void
   onDescribe: (cardId: string, description: string) => void
@@ -165,6 +168,8 @@ export function CardPanel({
           />
         )}
       </section>
+
+      <Discussion boardId={boardId} cardId={card.id} meId={meId} canEdit={canEdit} />
 
       <History boardId={boardId} cardId={card.id} version={card.version} />
 

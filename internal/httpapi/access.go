@@ -23,6 +23,11 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
+	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}/comments", s.authed(s.handleComments))
+	mux.HandleFunc("POST /api/boards/{id}/cards/{cardId}/comments", s.authed(s.handleAddComment))
+	mux.HandleFunc("PATCH /api/comments/{commentId}", s.authed(s.handleEditComment))
+	mux.HandleFunc("DELETE /api/comments/{commentId}", s.authed(s.handleDeleteComment))
+	mux.HandleFunc("GET /api/comments/{commentId}/revisions", s.authed(s.handleRevisions))
 	mux.HandleFunc("GET /api/fields", s.authed(s.handleListFields))
 	mux.HandleFunc("POST /api/fields", s.authed(s.handleCreateField))
 	mux.HandleFunc("DELETE /api/fields/{id}", s.authed(s.handleArchiveField))
@@ -98,6 +103,10 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
+	case errors.Is(err, board.ErrNotAuthor):
+		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, board.ErrTooDeep):
+		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, board.ErrFieldExists):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, board.ErrIterationClosed),
@@ -234,4 +243,65 @@ func (s *Server) handleArchiveField(w http.ResponseWriter, r *http.Request, p au
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleComments(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	comments, err := s.boards.Comments(r.Context(), p.OrgID, p.ID, r.PathValue("cardId"))
+	if s.failAccess(w, "обсуждение карточки", err) {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"comments": comments})
+}
+
+func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Body     string   `json:"body"`
+		ParentID *string  `json:"parentId"`
+		Mentions []string `json:"mentions"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	c, err := s.boards.AddComment(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), r.PathValue("cardId"), req.Body, req.ParentID, req.Mentions)
+	if s.failAccess(w, "комментарий", err) {
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (s *Server) handleEditComment(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Body string `json:"body"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := s.boards.EditComment(r.Context(), p.OrgID, p.ID, r.PathValue("commentId"), req.Body)
+	if s.failAccess(w, "правка комментария", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleDeleteComment(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	err := s.boards.DeleteComment(r.Context(), p.OrgID, p.ID, r.PathValue("commentId"))
+	if s.failAccess(w, "удаление комментария", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Прежние версии текста. «Изменено» без них бесполезно: спрашивают
+// не «правил ли он», а «что там было написано до».
+func (s *Server) handleRevisions(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	was, err := s.boards.Revisions(r.Context(), p.OrgID, p.ID, r.PathValue("commentId"))
+	if s.failAccess(w, "прежние версии комментария", err) {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"revisions": was})
 }
