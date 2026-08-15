@@ -23,6 +23,7 @@ import (
 	"github.com/konkov/agile/internal/oidc"
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/realtime"
+	"github.com/konkov/agile/internal/scim"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/team"
 	"github.com/konkov/agile/internal/webhook"
@@ -42,7 +43,8 @@ type Server struct {
 	audit   *audit.Service
 	export  *export.Service
 	// oidc — провайдер корпоративного входа; nil, когда он не настроен.
-	oidc *oidc.Provider
+	oidc    *oidc.Provider
+	scimSvc *scim.Service
 	// draining — реплика получила сигнал остановки и больше не готова
 	// принимать новые запросы, хотя текущие ещё дорабатывает.
 	draining atomic.Bool
@@ -63,6 +65,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 		limiter: newLimiter(),
 		audit:   audit.New(db),
 		export:  export.New(db),
+		scimSvc: scim.New(db),
 		log:     log,
 	}
 	if cfg.OIDC.Enabled() {
@@ -124,6 +127,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerStreamRoutes(mux)
 	s.registerExportRoutes(mux)
 	s.registerOIDCRoutes(mux)
+	s.registerSCIMRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))

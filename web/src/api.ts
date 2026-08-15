@@ -165,6 +165,7 @@ export const SCOPE_NAMES: Record<string, string> = {
   'boards:write': 'Изменять доски',
   'structure:read': 'Читать структуру',
   'audit:read': 'Читать журнал',
+  'scim:write': 'Заводить людей из каталога',
 }
 
 /** Метрики потока. Считаются из отметок карточки, ничего не хранится

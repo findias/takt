@@ -44,11 +44,15 @@ const (
 	ScopeBoardsWrite   = "boards:write"
 	ScopeStructureRead = "structure:read"
 	ScopeAuditRead     = "audit:read"
+	// ScopeSCIM — заведение и отключение людей и групп провайдером.
+	// Отдельное разрешение, потому что это единственный ключ, которому
+	// нужны права владельца: заводить людей и команды — его действие.
+	ScopeSCIM = "scim:write"
 )
 
 func KnownScope(scope string) bool {
 	switch scope {
-	case ScopeBoardsRead, ScopeBoardsWrite, ScopeStructureRead, ScopeAuditRead:
+	case ScopeBoardsRead, ScopeBoardsWrite, ScopeStructureRead, ScopeAuditRead, ScopeSCIM:
 		return true
 	}
 	return false
@@ -132,6 +136,13 @@ func (s *Service) Create(ctx context.Context, orgID, actorID, name string, scope
 	role := auth.RoleViewer
 	if seen[ScopeBoardsWrite] {
 		role = auth.RoleMember
+	}
+	// Заведение людей и команд — действие владельца, и политики базы
+	// требуют именно этого. Ключ от этого не становится всесильным:
+	// на доски он не пройдёт, там проверяется разрешение, а его у него
+	// нет.
+	if seen[ScopeSCIM] {
+		role = auth.RoleOwner
 	}
 
 	c := Client{Name: name, Scopes: cleaned, Token: token, Prefix: token[:8], ExpiresAt: expiresAt}
