@@ -214,6 +214,20 @@ export function Board({
       </div>
       <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
 
+      {Object.keys(base.cards).length === 0 && (
+        <div className="note empty-board" role="note">
+          <p className="small">
+            <strong>На доске ещё нет карточек.</strong> Это не поломка —
+            просто здесь пока ничего не заводили.
+          </p>
+          <p className="muted small">
+            Заведите первую в колонке «{base.columns[base.columnIds[0]]?.name ?? 'первой'}».
+            Дальше её можно перетащить мышью, перенести кнопкой на самой карточке
+            или клавишами: Ctrl со стрелками.
+          </p>
+        </div>
+      )}
+
       <div className="columns">
         {base.columnIds.map((columnId) => (
           <ColumnView
@@ -363,7 +377,11 @@ function ColumnView(props: ColumnProps) {
             onArchive={() => props.onArchiveCard(cardId)}
           />
         ))}
-        {props.cardIds.length === 0 && <p className="empty">Пусто. Перетащите карточку сюда.</p>}
+        {props.cardIds.length === 0 && (
+          <p className="empty">
+            Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.
+          </p>
+        )}
       </div>
 
       {adding ? (

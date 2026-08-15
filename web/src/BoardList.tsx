@@ -72,19 +72,22 @@ export function BoardList({
                   <button
                     className="link"
                     aria-label={`Убрать доску «${b.name}» в архив`}
+                    title="Карточки и история сохранятся"
                     onClick={() => {
                       api
                         .archiveBoard(b.id)
                         .then(() => {
                           load()
-                          setArchived(null)
+                          // Показываем архив сразу: доска, исчезнувшая
+                          // из списка без следа, читается как потеря.
+                          return api.archivedBoards().then((r) => setArchived(r.boards))
                         })
                         .catch((e) =>
                           setError(e instanceof Error ? e.message : 'Не удалось убрать доску'),
                         )
                     }}
                   >
-                    Убрать
+                    В архив
                   </button>
                 )}
               </div>
