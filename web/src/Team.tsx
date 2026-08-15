@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from './api'
-import { FIELD_KIND_NAMES } from './api'
-import type { AuditEntry, CardField, FieldKind, Invite, Member, Principal, Role } from './api'
+import { FIELD_KIND_NAMES, SCOPE_NAMES } from './api'
+import type {
+  ApiClient,
+  AuditEntry,
+  CardField,
+  FieldKind,
+  Invite,
+  Member,
+  Principal,
+  Role,
+} from './api'
 import { actorText, auditText, timeText } from './feedModel'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -123,8 +132,142 @@ export function Team({ principal }: { principal: Principal }) {
 
       <CardFields canEdit={principal.role !== 'viewer'} />
 
+      {isOwner && <Clients />}
+
       <AuditFeed />
     </div>
+  )
+}
+
+/**
+ * Ключи для интеграций.
+ *
+ * Токен показывается один раз: в базе лежит только его хеш, как
+ * у приглашения. В списке остаётся начало ключа — по нему свой ключ
+ * узнают, не раскрывая его.
+ */
+function Clients() {
+  const [clients, setClients] = useState<ApiClient[]>([])
+  const [fresh, setFresh] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [scopes, setScopes] = useState<string[]>(['boards:read'])
+  const [expires, setExpires] = useState('')
+
+  const load = useCallback(() => {
+    api
+      .listClients()
+      .then((r) => setClients(r.clients))
+      .catch(() => setClients([]))
+  }, [])
+
+  useEffect(load, [load])
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Ключи для интеграций</h2>
+      {error && <p className="error">{error}</p>}
+      <p className="muted small">
+        Ключ принадлежит организации, а не человеку: интеграция живёт дольше того,
+        кто её завёл. Действия ключа видны в журнале наравне с людскими.
+      </p>
+
+      {clients.length > 0 && (
+        <ul className="member-list">
+          {clients.map((c) => (
+            <li key={c.id}>
+              <div className="member-who">
+                <span>{c.name}</span>
+                <span className="muted small">
+                  {c.prefix}… · {c.scopes.map((s) => SCOPE_NAMES[s] ?? s).join(', ')}
+                  {c.lastUsedAt
+                    ? ` · работал ${new Date(c.lastUsedAt).toLocaleDateString('ru-RU')}`
+                    : ' · ещё не работал'}
+                </span>
+              </div>
+              <button
+                className="link"
+                onClick={() => {
+                  setError(null)
+                  api
+                    .revokeClient(c.id)
+                    .then(load)
+                    .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+                }}
+              >
+                Отозвать
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {fresh && (
+        <div className="note">
+          <p className="small">
+            Ключ создан. Он показывается один раз — в базе хранится только его
+            отпечаток. Скопируйте и положите туда, откуда его возьмёт интеграция.
+          </p>
+          <div className="row">
+            <input readOnly value={fresh} onFocus={(e) => e.target.select()} />
+            <button onClick={() => void navigator.clipboard?.writeText(fresh)}>Скопировать</button>
+          </div>
+        </div>
+      )}
+
+      <form
+        className="stack"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!name.trim() || scopes.length === 0) return
+          setError(null)
+          api
+            .createClient(name.trim(), scopes, expires)
+            .then((c) => {
+              setFresh(c.token ?? null)
+              setName('')
+              setExpires('')
+              load()
+            })
+            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать ключ'))
+        }}
+      >
+        <div className="row row--tight">
+          <input
+            value={name}
+            placeholder="Для чего ключ"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            type="date"
+            value={expires}
+            aria-label="Действует до"
+            onChange={(e) => setExpires(e.target.value)}
+          />
+          <button type="submit" disabled={!name.trim() || scopes.length === 0}>
+            Создать
+          </button>
+        </div>
+        <div className="row row--tight">
+          {Object.keys(SCOPE_NAMES).map((scope) => (
+            <label key={scope} className="row row--tight">
+              <input
+                type="checkbox"
+                checked={scopes.includes(scope)}
+                onChange={(e) =>
+                  setScopes((current) =>
+                    e.target.checked
+                      ? [...current, scope]
+                      : current.filter((s) => s !== scope),
+                  )
+                }
+              />
+              <span className="small">{SCOPE_NAMES[scope]}</span>
+            </label>
+          ))}
+        </div>
+      </form>
+    </section>
   )
 }
 

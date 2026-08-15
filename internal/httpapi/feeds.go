@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/auth"
 )
 
@@ -15,7 +16,7 @@ import (
 
 func (s *Server) registerFeedRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/{id}/events", s.authed(s.handleBoardEvents))
-	mux.HandleFunc("GET /api/audit", s.authed(s.handleAudit))
+	mux.HandleFunc("GET /api/audit", s.scoped(apiclient.ScopeAuditRead, s.handleAudit))
 }
 
 func (s *Server) handleBoardEvents(w http.ResponseWriter, r *http.Request, p auth.Principal) {

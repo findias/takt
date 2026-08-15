@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/team"
 )
@@ -16,7 +17,7 @@ import (
 // другого держателя этого права нет.
 
 func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/teams", s.authed(s.handleListTeams))
+	mux.HandleFunc("GET /api/teams", s.scoped(apiclient.ScopeStructureRead, s.handleListTeams))
 	mux.HandleFunc("POST /api/teams", s.authed(s.handleCreateTeam))
 	mux.HandleFunc("PATCH /api/teams/{id}", s.authed(s.handleUpdateTeam))
 	mux.HandleFunc("DELETE /api/teams/{id}", s.authed(s.handleArchiveTeam))

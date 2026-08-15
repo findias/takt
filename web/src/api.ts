@@ -146,6 +146,27 @@ export type Comment = {
   mentions: string[]
 }
 
+/** Сервисный клиент: доступ к API не от человека. Токен принадлежит
+ *  организации — интеграция живёт дольше того, кто её завёл. */
+export type ApiClient = {
+  id: string
+  name: string
+  prefix: string
+  scopes: string[]
+  /** Приходит только в ответе на создание: в базе лежит лишь хеш. */
+  token?: string
+  createdAt: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+}
+
+export const SCOPE_NAMES: Record<string, string> = {
+  'boards:read': 'Читать доски',
+  'boards:write': 'Изменять доски',
+  'structure:read': 'Читать структуру',
+  'audit:read': 'Читать журнал',
+}
+
 export type Visibility = 'org' | 'team' | 'private'
 
 export const VISIBILITY_NAMES: Record<Visibility, string> = {
@@ -378,6 +399,11 @@ export const api = {
     request<void>('PUT', `/api/teams/${id}/members/${userId}`),
   removeTeamMember: (id: string, userId: string) =>
     request<void>('DELETE', `/api/teams/${id}/members/${userId}`),
+
+  listClients: () => request<{ clients: ApiClient[] }>('GET', '/api/clients'),
+  createClient: (name: string, scopes: string[], expiresAt: string) =>
+    request<ApiClient>('POST', '/api/clients', { name, scopes, expiresAt }),
+  revokeClient: (id: string) => request<void>('DELETE', `/api/clients/${id}`),
 
   listAdmins: () => request<{ admins: TeamAdmin[] }>('GET', '/api/team-admins'),
   grantAdmin: (userId: string, teamId: string) =>

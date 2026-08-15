@@ -2,14 +2,17 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/audit"
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
@@ -25,6 +28,7 @@ type Server struct {
 	boards *board.Service
 	orgs   *org.Service
 	teams  *team.Service
+	client *apiclient.Service
 	audit  *audit.Service
 	log    *slog.Logger
 }
@@ -36,6 +40,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 		boards: board.New(db),
 		orgs:   org.New(db),
 		teams:  team.New(db),
+		client: apiclient.New(db),
 		audit:  audit.New(db),
 		log:    log,
 	}
@@ -70,11 +75,13 @@ func (s *Server) Handler() http.Handler {
 	s.registerTeamRoutes(mux)
 	s.registerAccessRoutes(mux)
 	s.registerFeedRoutes(mux)
+	s.registerClientRoutes(mux)
 
-	mux.HandleFunc("GET /api/boards", s.authed(s.handleListBoards))
-	mux.HandleFunc("POST /api/boards", s.authed(s.handleCreateBoard))
-	mux.HandleFunc("GET /api/boards/{id}", s.authed(s.handleSnapshot))
-	mux.HandleFunc("POST /api/boards/{id}/operations", s.authed(s.handleOperation))
+	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
+	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))
+	mux.HandleFunc("GET /api/boards/{id}", s.scoped(apiclient.ScopeBoardsRead, s.handleSnapshot))
+	mux.HandleFunc("POST /api/boards/{id}/operations",
+		s.scoped(apiclient.ScopeBoardsWrite, s.handleOperation))
 
 	if s.cfg.WebDir != "" {
 		mux.Handle("/", s.staticHandler())
@@ -92,10 +99,44 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // --- доступ ---
 
-// authed требует активную сессию и подставляет автора запроса вместе
-// с его ролью в активной организации.
+// scoped требует разрешения у сервисного клиента. Для человека
+// разрешений нет: он ограничен ролью, и этого достаточно — ключ же
+// выдаётся под конкретную задачу, и «может всё» у него было бы
+// бессмысленным по назначению.
+func (s *Server) scoped(scope string, next func(http.ResponseWriter, *http.Request, auth.Principal)) http.HandlerFunc {
+	return s.authed(func(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+		if granted, ok := scopesOf(r); ok && !slices.Contains(granted, scope) {
+			writeError(w, http.StatusForbidden, "ключу не выдано разрешение "+scope)
+			return
+		}
+		next(w, r, p)
+	})
+}
+
+type scopesKey struct{}
+
+func scopesOf(r *http.Request) ([]string, bool) {
+	scopes, ok := r.Context().Value(scopesKey{}).([]string)
+	return scopes, ok
+}
+
+// authed принимает и человека с сессией, и сервисного клиента с ключом.
+//
+// Дальше по коду разницы между ними нет: у клиента есть служебная
+// личность, он состоит в организации как все, и политики доступа
+// не знают, кто именно за запросом.
 func (s *Server) authed(next func(http.ResponseWriter, *http.Request, auth.Principal)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if token, ok := bearer(r); ok {
+			principal, scopes, err := s.client.Authenticate(r.Context(), token)
+			if err != nil {
+				writeError(w, http.StatusUnauthorized, "ключ недействителен")
+				return
+			}
+			next(w, r.WithContext(context.WithValue(r.Context(), scopesKey{}, scopes)), principal)
+			return
+		}
+
 		cookie, err := r.Cookie(auth.CookieName)
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "нужно войти")
@@ -109,6 +150,18 @@ func (s *Server) authed(next func(http.ResponseWriter, *http.Request, auth.Princ
 		}
 		next(w, r, principal)
 	}
+}
+
+// bearer читает ключ из заголовка. Ключ в строке запроса не принимается
+// намеренно: адреса попадают в логи прокси и в историю браузера, а секрет
+// там оказываться не должен.
+func bearer(r *http.Request) (string, bool) {
+	header := r.Header.Get("Authorization")
+	if !strings.HasPrefix(header, "Bearer ") {
+		return "", false
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+	return token, token != ""
 }
 
 // owner дополнительно требует роль владельца в активной организации.

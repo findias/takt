@@ -61,6 +61,11 @@ type Scope struct {
 	// Пустое значение оставляет доступной только то, что открыто всей
 	// организации, — то есть фоновые задачи не видят чужих командных досок.
 	UserID string
+	// APIToken открывает одну строку сервисного клиента по хешу его
+	// токена — до того, как известна организация. То же исключение,
+	// что и у приглашения, и по той же причине: предъявленный секрет
+	// и есть право.
+	APIToken string
 	// InviteToken открывает одну строку приглашения по хешу его токена.
 	// Приглашение открывают по секретной ссылке, когда организация ещё
 	// неизвестна, а у человека может не быть аккаунта.
@@ -80,8 +85,9 @@ func (s *Store) BeginScope(ctx context.Context, scope Scope) (pgx.Tx, error) {
 	_, err = tx.Exec(ctx, `
 		select set_config('app.current_org', $1, true),
 		       set_config('app.current_user', $2, true),
-		       set_config('app.invite_token', $3, true)`,
-		scope.OrgID, scope.UserID, scope.InviteToken)
+		       set_config('app.invite_token', $3, true),
+		       set_config('app.api_token', $4, true)`,
+		scope.OrgID, scope.UserID, scope.InviteToken, scope.APIToken)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("установка области видимости: %w", err)
