@@ -1,0 +1,435 @@
+<title>Необратимое в схеме</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<style>
+/* decision sheet — компактная надстройка над системой research-документов */
+.sheet{padding-top:3rem}
+.sheet .masthead{padding-top:0}
+.band{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:2.8rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--rule);
+}
+.band h2{font-size:clamp(1.3rem,2.6vw,1.6rem)}
+.tag{
+  font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;font-weight:650;
+  padding:.22rem .5rem;border:1px solid var(--rule-strong);color:var(--ink-3);
+  white-space:nowrap;flex:none;
+}
+.tag.hard{color:var(--risk);border-color:var(--risk)}
+.tag.keep{color:var(--accent);border-color:var(--accent)}
+.tag.soft{color:var(--warn);border-color:var(--warn)}
+.tag.never{color:var(--ink-3)}
+.rows{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.row{
+  display:grid;grid-template-columns:15.5rem 1fr;gap:1.3rem;
+  background:var(--surface);padding:.9rem 1.1rem;
+}
+.row .what{font-size:.9rem;font-weight:650;line-height:1.35}
+.row .what code{font-size:.78rem;font-weight:400;display:inline-block;margin-top:.25rem}
+.row .why{font-size:.88rem;color:var(--ink-2);margin:0}
+.row .why em{color:var(--ink-3);font-style:normal;font-size:.82rem;display:block;margin-top:.3rem}
+.dont{list-style:none;padding:0;margin:1rem 0 0}
+.dont li{
+  padding:.6rem 0 .6rem 1.5rem;border-bottom:1px solid var(--rule);margin:0;
+  font-size:.92rem;position:relative;
+}
+.dont li:last-child{border-bottom:none}
+.dont li::before{
+  content:"×";position:absolute;left:.35rem;top:.62rem;
+  color:var(--risk);font-weight:650;
+}
+.dont b{color:var(--ink)}
+@media (max-width:720px){
+  .row{grid-template-columns:1fr;gap:.35rem}
+}
+</style>
+
+<article class="doc sheet">
+
+<header class="masthead">
+  <p class="kicker mono">Лист решений · схема доски · август 2026</p>
+  <h1>Необратимое в схеме</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">Выжимка из <a href="boards-research.html">разбора устройства досок</a>: что заложить в схему сейчас, что уже сделано верно и что нельзя ломать, что добавляется потом бесплатно и чего не делать никогда. Порядок — по обратимости решения, а не по важности.</p>
+</header>
+
+<div class="band">
+  <span class="tag hard">задним числом никогда</span>
+  <h2>Заложить сейчас</h2>
+</div>
+<div class="wide rows">
+  <div class="row">
+    <div class="what">Семантика колонки<br><code>kind · is_started_point · is_finished_point · policy</code></div>
+    <p class="why">Kanban Guide определяет WIP, Cycle Time, Work Item Age и Throughput через точки старта и финиша, а не через «в какой колонке лежит». История переходов копится уже сейчас — но без разметки колонок она непригодна для метрик.<em>Там же место под Definition of Done текстом — как у Azure DevOps.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Отметки времени на карточке<br><code>started_at · finished_at · column_entered_at</code></div>
+    <p class="why">Старение карточки считать на лету дорого, а <code>created_at</code> — это не <code>started_at</code>. Денормализация из журнала, который уже пишется.</p>
+  </div>
+  <div class="row">
+    <div class="what">Снимок колонки в событии<br><code>card_events.payload</code></div>
+    <p class="why"><code>from_column</code> и <code>to_column</code> — голые uuid без внешнего ключа. Microsoft прямым текстом называет переконфигурацию измерений «irreversible data loss» во всех исторических графиках: диаграмма потока ссылается на значения такими, какими они были в момент события.<em>Следствие: удаление колонки — только архивирование. <code>archived_at</code> в таблице уже есть.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Блокировки интервалом<br><code>card_blocks(blocked_at, unblocked_at, reason)</code></div>
+    <p class="why">Булев флаг — необратимая потеря аналитики. У Jira блокировка это чекбокс «Flagged» без длительности, и времени разрешения блокировок там нет; у Kaiten блокировка с категорией и сроком, и отчёт есть.</p>
+  </div>
+  <div class="row">
+    <div class="what">Иерархия карточек<br><code>parent_id</code> + предел глубины</div>
+    <p class="why">Поле добавляется дёшево, но смена схемы иерархии потом рвёт существующие связи: у Jira это задокументировано как «cannot be undone». Решить сразу, сколько уровней и ограничена ли глубина — Azure DevOps держит планку «меньше 14», GitHub — 8 уровней и 100 подзадач на родителя.</p>
+  </div>
+  <div class="row">
+    <div class="what">Итерация как сущность<br><code>iterations(state, start, end, incomplete_destination)</code></div>
+    <p class="why">Ссылку у карточки добавить легко, диаграмму сгорания за прошедшие спринты — никогда: для неё нужна история оценок по дням. Поле «куда уезжают незавершённые» есть у спринта Jira и обязано быть в схеме, иначе решается кодом каждый раз по-разному.</p>
+  </div>
+</div>
+
+<div class="band">
+  <span class="tag keep">уже верно</span>
+  <h2>Не сломать</h2>
+</div>
+<div class="wide rows">
+  <div class="row">
+    <div class="what">Позиция в разрезе колонки<br><code>unique (column_id, position)</code>, ранг строкой</div>
+    <p class="why">Единственное место, где мы правы, а взрослые ошиблись. У GitLab одно целое поле на инстанс — в 2021 на gitlab.com оно упёрлось в 2,016 млрд при пределе 2,147 млрд, ребалансировка 40 минут при 20-минутном таймауте. У Jira ранг глобальный, запрос сделать его контекстным открыт с 2012 года.<em>Позиция принадлежит паре «карточка × ось упорядочивания». Сегодня ось — колонка.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Колонка — сущность, а не значение поля</div>
+    <p class="why">У продуктов-представлений (GitHub, Linear, Notion) лимит и политику вешать некуда — у GitHub «column limit» живёт внутри вида и ничего не запрещает. Многомерный WIP уровня Kaiten и Taiga возможен только когда колонка и дорожка — строки в базе.</p>
+  </div>
+  <div class="row">
+    <div class="what">Журнал <code>card_events</code> — append-only</div>
+    <p class="why">Из журнала можно построить снимки, обратно — нельзя, а из текущего состояния — ни то ни другое. Событие пишется даже на перестановку внутри колонки: это верно.</p>
+  </div>
+  <div class="row">
+    <div class="what">Идентификаторы — <code>uuid</code>, не счётчики</div>
+    <p class="why">Fossil выбрал случайные идентификаторы в 2007-м, Backlog.md переоткрыл это в продакшене в 2026-м: два клиента считают <code>max + 1</code> от того, что видят, и детерминированно выдают один и тот же номер. Условие работоспособности при любом импорте, экспорте или слиянии организаций.</p>
+  </div>
+  <div class="row">
+    <div class="what">Операция как намерение<br><code>operation_id</code> + <code>409</code> с текущим порядком</div>
+    <p class="why">Клиент присылает намерение, а не пересчитанное состояние — та же развязка, к которой пришли git-bug и Fossil: гранулярность конфликта становится полем, а не документом.</p>
+  </div>
+</div>
+
+<div class="band">
+  <span class="tag soft">аддитивно</span>
+  <h2>Можно потом</h2>
+</div>
+<div class="wide rows">
+  <div class="row">
+    <div class="what">Оживить WIP-лимит<br><code>SET_COLUMN_LIMIT</code> + <code>wip_limit_hard</code></div>
+    <p class="why">Сейчас <code>wip_limit</code> есть в таблице, читается в снимок доски и отдаётся в API, но ни одна операция его не выставляет и нигде не проверяется — всегда <code>NULL</code>. Единственное место, где заявленное расходится с работающим.<em>По умолчанию мягкий, как у Jira, Azure DevOps и GitHub; жёсткий — флагом колонки, как <code>soft</code> у Wekan.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Вторая ось упорядочивания<br><code>card_positions(card_id, axis_id, rank)</code></div>
+    <p class="why">Понадобится, когда появится вторая доска над теми же карточками или ручной порядок в списке. Миграция механическая: сегодняшняя позиция становится строкой с осью «колонка». К этому же независимо пришли Vikunja, OpenProject и Asana.</p>
+  </div>
+  <div class="row">
+    <div class="what">Поля под представления</div>
+    <p class="why">Одна дата открывает календарь, начало и конец — таймлайн, обложка — галерею, типизированные поля — таблицу. Всё аддитивно. Дорого только Гант: ему нужна самоссылающаяся связь зависимостей с семантикой направления.</p>
+  </div>
+  <div class="row">
+    <div class="what">Явное состояние сортировки колонки</div>
+    <p class="why">Ручной порядок и сортировка по полю взаимоисключающи — у GitHub «when a board is sorted, you cannot manually reorder items». Когда появится сортировка, перетаскивание должно отключаться явно, а не молча игнорировать ранг.</p>
+  </div>
+</div>
+
+<div class="band">
+  <span class="tag never">осознанно нет</span>
+  <h2>Не делать</h2>
+</div>
+<ul class="dont wide">
+  <li><b>Переносить позицию на карточку.</b> Это ошибка GitLab и Jira: одной стоила производственного инцидента, другой — многодневных ребалансировок на полумиллионе задач. GitLab для эпиков потом завёл отдельную таблицу позиций на доску.</li>
+  <li><b>Делать доску сохранённым запросом на этапе 0.</b> Модель Jira требует языка запросов, статусов как отдельной сущности и рабочего процесса. Правильная цель, неправильный первый шаг.</li>
+  <li><b>Включать жёсткий WIP по умолчанию.</b> Все, кто мог, сделали мягкий и объяснили почему: Azure DevOps прямо пишет, что превышение на один-два элемента — норма.</li>
+  <li><b>Хранить доску в git.</b> У git-bug доска — draft-PR с августа 2022, где операция перемещения карточки объявлена и не реализована; у Radicle досок нет, единственная попытка заархивирована. Ломается ровно нужное: глобальный запрос, права на уровне поля, уведомления и порядок при конкурентных изменениях.</li>
+  <li><b>Жёстко удалять колонки.</b> Разбирается выше — это стирание истории потока, а не уборка.</li>
+</ul>
+
+<div class="band">
+  <span class="tag">до миграции</span>
+  <h2>Открытые вопросы</h2>
+</div>
+<ol class="qlist wide">
+  <li><strong>Колонка — это статус или это место?</strong> От ответа зависит, появится ли у карточки состояние, независимое от доски, и смогут ли две доски показывать один набор карточек. Сейчас <code>cards.board_id</code> скалярный: «одна карточка на двух досках» закрыто на уровне схемы.</li>
+  <li><strong>Дорожки — сущность или группировка по полю?</strong> Лимит на ячейку «дорожка × колонка», как у Kaiten и Taiga, возможен только в первом случае.</li>
+  <li><strong>Сколько уровней иерархии и ограничена ли глубина?</strong> Единственный вопрос из списка, где «разберёмся потом» дороже всего.</li>
+  <li><strong>Нужна ли двусторонняя связь с git-хостингом?</strong> Импорт из GitHub Projects технически возможен, но упирается в лимиты: 5000 очков в час, не больше 100 элементов на страницу, пауза не меньше секунды между изменяющими запросами.</li>
+  <li><strong>Экспорт доски в файлы и MCP — цель или побочный эффект?</strong> Если цель, формат задачи стоит спроектировать до появления пользовательских полей.</li>
+</ol>
+
+</article>

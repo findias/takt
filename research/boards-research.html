@@ -1,0 +1,789 @@
+<title>Колонка или поле</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<style>
+td.risk,.risk{color:var(--risk);font-weight:650}
+.stage p.st{margin:0}
+</style>
+
+<article class="doc">
+
+<header class="masthead">
+  <p class="kicker mono">Исследование · доски в git-хостингах, в репозитории и в продуктах · август 2026</p>
+  <h1>Колонка или поле</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">Как настроены доски в GitHub, GitLab, Gitea и Jira; что происходит с доской, когда она живёт прямо в git-репозитории; на какие три архетипа делятся все остальные продукты; и какие представления вырастают из одной доменной модели. С разбором нашей схемы и списком того, что необратимо задним числом.</p>
+  <dl class="meta">
+    <div><dt class="mono">git-досок у нас</dt><dd>не настроено</dd></div>
+    <div><dt class="mono">Хостингов разобрано</dt><dd>6</dd></div>
+    <div><dt class="mono">git-native проектов</dt><dd>14</dd></div>
+    <div><dt class="mono">Продуктов</dt><dd>23</dd></div>
+    <div><dt class="mono">Необратимых решений</dt><dd>5</dd></div>
+  </dl>
+</header>
+
+<section>
+  <p><strong>Короткий вывод.</strong> Проверять в репозитории нечего: <code>git remote -v</code> пуст, каталога <code>.github</code> нет, ветка одна — <code>master</code>. Ни GitHub Projects, ни GitLab Boards, ни Gitea Projects здесь не настроены и никогда не были; доска проекта существует только внутри самого приложения. Поэтому вопрос «как настроены доски git» ниже разобран иначе — как <em>устроены</em> доски у тех, кто их сделал, и что из этого применимо к нашей схеме.</p>
+
+  <p>Главный результат ресерча: продуктов много, а архитектур доски — три, и выбор между ними делается один раз. Либо <strong>колонка владеет карточкой</strong> (у карточки внешний ключ на колонку, отдельного статуса нет), либо <strong>состояние живёт в поле карточки, а доска его только рисует</strong>, либо <strong>владеет связка</strong> — отдельная сущность на пару «карточка × доска», хранящая и колонку, и порядок. Наша схема — первая. Всё остальное — мультибордовость, дорожки, таймлайн, спринты, WIP на нескольких досках — следствия этого выбора, а не независимые фичи.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Пять тезисов</span>
+    <ol style="margin-bottom:0">
+      <li><strong>Мы выбрали модель «владения» — как Trello, Kaiten, Wekan и YouGile.</strong> Это нормальный выбор для этапа 0, и он же навсегда закрывает «одна карточка на двух досках»: у нас <code>cards.board_id</code> скалярный. Kaiten живёт с этим ограничением до сих пор и обходит его копиями.</li>
+      <li><strong>Порядок карточек — единственное, где мы уже правы, а взрослые ошиблись.</strong> Наша позиция лежит в разрезе колонки. У GitLab и Jira позиция глобальная на задачу, и обе компании публично признали, что это ошибка: GitLab завёл для эпиков отдельную таблицу позиций на доску, у Jira это тикет с 2012 года.</li>
+      <li><strong>Необратимы ровно пять вещей</strong>, и три из них у нас пока не заложены: семантика колонок (started/finished points), иерархия карточек и интервалы блокировок. Журнал событий и строковый ранг — заложены.</li>
+      <li><strong>Доску в git не хранит никто из тех, кто дожил до 2026-го.</strong> У git-bug доска — четырёхлетний draft-PR, в котором операция перемещения карточки объявлена, но не реализована. У Radicle досок нет и не было. Заимствовать оттуда стоит идеи, не хранилище.</li>
+      <li><strong>WIP-лимит почти везде — подсветка, а не запрет.</strong> Jira, Azure DevOps, GitHub, Kaiten, Яндекс Трекер не блокируют превышение осознанно. Жёсткий лимит есть только у Weeek и (опционально) у Wekan. У нас поле <code>wip_limit</code> заведено, но не выставляется и не проверяется — это мёртвый столбец.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ 00 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">00</span><h2>Что настроено у нас — по факту</h2></div>
+
+  <h4>git-доски</h4>
+  <p>Ни одной. Репозиторий локальный: удалённых нет вообще, значит нет ни GitHub Projects, ни GitLab Boards, ни Gitea Projects — их просто негде включить. Каталога <code>.github</code> и файлов <code>.gitlab-*</code> нет, то есть нет ни шаблонов задач, ни автоматизаций, ни workflow. Два коммита в <code>master</code>, планирование ведётся вне git.</p>
+
+  <h4>Доска внутри приложения</h4>
+  <p>Схема из <code>migrations/0001_init.sql</code>:</p>
+  <pre><code>boards         (id, org_id, project_id, name, version, archived_at)
+board_columns  (id, board_id, name, position text, wip_limit int, archived_at)
+cards          (id, board_id, column_id, position text, title, description,
+                version, archived_at)
+card_events    (id, board_id, card_id, actor_id, type, from_column, to_column,
+                payload jsonb, at)          -- append-only
+operations     (operation_id pk, board_id, kind, result jsonb, at)</code></pre>
+
+  <p>Карточка ссылается на колонку и на доску, статуса как отдельного поля нет. Перемещение — один <code>UPDATE</code>, меняющий <code>column_id</code> и <code>position</code>, плюс запись события <code>moved</code> с <code>from_column</code> и <code>to_column</code>. Операций шесть: <code>CREATE_CARD</code>, <code>MOVE_CARD</code>, <code>UPDATE_CARD</code>, <code>ARCHIVE_CARD</code>, <code>CREATE_COLUMN</code>, <code>RENAME_COLUMN</code>.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Наша модель на фоне разобранных: что есть, чего нет</caption>
+      <thead><tr><th style="width:26%">Свойство</th><th style="width:14%">У нас</th><th>Комментарий</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Архетип</strong></td><td class="maybe">владение</td><td>Колонка владеет карточкой. Та же модель у Trello, Kaiten, Wekan, Kanboard, YouGile.</td></tr>
+        <tr><td><strong>Позиция</strong></td><td class="yes">в разрезе колонки</td><td>Строковый ранг, <code>unique (column_id, position)</code>. Правильнее, чем у GitLab и Jira (см. раздел 06).</td></tr>
+        <tr><td><strong>Колонка — сущность</strong></td><td class="yes">да</td><td>Есть куда повесить лимит, политику и тип колонки. У продуктов-представлений (Linear, Notion, GitHub) этого места нет.</td></tr>
+        <tr><td><strong>Журнал переходов</strong></td><td class="yes">есть</td><td><code>card_events</code> пишется на каждое перемещение, включая перестановку внутри колонки. Восстановить задним числом невозможно — заложено верно.</td></tr>
+        <tr><td><strong>WIP-лимит</strong></td><td class="no">мёртвое поле</td><td><code>wip_limit</code> есть в схеме, читается в снимок доски и отдаётся в API, но <em>ни одна операция его не выставляет</em> и нигде не проверяется. Всегда <code>NULL</code>.</td></tr>
+        <tr><td><strong>Семантика колонок</strong></td><td class="no">нет</td><td>Нет признаков «очередь / в работе / готово» и точек started/finished. Без них не определены Cycle Time, Work Item Age, Throughput и WIP в смысле Kanban Guide.</td></tr>
+        <tr><td><strong>Иерархия</strong></td><td class="no">нет</td><td>Нет <code>parent_id</code>. Добавляется дёшево, но аналитика по эпикам за прошлое не построится.</td></tr>
+        <tr><td><strong>Даты, метки, исполнители</strong></td><td class="no">нет</td><td>Пока нет ни одного поля, из которого вырастает календарь, таймлайн или группировка.</td></tr>
+        <tr><td><strong>Итерации</strong></td><td class="no">нет</td><td>Поле добавляется дёшево, диаграмма сгорания за прошедшие спринты — никогда.</td></tr>
+        <tr><td><strong>Блокировки</strong></td><td class="no">нет</td><td>Если делать — сразу интервалом, а не флагом (см. раздел 07).</td></tr>
+        <tr><td><strong>Удаление колонки</strong></td><td class="maybe">операции нет</td><td>Пока это удача: <code>card_events.from_column</code> — голый uuid без внешнего ключа. Жёсткое удаление колонки осиротит историю и убьёт диаграмму потока.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <span class="lbl mono">Одна конкретная ловушка</span>
+    <p>Когда появится операция удаления колонки, она обязана быть <em>архивированием</em>, а не <code>DELETE</code>. В <code>board_columns</code> уже есть <code>archived_at</code> — этого достаточно. Причина не наша: Microsoft прямым текстом пишет, что переконфигурация Area Path и Iteration Path вызывает «irreversible data loss» во всех исторических графиках, потому что графики ссылаются на значения измерений <em>такими, какими они были на момент события</em>. У нас та же схема: <code>from_column</code> и <code>to_column</code> — ссылки на строки, которые кто-то однажды захочет почистить. Дешёвая страховка — дополнительно класть имя колонки снимком в <code>payload</code> события.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">01</span><h2>Развилка: три архетипа, а не двадцать три</h2></div>
+  <p>Двадцать три продукта с доской укладываются в три модели хранения. Разброс по фичам огромный, по архитектуре — почти нулевой.</p>
+
+  <div class="wide diagram">
+    <div class="dgrid">
+      <div class="dlane">
+        <div class="dlabel">Владение</div>
+        <div class="dboxes">
+          <div class="dbox hot"><b>карточка → колонка</b><span>FK на карточке: <code>idList</code>, <code>column_id</code>, <code>listId</code>. Статуса нет — статус и есть колонка</span></div>
+          <div class="dbox"><b>Кто</b><span>Trello · Kaiten · Wekan · Kanboard · YouGile · <strong>мы</strong></span></div>
+          <div class="dbox"><b>Цена</b><span>карточка физически не может быть на двух досках</span></div>
+        </div>
+      </div>
+      <div class="dlane">
+        <div class="dlabel">Представление</div>
+        <div class="dboxes">
+          <div class="dbox"><b>карточка → статус</b><span>колонка — группировка по полю; досок над одним набором сколько угодно</span></div>
+          <div class="dbox"><b>Кто</b><span>Linear · Notion · GitHub · Plane · Huly · Taiga · Leantime · Shortcut · ClickUp</span></div>
+          <div class="dbox"><b>Цена</b><span>порядок больше не привязан к колонке, его надо где-то хранить</span></div>
+        </div>
+      </div>
+      <div class="dlane">
+        <div class="dlabel">Членство</div>
+        <div class="dboxes">
+          <div class="dbox"><b>связка (карточка, доска)</b><span>отдельная сущность хранит и колонку, и порядок — на каждую доску свои</span></div>
+          <div class="dbox"><b>Кто</b><span>Asana · Vikunja · OpenProject · Monday · Яндекс&nbsp;Трекер · Weeek</span></div>
+          <div class="dbox"><b>Цена</b><span>сложность; часть полей всё равно остаётся глобальной</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="dflow mono">владение → дёшево и тупиково · представление → гибко и без места для политики колонки · членство → честно и дорого</p>
+  </div>
+
+  <p>Показателен GitHub: там <code>Status</code> — это <code>ProjectV2SingleSelectField</code> с обязательным <code>project: ProjectV2!</code>, то есть поле <em>проекта</em>, а не свойство issue. Одна и та же issue в двух проектах — это два разных <code>ProjectV2Item</code> с независимыми значениями полей и независимой позицией. Классическое «представление», доведённое до конца: доска ничего не знает про issue, кроме того, что на неё ссылается элемент проекта.</p>
+
+  <p>Противоположный полюс — Wekan и Kanboard: у карточки три внешних ключа прямо в таблице (<code>boardId</code>, <code>listId</code>, <code>swimlaneId</code> у Wekan; <code>column_id NOT NULL</code>, <code>swimlane_id NOT NULL</code> у Kanboard). Мультибордовость Wekan докручивает связанными карточками: <code>link()</code> создаёт <strong>новый документ</strong> с <code>type: 'cardType-linkedCard'</code>, у которого свои колонка, дорожка и порядок.</p>
+
+  <div class="note">
+    <span class="lbl mono">Где проходит настоящая граница</span>
+    <p>Не «владение против представления», а <strong>есть ли у колонки собственная строка в базе</strong>. Если колонка — значение перечисления (Notion, Linear, GitHub), то WIP-лимит, политику входа, тип колонки и Definition of Done вешать некуда, и они либо отсутствуют, либо переезжают в настройки представления. У GitHub «column limit» так и живёт — <em>внутри вида</em>: «Column limits are unique to each view», и лимит ничего не запрещает. У нас колонка — сущность, и это стоит сохранить даже если модель однажды поедет в сторону представлений.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">02</span><h2>Доски в git-хостингах</h2></div>
+  <p>Шесть систем, три вопроса к каждой: хранится ли позиция отдельно от статуса, что происходит с порядком, когда задача попадает на вторую доску, и что на самом деле делает WIP-лимит.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Сводка по хостингам</caption>
+      <thead><tr><th style="width:15%">Система</th><th style="width:20%">Позиция ≠ статус</th><th style="width:30%">Задача на N досках</th><th>WIP</th></tr></thead>
+      <tbody>
+        <tr><td><strong>GitHub Projects v2</strong></td><td class="yes">да</td><td>Да, но это <strong>разные</strong> <code>ProjectV2Item</code>: свой статус и своя позиция в каждом проекте. Внутри проекта позиция общая для всех видов, не на вид.</td><td class="maybe">column limit, только подсветка, per-view</td></tr>
+        <tr><td><strong>GitLab</strong></td><td class="no">нет</td><td>Порядок <strong>общий</strong>: <code>issues.relative_position</code> — одно целое поле. Документация прямо описывает это как поведение: переставили на одной доске — переставилось на всех.</td><td class="maybe">Premium+, по числу или по весу, красный счётчик</td></tr>
+        <tr><td><strong>Gitea ≥ 1.27</strong></td><td class="yes">да</td><td>Да, с апреля 2026: <code>project_issue(issue_id, project_id, project_board_id, sorting)</code> — своя колонка и свой порядок в каждом проекте.</td><td class="no">нет вообще</td></tr>
+        <tr><td><strong>Forgejo</strong></td><td class="yes">да</td><td><strong>Нет.</strong> <code>IssueAssignOrRemoveProject</code> принимает скаляр, на связке уникальный индекс: один issue — один проект.</td><td class="no">нет вообще</td></tr>
+        <tr><td><strong>Jira</strong></td><td class="yes">да</td><td>Да, но ранг <strong>глобальный на инстанс</strong>: «An issue only has one rank even if it's included in multiple boards».</td><td class="maybe">min/max, красный и жёлтый заголовок, не блокирует</td></tr>
+        <tr><td><strong>Azure Boards</strong></td><td class="yes">да</td><td>Да — и это признанная слабость: <code>System.BoardColumn</code> одно на work item, команды перетирают значения друг друга, при равной глубине area path результат недетерминирован.</td><td class="maybe">«soft constraints», прямо сказано «you can exceed these limits»</td></tr>
+        <tr><td><strong>Bitbucket</strong></td><td class="no">досок нет</td><td colspan="2">Встроенный трекер <strong>удаляется 20 августа 2026</strong>; с апреля 2026 его уже нельзя включить там, где он не использовался. Доски — только через Jira.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>GitHub Projects: как это настраивается</h3>
+  <p>Доска — это <em>вид</em> проекта, а не отдельная сущность. Раскладок три: <code>TABLE_LAYOUT</code>, <code>BOARD_LAYOUT</code>, <code>ROADMAP_LAYOUT</code>. Колонкой доски может быть <code>Status</code> или любое другое поле типа single-select либо iteration. Пользовательских типов полей ровно шесть: текст, число, дата, single-select, multi-select, iteration; всего полей на проект — <strong>50</strong>, включая встроенные, опций в single-select — тоже 50.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Лимиты GitHub Projects, август 2026</caption>
+      <thead><tr><th style="width:42%">Что</th><th>Сколько</th></tr></thead>
+      <tbody>
+        <tr><td>Элементов в проекте</td><td><strong>50 000</strong> (активные + архив). До февраля 2025 — 1200 активных; GA расширения — 9 апреля 2025</td></tr>
+        <tr><td>Полей на проект</td><td>50, включая встроенные и организационные</td></tr>
+        <tr><td>Опций single-select</td><td>50</td></tr>
+        <tr><td>Подзадач у одной issue</td><td>100, вложенность до 8 уровней</td></tr>
+        <tr><td>Типов issue на организацию</td><td>25</td></tr>
+        <tr><td>Зависимостей (blocked by / blocks)</td><td>50 на каждый тип связи, с 21 августа 2025</td></tr>
+        <tr><td>Автодобавляющих workflow</td><td>Free 1 · Pro 5 · Team 5 · Enterprise 20</td></tr>
+        <tr><td>Видов на проект</td><td class="no">не задокументирован</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Автоматизаций встроено немного, и по умолчанию включены две: закрытая issue или PR → <code>Done</code>, влитый PR → <code>Done</code>. Отдельно есть авто-добавление и авто-архивирование, и между ними есть ассиметрия, о которую спотыкаются: <strong>авто-добавление не подхватывает уже существующие элементы</strong> («existing items matching your criteria will not be added»), а авто-архивирование, наоборот, применяется задним числом.</p>
+
+  <p>API — половинчатый, и это важно для любых планов на интеграцию. Мутации <code>createProjectV2View</code> / <code>updateProjectV2View</code> существуют, но их <code>ProjectV2ViewConfigurationInput</code> содержит <strong>ровно одно поле</strong> — <code>visibleFieldIds</code>: группировку, срезы и сортировку через GraphQL задать нельзя, только прочитать. У workflow из мутаций есть <strong>только</strong> <code>deleteProjectV2Workflow</code> — создать или включить правило программно невозможно. Insights в схеме отсутствуют вовсе. REST API для Projects появился 11 сентября 2025 и в части видов оказался богаче GraphQL: <code>POST /views</code> принимает <code>group_by</code>, <code>sort_by</code>, <code>vertical_group_by</code>.</p>
+
+  <p>Порядок: <code>updateProjectV2ItemPosition(projectId, itemId, afterId)</code>, где пустой <code>afterId</code> означает «в начало». Позиция одна на проект — <code>items</code> это поле <code>ProjectV2</code>, а не <code>ProjectV2View</code>. Отсюда открытый с апреля 2022 запрос сообщества: если в двух видах выбрана ручная сортировка, перестановка в одном меняет порядок в другом. И отдельное ограничение, которое стоит запомнить: <em>«When a board is sorted, you cannot manually reorder items within a column»</em> — ручной порядок и сортировка взаимоисключающи.</p>
+
+  <h3>GitLab: перетаскивание меняет данные задачи</h3>
+  <p>Список на доске — это метка, исполнитель, веха, итерация или (с 18.2) статус. Перетаскивание не «кладёт карточку в колонку», а <strong>правит поля задачи</strong>: из списка метки A в список метки B — снять A, поставить B; в Closed — закрыть; из Closed — переоткрыть. Дорожки — только по эпикам и только в Premium; там же WIP-лимиты (по числу или по весу; вес добавлен в 17.11) и настраиваемая область видимости доски.</p>
+
+  <p>Отдельно стоит отметить миграцию на unified Work Items: эпик как work item дошёл до GA в 18.1, кастомные статусы — в 18.4 (до 70 статусов на пространство имён, до 30 на жизненный цикл, категории Done и Canceled автоматически закрывают элемент), настраиваемые типы work item — GA в 19.1, до 40 типов на верхнеуровневую группу. Мутации старых epic boards помечены deprecated ещё в 17.5 с формулировкой «Replaced by WorkItem type». То есть GitLab на наших глазах переезжает из «доска правит метки» в «доска рисует статус».</p>
+
+  <h3>Gitea и Forgejo: нижняя планка</h3>
+  <p>Официальной документации нет (<code>docs.gitea.com/usage/projects</code> отдаёт 404), всё проверяется по исходникам. Шаблонов доски три: <code>None</code>, <code>BasicKanban</code> («To Do», «In Progress», «Done»), <code>BugTriage</code> («Needs Triage», «High Priority», «Low Priority», «Closed»), причём первой при любом шаблоне создаётся колонка <strong>Backlog</strong> с флагом <code>Default</code>. Максимум колонок — <code>maxProjectColumns = 20</code>, с комментарием в коде, что больше 127 нельзя, потому что <code>sorting</code> — <code>int8</code>.</p>
+
+  <p>Автоматизаций нет никаких: закрытие issue не двигает карточку, понятия «колонка Done» в модели не существует — есть только флаг <code>Default</code> и заголовок-строка. Запрос «Add automated project board» открыт с 2020 года. REST API для проектов <strong>не вышел ни в одном релизе</strong>: PR влит 8 августа 2026 в веху 28.0.0; Forgejo проектирует свой API с отдельными скоупами <code>read:projects</code>/<code>write:projects</code>, то есть дизайн уже разошёлся.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Практический ответ, если доска для этого проекта всё-таки нужна</span>
+    <p>Из хостингов пригодны два. <strong>GitHub Projects</strong> — если не пугает облако: 50 000 элементов, поля-итерации, три раскладки, подзадачи и типы задач, но ручной порядок один на проект и автоматизации через API не создаются. <strong>Gitea</strong> — если строго self-hosted: колонки и перетаскивание есть, автоматизаций, WIP-лимитов и API нет до версии 28. Forgejo сейчас слабее Gitea: одна задача — один проект. Что бы ни выбрали, «доска для разработки самого трекера» и «доска как продукт» — разные задачи, и вторую первая не заменяет.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">03</span><h2>Доска внутри git: что там на самом деле есть</h2></div>
+  <p>Идея «трекер живёт в репозитории» существует пятнадцать лет и породила десяток проектов. Ниже — что из них живо, как устроено и почему досок там нет.</p>
+
+  <h3>git-bug — самый зрелый, и досок в нём нет</h3>
+  <p>Хранит не файлы, а git-объекты. Сущность — это ref <code>refs/bugs/&lt;id&gt;</code>, указывающий на цепочку коммитов; идентичности — <code>refs/identities/&lt;id&gt;</code>. Дерево каждого коммита и есть весь формат:</p>
+  <pre><code>100644 blob e69de29b…  create-clock-14     ← значение в ИМЕНИ, blob пустой
+100644 blob e69de29b…  edit-clock-137      ← то же
+100644 blob e69de29b…  version-4
+100644 blob a020a85b…  ops                 ← JSON: {"author":{"id":…},"ops":[…]}
+040000 tree …          extra/              ← вложения, если есть</code></pre>
+  <p>Метаданные закодированы в именах записей дерева и указывают на один и тот же пустой blob — чтобы push и fetch ничего лишнего не гоняли. Сообщение коммита пустое. Идентификатор бага — не хеш коммита, а <code>sha256</code> сырых байтов первой операции.</p>
+
+  <p>Слияние: операции — это CmRDT, «merging them is simply a matter of taking the union of both operation sets». Порядок применения <strong>игнорирует топологию DAG</strong> — сортировка идёт по логическим часам Лампорта, а при равенстве лексикографически по идентификатору пака, с обоснованием прямо в исходнике: «It doesn't carry much meaning but it's unbiased and hard to abuse». Разрешение по полям обычное: заголовок и статус — last-write-wins по этому тотальному порядку, комментарии — растущий журнал, метаданные — first-write-wins на ключ. Есть защита от подделки часов: скачок больше миллиона трактуется как атака.</p>
+
+  <div class="note risk">
+    <span class="lbl mono">Досок нет — и это ключевое</span>
+    <p>В основной ветке git-bug ноль упоминаний доски или канбана. Реализация живёт в draft-PR <strong>#843, открытом 13 августа 2022</strong>: 116 файлов, +11 374 строки, состояние <code>mergeable: false</code>, последний коммит — май 2025. Там есть <code>refs/boards/&lt;id&gt;</code> и колонки по умолчанию «To Do / In Progress / Done», но <strong><code>MoveItemOp</code> и <code>RemoveItemOp</code> объявлены и не реализованы</strong> — файлов нет, в разборщике операций их нет. То есть перетащить карточку между колонками нельзя: отсутствует ровно та единственная операция, ради которой канбан существует. Статусов в git-bug при этом ровно два — <code>open</code> и <code>closed</code>, хардкодом, без точки расширения; исполнителей, вех и приоритетов нет вовсе.</p>
+  </div>
+
+  <p>При этом проект живой и даже ускорился: 216 коммитов за первую половину 2026 против 78 за весь 2025, почти 10 000 звёзд. В мае 2026 появилась формальная спецификация формата (<code>doc/spec/</code>) — её написали за день после того, как автор стороннего форжа реализовал формат самостоятельно. Мейнтейнер оценивает формат как «stable-ish» и явно допускает расширение снаружи: «new entities… can be added, including independently from git-bug itself». Дорожной карты нет, релизов нет с мая 2025 при активной разработке — кто ставит из тарбола, получает сборку до спеки и до переписанного веб-интерфейса.</p>
+
+  <h3>Radicle: COB — самая красивая модель без единой доски</h3>
+  <p>Collaborative Object — это git-коммиты, где дерево плоское: blob <code>manifest</code> (JSON, ровно два поля — <code>typeName</code> и <code>version</code>) и blob'ы <code>0</code>, <code>1</code>, … по одному на действие. Подпись — SSH-подпись в заголовке <code>gpgsig</code>, и подписывается <strong>OID дерева, а не коммита</strong>, поэтому переподцепка родителей подпись не ломает. Идентификатор объекта равен OID корневого коммита. Слияние — объединение графов: «the commit graphs are simply unioned with each other in a non-destructive, idempotent way», порядок — топологический с тайбрейком по паре (timestamp, OID).</p>
+
+  <p>Две вещи здесь интереснее всего для нас. Первая — <strong>настоящая модель прав внутри CRDT</strong>: делегатам можно всё, автору issue — менять заголовок и открывать/закрывать, комментировать — кому угодно, а назначать исполнителя и вешать метки — <em>только делегатам</em>. Неавторизованное действие не отклоняется с ошибкой, а вырезается из вычисленного вида вместе со всеми потомками. Вторая — <strong>плагины типов</strong>: тип <code>com.example.multiset</code> запускает внешнюю программу <code>rad-cob-multiset</code> из <code>PATH</code>, общение через JSON Lines, и хелперу на вход подаются конкурентные операции. Рабочий пример в репозитории написан на jq.</p>
+
+  <p>Досок нет ни в веб-интерфейсе, ни в десктопе, ни в TUI — по нулю совпадений на «kanban» и «swimlane». Единственная попытка, <code>radicle-planning-boards</code>, <strong>заархивирована в ноябре 2025</strong>, и её архитектурный урок стоит запомнить: базы не было, состояние доски кодировалось прямо в метках issue — <code>RPB:column:{name}</code> и <code>RPB:priority:{n}</code>. Что при правах «метки ставят только делегаты» означает: каждое перемещение карточки требует ключа делегата.</p>
+
+  <h3>Fossil: единственный, кто продумал не-разработчиков</h3>
+  <p>Тикет — не запись, а append-only набор артефактов из пяти карточек (<code>D</code> время, <code>J</code> поле-значение, <code>K</code> ticket-id, <code>U</code> пользователь, <code>Z</code> контрольная сумма). Правка эмитит <strong>только затронутые поля</strong>, поэтому гранулярность конфликта — поле, а не документ: один меняет статус, другой приоритет — сливается без потерь. Конкурентная правка <em>одного</em> поля разрешается молча по времени, и документация честно предупреждает, что съехавшие системные часы «can seriously confuse the replay algorithm».</p>
+
+  <p>Два решения Fossil стоят отдельного внимания. Первое: идентификаторы тикетов — <strong>просто случайные 40 hex-символов</strong>, не хеши. Счётчика нет — значит на нём нельзя столкнуться при офлайновой работе. Второе: тикеты сознательно не хранятся файлами в дереве, и три причины сформулированы прямым текстом — коммиты неизменяемы, тысячи файлов засорят дерево, и главное: <em>«Casual passers-by on the internet should be permitted to create tickets»</em>, для чего нужна система прав, отдельная от прав на коммит. Досок в Fossil тоже нет, зато отчёты — это пользовательский SQL.</p>
+
+  <h3>Markdown-в-репозитории: живая ниша 2026 года</h3>
+  <p>Единственная категория, где доски есть по-настоящему, — задачи как <code>.md</code>-файлы. Backlog.md (терминальный канбан, веб-интерфейс с перетаскиванием, MCP-сервер для агентов, автокоммит изменений задач), markdown-ticket, kanban-skill, VS Code Agent Kanban. Драйвер понятен: агентам нужен формат, который они могут читать и писать без API, а человеку — доска.</p>
+
+  <p>И здесь же — самый поучительный факт всего раздела. Backlog.md, тикет #711, июль 2026:</p>
+  <div class="note risk">
+    <span class="lbl mono">Счётчик не переживает распределённость</span>
+    <p><em>«Sequential ID allocation (max + 1) cannot be made safe… Each clone computes max + 1 against the state it can see, so two writers creating tasks between one another's pushes <strong>deterministically mint the same ID</strong>»</em> — и дальше: <em>«We hit this in production twice»</em>. Решение — случайные идентификаторы. То есть в 2026 году в продакшене переоткрыли ровно то, что Fossil выбрал в 2007-м.</p>
+    <p style="margin-bottom:0">Для нас это подтверждение уже принятого решения: <code>uuid</code> по умолчанию — не украшение, а условие работоспособности, если данные когда-нибудь начнут ходить между инсталляциями (импорт, экспорт, слияние организаций).</p>
+  </div>
+
+  <p>Порядок карточек в markdown-подходе — это порядок строк в файле. Две конкурентные вставки в одну колонку — две вставки в один диапазон строк одного файла, то есть обычный git-конфликт, который git разрешить не может. Obsidian Kanban, самый популярный представитель, при этом фактически умер: репозиторий передан в <code>community-archive</code>, последний релиз — май 2024, 598 открытых тикетов.</p>
+
+  <h3>Кладбище: почему они умирали</h3>
+  <p>Ditz (последний gem — 2009, домашняя страница отдаёт 404), Bugs Everywhere (последний релиз 2013, домен перепродан), SIT (замер в 2018, домен теперь у стартапа про сканирование меню), git-dit (задокументировал собственные изъяны в <code>doc/caveats.md</code>), git-appraise (последний коммит 2023). Ticgit неожиданно воскрес в 2026 — переписан Скоттом Чаконом на Rust, хранит тикеты в <code>refs/meta/main</code>, с флагами <code>--json</code> и <code>--markdown</code> «for agentic use», — но на Hacker News собрал три балла и ноль комментариев.</p>
+
+  <p>Причины смерти повторяются:</p>
+  <ul>
+    <li><strong>Заражение веткой.</strong> Если задачи — файлы в дереве, статус задачи становится функцией того, какая ветка выкачена. Выжили только ref-based проекты.</li>
+    <li><strong>Нет пути для не-коммитера завести задачу.</strong> git-dit довёл это до абсурда: чтобы сообщить о баге, репортёр должен опубликовать собственный репозиторий и уговорить мейнтейнера сделать fetch.</li>
+    <li><strong>Задачи не приезжают с <code>git clone</code></strong> — нужны отдельные refspec и отдельная команда синхронизации.</li>
+    <li><strong>Нет веб-интерфейса для не-разработчиков.</strong> У git-bug веб-интерфейс работает под одной захардкоженной личностью: <code>// use an authentication middleware with a fixed identity</code>; OAuth — открытый тикет с 2021 года.</li>
+    <li><strong>Уведомлений нет структурно.</strong> В pull-модели нет момента «событие произошло», есть только «кто-то сделал fetch». Тикет git-bug про уведомления открыт с марта 2019-го.</li>
+  </ul>
+
+  <div class="note warn">
+    <span class="lbl mono">И проблема, которая нас касается напрямую</span>
+    <p>Порядок карточек при конкурентных изменениях — <strong>не недоработка этих проектов, а открытая задача теории</strong>. Kleppmann, «Moving Elements in List CRDTs» (PaPoC 2020): существующие алгоритмы ведут себя плохо, когда пользователи конкурентно перемещают элементы списка. Промышленный ответ — дробная индексация: у каждого элемента собственная позиция-ключ, между любыми двумя всегда есть место, перемещение обновляет один ключ. Так упорядочивают списки Figma и Linear. <strong>Это ровно то, что у нас уже сделано в <code>internal/rank</code>.</strong> Не потому что мы умные, а потому что другого работающего ответа нет.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">04</span><h2>Остальные продукты: что у кого под капотом</h2></div>
+  <p>Двадцать три продукта разобраны по схемам API и исходникам моделей. Ниже — выжимка по тем, у кого есть чему поучиться или чего избежать.</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Где живёт колонка и где живёт порядок</caption>
+      <thead><tr><th style="width:14%">Продукт</th><th style="width:12%">Архетип</th><th style="width:32%">Порядок карточки</th><th>Чем интересен</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Vikunja</strong></td><td>членство</td><td><code>task_positions(task_id, project_view_id, position float64)</code>, unique(task, view); <code>MinPositionSpacing = 0.01</code>, ниже — пересчёт всего вида</td><td class="yes">Самая честная модель порядка в выборке: позиция на каждое представление, колонки там же — <code>task_buckets(task_id, bucket_id, project_view_id)</code></td></tr>
+        <tr><td><strong>OpenProject</strong></td><td>членство</td><td><code>OrderedWorkPackage(query, work_package, position)</code> — порядок на каждый сохранённый запрос</td><td class="yes">Колонка = сохранённый Query, доска = сетка виджетов. Приходит к тому же, что Vikunja, с другой стороны</td></tr>
+        <tr><td><strong>Taiga</strong></td><td>представление</td><td><strong>Три поля:</strong> <code>backlog_order</code>, <code>sprint_order</code>, <code>kanban_order</code>, все BigInteger со значением по умолчанию <code>timestamp_mics</code></td><td class="yes">Двухуровневые WIP: на колонку и <strong>на ячейку дорожка×колонка</strong>. Дорожка — первоклассная сущность</td></tr>
+        <tr><td><strong>Linear</strong></td><td>представление</td><td><code>sortOrder: Float!</code> — один на весь воркспейс. <code>boardOrder</code> в схеме есть и помечен <strong>deprecated</strong></td><td class="maybe">Попробовали отдельный порядок для доски и <strong>откатились</strong>: «Board views and List view cannot be ordered independently»</td></tr>
+        <tr><td><strong>Plane</strong></td><td>представление</td><td><code>sort_order = FloatField(default=65535)</code>, новая задача получает <code>max + 10000</code> внутри (project, state)</td><td class="no"><code>CycleIssue</code> и <code>ModuleIssue</code> порядка не хранят вовсе — в спринте порядок тот же, что в проекте</td></tr>
+        <tr><td><strong>Huly</strong></td><td>представление</td><td><code>rank: Rank</code> — LexoRank (пакет <code>lexorank</code>, base-36), одна строка на задачу</td><td class="maybe">Хостируемый Huly закрывается, код жив (EPL-2.0)</td></tr>
+        <tr><td><strong>Focalboard</strong></td><td>представление</td><td><code>cardOrder: string[]</code> — явный массив идентификаторов прямо на объекте вида</td><td class="no">Standalone без мейнтейнеров, последний релиз v8.0.0 от 13.06.2024</td></tr>
+        <tr><td><strong>Wekan</strong></td><td>владение</td><td><code>card.sort: Number</code>, одно поле</td><td class="yes"><code>list.wipLimit</code> с полями <code>value</code>, <code>enabled</code> и <strong><code>soft</code></strong> — мягкий или жёсткий на выбор. Живой, MIT</td></tr>
+        <tr><td><strong>Kaiten</strong></td><td>владение</td><td><code>card.sort_order</code>, одно поле; <code>board_id</code> скалярный</td><td class="yes"><strong>Самый развитый WIP:</strong> колонка, дорожка и <strong>ячейка на их пересечении</strong>, по числу карточек или по их суммарному размеру</td></tr>
+        <tr><td><strong>Яндекс Трекер</strong></td><td>членство</td><td>Ранжирование в интерфейсе есть, в публичном API не выражено</td><td class="maybe">Два взаимоисключающих вида колонок: по статусам либо «произвольные», где перетаскивание <strong>не меняет параметры задачи</strong>. Потолок 2000 задач на доску</td></tr>
+        <tr><td><strong>Weeek</strong></td><td>членство</td><td>Явного поля ручной сортировки в API не найдено</td><td class="yes">Единственный <strong>жёсткий</strong> WIP: без флажка «Разрешать превышать лимит» задачу внести нельзя. Лимит по задачам или по оценке времени</td></tr>
+        <tr><td><strong>Asana</strong></td><td>членство</td><td>Только относительный: <code>insert_before</code> / <code>insert_after</code>, свой в каждом проекте. Числового поля наружу нет</td><td class="yes">Позиция — свойство пары: «position only makes sense in the context of a project». Максимум 20 проектов на задачу</td></tr>
+        <tr><td><strong>Trello</strong></td><td>владение</td><td><code>pos</code> — float либо <code>"top"</code>/<code>"bottom"</code>, в пределах списка; шаг новых карточек 65535, вставки делят пополам</td><td class="maybe">Перенумеровывает, когда значения сходятся слишком близко, и умеет менять <code>pos</code> только по одной карточке за раз</td></tr>
+        <tr><td><strong>Height</strong></td><td>представление</td><td><code>index</code> + <code>orderIntent</code></td><td class="no"><strong>Закрылся 24 сентября 2025</strong> — при том что <code>listIds</code> массивом был архитектурно одним из самых честных</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tnote wide">Пометка «не найдено» в исходных данных означала ровно это — подтверждения в документации и коде не нашлось; это не то же самое, что «функции нет».</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Три вывода из матрицы</span>
+    <ol style="margin-bottom:0">
+      <li><strong>Все, кто дошёл до нескольких досок над одним набором задач, завели позицию в разрезе представления.</strong> Vikunja, OpenProject, Asana — независимо друг от друга. Taiga и Leantime пришли к тому же грубее — отдельными полями под каждый вид.</li>
+      <li><strong>Linear попробовал и откатился</strong> — то есть у этого решения есть и цена: два порядка на одну задачу трудно объяснить пользователю, когда доска и список показывают одно и то же.</li>
+      <li><strong>Многомерный WIP — это Kaiten и Taiga, и он требует, чтобы дорожка была сущностью.</strong> Лимит на ячейку «дорожка × колонка» невозможно повесить на группировку по полю.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">05</span><h2>Представления: что каждое требует от схемы</h2></div>
+  <p>Представления — это проекции, и почти все они добавляются аддитивно. Вопрос не «сделаем ли мы Гант», а «какое поле должно существовать, чтобы Гант вообще стал возможен».</p>
+
+  <div class="wide tablewrap">
+    <table>
+      <caption class="mono">Цена представления</caption>
+      <thead><tr><th style="width:20%">Представление</th><th style="width:40%">Минимальное требование к схеме</th><th>Стоимость</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Таблица</strong></td><td>ничего сверх типизированных полей</td><td class="yes">бесплатно</td></tr>
+        <tr><td><strong>Канбан</strong></td><td>поле-перечисление с единственным значением + позиция</td><td class="yes">уже есть</td></tr>
+        <tr><td><strong>Список</strong></td><td>опционально <code>parent_id</code></td><td class="yes">дёшево</td></tr>
+        <tr><td><strong>Календарь</strong></td><td>одно поле даты</td><td class="yes">дёшево, аддитивно</td></tr>
+        <tr><td><strong>Галерея</strong></td><td>поле обложки или вложения</td><td class="yes">дёшево</td></tr>
+        <tr><td><strong>Таймлайн</strong></td><td>дата начала (конец опционален)</td><td class="maybe">средне</td></tr>
+        <tr><td><strong>Гант</strong></td><td>начало + конец + самоссылающаяся связь зависимостей + семантика направления</td><td class="risk">дорого</td></tr>
+        <tr><td><strong>Дорожная карта</strong></td><td>«нечёткие» даты (квартал, полугодие) <em>или</em> сущность-итерация</td><td class="risk">дорого</td></tr>
+        <tr><td><strong>Иерархия</strong></td><td><code>parent_id</code> + уровни + правила обхода + предел глубины</td><td class="risk">необратимо</td></tr>
+        <tr><td><strong>Диаграммы потока</strong></td><td>агрегируемые поля <strong>+ история или снимки</strong></td><td class="risk">необратимо</td></tr>
+        <tr><td><strong>Спринт и сгорание</strong></td><td>сущность итерации + история оценок по дням</td><td class="risk">необратимо</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Несколько деталей, которые экономят время, если знать их заранее:</p>
+  <ul>
+    <li><strong>Веха — не отдельная сущность, а вырожденный диапазон.</strong> Airtable рисует веху как запись, у которой есть только дата окончания; monday хранит обычный timeline со значением <code>visualization_type: "milestone"</code>.</li>
+    <li><strong>Roll-up дат — вычисление вида, а не поле.</strong> Jira собирает даты родителя из детей, рисует их «полосатым леденцом» и прямо предупреждает: «When you commit changes back to your Jira work items, these rolled-up values aren't saved».</li>
+    <li><strong>Повторяющееся событие ломает «одну дату».</strong> Это уже RRULE по RFC 5545 с исключениями и правками отдельных вхождений.</li>
+    <li><strong>Иерархия требует предела глубины прямо в модели.</strong> Azure DevOps: «fewer than 14 levels deep», у Airtable — 10 слоёв, у GitHub — 8 уровней подзадач и не более 100 подзадач на родителя.</li>
+    <li><strong>Смена иерархии необратима.</strong> Jira: «Changing your work type hierarchy will break existing parent and child relationships», и это «cannot be undone».</li>
+    <li><strong>Дорожка по запросу мощнее дорожки по полю.</strong> У Jira одна из шести схем дорожек — по JQL, одна дорожка на запрос: именно так делается expedite-полоса. Это единственный способ выразить «класс обслуживания» без нового поля.</li>
+    <li><strong>Срез вместо дорожек.</strong> GitHub вместо дорожек сделал «slice by» — боковую панель значений поля, которая фильтрует текущий вид. Дешевле двумерного рендера и закрывает большую часть сценариев.</li>
+  </ul>
+
+  <h3>Scrum и канбан обслуживаются одной моделью</h3>
+  <p>Разница структурно небольшая: бэклог, сущность итерации со своим состоянием и датами, ось времени вместо непрерывного потока, сгорание вместо диаграммы потока. Достаточно добавить итерацию как сущность и nullable-ссылку на неё у карточки: канбан-доска просто не показывает это поле. Так устроены GitHub (итерация — обычное поле проекта, по которому можно группировать и строить колонки), Linear (циклы сосуществуют с доской), Azure DevOps (четыре представления над одними и теми же элементами). Jira смогла совместить их только в новой архитектуре: в team-managed проектах спринты включаются тумблером, а в company-managed тип доски после создания <strong>не меняется вообще</strong>.</p>
+
+  <p>Одна деталь модели итерации, которую все забывают: у спринта Jira есть поле <code>incompleteIssuesDestinationId</code>. Схема обязана хранить, <em>куда уезжают незавершённые задачи</em> при закрытии спринта, иначе это будет решаться кодом каждый раз по-разному.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">06</span><h2>Порядок карточек: где ошиблись взрослые</h2></div>
+  <p>Это самая дорогая ошибка в категории, и она сделана дважды — в GitLab и в Jira. Обе компании хранят позицию как свойство задачи, а не как свойство пары «задача × доска».</p>
+
+  <h3>GitLab: одно целое поле на весь инстанс</h3>
+  <p><code>issues.relative_position</code> — <code>integer</code> в таблице <code>issues</code>. Константы: шаг <code>IDEAL_DISTANCE = 257</code>, максимальный зазор 514, границы — 32-битное знаковое целое. Документация описывает следствие как норму: перетащили A выше B — порядок сохранится «in any board in the same instance», хоть на другой доске проекта, хоть на групповой. В трекере это сформулировано прямее: <em>«If you reorder an issue on one board, it may affect the issue's relative order in another board. That is okay.»</em></p>
+
+  <div class="note risk">
+    <span class="lbl mono">Чем это кончилось на практике</span>
+    <p>Исчерпание зазора бросает <code>NoSpaceLeft</code> и запускает воркер ребалансировки — с батчами по 100, префетчем по 10 000, лимитом конкурентности и ошибкой <code>TooManyConcurrentRebalances</code>. В 2021 году на gitlab.com пространство имён <code>gitlab-com</code> дошло до <code>relative_position = 2 016 553 103</code> при пределе 2 147 483 647; ребалансировка занимала около 40 минут при 20-минутном таймауте запроса. Перетаскивание можно принудительно отключить для пространства имён: <code>IssuePositioningDisabled, "Issue relative position changes temporarily disabled."</code></p>
+    <p style="margin-bottom:0">Показательно, что <strong>для эпиков GitLab сделал наоборот</strong>: завёл отдельную таблицу <code>boards_epic_board_positions</code> с позицией на доску, явно отметив, что это «unrelated to the epic's existing relative_position attribute».</p>
+  </div>
+
+  <h3>Jira: LexoRank и глобальный ранг</h3>
+  <p>Ранг — отдельное поле <code>Global Rank</code>, строка вида <code>bucket|rank</code> в таблице <code>AO_60DB71_LEXORANK</code>, три бакета ротируются, чтобы обслуживать чтение во время ребалансировки. Пороги по длине строки: <strong>128 символов</strong> — ребалансировка в ближайшие 12 часов, <strong>160</strong> — немедленная, <strong>254</strong> — ранжирование для таких значений отключается. Коллация базы имеет значение: нужны <code>Latin1_General_CI_AI</code>, <code>utf8_bin</code> или локаль <code>C</code>, иначе лексикографический порядок ломается.</p>
+
+  <p>Глобальность зафиксирована документально: «An issue only has one rank even if it's included in multiple boards». Запрос сделать ранг контекстным — тикет <strong>от декабря 2012 года</strong>, закрыт как «Answered». Обходной путь через несколько Rank-полей есть, но Atlassian от него отговаривает: «twice the ranking operations to complete on every issue». Известный дефект производительности: конкатенация бакета и ранга в одну колонку инвалидирует статистику БД при смене бакета — на инстансе в 500 000 задач балансировка занимала несколько дней. И конкурентное перетаскивание даёт видимую пользователю ошибку: «JIRA Agile cannot execute the rank operation at this time».</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Что это значит для нас</span>
+    <p>Наша позиция уже лежит в разрезе колонки, с уникальным индексом <code>(column_id, position)</code>, и ключ строковый — то есть у нас нет ни глобального счётчика, ни целочисленного зазора, ни воркера ребалансировки. Это ровно та схема, к которой Vikunja, OpenProject и Asana пришли через годы, а GitLab и Jira не пришли до сих пор.</p>
+    <p style="margin-bottom:0"><strong>Единственное, что стоит сделать сейчас — на уровне понимания, не кода:</strong> зафиксировать, что позиция принадлежит паре «карточка × ось упорядочивания», а не карточке. Сегодня ось — это колонка. Когда появится вторая доска над теми же карточками или ручной порядок в списке, миграция будет механической: <code>card_positions(card_id, axis_id, rank)</code>, где текущая позиция становится строкой с осью «колонка». Если же позицию однажды перенесут на карточку «чтобы было проще» — это и есть та ошибка, которую разбирали выше.</p>
+  </div>
+
+  <p>Отдельное ограничение, общее для всех: <strong>ручной порядок и сортировка взаимоисключающи</strong>. GitHub: «When a board is sorted, you cannot manually reorder items within a column». Linear: «Grouping settings will affect whether you can order issues manually». Когда у нас появится сортировка по полю, у колонки должно быть явное состояние «сортируется по X» с отключённым перетаскиванием, а не тихое игнорирование ранга.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">07</span><h2>Канбан как метод и аналитика потока</h2></div>
+
+  <h3>WIP-лимит почти нигде не лимит</h3>
+  <p>Jira — красный заголовок при превышении максимума, жёлтый при недоборе минимума, перетаскивание разрешено. Azure DevOps — «soft constraints… you can exceed these limits», с добавкой «exceeding WIP limits by one or two items is normal». GitHub — «Setting a limit does not restrict anyone from adding cards». Kaiten и Яндекс Трекер — подсветка. Жёсткий лимит есть у <strong>Weeek</strong> (флажок «Разрешать превышать лимит») и опционально у <strong>Wekan</strong> (<code>wipLimit.soft</code>).</p>
+  <p>Многомерность — редкость: Kaiten держит лимит на колонку, на дорожку и на ячейку их пересечения, считая по числу карточек или по их размеру; Taiga — на колонку и на ячейку дорожка×колонка. Businessmap добавляет к этому лимит на человека и бизнес-правило «лимит достигнут» как триггер автоматизации.</p>
+
+  <h3>Kanban Guide — это буквально спецификация схемы</h3>
+  <p>Четыре обязательные метрики определены через события, а не через текущее состояние:</p>
+  <ul>
+    <li><strong>WIP</strong> — «work items started but not finished» → нужны отметки старта и финиша, а не «в какой колонке лежит».</li>
+    <li><strong>Throughput</strong> — завершено за единицу времени → нужен <code>finished_at</code>.</li>
+    <li><strong>Work Item Age</strong> — от старта до сегодня → нужен <code>started_at</code>, и это <em>не</em> <code>created_at</code>.</li>
+    <li><strong>Cycle Time</strong> — от старта до финиша.</li>
+  </ul>
+  <p>Definition of Workflow требует шести элементов, из которых четыре — поля схемы: точки старта и финиша, состояния, способ контроля WIP, явные политики перехода и SLE (прогноз «столько-то дней с такой-то вероятностью»). То есть колонка обязана нести флаги <code>is_started_point</code> и <code>is_finished_point</code>, текст политики и лимит, а доска — SLE в виде пары «перцентиль, дни».</p>
+
+  <h3>Три уровня хранения истории, и они не заменяют друг друга</h3>
+  <p>Текущее состояние даёт «сколько сейчас в колонке». Журнал переходов даёт cycle time, время в статусе и старение. Дневные снимки дают диаграмму потока, сгорание и историю изменения объёма. Из журнала можно построить снимки, обратно — нельзя, и ни то ни другое не восстанавливается из текущего состояния.</p>
+  <p>Как это делают: Azure DevOps строит CFD прямым запросом к <code>WorkItemBoardSnapshot</code>, по строке на пару (дата, колонка), и прямо советует брать недельные или месячные снимки для длинных периодов. Jira, наоборот, нормализованного cycle time не хранит и считает его на лету из истории — и наследует её дефекты: у контрольного графика есть известные проблемы с логированием переходов, а при переоткрытии задачи время «доработки» просто прибавляется к циклу. GitLab пошёл третьим путём — отдельные сущности событий (<code>resource_state_events</code>, <code>resource_label_events</code>, <code>resource_milestone_events</code>), с честно задокументированной дырой: начальное состояние не пишется.</p>
+
+  <div class="note pick">
+    <span class="lbl mono">Что добавить к нашему журналу</span>
+    <p>Сам журнал у нас есть и заполняется правильно. Не хватает трёх вещей, и все три — сейчас на пару часов работы, а потом никогда:</p>
+    <ol style="margin-bottom:0">
+      <li><strong>Денормализованные <code>started_at</code>, <code>finished_at</code> и <code>column_entered_at</code> на карточке.</strong> Последнее нужно для старения и на лету считается дорого.</li>
+      <li><strong>Снимок имени и семантики колонки в <code>payload</code> события.</strong> Страховка от переименования и архивирования колонки, ровно та, которой нет у Azure DevOps.</li>
+      <li><strong>Блокировка как интервал</strong> — <code>card_blocks(card_id, reason, blocked_at, unblocked_at)</code>, а не булев флаг. У Jira блокировка — чекбокс «Flagged» без длительности, и время блокировки приходится восстанавливать из changelog. У Kaiten блокировка с категорией и сроком, и поэтому у него есть отчёт «Время разрешения блокировок».</li>
+    </ol>
+  </div>
+
+  <h3>Типы колонок</h3>
+  <p>Лучшее решение здесь у Azure DevOps: split columns делят колонку на «Doing» и «Done», реализуя вытягивание, и — ключевое для модели — <strong>это отдельное булево поле, а не статус</strong>: <code>System.BoardColumnDone</code> равно <code>False</code> в Doing и <code>True</code> в Done. У Kaiten вместо этого подколонки второго уровня. Обе схемы решают одну задачу — «работа закончена, но следующий этап её ещё не забрал» — и у нас она возникнет ровно тогда, когда появится вторая колонка «в работе».</p>
+  <p>Политики входа и выхода как текст на колонке есть только у Azure DevOps («Definition of Done» с иконкой информации). У Jira, Trello, GitHub и Notion их нет вовсе, хотя Kanban Guide требует их явно.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">08</span><h2>Что делать нам</h2></div>
+
+  <div class="stages wide">
+    <div class="stage">
+      <p class="st mono">Сейчас<em>часы</em></p>
+      <div>
+        <h3>Три поля, которые потом не добавить</h3>
+        <p>Семантика колонки: <code>kind</code> (<code>queue</code> / <code>in_progress</code> / <code>done</code>) плюс <code>is_started_point</code> и <code>is_finished_point</code>. Без них не определены ни Cycle Time, ни Work Item Age, ни Throughput — а метрики считаются по истории, которая копится уже сейчас. Туда же — <code>policy text</code> под Definition of Done.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Сейчас<em>часы</em></p>
+      <div>
+        <h3>Достроить журнал до аналитики</h3>
+        <p><code>started_at</code>, <code>finished_at</code>, <code>column_entered_at</code> на карточке; снимок имени и вида колонки в <code>payload</code> события. Удаление колонки — только архивирование, <code>DELETE</code> запретить на уровне операции.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Этап 1<em>день</em></p>
+      <div>
+        <h3>Оживить WIP-лимит</h3>
+        <p>Операция <code>SET_COLUMN_LIMIT</code> и поле <code>wip_limit_hard bool</code>. По умолчанию мягкий — как у всех взрослых; жёсткий отдаёт наш обычный <code>409</code>. Сейчас столбец есть, но всегда <code>NULL</code>, и это единственное место в схеме, где заявленное расходится с работающим.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Этап 1<em>день</em></p>
+      <div>
+        <h3>Блокировки интервалом</h3>
+        <p><code>card_blocks(id, card_id, reason, category, blocked_at, unblocked_at, actor_id)</code>. Булев флаг — необратимая потеря аналитики: именно из интервалов получается отчёт о времени разрешения блокировок, который у Kaiten есть, а у Jira нет.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Этап 2<em>решение</em></p>
+      <div>
+        <h3>Иерархия</h3>
+        <p><code>parent_id</code> плюс явный предел глубины. Добавляется дёшево, но аналитика по эпикам за прошлое не построится, а смена схемы иерархии позже необратима — у Jira это прямо задокументировано как «cannot be undone».</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Этап 2<em>решение</em></p>
+      <div>
+        <h3>Итерации</h3>
+        <p>Сущность со статусом, датами и — обязательно — полем «куда уезжают незавершённые». Поле у карточки nullable: канбан-доска его просто не показывает. Диаграмма сгорания за прошедшие спринты задним числом не строится.</p>
+      </div>
+    </div>
+    <div class="stage">
+      <p class="st mono">Позже<em>механически</em></p>
+      <div>
+        <h3>Позиция в разрезе оси</h3>
+        <p><code>card_positions(card_id, axis_id, rank)</code>, где сегодняшняя позиция — строка с осью «колонка». Делать сейчас незачем; важно не сделать наоборот — не перенести позицию на карточку.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note risk">
+    <span class="lbl mono">Чего не делать</span>
+    <ul style="margin-bottom:0">
+      <li><strong>Не хранить доску в git.</strong> Никто из доживших до 2026 года этого не делает: у git-bug доска — четырёхлетний draft-PR без реализованного перемещения карточки, у Radicle досок нет, единственная попытка заархивирована. Ломается ровно то, что нам нужно: глобальный запрос, права на уровне поля, уведомления и порядок карточек при конкурентных изменениях.</li>
+      <li><strong>Не переносить позицию на карточку.</strong> Разобрано в разделе 06: это ошибка GitLab и Jira, стоившая одной многодневных ребалансировок, другой — производственного инцидента.</li>
+      <li><strong>Не делать доску сохранённым запросом на этапе 0.</strong> Модель Jira («доска = JQL + маппинг колонок на статусы») требует языка запросов, статусов как отдельной сущности и рабочего процесса. Это правильная цель и неправильный первый шаг.</li>
+      <li><strong>Не делать жёсткий WIP по умолчанию.</strong> Все, кто мог, сделали мягкий и объяснили почему. Жёсткий — опция колонки, а не поведение системы.</li>
+    </ul>
+  </div>
+
+  <h3>Что взять у git — не как хранилище, а как приём</h3>
+  <ul>
+    <li><strong>Хранить намерение, а не состояние.</strong> git-bug и Fossil независимо пришли к одному: правка эмитит только затронутые поля, поэтому гранулярность конфликта — поле, а не документ. У нас это уже так: клиент присылает операцию, а не пересчитанную доску.</li>
+    <li><strong>Случайные идентификаторы вместо счётчиков.</strong> Fossil выбрал это в 2007-м, Backlog.md переоткрыл в продакшене в 2026-м. У нас <code>uuid</code> — это не косметика, а то, что позволит однажды слить два инстанса.</li>
+    <li><strong>Экспорт доски в файлы — живая ниша.</strong> Единственное место, где доски внутри репозитория действительно работают, — задачи как markdown для AI-агентов (Backlog.md, markdown-ticket, MCP-серверы). Это не архитектура хранения, а <em>интеграция</em>: выгрузка карточек в файлы и MCP-интерфейс к доске — дешёвая и заметная дифференциация, не трогающая ядро.</li>
+    <li><strong>Права как часть модели данных.</strong> Radicle показывает крайний случай: «assign и label — только делегаты», причём неавторизованное действие вырезается из вычисленного состояния. У нас роли уже свойство участия, а не человека, — стоит довести до уровня операций, а не только маршрутов.</li>
+  </ul>
+</section>
+
+<!-- ============ 09 ============ -->
+<section>
+  <div class="sechead"><span class="num mono">09</span><h2>Что решить до следующей миграции</h2></div>
+  <ol class="qlist">
+    <li><strong>Остаёмся в модели «колонка владеет карточкой»?</strong> Если да — «одна карточка на двух досках» закрыто навсегда, и это надо сказать вслух. Если нет — переезд дешевле сейчас, пока карточек нет.</li>
+    <li><strong>Колонка — это статус или это место?</strong> От ответа зависит, появится ли у карточки поле состояния, независимое от доски, и смогут ли две доски показывать один набор карточек.</li>
+    <li><strong>Точки старта и финиша — свойство колонки или отдельная настройка доски?</strong> Kanban Guide требует их в любом случае; вопрос только в том, где они лежат.</li>
+    <li><strong>Дорожки: сущность или группировка по полю?</strong> Лимит на ячейку «дорожка × колонка», как у Kaiten и Taiga, возможен только если дорожка — сущность.</li>
+    <li><strong>Иерархия карточек — сколько уровней и ограничена ли глубина?</strong> Ответ «потом разберёмся» здесь дороже всего: смена схемы иерархии ломает существующие связи необратимо.</li>
+    <li><strong>WIP-лимит мягкий или настраиваемый?</strong> Рекомендация — мягкий по умолчанию, жёсткий флагом колонки.</li>
+    <li><strong>Нужна ли двусторонняя связь с git-хостингом?</strong> Импорт из GitHub Projects технически возможен (GraphQL <code>ProjectV2</code>), но упирается в лимиты: 5000 очков в час, не более 100 элементов на страницу, пауза не меньше секунды между изменяющими запросами.</li>
+    <li><strong>Экспорт доски в файлы и MCP — продуктовая цель или побочный эффект?</strong> Если цель, формат хранения задачи стоит спроектировать до того, как появятся кастомные поля.</li>
+  </ol>
+</section>
+
+<!-- ============ sources ============ -->
+<section>
+  <div class="sechead"><span class="num mono">10</span><h2>Источники</h2></div>
+  <ul class="src">
+    <li><strong>GitHub</strong> — <a href="https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects">About Projects</a>, <a href="https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/customizing-the-board-layout">Board layout</a>, <a href="https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/adding-items-automatically">Auto-add</a>, <a href="https://docs.github.com/en/graphql/reference/objects#projectv2item">GraphQL ProjectV2Item</a>, <a href="https://github.blog/changelog/2025-04-09-evolving-github-issues-and-projects/">Evolving Issues and Projects (GA, апрель 2025)</a>, <a href="https://github.blog/changelog/2025-09-11-a-rest-api-for-github-projects-sub-issues-improvements-and-more/">REST API для Projects</a>.</li>
+    <li><strong>GitLab</strong> — <a href="https://docs.gitlab.com/user/project/issue_board/">Issue boards</a>, <a href="https://docs.gitlab.com/user/work_items/status/">Custom statuses</a>, <a href="https://gitlab.com/gitlab-org/gitlab-foss/-/issues/21264">о глобальности relative_position</a>, <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/247867">позиция эпиков на доску</a>, <a href="https://gitlab.com/gitlab-com/gl-infra/production/-/issues/4584">инцидент с исчерпанием позиций, 2021</a>.</li>
+    <li><strong>Jira и Atlassian</strong> — <a href="https://support.atlassian.com/jira-software-cloud/docs/configure-columns/">Configure columns</a>, <a href="https://support.atlassian.com/jira-software-cloud/docs/configure-swimlanes/">Configure swimlanes</a>, <a href="https://confluence.atlassian.com/adminjiraserver/managing-lexorank-938847803.html">Managing LexoRank</a>, <a href="https://jira.atlassian.com/browse/JSWSERVER-6910">«Rankings should be per-context rather than global» (2012)</a>, <a href="https://support.atlassian.com/jira-software-cloud/docs/issue-limits-in-company-managed-projects/">лимит 5000 задач на доску</a>.</li>
+    <li><strong>Azure DevOps</strong> — <a href="https://learn.microsoft.com/en-us/azure/devops/boards/boards/add-columns?view=azure-devops">Columns и split columns</a>, <a href="https://learn.microsoft.com/en-us/azure/devops/boards/boards/wip-limits?view=azure-devops">WIP limits</a>, <a href="https://learn.microsoft.com/en-us/azure/devops/report/dashboards/cumulative-flow?view=azure-devops">Cumulative flow</a>, <a href="https://learn.microsoft.com/en-us/azure/devops/boards/queries/query-by-workflow-changes?view=azure-devops">Board Column и Board Lane как поля</a>.</li>
+    <li><strong>Gitea и Forgejo</strong> — исходники <a href="https://github.com/go-gitea/gitea/blob/main/models/project/column.go">models/project/column.go</a> и <a href="https://github.com/go-gitea/gitea/blob/main/models/project/template.go">template.go</a>, PR <a href="https://github.com/go-gitea/gitea/pull/36784">«Allow multiple projects per issue»</a>, <a href="https://codeberg.org/forgejo/forgejo/releases">релизы Forgejo</a>.</li>
+    <li><strong>git-bug</strong> — <a href="https://github.com/git-bug/git-bug/tree/trunk/doc/spec">формальная спецификация формата</a>, <a href="https://github.com/git-bug/git-bug/blob/trunk/entity/dag/operation_pack.go">operation_pack.go</a>, <a href="https://github.com/git-bug/git-bug/pull/843">draft-PR доски #843</a>, <a href="https://github.com/git-bug/git-bug/blob/trunk/doc/feature-matrix.md">feature matrix</a>.</li>
+    <li><strong>Radicle</strong> — <a href="https://radicle.dev/guides/protocol">Protocol Guide</a>, <a href="https://github.com/radicle-dev/heartwood/blob/master/crates/radicle-cob/src/backend/git/change.rs">radicle-cob: change.rs</a>, <a href="https://github.com/radicle-dev/heartwood/blob/master/crates/radicle/src/cob/issue.rs">модель прав issue</a>, <a href="https://github.com/cytechmobile/radicle-planning-boards">архив radicle-planning-boards</a>.</li>
+    <li><strong>Fossil</strong> — <a href="https://fossil-scm.org/home/doc/trunk/www/bugtheory.wiki">Bug tracking theory</a>, <a href="https://fossil-scm.org/home/doc/trunk/www/fileformat.wiki#tktchng">формат ticket change</a>, <a href="https://fossil-scm.org/home/doc/trunk/www/sync.wiki">Sync protocol</a>.</li>
+    <li><strong>Markdown-в-репозитории</strong> — <a href="https://github.com/MrLesk/Backlog.md/issues/711">Backlog.md #711 о коллизиях идентификаторов</a>, <a href="https://news.ycombinator.com/item?id=44483530">запуск на Hacker News</a>, <a href="https://github.com/community-archive/obsidian-kanban">Obsidian Kanban в community-archive</a>.</li>
+    <li><strong>Порядок и CRDT</strong> — <a href="https://martin.kleppmann.com/2020/04/27/papoc-list-move.html">Kleppmann, «Moving Elements in List CRDTs» (PaPoC 2020)</a>, <a href="https://www.figma.com/blog/realtime-editing-of-ordered-sequences/">Figma о дробной индексации</a>, <a href="https://mattweidner.com/2022/10/21/basic-list-crdt.html">Weidner, «Fugue: A Basic List CRDT»</a>.</li>
+    <li><strong>Продукты</strong> — <a href="https://vikunja.io/help/views/">Vikunja: представления</a>, <a href="https://docs.plane.so/core-concepts/cycles">Plane: циклы</a>, <a href="https://linear.app/docs/display-options">Linear: группировка и порядок</a>, <a href="https://www.notion.com/help/views-filters-and-sorts">Notion: виды</a>, <a href="https://kaiten.ru/blog/rabota-po-kanban-v-kaiten/">Kaiten: канбан и метрики</a>, <a href="https://yandex.ru/support/tracker/ru/manager/agile">Яндекс Трекер: agile-доски</a>.</li>
+    <li><strong>Метод</strong> — <a href="https://kanbanguides.org/english/">Kanban Guide</a>: определения WIP, Throughput, Work Item Age, Cycle Time и Definition of Workflow.</li>
+  </ul>
+</section>
+
+</article>
