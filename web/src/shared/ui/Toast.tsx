@@ -106,7 +106,11 @@ export function ToastHost({ children }: { children: ReactNode }) {
  * Показать сообщение. Вне ToastHost возвращает пустышку, а не бросает
  * исключение: сообщение — не то, ради чего стоит ронять экран.
  */
+/** Заглушка вне провайдера — одна на всех. Новая стрелка на каждый
+ *  вызов делала бы обработчики, собранные вокруг неё, разными при
+ *  каждой отрисовке, а через них перерисовывалась бы вся доска. */
+const SILENT: Push = () => {}
+
 export function useToast(): Push {
-  const push = useContext(ToastContext)
-  return push ?? (() => {})
+  return useContext(ToastContext) ?? SILENT
 }

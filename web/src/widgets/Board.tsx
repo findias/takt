@@ -1,38 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
-import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
-import { preserveOffsetOnSource } from '@atlaskit/pragmatic-drag-and-drop/element/preserve-offset-on-source'
-import {
-  draggable,
-  dropTargetForElements,
-  monitorForElements,
-} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import {
-  attachClosestEdge,
-  extractClosestEdge,
-} from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { agingLabel, flowIssues, flowMarks, limitLabel, parseLimitDraft } from '../entities/board/model.ts'
-import type { BaseState } from '../entities/board/model.ts'
+import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
+import { flowIssues } from '../entities/board/model.ts'
 import { api } from '../shared/api/index.ts'
 import type {
   BoardAccess as Access,
-  Card,
-  Label,
   Column,
-  ColumnKind,
   EstimateUnit,
   Iteration,
 } from '../shared/api/index.ts'
-import type { ColumnPatch } from '../features/board/useBoard.ts'
-import { progressLabel } from '../entities/card/model.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
-import { Avatar } from '../shared/ui/Avatar.tsx'
 import { BoardSkeleton, ErrorState } from '../shared/ui/states.tsx'
-import { IconButton } from '../shared/ui/Button.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
@@ -45,24 +26,18 @@ import { nextCard } from '../features/board/navigation.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
 import type { Grouping } from '../features/board/grouping.ts'
-import { Menu } from '../shared/ui/Menu.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
-  ArchiveIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
-  EditIcon,
-  FlowIcon,
   CloseIcon,
-  MoreIcon,
-  MoveIcon,
+  FlowIcon,
   OpenIcon,
   PeopleIcon,
-  PlusIcon,
   SearchIcon,
   TagIcon,
 } from '../shared/ui/icons.tsx'
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
+import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
 
 export function Board({
@@ -159,6 +134,25 @@ export function Board({
   )
 
   const { base, order: fullOrder, moveCard } = board
+
+  /**
+   * Зеркало доски для обработчиков.
+   *
+   * Обработчики карточки уходят в мемоизированный компонент, и любая
+   * их пересборка перерисовывает все карточки разом. Замыкать в них
+   * `base` нельзя: он меняется на каждую правку — а значит, правка
+   * одной карточки стоила бы отрисовки всей доски. Замер на пятистах
+   * карточках показывал 120 мс на переименование одной; читая
+   * состояние из зеркала, обработчики остаются теми же объектами.
+   *
+   * Запись в эффекте, а не во время отрисовки: отрисовка может быть
+   * отброшена, а обработчик вызывается уже после того, как результат
+   * показан.
+   */
+  const stateRef = useRef<{ base: typeof base; order: Record<string, string[]> }>({
+    base: null,
+    order: {},
+  })
 
   // Фильтр применяется к показу, а не к данным: перетаскивание,
   // счётчики лимита и догон патчами продолжают работать с полной
@@ -263,16 +257,25 @@ export function Board({
     [base?.people],
   )
 
+  // useLayoutEffect, а не useEffect: обычные эффекты откладываются
+  // планировщиком, и между отрисовкой карточек и обновлением зеркала
+  // помещается нажатие клавиши. Так и было поймано: перенос
+  // с клавиатуры сразу после загрузки доски не делал ничего.
+  useLayoutEffect(() => {
+    stateRef.current = { base, order }
+  })
+
   // Стрелки водят выделение по доске, как по сетке: Tab идёт по всем
   // кнопкам подряд, и до третьей карточки во второй колонке им нужно
   // два десятка нажатий.
   const navigateCards = useCallback(
     (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => {
+      const { base, order } = stateRef.current
       if (!base) return
       const next = nextCard(base.columnIds, order, cardId, direction)
       if (next && next !== cardId) refocus(next)
     },
-    [base, order, refocus],
+    [refocus],
   )
 
   // Один монитор на всю доску: он знает и источник, и цель, и порядок
@@ -321,6 +324,7 @@ export function Board({
   // управляемой без мыши.
   const moveByKeyboard = useCallback(
     (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => {
+      const { base, order } = stateRef.current
       if (!base) return
       const card = base.cards[cardId]
       if (!card) return
@@ -357,7 +361,7 @@ export function Board({
       )
       refocus(cardId)
     },
-    [base, order, moveCard, announce, refocus, flash],
+    [moveCard, announce, refocus, flash],
   )
 
   /**
@@ -370,6 +374,7 @@ export function Board({
    */
   const moveToColumn = useCallback(
     (cardId: string, columnId: string) => {
+      const { base } = stateRef.current
       if (!base) return
       const card = base.cards[cardId]
       if (!card || card.columnId === columnId) return
@@ -380,7 +385,42 @@ export function Board({
       )
       refocus(cardId)
     },
-    [base, moveCard, announce, refocus],
+    [moveCard, announce, refocus],
+  )
+
+  // Обработчики карточек собраны один раз: они уходят в мемоизированную
+  // карточку, и новая функция на каждую отрисовку доски обесценивает
+  // мемоизацию целиком. Идентификатор карточки приходит аргументом —
+  // замыкать его значит делать функцию своей у каждой карточки.
+  // Зависимости — сами действия, а не объект доски: он собирается
+  // заново на каждую отрисовку, и обработчики вместе с ним.
+  const { assignCard: assign, toggleLabel: label, renameCard: rename, archiveCard: archive } = board
+  const assignCard = useCallback(
+    (cardId: string, assigneeId: string | null) => void assign(cardId, assigneeId),
+    [assign],
+  )
+  const toggleLabel = useCallback(
+    (cardId: string, labelId: string, on: boolean) => void label(cardId, labelId, on),
+    [label],
+  )
+  const renameCard = useCallback(
+    (cardId: string, title: string) => void rename(cardId, title),
+    [rename],
+  )
+  const archiveCard = useCallback((cardId: string) => void archive(cardId), [archive])
+  const showCard = useCallback((cardId: string) => {
+    setShowFlow(false)
+    setOpenCard(cardId)
+  }, [])
+
+  // Список колонок для меню «перенести»: тот же массив, пока колонки
+  // не менялись. Зависимость — сами колонки, а не доска: у доски
+  // меняется хотя бы номер версии, то есть каждый раз.
+  const columnIds = base?.columnIds
+  const columnsById = base?.columns
+  const columnList = useMemo(
+    () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
+    [columnIds, columnsById],
   )
 
   if (board.loadError) {
@@ -422,25 +462,22 @@ export function Board({
             unit={unit}
             sleDays={base.info.sleDays}
             people={base.people}
-            onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
+            onAssign={assignCard}
             justMoved={justMoved}
             labels={base.labels}
             cardLabels={base.cardLabels}
-            onLabel={(cardId, labelId, on) => void board.toggleLabel(cardId, labelId, on)}
-            columns={base.columnIds.map((id) => base.columns[id])}
+            onLabel={toggleLabel}
+            columns={columnList}
             onMoveToColumn={moveToColumn}
-            onOpenCard={(id) => {
-              setShowFlow(false)
-              setOpenCard(id)
-            }}
+            onOpenCard={showCard}
             onMoveByKeyboard={moveByKeyboard}
             onNavigate={navigateCards}
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
             onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
             onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
-            onRenameCard={(cardId, title) => void board.renameCard(cardId, title)}
-            onArchiveCard={(cardId) => void board.archiveCard(cardId)}
+            onRenameCard={renameCard}
+            onArchiveCard={archiveCard}
           />
     ))
 
@@ -514,7 +551,7 @@ export function Board({
       <div className="board-toolbar">
         <div className="row row--between">
           <div className="row">
-            <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
+            <FlowHint columns={columnList} />
             <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
           </div>
           <button className="btn btn--quiet" onClick={() => setPalette(true)}>
@@ -649,471 +686,6 @@ export function Board({
   )
 }
 
-type ColumnProps = {
-  columnId: string
-  name: string
-  column: Column
-  /** Свёрнутая колонка занимает полосу шириной с заголовок. */
-  collapsed: boolean
-  onToggleCollapsed: () => void
-  cardIds: string[]
-  cards: BaseState['cards']
-  unit: EstimateUnit
-  sleDays: number | null
-  people: Record<string, string>
-  onAssign: (cardId: string, assigneeId: string | null) => void
-  /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
-  justMoved: string | null
-  labels: Label[]
-  cardLabels: Record<string, string[]>
-  onLabel: (cardId: string, labelId: string, on: boolean) => void
-  columns: Column[]
-  onMoveToColumn: (cardId: string, columnId: string) => void
-  onOpenCard: (cardId: string) => void
-  onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
-  onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
-  onCreateCard: (title: string) => void
-  onRenameColumn: (name: string) => void
-  onSetLimit: (limit: number | null) => void
-  onUpdateColumn: (patch: ColumnPatch) => void
-  onRenameCard: (cardId: string, title: string) => void
-  onArchiveCard: (cardId: string) => void
-}
-
-function ColumnView(props: ColumnProps) {
-  const dropRef = useRef<HTMLDivElement>(null)
-  const [over, setOver] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [settings, setSettings] = useState(false)
-
-  useEffect(() => {
-    const element = dropRef.current
-    if (!element) return
-    return combine(
-      // Автопрокрутка списка: без неё карточку нельзя утащить ниже
-      // видимой части колонки — приходится бросать, прокручивать
-      // и тащить снова.
-      autoScrollForElements({ element }),
-      dropTargetForElements({
-      element,
-      canDrop: ({ source }) => source.data.kind === 'card',
-      getData: () => ({ kind: 'column', columnId: props.columnId }),
-      onDragEnter: () => setOver(true),
-      onDragLeave: () => setOver(false),
-      onDrop: () => setOver(false),
-      }),
-    )
-  }, [props.columnId])
-
-  return (
-    <section
-      className={`column${over ? ' column--over' : ''}${props.collapsed ? ' column--collapsed' : ''}`}
-      aria-label={props.name}
-    >
-      <header className="column-header">
-        {/* Название и счётчик — одна мысль «в этой колонке столько
-            работы», поэтому стоят рядом. Раньше счётчик висел посередине
-            заголовка и читался как случайное число. */}
-        <div className="row row--tight">
-          <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
-          <ColumnCount
-            count={props.cardIds.length}
-            limit={props.column.wipLimit}
-            hard={props.column.wipLimitHard}
-            onSetLimit={props.onSetLimit}
-          />
-        </div>
-        <div className="row row--tight">
-          {!props.collapsed && (
-            <button
-              className="link column-settings-toggle"
-              aria-expanded={settings}
-              onClick={() => setSettings((v) => !v)}
-            >
-              Разметка
-            </button>
-          )}
-          {/* Сворачивание — личное предпочтение смотрящего, поэтому оно
-              не в адресе и не на сервере: «Готово» мешает одному
-              и нужна другому. */}
-          <IconButton
-            label={props.collapsed ? `Развернуть «${props.name}»` : `Свернуть «${props.name}»`}
-            onClick={props.onToggleCollapsed}
-          >
-            {props.collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
-        </div>
-      </header>
-
-      {!props.collapsed && flowMarks(props.column).length > 0 && (
-        <div className="card-marks">
-          {flowMarks(props.column).map((m) => (
-            <span key={m} className="mark">
-              {m}
-            </span>
-          ))}
-        </div>
-      )}
-      {!props.collapsed && props.column.policy && !settings && (
-        <p className="muted small column-policy">{props.column.policy}</p>
-      )}
-      {!props.collapsed && settings && (
-        <ColumnSettings column={props.column} onUpdate={props.onUpdateColumn} />
-      )}
-
-      <div className="cards" ref={dropRef} hidden={props.collapsed}>
-        {props.cardIds.map((cardId) => (
-          <CardView
-            key={cardId}
-            cardId={cardId}
-            columnId={props.columnId}
-            card={props.cards[cardId]}
-            unit={props.unit}
-            sleDays={props.sleDays}
-            people={props.people}
-            onAssign={props.onAssign}
-            flash={props.justMoved === cardId}
-            labels={props.labels}
-            cardLabels={props.cardLabels[cardId] ?? []}
-            onLabel={props.onLabel}
-            columns={props.columns}
-            onMoveToColumn={props.onMoveToColumn}
-            onOpen={() => props.onOpenCard(cardId)}
-            onMoveByKeyboard={props.onMoveByKeyboard}
-            onNavigate={props.onNavigate}
-            onRename={(title) => props.onRenameCard(cardId, title)}
-            onArchive={() => props.onArchiveCard(cardId)}
-          />
-        ))}
-        {props.cardIds.length === 0 && (
-          <p className="empty">
-            Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.
-          </p>
-        )}
-      </div>
-
-      {adding ? (
-        <NewCardForm
-          onCancel={() => setAdding(false)}
-          onCreate={(title) => {
-            props.onCreateCard(title)
-            setAdding(false)
-          }}
-        />
-      ) : (
-        !props.collapsed && (
-          <button className="add" onClick={() => setAdding(true)}>
-            <PlusIcon />
-            Добавить карточку
-          </button>
-        )
-      )}
-    </section>
-  )
-}
-
-type CardProps = {
-  cardId: string
-  columnId: string
-  card: Card | undefined
-  unit: EstimateUnit
-  /** Обещание доски: с ним сравнивается возраст карточки. */
-  sleDays: number | null
-  flash: boolean
-  /** userId → имя: карточка хранит идентификатор, показать надо имя. */
-  people: Record<string, string>
-  onAssign: (cardId: string, assigneeId: string | null) => void
-  labels: Label[]
-  cardLabels: string[]
-  onLabel: (cardId: string, labelId: string, on: boolean) => void
-  columns: Column[]
-  onMoveToColumn: (cardId: string, columnId: string) => void
-  onOpen: () => void
-  onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
-  /** Перейти к соседней карточке — стрелка без модификатора. */
-  onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
-  onRename: (title: string) => void
-  onArchive: () => void
-}
-
-function CardView({
-  cardId,
-  columnId,
-  card,
-  unit,
-  sleDays,
-  flash,
-  people,
-  onAssign,
-  labels,
-  cardLabels,
-  onLabel,
-  columns,
-  onMoveToColumn,
-  onOpen,
-  onMoveByKeyboard,
-  onNavigate,
-  onRename,
-  onArchive,
-}: CardProps) {
-  const title = card?.title ?? '…'
-  const ref = useRef<HTMLElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [edge, setEdge] = useState<Edge | null>(null)
-  const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    const element = ref.current
-    if (!element) return
-    const data = { kind: 'card', cardId, columnId }
-    return combine(
-      draggable({
-        element,
-        getInitialData: () => data,
-        // Своё превью вместо браузерного. Браузер тащит полупрозрачный
-        // снимок всего узла — вместе с раскрытым меню и рамкой фокуса,
-        // если они были; получается мутный прямоугольник, по которому
-        // не видно, что именно летит. Тут летит сама карточка,
-        // уменьшенная и повёрнутая на пару градусов: наклон отличает
-        // «взятое в руку» от «лежащего на доске».
-        onGenerateDragPreview: ({ nativeSetDragImage, location }) => {
-          setCustomNativeDragPreview({
-            nativeSetDragImage,
-            // Превью держится там, где карточку взяли: иначе она
-            // прыгает под курсор углом и ощущается вырванной.
-            getOffset: preserveOffsetOnSource({ element, input: location.current.input }),
-            render: ({ container }) => {
-              const copy = element.cloneNode(true) as HTMLElement
-              copy.classList.add('card--preview')
-              copy.style.width = `${element.offsetWidth}px`
-              container.append(copy)
-            },
-          })
-        },
-        onDragStart: () => setDragging(true),
-        onDrop: () => setDragging(false),
-      }),
-      dropTargetForElements({
-        element,
-        canDrop: ({ source }) => source.data.kind === 'card',
-        getData: ({ input, element }) =>
-          attachClosestEdge(data, { input, element, allowedEdges: ['top', 'bottom'] }),
-        onDrag: ({ self }) => setEdge(extractClosestEdge(self.data)),
-        onDragLeave: () => setEdge(null),
-        onDrop: () => setEdge(null),
-      }),
-    )
-  }, [cardId, columnId])
-
-  // Возраст против обещания доски — единственный случай, когда карточка
-  // получает третью метку. Считается на отрисовке: хранить «просрочена»
-  // значит завести поле, которое устаревает само по себе.
-  const aging = card ? agingLabel(card, sleDays) : null
-  const assigneeName = card?.assigneeId ? (people[card.assigneeId] ?? null) : null
-  const own = labels.filter((l) => cardLabels.includes(l.id))
-  const shownLabels = own.slice(0, 3)
-  const hiddenLabels = own.length - shownLabels.length
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    const arrows: Record<string, 'left' | 'right' | 'up' | 'down'> = {
-      ArrowLeft: 'left',
-      ArrowRight: 'right',
-      ArrowUp: 'up',
-      ArrowDown: 'down',
-    }
-    const direction = arrows[e.key]
-
-    // Со стрелками разница между «перенести» и «перейти» — модификатор:
-    // так же устроены все списки, в которых можно и ходить, и двигать.
-    if (direction) {
-      e.preventDefault()
-      if (e.ctrlKey || e.metaKey) onMoveByKeyboard(cardId, direction)
-      else onNavigate(cardId, direction)
-      return
-    }
-
-    if (e.ctrlKey || e.metaKey || e.altKey) return
-
-    // Буквы работают только тогда, когда выделена сама карточка: иначе
-    // они перехватывали бы ввод в поле переименования, которое живёт
-    // внутри неё же.
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      onOpen()
-      return
-    }
-    if (e.key === 'e' || e.key === 'у') {
-      e.preventDefault()
-      setEditing(true)
-    }
-  }
-
-  return (
-    <article
-      ref={ref}
-      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}`}
-      tabIndex={0}
-      data-card={cardId}
-      role="group"
-      // Подсказка читается скринридером при переходе на карточку —
-      // это единственное место, где о сокращениях можно сказать тому,
-      // кто не видит экрана.
-      aria-label={`Карточка «${title}». Стрелки — переход, Ctrl со стрелками — перенос, Enter — открыть, E — переименовать.`}
-      onKeyDown={onKeyDown}
-    >
-      {editing ? (
-        <EditableText
-          value={title}
-          autoFocus
-          onSave={(next) => {
-            onRename(next)
-            setEditing(false)
-          }}
-          onCancel={() => setEditing(false)}
-          className="card-title"
-        />
-      ) : (
-        <>
-          <div className="card-head">
-            <span className="card-title" onDoubleClick={() => setEditing(true)}>
-              {title}
-            </span>
-            {/* Кто делает — самое частое, о чём спрашивают доску после
-                «что происходит». Инициалы читаются с одного взгляда
-                и занимают двадцать пикселей. */}
-            {assigneeName && <Avatar name={assigneeName} />}
-          </div>
-          {/* Метки — до трёх видимых. Дальше счётчик: четыре цветных
-              чипа занимают строку целиком и перестают читаться. */}
-          {shownLabels.length > 0 && (
-            <div className="card-labels">
-              {shownLabels.map((label) => (
-                <span key={label.id} className={`chip chip--${label.tone}`}>
-                  {label.name}
-                </span>
-              ))}
-              {hiddenLabels > 0 && <span className="chip chip--more">+{hiddenLabels}</span>}
-            </div>
-          )}
-          {card && (card.blocked || card.progress || aging) && (
-            <div className="card-marks">
-              {aging && (
-                <span className="mark mark--aging" title="Возраст считается от начала работы">
-                  {aging}
-                </span>
-              )}
-              {card.blocked && (
-                <span className="mark mark--blocked" title={card.blocked.reason}>
-                  {/* Глиф прячем: скринридер прочитает ⛔ как «знак въезд
-                      запрещён» — слово рядом надёжнее. */}
-                  <span aria-hidden="true">⛔ </span>
-                  Заблокирована: {card.blocked.reason}
-                </span>
-              )}
-              {progressLabel(card, unit) && (
-                <span className="mark">{progressLabel(card, unit)}</span>
-              )}
-            </div>
-          )}
-          <div className="card-actions">
-            {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
-                не помещались и обрезались до «Откры», «Переиме», «Удалит».
-                Перенос стоит в нём же — это не удобство, а требование
-                WCAG 2.5.7: клавиатурного эквивалента недостаточно, нужен
-                путь, выполнимый одним нажатием. */}
-            <Menu
-              label={`Действия карточки «${title}»`}
-              items={[
-                { label: 'Открыть', icon: <OpenIcon />, onSelect: onOpen },
-                { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
-                ...Object.entries(people)
-                  .filter(([id]) => id !== card?.assigneeId)
-                  .map(([id, name]) => ({
-                    label: `Назначить: ${name}`,
-                    icon: <PeopleIcon />,
-                    onSelect: () => onAssign(cardId, id),
-                  })),
-                ...labels.map((label) => ({
-                  label: cardLabels.includes(label.id)
-                    ? `Снять метку «${label.name}»`
-                    : `Метка «${label.name}»`,
-                  icon: <TagIcon />,
-                  onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
-                })),
-                ...(card?.assigneeId
-                  ? [
-                      {
-                        label: 'Снять исполнителя',
-                        icon: <PeopleIcon />,
-                        onSelect: () => onAssign(cardId, null),
-                      },
-                    ]
-                  : []),
-                ...columns
-                  .filter((c) => c.id !== columnId)
-                  .map((c) => ({
-                    label: `Перенести в «${c.name}»`,
-                    icon: <MoveIcon />,
-                    onSelect: () => onMoveToColumn(cardId, c.id),
-                  })),
-                {
-                  label: 'Убрать в архив',
-                  icon: <ArchiveIcon />,
-                  danger: true,
-                  onSelect: onArchive,
-                },
-              ]}
-            >
-              <MoreIcon />
-            </Menu>
-          </div>
-        </>
-      )}
-    </article>
-  )
-}
-
-function NewCardForm({
-  onCreate,
-  onCancel,
-}: {
-  onCreate: (title: string) => void
-  onCancel: () => void
-}) {
-  const [value, setValue] = useState('')
-  return (
-    <form
-      className="new-card"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (value.trim()) onCreate(value.trim())
-      }}
-    >
-      <textarea
-        autoFocus
-        value={value}
-        placeholder="Что нужно сделать?"
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onCancel()
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            if (value.trim()) onCreate(value.trim())
-          }
-        }}
-      />
-      <div className="row">
-        <button type="submit" disabled={!value.trim()}>
-          Добавить
-        </button>
-        <button type="button" className="link" onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
-    </form>
-  )
-}
-
 function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
   const [adding, setAdding] = useState(false)
   const [value, setValue] = useState('')
@@ -1144,197 +716,6 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
       />
       <button type="submit">Создать</button>
     </form>
-  )
-}
-
-/** Счётчик карточек, он же редактор лимита колонки.
- *
- *  Превышение подсвечивается, но работать не мешает: лимит нужен, чтобы
- *  команда видела перегрузку. Запрещает превышение только жёсткий лимит,
- *  и отказывает в этом сервер — здесь запрета нет намеренно.
- *  Пустое поле снимает лимит. */
-function ColumnCount({
-  count,
-  limit,
-  hard,
-  onSetLimit,
-}: {
-  count: number
-  limit: number | null
-  hard: boolean
-  onSetLimit: (limit: number | null) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(limit === null ? '' : String(limit))
-  useEffect(() => setDraft(limit === null ? '' : String(limit)), [limit])
-
-  const commit = () => {
-    setEditing(false)
-    const parsed = parseLimitDraft(draft, limit)
-    if (parsed.change) onSetLimit(parsed.limit)
-  }
-
-  if (editing)
-    return (
-      <input
-        autoFocus
-        type="number"
-        min={1}
-        className="count-edit"
-        aria-label="Лимит карточек в колонке, пусто — без лимита"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit()
-          if (e.key === 'Escape') {
-            setDraft(limit === null ? '' : String(limit))
-            setEditing(false)
-          }
-        }}
-      />
-    )
-
-  const { label, over } = limitLabel(count, limit)
-  return (
-    <button
-      className={`count${over ? ' count--over' : ''}`}
-      onClick={() => setEditing(true)}
-      title={
-        limit === null
-          ? 'Карточек в колонке. Нажмите, чтобы задать лимит'
-          : `${count} из ${limit}${hard ? ', жёсткий лимит' : ''}. Нажмите, чтобы изменить`
-      }
-    >
-      {label}
-    </button>
-  )
-}
-
-function EditableText({
-  value,
-  onSave,
-  onCancel,
-  className,
-  autoFocus,
-}: {
-  value: string
-  onSave: (next: string) => void
-  onCancel?: () => void
-  className?: string
-  autoFocus?: boolean
-}) {
-  const [editing, setEditing] = useState(Boolean(autoFocus))
-  const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
-
-  const commit = useMemo(
-    () => () => {
-      const next = draft.trim()
-      if (next && next !== value) onSave(next)
-      else onCancel?.()
-      setEditing(false)
-    },
-    [draft, value, onSave, onCancel],
-  )
-
-  if (!editing)
-    return (
-      <button className={`inline-edit ${className ?? ''}`} onClick={() => setEditing(true)}>
-        {value}
-      </button>
-    )
-
-  return (
-    <input
-      autoFocus
-      className={className}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') commit()
-        if (e.key === 'Escape') {
-          setDraft(value)
-          setEditing(false)
-          onCancel?.()
-        }
-      }}
-    />
-  )
-}
-
-/**
- * Разметка колонки: чем она является для потока.
- *
- * Вид колонки и точки старта и финиша — не одно и то же. Очередей и стадий
- * работы бывает много, а границами потока объявляются конкретные: время
- * цикла считается между ними, и переставить их задним числом нельзя так,
- * чтобы прошлые события пересчитались правильно.
- */
-function ColumnSettings({
-  column,
-  onUpdate,
-}: {
-  column: Column
-  onUpdate: (patch: ColumnPatch) => void
-}) {
-  const [policy, setPolicy] = useState(column.policy)
-  useEffect(() => setPolicy(column.policy), [column.policy])
-
-  return (
-    <div className="column-settings stack">
-      <label className="row row--tight">
-        <span className="muted small">Вид</span>
-        <select
-          value={column.kind}
-          aria-label={`Вид колонки «${column.name}»`}
-          onChange={(e) => onUpdate({ kind: e.target.value as ColumnKind })}
-        >
-          <option value="queue">Очередь</option>
-          <option value="in_progress">Работа</option>
-          <option value="done">Готово</option>
-        </select>
-      </label>
-
-      <label className="row row--tight">
-        <input
-          type="checkbox"
-          checked={column.isStartedPoint}
-          onChange={(e) => onUpdate({ isStartedPoint: e.target.checked })}
-        />
-        <span className="small">Здесь работа начинается</span>
-      </label>
-      <label className="row row--tight">
-        <input
-          type="checkbox"
-          checked={column.isFinishedPoint}
-          onChange={(e) => onUpdate({ isFinishedPoint: e.target.checked })}
-        />
-        <span className="small">Здесь работа заканчивается</span>
-      </label>
-      <label className="row row--tight">
-        <input
-          type="checkbox"
-          checked={column.wipLimitHard}
-          disabled={column.wipLimit === null}
-          onChange={(e) => onUpdate({ wipLimitHard: e.target.checked })}
-        />
-        <span className="small">
-          Жёсткий лимит{column.wipLimit === null ? ' (сначала задайте лимит)' : ''}
-        </span>
-      </label>
-
-      <textarea
-        className="description"
-        rows={2}
-        value={policy}
-        placeholder="Правило входа: что должно быть сделано, чтобы карточка попала сюда"
-        aria-label={`Правило входа в колонку «${column.name}»`}
-        onChange={(e) => setPolicy(e.target.value)}
-        onBlur={() => policy !== column.policy && onUpdate({ policy })}
-      />
-    </div>
   )
 }
 

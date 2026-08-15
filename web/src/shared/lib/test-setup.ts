@@ -32,3 +32,23 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+// Он же не знает про IntersectionObserver: колонка дорисовывает карточки
+// по мере прокрутки, а прокрутки в jsdom нет. Заглушка ничего не
+// наблюдает — значит в тестах видно ровно первое окно списка, и это
+// честно: дорисовка проверяется в браузере.
+if (!window.IntersectionObserver) {
+  class Stub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return []
+    }
+    root = null
+    rootMargin = ''
+    thresholds: number[] = []
+  }
+  window.IntersectionObserver = Stub as unknown as typeof IntersectionObserver
+
+}

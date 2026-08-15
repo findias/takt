@@ -100,35 +100,61 @@ function byPosition(a: { position: string }, b: { position: string }) {
   return a.position < b.position ? -1 : a.position > b.position ? 1 : 0
 }
 
-/** Применяет к базе патч, пришедший в ответе на операцию. */
+/**
+ * Применяет к базе патч, пришедший в ответе на операцию.
+ *
+ * Нетронутые части возвращаются теми же объектами, а не копиями.
+ * Это не бережливость ради бережливости: список колонок и порядок
+ * карточек уходят в мемоизированные компоненты, и новая ссылка на
+ * неизменившиеся данные перерисовывает всю доску. На пятистах
+ * карточках такая перерисовка стоила 120 мс на каждую правку.
+ */
 export function applyPatch(base: BaseState, result: OperationResult): BaseState {
-  const columns = { ...base.columns }
-  let columnIds = base.columnIds
-  const cards = { ...base.cards }
-  const order: Record<string, string[]> = {}
-  for (const [key, value] of Object.entries(base.order)) order[key] = [...value]
+  const patchColumns = result.patch.columns ?? []
+  const patchCards = result.patch.cards ?? []
+  const removed = result.patch.removedCardIds ?? []
 
-  for (const column of result.patch.columns ?? []) {
+  const columns = patchColumns.length > 0 ? { ...base.columns } : base.columns
+  let columnIds = base.columnIds
+  const cards = patchCards.length > 0 || removed.length > 0 ? { ...base.cards } : base.cards
+
+  // Копируются только те колонки порядка, которых патч касается:
+  // глубокая копия всего порядка на доске в пятьсот карточек — это
+  // пятьсот строк на каждое чужое изменение.
+  const order = { ...base.order }
+  const touched = new Set<string>()
+  const touch = (columnId: string) => {
+    if (touched.has(columnId)) return
+    touched.add(columnId)
+    order[columnId] = [...(order[columnId] ?? [])]
+  }
+
+  for (const column of patchColumns) {
     const isNew = !columns[column.id]
     columns[column.id] = column
     if (isNew) {
-      order[column.id] ??= []
+      touch(column.id)
       columnIds = [...columnIds, column.id].sort((a, b) =>
         byPosition(columns[a], columns[b]),
       )
     }
   }
 
-  for (const card of result.patch.cards ?? []) {
+  for (const card of patchCards) {
     const previous = cards[card.id]
-    if (previous) removeFromOrder(order, previous.columnId, card.id)
+    if (previous) {
+      touch(previous.columnId)
+      removeFromOrder(order, previous.columnId, card.id)
+    }
+    touch(card.columnId)
     cards[card.id] = card
     insertByPosition(order, cards, card)
   }
 
-  for (const id of result.patch.removedCardIds ?? []) {
+  for (const id of removed) {
     const card = cards[id]
     if (card) {
+      touch(card.columnId)
       removeFromOrder(order, card.columnId, id)
       delete cards[id]
     }
@@ -148,7 +174,7 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     columnIds,
     columns,
     cards,
-    order,
+    order: touched.size > 0 ? order : base.order,
     cardLabels,
   }
 }
