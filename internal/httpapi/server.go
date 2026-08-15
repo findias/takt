@@ -15,6 +15,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/team"
 )
 
 type Server struct {
@@ -22,6 +23,7 @@ type Server struct {
 	db     *store.Store
 	boards *board.Service
 	orgs   *org.Service
+	teams  *team.Service
 	log    *slog.Logger
 }
 
@@ -31,6 +33,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 		db:     db,
 		boards: board.New(db),
 		orgs:   org.New(db),
+		teams:  team.New(db),
 		log:    log,
 	}
 }
@@ -60,6 +63,8 @@ func (s *Server) Handler() http.Handler {
 	// Приглашение открывают по секретной ссылке — до входа и до аккаунта.
 	mux.HandleFunc("GET /api/invites/{token}/info", s.handleInviteInfo)
 	mux.HandleFunc("POST /api/invites/{token}/accept", s.handleAcceptInvite)
+
+	s.registerTeamRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.authed(s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.authed(s.handleCreateBoard))
