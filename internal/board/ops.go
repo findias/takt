@@ -351,6 +351,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return renameColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "UPDATE_COLUMN":
 		return updateColumn(ctx, tx, orgID, boardID, req.Payload)
+	case "CREATE_SUBTASK":
+		return createSubtask(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "LINK_CARDS":
 		return linkCards(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNLINK_CARDS":
@@ -395,9 +397,23 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, err
 	}
 
-	pos, err := nextPosition(ctx, tx, p.ColumnID, p.Placement, "")
+	c, err := insertCard(ctx, tx, orgID, actorID, boardID, col, p.Title, p.Placement)
 	if err != nil {
 		return Patch{}, err
+	}
+	return Patch{Cards: []Card{c}}, nil
+}
+
+// insertCard заводит карточку в уже проверенной колонке. Отдельно от
+// createCard потому, что карточку заводит не только сама операция
+// создания: подзадача создаётся и связывается одной транзакцией.
+func insertCard(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
+	col Column, title string, placement Placement,
+) (Card, error) {
+	pos, err := nextPosition(ctx, tx, col.ID, placement, "")
+	if err != nil {
+		return Card{}, err
 	}
 
 	// Карточка, заведённая сразу в стадии работы, считается начатой в этот
@@ -409,17 +425,17 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		        case when $6::bool then now() end,
 		        case when $7::bool then now() end)
 		returning `+cardFields,
-		orgID, boardID, p.ColumnID, pos, p.Title,
+		orgID, boardID, col.ID, pos, title,
 		col.IsStartedPoint, col.IsFinishedPoint))
 	if err != nil {
-		return Patch{}, err
+		return Card{}, err
 	}
 
-	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "created", nil, &p.ColumnID,
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "created", nil, &col.ID,
 		map[string]any{"to": columnFact(col)}); err != nil {
-		return Patch{}, err
+		return Card{}, err
 	}
-	return Patch{Cards: []Card{c}}, nil
+	return c, nil
 }
 
 type moveCardPayload struct {

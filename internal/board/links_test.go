@@ -337,3 +337,85 @@ func TestEstimateIsSetClearedAndValidated(t *testing.T) {
 		}
 	}
 }
+
+// Подзадача заводится одной операцией: карточка и связь появляются вместе
+// или не появляются вовсе. Двумя вызовами с клиента это делалось бы
+// в два шага, и оборванный второй оставлял бы карточку без родителя —
+// то есть работу, о которой никто не просил и которую никто не найдёт.
+func TestCreateSubtaskMakesCardAndLinkAtOnce(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	parent := f.createCard("Выпустить релиз", cols[0].ID)
+
+	res := f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Прогнать тесты"})
+
+	// В ответе обе карточки: у родителя изменился прогресс, подзадача
+	// появилась — клиенту нужно и то, и другое.
+	var child Card
+	for _, c := range res.Patch.Cards {
+		if c.ID != parent {
+			child = c
+		}
+	}
+	if child.ID == "" {
+		t.Fatalf("в патче нет новой карточки: %+v", res.Patch.Cards)
+	}
+	if child.Title != "Прогнать тесты" {
+		t.Errorf("название подзадачи %q", child.Title)
+	}
+	// Колонка не названа — значит первая на доске: подзадачу заводят
+	// из панели родителя, где колонку не выбирают.
+	if child.ColumnID != cols[0].ID {
+		t.Errorf("подзадача легла в колонку %s, ожидалась первая %s", child.ColumnID, cols[0].ID)
+	}
+
+	if p := f.card(parent).Progress; p == nil || p.Total != 1 || p.Done != 0 {
+		t.Fatalf("прогресс родителя: %+v, ожидалось 0 из 1", p)
+	}
+	if got := len(f.snapshot().Links); got != 1 {
+		t.Errorf("связей на доске %d, ожидалась одна", got)
+	}
+}
+
+// Колонку можно назвать: подзадачу, которую уже делают, заводят сразу
+// в работе, и лишний перенос после создания — это лишний шаг.
+func TestCreateSubtaskRespectsNamedColumn(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	parent := f.createCard("Выпустить релиз", cols[0].ID)
+
+	res := f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Уже делаем", "columnId": cols[1].ID})
+
+	for _, c := range res.Patch.Cards {
+		if c.ID != parent && c.ColumnID != cols[1].ID {
+			t.Fatalf("подзадача легла в %s, ожидалось %s", c.ColumnID, cols[1].ID)
+		}
+	}
+}
+
+// Название пустое или родителя нет — карточка не заводится. Проверяется
+// именно отсутствие следов: операция, оборвавшаяся после создания
+// карточки, оставила бы её на доске.
+func TestCreateSubtaskRefusesWithoutTitleOrParent(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+
+	if _, err := f.apply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "   "}); err == nil {
+		t.Fatal("пустое название принято")
+	}
+	if _, err := f.apply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": uuid.NewString(), "title": "Сирота"}); err == nil {
+		t.Fatal("подзадача заведена без родителя")
+	}
+
+	snap := f.snapshot()
+	if len(snap.Cards) != 1 {
+		t.Fatalf("на доске %d карточек, ожидалась одна — родитель", len(snap.Cards))
+	}
+	if len(snap.Links) != 0 {
+		t.Errorf("связей %d, ожидалось ни одной", len(snap.Links))
+	}
+}

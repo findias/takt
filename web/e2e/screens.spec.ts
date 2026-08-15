@@ -80,8 +80,11 @@ test('снимки экранов', async ({ page }) => {
   await card.hover()
   await card.getByRole('button', { name: /Действия карточки/ }).click()
   await page.screenshot({ path: `${SHOTS}/07a-меню-карточки.png` })
-  await page.getByRole('menuitem', { name: 'Открыть' }).click()
-  await page.waitForTimeout(300)
+  await page.keyboard.press('Escape')
+  await card.click()
+  await page.getByLabel('Название подзадачи').fill('Свести смету с прошлым годом')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/07-панель-сбоку.png` })
 
   const mode = page.getByLabel('Как показывать панель')

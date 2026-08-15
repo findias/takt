@@ -71,6 +71,18 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		}
 	}
 
+	if err := insertLink(ctx, tx, orgID, actorID, boardID, p); err != nil {
+		return Patch{}, err
+	}
+	return linkPatch(ctx, tx, boardID, p)
+}
+
+// insertLink кладёт связь и пишет события. Отдельно от linkCards потому,
+// что связь возникает не только по просьбе связать: подзадача создаётся
+// и связывается одной операцией.
+func insertLink(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, p linkPayload,
+) error {
 	tag, err := tx.Exec(ctx, `
 		insert into card_links (org_id, from_card, to_card, kind, created_by)
 		values ($1, $2, $3, $4, $5)
@@ -80,26 +92,106 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		// Единственный частичный индекс здесь — «у подзадачи один родитель».
 		var pgErr interface{ SQLState() string }
 		if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
-			return Patch{}, conflictf("", "у этой карточки уже есть родительская задача")
+			return conflictf("", "у этой карточки уже есть родительская задача")
 		}
-		return Patch{}, err
+		return err
 	}
 	if tag.RowsAffected() == 0 {
 		// Связь уже была — операция идемпотентна по смыслу, а не только
 		// по идентификатору: повтор не ошибка.
-		return linkPatch(ctx, tx, boardID, p)
+		return nil
 	}
 
 	// Событие пишется обеим сторонам: и родитель, и подзадача участвуют
 	// в разных отчётах, и связывать их постфактум по времени неправильно.
 	payload := map[string]any{"kind": p.Kind, "fromCard": p.FromCard, "toCard": p.ToCard}
 	if err := logEvent(ctx, tx, orgID, boardID, p.FromCard, actorID, "linked", nil, nil, payload); err != nil {
+		return err
+	}
+	return logEvent(ctx, tx, orgID, boardID, p.ToCard, actorID, "linked", nil, nil, payload)
+}
+
+type createSubtaskPayload struct {
+	ParentCardID string `json:"parentCardId"`
+	Title        string `json:"title"`
+	// Куда положить подзадачу. Пусто — в первую колонку доски: чаще всего
+	// подзадачу заводят из панели родителя, где колонку не выбирают,
+	// а «начало доски» — единственный ответ, не требующий догадок.
+	ColumnID string `json:"columnId"`
+}
+
+// createSubtask заводит карточку и тут же связывает её с родителем.
+//
+// Одной операцией, а не двумя вызовами с клиента: два вызова означают
+// два способа оборваться посередине, и оба оставляют мусор — карточку
+// без родителя, о которой никто не просил, или связь на несозданное.
+// Здесь всё в одной транзакции: либо подзадача есть, либо ничего
+// не произошло.
+func createSubtask(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage,
+) (Patch, error) {
+	var p createSubtaskPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор CREATE_SUBTASK: %v", err)
+	}
+	p.Title = strings.TrimSpace(p.Title)
+	if p.Title == "" {
+		return Patch{}, badRequestf("у подзадачи должно быть название")
+	}
+	if p.ParentCardID == "" {
+		return Patch{}, badRequestf("не сказано, чьей подзадачей она будет")
+	}
+
+	var parentExists bool
+	if err := tx.QueryRow(ctx,
+		`select exists (select 1 from cards where id = $1 and archived_at is null)`,
+		p.ParentCardID).Scan(&parentExists); err != nil {
 		return Patch{}, err
 	}
-	if err := logEvent(ctx, tx, orgID, boardID, p.ToCard, actorID, "linked", nil, nil, payload); err != nil {
+	if !parentExists {
+		return Patch{}, conflictf("", "карточка не найдена или уже удалена")
+	}
+
+	col, err := subtaskColumn(ctx, tx, boardID, p.ColumnID)
+	if err != nil {
 		return Patch{}, err
 	}
-	return linkPatch(ctx, tx, boardID, p)
+	if err := enforceWIP(ctx, tx, col); err != nil {
+		return Patch{}, err
+	}
+
+	card, err := insertCard(ctx, tx, orgID, actorID, boardID, col, p.Title, Placement{Place: "end"})
+	if err != nil {
+		return Patch{}, err
+	}
+
+	link := linkPayload{FromCard: p.ParentCardID, ToCard: card.ID, Kind: LinkSubtask}
+	if err := checkSubtaskTree(ctx, tx, link.FromCard, link.ToCard); err != nil {
+		return Patch{}, err
+	}
+	if err := insertLink(ctx, tx, orgID, actorID, boardID, link); err != nil {
+		return Patch{}, err
+	}
+	return linkPatch(ctx, tx, boardID, link)
+}
+
+// subtaskColumn выбирает колонку для подзадачи: названную или первую
+// на доске.
+func subtaskColumn(ctx context.Context, tx pgx.Tx, boardID, columnID string) (Column, error) {
+	if columnID != "" {
+		return loadColumn(ctx, tx, boardID, columnID)
+	}
+	var id string
+	err := tx.QueryRow(ctx,
+		`select id from board_columns where board_id = $1 order by position limit 1`,
+		boardID).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Column{}, badRequestf("на доске нет ни одной колонки")
+	}
+	if err != nil {
+		return Column{}, err
+	}
+	return loadColumn(ctx, tx, boardID, id)
 }
 
 func unlinkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {

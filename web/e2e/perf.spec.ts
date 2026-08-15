@@ -153,7 +153,8 @@ test('доска в пятьсот карточек открывается и о
   // список перерисовывается, и указатель успевает съехать. Путь тот же
   // самый, просто без мыши.
   const card = page.getByRole('group', { name: /Карточка «Задача номер 1»/ })
-  await card.getByText('Задача номер 1', { exact: true }).dblclick()
+  await card.focus()
+  await page.keyboard.press('e')
   await page.keyboard.press('End')
   await page.keyboard.type(' — правка')
   await page.keyboard.press('Enter')

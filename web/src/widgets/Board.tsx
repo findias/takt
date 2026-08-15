@@ -664,6 +664,7 @@ export function Board({
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}
           onEstimate={(id, value) => void board.estimateCard(id, value)}
+          onSubtask={(parentCardId, title) => void board.createSubtask(parentCardId, title)}
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={(id, reason) => void board.blockCard(id, reason)}

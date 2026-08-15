@@ -217,27 +217,24 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const order = useMemo(() => (base ? renderOrder(base, queue) : {}), [base, queue])
 
   /** Перемещение применяется мгновенно, подтверждение приходит потом. */
-  const moveCard = useCallback(
-    (cardId: string, toColumnId: string, placement: Placement) => {
-      setBase((current) => {
-        if (!current) return current
-        const card = current.cards[cardId]
-        if (!card) return current
-        setQueue((list) => [
-          ...list,
-          {
-            operationId: crypto.randomUUID(),
-            cardId,
-            toColumnId,
-            placement,
-            fromColumnId: card.columnId,
-          },
-        ])
-        return current
-      })
-    },
-    [],
-  )
+  const moveCard = useCallback((cardId: string, toColumnId: string, placement: Placement) => {
+    setBase((current) => {
+      if (!current) return current
+      const card = current.cards[cardId]
+      if (!card) return current
+      setQueue((list) => [
+        ...list,
+        {
+          operationId: crypto.randomUUID(),
+          cardId,
+          toColumnId,
+          placement,
+          fromColumnId: card.columnId,
+        },
+      ])
+      return current
+    })
+  }, [])
 
   /**
    * Изменение карточки, видимое сразу.
@@ -252,7 +249,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
    * стирать чужую работу. Возвращаем ровно ту карточку, которую трогали.
    */
   const patchCard = useCallback(
-    async (cardId: string, change: Partial<Card>, type: string, payload: unknown, failureText: string) => {
+    async (
+      cardId: string,
+      change: Partial<Card>,
+      type: string,
+      payload: unknown,
+      failureText: string,
+    ) => {
       if (!boardId) return
       const previous = shown.current?.cards[cardId] ?? null
       setBase((current) => {
@@ -311,8 +314,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
   const renameCard = useCallback(
     (cardId: string, title: string) =>
-      patchCard(cardId, { title }, 'UPDATE_CARD', { cardId, title },
-        'Не удалось переименовать карточку'),
+      patchCard(
+        cardId,
+        { title },
+        'UPDATE_CARD',
+        { cardId, title },
+        'Не удалось переименовать карточку',
+      ),
     [patchCard],
   )
   /**
@@ -374,10 +382,15 @@ export function useBoard(boardId: string | null, notify: Notify) {
         })
       } catch (e) {
         setBase((current) =>
-          current ? { ...current, cardLabels: { ...current.cardLabels, [cardId]: previous } } : current,
+          current
+            ? { ...current, cardLabels: { ...current.cardLabels, [cardId]: previous } }
+            : current,
         )
         notify({
-          text: e instanceof Error ? `Не удалось изменить метки: ${e.message}` : 'Не удалось изменить метки',
+          text:
+            e instanceof Error
+              ? `Не удалось изменить метки: ${e.message}`
+              : 'Не удалось изменить метки',
           tone: 'warning',
         })
       }
@@ -387,22 +400,37 @@ export function useBoard(boardId: string | null, notify: Notify) {
 
   const assignCard = useCallback(
     (cardId: string, assigneeId: string | null) =>
-      patchCard(cardId, { assigneeId }, 'ASSIGN_CARD', { cardId, assigneeId },
-        'Не удалось назначить исполнителя'),
+      patchCard(
+        cardId,
+        { assigneeId },
+        'ASSIGN_CARD',
+        { cardId, assigneeId },
+        'Не удалось назначить исполнителя',
+      ),
     [patchCard],
   )
 
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
-      patchCard(cardId, { estimate }, 'UPDATE_CARD', { cardId, estimate },
-        'Не удалось сохранить оценку'),
+      patchCard(
+        cardId,
+        { estimate },
+        'UPDATE_CARD',
+        { cardId, estimate },
+        'Не удалось сохранить оценку',
+      ),
     [patchCard],
   )
 
   const describeCard = useCallback(
     (cardId: string, description: string) =>
-      patchCard(cardId, { description }, 'UPDATE_CARD', { cardId, description },
-        'Не удалось сохранить описание'),
+      patchCard(
+        cardId,
+        { description },
+        'UPDATE_CARD',
+        { cardId, description },
+        'Не удалось сохранить описание',
+      ),
     [patchCard],
   )
 
@@ -424,24 +452,42 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // же, и третьего состояния заводить незачем.
   const setCardField = useCallback(
     (cardId: string, fieldId: string, value: string | number | boolean | null) =>
-      runAndReload('SET_CARD_FIELD', { cardId, fieldId, value },
-        'Не удалось сохранить поле'),
+      runAndReload('SET_CARD_FIELD', { cardId, fieldId, value }, 'Не удалось сохранить поле'),
     [runAndReload],
   )
 
   const addToIteration = useCallback(
     (cardId: string, iterationId: string) =>
-      runAndReload('ADD_TO_ITERATION', { cardId, iterationId },
-        'Не удалось добавить в итерацию'),
+      runAndReload('ADD_TO_ITERATION', { cardId, iterationId }, 'Не удалось добавить в итерацию'),
     [runAndReload],
   )
   const removeFromIteration = useCallback(
     (cardId: string, iterationId: string) =>
-      runAndReload('REMOVE_FROM_ITERATION', { cardId, iterationId },
-        'Не удалось убрать из итерации'),
+      runAndReload(
+        'REMOVE_FROM_ITERATION',
+        { cardId, iterationId },
+        'Не удалось убрать из итерации',
+      ),
     [runAndReload],
   )
 
+  /**
+   * Завести подзадачу одним действием.
+   *
+   * Не «создать карточку, потом связать»: два вызова с клиента дают два
+   * способа оборваться посередине, и оба оставляют мусор — карточку без
+   * родителя или связь на несозданное. Сервер делает это одной
+   * транзакцией.
+   */
+  const createSubtask = useCallback(
+    (parentCardId: string, title: string, columnId?: string) =>
+      runAndReload(
+        'CREATE_SUBTASK',
+        { parentCardId, title, columnId },
+        'Не удалось завести подзадачу',
+      ),
+    [runAndReload],
+  )
   const linkCards = useCallback(
     (fromCard: string, toCard: string, kind: LinkKind) =>
       runAndReload('LINK_CARDS', { fromCard, toCard, kind }, 'Не удалось связать карточки'),
@@ -494,6 +540,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     archiveCard,
     assignCard,
     toggleLabel,
+    createSubtask,
     linkCards,
     unlinkCards,
     blockCard,

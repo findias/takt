@@ -579,3 +579,31 @@ test('нажатие открывает карточку, а нажатие на
   await expect(page.getByRole('menuitem', { name: 'Переименовать' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Открыться по нажатию' })).toHaveCount(0)
 })
+
+test('подзадача заводится из карточки одним полем', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с подзадачами')
+  await addCard(page, 'Очередь', 'Выпустить релиз')
+
+  await cardIn(page, 'Очередь', 'Выпустить релиз').click()
+  await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
+
+  // Название — всё, что спрашивают: подзадача это обычная карточка,
+  // и заводится она тем же движением, что и карточка в колонке.
+  await page.getByLabel('Название подзадачи').fill('Прогнать тесты')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+
+  // Она сразу видна и в списке подзадач, и на самой доске: это одна
+  // и та же карточка, а не запись внутри родителя.
+  await expect(page.getByRole('complementary').getByText('Прогнать тесты')).toBeVisible()
+  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await expect(cardIn(page, 'Очередь', 'Прогнать тесты')).toBeVisible()
+
+  // И переживает перезагрузку — то есть связь легла в базу, а не
+  // в память вкладки.
+  await page.reload()
+  await cardIn(page, 'Очередь', 'Выпустить релиз').click()
+  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1' })).toBeVisible()
+})

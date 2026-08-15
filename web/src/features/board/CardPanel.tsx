@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
+import { Button } from '../../shared/ui/Button.tsx'
+import { PlusIcon } from '../../shared/ui/icons.tsx'
 import { LINK_KIND_NAMES, api } from '../../shared/api/index.ts'
 import type {
   BoardEvent,
@@ -12,7 +14,12 @@ import type {
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 import { Discussion } from './Discussion.tsx'
 import type { BaseState } from '../../entities/board/model.ts'
-import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from '../../entities/card/model.ts'
+import {
+  candidatesForSubtask,
+  cardDetails,
+  progressLabel,
+  progressRatio,
+} from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 
 /**
@@ -33,6 +40,7 @@ export function CardPanel({
   onClose,
   onDescribe,
   onEstimate,
+  onSubtask,
   onLink,
   onUnlink,
   onBlock,
@@ -49,6 +57,8 @@ export function CardPanel({
   onClose: () => void
   onDescribe: (cardId: string, description: string) => void
   onEstimate: (cardId: string, estimate: number | null) => void
+  /** Завести новую подзадачу: название — всё, что нужно спросить. */
+  onSubtask: (parentCardId: string, title: string) => void
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onBlock: (cardId: string, reason: string) => void
@@ -73,7 +83,6 @@ export function CardPanel({
       label={`Карточка «${card.title}»`}
       onClose={onClose}
     >
-
       {card.blocked ? (
         <div className="blocked">
           <div className="stack">
@@ -83,9 +92,7 @@ export function CardPanel({
               с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
             </span>
           </div>
-          {canEdit && (
-            <button onClick={() => onUnblock(card.id)}>Снять</button>
-          )}
+          {canEdit && <button onClick={() => onUnblock(card.id)}>Снять</button>}
         </div>
       ) : (
         canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
@@ -150,8 +157,8 @@ export function CardPanel({
 
         {details.subtasks.length === 0 && (
           <p className="muted small">
-            Подзадач нет. Подзадача может идти на доске другой команды — прогресс
-            всё равно посчитается здесь.
+            Подзадач нет. Подзадача может идти на доске другой команды — прогресс всё равно
+            посчитается здесь.
           </p>
         )}
         {details.subtasks.map((s) => (
@@ -163,6 +170,11 @@ export function CardPanel({
           />
         ))}
 
+        {canEdit && <NewSubtask onCreate={(title) => onSubtask(card.id, title)} />}
+
+        {/* Связать существующую — отдельный путь и подписан отдельно:
+            без подписи два ряда полей подряд читались как одно
+            непонятное место. */}
         {canEdit && (
           <LinkPicker
             base={base}
@@ -555,7 +567,44 @@ function BlockForm({ onBlock }: { onBlock: (reason: string) => void }) {
 }
 
 /**
- * Выбор карточки для связи. Предлагаются только карточки этой доски:
+ * Завести подзадачу.
+ *
+ * Поле и Enter — как в колонке доски, и намеренно так же: подзадача
+ * это обычная карточка, и заводиться она должна тем же движением.
+ * Раньше единственным путём было «создать карточку на доске, потом
+ * найти её в выпадающем списке и связать» — три действия и переход
+ * туда-обратно там, где нужно записать мысль.
+ *
+ * Колонка не спрашивается: подзадача ложится в начало доски, а перенести
+ * её можно потом — как любую карточку.
+ */
+function NewSubtask({ onCreate }: { onCreate: (title: string) => void }) {
+  const [title, setTitle] = useState('')
+  return (
+    <form
+      className="row row--tight"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!title.trim()) return
+        onCreate(title.trim())
+        setTitle('')
+      }}
+    >
+      <input
+        value={title}
+        placeholder="Что нужно сделать?"
+        aria-label="Название подзадачи"
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <Button kind="primary" type="submit" icon={<PlusIcon />} disabled={!title.trim()}>
+        Подзадача
+      </Button>
+    </form>
+  )
+}
+
+/**
+ * Связать с существующей карточкой. Предлагаются только карточки этой доски:
  * связать с чужой можно, но выбирать её здесь не из чего — для этого
  * нужен поиск по организации, а его ещё нет.
  */
@@ -574,27 +623,34 @@ function LinkPicker({
   if (candidates.length === 0) return null
 
   return (
-    <div className="row row--tight">
-      <select value={kind} onChange={(e) => setKind(e.target.value as LinkKind)} aria-label="Вид связи">
-        {(Object.keys(LINK_KIND_NAMES) as LinkKind[]).map((k) => (
-          <option key={k} value={k}>
-            {LINK_KIND_NAMES[k]}
-          </option>
-        ))}
-      </select>
-      <select
-        value=""
-        aria-label="Карточка для связи"
-        onChange={(e) => e.target.value && onPick(e.target.value, kind)}
-      >
-        <option value="">Выбрать карточку…</option>
-        {candidates.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.title}
-          </option>
-        ))}
-      </select>
-    </div>
+    <details className="link-picker">
+      <summary className="muted small">Связать с существующей карточкой</summary>
+      <div className="row row--tight">
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as LinkKind)}
+          aria-label="Вид связи"
+        >
+          {(Object.keys(LINK_KIND_NAMES) as LinkKind[]).map((k) => (
+            <option key={k} value={k}>
+              {LINK_KIND_NAMES[k]}
+            </option>
+          ))}
+        </select>
+        <select
+          value=""
+          aria-label="Карточка для связи"
+          onChange={(e) => e.target.value && onPick(e.target.value, kind)}
+        >
+          <option value="">Выбрать карточку…</option>
+          {candidates.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.title}
+            </option>
+          ))}
+        </select>
+      </div>
+    </details>
   )
 }
 
