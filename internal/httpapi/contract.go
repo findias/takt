@@ -235,3 +235,11 @@ func (w *recordingWriter) Write(b []byte) (int, error) {
 	w.body = append(w.body, b...)
 	return w.ResponseWriter.Write(b)
 }
+
+// Flush пропускает сброс буфера дальше — по той же причине, что и у
+// обёртки для логов: запись ответа не должна мешать потоковым ответам.
+func (w *recordingWriter) Flush() {
+	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}

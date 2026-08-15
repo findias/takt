@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/konkov/agile/internal/config"
+	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
 )
 
@@ -45,7 +46,15 @@ func newAPI(t *testing.T) *api {
 	t.Cleanup(db.Close)
 
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	srv := httptest.NewServer(New(config.Config{BaseURL: "http://example.test"}, db, log).Handler())
+	// Оповещения слушает настоящий узел: поток изменений — часть API,
+	// и проверять его заглушкой значит проверять заглушку.
+	hub := realtime.NewHub(db, log)
+	hubCtx, stopHub := context.WithCancel(context.Background())
+	go hub.Run(hubCtx)
+	t.Cleanup(stopHub)
+
+	srv := httptest.NewServer(
+		New(config.Config{BaseURL: "http://example.test"}, db, log, hub).Handler())
 	t.Cleanup(srv.Close)
 
 	return &api{t: t, server: srv, client: srv.Client()}

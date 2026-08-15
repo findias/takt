@@ -23,6 +23,7 @@ import (
 
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/httpapi"
+	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/webhook"
 )
@@ -90,9 +91,15 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 		os.Exit(1)
 	}
 
+	// Одно слушающее соединение на процесс раздаёт изменения всем открытым
+	// доскам: подписка на канал в базе стоит соединения, и держать его
+	// по одному на вкладку нельзя.
+	hub := realtime.NewHub(db, log)
+	go hub.Run(ctx)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           httpapi.New(cfg, db, log).Handler(),
+		Handler:           httpapi.New(cfg, db, log, hub).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Долгий таймаут записи нужен будущим WebSocket-соединениям;
 		// обычные запросы ограничены таймаутом чтения заголовков.

@@ -116,6 +116,41 @@ export function useBoard(boardId: string | null) {
     })()
   }, [boardId, queue, notify, reload])
 
+  // Поток изменений: сервер сообщает «доска доехала до такой-то версии»,
+  // и мы перечитываем снимок. Патч по проводу пришлось бы сливать
+  // с очередью неподтверждённых команд — сложность не там и не тогда.
+  //
+  // Своё же изменение мы уже ждём ответом на операцию, поэтому чужой
+  // автор — единственный повод дёрнуться.
+  useEffect(() => {
+    if (!boardId) return
+    const source = new EventSource(`/api/boards/${boardId}/stream`)
+
+    source.addEventListener('board', (event) => {
+      try {
+        const change = JSON.parse((event as MessageEvent).data) as {
+          version: number
+          actorId: string
+        }
+        setBase((current) => {
+          if (!current) return current
+          // Версия не новее нашей — новость уже учтена.
+          if (change.version <= current.info.version) return current
+          // Перечитываем вне setBase: обновление состояния должно
+          // оставаться чистым.
+          queueMicrotask(reload)
+          return current
+        })
+      } catch {
+        // Непонятное сообщение — не повод ронять доску.
+      }
+    })
+
+    // Переподключение EventSource умеет сам; наше дело — закрыть поток
+    // при уходе с доски.
+    return () => source.close()
+  }, [boardId, reload])
+
   const order = useMemo(() => (base ? renderOrder(base, queue) : {}), [base, queue])
 
   /** Перемещение применяется мгновенно, подтверждение приходит потом. */

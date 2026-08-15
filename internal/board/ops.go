@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/rank"
+	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/webhook"
 )
 
@@ -156,6 +157,15 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	if _, err := tx.Exec(ctx,
 		`update operations set result = $2::jsonb where operation_id = $1`,
 		req.OperationID, string(encoded)); err != nil {
+		return Result{}, err
+	}
+
+	// Оповещение уходит тем же коммитом, что и само изменение: отправленное
+	// отдельно, оно рано или поздно уйдёт без изменения либо изменение
+	// пройдёт без оповещения.
+	if err := realtime.Notify(ctx, tx, realtime.Change{
+		BoardID: boardID, Version: version, ActorID: actorID,
+	}); err != nil {
 		return Result{}, err
 	}
 

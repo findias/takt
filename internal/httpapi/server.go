@@ -19,6 +19,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/metrics"
 	"github.com/konkov/agile/internal/org"
+	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/team"
 	"github.com/konkov/agile/internal/webhook"
@@ -33,12 +34,13 @@ type Server struct {
 	client  *apiclient.Service
 	hooks   *webhook.Service
 	metrics *metrics.Service
+	hub     *realtime.Hub
 	limiter *limiter
 	audit   *audit.Service
 	log     *slog.Logger
 }
 
-func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
+func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub) *Server {
 	return &Server{
 		cfg:     cfg,
 		db:      db,
@@ -48,6 +50,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger) *Server {
 		client:  apiclient.New(db),
 		hooks:   webhook.New(db),
 		metrics: metrics.New(db),
+		hub:     hub,
 		limiter: newLimiter(),
 		audit:   audit.New(db),
 		log:     log,
@@ -87,6 +90,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerContractRoutes(mux)
 	s.registerWebhookRoutes(mux)
 	s.registerMetricsRoutes(mux)
+	s.registerStreamRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))
