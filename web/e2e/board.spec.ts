@@ -464,3 +464,46 @@ test('настроенный вид сохраняется и открывает
     timeout: 10_000,
   })
 })
+
+test('палитра находит карточку и выполняет команду', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с палитрой')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Договор аренды')
+
+  await page.keyboard.press('Control+k')
+  const input = page.getByRole('combobox', { name: 'Поиск и команды' })
+  await expect(input).toBeVisible()
+
+  // Карточка: четыре буквы вместо прокрутки и глаз.
+  await input.fill('догов')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Договор аренды' })).toBeVisible()
+  expect(page.url()).toMatch(/\/card\//)
+
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // Команда: в том же списке, потому что человек не разделяет
+  // «найти» и «сделать», пока не начал набирать.
+  await page.keyboard.press('Control+k')
+  await page.getByRole('combobox', { name: 'Поиск и команды' }).fill('исполнител')
+  await page.keyboard.press('Enter')
+  // Исполнителей ни у кого нет, поэтому дорожка одна — «Ни на ком».
+  // Она остаётся видимой всегда: именно там теряется работа.
+  await expect(page.getByRole('heading', { name: 'Ни на ком' })).toBeVisible()
+  expect(page.url()).toContain('group=assignee')
+})
+
+test('палитра закрывается по Escape и ничего не делает', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска без последствий')
+  await addCard(page, 'Очередь', 'Не трогать')
+
+  await page.keyboard.press('Control+k')
+  await expect(page.getByRole('combobox', { name: 'Поиск и команды' })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await expect(page.getByRole('combobox', { name: 'Поиск и команды' })).toBeHidden()
+  await expect(cardIn(page, 'Очередь', 'Не трогать')).toBeVisible()
+  expect(page.url()).not.toMatch(/\/card\//)
+})

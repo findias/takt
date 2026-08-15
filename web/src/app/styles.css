@@ -1385,6 +1385,68 @@ textarea.description {
   min-width: 0;
 }
 
+/* Командная палитра. Окно у верхней трети экрана, а не по центру:
+   список растёт вниз, и центрированное окно прыгало бы при каждом
+   наборе буквы. */
+.palette {
+  margin-top: 12vh;
+  width: min(34rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+.palette::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.palette-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  padding: var(--space-3);
+  font-size: var(--text-lg);
+}
+.palette-input:focus-visible {
+  outline: none;
+}
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  padding: var(--space-2);
+  min-height: var(--target);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.palette-item--active {
+  background: var(--surface-2);
+}
+.palette-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette-empty {
+  padding: var(--space-3);
+}
+
 /* Сохранённые виды. Кнопка «забыть» появляется при наведении: постоянный
    крестик у каждого вида превращает полосу в ряд крестиков. */
 .view {

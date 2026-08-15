@@ -202,3 +202,39 @@ describe('состояния доски', () => {
     expect(queue.textContent).toMatch(/2\s*\/\s*3/)
   })
 })
+
+describe('ходьба по доске', () => {
+  // Tab идёт по всем кнопкам подряд: до третьей карточки во второй
+  // колонке ему нужно два десятка нажатий. Стрелки превращают доску
+  // в сетку, какой она и выглядит.
+  it('стрелка без модификатора переводит выделение, а не карточку', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(
+      board([card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')]),
+    )
+    show()
+
+    const first = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    first.focus()
+    await user.keyboard('{ArrowDown}')
+
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('aria-label')).toMatch(/«вторая»/),
+    )
+    // Ничего не двинулось: это переход, а не перенос.
+    expect(operation).not.toHaveBeenCalled()
+  })
+
+  it('Enter открывает карточку, E переводит её в переименование', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
+
+    const cardNode = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    cardNode.focus()
+    await user.keyboard('e')
+
+    // Появилось поле с прежним названием — значит карточка в правке.
+    await waitFor(() => expect(screen.getByDisplayValue('первая')).toBeTruthy())
+  })
+})

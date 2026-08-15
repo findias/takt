@@ -30,11 +30,14 @@ import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Avatar } from '../shared/ui/Avatar.tsx'
 import { IconButton } from '../shared/ui/Button.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
-import { filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
+import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
+import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
+import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
+import { nextCard } from '../features/board/navigation.ts'
 import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
 import type { Grouping } from '../features/board/grouping.ts'
 import { Menu } from '../shared/ui/Menu.tsx'
@@ -45,11 +48,13 @@ import {
   ChevronRightIcon,
   EditIcon,
   FlowIcon,
+  CloseIcon,
   MoreIcon,
   MoveIcon,
   OpenIcon,
   PeopleIcon,
   PlusIcon,
+  SearchIcon,
   TagIcon,
 } from '../shared/ui/icons.tsx'
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
@@ -98,6 +103,8 @@ export function Board({
   const [showFlow, setShowFlow] = useState(false)
   const [showAccess, setShowAccess] = useState(false)
   const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
+  const [palette, setPalette] = useState(false)
+  usePaletteHotkey(useCallback(() => setPalette(true), []))
   // Видимость доски показывается в шапке: «доску видят не те» — это то,
   // что замечают, глядя на доску, а не на её строку в списке.
   const [access, setAccess] = useState<Access | null>(null)
@@ -159,6 +166,64 @@ export function Board({
     [base, order, grouping],
   )
 
+  // Что можно найти и что можно сделать — в одном списке: человек,
+  // набрав «мет», одинаково может иметь в виду карточку со словом
+  // «метка» и команду «сгруппировать по меткам».
+  const commands = useMemo((): Command[] => {
+    if (!base) return []
+    const cards: Command[] = Object.values(base.cards).map((card) => ({
+      id: `card-${card.id}`,
+      title: card.title,
+      hint: base.columns[card.columnId]?.name,
+      icon: <OpenIcon />,
+      run: () => {
+        setShowFlow(false)
+        setOpenCard(card.id)
+      },
+    }))
+
+    const actions: Command[] = [
+      {
+        id: 'flow',
+        title: 'Показать поток',
+        hint: 'метрики доски',
+        icon: <FlowIcon />,
+        run: () => {
+          setOpenCard(null)
+          setShowFlow(true)
+        },
+      },
+      {
+        id: 'access',
+        title: 'Кому видна доска',
+        icon: <PeopleIcon />,
+        run: () => setShowAccess(true),
+      },
+      ...(Object.keys(GROUPING_NAMES) as Grouping[])
+        .filter((g) => g !== grouping)
+        .map((g) => ({
+          id: `group-${g}`,
+          title: GROUPING_NAMES[g],
+          hint: 'группировка',
+          icon: <TagIcon />,
+          run: () => setGrouping(g),
+        })),
+      ...(isEmpty(filters)
+        ? []
+        : [
+            {
+              id: 'clear-filters',
+              title: 'Показать все карточки',
+              hint: 'сбросить фильтры',
+              icon: <CloseIcon />,
+              run: () => setFilters(EMPTY),
+            },
+          ]),
+    ]
+
+    return [...cards, ...actions]
+  }, [base, grouping, filters, setGrouping, setFilters])
+
   // Список людей для фильтра: в снимке они словарём, а выпадающему
   // списку нужен порядок.
   const peopleList = useMemo(
@@ -167,6 +232,18 @@ export function Board({
         .map(([userId, name]) => ({ userId, name }))
         .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
     [base?.people],
+  )
+
+  // Стрелки водят выделение по доске, как по сетке: Tab идёт по всем
+  // кнопкам подряд, и до третьей карточки во второй колонке им нужно
+  // два десятка нажатий.
+  const navigateCards = useCallback(
+    (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => {
+      if (!base) return
+      const next = nextCard(base.columnIds, order, cardId, direction)
+      if (next && next !== cardId) refocus(next)
+    },
+    [base, order, refocus],
   )
 
   // Один монитор на всю доску: он знает и источник, и цель, и порядок
@@ -308,6 +385,7 @@ export function Board({
               setOpenCard(id)
             }}
             onMoveByKeyboard={moveByKeyboard}
+            onNavigate={navigateCards}
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
             onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
@@ -390,6 +468,11 @@ export function Board({
             <FlowHint columns={base.columnIds.map((id) => base.columns[id])} />
             <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
           </div>
+          <button className="btn btn--quiet" onClick={() => setPalette(true)}>
+            <SearchIcon />
+            Найти
+            <span className="muted small">{paletteHint()}</span>
+          </button>
           <button
             className="btn btn--quiet"
             aria-expanded={showFlow}
@@ -449,6 +532,8 @@ export function Board({
           onPromise={board.reload}
         />
       )}
+
+      <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
 
       {showAccess && (
         <AccessPanel
@@ -512,6 +597,7 @@ type ColumnProps = {
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
+  onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onCreateCard: (title: string) => void
   onRenameColumn: (name: string) => void
   onSetLimit: (limit: number | null) => void
@@ -613,6 +699,7 @@ function ColumnView(props: ColumnProps) {
             onMoveToColumn={props.onMoveToColumn}
             onOpen={() => props.onOpenCard(cardId)}
             onMoveByKeyboard={props.onMoveByKeyboard}
+            onNavigate={props.onNavigate}
             onRename={(title) => props.onRenameCard(cardId, title)}
             onArchive={() => props.onArchiveCard(cardId)}
           />
@@ -661,6 +748,8 @@ type CardProps = {
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpen: () => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
+  /** Перейти к соседней карточке — стрелка без модификатора. */
+  onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (title: string) => void
   onArchive: () => void
 }
@@ -680,6 +769,7 @@ function CardView({
   onMoveToColumn,
   onOpen,
   onMoveByKeyboard,
+  onNavigate,
   onRename,
   onArchive,
 }: CardProps) {
@@ -722,17 +812,37 @@ function CardView({
   const hiddenLabels = own.length - shownLabels.length
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (!(e.ctrlKey || e.metaKey)) return
-    const map: Record<string, 'left' | 'right' | 'up' | 'down'> = {
+    const arrows: Record<string, 'left' | 'right' | 'up' | 'down'> = {
       ArrowLeft: 'left',
       ArrowRight: 'right',
       ArrowUp: 'up',
       ArrowDown: 'down',
     }
-    const direction = map[e.key]
-    if (!direction) return
-    e.preventDefault()
-    onMoveByKeyboard(cardId, direction)
+    const direction = arrows[e.key]
+
+    // Со стрелками разница между «перенести» и «перейти» — модификатор:
+    // так же устроены все списки, в которых можно и ходить, и двигать.
+    if (direction) {
+      e.preventDefault()
+      if (e.ctrlKey || e.metaKey) onMoveByKeyboard(cardId, direction)
+      else onNavigate(cardId, direction)
+      return
+    }
+
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+
+    // Буквы работают только тогда, когда выделена сама карточка: иначе
+    // они перехватывали бы ввод в поле переименования, которое живёт
+    // внутри неё же.
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onOpen()
+      return
+    }
+    if (e.key === 'e' || e.key === 'у') {
+      e.preventDefault()
+      setEditing(true)
+    }
   }
 
   return (
@@ -742,7 +852,10 @@ function CardView({
       tabIndex={0}
       data-card={cardId}
       role="group"
-      aria-label={`Карточка «${title}». Ctrl со стрелками перемещает её.`}
+      // Подсказка читается скринридером при переходе на карточку —
+      // это единственное место, где о сокращениях можно сказать тому,
+      // кто не видит экрана.
+      aria-label={`Карточка «${title}». Стрелки — переход, Ctrl со стрелками — перенос, Enter — открыть, E — переименовать.`}
       onKeyDown={onKeyDown}
     >
       {editing ? (
