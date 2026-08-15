@@ -10,6 +10,7 @@ import { test } from 'node:test'
 import {
   EMPTY,
   UNASSIGNED,
+  activeCount,
   filtersToQuery,
   isEmpty,
   matches,
@@ -129,4 +130,16 @@ test('блокировка и возраст сверх обещания', () =>
     matches(card({ startedAt: started(40) }), aging, { labelsOf: () => [], sleDays: null, now }),
     false,
   )
+})
+
+test('число действующих отборов не считает поиск', () => {
+  // На телефоне это число — единственное, что остаётся от полосы
+  // фильтров, и по нему человек понимает, что доска показана не вся.
+  assert.equal(activeCount(EMPTY), 0)
+  // Поиск виден сам по себе — своей строкой, поэтому в счёт не идёт.
+  assert.equal(activeCount({ ...EMPTY, text: 'смета' }), 0)
+  assert.equal(activeCount({ ...EMPTY, assignee: UNASSIGNED }), 1)
+  // Каждая метка считается отдельно: убирают их тоже по одной.
+  assert.equal(activeCount({ ...EMPTY, labels: ['a', 'b'] }), 2)
+  assert.equal(activeCount({ ...EMPTY, blocked: true, aging: true }), 2)
 })

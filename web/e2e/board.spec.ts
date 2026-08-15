@@ -511,3 +511,57 @@ test('палитра закрывается по Escape и ничего не д�
   await expect(cardIn(page, 'Очередь', 'Не трогать')).toBeVisible()
   expect(page.url()).not.toMatch(/\/card\//)
 })
+
+// Настоящее сенсорное устройство, а не просто узкое окно: у наведения
+// и у пальца разные правила, и проверять надо те, что достаются пальцу.
+test('на узком экране показывается одна колонка с переключателем', async ({ browser }) => {
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await phone.newPage()
+  await register(page)
+  await createBoard(page, 'Доска в кармане')
+  await addCard(page, 'Очередь', 'Первое дело')
+
+  // Колонка одна: горизонтальная прокрутка доски на телефоне
+  // превращает работу в поиск.
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'В работе' })).toHaveCount(0)
+
+  // Остальные — переключателем, и в нём видно, сколько там работы.
+  const tabs = page.getByRole('tablist', { name: 'Колонки' })
+  await expect(tabs.getByRole('tab')).toHaveCount(3)
+  await tabs.getByRole('tab', { name: /Очередь/ }).and(page.locator('[aria-selected="true"]')).waitFor()
+
+  await tabs.getByRole('tab', { name: /В работе/ }).click()
+  await expect(page.getByRole('region', { name: 'В работе' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toHaveCount(0)
+
+  // Перенести карточку без перетаскивания можно и здесь: на телефоне
+  // это единственный путь — HTML5-перетаскивание пальцем не работает.
+  await tabs.getByRole('tab', { name: /Очередь/ }).click()
+  const card = cardIn(page, 'Очередь', 'Первое дело')
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Перенести в «В работе»' }).click()
+
+  await tabs.getByRole('tab', { name: /В работе/ }).click()
+  await expect(cardIn(page, 'В работе', 'Первое дело')).toBeVisible()
+
+  // Отборы убраны под кнопку, и число на ней говорит, что доска
+  // показана не вся: спрятанный фильтр без такого напоминания — это
+  // фильтр, о котором забывают.
+  const toggle = page.getByRole('button', { name: /Отбор/ })
+  await expect(page.getByRole('combobox', { name: 'Исполнитель' })).toBeHidden()
+  await expect(page.getByRole('searchbox', { name: 'Найти карточку' })).toBeVisible()
+
+  await toggle.click()
+  await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
+  await expect(toggle).toHaveText(/Отбор · 1/)
+
+  await toggle.click()
+  await expect(page.getByRole('checkbox', { name: 'Заблокированные' })).toBeHidden()
+  await expect(toggle).toHaveText(/Отбор · 1/)
+  await phone.close()
+})

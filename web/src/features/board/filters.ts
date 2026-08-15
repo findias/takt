@@ -47,12 +47,21 @@ export const UNASSIGNED = 'none'
 
 export function isEmpty(f: Filters): boolean {
   return (
-    f.text.trim() === '' &&
-    f.assignee === null &&
-    f.labels.length === 0 &&
-    !f.blocked &&
-    !f.aging
+    f.text.trim() === '' && f.assignee === null && f.labels.length === 0 && !f.blocked && !f.aging
   )
+}
+
+/**
+ * Сколько отборов действует, не считая поиска.
+ *
+ * Нужно на телефоне: там всё, кроме поиска, убрано под кнопку, и число
+ * на ней заменяет вид самой полосы. Правило «спрятанный фильтр — это
+ * забытый фильтр» держится именно на этом числе, а не на видимости
+ * полей. Поиск не считается: его строка остаётся на виду и говорит
+ * о себе сама.
+ */
+export function activeCount(f: Filters): number {
+  return (f.assignee === null ? 0 : 1) + f.labels.length + (f.blocked ? 1 : 0) + (f.aging ? 1 : 0)
 }
 
 export function parseFilters(query: URLSearchParams): Filters {

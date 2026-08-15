@@ -148,8 +148,8 @@ body {
   color: var(--ink);
   font-size: var(--text);
   line-height: 1.5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 h1 {
@@ -1250,9 +1250,67 @@ textarea.description {
   }
 }
 
+/* Переключатель колонок: на узком экране колонка одна, а остальные
+   выбираются здесь. Полоса прокручивается вбок — колонок бывает
+   больше, чем помещается, — но прокручивается она сама, без карточек
+   внутри, и это дёшево. */
+.column-switch {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+.column-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  padding: var(--space-1) var(--space-3);
+  min-height: var(--target);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.column-tab--current {
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 650;
+}
+
 /* Панель во весь экран: 26rem на телефоне — это доска, перекрытая
    наполовину, худшее из обоих. */
 @media (max-width: 40rem) {
+  /* Единственная показанная колонка занимает ширину экрана: на телефоне
+     край соседней подсказывать нечего — соседних тут нет. Перенос строк
+     нужен из-за кнопки «+ Колонка»: она такая же колонка и без переноса
+     делит ширину пополам, оставляя работе половину экрана. */
+  .columns {
+    flex-wrap: wrap;
+  }
+  .column {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .filters {
+    /* Поиск во всю строку, остальное под ним: на 390 пикселях
+       выпадающие списки в одну строку с поиском не помещаются
+       и наезжают друг на друга. */
+    gap: var(--space-1);
+  }
+  .filters-search {
+    flex: 1 1 auto;
+  }
+  /* Остальные отборы — под кнопкой. Раскрытые ложатся столбцом:
+     в строку на 390 пикселях они всё равно не встают, а «в столбец»
+     читается как список условий, а не как каша из полей. */
+  .filters-rest {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
   .panel-card {
     width: 100vw;
     border-left: none;
@@ -1270,6 +1328,13 @@ textarea.description {
   :root {
     --target: 44px;
   }
+  /* Действия карточки показываются всегда: наведения на телефоне нет,
+     и спрятанное «по наведению» там просто недостижимо. На широком
+     экране они остаются скрытыми — там ряд кнопок под каждой карточкой
+     съедал бы плотность. */
+  .card-actions {
+    display: flex;
+  }
 }
 
 /* Пустая доска объясняет себя: без объяснения она неотличима
@@ -1277,7 +1342,6 @@ textarea.description {
 .empty-board {
   margin: var(--space-4) var(--space-4) 0;
 }
-
 
 /* --- Компонентная база --- */
 
@@ -1365,14 +1429,30 @@ textarea.description {
 /* Оттенки выводятся из имени и живут здесь, а не в поле «цвет
    человека»: такое поле кто-то однажды должен заполнить, а потом
    поддерживать. */
-.avatar--tone-0 { background: #0e6f5c; }
-.avatar--tone-1 { background: #2f6f9f; }
-.avatar--tone-2 { background: #6b5ca5; }
-.avatar--tone-3 { background: #a3506b; }
-.avatar--tone-4 { background: #a3671e; }
-.avatar--tone-5 { background: #4a7a2a; }
-.avatar--tone-6 { background: #2b7f7a; }
-.avatar--tone-7 { background: #8a5a2b; }
+.avatar--tone-0 {
+  background: #0e6f5c;
+}
+.avatar--tone-1 {
+  background: #2f6f9f;
+}
+.avatar--tone-2 {
+  background: #6b5ca5;
+}
+.avatar--tone-3 {
+  background: #a3506b;
+}
+.avatar--tone-4 {
+  background: #a3671e;
+}
+.avatar--tone-5 {
+  background: #4a7a2a;
+}
+.avatar--tone-6 {
+  background: #2b7f7a;
+}
+.avatar--tone-7 {
+  background: #8a5a2b;
+}
 
 .card-head {
   display: flex;
@@ -1396,12 +1476,7 @@ textarea.description {
 .skeleton-line {
   height: 1rem;
   border-radius: var(--radius);
-  background: linear-gradient(
-    90deg,
-    var(--surface-2) 25%,
-    var(--rule) 37%,
-    var(--surface-2) 63%
-  );
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--rule) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
@@ -1712,35 +1787,107 @@ textarea.description {
   color: var(--ink-3);
   border-color: var(--rule);
 }
-.chip--slate  { background: #e3e8e6; color: #2b3733; }
-.chip--green  { background: #d9ece4; color: #12503f; }
-.chip--blue   { background: #dbe7f2; color: #1d4a6e; }
-.chip--violet { background: #e3ddf2; color: #3f2f6b; }
-.chip--rose   { background: #f2dde3; color: #6b2f42; }
-.chip--amber  { background: #f2e7d2; color: #6b4a12; }
-.chip--teal   { background: #d5eceb; color: #16514e; }
-.chip--brown  { background: #ecdfd2; color: #5c3d21; }
+.chip--slate {
+  background: #e3e8e6;
+  color: #2b3733;
+}
+.chip--green {
+  background: #d9ece4;
+  color: #12503f;
+}
+.chip--blue {
+  background: #dbe7f2;
+  color: #1d4a6e;
+}
+.chip--violet {
+  background: #e3ddf2;
+  color: #3f2f6b;
+}
+.chip--rose {
+  background: #f2dde3;
+  color: #6b2f42;
+}
+.chip--amber {
+  background: #f2e7d2;
+  color: #6b4a12;
+}
+.chip--teal {
+  background: #d5eceb;
+  color: #16514e;
+}
+.chip--brown {
+  background: #ecdfd2;
+  color: #5c3d21;
+}
 
 /* В тёмной теме метки не осветляются, а затемняются: светлая плашка
    на тёмном фоне бьёт по глазам сильнее, чем тёмная на светлом. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .chip--slate  { background: #263230; color: #cbd6d2; }
-  :root:not([data-theme='light']) .chip--green  { background: #16352c; color: #9fd8c4; }
-  :root:not([data-theme='light']) .chip--blue   { background: #1a2f42; color: #a6c8e4; }
-  :root:not([data-theme='light']) .chip--violet { background: #2a2440; color: #c2b5e8; }
-  :root:not([data-theme='light']) .chip--rose   { background: #3d222b; color: #e3adbd; }
-  :root:not([data-theme='light']) .chip--amber  { background: #3a2f18; color: #dcc189; }
-  :root:not([data-theme='light']) .chip--teal   { background: #163533; color: #9ed3cf; }
-  :root:not([data-theme='light']) .chip--brown  { background: #33261a; color: #d6b795; }
+  :root:not([data-theme='light']) .chip--slate {
+    background: #263230;
+    color: #cbd6d2;
+  }
+  :root:not([data-theme='light']) .chip--green {
+    background: #16352c;
+    color: #9fd8c4;
+  }
+  :root:not([data-theme='light']) .chip--blue {
+    background: #1a2f42;
+    color: #a6c8e4;
+  }
+  :root:not([data-theme='light']) .chip--violet {
+    background: #2a2440;
+    color: #c2b5e8;
+  }
+  :root:not([data-theme='light']) .chip--rose {
+    background: #3d222b;
+    color: #e3adbd;
+  }
+  :root:not([data-theme='light']) .chip--amber {
+    background: #3a2f18;
+    color: #dcc189;
+  }
+  :root:not([data-theme='light']) .chip--teal {
+    background: #163533;
+    color: #9ed3cf;
+  }
+  :root:not([data-theme='light']) .chip--brown {
+    background: #33261a;
+    color: #d6b795;
+  }
 }
-:root[data-theme='dark'] .chip--slate  { background: #263230; color: #cbd6d2; }
-:root[data-theme='dark'] .chip--green  { background: #16352c; color: #9fd8c4; }
-:root[data-theme='dark'] .chip--blue   { background: #1a2f42; color: #a6c8e4; }
-:root[data-theme='dark'] .chip--violet { background: #2a2440; color: #c2b5e8; }
-:root[data-theme='dark'] .chip--rose   { background: #3d222b; color: #e3adbd; }
-:root[data-theme='dark'] .chip--amber  { background: #3a2f18; color: #dcc189; }
-:root[data-theme='dark'] .chip--teal   { background: #163533; color: #9ed3cf; }
-:root[data-theme='dark'] .chip--brown  { background: #33261a; color: #d6b795; }
+:root[data-theme='dark'] .chip--slate {
+  background: #263230;
+  color: #cbd6d2;
+}
+:root[data-theme='dark'] .chip--green {
+  background: #16352c;
+  color: #9fd8c4;
+}
+:root[data-theme='dark'] .chip--blue {
+  background: #1a2f42;
+  color: #a6c8e4;
+}
+:root[data-theme='dark'] .chip--violet {
+  background: #2a2440;
+  color: #c2b5e8;
+}
+:root[data-theme='dark'] .chip--rose {
+  background: #3d222b;
+  color: #e3adbd;
+}
+:root[data-theme='dark'] .chip--amber {
+  background: #3a2f18;
+  color: #dcc189;
+}
+:root[data-theme='dark'] .chip--teal {
+  background: #163533;
+  color: #9ed3cf;
+}
+:root[data-theme='dark'] .chip--brown {
+  background: #33261a;
+  color: #d6b795;
+}
 
 /* Меню. Список открывается под кнопкой и перекрывает содержимое —
    отсюда z-index; больше ничего в интерфейсе так не всплывает. */

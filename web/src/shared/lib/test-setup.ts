@@ -13,3 +13,22 @@ import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
 afterEach(cleanup)
+
+// jsdom не знает про matchMedia: окна нет, размеров нет, отвечать
+// нечем. Подменяем заглушкой, которая всегда говорит «не совпало» —
+// то есть широкий экран. Компоненты, которым важна узкая раскладка,
+// проверяются в настоящем браузере, где ширину можно задать;
+// здесь важно лишь, чтобы вызов не падал.
+if (!window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      media: query,
+      matches: false,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList
+}

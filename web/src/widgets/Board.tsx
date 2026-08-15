@@ -42,6 +42,7 @@ import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palett
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { nextCard } from '../features/board/navigation.ts'
+import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import { GROUPING_NAMES, groupingToQuery, groupsOf, parseGrouping } from '../features/board/grouping.ts'
 import type { Grouping } from '../features/board/grouping.ts'
 import { Menu } from '../shared/ui/Menu.tsx'
@@ -122,6 +123,12 @@ export function Board({
   const [showAccess, setShowAccess] = useState(false)
   const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
   const [palette, setPalette] = useState(false)
+  // На узком экране колонки не помещаются рядом, и горизонтальная
+  // прокрутка доски превращает работу в поиск: показываем одну колонку
+  // и переключатель. Это разный состав разметки, а не разное
+  // оформление, — CSS такого не умеет.
+  const narrow = useMedia(NARROW)
+  const [visibleColumn, setVisibleColumn] = useState<string | null>(null)
   // Карточка, которую только что перенесли: она вспыхивает, чтобы глаз
   // нашёл её на новом месте. Живёт полсекунды — это подсказка, а не
   // состояние доски.
@@ -395,8 +402,14 @@ export function Board({
 
   // Колонки рисуются для каждой дорожки: сами колонки одни и те же,
   // разнится только набор карточек в них.
+  // На узком экране рисуется одна колонка — выбранная или первая:
+  // остальные доступны переключателем над доской.
+  const shownColumns = narrow
+    ? base.columnIds.filter((id) => id === (visibleColumn ?? base.columnIds[0]))
+    : base.columnIds
+
   const renderColumns = (groupOrder: Record<string, string[]>) =>
-    base.columnIds.map((columnId) => (
+    shownColumns.map((columnId) => (
           <ColumnView
             key={columnId}
             name={base.columns[columnId].name}
@@ -536,6 +549,26 @@ export function Board({
             Дальше её можно перетащить мышью, перенести кнопкой на самой карточке
             или клавишами: Ctrl со стрелками.
           </p>
+        </div>
+      )}
+
+      {narrow && (
+        <div className="column-switch board-toolbar" role="tablist" aria-label="Колонки">
+          {base.columnIds.map((columnId) => {
+            const current = columnId === (visibleColumn ?? base.columnIds[0])
+            return (
+              <button
+                key={columnId}
+                role="tab"
+                aria-selected={current}
+                className={current ? 'column-tab column-tab--current' : 'column-tab'}
+                onClick={() => setVisibleColumn(columnId)}
+              >
+                {base.columns[columnId].name}
+                <span className="muted small">{(order[columnId] ?? []).length}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 

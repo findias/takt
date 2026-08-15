@@ -181,6 +181,15 @@ export function OpenIcon(props: IconProps) {
   )
 }
 
+/** Воронка — общепринятый знак отбора: у Jira, Linear и GitHub он же. */
+export function FilterIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 5h18l-7 8v6l-4-2v-4L3 5Z" />
+    </Icon>
+  )
+}
+
 export function TagIcon(props: IconProps) {
   return (
     <Icon {...props}>
