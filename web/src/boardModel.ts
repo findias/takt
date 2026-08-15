@@ -9,7 +9,16 @@
 // а не «в порядке прихода ответов». Благодаря этому повтор, задержка или
 // переупорядочивание ответов не могут оставить доску в странном виде.
 
-import type { BoardInfo, Card, Column, Placement, Snapshot, OperationResult } from './api'
+import type {
+  BoardInfo,
+  Card,
+  Column,
+  Link,
+  LinkedCard,
+  Placement,
+  Snapshot,
+  OperationResult,
+} from './api'
 
 export type BaseState = {
   info: BoardInfo
@@ -18,6 +27,11 @@ export type BaseState = {
   cards: Record<string, Card>
   /** columnId → упорядоченные id карточек */
   order: Record<string, string[]>
+  /** Связи карточек доски — с обеих сторон, включая чужие карточки. */
+  links: Link[]
+  /** Карточки с других досок, на которые ведут связи: id → карточка.
+   *  Связь без этого — голый идентификатор, показать по нему нечего. */
+  linked: Record<string, LinkedCard>
 }
 
 export type MoveCommand = {
@@ -44,12 +58,17 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     // терять её нельзя, поэтому заводим список на лету
     ;(order[card.columnId] ??= []).push(card.id)
   }
+  const linked: Record<string, LinkedCard> = {}
+  for (const card of snap.linked) linked[card.id] = card
+
   return {
     info: snap.board,
     columnIds: sortedColumns.map((c) => c.id),
     columns,
     cards,
     order,
+    links: snap.links,
+    linked,
   }
 }
 

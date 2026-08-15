@@ -142,6 +142,27 @@ type Snapshot struct {
 	// на досках других команд. Клиенту нужны обе стороны, чтобы показать
 	// подзадачу, которую делает кто-то ещё.
 	Links []Link `json:"links"`
+	// Карточки с других досок, на которые ведут связи. Своих здесь нет —
+	// они уже в Cards. Без этого связь остаётся голым идентификатором,
+	// и «подзадача у соседней команды» показать нечем.
+	//
+	// Сюда попадает не всё, на что ссылаются связи: карточка на закрытой
+	// или чужой доске не пройдёт политику и просто не появится. Это
+	// правильный ответ — существование связи скрывать незачем, а вот
+	// содержимое недоступной доски раскрывать нельзя.
+	Linked []LinkedCard `json:"linked"`
+}
+
+// LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
+// где она лежит, чья это команда и доведена ли она до конца.
+type LinkedCard struct {
+	ID        string  `json:"id"`
+	Title     string  `json:"title"`
+	BoardID   string  `json:"boardId"`
+	BoardName string  `json:"boardName"`
+	TeamName  *string `json:"teamName"`
+	Outcome   *string `json:"outcome"`
+	Blocked   bool    `json:"blocked"`
 }
 
 type Service struct {
@@ -380,7 +401,44 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		}
 		snap.Links = append(snap.Links, l)
 	}
-	return linkRows.Err()
+	if err := linkRows.Err(); err != nil {
+		return err
+	}
+
+	// Карточки с других досок. Один запрос на всю доску, а не по одному
+	// на связь: связей у доски десятки, а запросов должно остаться
+	// столько же, сколько было.
+	others := make([]string, 0, len(snap.Links)*2)
+	for _, l := range snap.Links {
+		others = append(others, l.FromCard, l.ToCard)
+	}
+	snap.Linked = []LinkedCard{}
+	if len(others) == 0 {
+		return nil
+	}
+
+	foreignRows, err := tx.Query(ctx, `
+		select c.id, c.title, c.board_id, b.name, t.name, c.outcome,
+		       exists (select 1 from card_blocks cb
+		                where cb.card_id = c.id and cb.unblocked_at is null)
+		  from cards c
+		  join boards b on b.id = c.board_id
+		  left join teams t on t.id = b.team_id
+		 where c.id = any ($1) and c.board_id <> $2 and c.archived_at is null`,
+		others, boardID)
+	if err != nil {
+		return err
+	}
+	defer foreignRows.Close()
+	for foreignRows.Next() {
+		var c LinkedCard
+		if err := foreignRows.Scan(&c.ID, &c.Title, &c.BoardID, &c.BoardName,
+			&c.TeamName, &c.Outcome, &c.Blocked); err != nil {
+			return err
+		}
+		snap.Linked = append(snap.Linked, c)
+	}
+	return foreignRows.Err()
 }
 
 // CardOrder — текущий порядок колонки, который возвращается клиенту

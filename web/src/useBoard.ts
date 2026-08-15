@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, NetworkError, api } from './api'
-import type { Conflict, Placement } from './api'
+import type { Conflict, LinkKind, Placement } from './api'
 import {
   applyPatch,
   fromSnapshot,
@@ -171,6 +171,44 @@ export function useBoard(boardId: string | null) {
       run('RENAME_COLUMN', { columnId, name }, 'Не удалось переименовать колонку'),
     [run],
   )
+  const describeCard = useCallback(
+    (cardId: string, description: string) =>
+      run('UPDATE_CARD', { cardId, description }, 'Не удалось сохранить описание'),
+    [run],
+  )
+
+  // Связи и блокировки меняют больше, чем возвращает патч: прогресс
+  // родителя, состав связей, карточки на других досках. Дешевле и честнее
+  // перечитать снимок, чем собирать это по кускам на клиенте — действия
+  // редкие, в отличие от перетаскивания.
+  const runAndReload = useCallback(
+    async (type: string, payload: unknown, failureText: string) => {
+      await run(type, payload, failureText)
+      reload()
+    },
+    [run, reload],
+  )
+
+  const linkCards = useCallback(
+    (fromCard: string, toCard: string, kind: LinkKind) =>
+      runAndReload('LINK_CARDS', { fromCard, toCard, kind }, 'Не удалось связать карточки'),
+    [runAndReload],
+  )
+  const unlinkCards = useCallback(
+    (fromCard: string, toCard: string, kind: LinkKind) =>
+      runAndReload('UNLINK_CARDS', { fromCard, toCard, kind }, 'Не удалось убрать связь'),
+    [runAndReload],
+  )
+  const blockCard = useCallback(
+    (cardId: string, reason: string) =>
+      runAndReload('BLOCK_CARD', { cardId, reason }, 'Не удалось отметить блокировку'),
+    [runAndReload],
+  )
+  const unblockCard = useCallback(
+    (cardId: string) => runAndReload('UNBLOCK_CARD', { cardId }, 'Не удалось снять блокировку'),
+    [runAndReload],
+  )
+
   // null снимает лимит. Отсутствие поля ничего не меняет, поэтому «снять»
   // и «не трогать» приходится различать явно.
   const setColumnLimit = useCallback(
@@ -191,7 +229,12 @@ export function useBoard(boardId: string | null) {
     moveCard,
     createCard,
     renameCard,
+    describeCard,
     archiveCard,
+    linkCards,
+    unlinkCards,
+    blockCard,
+    unblockCard,
     createColumn,
     renameColumn,
     setColumnLimit,

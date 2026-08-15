@@ -32,6 +32,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     columnEnteredAt: '2026-08-14T12:00:00Z',
     startedAt: null,
     finishedAt: null,
+    outcome: null,
   }
 }
 
@@ -54,6 +55,8 @@ function column(id: string, name: string, position: string, kind: ColumnKind): C
 function snapshot(cards: Card[]): Snapshot {
   return {
     board: { id: 'board', name: 'Доска', version: 1 },
+    links: [],
+    linked: [],
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),

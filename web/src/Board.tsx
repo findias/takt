@@ -11,11 +11,16 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { limitLabel, parseLimitDraft } from './boardModel.ts'
+import type { BaseState } from './boardModel.ts'
+import type { Card } from './api'
+import { progressLabel } from './cardModel'
+import { CardPanel } from './CardPanel'
 import { useBoard } from './useBoard'
 
 export function Board({ boardId, onBack }: { boardId: string; onBack: () => void }) {
   const board = useBoard(boardId)
   const [announcement, setAnnouncement] = useState('')
+  const [openCard, setOpenCard] = useState<string | null>(null)
 
   const { base, order, moveCard } = board
 
@@ -146,7 +151,8 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
             wipLimit={base.columns[columnId].wipLimit}
             wipLimitHard={base.columns[columnId].wipLimitHard}
             cardIds={order[columnId] ?? []}
-            titles={base.cards}
+            cards={base.cards}
+            onOpenCard={setOpenCard}
             onMoveByKeyboard={moveByKeyboard}
             onCreateCard={(title) => void board.createCard(columnId, title)}
             onRenameColumn={(name) => void board.renameColumn(columnId, name)}
@@ -157,6 +163,20 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
         ))}
         <NewColumn onCreate={(name) => void board.createColumn(name)} />
       </div>
+
+      {openCard && base.cards[openCard] && (
+        <CardPanel
+          base={base}
+          cardId={openCard}
+          canEdit
+          onClose={() => setOpenCard(null)}
+          onDescribe={(id, text) => void board.describeCard(id, text)}
+          onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
+          onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
+          onBlock={(id, reason) => void board.blockCard(id, reason)}
+          onUnblock={(id) => void board.unblockCard(id)}
+        />
+      )}
 
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
@@ -171,7 +191,8 @@ type ColumnProps = {
   wipLimit: number | null
   wipLimitHard: boolean
   cardIds: string[]
-  titles: Record<string, { title: string }>
+  cards: BaseState['cards']
+  onOpenCard: (cardId: string) => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onCreateCard: (title: string) => void
   onRenameColumn: (name: string) => void
@@ -216,7 +237,8 @@ function ColumnView(props: ColumnProps) {
             key={cardId}
             cardId={cardId}
             columnId={props.columnId}
-            title={props.titles[cardId]?.title ?? '…'}
+            card={props.cards[cardId]}
+            onOpen={() => props.onOpenCard(cardId)}
             onMoveByKeyboard={props.onMoveByKeyboard}
             onRename={(title) => props.onRenameCard(cardId, title)}
             onArchive={() => props.onArchiveCard(cardId)}
@@ -245,13 +267,15 @@ function ColumnView(props: ColumnProps) {
 type CardProps = {
   cardId: string
   columnId: string
-  title: string
+  card: Card | undefined
+  onOpen: () => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (title: string) => void
   onArchive: () => void
 }
 
-function CardView({ cardId, columnId, title, onMoveByKeyboard, onRename, onArchive }: CardProps) {
+function CardView({ cardId, columnId, card, onOpen, onMoveByKeyboard, onRename, onArchive }: CardProps) {
+  const title = card?.title ?? '…'
   const ref = useRef<HTMLElement>(null)
   const [dragging, setDragging] = useState(false)
   const [edge, setEdge] = useState<Edge | null>(null)
@@ -319,7 +343,20 @@ function CardView({ cardId, columnId, title, onMoveByKeyboard, onRename, onArchi
           <span className="card-title" onDoubleClick={() => setEditing(true)}>
             {title}
           </span>
+          {card && (card.blocked || card.progress) && (
+            <div className="card-marks">
+              {card.blocked && (
+                <span className="mark mark--blocked" title={card.blocked.reason}>
+                  ⛔ {card.blocked.reason}
+                </span>
+              )}
+              {progressLabel(card) && <span className="mark">{progressLabel(card)}</span>}
+            </div>
+          )}
           <div className="card-actions">
+            <button onClick={onOpen} aria-label={`Открыть «${title}»`}>
+              Открыть
+            </button>
             <button onClick={() => setEditing(true)} aria-label={`Переименовать «${title}»`}>
               Переименовать
             </button>

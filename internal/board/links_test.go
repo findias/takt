@@ -223,3 +223,43 @@ func TestMoveEventCarriesFlowMeaning(t *testing.T) {
 			payload.CrossedStart, payload.CrossedFinish)
 	}
 }
+
+// Связь без названия карточки бесполезна: на экране родителя подзадача
+// с соседней доски должна называться и показывать, чья это команда.
+func TestSnapshotResolvesCardsFromOtherBoards(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columnA)
+
+	otherBoard, otherQueue, otherDone := f.secondBoard()
+	child := f.cardOn(otherBoard, otherQueue, "Собрать сборку")
+	f.mustApply("LINK_CARDS", map[string]any{
+		"fromCard": parent, "toCard": child, "kind": "subtask"})
+
+	snap := f.snapshot()
+	if len(snap.Linked) != 1 {
+		t.Fatalf("карточек с других досок %d, ожидалась одна: %+v", len(snap.Linked), snap.Linked)
+	}
+	got := snap.Linked[0]
+	if got.ID != child || got.Title != "Собрать сборку" {
+		t.Errorf("подзадача пришла неузнаваемой: %+v", got)
+	}
+	if got.BoardName != "Соседняя команда" {
+		t.Errorf("не видно, на какой доске идёт подзадача: %+v", got)
+	}
+	if got.Outcome != nil {
+		t.Errorf("незавершённая подзадача пришла с исходом %v", *got.Outcome)
+	}
+
+	// Своих карточек здесь быть не должно: они уже в Cards, и дублировать
+	// их значит заставить клиент решать, какой копии верить.
+	for _, c := range snap.Linked {
+		if c.BoardID == f.boardID {
+			t.Errorf("своя карточка попала в список чужих: %+v", c)
+		}
+	}
+
+	f.moveOn(otherBoard, child, otherDone)
+	if snap = f.snapshot(); snap.Linked[0].Outcome == nil || *snap.Linked[0].Outcome != "done" {
+		t.Errorf("завершение подзадачи не отражено: %+v", snap.Linked[0])
+	}
+}

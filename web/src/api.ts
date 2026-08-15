@@ -132,9 +132,45 @@ export type Card = {
   columnEnteredAt: string
   startedAt: string | null
   finishedAt: string | null
+  /** Исход работы: done или discarded. Пока работа идёт — пусто.
+   *  Отказ и завершение — разные факты: иначе пропускная способность
+   *  считает выброшенное за сделанное. */
+  outcome: 'done' | 'discarded' | null
+  /** Прогресс по подзадачам; пусто, если подзадач нет. */
+  progress?: { done: number; total: number }
+  /** Открытая блокировка, если есть. */
+  blocked?: { id: string; reason: string; blockedAt: string }
 }
 
-export type Snapshot = { board: BoardInfo; columns: Column[]; cards: Card[] }
+export type LinkKind = 'subtask' | 'blocks' | 'relates'
+
+export const LINK_KIND_NAMES: Record<LinkKind, string> = {
+  subtask: 'Подзадача',
+  blocks: 'Блокирует',
+  relates: 'Связана с',
+}
+
+export type Link = { fromCard: string; toCard: string; kind: LinkKind }
+
+/** Карточка с другой доски: столько, сколько нужно, чтобы её узнать
+ *  и понять, чья это команда. Недоступной доски здесь не будет. */
+export type LinkedCard = {
+  id: string
+  title: string
+  boardId: string
+  boardName: string
+  teamName: string | null
+  outcome: 'done' | 'discarded' | null
+  blocked: boolean
+}
+
+export type Snapshot = {
+  board: BoardInfo
+  columns: Column[]
+  cards: Card[]
+  links: Link[]
+  linked: LinkedCard[]
+}
 
 export type Patch = {
   cards?: Card[]
