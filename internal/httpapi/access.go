@@ -20,6 +20,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/boards/{id}/access", s.authed(s.handleSetBoardAccess))
 	mux.HandleFunc("PUT /api/boards/{id}/members/{userId}", s.authed(s.handleAddBoardMember))
 	mux.HandleFunc("DELETE /api/boards/{id}/members/{userId}", s.authed(s.handleRemoveBoardMember))
+	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
+	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
+	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
 }
 
 func (s *Server) handleBoardAccess(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -97,4 +100,40 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		s.fail(w, what, err)
 	}
 	return true
+}
+
+func (s *Server) handleArchivedBoards(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	boards, err := s.boards.Archived(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "архив досок", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"boards": boards})
+}
+
+// Убранная доска не удаляется: карточки и журнал переходов остаются, по
+// ним считается поток. Поэтому DELETE здесь означает «убрать с глаз»,
+// а не «стереть», и у него есть обратное действие.
+func (s *Server) handleArchiveBoard(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	err := s.boards.Archive(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failAccess(w, "архивация доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleRestoreBoard(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	err := s.boards.Restore(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failAccess(w, "возврат доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

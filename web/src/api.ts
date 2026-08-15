@@ -334,6 +334,11 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
+  archivedBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards/archived'),
+  /** Убирает доску с глаз, не удаляя: карточки и журнал остаются, по ним
+   *  считается поток. Поэтому у действия есть обратное. */
+  archiveBoard: (boardId: string) => request<void>('DELETE', `/api/boards/${boardId}`),
+  restoreBoard: (boardId: string) => request<void>('POST', `/api/boards/${boardId}/restore`),
   createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),
 

@@ -192,3 +192,58 @@ func translateAccess(err error) error {
 	}
 	return err
 }
+
+// --- архив ---
+
+// Archive убирает доску с глаз, не удаляя её. Журнал переходов и все
+// карточки остаются: по ним считается поток, и вырезать их значило бы
+// потерять историю, которую больше неоткуда взять.
+func (s *Service) Archive(ctx context.Context, orgID, actorID, boardID string) error {
+	return s.setArchived(ctx, orgID, actorID, boardID, true)
+}
+
+// Restore возвращает доску из архива.
+func (s *Service) Restore(ctx context.Context, orgID, actorID, boardID string) error {
+	return s.setArchived(ctx, orgID, actorID, boardID, false)
+}
+
+func (s *Service) setArchived(ctx context.Context, orgID, actorID, boardID string, archived bool) error {
+	return translateAccess(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			update boards set archived_at = case when $2 then now() else null end
+			 where id = $1 and (archived_at is null) = $2`, boardID, archived)
+		if err != nil {
+			return err
+		}
+		// Ноль строк — доска не найдена или уже в нужном состоянии.
+		// Для вызывающего это одно и то же: делать нечего.
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	}))
+}
+
+// Archived перечисляет убранные доски — иначе вернуть их будет неоткуда.
+func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, error) {
+	out := []Info{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select id, name, version from boards
+			 where archived_at is not null
+			 order by archived_at desc`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var b Info
+			if err := rows.Scan(&b.ID, &b.Name, &b.Version); err != nil {
+				return err
+			}
+			out = append(out, b)
+		}
+		return rows.Err()
+	})
+	return out, err
+}

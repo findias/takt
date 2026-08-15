@@ -132,3 +132,37 @@ func TestBoardAccessOfAnotherOrgIsNotFound(t *testing.T) {
 		t.Errorf("добавление в чужую доску: код %d, ожидался 404", code)
 	}
 }
+
+// «Убрать» — не «удалить»: карточки и журнал остаются, и доску можно
+// вернуть. Без обратного действия архивация была бы удалением с лишним
+// шагом.
+func TestBoardIsArchivedAndRestoredOverHTTP(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	viewer := owner.join("viewer")
+	boardID := owner.board("Найм")
+
+	// Наблюдателю доска видна, но убрать её он не может.
+	viewer.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	if code, _ := viewer.do("DELETE", "/api/boards/"+boardID, nil); code != http.StatusForbidden {
+		t.Errorf("наблюдатель убрал доску: код %d, ожидался 403", code)
+	}
+
+	owner.mustDo("DELETE", "/api/boards/"+boardID, nil, http.StatusNoContent)
+	if code, _ := owner.do("GET", "/api/boards/"+boardID, nil); code != http.StatusNotFound {
+		t.Errorf("убранная доска открывается: код %d, ожидался 404", code)
+	}
+
+	raw := owner.mustDo("GET", "/api/boards/archived", nil, http.StatusOK)
+	if boards, _ := field(t, raw, "boards").([]any); len(boards) != 1 {
+		t.Fatalf("в архиве %d досок, ожидалась одна; тело: %s", len(boards), raw)
+	}
+
+	owner.mustDo("POST", "/api/boards/"+boardID+"/restore", nil, http.StatusNoContent)
+	owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+
+	// Повтор ничего не меняет и говорит об этом.
+	if code, _ := owner.do("POST", "/api/boards/"+boardID+"/restore", nil); code != http.StatusNotFound {
+		t.Errorf("повторный возврат: код %d, ожидался 404", code)
+	}
+}

@@ -14,6 +14,7 @@ export function BoardList({
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [openAccess, setOpenAccess] = useState<string | null>(null)
+  const [archived, setArchived] = useState<BoardInfo[] | null>(null)
   // Люди и подразделения нужны только настройке доступа, поэтому берутся
   // один раз на список, а не по разу на каждую доску.
   const [people, setPeople] = useState<Member[]>([])
@@ -59,13 +60,34 @@ export function BoardList({
           <li key={b.id}>
             <div className="row row--between">
               <button onClick={() => onOpen(b.id)}>{b.name}</button>
-              <button
-                className="link"
-                aria-expanded={openAccess === b.id}
-                onClick={() => setOpenAccess((v) => (v === b.id ? null : b.id))}
-              >
-                Доступ
-              </button>
+              <div className="row row--tight">
+                <button
+                  className="link"
+                  aria-expanded={openAccess === b.id}
+                  onClick={() => setOpenAccess((v) => (v === b.id ? null : b.id))}
+                >
+                  Доступ
+                </button>
+                {canEdit && (
+                  <button
+                    className="link"
+                    aria-label={`Убрать доску «${b.name}» в архив`}
+                    onClick={() => {
+                      api
+                        .archiveBoard(b.id)
+                        .then(() => {
+                          load()
+                          setArchived(null)
+                        })
+                        .catch((e) =>
+                          setError(e instanceof Error ? e.message : 'Не удалось убрать доску'),
+                        )
+                    }}
+                  >
+                    Убрать
+                  </button>
+                )}
+              </div>
             </div>
             {openAccess === b.id && (
               <BoardAccess
@@ -79,6 +101,27 @@ export function BoardList({
           </li>
         ))}
       </ul>
+
+      <Archive
+        boards={archived}
+        canEdit={canEdit}
+        onOpen={() =>
+          api
+            .archivedBoards()
+            .then((r) => setArchived(r.boards))
+            .catch(() => setArchived([]))
+        }
+        onRestore={(id) =>
+          api
+            .restoreBoard(id)
+            .then(() => {
+              load()
+              return api.archivedBoards()
+            })
+            .then((r) => setArchived(r.boards))
+            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось вернуть доску'))
+        }
+      />
 
       {canEdit && (
         <form
@@ -107,5 +150,51 @@ export function BoardList({
         </form>
       )}
     </div>
+  )
+}
+
+/**
+ * Архив досок.
+ *
+ * Убранная доска не удаляется: карточки и журнал переходов остаются, по ним
+ * считается поток. Значит, список убранного обязан существовать — иначе
+ * «убрать» ничем не отличалось бы от удаления, только выглядело мягче.
+ */
+function Archive({
+  boards,
+  canEdit,
+  onOpen,
+  onRestore,
+}: {
+  boards: BoardInfo[] | null
+  canEdit: boolean
+  onOpen: () => void
+  onRestore: (id: string) => void
+}) {
+  if (boards === null) {
+    return (
+      <button className="link" onClick={onOpen}>
+        Показать архив
+      </button>
+    )
+  }
+  if (boards.length === 0) return <p className="muted small">В архиве пусто.</p>
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Архив</h2>
+      <ul className="member-list">
+        {boards.map((b) => (
+          <li key={b.id}>
+            <span>{b.name}</span>
+            {canEdit && (
+              <button className="link" onClick={() => onRestore(b.id)}>
+                Вернуть
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
