@@ -55,7 +55,7 @@ async function openBoard(page: Page, name: string) {
 
 async function addCard(page: Page, column: string, title: string) {
   const section = page.getByRole('region', { name: column })
-  await section.getByRole('button', { name: '+ Добавить карточку' }).click()
+  await section.getByRole('button', { name: 'Добавить карточку' }).click()
   await section.getByPlaceholder('Что нужно сделать?').fill(title)
   await section.getByRole('button', { name: 'Добавить', exact: true }).click()
   await expect(cardIn(page, column, title)).toBeVisible()
@@ -111,7 +111,7 @@ test('от входа до переставленной карточки', async
 
   // И переживает выход с повторным входом — то есть лежит не в браузере.
   // Выход живёт в шапке списка досок: на самой доске в шапке только доска.
-  await page.getByRole('button', { name: '← Все доски' }).click()
+  await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Выйти' }).click()
   await signIn(page, who)
   await openBoard(page, 'Первая доска')
@@ -204,10 +204,13 @@ test('ссылка открывает доску и карточку, чужая
   await addCard(page, 'Очередь', 'Прислать коллеге')
 
   // Карточка открывается — и адрес меняется вместе с ней.
+  // Действия карточки живут в меню: три подписи в ряд не помещались
+  // в ширину колонки и обрезались.
   await cardIn(page, 'Очередь', 'Прислать коллеге').hover()
   await cardIn(page, 'Очередь', 'Прислать коллеге')
-    .getByRole('button', { name: /Открыть/ })
+    .getByRole('button', { name: /Действия карточки/ })
     .click()
+  await page.getByRole('menuitem', { name: 'Открыть' }).click()
   await expect(page.getByRole('heading', { name: 'Прислать коллеге' })).toBeVisible()
   const cardUrl = page.url()
   expect(cardUrl).toMatch(/\/board\/[0-9a-f-]+\/card\/[0-9a-f-]+$/)

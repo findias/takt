@@ -30,7 +30,7 @@ async function board(page: Page, name: string) {
 
 async function addCard(page: Page, column: string, title: string) {
   const section = page.getByRole('region', { name: column })
-  await section.getByRole('button', { name: '+ Добавить карточку' }).click()
+  await section.getByRole('button', { name: 'Добавить карточку' }).click()
   await section.getByPlaceholder('Что нужно сделать?').fill(title)
   await section.getByRole('button', { name: 'Добавить', exact: true }).click()
   await expect(
@@ -78,8 +78,9 @@ test('снимки экранов', async ({ page }) => {
   // действия появляются по наведению.
   const card = page.getByRole('group', { name: /Согласовать смету/ })
   await card.hover()
-  await page.screenshot({ path: `${SHOTS}/07a-карточка-с-действиями.png` })
-  await card.getByRole('button', { name: /Открыть/ }).click()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.screenshot({ path: `${SHOTS}/07a-меню-карточки.png` })
+  await page.getByRole('menuitem', { name: 'Открыть' }).click()
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/07-панель-сбоку.png` })
 
@@ -105,7 +106,7 @@ test('снимки экранов', async ({ page }) => {
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   // Экран команды и структуры.
-  await page.getByRole('button', { name: '← Все доски' }).click()
+  await page.getByRole('button', { name: 'Все доски' }).click()
   await expect(page.getByRole('button', { name: 'Поставки', exact: true })).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/10-список-досок.png` })
   await page.getByRole('button', { name: 'Команда' }).click()

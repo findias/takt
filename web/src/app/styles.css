@@ -776,6 +776,19 @@ select {
     display: none;
   }
 }
+.card:hover,
+.card:focus-within {
+  /* Карточка, с которой сейчас работают, поднимается над соседями
+     и перестаёт обрезать своё содержимое.
+     
+     Второе важнее первого и совсем неочевидно: `content-visibility: auto`
+     подразумевает `contain: paint`, а он обрезает всё, что выходит
+     за границы элемента. Меню действий вылезает за карточку вниз —
+     и его нижние пункты просто нельзя было нажать. Нашлось сценарием:
+     пункт виден на снимке, а щелчок по нему не проходит. */
+  z-index: 2;
+  content-visibility: visible;
+}
 .card:hover {
   border-color: var(--ink-3);
 }
@@ -804,6 +817,10 @@ select {
 }
 .card-actions {
   display: none;
+  /* Кнопка действий прижата к правому краю карточки: так меню,
+     выровненное по её правому краю, раскрывается внутрь колонки,
+     а не за её пределы — где список карточек его обрежет. */
+  justify-content: flex-end;
   gap: var(--space-1);
   /* Ряд действий не помещался в ширину колонки и обрезался: было видно
      «Откры», «Переиме», «Удалит». Перенос по строкам вместо обрезки —
@@ -1252,4 +1269,179 @@ textarea.description {
    от сломанной, и это первое, обо что спотыкаются. */
 .empty-board {
   margin: var(--space-4) var(--space-4) 0;
+}
+
+
+/* --- Компонентная база --- */
+
+/* Кнопка. Четыре вида: главное действие на экране одно, обычных сколько
+   угодно, тихая живёт в плотных рядах, опасная — там, где отменить
+   нельзя. Занятость отличается от недоступности: «уже делаю» и «сейчас
+   нельзя» — разные сообщения. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--space-1) var(--space-3);
+  min-height: var(--target);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+  font-weight: 600;
+}
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn--quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-2);
+}
+.btn--quiet:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+.btn--danger {
+  color: var(--warn);
+  border-color: var(--rule);
+}
+.btn--danger:hover:not(:disabled) {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+.btn--icon {
+  padding: 0;
+  /* Цель нажатия по WCAG 2.5.8 считается по самой кнопке, а не по
+     иконке внутри неё. */
+  min-width: var(--target);
+}
+.icon {
+  flex: none;
+}
+
+/* Меню. Список открывается под кнопкой и перекрывает содержимое —
+   отсюда z-index; больше ничего в интерфейсе так не всплывает. */
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+.menu-list {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 30;
+  min-width: 12rem;
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-drag);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  padding: var(--space-1) var(--space-2);
+  min-height: var(--target);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible {
+  background: var(--surface-2);
+}
+.menu-item--danger {
+  color: var(--warn);
+}
+.menu-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Сообщения. Не больше трёх разом — дальше это стена, которую
+   не читают. */
+.toasts {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(30rem, calc(100vw - 2rem));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-3);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-drag);
+  font-size: var(--text-sm);
+}
+.toast--warning {
+  border-left-color: var(--warn);
+  background: var(--warn-soft);
+}
+.toast-text {
+  flex: 1;
+}
+
+/* Диалог. Ловушку фокуса, верхний слой и затемнение делает браузер —
+   своя реализация всего этого обычно заканчивается окном, из которого
+   не выйти с клавиатуры. */
+.dialog {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--space-4);
+  width: min(28rem, calc(100vw - 2rem));
+  box-shadow: var(--shadow-lg);
+}
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.dialog-title {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  margin: 0 0 var(--space-2);
+}
+.dialog-body {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+.dialog-actions {
+  margin-top: var(--space-4);
 }

@@ -100,6 +100,7 @@ beforeEach(() => {
   snapshot.mockReset()
   operation.mockReset()
   snapshot.mockResolvedValue(board())
+  said.length = 0
   FakeEventSource.last = null
   vi.stubGlobal('EventSource', FakeEventSource)
 })
@@ -108,9 +109,21 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+/** Сообщения теперь показывает ToastHost, а хук только зовёт функцию.
+ *  В тестах она подменена: проверять надо, что и когда он говорит,
+ *  а не как это выглядит. */
+const said: { text: string; action?: { label: string; onAct: () => void } }[] = []
+const notify = (message: {
+  text: string
+  tone: 'info' | 'warning'
+  action?: { label: string; onAct: () => void }
+}) => {
+  said.push(message)
+}
+
 /** Хук с уже загруженной доской. */
 async function loaded() {
-  const view = renderHook(() => useBoard('board'))
+  const view = renderHook(() => useBoard('board', notify))
   await waitFor(() => expect(view.result.current.base).not.toBeNull())
   return view
 }
@@ -125,7 +138,7 @@ describe('загрузка', () => {
 
   it('не роняет доску, когда снимок не пришёл, и говорит об этом', async () => {
     snapshot.mockRejectedValueOnce(new NetworkError('Сеть недоступна'))
-    const view = renderHook(() => useBoard('board'))
+    const view = renderHook(() => useBoard('board', notify))
     await waitFor(() => expect(view.result.current.loadError).toBe('Сеть недоступна'))
     expect(view.result.current.loading).toBe(false)
   })
@@ -204,7 +217,7 @@ describe('расхождение с сервером', () => {
     await waitFor(() => expect(view.result.current.pending).toBe(0))
     expect(view.result.current.order[COL_A]).toEqual(['вторая', 'первая'])
     expect(snapshot).toHaveBeenCalledTimes(1)
-    expect(view.result.current.notices.map((n) => n.text)).toEqual(['Доска изменилась'])
+    expect(said.map((m) => m.text)).toEqual(['Доска изменилась'])
   })
 
   // А вот незнакомая карточка в присланном порядке означает, что своими
@@ -240,19 +253,19 @@ describe('расхождение с сервером', () => {
       view.result.current.moveCard('первая', COL_B, { place: 'end' })
     })
 
-    await waitFor(() => expect(view.result.current.notices.length).toBe(1))
+    await waitFor(() => expect(said.length).toBe(1))
     expect(view.result.current.order[COL_A]).toEqual(['первая', 'вторая'])
     expect(view.result.current.order[COL_B]).toEqual([])
 
-    const notice = view.result.current.notices[0]
-    expect(notice.retry).toBeTypeOf('function')
+    const notice = said[0]
+    expect(notice.action?.onAct).toBeTypeOf('function')
     const firstOperationId = operation.mock.calls[0][1]
 
     operation.mockResolvedValueOnce({
       version: 2,
       patch: { cards: [card('первая', COL_B, 'a2')] },
     })
-    await act(async () => notice.retry?.())
+    await act(async () => notice.action?.onAct())
     await waitFor(() => expect(operation).toHaveBeenCalledTimes(2))
     expect(operation.mock.calls[1][1]).toBe(firstOperationId)
   })

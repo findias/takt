@@ -85,7 +85,7 @@ test('на всех экранах цели нажатия не мельче 24 
   await page.getByPlaceholder('Название новой доски').fill('Доступность')
   await page.getByRole('button', { name: 'Создать', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: '+ Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
   await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
 
@@ -93,7 +93,7 @@ test('на всех экранах цели нажатия не мельче 24 
   await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()
   expect(await tinyTargets(page), 'доска').toEqual([])
 
-  await page.getByRole('button', { name: '← Все доски' }).click()
+  await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Команда' }).click()
   await expect(page.getByText('В организации')).toBeVisible()
   expect(await tinyTargets(page), 'команда').toEqual([])

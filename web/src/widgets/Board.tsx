@@ -26,6 +26,19 @@ import { progressLabel } from '../entities/card/model.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
+import { Menu } from '../shared/ui/Menu.tsx'
+import { useToast } from '../shared/ui/Toast.tsx'
+import {
+  ArchiveIcon,
+  ChevronLeftIcon,
+  EditIcon,
+  FlowIcon,
+  MoreIcon,
+  MoveIcon,
+  OpenIcon,
+  PeopleIcon,
+  PlusIcon,
+} from '../shared/ui/icons.tsx'
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
 
@@ -46,7 +59,8 @@ export function Board({
   meId: string
   onBack: () => void
 }) {
-  const board = useBoard(boardId)
+  const notify = useToast()
+  const board = useBoard(boardId, notify)
   const [announcement, setAnnouncement] = useState('')
 
   // Объявление ставится с задержкой около секунды: смена фокуса, которая
@@ -202,8 +216,9 @@ export function Board({
   return (
     <div className="board-screen">
       <header className="board-header">
-        <button className="link" onClick={onBack}>
-          ← Все доски
+        <button className="btn btn--quiet" onClick={onBack}>
+          <ChevronLeftIcon />
+          Все доски
         </button>
         <h1>{base.info.name}</h1>
         <span className="version" title="Версия доски растёт с каждой операцией">
@@ -219,7 +234,7 @@ export function Board({
             стоял только в списке досок, где он бесполезен. */}
         <div className="board-header-tail">
           <button
-            className="link"
+            className="btn btn--quiet"
             aria-expanded={showAccess}
             onClick={() => {
               setOpenCard(null)
@@ -227,32 +242,12 @@ export function Board({
               setShowAccess((v) => !v)
             }}
           >
+            <PeopleIcon />
             {visibilityLabel(access)}
           </button>
           <Appearance />
         </div>
       </header>
-
-      <div className="notices">
-        {board.notices.map((n) => (
-          <div key={n.id} className={`notice notice--${n.tone}`} role="status">
-            <span>{n.text}</span>
-            {n.retry && (
-              <button
-                onClick={() => {
-                  n.retry?.()
-                  board.dismiss(n.id)
-                }}
-              >
-                Повторить
-              </button>
-            )}
-            <button className="close" onClick={() => board.dismiss(n.id)} aria-label="Закрыть">
-              ×
-            </button>
-          </div>
-        ))}
-      </div>
 
       {/* Одна полоса, а не три: подсказка о потоке, итерации и переход
           к потоку — это всё «про доску целиком», и разносить их
@@ -264,7 +259,8 @@ export function Board({
             <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
           </div>
           <button
-            className="link"
+            className="btn btn--quiet"
+            aria-expanded={showFlow}
             onClick={() => {
               // Две панели разом перекрывают друг друга, а в модальном
               // режиме ещё и спорят за фокус. Открываем по одной.
@@ -272,6 +268,7 @@ export function Board({
               setShowFlow((v) => !v)
             }}
           >
+            <FlowIcon />
             Поток
           </button>
         </div>
@@ -485,7 +482,8 @@ function ColumnView(props: ColumnProps) {
         />
       ) : (
         <button className="add" onClick={() => setAdding(true)}>
-          + Добавить карточку
+          <PlusIcon />
+        Добавить карточку
         </button>
       )}
     </section>
@@ -615,35 +613,33 @@ function CardView({
             </div>
           )}
           <div className="card-actions">
-            {/* Перенос без перетаскивания. Не удобство, а требование
+            {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
+                не помещались и обрезались до «Откры», «Переиме», «Удалит».
+                Перенос стоит в нём же — это не удобство, а требование
                 WCAG 2.5.7: клавиатурного эквивалента недостаточно, нужен
                 путь, выполнимый одним нажатием. */}
-            <select
-              value=""
-              className="card-move"
-              aria-label={`Перенести «${title}» в другую колонку`}
-              onChange={(e) => {
-                if (e.target.value) onMoveToColumn(cardId, e.target.value)
-              }}
+            <Menu
+              label={`Действия карточки «${title}»`}
+              items={[
+                { label: 'Открыть', icon: <OpenIcon />, onSelect: onOpen },
+                { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
+                ...columns
+                  .filter((c) => c.id !== columnId)
+                  .map((c) => ({
+                    label: `Перенести в «${c.name}»`,
+                    icon: <MoveIcon />,
+                    onSelect: () => onMoveToColumn(cardId, c.id),
+                  })),
+                {
+                  label: 'Убрать в архив',
+                  icon: <ArchiveIcon />,
+                  danger: true,
+                  onSelect: onArchive,
+                },
+              ]}
             >
-              <option value="">Перенести…</option>
-              {columns
-                .filter((c) => c.id !== columnId)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
-            <button onClick={onOpen} aria-label={`Открыть «${title}»`}>
-              Открыть
-            </button>
-            <button onClick={() => setEditing(true)} aria-label={`Переименовать «${title}»`}>
-              Переименовать
-            </button>
-            <button onClick={onArchive} aria-label={`Удалить «${title}»`}>
-              Удалить
-            </button>
+              <MoreIcon />
+            </Menu>
           </div>
         </>
       )}

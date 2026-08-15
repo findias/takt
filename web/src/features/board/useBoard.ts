@@ -18,31 +18,26 @@ import {
 } from '../../entities/board/model.ts'
 import type { BaseState, MoveCommand } from '../../entities/board/model.ts'
 
-export type Notice = {
-  id: string
+/**
+ * Как хук сообщает о том, что пошло не так.
+ *
+ * Раньше он держал собственный список уведомлений и сам заводил таймеры
+ * их исчезновения. Это работа показа, а не работа с данными: теперь хук
+ * зовёт функцию, а очередь, время жизни и разметку держит ToastHost.
+ * Повтор идёт с тем же operationId, поэтому «дважды» ничего не произойдёт.
+ */
+export type Notify = (message: {
   text: string
   tone: 'info' | 'warning'
-  /** Повтор идёт с тем же operationId, поэтому «дважды» ничего не произойдёт. */
-  retry?: () => void
-}
+  action?: { label: string; onAct: () => void }
+}) => void
 
-export function useBoard(boardId: string | null) {
+export function useBoard(boardId: string | null, notify: Notify) {
   const [base, setBase] = useState<BaseState | null>(null)
   const [queue, setQueue] = useState<MoveCommand[]>([])
-  const [notices, setNotices] = useState<Notice[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const sending = useRef(false)
-
-  const notify = useCallback((text: string, tone: Notice['tone'], retry?: () => void) => {
-    const id = crypto.randomUUID()
-    setNotices((list) => [...list, { id, text, tone, retry }])
-    if (!retry) setTimeout(() => setNotices((list) => list.filter((n) => n.id !== id)), 4000)
-  }, [])
-
-  const dismiss = useCallback((id: string) => {
-    setNotices((list) => list.filter((n) => n.id !== id))
-  }, [])
 
   const reload = useCallback(async () => {
     if (!boardId) return
@@ -95,7 +90,10 @@ export function useBoard(boardId: string | null) {
             void reload()
             return current
           })
-          notify(conflict.error ?? 'Доска изменилась, пока вы перетаскивали карточку', 'warning')
+          notify({
+            text: conflict.error ?? 'Доска изменилась, пока вы перетаскивали карточку',
+            tone: 'warning',
+          })
           return
         }
 
@@ -103,13 +101,18 @@ export function useBoard(boardId: string | null) {
           // Карточка уже вернулась на место — команда убрана из очереди.
           // Предлагаем повтор с тем же operationId: если операция всё-таки
           // дошла до сервера, второй раз она не выполнится.
-          notify(`${e.message}. Карточка вернулась на место.`, 'warning', () =>
-            setQueue((list) => [...list, command]),
-          )
+          notify({
+            text: `${e.message}. Карточка вернулась на место.`,
+            tone: 'warning',
+            action: { label: 'Повторить', onAct: () => setQueue((list) => [...list, command]) },
+          })
           return
         }
 
-        notify(e instanceof Error ? e.message : 'Не удалось переместить карточку', 'warning')
+        notify({
+          text: e instanceof Error ? e.message : 'Не удалось переместить карточку',
+          tone: 'warning',
+        })
       } finally {
         sending.current = false
       }
@@ -186,7 +189,10 @@ export function useBoard(boardId: string | null) {
         const result = await api.operation(boardId, crypto.randomUUID(), type, payload)
         setBase((current) => (current ? applyPatch(current, result) : current))
       } catch (e) {
-        notify(e instanceof Error ? `${failureText}: ${e.message}` : failureText, 'warning')
+        notify({
+          text: e instanceof Error ? `${failureText}: ${e.message}` : failureText,
+          tone: 'warning',
+        })
       }
     },
     [boardId, notify],
@@ -308,8 +314,6 @@ export function useBoard(boardId: string | null) {
     pending: queue.length,
     loading,
     loadError,
-    notices,
-    dismiss,
     reload,
     moveCard,
     createCard,

@@ -9,6 +9,7 @@ import { Structure } from '../widgets/Structure.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
+import { ToastHost } from '../shared/ui/Toast.tsx'
 
 const TABS = [
   ['boards', 'Доски'],
@@ -16,7 +17,17 @@ const TABS = [
   ['structure', 'Структура'],
 ] as const
 
+/** Сообщения общие на всё приложение: их очередь и время жизни —
+ *  не забота экрана, который их вызвал. */
 export function App() {
+  return (
+    <ToastHost>
+      <Screens />
+    </ToastHost>
+  )
+}
+
+function Screens() {
   const [principal, setPrincipal] = useState<Principal | null>(null)
   const [checking, setChecking] = useState(true)
   // Что открыто — состояние адреса, а не компонента: иначе ссылку
