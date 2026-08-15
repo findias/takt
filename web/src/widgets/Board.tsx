@@ -31,6 +31,7 @@ import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Avatar } from '../shared/ui/Avatar.tsx'
+import { BoardSkeleton, ErrorState } from '../shared/ui/states.tsx'
 import { IconButton } from '../shared/ui/Button.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
@@ -377,13 +378,20 @@ export function Board({
 
   if (board.loadError) {
     return (
-      <div className="centered">
-        <p>{board.loadError}</p>
-        <button onClick={() => void board.reload()}>Попробовать ещё раз</button>
+      <div className="board-screen">
+        <ErrorState what="загрузить доску" error={board.loadError} onRetry={() => void board.reload()} />
       </div>
     )
   }
-  if (!base) return <div className="centered">Загружаем доску…</div>
+  // Заглушка в форме доски, а не слово «загружаем»: человек успевает
+  // привыкнуть к раскладке до того, как она наполнится.
+  if (!base) {
+    return (
+      <div className="board-screen">
+        <BoardSkeleton />
+      </div>
+    )
+  }
 
   // Колонки рисуются для каждой дорожки: сами колонки одни и те же,
   // разнится только набор карточек в них.

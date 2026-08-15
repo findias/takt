@@ -14,6 +14,7 @@ import type {
   Role,
 } from '../shared/api/index.ts'
 import { actorText, auditText, timeText } from '../entities/feed/model.ts'
+import { Skeleton } from '../shared/ui/states.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -45,7 +46,7 @@ export function Team({ principal }: { principal: Principal }) {
 
       <section className="stack">
         <h2 className="section-title">В организации</h2>
-        {members === null && <p className="muted">Загружаем…</p>}
+        {members === null && <Skeleton lines={2} />}
         <ul className="member-list">
           {members?.map((m) => (
             <li key={m.userId}>

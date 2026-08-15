@@ -1385,6 +1385,70 @@ textarea.description {
   min-width: 0;
 }
 
+/* Заглушки и состояния экрана. Полосы на месте будущих строк, а не
+   крутящийся кружок: кружок сообщает «жди», полосы — «здесь будет
+   список», и человек успевает привыкнуть к раскладке. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.skeleton-line {
+  height: 1rem;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--rule) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton--title .skeleton-line {
+  height: 1.25rem;
+  width: 60%;
+}
+.skeleton--cards .skeleton-line {
+  height: 3rem;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+/* Тем, кто просил меньше движения, остаётся ровный фон: мерцание
+   в заглушке ничего не объясняет, оно только развлекает. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+    background: var(--surface-2);
+  }
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  max-width: 40rem;
+}
+.state--error {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+.state-title {
+  margin: 0;
+  font-weight: 650;
+}
+
 /* Карточка в руке. Наклон в полтора градуса и тень отличают «взятое»
    от «лежащего»: без них превью выглядит вторым экземпляром карточки,
    и непонятно, какой из них настоящий. */

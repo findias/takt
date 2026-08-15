@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../shared/api/index.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { BoardAccess } from '../features/access/BoardAccess.tsx'
+import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 
 export function BoardList({
   principal,
@@ -48,11 +49,13 @@ export function BoardList({
   return (
     <div className="stack">
       {error && <p className="error">{error}</p>}
-      {boards === null && <p className="muted">Загружаем…</p>}
+      {boards === null && <Skeleton lines={3} />}
       {boards?.length === 0 && (
-        <p className="muted">
-          {canEdit ? 'Пока ни одной. Создайте первую.' : 'В этой организации пока нет досок.'}
-        </p>
+        <EmptyState title="Досок пока нет">
+          {canEdit
+            ? 'Доска — это колонки и карточки: заведите первую внизу, остальное появится по ходу дела.'
+            : 'В этой организации ещё не завели ни одной доски. Заводит их тот, кто может изменять данные.'}
+        </EmptyState>
       )}
 
       <ul className="board-list">

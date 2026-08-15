@@ -10,6 +10,7 @@ import type {
 } from '../shared/api/index.ts'
 import { allowedParents, buildTree, canNestInside, counters } from '../entities/team/model.ts'
 import type { TreeNode } from '../entities/team/model.ts'
+import { Skeleton } from '../shared/ui/states.tsx'
 
 /**
  * Структура организации: дерево подразделений, их состав и наблюдение.
@@ -47,7 +48,7 @@ export function Structure({ principal }: { principal: Principal }) {
     p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
   }
 
-  if (teams === null) return <p className="muted">Загружаем…</p>
+  if (teams === null) return <Skeleton lines={3} />
   const tree = buildTree(teams)
 
   return (
@@ -216,7 +217,7 @@ function TeamMembers({
   return (
     <div className="tree-body stack">
       {members === null ? (
-        <p className="muted small">Загружаем…</p>
+        <Skeleton lines={2} />
       ) : members.length === 0 ? (
         <p className="muted small">
           Никого нет. Участник подразделения работает и во всех отделах под ним,

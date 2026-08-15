@@ -242,7 +242,11 @@ test('ссылка открывает доску и карточку, чужая
   const strangerPage = await stranger.newPage()
   await register(strangerPage)
   await strangerPage.goto(cardUrl)
-  await expect(strangerPage.getByText(/не найдена|Не удалось/)).toBeVisible()
+  // Ошибка — это тревога с причиной и кнопкой, а не строчка текста:
+  // проверяем именно её, иначе совпадений в разметке несколько.
+  const refusal = strangerPage.getByRole('alert')
+  await expect(refusal).toBeVisible()
+  await expect(refusal).toContainText(/не найдена/)
   await expect(strangerPage.getByRole('group', { name: /Карточка/ })).toHaveCount(0)
   await stranger.close()
 })
