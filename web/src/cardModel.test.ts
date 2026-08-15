@@ -28,6 +28,7 @@ function card(id: string, title: string, extra: Partial<Card> = {}): Card {
     startedAt: null,
     finishedAt: null,
     outcome: null,
+    estimate: null,
     ...extra,
   }
 }
@@ -124,10 +125,37 @@ test('карточки, которой нет, не существует и де
 
 test('прогресс показывается только когда есть подзадачи', () => {
   assert.equal(progressLabel(card('a', 'А')), null)
-  assert.equal(progressLabel(card('a', 'А', { progress: { done: 0, total: 0 } })), null)
-  assert.equal(progressLabel(card('a', 'А', { progress: { done: 1, total: 3 } })), '1 из 3')
-  assert.equal(progressRatio(card('a', 'А', { progress: { done: 1, total: 4 } })), 0.25)
+  assert.equal(
+    progressLabel(card('a', 'А', { progress: { done: 0, total: 0, byWeight: false } })),
+    null,
+  )
+  assert.equal(
+    progressLabel(card('a', 'А', { progress: { done: 1, total: 3, byWeight: false } })),
+    '1 из 3',
+  )
+  assert.equal(
+    progressRatio(card('a', 'А', { progress: { done: 1, total: 4, byWeight: false } })),
+    0.25,
+  )
   assert.equal(progressRatio(card('a', 'А')), 0)
+})
+
+test('прогресс по весу называет единицу и склоняет её', () => {
+  // Разница не косметическая: «3 из 5» и «12 из 20 очков» — разные
+  // утверждения о том, сколько работы сделано.
+  const weighted = (done: number, total: number) =>
+    card('a', 'А', { progress: { done, total, byWeight: true } })
+
+  assert.equal(progressLabel(weighted(12, 20), 'points'), '12 из 20 очков')
+  assert.equal(progressLabel(weighted(1, 1), 'hours'), '1 из 1 час')
+  assert.equal(progressLabel(weighted(0, 3), 'days'), '0 из 3 дня')
+  assert.equal(progressLabel(weighted(0, 13), 'points'), '0 из 13 очков')
+
+  // Дробные оценки существуют, но «2.00» на карточке не нужно никому.
+  assert.equal(progressLabel(weighted(0.5, 2.5), 'hours'), '0.5 из 2.5 часа')
+
+  // Без единицы подпись остаётся честной, просто без названия.
+  assert.equal(progressLabel(weighted(12, 20)), '12 из 20')
 })
 
 test('в подзадачи не предлагается ни сама карточка, ни занятые', () => {

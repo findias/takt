@@ -12,7 +12,13 @@ export type Principal = {
   orgName: string
   orgSlug: string
   role: Role
+  /** В чём организация оценивает работу. Свойство организации, а не
+   *  карточки: складывать часы с очками бессмысленно, а прогресс —
+   *  это сложение. */
+  estimateUnit: EstimateUnit
 }
+
+export type EstimateUnit = 'points' | 'hours' | 'days'
 
 export type Membership = {
   orgId: string
@@ -164,8 +170,11 @@ export type Card = {
    *  Отказ и завершение — разные факты: иначе пропускная способность
    *  считает выброшенное за сделанное. */
   outcome: 'done' | 'discarded' | null
-  /** Прогресс по подзадачам; пусто, если подзадач нет. */
-  progress?: { done: number; total: number }
+  /** Оценка в единицах организации. Пусто — не оценена. */
+  estimate: number | null
+  /** Прогресс по подзадачам; пусто, если подзадач нет. `byWeight`
+   *  говорит, чем он измерен: суммой оценок или штуками. */
+  progress?: { done: number; total: number; byWeight: boolean }
   /** Открытая блокировка, если есть. */
   blocked?: { id: string; reason: string; blockedAt: string }
 }

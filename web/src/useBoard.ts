@@ -180,6 +180,14 @@ export function useBoard(boardId: string | null) {
       run('RENAME_COLUMN', { columnId, name }, 'Не удалось переименовать колонку'),
     [run],
   )
+  // null снимает оценку, отсутствие поля её не трогает: иначе
+  // переименование стирало бы оценку.
+  const estimateCard = useCallback(
+    (cardId: string, estimate: number | null) =>
+      run('UPDATE_CARD', { cardId, estimate }, 'Не удалось сохранить оценку'),
+    [run],
+  )
+
   const describeCard = useCallback(
     (cardId: string, description: string) =>
       run('UPDATE_CARD', { cardId, description }, 'Не удалось сохранить описание'),
@@ -248,6 +256,7 @@ export function useBoard(boardId: string | null) {
     createCard,
     renameCard,
     describeCard,
+    estimateCard,
     archiveCard,
     linkCards,
     unlinkCards,

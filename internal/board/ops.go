@@ -383,6 +383,9 @@ type updateCardPayload struct {
 	CardID      string  `json:"cardId"`
 	Title       *string `json:"title"`
 	Description *string `json:"description"`
+	// Оценка различает «не трогать» и «снять»: у карточки без оценки
+	// и у карточки, оценку которой не присылали, разная судьба.
+	Estimate optionalFloat `json:"estimate"`
 }
 
 func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -390,8 +393,11 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор UPDATE_CARD: %v", err)
 	}
-	if p.Title == nil && p.Description == nil {
+	if p.Title == nil && p.Description == nil && !p.Estimate.Set {
 		return Patch{}, badRequestf("нечего изменять")
+	}
+	if p.Estimate.Set && p.Estimate.Value != nil && *p.Estimate.Value <= 0 {
+		return Patch{}, badRequestf("оценка должна быть больше нуля")
 	}
 	if p.Title != nil {
 		trimmed := strings.TrimSpace(*p.Title)
@@ -405,11 +411,13 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		update cards
 		   set title       = coalesce($2, title),
 		       description = coalesce($3, description),
+		       estimate    = case when $5 then $6 else estimate end,
 		       version     = version + 1,
 		       updated_at  = now()
 		 where id = $1 and board_id = $4 and archived_at is null
 		 returning `+cardFields,
-		p.CardID, p.Title, p.Description, boardID))
+		p.CardID, p.Title, p.Description, boardID,
+		p.Estimate.Set, p.Estimate.Value))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, conflictf("", "карточка уже удалена")
 	}
@@ -417,11 +425,20 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, err
 	}
 
+	// Событие называет главное из изменённого. Оценка важнее описания:
+	// по ней считается прогресс и прогноз, и её изменение — то, о чём
+	// потом спрашивают.
 	kind := "described"
-	if p.Title != nil {
+	payload := map[string]any(nil)
+	switch {
+	case p.Title != nil:
 		kind = "renamed"
+		payload = map[string]any{"title": *p.Title}
+	case p.Estimate.Set:
+		kind = "estimated"
+		payload = map[string]any{"estimate": p.Estimate.Value}
 	}
-	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, nil); err != nil {
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, payload); err != nil {
 		return Patch{}, err
 	}
 	return Patch{Cards: []Card{c}}, nil
@@ -540,6 +557,18 @@ func renameColumn(ctx context.Context, tx pgx.Tx, _, boardID string, raw json.Ra
 		ColumnID: p.ColumnID,
 		Name:     &p.Name,
 	})
+}
+
+// optionalFloat различает «поле не прислали» и «прислали null» — как
+// и optionalInt, но для дробных значений.
+type optionalFloat struct {
+	Set   bool
+	Value *float64
+}
+
+func (o *optionalFloat) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
 }
 
 // optionalInt различает «поле не прислали» и «прислали null». Для лимита

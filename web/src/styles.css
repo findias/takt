@@ -670,3 +670,7 @@ textarea.description {
 .feed li:last-child {
   border-bottom: none;
 }
+
+.estimate-input {
+  width: 5rem;
+}

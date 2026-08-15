@@ -5,7 +5,7 @@
 // другой команды или на доску, которой спрашивающий не видит. Разложить
 // это по полкам можно без сети — значит, здесь и раскладываем.
 
-import type { Card, Link, LinkKind, LinkedCard } from './api.ts'
+import type { Card, EstimateUnit, Link, LinkKind, LinkedCard } from './api.ts'
 import type { BaseState } from './boardModel.ts'
 
 /** Куда ведёт связь и что об этом известно. */
@@ -99,14 +99,44 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
   }
 }
 
+// Названия единиц оценки живут здесь, а не в клиенте API: модель берёт
+// оттуда только типы, и они стираются при сборке.
+const UNITS: Record<EstimateUnit, [string, string, string]> = {
+  points: ['очко', 'очка', 'очков'],
+  hours: ['час', 'часа', 'часов'],
+  days: ['день', 'дня', 'дней'],
+}
+
 /**
- * Подпись прогресса. Считается по количеству подзадач — и это временно:
- * без веса задачи «три из пяти» врут в любой команде, где задачи разного
- * размера. Вес заложен в план отдельным пунктом.
+ * Подпись прогресса.
+ *
+ * Считается двумя способами, и подпись обязана их различать. По штукам —
+ * «3 из 5»; по весу — «12 из 20 очков». Разница не косметическая: три
+ * мелкие правки из пяти задач не означают, что работа сделана на
+ * шестьдесят процентов, и подпись не должна это скрывать.
  */
-export function progressLabel(card: Card): string | null {
+export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   if (!card.progress || card.progress.total === 0) return null
-  return `${card.progress.done} из ${card.progress.total}`
+  const { done, total, byWeight } = card.progress
+  const base = `${number(done)} из ${number(total)}`
+  if (!byWeight || !unit) return base
+  return `${base} ${plural(total, UNITS[unit])}`
+}
+
+/** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */
+function number(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))
+}
+
+function plural(n: number, forms: [string, string, string]): string {
+  // Дробное число склоняется как «часа»: 1.5 часа, 2.5 часа.
+  if (!Number.isInteger(n)) return forms[1]
+  const mod100 = n % 100
+  const mod10 = n % 10
+  if (mod100 >= 11 && mod100 <= 14) return forms[2]
+  if (mod10 === 1) return forms[0]
+  if (mod10 >= 2 && mod10 <= 4) return forms[1]
+  return forms[2]
 }
 
 /** Доля выполненного от нуля до единицы — для полоски. */

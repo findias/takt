@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { LINK_KIND_NAMES, api } from './api'
-import type { BoardEvent, LinkKind } from './api'
+import type { BoardEvent, EstimateUnit, LinkKind } from './api'
 import { actorText, eventText, timeText } from './feedModel'
 import type { BaseState } from './boardModel'
 import { candidatesForSubtask, cardDetails, progressLabel, progressRatio } from './cardModel'
@@ -18,9 +18,11 @@ export function CardPanel({
   base,
   boardId,
   cardId,
+  unit,
   canEdit,
   onClose,
   onDescribe,
+  onEstimate,
   onLink,
   onUnlink,
   onBlock,
@@ -29,9 +31,11 @@ export function CardPanel({
   base: BaseState
   boardId: string
   cardId: string
+  unit: EstimateUnit
   canEdit: boolean
   onClose: () => void
   onDescribe: (cardId: string, description: string) => void
+  onEstimate: (cardId: string, estimate: number | null) => void
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onBlock: (cardId: string, reason: string) => void
@@ -40,7 +44,7 @@ export function CardPanel({
   const details = cardDetails(base, cardId)
   if (!details) return null
   const { card } = details
-  const label = progressLabel(card)
+  const label = progressLabel(card, unit)
 
   return (
     <aside className="panel-card" aria-label={`Карточка «${card.title}»`}>
@@ -67,6 +71,13 @@ export function CardPanel({
       ) : (
         canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
       )}
+
+      <Estimate
+        value={card.estimate}
+        unit={unit}
+        canEdit={canEdit}
+        onSave={(value) => onEstimate(card.id, value)}
+      />
 
       <Description
         value={card.description}
@@ -178,6 +189,77 @@ function RelatedRow({
         </button>
       )}
     </div>
+  )
+}
+
+// Единицы называются коротко: подпись стоит рядом с полем, и повторять
+// «очков» в каждой строке незачем.
+const UNIT_SHORT: Record<EstimateUnit, string> = {
+  points: 'очк.',
+  hours: 'ч',
+  days: 'дн.',
+}
+
+/**
+ * Оценка карточки.
+ *
+ * Пустое поле — «не оценена», и это не то же самое, что ноль: прогресс
+ * родителя считается весом только когда оценены все подзадачи. Одна
+ * неоценённая — и счёт возвращается к штукам, потому что вес ноль молча
+ * выкинул бы работу из знаменателя.
+ */
+function Estimate({
+  value,
+  unit,
+  canEdit,
+  onSave,
+}: {
+  value: number | null
+  unit: EstimateUnit
+  canEdit: boolean
+  onSave: (value: number | null) => void
+}) {
+  const [draft, setDraft] = useState(value === null ? '' : String(value))
+  useEffect(() => setDraft(value === null ? '' : String(value)), [value])
+
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        Оценка: {value === null ? 'не поставлена' : `${value} ${UNIT_SHORT[unit]}`}
+      </p>
+    )
+  }
+
+  const commit = () => {
+    const trimmed = draft.trim()
+    if (trimmed === '') {
+      if (value !== null) onSave(null)
+      return
+    }
+    const parsed = Number(trimmed.replace(',', '.'))
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setDraft(value === null ? '' : String(value))
+      return
+    }
+    if (parsed !== value) onSave(parsed)
+  }
+
+  return (
+    <label className="row row--tight">
+      <span className="muted small">Оценка</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        className="estimate-input"
+        value={draft}
+        placeholder="—"
+        aria-label={`Оценка карточки, ${UNIT_SHORT[unit]}`}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+      <span className="muted small">{UNIT_SHORT[unit]}</span>
+    </label>
   )
 }
 

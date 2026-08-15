@@ -69,6 +69,8 @@ type Card struct {
 	ColumnEnteredAt time.Time  `json:"columnEnteredAt"`
 	StartedAt       *time.Time `json:"startedAt"`
 	FinishedAt      *time.Time `json:"finishedAt"`
+	// Оценка карточки в единицах организации. Пусто — не оценена.
+	Estimate *float64 `json:"estimate"`
 	// Исход работы: done или discarded. Пока работа идёт — пусто.
 	// Пропускная способность считается только по done, иначе выброшенные
 	// карточки завышают её и все прогнозы по ней.
@@ -83,12 +85,22 @@ type Card struct {
 	Blocked *Block `json:"blocked,omitempty"`
 }
 
-// Progress — доля завершённых подзадач. Считается запросом, а не хранится:
-// иначе пришлось бы поддерживать счётчики в согласованном состоянии при
-// каждом изменении любой подзадачи, в том числе на чужой доске.
+// Progress — доля завершённой работы среди подзадач. Считается запросом,
+// а не хранится: иначе пришлось бы поддерживать счётчики в согласованном
+// состоянии при каждом изменении любой подзадачи, в том числе на чужой
+// доске.
+//
+// Считается двумя способами, и это видно снаружи. Если оценены все
+// подзадачи — по сумме оценок; если хотя бы одна не оценена — по их
+// количеству. Смешивать нельзя: неоценённая подзадача с весом ноль
+// исчезла бы из знаменателя, и прогресс показывал бы больше сделанного,
+// чем есть. Ошибаться тут можно только в сторону осторожности.
 type Progress struct {
-	Done  int `json:"done"`
-	Total int `json:"total"`
+	Done  float64 `json:"done"`
+	Total float64 `json:"total"`
+	// ByWeight говорит, чем измерен прогресс: весом или штуками. Клиенту
+	// это нужно, чтобы подписать «3 из 5» или «12 из 20 очков».
+	ByWeight bool `json:"byWeight"`
 }
 
 // Block — интервал блокировки. Именно интервал, а не флаг: из булева поля
@@ -122,12 +134,13 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, outcome`
+	column_entered_at, started_at, finished_at, estimate, outcome`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description,
-		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt, &c.Outcome)
+		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
+		&c.Estimate, &c.Outcome)
 	return c, err
 }
 
@@ -334,8 +347,11 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	// связи в том и состоит, что работу может делать другая команда.
 	progressRows, err := tx.Query(ctx, `
 		select l.from_card,
-		       count(*)                                        as total,
-		       count(*) filter (where c.outcome = 'done')      as done
+		       count(*)                                   as total,
+		       count(*) filter (where c.outcome = 'done') as done,
+		       count(*) filter (where c.estimate is null) as unestimated,
+		       coalesce(sum(c.estimate), 0)               as weight,
+		       coalesce(sum(c.estimate) filter (where c.outcome = 'done'), 0) as weight_done
 		  from card_links l
 		  join cards c on c.id = l.to_card and c.archived_at is null
 		 where l.kind = 'subtask'
@@ -348,9 +364,17 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	defer progressRows.Close()
 	for progressRows.Next() {
 		var id string
-		var p Progress
-		if err := progressRows.Scan(&id, &p.Total, &p.Done); err != nil {
+		var total, done, unestimated int
+		var weight, weightDone float64
+		if err := progressRows.Scan(&id, &total, &done, &unestimated,
+			&weight, &weightDone); err != nil {
 			return err
+		}
+		p := Progress{Done: float64(done), Total: float64(total)}
+		// Вес берётся, только если оценены все подзадачи. Иначе
+		// неоценённая работа молча исчезла бы из знаменателя.
+		if unestimated == 0 && weight > 0 {
+			p = Progress{Done: weightDone, Total: weight, ByWeight: true}
 		}
 		if card := byID[id]; card != nil {
 			card.Progress = &p

@@ -51,7 +51,14 @@ export function App() {
 
   if (checking) return <div className="centered">Проверяем сессию…</div>
   if (!principal) return <Auth onSignedIn={setPrincipal} />
-  if (boardId) return <Board boardId={boardId} onBack={() => setBoardId(null)} />
+  if (boardId)
+    return (
+      <Board
+        boardId={boardId}
+        unit={principal.estimateUnit}
+        onBack={() => setBoardId(null)}
+      />
+    )
 
   return (
     <div className="centered">

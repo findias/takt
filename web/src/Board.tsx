@@ -12,13 +12,21 @@ import {
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { flowIssues, flowMarks, limitLabel, parseLimitDraft } from './boardModel.ts'
 import type { BaseState } from './boardModel.ts'
-import type { Card, Column, ColumnKind } from './api'
+import type { Card, Column, ColumnKind, EstimateUnit } from './api'
 import type { ColumnPatch } from './useBoard'
 import { progressLabel } from './cardModel'
 import { CardPanel } from './CardPanel'
 import { useBoard } from './useBoard'
 
-export function Board({ boardId, onBack }: { boardId: string; onBack: () => void }) {
+export function Board({
+  boardId,
+  unit,
+  onBack,
+}: {
+  boardId: string
+  unit: EstimateUnit
+  onBack: () => void
+}) {
   const board = useBoard(boardId)
   const [announcement, setAnnouncement] = useState('')
   const [openCard, setOpenCard] = useState<string | null>(null)
@@ -154,6 +162,7 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
             column={base.columns[columnId]}
             cardIds={order[columnId] ?? []}
             cards={base.cards}
+            unit={unit}
             onOpenCard={setOpenCard}
             onMoveByKeyboard={moveByKeyboard}
             onCreateCard={(title) => void board.createCard(columnId, title)}
@@ -172,9 +181,11 @@ export function Board({ boardId, onBack }: { boardId: string; onBack: () => void
           base={base}
           boardId={boardId}
           cardId={openCard}
+          unit={unit}
           canEdit
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}
+          onEstimate={(id, value) => void board.estimateCard(id, value)}
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={(id, reason) => void board.blockCard(id, reason)}
@@ -195,6 +206,7 @@ type ColumnProps = {
   column: Column
   cardIds: string[]
   cards: BaseState['cards']
+  unit: EstimateUnit
   onOpenCard: (cardId: string) => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onCreateCard: (title: string) => void
@@ -266,6 +278,7 @@ function ColumnView(props: ColumnProps) {
             cardId={cardId}
             columnId={props.columnId}
             card={props.cards[cardId]}
+            unit={props.unit}
             onOpen={() => props.onOpenCard(cardId)}
             onMoveByKeyboard={props.onMoveByKeyboard}
             onRename={(title) => props.onRenameCard(cardId, title)}
@@ -296,13 +309,23 @@ type CardProps = {
   cardId: string
   columnId: string
   card: Card | undefined
+  unit: EstimateUnit
   onOpen: () => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (title: string) => void
   onArchive: () => void
 }
 
-function CardView({ cardId, columnId, card, onOpen, onMoveByKeyboard, onRename, onArchive }: CardProps) {
+function CardView({
+  cardId,
+  columnId,
+  card,
+  unit,
+  onOpen,
+  onMoveByKeyboard,
+  onRename,
+  onArchive,
+}: CardProps) {
   const title = card?.title ?? '…'
   const ref = useRef<HTMLElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -378,7 +401,9 @@ function CardView({ cardId, columnId, card, onOpen, onMoveByKeyboard, onRename, 
                   ⛔ {card.blocked.reason}
                 </span>
               )}
-              {progressLabel(card) && <span className="mark">{progressLabel(card)}</span>}
+              {progressLabel(card, unit) && (
+                <span className="mark">{progressLabel(card, unit)}</span>
+              )}
             </div>
           )}
           <div className="card-actions">

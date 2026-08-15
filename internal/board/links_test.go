@@ -263,3 +263,77 @@ func TestSnapshotResolvesCardsFromOtherBoards(t *testing.T) {
 		t.Errorf("завершение подзадачи не отражено: %+v", snap.Linked[0])
 	}
 }
+
+// Прогресс по числу подзадач — ложь в любой команде, где задачи разного
+// размера. Три мелкие правки из пяти задач не означают, что работа
+// сделана на шестьдесят процентов.
+func TestProgressCountsWeightWhenEverythingIsEstimated(t *testing.T) {
+	f := newFixture(t)
+	queue := f.columns()[0].ID
+	done := f.columns()[2].ID
+	parent := f.createCard("Выпустить релиз", queue)
+
+	small := f.createCard("Мелочь", queue)
+	big := f.createCard("Большая часть", queue)
+	for _, child := range []string{small, big} {
+		f.mustApply("LINK_CARDS", map[string]any{
+			"fromCard": parent, "toCard": child, "kind": "subtask"})
+	}
+
+	// Пока не оценено ничего — считаем штуками.
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": small, "toColumnId": done, "place": "end"})
+	p := f.card(parent).Progress
+	if p == nil || p.ByWeight || p.Done != 1 || p.Total != 2 {
+		t.Fatalf("без оценок прогресс: %+v, ожидалось 1 из 2 штуками", p)
+	}
+
+	// Оценена половина — по-прежнему штуками: неоценённая подзадача
+	// с весом ноль исчезла бы из знаменателя, и прогресс показал бы
+	// больше сделанного, чем есть.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": small, "estimate": 1})
+	p = f.card(parent).Progress
+	if p == nil || p.ByWeight {
+		t.Fatalf("при частичной оценке прогресс посчитан весом: %+v", p)
+	}
+
+	// Оценено всё — считаем весом, и картина меняется на честную.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": big, "estimate": 9})
+	p = f.card(parent).Progress
+	if p == nil || !p.ByWeight || p.Done != 1 || p.Total != 10 {
+		t.Fatalf("с оценками прогресс: %+v, ожидалось 1 из 10 весом", p)
+	}
+}
+
+func TestEstimateIsSetClearedAndValidated(t *testing.T) {
+	f := newFixture(t)
+	id := f.createCard("Задача", f.columns()[0].ID)
+
+	if got := f.card(id).Estimate; got != nil {
+		t.Errorf("новая карточка уже оценена: %v", *got)
+	}
+
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "estimate": 2.5})
+	if got := f.card(id).Estimate; got == nil || *got != 2.5 {
+		t.Fatalf("оценка не сохранилась: %v", got)
+	}
+
+	// Не присланное поле ничего не меняет — иначе переименование
+	// стирало бы оценку.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "title": "Другое имя"})
+	if got := f.card(id).Estimate; got == nil || *got != 2.5 {
+		t.Errorf("переименование сбросило оценку: %v", got)
+	}
+
+	// Снять оценку можно только явным null.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "estimate": nil})
+	if got := f.card(id).Estimate; got != nil {
+		t.Errorf("оценка не снялась: %v", *got)
+	}
+
+	for _, bad := range []any{0, -3} {
+		if _, err := f.apply("UPDATE_CARD", map[string]any{
+			"cardId": id, "estimate": bad}); !errors.Is(err, ErrBadRequest) {
+			t.Errorf("оценка %v принята: %v", bad, err)
+		}
+	}
+}

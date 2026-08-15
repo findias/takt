@@ -51,6 +51,10 @@ type Membership struct {
 	OrgName string `json:"orgName"`
 	OrgSlug string `json:"orgSlug"`
 	Role    string `json:"role"`
+	// EstimateUnit — в чём организация оценивает работу: очки, часы, дни.
+	// Свойство организации, а не карточки: складывать часы с очками
+	// бессмысленно, а прогресс — это сложение.
+	EstimateUnit string `json:"estimateUnit"`
 }
 
 // Principal — кто выполняет запрос и от имени какой организации.
@@ -101,7 +105,7 @@ func Authenticate(ctx context.Context, pool *pgxpool.Pool, email, password strin
 // Memberships возвращает все организации пользователя.
 func Memberships(ctx context.Context, pool *pgxpool.Pool, userID string) ([]Membership, error) {
 	rows, err := pool.Query(ctx, `
-		select o.id, o.name, o.slug, m.role
+		select o.id, o.name, o.slug, m.role, o.estimate_unit
 		  from memberships m
 		  join orgs o on o.id = m.org_id
 		 where m.user_id = $1
@@ -113,7 +117,7 @@ func Memberships(ctx context.Context, pool *pgxpool.Pool, userID string) ([]Memb
 	out := []Membership{}
 	for rows.Next() {
 		var m Membership
-		if err := rows.Scan(&m.OrgID, &m.OrgName, &m.OrgSlug, &m.Role); err != nil {
+		if err := rows.Scan(&m.OrgID, &m.OrgName, &m.OrgSlug, &m.Role, &m.EstimateUnit); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -170,13 +174,14 @@ func PrincipalBySession(ctx context.Context, pool *pgxpool.Pool, sessionID strin
 	var p Principal
 	p.SessionID = sessionID
 	err := pool.QueryRow(ctx, `
-		select u.id, u.email, u.name, o.id, o.name, o.slug, m.role
+		select u.id, u.email, u.name, o.id, o.name, o.slug, m.role, o.estimate_unit
 		  from sessions s
 		  join users u on u.id = s.user_id
 		  join memberships m on m.user_id = u.id and m.org_id = s.active_org_id
 		  join orgs o on o.id = m.org_id
 		 where s.id = $1 and s.expires_at > now()`, sessionID).
-		Scan(&p.ID, &p.Email, &p.Name, &p.OrgID, &p.OrgName, &p.OrgSlug, &p.Role)
+		Scan(&p.ID, &p.Email, &p.Name, &p.OrgID, &p.OrgName, &p.OrgSlug, &p.Role,
+			&p.EstimateUnit)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Либо сессии нет, либо человека исключили из активной организации,
 		// пока он работал. Второй случай чиним подбором любой другой.
