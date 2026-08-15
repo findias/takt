@@ -23,6 +23,37 @@ type Config struct {
 	// Storage — место хранения вложений. Пока поддержан только file://,
 	// но интерфейс заложен так, чтобы позже подставить s3://.
 	Storage string
+
+	// Вход через корпоративный провайдер. Настройки берутся из окружения,
+	// а не из базы, и это решение стоит объяснить.
+	//
+	// Хранить настройки провайдера по организациям было бы правильно для
+	// облачной установки с сотней арендаторов. Но там же пришлось бы
+	// хранить секрет клиента, то есть шифровать его ключом, которого
+	// у нас нет, — и появился бы ключ, его ротация, хранилище ключей
+	// и вопрос «а кто расшифрует, если сервер потеряли». Корпоративный
+	// вход ставят в закрытом контуре, где организация одна, а секрет
+	// уже лежит в секретах кластера. Отсюда: одна установка — один
+	// провайдер, и никаких секретов в базе.
+	OIDC OIDCConfig
+}
+
+type OIDCConfig struct {
+	Issuer       string
+	ClientID     string
+	ClientSecret string
+	// OrgSlug — организация, в которую попадает пришедший впервые.
+	// Уже состоящий в какой-либо организации никуда не добавляется:
+	// вход не должен молча менять чью-то принадлежность.
+	OrgSlug string
+	// Label — надпись на кнопке. У заказчика провайдер называется
+	// не «OIDC», а «Корпоративный аккаунт» или именем своей системы,
+	// и человек ищет глазами знакомое слово.
+	Label string
+}
+
+func (c OIDCConfig) Enabled() bool {
+	return c.Issuer != "" && c.ClientID != ""
 }
 
 func Load() (Config, error) {
@@ -32,6 +63,13 @@ func Load() (Config, error) {
 		ListenAddr:  env("LISTEN_ADDR", ":8080"),
 		WebDir:      env("WEB_DIR", "./web/dist"),
 		Storage:     env("STORAGE", "file://./data/attachments"),
+		OIDC: OIDCConfig{
+			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
+			ClientID:     env("OIDC_CLIENT_ID", ""),
+			ClientSecret: env("OIDC_CLIENT_SECRET", ""),
+			OrgSlug:      env("OIDC_ORG", ""),
+			Label:        env("OIDC_LABEL", "Корпоративный аккаунт"),
+		},
 	}
 
 	if c.DatabaseURL == "" {
@@ -44,8 +82,37 @@ func Load() (Config, error) {
 		return c, fmt.Errorf("BASE_URL = %q: ожидался абсолютный адрес вида https://board.example.ru", c.BaseURL)
 	}
 
+	if c.OIDC.Enabled() {
+		u, err := url.Parse(c.OIDC.Issuer)
+		if err != nil || u.Scheme == "" || u.Host == "" {
+			return c, fmt.Errorf("OIDC_ISSUER = %q: ожидался абсолютный адрес", c.OIDC.Issuer)
+		}
+		// Только https, кроме локального стенда. Провайдер по http означает,
+		// что коды и токены ходят открытым текстом, и весь корпоративный
+		// вход становится украшением.
+		if u.Scheme != "https" && !isLoopback(u.Hostname()) {
+			return c, fmt.Errorf("OIDC_ISSUER = %q: провайдер должен быть по https", c.OIDC.Issuer)
+		}
+		if c.OIDC.ClientSecret == "" {
+			return c, fmt.Errorf("не задан OIDC_CLIENT_SECRET")
+		}
+		if c.OIDC.OrgSlug == "" {
+			return c, fmt.Errorf("не задан OIDC_ORG: некуда зачислять пришедшего впервые")
+		}
+	}
+
 	return c, nil
 }
+
+func isLoopback(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
+// RedirectURL — обратный адрес, который провайдер обязан знать заранее.
+// Собирается из BASE_URL, чтобы его нельзя было настроить отдельно
+// и разойтись с ним: несовпадение здесь даёт отказ в момент входа,
+// а не при запуске.
+func (c Config) RedirectURL() string { return c.BaseURL + "/api/auth/oidc/callback" }
 
 // SecureCookies включает флаг Secure у cookie, когда приложение открывается
 // по https. За обратным прокси схему знает только BASE_URL.

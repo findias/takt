@@ -378,8 +378,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return parsed as T
 }
 
+export type AuthMethods = {
+  password: { enabled: boolean }
+  oidc: { enabled: boolean; label?: string }
+}
+
 export const api = {
   me: () => request<Principal>('GET', '/api/me'),
+  authMethods: () => request<AuthMethods>('GET', '/api/auth/methods'),
   login: (email: string, password: string) =>
     request<Principal>('POST', '/api/auth/login', { email, password }),
   register: (org: string, name: string, email: string, password: string) =>

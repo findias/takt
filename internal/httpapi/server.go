@@ -20,6 +20,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/export"
 	"github.com/konkov/agile/internal/metrics"
+	"github.com/konkov/agile/internal/oidc"
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
@@ -40,6 +41,8 @@ type Server struct {
 	limiter *limiter
 	audit   *audit.Service
 	export  *export.Service
+	// oidc — провайдер корпоративного входа; nil, когда он не настроен.
+	oidc *oidc.Provider
 	// draining — реплика получила сигнал остановки и больше не готова
 	// принимать новые запросы, хотя текущие ещё дорабатывает.
 	draining atomic.Bool
@@ -47,7 +50,7 @@ type Server struct {
 }
 
 func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub) *Server {
-	return &Server{
+	s := &Server{
 		cfg:     cfg,
 		db:      db,
 		boards:  board.New(db),
@@ -62,6 +65,15 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 		export:  export.New(db),
 		log:     log,
 	}
+	if cfg.OIDC.Enabled() {
+		s.oidc = oidc.New(oidc.Config{
+			Issuer:       cfg.OIDC.Issuer,
+			ClientID:     cfg.OIDC.ClientID,
+			ClientSecret: cfg.OIDC.ClientSecret,
+			RedirectURL:  cfg.RedirectURL(),
+		})
+	}
+	return s
 }
 
 func (s *Server) Handler() http.Handler {
@@ -111,6 +123,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerMetricsRoutes(mux)
 	s.registerStreamRoutes(mux)
 	s.registerExportRoutes(mux)
+	s.registerOIDCRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))
 	mux.HandleFunc("POST /api/boards", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateBoard))
