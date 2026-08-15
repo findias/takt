@@ -1,4 +1,7 @@
-import { defineConfig } from 'vite'
+// defineConfig берётся из vitest: он тот же самый, но знает про раздел
+// test. Иначе конфигурация тестов не проходит проверку типов, а «не
+// проверяется типами» здесь означает «однажды молча перестанет работать».
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // В разработке фронтенд поднимается отдельно и проксирует запросы к API,
@@ -13,4 +16,19 @@ export default defineConfig({
     },
   },
   build: { outDir: 'dist', emptyOutDir: true },
+
+  // Тесты компонентов и хуков живут здесь же и на той же сборке, что
+  // и приложение: отдельная конфигурация для тестов расходится с рабочей
+  // ровно в тот день, когда это дороже всего.
+  //
+  // Модели доски проверяются встроенным в node запускателем и сюда
+  // не попадают — им не нужен ни DOM, ни React, и тащить их через
+  // браузерное окружение значит платить за него без причины.
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.dom.test.tsx'],
+    setupFiles: ['src/test-setup.ts'],
+    globals: false,
+    restoreMocks: true,
+  },
 })
