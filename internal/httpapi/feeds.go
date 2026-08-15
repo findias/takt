@@ -16,6 +16,7 @@ import (
 
 func (s *Server) registerFeedRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/{id}/events", s.authed(s.handleBoardEvents))
+	mux.HandleFunc("GET /api/boards/{id}/changes", s.authed(s.handleBoardChanges))
 	mux.HandleFunc("GET /api/audit", s.scoped(apiclient.ScopeAuditRead, s.handleAudit))
 }
 
@@ -27,6 +28,22 @@ func (s *Server) handleBoardEvents(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	writeJSON(w, http.StatusOK, feed)
+}
+
+// Догнать пропущенное: патчи после названной версии вместо целого
+// снимка. Ответ с full=true означает «патчами не догнать» — так бывает
+// с операциями, которые старше самой возможности догонять.
+func (s *Server) handleBoardChanges(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	since, err := strconv.ParseInt(r.URL.Query().Get("since"), 10, 64)
+	if err != nil || since < 0 {
+		writeError(w, http.StatusBadRequest, "нужен параметр since — версия доски, которая уже есть")
+		return
+	}
+	catchup, cErr := s.boards.Changes(r.Context(), p.OrgID, p.ID, r.PathValue("id"), since)
+	if s.failAccess(w, "изменения доски", cErr) {
+		return
+	}
+	writeJSON(w, http.StatusOK, catchup)
 }
 
 func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request, p auth.Principal) {

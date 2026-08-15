@@ -192,9 +192,22 @@ test('изменение доезжает до второй открытой д�
   await signIn(watcher, who)
   await openBoard(watcher, 'Общая доска')
 
+  // Считаем, чем именно догоняет сосед. Раньше на каждое чужое изменение
+  // он перечитывал доску целиком — на трёхстах карточках это заметно,
+  // и заметно тем сильнее, чем больше людей работает.
+  let snapshots = 0
+  let catchups = 0
+  watcher.on('response', (r) => {
+    const path = r.url().split('/api')[1] ?? ''
+    if (/^\/boards\/[0-9a-f-]+$/.test(path)) snapshots++
+    if (path.includes('/changes?')) catchups++
+  })
+
   await addCard(page, 'Очередь', 'Появись у соседа')
 
   await expect(cardIn(watcher, 'Очередь', 'Появись у соседа')).toBeVisible({ timeout: 15_000 })
+  expect(catchups, 'сосед догнал патчем').toBeGreaterThan(0)
+  expect(snapshots, 'снимок доски перезапрашивать не пришлось').toBe(0)
   await second.close()
 })
 

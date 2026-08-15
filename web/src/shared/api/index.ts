@@ -200,6 +200,15 @@ export type BoardAccess = {
   members: { userId: string; name: string; email: string }[]
 }
 
+/** Ответ на «что я пропустил». Каждый патч назван своей версией —
+ *  выводить её из порядка на этой стороне значило бы хранить одно
+ *  и то же в двух местах. full означает «патчами не догнать». */
+export type Catchup = {
+  version: number
+  results: OperationResult[]
+  full: boolean
+}
+
 export type BoardInfo = {
   id: string
   name: string
@@ -459,6 +468,9 @@ export const api = {
     request<Observer>('POST', '/api/observers', { userId, teamId }),
   revokeObservation: (id: string) => request<void>('DELETE', `/api/observers/${id}`),
 
+  /** Догнать пропущенное патчами вместо целого снимка. */
+  changes: (boardId: string, since: number) =>
+    request<Catchup>('GET', `/api/boards/${boardId}/changes?since=${since}`),
   boardAccess: (boardId: string) => request<BoardAccess>('GET', `/api/boards/${boardId}/access`),
   setSLE: (boardId: string, days: number | null, probability: number) =>
     request<void>('PUT', `/api/boards/${boardId}/sle`, { days, probability }),

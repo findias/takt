@@ -38,6 +38,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const sending = useRef(false)
+  // Зеркало версии доски. Нужно затем, чтобы догон не зависел от самого
+  // снимка: иначе функция пересоздаётся на каждое изменение, а вместе
+  // с ней переподписывается поток — и мы теряем события ровно тогда,
+  // когда их больше всего.
+  const latest = useRef<number | null>(null)
 
   const reload = useCallback(async () => {
     if (!boardId) return
@@ -119,9 +124,53 @@ export function useBoard(boardId: string | null, notify: Notify) {
     })()
   }, [boardId, queue, notify, reload])
 
-  // Поток изменений: сервер сообщает «доска доехала до такой-то версии»,
-  // и мы перечитываем снимок. Патч по проводу пришлось бы сливать
-  // с очередью неподтверждённых команд — сложность не там и не тогда.
+  /**
+   * Догнать пропущенное.
+   *
+   * Раньше на каждое чужое изменение перечитывался весь снимок доски:
+   * на десяти карточках незаметно, на трёхстах заметно, и заметно тем
+   * сильнее, чем больше людей работает — каждый из них перечитывает
+   * доску целиком на каждое чужое действие.
+   *
+   * Теперь спрашиваем только патчи после нашей версии и применяем их
+   * тем же кодом, которым применяем ответы на собственные операции.
+   * Если сервер отвечает «догнать нечем» — перечитываем снимок: это
+   * редкий путь, и лучше он будет медленным, чем незаметно неверным.
+   */
+  useEffect(() => {
+    latest.current = base?.info.version ?? null
+  }, [base?.info.version])
+
+  const catchUp = useCallback(async () => {
+    if (!boardId) return
+    const from = latest.current
+    if (from === null) return
+    try {
+      const catchup = await api.changes(boardId, from)
+      if (catchup.full) {
+        await reload()
+        return
+      }
+      setBase((current) => {
+        if (!current) return current
+        // Пока мы ходили за патчами, доска могла уехать вперёд: ответ
+        // на собственную операцию мог прийти раньше. Применяем только
+        // то, чего у нас ещё нет, — по версии, названной сервером.
+        let next = current
+        for (const result of catchup.results) {
+          if (result.version <= next.info.version) continue
+          next = applyPatch(next, result)
+        }
+        return next
+      })
+    } catch {
+      // Не догнали — перечитаем целиком. Молчание здесь осознанное:
+      // человеку об этом знать незачем, доска сойдётся сама.
+      await reload()
+    }
+  }, [boardId, reload])
+
+  // Поток изменений: сервер сообщает «доска доехала до такой-то версии».
   //
   // Своё же изменение мы уже ждём ответом на операцию, поэтому чужой
   // автор — единственный повод дёрнуться.
@@ -139,9 +188,9 @@ export function useBoard(boardId: string | null, notify: Notify) {
           if (!current) return current
           // Версия не новее нашей — новость уже учтена.
           if (change.version <= current.info.version) return current
-          // Перечитываем вне setBase: обновление состояния должно
+          // Догоняем вне setBase: обновление состояния должно
           // оставаться чистым.
-          queueMicrotask(reload)
+          queueMicrotask(catchUp)
           return current
         })
       } catch {
@@ -152,7 +201,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     // Переподключение EventSource умеет сам; наше дело — закрыть поток
     // при уходе с доски.
     return () => source.close()
-  }, [boardId, reload])
+  }, [boardId, catchUp])
 
   const order = useMemo(() => (base ? renderOrder(base, queue) : {}), [base, queue])
 

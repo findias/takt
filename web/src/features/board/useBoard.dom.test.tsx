@@ -15,13 +15,14 @@ import type { Card, Column, Snapshot } from '../../shared/api/index.ts'
 
 const snapshot = vi.fn<() => Promise<Snapshot>>()
 const operation = vi.fn()
+const changes = vi.fn()
 
 // Подменяется только объект api: классы ошибок остаются настоящими,
 // потому что хук различает их через instanceof, и подделка проверяла бы
 // подделку.
 vi.mock('../../shared/api', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../shared/api')>()
-  return { ...real, api: { ...real.api, snapshot, operation } }
+  return { ...real, api: { ...real.api, snapshot, operation, changes } }
 })
 
 const { ApiError, NetworkError } = await import('../../shared/api')
@@ -99,6 +100,8 @@ class FakeEventSource {
 beforeEach(() => {
   snapshot.mockReset()
   operation.mockReset()
+  changes.mockReset()
+  changes.mockResolvedValue({ version: 1, results: [], full: false })
   snapshot.mockResolvedValue(board())
   said.length = 0
   FakeEventSource.last = null
@@ -272,24 +275,48 @@ describe('расхождение с сервером', () => {
 })
 
 describe('поток изменений', () => {
-  it('перечитывает доску, когда чужая версия новее нашей', async () => {
-    await loaded()
+  // Догоняем патчами, а не перечитыванием: на большой доске разница
+  // между «прислали одну карточку» и «прислали всю доску» — это разница
+  // между незаметным и заметным.
+  it('догоняет чужое изменение патчем, не запрашивая снимок заново', async () => {
+    const view = await loaded()
     expect(snapshot).toHaveBeenCalledTimes(1)
 
-    snapshot.mockResolvedValue(board(2))
+    changes.mockResolvedValue({
+      version: 2,
+      results: [{ version: 2, patch: { cards: [card('третья', COL_B, 'a3')] } }],
+      full: false,
+    })
     await act(async () => {
       FakeEventSource.last?.emit('board', { version: 2, actorId: 'кто-то' })
+    })
+
+    await waitFor(() => expect(view.result.current.order[COL_B]).toEqual(['третья']))
+    expect(changes).toHaveBeenCalledWith('board', 1)
+    // Снимок не перезапрашивался — в этом весь смысл.
+    expect(snapshot).toHaveBeenCalledTimes(1)
+  })
+
+  // Догнать удаётся не всегда: операции могут быть старше самой
+  // возможности догонять. Тогда честный путь — перечитать снимок.
+  it('перечитывает снимок, когда догнать нечем', async () => {
+    await loaded()
+    changes.mockResolvedValue({ version: 5, results: [], full: true })
+
+    await act(async () => {
+      FakeEventSource.last?.emit('board', { version: 5, actorId: 'кто-то' })
     })
     await waitFor(() => expect(snapshot).toHaveBeenCalledTimes(2))
   })
 
   // Новость о версии, которая у нас уже есть, — не повод дёргать сервер.
-  it('не перечитывает доску на новость о версии не новее нашей', async () => {
+  it('не дёргается на новость о версии не новее нашей', async () => {
     await loaded()
     await act(async () => {
       FakeEventSource.last?.emit('board', { version: 1, actorId: 'кто-то' })
     })
     expect(snapshot).toHaveBeenCalledTimes(1)
+    expect(changes).not.toHaveBeenCalled()
   })
 
   it('закрывает поток, когда доску закрывают', async () => {

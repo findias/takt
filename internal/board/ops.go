@@ -161,9 +161,12 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	if err != nil {
 		return Result{}, err
 	}
-	if _, err := tx.Exec(ctx,
-		`update operations set result = $2::jsonb where operation_id = $1`,
-		req.OperationID, string(encoded)); err != nil {
+	// Версия кладётся отдельной колонкой, а не только внутрь результата:
+	// по ней клиент догоняет пропущенное, не перечитывая доску целиком.
+	if _, err := tx.Exec(ctx, `
+		update operations set result = $2::jsonb, board_version = $3
+		 where operation_id = $1`,
+		req.OperationID, string(encoded), version); err != nil {
 		return Result{}, err
 	}
 
@@ -181,6 +184,85 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	committed = true
 	return result, nil
+}
+
+// Changes отдаёт то, что случилось с доской после названной версии.
+//
+// Клиент, узнав из потока «доска доехала до версии N», раньше запрашивал
+// весь снимок. Здесь он получает только патчи — те самые, которые уже
+// применял к себе, отвечая на собственные операции.
+//
+// Догнать удаётся не всегда: операции старше колонки board_version
+// версии не имеют, а очень старые могут быть убраны. Тогда честный
+// ответ — «догнать нельзя», и клиент перечитывает снимок. Молча отдать
+// неполный список хуже: расхождение всплывёт позже и необъяснимо.
+func (s *Service) Changes(ctx context.Context, orgID, userID, boardID string, since int64) (Catchup, error) {
+	out := Catchup{Results: []Result{}}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			select version from boards
+			 where id = $1 and archived_at is null`, boardID).Scan(&out.Version); err != nil {
+			return err
+		}
+		if since >= out.Version {
+			return nil
+		}
+
+		rows, err := tx.Query(ctx, `
+			select result, board_version from operations
+			 where board_id = $1 and board_version > $2
+			 order by board_version`, boardID, since)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		var last int64 = since
+		for rows.Next() {
+			var raw []byte
+			var version int64
+			if err := rows.Scan(&raw, &version); err != nil {
+				return err
+			}
+			var result Result
+			if err := json.Unmarshal(raw, &result); err != nil {
+				return err
+			}
+			// Пропуск в версиях означает, что между ними было изменение,
+			// патча от которого у нас нет.
+			if version != last+1 {
+				out.Full = true
+				out.Results = nil
+				return nil
+			}
+			last = version
+			// Версия отдаётся вместе с патчем, а не выводится клиентом
+			// из порядка: считать её на той стороне значит хранить
+			// в двух местах одно и то же и однажды разойтись.
+			result.Version = version
+			out.Results = append(out.Results, result)
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if last != out.Version {
+			out.Full = true
+			out.Results = nil
+		}
+		return nil
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Catchup{}, ErrNotFound
+	}
+	return out, err
+}
+
+// Catchup — чем догнать пропущенное. Full означает «патчами не догнать,
+// перечитай снимок».
+type Catchup struct {
+	Version int64    `json:"version"`
+	Results []Result `json:"results"`
+	Full    bool     `json:"full"`
 }
 
 // explainMissingBoard отвечает на вопрос, почему доска не досталась
