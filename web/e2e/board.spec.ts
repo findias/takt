@@ -322,3 +322,51 @@ test('метка заводится в организации и вешаетс�
   await page.getByRole('menuitem', { name: 'Снять метку «Срочно»' }).click()
   await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toHaveCount(0)
 })
+
+test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с фильтром')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Разобрать обращения')
+  await addCard(page, 'В работе', 'Договор аренды')
+
+  // Поиск: показывает найденное и говорит, сколько скрыл, — иначе доска
+  // выглядит опустевшей без объяснения.
+  await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('договор')
+  await expect(cardIn(page, 'В работе', 'Договор аренды')).toBeVisible()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+  await expect(page.getByText(/скрыто 2/)).toBeVisible()
+
+  // Фильтр — состояние адреса: ссылку на отфильтрованный вид можно
+  // прислать, и она переживает перезагрузку.
+  expect(page.url()).toContain('q=')
+  const filtered = page.url()
+  await page.reload()
+  await expect(cardIn(page, 'В работе', 'Договор аренды')).toBeVisible()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+  expect(page.url()).toBe(filtered)
+
+  // «Показать все» возвращает доску целиком и чистит адрес.
+  await page.getByRole('button', { name: 'Показать все' }).click()
+  await expect(cardIn(page, 'Очередь', 'Согласовать смету')).toBeVisible()
+  expect(page.url()).not.toContain('q=')
+})
+
+test('фильтр по исполнителю показывает и то, что ни на ком', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с исполнителями')
+  await addCard(page, 'Очередь', 'Моя работа')
+  await addCard(page, 'Очередь', 'Ничья работа')
+
+  const mine = cardIn(page, 'Очередь', 'Моя работа')
+  await mine.hover()
+  await mine.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await expect(mine.locator('.avatar')).toBeVisible()
+
+  // Работа без исполнителя и есть то, что теряется: её надо уметь
+  // спросить отдельно.
+  await page.getByLabel('Исполнитель').selectOption('none')
+  await expect(cardIn(page, 'Очередь', 'Ничья работа')).toBeVisible()
+  await expect(page.getByRole('group', { name: /Моя работа/ })).toHaveCount(0)
+})

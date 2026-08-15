@@ -28,6 +28,10 @@ import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Avatar } from '../shared/ui/Avatar.tsx'
+import { FilterBar } from '../features/board/FilterBar.tsx'
+import { filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
+import type { Filters } from '../features/board/filters.ts'
+import { setQuery, useQuery } from '../shared/router/index.ts'
 import { Menu } from '../shared/ui/Menu.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
@@ -102,7 +106,49 @@ export function Board({
 
   useEffect(loadAccess, [loadAccess])
 
-  const { base, order, moveCard } = board
+  // Фильтры живут в адресе: отфильтрованный вид можно прислать ссылкой,
+  // и он переживает перезагрузку.
+  const query = useQuery()
+  const filters = useMemo(() => parseFilters(query), [query])
+  const setFilters = useCallback(
+    (next: Filters) => setQuery(filtersToQuery(next, query), { replace: true }),
+    [query],
+  )
+
+  const { base, order: fullOrder, moveCard } = board
+
+  // Фильтр применяется к показу, а не к данным: перетаскивание,
+  // счётчики лимита и догон патчами продолжают работать с полной
+  // доской, иначе включённый фильтр начал бы менять её поведение.
+  const { order, hidden } = useMemo(() => {
+    if (!base || isEmpty(filters)) return { order: fullOrder, hidden: 0 }
+    const context = {
+      labelsOf: (cardId: string) => base.cardLabels[cardId] ?? [],
+      sleDays: base.info.sleDays,
+    }
+    const next: Record<string, string[]> = {}
+    let hidden = 0
+    for (const [columnId, ids] of Object.entries(fullOrder)) {
+      next[columnId] = ids.filter((id) => {
+        const card = base.cards[id]
+        if (!card) return true
+        const ok = matches(card, filters, context)
+        if (!ok) hidden += 1
+        return ok
+      })
+    }
+    return { order: next, hidden }
+  }, [base, fullOrder, filters])
+
+  // Список людей для фильтра: в снимке они словарём, а выпадающему
+  // списку нужен порядок.
+  const peopleList = useMemo(
+    () =>
+      Object.entries(base?.people ?? {})
+        .map(([userId, name]) => ({ userId, name }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [base?.people],
+  )
 
   // Один монитор на всю доску: он знает и источник, и цель, и порядок
   // колонки — вычислять намерение по частям в отдельных обработчиках
@@ -251,6 +297,16 @@ export function Board({
           <Appearance />
         </div>
       </header>
+
+      <div className="board-toolbar">
+        <FilterBar
+          filters={filters}
+          people={peopleList}
+          labels={base.labels}
+          hidden={hidden}
+          onChange={setFilters}
+        />
+      </div>
 
       {/* Одна полоса, а не три: подсказка о потоке, итерации и переход
           к потоку — это всё «про доску целиком», и разносить их

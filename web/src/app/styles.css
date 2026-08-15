@@ -1378,6 +1378,44 @@ textarea.description {
   min-width: 0;
 }
 
+/* Полоса фильтров. Всегда на виду, а не за кнопкой: спрятанный фильтр —
+   это фильтр, о котором забывают, а забытый фильтр показывает доску
+   не целиком и об этом не сообщает. */
+.filters {
+  flex-wrap: wrap;
+  padding-bottom: var(--space-2);
+}
+.filters-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-3);
+  min-width: 14rem;
+}
+.filters-search input {
+  border: none;
+  background: none;
+  padding: var(--space-1) 0;
+  min-width: 0;
+}
+.filters-search input:focus-visible {
+  outline: none;
+}
+.filters-search:focus-within {
+  border-color: var(--accent);
+}
+.chip--removable {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+  min-height: var(--target);
+}
+
 /* Метки на карточке. Цвет приходит именем оттенка, а не значением:
    сырой цвет из базы в тёмной теме начал бы светиться, и правило
    «сырых цветов в правилах нет» перестало бы действовать ровно там,
