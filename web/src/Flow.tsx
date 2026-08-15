@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useEscape } from './useEscape'
 import { api } from './api'
 import type { FlowReport } from './api'
 
@@ -23,6 +24,7 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
   }, [boardId, days])
 
   useEffect(load, [load])
+  useEscape(onClose)
 
   if (error) return <div className="panel-card">{error}</div>
   if (!report) return <div className="panel-card">Считаем…</div>
@@ -84,7 +86,8 @@ export function Flow({ boardId, onClose }: { boardId: string; onClose: () => voi
               <li key={card.id}>
                 <div className="member-who">
                   <span>
-                    {card.blocked && <span aria-label="заблокирована">⛔ </span>}
+                    {card.blocked && <span aria-hidden="true">⛔ </span>}
+                    {card.blocked && <span className="sr-only">Заблокирована. </span>}
                     {card.title}
                   </span>
                   <span className="muted small">{card.column}</span>

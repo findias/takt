@@ -7,6 +7,7 @@ import { InviteScreen } from './Invite'
 import { Team } from './Team'
 import { Structure } from './Structure'
 import { BoardList } from './BoardList'
+import { Appearance } from './Appearance'
 
 /** Приглашение приходит ссылкой вида /invite/<токен>. */
 function inviteTokenFromLocation(): string | null {
@@ -165,6 +166,7 @@ function OrgHeader({
         <button className="link" onClick={onSignOut}>
           Выйти
         </button>
+        <Appearance />
       </div>
 
       {creating && (

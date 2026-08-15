@@ -33,6 +33,24 @@ export function Board({
 }) {
   const board = useBoard(boardId)
   const [announcement, setAnnouncement] = useState('')
+
+  // Объявление ставится с задержкой около секунды: смена фокуса, которая
+  // неизбежно следует за перемещением, иначе перебивает его, и скринридер
+  // читает пустоту. Так это решено в live-region у Atlassian, и по той же
+  // причине здесь role="status", а не alert — alert читается ненадёжно.
+  const announce = useCallback((text: string) => {
+    setAnnouncement('')
+    window.setTimeout(() => setAnnouncement(text), 1000)
+  }, [])
+
+  // Узел карточки перемонтируется в новой колонке, и фокус улетает
+  // в body. Возвращаем его руками — иначе человек, работающий
+  // с клавиатуры, теряет место после каждого переноса.
+  const refocus = useCallback((cardId: string) => {
+    window.setTimeout(() => {
+      document.querySelector<HTMLElement>(`[data-card="${cardId}"]`)?.focus()
+    }, 50)
+  }, [])
   const [openCard, setOpenCard] = useState<string | null>(null)
   const [showFlow, setShowFlow] = useState(false)
 
@@ -89,7 +107,11 @@ export function Board({
         const next = base.columnIds[columnIndex + (direction === 'left' ? -1 : 1)]
         if (!next) return
         moveCard(cardId, next, { place: 'end' })
-        setAnnouncement(`«${card.title}» перемещена в колонку «${base.columns[next].name}»`)
+        announce(
+          `Карточка «${card.title}» перенесена из «${base.columns[card.columnId].name}» ` +
+            `в «${base.columns[next].name}», последняя из ${(order[next]?.length ?? 0) + 1}`,
+        )
+        refocus(cardId)
         return
       }
 
@@ -103,9 +125,37 @@ export function Board({
         if (at < 0 || at >= list.length - 1) return
         moveCard(cardId, card.columnId, { place: 'after', afterCardId: list[at + 1] })
       }
-      setAnnouncement(`«${card.title}» перемещена ${direction === 'up' ? 'выше' : 'ниже'}`)
+      const to = direction === 'up' ? at : at + 2
+      announce(
+        `Карточка «${card.title}» перенесена на позицию ${to} из ${list.length} ` +
+          `в колонке «${base.columns[card.columnId].name}»`,
+      )
+      refocus(cardId)
     },
-    [base, order, moveCard],
+    [base, order, moveCard, announce, refocus],
+  )
+
+  /**
+   * Перенос указателем без перетаскивания.
+   *
+   * Это не удобство, а требование: WCAG 2.5.7 прямо говорит, что
+   * клавиатурного эквивалента недостаточно — нужен путь, выполнимый
+   * одним кликом. Перетаскивание таким путём не является, а меню
+   * на карточке — является.
+   */
+  const moveToColumn = useCallback(
+    (cardId: string, columnId: string) => {
+      if (!base) return
+      const card = base.cards[cardId]
+      if (!card || card.columnId === columnId) return
+      moveCard(cardId, columnId, { place: 'end' })
+      announce(
+        `Карточка «${card.title}» перенесена из «${base.columns[card.columnId].name}» ` +
+          `в «${base.columns[columnId].name}»`,
+      )
+      refocus(cardId)
+    },
+    [base, moveCard, announce, refocus],
   )
 
   if (board.loadError) {
@@ -174,6 +224,8 @@ export function Board({
             cardIds={order[columnId] ?? []}
             cards={base.cards}
             unit={unit}
+            columns={base.columnIds.map((id) => base.columns[id])}
+            onMoveToColumn={moveToColumn}
             onOpenCard={setOpenCard}
             onMoveByKeyboard={moveByKeyboard}
             onCreateCard={(title) => void board.createCard(columnId, title)}
@@ -229,6 +281,8 @@ type ColumnProps = {
   cardIds: string[]
   cards: BaseState['cards']
   unit: EstimateUnit
+  columns: Column[]
+  onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onCreateCard: (title: string) => void
@@ -301,6 +355,8 @@ function ColumnView(props: ColumnProps) {
             columnId={props.columnId}
             card={props.cards[cardId]}
             unit={props.unit}
+            columns={props.columns}
+            onMoveToColumn={props.onMoveToColumn}
             onOpen={() => props.onOpenCard(cardId)}
             onMoveByKeyboard={props.onMoveByKeyboard}
             onRename={(title) => props.onRenameCard(cardId, title)}
@@ -332,6 +388,8 @@ type CardProps = {
   columnId: string
   card: Card | undefined
   unit: EstimateUnit
+  columns: Column[]
+  onMoveToColumn: (cardId: string, columnId: string) => void
   onOpen: () => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (title: string) => void
@@ -343,6 +401,8 @@ function CardView({
   columnId,
   card,
   unit,
+  columns,
+  onMoveToColumn,
   onOpen,
   onMoveByKeyboard,
   onRename,
@@ -396,6 +456,7 @@ function CardView({
       ref={ref}
       className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}`}
       tabIndex={0}
+      data-card={cardId}
       role="group"
       aria-label={`Карточка «${title}». Ctrl со стрелками перемещает её.`}
       onKeyDown={onKeyDown}
@@ -420,7 +481,10 @@ function CardView({
             <div className="card-marks">
               {card.blocked && (
                 <span className="mark mark--blocked" title={card.blocked.reason}>
-                  ⛔ {card.blocked.reason}
+                  {/* Глиф прячем: скринридер прочитает ⛔ как «знак въезд
+                      запрещён» — слово рядом надёжнее. */}
+                  <span aria-hidden="true">⛔ </span>
+                  Заблокирована: {card.blocked.reason}
                 </span>
               )}
               {progressLabel(card, unit) && (
@@ -429,6 +493,26 @@ function CardView({
             </div>
           )}
           <div className="card-actions">
+            {/* Перенос без перетаскивания. Не удобство, а требование
+                WCAG 2.5.7: клавиатурного эквивалента недостаточно, нужен
+                путь, выполнимый одним нажатием. */}
+            <select
+              value=""
+              className="card-move"
+              aria-label={`Перенести «${title}» в другую колонку`}
+              onChange={(e) => {
+                if (e.target.value) onMoveToColumn(cardId, e.target.value)
+              }}
+            >
+              <option value="">Перенести…</option>
+              {columns
+                .filter((c) => c.id !== columnId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </select>
             <button onClick={onOpen} aria-label={`Открыть «${title}»`}>
               Открыть
             </button>

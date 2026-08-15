@@ -1,4 +1,49 @@
+/* Основание дизайн-языка.
+ *
+ * Правила и причины — в внутренние-правила/skills/board-design/SKILL.md. Коротко:
+ * всё измеримое — токен, плотность — множитель, движения по умолчанию нет.
+ */
+
 :root {
+  color-scheme: light dark;
+
+  /* Плотность одной ручкой, как в Radix: второй набор классов под
+     «компактный режим» расходится с первым за месяц. */
+  --scaling: 1;
+
+  /* Шкала отступов 4/8/12/16/24/32. Промежуточных значений нет:
+     0.55rem в правиле означает, что кто-то подгонял на глаз. */
+  --space-1: calc(4px * var(--scaling));
+  --space-2: calc(8px * var(--scaling));
+  --space-3: calc(12px * var(--scaling));
+  --space-4: calc(16px * var(--scaling));
+  --space-6: calc(24px * var(--scaling));
+  --space-8: calc(32px * var(--scaling));
+
+  /* Типографика. Базовый размер — единственное, что масштабируется
+     отдельно: так сделано у Linear, и это работает лучше, чем
+     масштабировать всё сразу. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.85rem;
+  --text: 0.95rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.4rem;
+
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  /* Тени только две: подняли и подняли сильно. Больше — украшение. */
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.08);
+
+  /* Две длительности. Больше не нужно. */
+  --fast: 0.12s;
+  --slow: 0.24s;
+
+  /* Цель нажатия по WCAG 2.5.8 (AA). Проверять кнопки-ссылки
+     в плотных рядах: именно они не проходят. */
+  --target: 24px;
+
   --paper: #f2f4f3;
   --surface: #ffffff;
   --surface-2: #e9edeb;
@@ -10,10 +55,12 @@
   --accent-soft: #dcebe5;
   --warn: #a33d1e;
   --warn-soft: #f6e2da;
-  --radius: 4px;
 }
+
+/* Тёмная тема системная, но с явным перекрытием: человек, у которого
+   система светлая, а глаза устали, должен иметь выбор. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #0d1312;
     --surface: #161e1c;
     --surface-2: #1e2826;
@@ -25,6 +72,53 @@
     --accent-soft: #122c25;
     --warn: #e08264;
     --warn-soft: #2d1a15;
+    --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #0d1312;
+  --surface: #161e1c;
+  --surface-2: #1e2826;
+  --ink: #e6edea;
+  --ink-2: #aebcb7;
+  --ink-3: #7b8a85;
+  --rule: #27322f;
+  --accent: #52c1a4;
+  --accent-soft: #122c25;
+  --warn: #e08264;
+  --warn-soft: #2d1a15;
+  --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Плотнее — по желанию. Одна переменная, никаких вторых стилей. */
+:root[data-density='compact'] {
+  --scaling: 0.85;
+}
+
+/* Фокус с клавиатуры виден всегда и одинаково. `outline: none` без
+   замены — дефект, а не стиль. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Движение объясняет перемещение объекта — и только. Тем, кто просил
+   меньше движения, заменяем сдвиг на проявление, а не выключаем всё:
+   иначе объяснение перемещения теряется вовсе. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--fast) !important;
+    transition-property: opacity, background-color, border-color, color !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -341,14 +435,21 @@ select {
   align-items: flex-start;
 }
 .column {
+  /* Колонка — контейнер: карточка внутри неё описывается через
+     контейнерные запросы и потому одинаково работает и здесь,
+     и в панели. Ширина колонки не связана с шириной экрана,
+     поэтому медиазапрос тут не годится. */
+  container-type: inline-size;
+  container-name: column;
+
   flex: 0 0 17.5rem;
   background: var(--surface-2);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: 0.6rem;
+  padding: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
   max-height: calc(100vh - 6rem);
 }
 .column--over {
@@ -420,11 +521,26 @@ select {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: 0.55rem 0.65rem;
+  padding: var(--space-2);
   cursor: grab;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--space-1);
+
+  /* Вместо виртуализации: браузер пропускает отрисовку того, что за
+     экраном, но узлы остаются в DOM и в дереве доступности. Поиск
+     по странице и скринридер продолжают работать — виртуализатор
+     ломает и то, и другое. Подсказка о размере нужна, чтобы полоса
+     прокрутки не прыгала. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 4rem;
+}
+
+/* В узкой колонке карточка теряет всё, кроме главного. */
+@container column (max-width: 14rem) {
+  .card-marks .mark:not(.mark--blocked) {
+    display: none;
+  }
 }
 .card:hover {
   border-color: var(--ink-3);
@@ -461,8 +577,12 @@ select {
   display: flex;
 }
 .card-actions button {
-  font-size: 0.75rem;
-  padding: 0.15em 0.5em;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
+  /* WCAG 2.5.8: цель нажатия 24×24. Кнопки-ссылки в плотных рядах —
+     ровно то место, где это правило обычно и нарушают. */
+  min-height: var(--target);
+  min-width: var(--target);
   color: var(--ink-2);
 }
 
@@ -760,4 +880,10 @@ textarea.description {
 .figures th {
   font-weight: 400;
   color: var(--ink-3);
+}
+
+.card-move {
+  font-size: var(--text-xs);
+  min-height: var(--target);
+  max-width: 8rem;
 }

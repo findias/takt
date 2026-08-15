@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useEscape } from './useEscape'
 import { LINK_KIND_NAMES, api } from './api'
 import type {
   BoardEvent,
@@ -57,6 +58,8 @@ export function CardPanel({
   /** null снимает поле. */
   onField: (cardId: string, fieldId: string, value: string | number | boolean | null) => void
 }) {
+  useEscape(onClose)
+
   const details = cardDetails(base, cardId)
   if (!details) return null
   const { card } = details
@@ -206,8 +209,10 @@ function RelatedRow({
     <div className={`related${related.reachable ? '' : ' related--hidden'}`}>
       <div className="member-who">
         <span>
-          {related.done && <span aria-label="готово">✓ </span>}
-          {related.blocked && <span aria-label="заблокирована">⛔ </span>}
+          {related.done && <span aria-hidden="true">✓ </span>}
+          {related.done && <span className="sr-only">Готово. </span>}
+          {related.blocked && <span aria-hidden="true">⛔ </span>}
+          {related.blocked && <span className="sr-only">Заблокирована. </span>}
           {related.title}
         </span>
         <span className="muted small">
