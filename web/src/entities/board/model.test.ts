@@ -68,6 +68,8 @@ function snapshot(cards: Card[]): Snapshot {
     fields: [],
     fieldValues: {},
     people: [],
+    labels: [],
+    cardLabels: {},
     columns: [
       column(COL_A, 'Очередь', 'a0', 'queue'),
       column(COL_B, 'В работе', 'a1', 'in_progress'),

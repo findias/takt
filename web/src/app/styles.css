@@ -1378,6 +1378,60 @@ textarea.description {
   min-width: 0;
 }
 
+/* Метки на карточке. Цвет приходит именем оттенка, а не значением:
+   сырой цвет из базы в тёмной теме начал бы светиться, и правило
+   «сырых цветов в правилах нет» перестало бы действовать ровно там,
+   где данные приходят снаружи. */
+.card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.chip {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip--more {
+  color: var(--ink-3);
+  border-color: var(--rule);
+}
+.chip--slate  { background: #e3e8e6; color: #2b3733; }
+.chip--green  { background: #d9ece4; color: #12503f; }
+.chip--blue   { background: #dbe7f2; color: #1d4a6e; }
+.chip--violet { background: #e3ddf2; color: #3f2f6b; }
+.chip--rose   { background: #f2dde3; color: #6b2f42; }
+.chip--amber  { background: #f2e7d2; color: #6b4a12; }
+.chip--teal   { background: #d5eceb; color: #16514e; }
+.chip--brown  { background: #ecdfd2; color: #5c3d21; }
+
+/* В тёмной теме метки не осветляются, а затемняются: светлая плашка
+   на тёмном фоне бьёт по глазам сильнее, чем тёмная на светлом. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .chip--slate  { background: #263230; color: #cbd6d2; }
+  :root:not([data-theme='light']) .chip--green  { background: #16352c; color: #9fd8c4; }
+  :root:not([data-theme='light']) .chip--blue   { background: #1a2f42; color: #a6c8e4; }
+  :root:not([data-theme='light']) .chip--violet { background: #2a2440; color: #c2b5e8; }
+  :root:not([data-theme='light']) .chip--rose   { background: #3d222b; color: #e3adbd; }
+  :root:not([data-theme='light']) .chip--amber  { background: #3a2f18; color: #dcc189; }
+  :root:not([data-theme='light']) .chip--teal   { background: #163533; color: #9ed3cf; }
+  :root:not([data-theme='light']) .chip--brown  { background: #33261a; color: #d6b795; }
+}
+:root[data-theme='dark'] .chip--slate  { background: #263230; color: #cbd6d2; }
+:root[data-theme='dark'] .chip--green  { background: #16352c; color: #9fd8c4; }
+:root[data-theme='dark'] .chip--blue   { background: #1a2f42; color: #a6c8e4; }
+:root[data-theme='dark'] .chip--violet { background: #2a2440; color: #c2b5e8; }
+:root[data-theme='dark'] .chip--rose   { background: #3d222b; color: #e3adbd; }
+:root[data-theme='dark'] .chip--amber  { background: #3a2f18; color: #dcc189; }
+:root[data-theme='dark'] .chip--teal   { background: #163533; color: #9ed3cf; }
+:root[data-theme='dark'] .chip--brown  { background: #33261a; color: #d6b795; }
+
 /* Меню. Список открывается под кнопкой и перекрывает содержимое —
    отсюда z-index; больше ничего в интерфейсе так не всплывает. */
 .menu {

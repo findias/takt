@@ -172,3 +172,12 @@ export function OpenIcon(props: IconProps) {
     </Icon>
   )
 }
+
+export function TagIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9Z" />
+      <circle cx="7.5" cy="7.5" r="1" />
+    </Icon>
+  )
+}

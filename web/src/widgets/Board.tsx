@@ -16,6 +16,7 @@ import { api } from '../shared/api/index.ts'
 import type {
   BoardAccess as Access,
   Card,
+  Label,
   Column,
   ColumnKind,
   EstimateUnit,
@@ -39,6 +40,7 @@ import {
   OpenIcon,
   PeopleIcon,
   PlusIcon,
+  TagIcon,
 } from '../shared/ui/icons.tsx'
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
@@ -302,6 +304,9 @@ export function Board({
             sleDays={base.info.sleDays}
             people={base.people}
             onAssign={(cardId, assigneeId) => void board.assignCard(cardId, assigneeId)}
+            labels={base.labels}
+            cardLabels={base.cardLabels}
+            onLabel={(cardId, labelId, on) => void board.toggleLabel(cardId, labelId, on)}
             columns={base.columnIds.map((id) => base.columns[id])}
             onMoveToColumn={moveToColumn}
             onOpenCard={(id) => {
@@ -382,6 +387,9 @@ type ColumnProps = {
   sleDays: number | null
   people: Record<string, string>
   onAssign: (cardId: string, assigneeId: string | null) => void
+  labels: Label[]
+  cardLabels: Record<string, string[]>
+  onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -464,6 +472,9 @@ function ColumnView(props: ColumnProps) {
             sleDays={props.sleDays}
             people={props.people}
             onAssign={props.onAssign}
+            labels={props.labels}
+            cardLabels={props.cardLabels[cardId] ?? []}
+            onLabel={props.onLabel}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={() => props.onOpenCard(cardId)}
@@ -507,6 +518,9 @@ type CardProps = {
   /** userId → имя: карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
   onAssign: (cardId: string, assigneeId: string | null) => void
+  labels: Label[]
+  cardLabels: string[]
+  onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpen: () => void
@@ -523,6 +537,9 @@ function CardView({
   sleDays,
   people,
   onAssign,
+  labels,
+  cardLabels,
+  onLabel,
   columns,
   onMoveToColumn,
   onOpen,
@@ -564,6 +581,9 @@ function CardView({
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
   const assigneeName = card?.assigneeId ? (people[card.assigneeId] ?? null) : null
+  const own = labels.filter((l) => cardLabels.includes(l.id))
+  const shownLabels = own.slice(0, 3)
+  const hiddenLabels = own.length - shownLabels.length
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!(e.ctrlKey || e.metaKey)) return
@@ -611,6 +631,18 @@ function CardView({
                 и занимают двадцать пикселей. */}
             {assigneeName && <Avatar name={assigneeName} />}
           </div>
+          {/* Метки — до трёх видимых. Дальше счётчик: четыре цветных
+              чипа занимают строку целиком и перестают читаться. */}
+          {shownLabels.length > 0 && (
+            <div className="card-labels">
+              {shownLabels.map((label) => (
+                <span key={label.id} className={`chip chip--${label.tone}`}>
+                  {label.name}
+                </span>
+              ))}
+              {hiddenLabels > 0 && <span className="chip chip--more">+{hiddenLabels}</span>}
+            </div>
+          )}
           {card && (card.blocked || card.progress || aging) && (
             <div className="card-marks">
               {aging && (
@@ -649,6 +681,13 @@ function CardView({
                     icon: <PeopleIcon />,
                     onSelect: () => onAssign(cardId, id),
                   })),
+                ...labels.map((label) => ({
+                  label: cardLabels.includes(label.id)
+                    ? `Снять метку «${label.name}»`
+                    : `Метка «${label.name}»`,
+                  icon: <TagIcon />,
+                  onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
+                })),
                 ...(card?.assigneeId
                   ? [
                       {

@@ -332,11 +332,43 @@ export type Snapshot = {
   /** Кого можно назначить. Приезжает со снимком: иначе исполнитель
    *  на карточке остался бы идентификатором. */
   people: Person[]
+  /** Словарь меток организации и то, что чем помечено. Раздельно:
+   *  иначе название метки уезжало бы в снимок столько раз, на скольких
+   *  карточках оно висит. */
+  labels: Label[]
+  cardLabels: Record<string, string[]>
 }
 
 export type Person = { userId: string; name: string }
 
+/** Метка организации. Цвет — имя оттенка из закрытого набора, а не
+ *  значение: сырой цвет в тёмной теме начал бы светиться. */
+export type Label = { id: string; name: string; tone: LabelTone }
+export type LabelTone =
+  | 'slate'
+  | 'green'
+  | 'blue'
+  | 'violet'
+  | 'rose'
+  | 'amber'
+  | 'teal'
+  | 'brown'
+
+export const TONE_NAMES: Record<LabelTone, string> = {
+  slate: 'Серый',
+  green: 'Зелёный',
+  blue: 'Синий',
+  violet: 'Фиолетовый',
+  rose: 'Розовый',
+  amber: 'Янтарный',
+  teal: 'Бирюзовый',
+  brown: 'Коричневый',
+}
+
 export type Patch = {
+  /** Метки карточки целиком: «вот как теперь», а не «добавили такую-то».
+   *  Такой патч можно применить дважды без вреда. */
+  cardLabels?: Record<string, string[]>
   cards?: Card[]
   columns?: Column[]
   removedCardIds?: string[]
@@ -475,6 +507,11 @@ export const api = {
   grantObservation: (userId: string, teamId: string | null) =>
     request<Observer>('POST', '/api/observers', { userId, teamId }),
   revokeObservation: (id: string) => request<void>('DELETE', `/api/observers/${id}`),
+
+  listLabels: () => request<{ labels: Label[]; tones: LabelTone[] }>('GET', '/api/labels'),
+  createLabel: (name: string, tone: LabelTone) =>
+    request<Label>('POST', '/api/labels', { name, tone }),
+  archiveLabel: (id: string) => request<void>('DELETE', `/api/labels/${id}`),
 
   /** Догнать пропущенное патчами вместо целого снимка. */
   changes: (boardId: string, since: number) =>

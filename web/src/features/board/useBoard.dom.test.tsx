@@ -74,6 +74,8 @@ function board(version = 1): Snapshot {
     fields: [],
     fieldValues: {},
     people: [],
+    labels: [],
+    cardLabels: {},
   }
 }
 

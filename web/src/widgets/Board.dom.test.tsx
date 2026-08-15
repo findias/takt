@@ -81,6 +81,8 @@ function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), 
     fields: [],
     fieldValues: {},
     people: [],
+    labels: [],
+    cardLabels: {},
   }
 }
 

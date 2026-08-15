@@ -252,6 +252,7 @@ test('карточка получает исполнителя, и это вид
   await createBoard(page, 'Доска с исполнителем')
   await addCard(page, 'Очередь', 'Кому-то делать')
 
+  const beforeAssign = await boardVersion(page)
   const card = cardIn(page, 'Очередь', 'Кому-то делать')
   await card.hover()
   await card.getByRole('button', { name: /Действия карточки/ }).click()
@@ -264,9 +265,10 @@ test('карточка получает исполнителя, и это вид
   const initials = await avatar.textContent()
   expect(initials?.trim().length).toBeGreaterThan(0)
 
-  // И это не украшение экрана: переживает перезагрузку. Ждём появления,
-  // а не мгновенного совпадения: после перезагрузки доска приходит
-  // запросом, и требовать её немедленно — значит проверять скорость сети.
+  // Перед перезагрузкой ждём подтверждения: назначение применяется
+  // мгновенно, а уходит следом, и перезагружаться, не дождавшись,
+  // значит проверять скорость сети, а не сохранность данных.
+  await savedSince(page, beforeAssign)
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveText(
     initials!.trim(),
@@ -280,4 +282,43 @@ test('карточка получает исполнителя, и это вид
     .click()
   await page.getByRole('menuitem', { name: 'Снять исполнителя' }).click()
   await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveCount(0)
+})
+
+test('метка заводится в организации и вешается на карточку', async ({ page }) => {
+  await register(page)
+
+  // Метки живут в организации: одинаково названная метка на двух досках
+  // это одна метка, иначе фильтр собирать не из чего.
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByPlaceholder('Название метки').fill('Срочно')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+  await expect(page.getByText('Срочно')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await createBoard(page, 'Доска с метками')
+  await addCard(page, 'Очередь', 'Пометить меня')
+
+  const beforeLabel = await boardVersion(page)
+  const card = cardIn(page, 'Очередь', 'Пометить меня')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Метка «Срочно»' }).click()
+
+  await expect(card.getByText('Срочно')).toBeVisible()
+
+  // Переживает перезагрузку — это данные, а не украшение экрана.
+  // Ждём подтверждения: метка вешается мгновенно, а уходит следом.
+  await savedSince(page, beforeLabel)
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toBeVisible({
+    timeout: 10_000,
+  })
+
+  // И снимается тем же меню.
+  await cardIn(page, 'Очередь', 'Пометить меня').hover()
+  await cardIn(page, 'Очередь', 'Пометить меня')
+    .getByRole('button', { name: /Действия карточки/ })
+    .click()
+  await page.getByRole('menuitem', { name: 'Снять метку «Срочно»' }).click()
+  await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toHaveCount(0)
 })

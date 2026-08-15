@@ -31,6 +31,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/fields", s.authed(s.handleListFields))
 	mux.HandleFunc("POST /api/fields", s.authed(s.handleCreateField))
 	mux.HandleFunc("DELETE /api/fields/{id}", s.authed(s.handleArchiveField))
+	mux.HandleFunc("GET /api/labels", s.authed(s.handleListLabels))
+	mux.HandleFunc("POST /api/labels", s.authed(s.handleCreateLabel))
+	mux.HandleFunc("DELETE /api/labels/{id}", s.authed(s.handleArchiveLabel))
 	mux.HandleFunc("PUT /api/boards/{id}/sle", s.authed(s.handleSetSLE))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
@@ -233,6 +236,58 @@ func (s *Server) handleCloseIteration(w http.ResponseWriter, r *http.Request, p 
 // Свои поля заводятся на организацию, а не на доску: одинаково названное
 // поле на двух досках — это одно поле, иначе сводный отчёт складывает
 // разные сущности с общим названием.
+// Метки заводятся на организацию, как и свои поля: одинаково названная
+// метка на двух досках — это одна метка, иначе фильтр по организации
+// собирать не из чего.
+func (s *Server) handleListLabels(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	labels, err := s.boards.Labels(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "список меток", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"labels": labels, "tones": board.Tones})
+}
+
+func (s *Server) handleCreateLabel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+		Tone string `json:"tone"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	label, err := s.boards.CreateLabel(r.Context(), p.OrgID, p.ID, req.Name, req.Tone)
+	switch {
+	case errors.Is(err, board.ErrLabelExists):
+		writeError(w, http.StatusConflict, board.ErrLabelExists.Error())
+	case err != nil:
+		if s.failAccess(w, "создание метки", err) {
+			return
+		}
+	default:
+		writeJSON(w, http.StatusCreated, label)
+	}
+}
+
+// Метка убирается из обихода, но не снимается с карточек: карточка,
+// помеченная полгода назад, объясняет этим своё время в очереди,
+// и стирать это задним числом значит делать историю неверной.
+func (s *Server) handleArchiveLabel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	if s.failAccess(w, "архивация метки",
+		s.boards.ArchiveLabel(r.Context(), p.OrgID, p.ID, r.PathValue("id"))) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) handleListFields(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	fields, err := s.boards.Fields(r.Context(), p.OrgID, p.ID)
 	if err != nil {

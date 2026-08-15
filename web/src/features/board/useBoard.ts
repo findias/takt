@@ -349,6 +349,42 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
   // null снимает оценку, отсутствие поля её не трогает: иначе
   // переименование стирало бы оценку.
+  /**
+   * Метка на карточке.
+   *
+   * Оптимистично и точечно: метка — самое частое действие после
+   * перемещения, и ждать ответа ради галочки, которая либо есть, либо
+   * нет, незачем. Откат возвращает прежний список меток именно этой
+   * карточки.
+   */
+  const toggleLabel = useCallback(
+    async (cardId: string, labelId: string, on: boolean) => {
+      if (!boardId) return
+      const previous = shown.current?.cardLabels[cardId] ?? []
+      setBase((current) => {
+        if (!current) return current
+        const now = current.cardLabels[cardId] ?? []
+        const next = on ? [...new Set([...now, labelId])] : now.filter((id) => id !== labelId)
+        return { ...current, cardLabels: { ...current.cardLabels, [cardId]: next } }
+      })
+      try {
+        await api.operation(boardId, crypto.randomUUID(), on ? 'LABEL_CARD' : 'UNLABEL_CARD', {
+          cardId,
+          labelId,
+        })
+      } catch (e) {
+        setBase((current) =>
+          current ? { ...current, cardLabels: { ...current.cardLabels, [cardId]: previous } } : current,
+        )
+        notify({
+          text: e instanceof Error ? `Не удалось изменить метки: ${e.message}` : 'Не удалось изменить метки',
+          tone: 'warning',
+        })
+      }
+    },
+    [boardId, notify],
+  )
+
   const assignCard = useCallback(
     (cardId: string, assigneeId: string | null) =>
       patchCard(cardId, { assigneeId }, 'ASSIGN_CARD', { cardId, assigneeId },
@@ -457,6 +493,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     estimateCard,
     archiveCard,
     assignCard,
+    toggleLabel,
     linkCards,
     unlinkCards,
     blockCard,

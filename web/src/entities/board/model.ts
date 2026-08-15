@@ -10,6 +10,7 @@
 // переупорядочивание ответов не могут оставить доску в странном виде.
 
 import type {
+  Label,
   BoardInfo,
   Card,
   CardField,
@@ -42,6 +43,9 @@ export type BaseState = {
   fieldValues: Record<string, FieldValue[]>
   /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
+  /** Словарь меток и то, что чем помечено. */
+  labels: Label[]
+  cardLabels: Record<string, string[]>
 }
 
 export type MoveCommand = {
@@ -77,6 +81,8 @@ export function fromSnapshot(snap: Snapshot): BaseState {
   return {
     info: snap.board,
     people,
+    labels: snap.labels,
+    cardLabels: snap.cardLabels,
     columnIds: sortedColumns.map((c) => c.id),
     columns,
     cards,
@@ -128,7 +134,23 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     }
   }
 
-  return { ...base, info: { ...base.info, version: result.version }, columnIds, columns, cards, order }
+  // Метки приходят списком целиком — «вот как теперь». Такой патч
+  // применяется дважды без вреда, и догоняющему клиенту не нужно
+  // рассуждать о порядке.
+  let cardLabels = base.cardLabels
+  if (result.patch.cardLabels) {
+    cardLabels = { ...cardLabels, ...result.patch.cardLabels }
+  }
+
+  return {
+    ...base,
+    info: { ...base.info, version: result.version },
+    columnIds,
+    columns,
+    cards,
+    order,
+    cardLabels,
+  }
 }
 
 function removeFromOrder(order: Record<string, string[]>, columnId: string, cardId: string) {

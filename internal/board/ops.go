@@ -34,6 +34,11 @@ type Patch struct {
 	Cards          []Card   `json:"cards,omitempty"`
 	Columns        []Column `json:"columns,omitempty"`
 	RemovedCardIDs []string `json:"removedCardIds,omitempty"`
+	// Метки карточки целиком, а не «повесили такую-то»: список короткий,
+	// а разница между «добавь» и «вот как теперь» — это разница между
+	// патчем, который надо применять по порядку, и патчем, который можно
+	// применить дважды без вреда.
+	CardLabels map[string][]string `json:"cardLabels,omitempty"`
 }
 
 type Result struct {
@@ -336,6 +341,10 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return restoreCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ASSIGN_CARD":
 		return assignCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "LABEL_CARD":
+		return labelCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "UNLABEL_CARD":
+		return unlabelCard(ctx, tx, orgID, boardID, req.Payload)
 	case "CREATE_COLUMN":
 		return createColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "RENAME_COLUMN":

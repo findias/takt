@@ -195,6 +195,12 @@ type Snapshot struct {
 	// Свои поля организации и их значения: cardId → значения.
 	Fields      []Field                 `json:"fields"`
 	FieldValues map[string][]FieldValue `json:"fieldValues"`
+	// Метки организации и то, что чем помечено. Раздельно, а не списком
+	// меток внутри каждой карточки: иначе название метки уезжало бы
+	// в снимок столько раз, на скольких карточках оно висит.
+	Labels []Label `json:"labels"`
+	// cardId → labelId
+	CardLabels map[string][]string `json:"cardLabels"`
 	// Кого можно назначить и чьи имена показывать. Список маленький —
 	// установка рассчитана на сотню человек, — и он нужен на каждой доске:
 	// без него исполнитель на карточке остался бы идентификатором.
@@ -373,6 +379,9 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 			return err
 		}
 		if err := loadPeople(ctx, tx, orgID, &snap); err != nil {
+			return err
+		}
+		if err := loadLabels(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
 		return loadFields(ctx, tx, boardID, &snap)
