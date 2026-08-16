@@ -24,6 +24,8 @@ import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../featur
 import type { Filters } from '../features/board/filters.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
+import { SORT_NAMES, TableView, parseSort, sortToQuery } from '../features/board/TableView.tsx'
+import type { Sort } from '../features/board/TableView.tsx'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
@@ -147,6 +149,10 @@ export function Board({
   // и он переживает перезагрузку.
   const query = useQuery()
   const filters = useMemo(() => parseFilters(query), [query])
+  // Вид и сортировка живут в адресе рядом с фильтрами: отсортированный
+  // список присылают ссылкой так же, как отфильтрованную доску.
+  const asTable = query.get('view') === 'table'
+  const sort = useMemo(() => parseSort(query), [query])
   const setFilters = useCallback(
     (next: Filters) => setQuery(filtersToQuery(next, query), { replace: true }),
     [query],
@@ -674,6 +680,44 @@ export function Board({
             Найти
             <span className="muted small">{paletteHint()}</span>
           </button>
+          {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
+              а не выпадающий список, — вариантов два, и выбранный должен
+              быть виден без нажатия. */}
+          <div className="segment" role="group" aria-label="Вид доски">
+            {[
+              { key: 'board', name: 'Доска' },
+              { key: 'table', name: 'Таблица' },
+            ].map((view) => (
+              <button
+                key={view.key}
+                className={
+                  (view.key === 'table') === asTable ? 'segment-item segment-item--on' : 'segment-item'
+                }
+                aria-pressed={(view.key === 'table') === asTable}
+                onClick={() => {
+                  const next = new URLSearchParams(query)
+                  if (view.key === 'table') next.set('view', 'table')
+                  else next.delete('view')
+                  setQuery(next)
+                }}
+              >
+                {view.name}
+              </button>
+            ))}
+          </div>
+          {asTable && (
+            <select
+              value={sort}
+              aria-label="Сортировка"
+              onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
+            >
+              {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORT_NAMES[key]}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             className="btn btn--quiet"
             aria-expanded={showFlow}
@@ -736,6 +780,26 @@ export function Board({
         </div>
       )}
 
+      {/* Таблица — второй вид на те же данные, а не второй экран:
+          фильтр, группировка и права остаются теми же, меняется только
+          раскладка. Колонки при этом не рисуются вовсе — прятать их
+          стилями значило бы держать в разметке пятьсот невидимых
+          карточек. */}
+      {asTable ? (
+        <TableView
+          base={base}
+          order={order}
+          columns={columnList}
+          unit={unit}
+          sort={sort}
+          people={base.people}
+          labels={base.labels}
+          onOpenCard={showCard}
+          onMoveToColumn={moveToColumn}
+          onAssign={assignCard}
+        />
+      ) : (
+        <>
       {/* Доска прокручивается вбок сама, когда карточку подносят к краю:
           иначе перетащить в дальнюю колонку можно только в два приёма —
           бросить, прокрутить, взять снова. */}
@@ -758,6 +822,8 @@ export function Board({
           </div>
         </div>
       ))}
+        </>
+      )}
 
       {showFlow && (
         <Flow

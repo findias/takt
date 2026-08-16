@@ -954,3 +954,32 @@ test('убранная карточка достижима из архива и 
   await expect(cardIn(page, 'Очередь', 'Отменённая закупка')).toBeVisible()
   await expect(panel.getByText('Архив пуст.')).toBeVisible()
 })
+
+test('таблица — второй вид на те же данные, и он присылается ссылкой', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со списком')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Обновить регламент')
+
+  await page.getByRole('button', { name: 'Таблица' }).click()
+  const rows = page.locator('.board-table tbody tr')
+  await expect(rows).toHaveCount(2)
+  // Колонок на экране больше нет: прятать их стилями значило бы держать
+  // в разметке невидимые карточки.
+  await expect(page.getByRole('region', { name: 'Очередь' })).toHaveCount(0)
+
+  // Вид и сортировка живут в адресе и переживают перезагрузку.
+  await page.getByLabel('Сортировка').selectOption('column')
+  await expect(page).toHaveURL(/view=table.*sort=column/)
+  await page.reload()
+  await expect(page.locator('.board-table tbody tr')).toHaveCount(2)
+
+  // Правка по месту: перенос прямо из строки.
+  await rows.first().getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
+  await expect(page.locator('.board-table tbody tr td', { hasText: 'Готово' })).toHaveCount(1)
+
+  // Возврат к доске — тем же переключателем.
+  await page.getByRole('button', { name: 'Доска' }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+})

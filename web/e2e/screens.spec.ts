@@ -101,51 +101,57 @@ test('снимки экранов', async ({ page }) => {
   }
   await backToBoard(page, boardUrl)
 
+  // Таблица — тот же набор данных плоским списком.
+  await page.getByRole('button', { name: 'Таблица' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/12-таблица.png` })
+  await page.getByRole('button', { name: 'Доска' }).click()
+
   // Поток: обещание, время цикла, возраст работы, пропускная способность.
   await page.getByRole('button', { name: 'Поток' }).click()
   await page.waitForTimeout(600)
-  await page.screenshot({ path: `${SHOTS}/12-поток.png`, fullPage: true })
+  await page.screenshot({ path: `${SHOTS}/13-поток.png`, fullPage: true })
   await backToBoard(page, boardUrl)
 
   // Архив карточек.
   await page.getByRole('button', { name: 'Архив' }).click()
   await page.waitForTimeout(500)
-  await page.screenshot({ path: `${SHOTS}/13-архив-карточек.png` })
+  await page.screenshot({ path: `${SHOTS}/14-архив-карточек.png` })
   await backToBoard(page, boardUrl)
 
   // Отчёт по закрытой итерации.
   await page.getByRole('button', { name: 'Неделя 32', exact: true }).click()
   await page.waitForTimeout(500)
-  await page.screenshot({ path: `${SHOTS}/14-отчёт-итерации.png` })
+  await page.screenshot({ path: `${SHOTS}/15-отчёт-итерации.png` })
   await backToBoard(page, boardUrl)
 
   // Доступ к доске — прямо из её шапки.
   await page.getByRole('button', { name: /Видна/ }).click()
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/15-доступ.png` })
+  await page.screenshot({ path: `${SHOTS}/16-доступ.png` })
   await backToBoard(page, boardUrl)
 
   // Поиск и команды одним списком.
   await page.getByRole('button', { name: /Найти/ }).click()
   await page.waitForTimeout(300)
-  await page.screenshot({ path: `${SHOTS}/16-поиск.png` })
+  await page.screenshot({ path: `${SHOTS}/17-поиск.png` })
   await page.keyboard.press('Escape')
 
   // Экраны организации.
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Команда' }).click()
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/17-команда.png`, fullPage: true })
+  await page.screenshot({ path: `${SHOTS}/18-команда.png`, fullPage: true })
   await page.getByRole('button', { name: 'Структура' }).click()
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/18-структура.png`, fullPage: true })
+  await page.screenshot({ path: `${SHOTS}/19-структура.png`, fullPage: true })
 
   // Узкий экран: колонки не помещаются рядом, показывается одна.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Доски' }).click()
   await openBoard(page, 'Поставки')
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/19-узкий-экран.png` })
+  await page.screenshot({ path: `${SHOTS}/20-узкий-экран.png` })
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.screenshot({ path: `${SHOTS}/20-узкий-экран-тёмный.png` })
+  await page.screenshot({ path: `${SHOTS}/21-узкий-экран-тёмный.png` })
 })
