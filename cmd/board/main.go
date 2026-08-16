@@ -4,6 +4,7 @@
 //
 //	board serve     — HTTP API, WebSocket, фоновые задачи (по умолчанию)
 //	board migrate   — применить миграции и выйти
+//	board demo      — наполнить пустую базу данными для работы над видом
 //
 // Миграции вынесены в отдельную подкоманду намеренно. Запуск их при старте
 // приложения работает на одной реплике и разносит базу на двух: обе стартуют
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/konkov/agile/internal/config"
+	"github.com/konkov/agile/internal/demo"
 	"github.com/konkov/agile/internal/httpapi"
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/retention"
@@ -71,11 +73,27 @@ func main() {
 			log.Info("миграции применены", "файлы", applied)
 		}
 
+	case "demo":
+		switch err := demo.Fill(ctx, db); {
+		case errors.Is(err, demo.ErrAlreadyFilled):
+			log.Info("демонстрационные данные уже есть — оставляю как есть",
+				"обновить", "make stand (сносит базу)")
+		case err != nil:
+			log.Error("демонстрационные данные не завелись", "err", err)
+			os.Exit(1)
+		default:
+			log.Info("демонстрационные данные готовы",
+				"организация", demo.OrgName,
+				"вход", demo.People[0].Email,
+				"пароль", demo.Password)
+		}
+
 	case "serve":
 		serve(ctx, cfg, db, log)
 
 	default:
-		log.Error("неизвестная команда", "команда", command, "доступные", []string{"serve", "migrate"})
+		log.Error("неизвестная команда", "команда", command,
+			"доступные", []string{"serve", "migrate", "demo"})
 		os.Exit(1)
 	}
 }
