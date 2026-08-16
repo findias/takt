@@ -422,3 +422,112 @@ func TestInviteTokenOpensOnlyItsOwnRow(t *testing.T) {
 		t.Errorf("по токену видно %d приглашений, ожидалось ровно одно", visible)
 	}
 }
+
+// --- обезличивание (этап 11.5) ---
+
+// Требование «удалите мои данные» исполняется обезличиванием, а не
+// удалением строки: на личность ссылаются подписи под работой.
+func TestEraseKeepsTheIdentityAndDropsThePerson(t *testing.T) {
+	f := newFixture(t)
+	o, ownerID := f.org("Компания")
+	memberID, email := f.user("Иван Петров")
+	if _, err := f.db.Pool.Exec(f.ctx,
+		`insert into memberships (org_id, user_id, role) values ($1, $2, 'member')`,
+		o.OrgID, memberID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.Pool.Exec(f.ctx, `
+		insert into sessions (user_id, expires_at) values ($1, now() + interval '1 day')`,
+		memberID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.svc.Erase(f.ctx, o.OrgID, ownerID, memberID); err != nil {
+		t.Fatalf("обезличивание: %v", err)
+	}
+
+	var name, newEmail, hash string
+	var issuer *string
+	var anonymized *time.Time
+	if err := f.db.Pool.QueryRow(f.ctx, `
+		select name, email, password_hash, oidc_issuer, anonymized_at
+		  from users where id = $1`, memberID).
+		Scan(&name, &newEmail, &hash, &issuer, &anonymized); err != nil {
+		t.Fatalf("личность исчезла из базы: %v", err)
+	}
+	if anonymized == nil {
+		t.Error("отметка об обезличивании не поставлена")
+	}
+	if name == "Иван Петров" || strings.Contains(newEmail, strings.Split(email, "@")[0]) {
+		t.Errorf("персональные данные остались: %q / %q", name, newEmail)
+	}
+	if hash != "" || issuer != nil {
+		t.Error("вход остался возможен")
+	}
+
+	// Участие снято, сессии оборваны.
+	var members, sessions int
+	if err := f.db.Pool.QueryRow(f.ctx,
+		`select (select count(*) from memberships where user_id = $1),
+		        (select count(*) from sessions where user_id = $1)`,
+		memberID).Scan(&members, &sessions); err != nil {
+		t.Fatal(err)
+	}
+	if members != 0 || sessions != 0 {
+		t.Errorf("участий %d, сессий %d — ожидался ноль и там и там", members, sessions)
+	}
+
+	// В журнале организации остался след: кто и над кем.
+	// Читаем журнал от владельца: его политика открыта тем, кто видит
+	// организацию целиком, а безличной областью — никому.
+	var n int
+	if err := f.db.InTenant(f.ctx, o.OrgID, ownerID, func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `
+			select count(*) from audit_events
+			 where subject = 'users' and subject_id = $1 and action = 'delete'`,
+			memberID).Scan(&n)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("записей об обезличивании в журнале: %d, ожидалась одна", n)
+	}
+}
+
+// Личность глобальна, а требование приходит в одну организацию: стереть
+// человека там, где о его удалении не просили, нельзя.
+func TestEraseRefusesSharedIdentity(t *testing.T) {
+	f := newFixture(t)
+	here, ownerID := f.org("Здесь")
+	elsewhere, _ := f.org("Там")
+	memberID, _ := f.user("Двойной житель")
+	for _, orgID := range []string{here.OrgID, elsewhere.OrgID} {
+		if _, err := f.db.Pool.Exec(f.ctx,
+			`insert into memberships (org_id, user_id, role) values ($1, $2, 'member')`,
+			orgID, memberID); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := f.svc.Erase(f.ctx, here.OrgID, ownerID, memberID); !errors.Is(err, ErrSharedIdentity) {
+		t.Fatalf("ожидался отказ по общей личности, получено %v", err)
+	}
+	var name string
+	if err := f.db.Pool.QueryRow(f.ctx,
+		`select name from users where id = $1`, memberID).Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	if name != "Двойной житель" {
+		t.Error("личность обезличена вопреки отказу")
+	}
+}
+
+// Последнего владельца обезличить нельзя — по той же причине, по которой
+// его нельзя исключить: организация станет неуправляемой.
+func TestEraseKeepsTheLastOwner(t *testing.T) {
+	f := newFixture(t)
+	o, ownerID := f.org("Компания")
+	if err := f.svc.Erase(f.ctx, o.OrgID, ownerID, ownerID); !errors.Is(err, ErrLastOwner) {
+		t.Fatalf("ожидался отказ по последнему владельцу, получено %v", err)
+	}
+}

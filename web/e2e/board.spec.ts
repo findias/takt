@@ -855,3 +855,34 @@ test('работу можно поставить на доску соседей,
   await expect(page.getByText('Работу не взяли')).toBeVisible()
   await expect(page.getByText(/которого вам не видно/)).toHaveCount(0)
 })
+
+test('удаление насовсем спрашивает и называет карточку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с дублями')
+  await addCard(page, 'Очередь', 'Дубль сметы')
+
+  const card = cardIn(page, 'Очередь', 'Дубль сметы')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
+
+  // Подтверждение называет то, что исчезнет: вопрос «вы уверены?»
+  // без имени отвечают не читая.
+  const dialog = page.locator('dialog')
+  await expect(dialog.getByText(/«Дубль сметы» исчезнет/)).toBeVisible()
+
+  // Отмена ничего не делает — иначе диалог был бы декорацией.
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  await expect(card).toBeVisible()
+
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
+  await dialog.getByRole('button', { name: 'Удалить навсегда' }).click()
+  await expect(card).toHaveCount(0)
+
+  // И не возвращается перезагрузкой: удаление, в отличие от архива,
+  // не имеет обратного действия.
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Дубль сметы')).toHaveCount(0)
+})

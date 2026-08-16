@@ -112,6 +112,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
 	mux.HandleFunc("DELETE /api/members/{userId}", s.owner(s.handleRemoveMember))
+	// Исключение и обезличивание — разные действия и потому разные пути:
+	// первое обратимо приглашением, второе не обратимо ничем.
+	mux.HandleFunc("DELETE /api/members/{userId}/identity", s.owner(s.handleEraseMember))
 
 	// Приглашение открывают по секретной ссылке — до входа и до аккаунта.
 	mux.HandleFunc("GET /api/invites/{token}/info", s.handleInviteInfo)
@@ -508,6 +511,22 @@ func (s *Server) handleSetRole(w http.ResponseWriter, r *http.Request, p auth.Pr
 func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	err := s.orgs.Remove(r.Context(), p.OrgID, p.ID, r.PathValue("userId"))
 	s.writeMembershipResult(w, err, "исключение из команды")
+}
+
+func (s *Server) handleEraseMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if r.PathValue("userId") == p.ID {
+		// Обезличить себя значит остаться без входа и без способа это
+		// исправить: владельцем организации уже никто не будет.
+		writeError(w, http.StatusConflict, "себя обезличить нельзя")
+		return
+	}
+	err := s.orgs.Erase(r.Context(), p.OrgID, p.ID, r.PathValue("userId"))
+	switch {
+	case errors.Is(err, org.ErrSharedIdentity), errors.Is(err, org.ErrServiceIdentity):
+		writeError(w, http.StatusConflict, err.Error())
+	default:
+		s.writeMembershipResult(w, err, "обезличивание участника")
+	}
 }
 
 func (s *Server) writeMembershipResult(w http.ResponseWriter, err error, what string) {

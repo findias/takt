@@ -495,6 +495,10 @@ export const api = {
   setRole: (userId: string, role: Role) =>
     request<void>('PUT', `/api/members/${userId}/role`, { role }),
   removeMember: (userId: string) => request<void>('DELETE', `/api/members/${userId}`),
+  /** Обезличить: личность остаётся, персональных данных в ней не остаётся.
+   *  Удалить строку нельзя — на неё ссылаются подписи под работой. */
+  eraseMember: (userId: string) =>
+    request<void>('DELETE', `/api/members/${userId}/identity`),
 
   inviteInfo: (token: string) => request<InviteInfo>('GET', `/api/invites/${token}/info`),
   acceptInvite: (token: string, account?: { name: string; password: string }) =>

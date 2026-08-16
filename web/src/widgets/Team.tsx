@@ -15,6 +15,7 @@ import type {
 } from '../shared/api/index.ts'
 import { actorText, auditText, timeText } from '../entities/feed/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
+import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -35,6 +36,9 @@ export function Team({ principal }: { principal: Principal }) {
 
   useEffect(load, [load])
 
+  // Кого спрашивают обезличить.
+  const [toErase, setToErase] = useState<Member | null>(null)
+
   const act = (p: Promise<unknown>) => {
     setError(null)
     p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
@@ -43,6 +47,34 @@ export function Team({ principal }: { principal: Principal }) {
   return (
     <div className="stack">
       {error && <p className="error">{error}</p>}
+
+      {/* Требование об удалении персональных данных. Диалог называет
+          и человека, и то, что останется: обещать полное стирание
+          нечестно — подписи под работой остаются. */}
+      <ConfirmDialog
+        open={toErase !== null}
+        title="Удалить данные человека?"
+        confirmLabel="Удалить данные"
+        danger
+        onCancel={() => setToErase(null)}
+        onConfirm={() => {
+          const who = toErase
+          setToErase(null)
+          if (who) act(api.eraseMember(who.userId))
+        }}
+      >
+        {/* Имя стоит в именительном падеже и подлежащим: склонять чужие
+            имена подстановкой нельзя, а «У «Иван Петров»» — это ошибка,
+            которую видно сразу. */}
+        <p>
+          «{toErase?.name}» перестанет быть участником организации. Имя, почта и способ входа
+          будут стёрты, сессии оборвутся.
+        </p>
+        <p className="muted small">
+          Работа, которую он делал, останется: карточки, комментарии и записи журнала продолжат
+          на неё ссылаться — просто без имени. Стереть их значило бы стереть историю чужой работы.
+        </p>
+      </ConfirmDialog>
 
       <section className="stack">
         <h2 className="section-title">В организации</h2>
@@ -73,6 +105,15 @@ export function Team({ principal }: { principal: Principal }) {
                     aria-label={`Исключить ${m.name}`}
                   >
                     Исключить
+                  </button>
+                  {/* Исключение обратимо приглашением, обезличивание
+                      не обратимо ничем — и потому спрашивает. */}
+                  <button
+                    className="link link--danger"
+                    onClick={() => setToErase(m)}
+                    aria-label={`Удалить данные: ${m.name}`}
+                  >
+                    Удалить данные
                   </button>
                 </div>
               ) : (

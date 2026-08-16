@@ -30,6 +30,17 @@ var (
 	ErrInviteInvalid = errors.New("ссылка недействительна или срок её действия истёк")
 	ErrAlreadyMember = errors.New("этот человек уже в команде")
 	ErrLastOwner     = errors.New("в организации должен остаться хотя бы один владелец")
+
+	// ErrSharedIdentity — личность живёт не только здесь. Обезличить её
+	// из одной организации значило бы стереть человека там, где о его
+	// удалении никто не просил.
+	ErrSharedIdentity = errors.New(
+		"этот человек состоит и в других организациях: обезличить личность отсюда нельзя, можно только исключить")
+
+	// ErrServiceIdentity — за личностью стоит ключ, а не человек.
+	// Персональных данных у неё нет, а обезличивание сломало бы подписи
+	// интеграции.
+	ErrServiceIdentity = errors.New("это служебная личность ключа, а не человек")
 )
 
 type Service struct {
@@ -157,6 +168,95 @@ func (s *Service) Remove(ctx context.Context, orgID, actorID, userID string) err
 		_, err = tx.Exec(ctx,
 			`update sessions set active_org_id = null
 			  where user_id = $1 and active_org_id = $2`, userID, orgID)
+		return err
+	})
+}
+
+// Erase исполняет требование об удалении персональных данных.
+//
+// Строку `users` при этом не удаляют, и это не обход требования, а его
+// единственное честное исполнение: на личность ссылаются подписи под
+// работой — журнал действий, назначения, комментарии, — и половина
+// ссылок без каскада. Удаление, стирающее историю чужой работы, хуже
+// отсутствия удаления.
+//
+// Поэтому личность остаётся, а персональных данных в ней не остаётся:
+// имя, почта и внешняя личность стираются, вход становится невозможен,
+// сессии обрываются. Подписи продолжают указывать на того же, кто делал
+// работу, — просто у него больше нет имени.
+//
+// Чего это не покрывает: почта, попавшая в журнал действий вместе
+// с приглашением. Журнал только дописывается — переписать историю нельзя
+// и владельцу, — и стирается он сроком хранения организации, а не
+// точечной правкой. Это тот же механизм, который уже есть, и другого
+// честного здесь нет.
+func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) error {
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
+			return err
+		}
+
+		// Личность глобальна, а требование пришло в одну организацию.
+		var elsewhere int
+		if err := tx.QueryRow(ctx,
+			`select count(*) from memberships where user_id = $1 and org_id <> $2`,
+			userID, orgID).Scan(&elsewhere); err != nil {
+			return err
+		}
+		if elsewhere > 0 {
+			return ErrSharedIdentity
+		}
+
+		var service bool
+		if err := tx.QueryRow(ctx,
+			`select exists (select 1 from api_clients where user_id = $1)`,
+			userID).Scan(&service); err != nil {
+			return err
+		}
+		if service {
+			return ErrServiceIdentity
+		}
+
+		// Участие снимается первым: его удаление пишется в журнал
+		// триггером, и в журнале это видно как отдельный факт.
+		if _, err := tx.Exec(ctx,
+			`delete from memberships where org_id = $1 and user_id = $2`,
+			orgID, userID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `delete from sessions where user_id = $1`, userID); err != nil {
+			return err
+		}
+
+		// Почта обязана остаться уникальной, поэтому не пустая, а заведомо
+		// недостижимая: `.invalid` зарезервирован RFC 2606 и не бывает
+		// ничьим адресом. Пустой пароль не совпадёт ни с чем: место хеша
+		// занято значением, которое хешем не является.
+		tag, err := tx.Exec(ctx, `
+			update users
+			   set name          = 'Удалённый участник',
+			       email         = 'deleted+' || id::text || '@invalid',
+			       password_hash = '',
+			       oidc_issuer   = null,
+			       oidc_subject  = null,
+			       anonymized_at = now()
+			 where id = $1 and anonymized_at is null`, userID)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+
+		// Запись в журнал делается кодом, а не триггером, — единственное
+		// такое место, и причина в самой таблице: у `users` нет org_id,
+		// а журнал ведётся по организациям. Триггеру неоткуда узнать,
+		// в чей журнал писать.
+		_, err = tx.Exec(ctx, `
+			insert into audit_events (org_id, actor_id, action, subject, subject_id, payload)
+			values ($1, (select app_current_user()), 'delete', 'users', $2,
+			        jsonb_build_object('reason', 'обезличивание по требованию об удалении данных'))`,
+			orgID, userID)
 		return err
 	})
 }
