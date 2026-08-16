@@ -616,6 +616,10 @@ export const api = {
    *  считается поток. Поэтому у действия есть обратное. */
   archiveBoard: (boardId: string) => request<void>('DELETE', `/api/boards/${boardId}`),
   restoreBoard: (boardId: string) => request<void>('POST', `/api/boards/${boardId}/restore`),
+  /** Удалить доску насовсем. Название передаётся не для удобства: сервер
+   *  сверяет его сам, иначе подтверждение было бы обещанием клиента. */
+  deleteBoard: (boardId: string, name: string) =>
+    request<void>('DELETE', `/api/boards/${boardId}/permanently`, { name }),
   createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),
 

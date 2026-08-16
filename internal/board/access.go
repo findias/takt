@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -236,6 +238,71 @@ func (s *Service) Archive(ctx context.Context, orgID, actorID, boardID string) e
 // Restore возвращает доску из архива.
 func (s *Service) Restore(ctx context.Context, orgID, actorID, boardID string) error {
 	return s.setArchived(ctx, orgID, actorID, boardID, false)
+}
+
+// ErrNameMismatch — подтверждение не совпало с названием доски.
+//
+// Вопрос «вы уверены?» отвечают не читая; вопрос «наберите название»
+// невозможно ответить, не посмотрев, что именно удаляешь. Это
+// единственный смысл требования, и потому оно стоит на сервере,
+// а не только в диалоге.
+var ErrNameMismatch = errors.New("название не совпало — доска не удалена")
+
+// ErrBoardNotArchived — доску сперва убирают в архив.
+var ErrBoardNotArchived = errors.New("удалить можно только доску из архива")
+
+// Delete стирает доску насовсем — вместе с карточками, колонками,
+// итерациями, обсуждениями и журналом её потока.
+//
+// Что остаётся: записи в журнале действий. У них нет внешних ключей
+// на доску, а сама запись об удалении делается триггером в тот же миг
+// и хранит удалённую строку целиком. После этого нельзя узнать, как шла
+// работа на доске, но всегда можно узнать, кто её убрал и что это была
+// за доска.
+//
+// Три условия, и каждое отвечает своему виду ошибки: право — владелец
+// организации, состояние — доска в архиве, намерение — набранное
+// название. Первые два держатся политикой в базе, третье проверяется
+// здесь: базе не с чем сравнивать намерение.
+func (s *Service) Delete(ctx context.Context, orgID, actorID, boardID, confirmName string) error {
+	return translateAccess(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		if err := requireOwner(ctx, tx); err != nil {
+			return err
+		}
+
+		var name string
+		var archived *time.Time
+		err := tx.QueryRow(ctx,
+			`select name, archived_at from boards where id = $1`, boardID).Scan(&name, &archived)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if archived == nil {
+			return ErrBoardNotArchived
+		}
+		if strings.TrimSpace(confirmName) != name {
+			return ErrNameMismatch
+		}
+
+		// Журнал потока стирается отдельным запросом: внешнего ключа
+		// на доску у него нет намеренно — событие хранит колонку такой,
+		// какой она была, — и каскад его не заберёт.
+		if _, err := tx.Exec(ctx,
+			`delete from card_events where board_id = $1`, boardID); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `delete from boards where id = $1`, boardID)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	}))
 }
 
 func (s *Service) setArchived(ctx context.Context, orgID, actorID, boardID string, archived bool) error {

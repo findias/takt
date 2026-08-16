@@ -23,6 +23,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
+	// Отдельный путь, а не флаг у DELETE: у этих двух действий разная
+	// цена ошибки, и различать их опечаткой в параметре нельзя.
+	mux.HandleFunc("DELETE /api/boards/{id}/permanently", s.authed(s.handleDeleteBoard))
 	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}/comments", s.authed(s.handleComments))
 	mux.HandleFunc("POST /api/boards/{id}/cards/{cardId}/comments", s.authed(s.handleAddComment))
 	mux.HandleFunc("PATCH /api/comments/{commentId}", s.authed(s.handleEditComment))
@@ -158,6 +161,31 @@ func (s *Server) handleArchiveBoard(w http.ResponseWriter, r *http.Request, p au
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Удаление насовсем: доска из архива, набранное название, владелец
+// организации. Ответ различает три отказа, потому что чинят их
+// по-разному: не тот человек, не то состояние, не то название.
+func (s *Server) handleDeleteBoard(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := s.boards.Delete(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Name)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, board.ErrOwnerOnly):
+		writeError(w, http.StatusForbidden, board.ErrOwnerOnly.Error())
+	case errors.Is(err, board.ErrBoardNotArchived):
+		writeError(w, http.StatusConflict, board.ErrBoardNotArchived.Error())
+	case errors.Is(err, board.ErrNameMismatch):
+		writeError(w, http.StatusBadRequest, board.ErrNameMismatch.Error())
+	default:
+		s.failAccess(w, "удаление доски", err)
+	}
 }
 
 func (s *Server) handleRestoreBoard(w http.ResponseWriter, r *http.Request, p auth.Principal) {

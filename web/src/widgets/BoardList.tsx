@@ -3,6 +3,7 @@ import { api } from '../shared/api/index.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { BoardAccess } from '../features/access/BoardAccess.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
+import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 
 export function BoardList({
   principal,
@@ -16,6 +17,9 @@ export function BoardList({
   const [error, setError] = useState<string | null>(null)
   const [openAccess, setOpenAccess] = useState<string | null>(null)
   const [archived, setArchived] = useState<BoardInfo[] | null>(null)
+  // Какую доску спрашивают удалить и что набрали в подтверждение.
+  const [toDelete, setToDelete] = useState<BoardInfo | null>(null)
+  const [typed, setTyped] = useState('')
   // Люди и подразделения нужны только настройке доступа, поэтому берутся
   // один раз на список, а не по разу на каждую доску.
   const [people, setPeople] = useState<Member[]>([])
@@ -127,7 +131,55 @@ export function BoardList({
             .then((r) => setArchived(r.boards))
             .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось вернуть доску'))
         }
+        // Удалять насовсем может один владелец: действие необратимо,
+        // и уносит оно работу целой команды.
+        onDelete={
+          principal.role === 'owner'
+            ? (board) => setToDelete(board)
+            : undefined
+        }
       />
+
+      {/* Название набирают руками, а не просто подтверждают. Вопрос
+          «вы уверены?» отвечают не читая; на вопрос «наберите название»
+          нельзя ответить, не посмотрев, что именно удаляешь. */}
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Удалить доску навсегда?"
+        confirmLabel="Удалить навсегда"
+        danger
+        confirmDisabled={typed.trim() !== toDelete?.name}
+        onCancel={() => {
+          setToDelete(null)
+          setTyped('')
+        }}
+        onConfirm={() => {
+          const board = toDelete
+          setToDelete(null)
+          setTyped('')
+          if (!board) return
+          api
+            .deleteBoard(board.id, board.name)
+            .then(() => api.archivedBoards())
+            .then((r) => setArchived(r.boards))
+            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось удалить доску'))
+        }}
+      >
+        <p>
+          Доска «{toDelete?.name}» исчезнет вместе со всеми карточками, колонками, итерациями,
+          обсуждениями и историей работы. Вернуть будет нечем.
+        </p>
+        <p className="muted small">
+          В журнале действий останется запись о том, кто её удалил. Наберите название доски, чтобы
+          подтвердить.
+        </p>
+        <input
+          value={typed}
+          aria-label="Название доски для подтверждения"
+          placeholder={toDelete?.name}
+          onChange={(e) => setTyped(e.target.value)}
+        />
+      </ConfirmDialog>
 
       {canEdit && (
         <form
@@ -171,11 +223,14 @@ function Archive({
   canEdit,
   onOpen,
   onRestore,
+  onDelete,
 }: {
   boards: BoardInfo[] | null
   canEdit: boolean
   onOpen: () => void
   onRestore: (id: string) => void
+  /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца. */
+  onDelete?: (board: BoardInfo) => void
 }) {
   if (boards === null) {
     return (
@@ -196,6 +251,11 @@ function Archive({
             {canEdit && (
               <button className="link" onClick={() => onRestore(b.id)}>
                 Вернуть
+              </button>
+            )}
+            {onDelete && (
+              <button className="link link--danger" onClick={() => onDelete(b)}>
+                Удалить навсегда
               </button>
             )}
           </li>

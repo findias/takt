@@ -22,6 +22,7 @@ export function ConfirmDialog({
   confirmLabel = 'Подтвердить',
   danger = false,
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: {
@@ -31,6 +32,9 @@ export function ConfirmDialog({
   confirmLabel?: string
   danger?: boolean
   busy?: boolean
+  /** Подтверждение недоступно, пока условие не выполнено: так у диалога,
+   *  который просит набрать название удаляемого. */
+  confirmDisabled?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -58,7 +62,12 @@ export function ConfirmDialog({
       <h2 className="dialog-title">{title}</h2>
       <div className="dialog-body">{children}</div>
       <div className="row row--tight dialog-actions">
-        <Button kind={danger ? 'danger' : 'primary'} busy={busy} onClick={onConfirm}>
+        <Button
+          kind={danger ? 'danger' : 'primary'}
+          busy={busy}
+          disabled={confirmDisabled}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </Button>
         <Button kind="quiet" onClick={onCancel}>

@@ -111,3 +111,88 @@ func TestDeleteCardIsOwnerOnly(t *testing.T) {
 		t.Error("карточка удалилась вопреки отказу")
 	}
 }
+
+// --- доска ---
+
+func TestDeleteBoardRequiresArchiveOwnerAndName(t *testing.T) {
+	f := newFixture(t)
+	f.createCard("Работа", f.columns()[0].ID)
+
+	var name string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select name from boards where id = $1`, f.boardID).Scan(&name)
+	})
+
+	// Живую доску не удаляют: сперва архив, и он обратим.
+	if err := f.svc.Delete(f.ctx, f.orgID, f.actorID, f.boardID, name); !errors.Is(err, ErrBoardNotArchived) {
+		t.Fatalf("живая доска удалилась или ответила не тем: %v", err)
+	}
+	if err := f.svc.Archive(f.ctx, f.orgID, f.actorID, f.boardID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Не тот человек.
+	member := addMember(t, f.svc.db, f.orgID, "member")
+	if err := f.svc.Delete(f.ctx, f.orgID, member, f.boardID, name); !errors.Is(err, ErrOwnerOnly) {
+		t.Fatalf("удалить смог не владелец: %v", err)
+	}
+
+	// Не то название: подтверждение проверяется на сервере, а не только
+	// в диалоге.
+	if err := f.svc.Delete(f.ctx, f.orgID, f.actorID, f.boardID, "не та доска"); !errors.Is(err, ErrNameMismatch) {
+		t.Fatalf("подтверждение не проверено: %v", err)
+	}
+	if n := f.countRows(`select count(*) from boards where id = $1`, f.boardID); n != 1 {
+		t.Fatal("доска исчезла после неудачных попыток")
+	}
+}
+
+func TestDeleteBoardErasesFlowAndKeepsTheLedger(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	id := f.createCard("Работа", cols[0].ID)
+	f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": id, "toColumnId": cols[1].ID, "place": "end"})
+
+	var name string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select name from boards where id = $1`, f.boardID).Scan(&name)
+	})
+	if err := f.svc.Archive(f.ctx, f.orgID, f.actorID, f.boardID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Delete(f.ctx, f.orgID, f.actorID, f.boardID, name); err != nil {
+		t.Fatalf("удаление доски: %v", err)
+	}
+
+	for _, q := range []string{
+		`select count(*) from boards where id = $1`,
+		`select count(*) from cards where board_id = $1`,
+		`select count(*) from board_columns where board_id = $1`,
+		`select count(*) from card_events where board_id = $1`,
+	} {
+		if n := f.countRows(q, f.boardID); n != 0 {
+			t.Errorf("после удаления осталось %d строк: %s", n, q)
+		}
+	}
+
+	// Журнал действий остался и знает, какую доску убрали.
+	var subject, deletedName string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `
+			select subject, payload -> 'new' ->> 'name' from audit_events
+			 where subject_id = $1 and action = 'delete'`, f.boardID).Scan(&subject, &deletedName)
+	})
+	if subject != "boards" || deletedName != name {
+		t.Errorf("в журнале %q/%q, ожидалась запись об удалении доски %q", subject, deletedName, name)
+	}
+
+	// А карточки доски отдельными записями ленту не топят: их унёс
+	// каскад, и доска записана целиком.
+	if n := f.countRows(`
+		select count(*) from audit_events
+		 where subject = 'cards' and action = 'delete'
+		   and payload -> 'new' ->> 'board_id' = $1::text`, f.boardID); n != 0 {
+		t.Errorf("карточки доски получили %d отдельных записей в журнале", n)
+	}
+}
