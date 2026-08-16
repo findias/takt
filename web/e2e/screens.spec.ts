@@ -82,6 +82,8 @@ test('снимки экранов', async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/07a-меню-карточки.png` })
   await page.keyboard.press('Escape')
   await card.click()
+  // Карточка открывается обсуждением; подзадачи живут на «Работе».
+  await page.getByRole('tab', { name: 'Работа' }).click()
   await page.getByLabel('Название подзадачи').fill('Свести смету с прошлым годом')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await page.getByLabel('Добавить исполнителя').selectOption({ index: 1 })
@@ -96,6 +98,10 @@ test('снимки экранов', async ({ page }) => {
     await mode.selectOption('side')
   }
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // Разбиение работы раскрывается прямо с доски.
+  await card.getByRole('button', { name: /Показать подзадачи/ }).click()
+  await page.screenshot({ path: `${SHOTS}/04а-доска-с-подзадачами.png` })
 
   // Доступ к доске — прямо с доски.
   await page.getByRole('button', { name: /Видна/ }).click()

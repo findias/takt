@@ -19,7 +19,7 @@ import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palett
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { parentsOf } from '../entities/card/model.ts'
+import { childrenOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -424,6 +424,9 @@ export function Board({
   // Кто чья подзадача — один раз на доску: строка «часть такой-то
   // задачи» на карточке нужна всем карточкам сразу.
   const parents = useMemo(() => (base ? parentsOf(base) : {}), [base])
+  // Подзадачи каждого родителя — один обход связей на доску, а не
+  // по обходу на карточку: см. childrenOf.
+  const children = useMemo(() => (base ? childrenOf(base) : {}), [base])
 
   const columnList = useMemo(
     () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
@@ -507,6 +510,7 @@ export function Board({
         cardLabels={base.cardLabels}
         cardAssignees={base.cardAssignees}
         parents={parents}
+        children={children}
         onLabel={toggleLabel}
         columns={columnList}
         onMoveToColumn={moveToColumn}

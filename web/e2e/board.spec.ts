@@ -584,6 +584,35 @@ test('на узком экране показывается одна колон�
   await phone.close()
 })
 
+test('подзадачи раскрываются прямо с доски', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска разбиения')
+  await addCard(page, 'Очередь', 'Собрать отчёт')
+
+  const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
+  await parent.getByRole('button', { name: 'Собрать отчёт' }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Название подзадачи').fill('Свести цифры')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await expect(page.getByRole('button', { name: 'Свести цифры' }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // Свёрнуто по умолчанию: разбиение видно мерой, а не списком, —
+  // иначе колонка из десяти разбитых задач превращается в простыню.
+  const toggle = parent.getByRole('button', { name: /подзадачи/i })
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(parent.getByText('Свести цифры')).toBeHidden()
+
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(parent.getByText('Свести цифры')).toBeVisible()
+
+  // Подзадача этой же доски открывается прямо отсюда: связь должна
+  // проходиться, а не только показываться.
+  await parent.getByRole('button', { name: 'Свести цифры' }).click()
+  await expect(page.getByRole('heading', { name: 'Свести цифры' })).toBeVisible()
+})
+
 test('история спрятана за вкладкой, карточка открывается обсуждением', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска вкладок')
@@ -646,6 +675,8 @@ test('подзадача заводится из карточки одним п�
 
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
+  // Карточка открывается обсуждением; подзадачи живут на «Работе».
+  await page.getByRole('tab', { name: 'Работа' }).click()
 
   // Название — всё, что спрашивают: подзадача это обычная карточка,
   // и заводится она тем же движением, что и карточка в колонке.
@@ -664,6 +695,7 @@ test('подзадача заводится из карточки одним п�
   // в память вкладки.
   await page.reload()
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
   await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
 
   // Связь проходится в обе стороны: из родителя — в подзадачу,
@@ -671,6 +703,7 @@ test('подзадача заводится из карточки одним п�
   // можно было только поиском по доске.
   await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты' }).click()
   await expect(page.getByRole('heading', { name: 'Прогнать тесты' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Работа' }).click()
   await page.getByRole('complementary').getByRole('button', { name: 'Выпустить релиз' }).click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
@@ -679,10 +712,12 @@ test('подзадача заводится из карточки одним п�
   // строке тоже можно перейти к родителю.
   const subtask = cardIn(page, 'Очередь', 'Прогнать тесты')
   await expect(subtask.getByRole('button', { name: 'Выпустить релиз' })).toBeVisible()
-  // Родитель показывает разбиение полосой прогресса.
+  // Родитель показывает разбиение полосой, и она же раскрывает
+  // подзадачи: мера и путь внутрь неё — одно управление, поэтому мера
+  // читается вслух как имя кнопки, а не как отдельная полоса.
   await expect(
-    cardIn(page, 'Очередь', 'Выпустить релиз').getByRole('progressbar', {
-      name: 'Подзадачи: готово 0 из 1',
+    cardIn(page, 'Очередь', 'Выпустить релиз').getByRole('button', {
+      name: /Подзадачи: готово 0 из 1/,
     }),
   ).toBeVisible()
 })
@@ -716,6 +751,7 @@ test('исполнителей у карточки может быть неск�
   await page.goto('/')
   await openBoard(page, 'Доска вдвоём')
   await cardIn(page, 'Очередь', 'Делать вдвоём').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
   await page.getByLabel('Добавить исполнителя').selectOption({ label: 'Проверяющий' })
   await page.getByLabel('Добавить исполнителя').selectOption({ label: 'Иван Петров' })
 

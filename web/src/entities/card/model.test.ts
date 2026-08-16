@@ -10,6 +10,7 @@ import { test } from 'node:test'
 import {
   candidatesForSubtask,
   cardDetails,
+  childrenOf,
   progressLabel,
   progressRatio,
 } from './model.ts'
@@ -98,6 +99,38 @@ test('подзадачи разбираются по трём случаям: с
   const hidden = details.subtasks.find((s) => s.id === 'hidden')!
   assert.equal(hidden.reachable, false)
   assert.ok(hidden.where.includes('не видно'))
+})
+
+test('подзадачи собираются по родителям одним обходом', () => {
+  const base = state(
+    [
+      card('parent', 'Релиз'),
+      card('other', 'Другая работа'),
+      card('b', 'Бета'),
+      card('a', 'Альфа'),
+    ],
+    [
+      { fromCard: 'parent', toCard: 'b', kind: 'subtask' },
+      { fromCard: 'parent', toCard: 'a', kind: 'subtask' },
+      { fromCard: 'parent', toCard: 'neighbour', kind: 'subtask' },
+      // Связь не-подзадачей в разбиение работы не входит.
+      { fromCard: 'parent', toCard: 'other', kind: 'blocks' },
+      // Родителя нет на этой доске: раскрывать нечего, и в список
+      // он не попадает.
+      { fromCard: 'elsewhere', toCard: 'other', kind: 'subtask' },
+    ],
+    [foreign('neighbour', 'Сборка')],
+  )
+
+  const children = childrenOf(base)
+  assert.deepEqual(Object.keys(children), ['parent'])
+  // Порядок — по названию, тот же, что в панели: два разных порядка
+  // в двух местах читались бы как два разных списка.
+  assert.deepEqual(
+    children.parent.map((s) => s.title),
+    ['Альфа', 'Бета', 'Сборка'],
+  )
+  assert.equal(children.parent.find((s) => s.id === 'neighbour')!.onThisBoard, false)
 })
 
 test('родитель находится по обратной стороне связи и он один', () => {

@@ -10,12 +10,15 @@ import {
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
 import { progressLabel, progressRatio } from '../../entities/card/model.ts'
+import type { Related } from '../../entities/card/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import {
   ArchiveIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   EditIcon,
   MoreIcon,
   MoveIcon,
@@ -53,6 +56,11 @@ type CardProps = {
   cardLabels: string[]
   /** Родительская задача, если карточка — чья-то подзадача. */
   parent?: { id: string; title: string; onThisBoard: boolean }
+  /** Подзадачи этой карточки. Раскрываются по кнопке прямо на доске:
+   *  до этого разбиение работы было видно только числом «0 из 3»,
+   *  а чтобы узнать, на что именно она разбита, карточку приходилось
+   *  открывать. */
+  subtasks: Related[]
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
@@ -79,6 +87,7 @@ function CardViewInner({
   labels,
   cardLabels,
   parent,
+  subtasks,
   onLabel,
   columns,
   onMoveToColumn,
@@ -93,6 +102,10 @@ function CardViewInner({
   const [dragging, setDragging] = useState(false)
   const [edge, setEdge] = useState<Edge | null>(null)
   const [editing, setEditing] = useState(false)
+  // Раскрытие подзадач — состояние самой карточки и живёт с ней: это
+  // ответ на «что здесь внутри», заданный один раз и здесь же, а не
+  // настройка, которую человек ждёт увидеть завтра такой же.
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const element = ref.current
@@ -318,18 +331,77 @@ function CardViewInner({
               далеко она ушла. */}
           {card?.progress && card.progress.total > 0 && (
             <div className="card-progress">
-              <div
-                className="progress"
-                role="progressbar"
-                aria-valuenow={card.progress.done}
-                aria-valuemin={0}
-                aria-valuemax={card.progress.total}
-                aria-label={`Подзадачи: готово ${progressLabel(card, unit)}`}
-              >
-                <div className="progress-fill" style={{ width: `${progressRatio(card) * 100}%` }} />
-              </div>
-              <span className="muted small">{progressLabel(card, unit)}</span>
+              {/* Полоса — она же кнопка раскрытия, если подзадачи видны
+                  отсюда. Отдельная кнопка рядом с полосой означала бы две
+                  цели нажатия про одно и то же в ширину колонки; здесь
+                  сама мера разбиения и есть путь внутрь него. */}
+              {subtasks.length > 0 ? (
+                <button
+                  className="card-progress-toggle"
+                  aria-expanded={open}
+                  aria-controls={`subtasks-${cardId}`}
+                  // Мера разбиения переезжает в имя кнопки, а сама полоса
+                  // становится картинкой. Вложить progressbar внутрь
+                  // кнопки нельзя: спецификация ARIA объявляет содержимое
+                  // кнопки представлением, и роль внутри неё пропадает —
+                  // мера просто перестала бы читаться вслух.
+                  aria-label={`Подзадачи: готово ${progressLabel(card, unit)}. ${
+                    open ? 'Скрыть подзадачи' : 'Показать подзадачи'
+                  }`}
+                  onClick={() => setOpen(!open)}
+                >
+                  {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                  <span className="progress" aria-hidden="true">
+                    <span
+                      className="progress-fill"
+                      style={{ width: `${progressRatio(card) * 100}%` }}
+                    />
+                  </span>
+                  <span className="muted small" aria-hidden="true">
+                    {progressLabel(card, unit)}
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <div
+                    className="progress"
+                    role="progressbar"
+                    aria-valuenow={card.progress.done}
+                    aria-valuemin={0}
+                    aria-valuemax={card.progress.total}
+                    aria-label={`Подзадачи: готово ${progressLabel(card, unit)}`}
+                  >
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${progressRatio(card) * 100}%` }}
+                    />
+                  </div>
+                  <span className="muted small">{progressLabel(card, unit)}</span>
+                </>
+              )}
             </div>
+          )}
+
+          {/* Раскрытые подзадачи. Список, а не карточки: карточка этой же
+              доски уже лежит в своей колонке, и второй её показ рядом
+              с родителем читался бы как вторая задача. Здесь видно, что
+              за работа, готова ли она и чья она, если чужая. */}
+          {subtasks.length > 0 && (
+            <ul className="subtasks" id={`subtasks-${cardId}`} hidden={!open}>
+              {subtasks.map((s) => (
+                <li key={s.id} className={s.done ? 'subtask subtask--done' : 'subtask'}>
+                  {s.onThisBoard ? (
+                    <button className="link" onClick={() => onOpen(s.id)}>
+                      {s.title}
+                    </button>
+                  ) : (
+                    // Чужая доска: назвать можем, открыть отсюда — нет.
+                    <span>{s.title}</span>
+                  )}
+                  {!s.onThisBoard && <span className="muted small">{s.where}</span>}
+                </li>
+              ))}
+            </ul>
           )}
 
           <div className="card-actions">

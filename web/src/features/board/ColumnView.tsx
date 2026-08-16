@@ -8,6 +8,8 @@ import type { Column, ColumnKind, EstimateUnit, Label } from '../../shared/api/i
 import { IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/icons.tsx'
+import { NO_SUBTASKS } from '../../entities/card/model.ts'
+import type { Related } from '../../entities/card/model.ts'
 import { CardView } from './CardView.tsx'
 import type { ColumnPatch } from './useBoard.ts'
 
@@ -45,6 +47,8 @@ type ColumnProps = {
   cardLabels: Record<string, string[]>
   /** cardId → родительская задача, если карточка чья-то подзадача. */
   parents: Record<string, { id: string; title: string; onThisBoard: boolean }>
+  /** cardId → её подзадачи, если работа разбита. */
+  children: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
@@ -206,6 +210,7 @@ export function ColumnView(props: ColumnProps) {
             labels={props.labels}
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
             parent={props.parents[cardId]}
+            subtasks={props.children[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}

@@ -61,6 +61,37 @@ export function parentsOf(
   return parents
 }
 
+/** Общий пустой список: `?? []` создавал бы новый массив на каждую
+ *  отрисовку и ломал бы memo у каждой карточки без подзадач, то есть
+ *  почти у всех. */
+export const NO_SUBTASKS: Related[] = []
+
+/**
+ * Чьи это подзадачи: cardId родителя → его подзадачи.
+ *
+ * Считается один раз на доску по той же причине, что и parentsOf:
+ * cardDetails обходит все связи ради одной карточки, и звать его
+ * из отрисовки каждой означало бы пятьсот обходов на доску.
+ *
+ * Порядок — тот же, что в панели карточки: по названию. Порядок
+ * подзадач сам по себе смысла не несёт, а два разных порядка в двух
+ * местах читаются как разные списки.
+ */
+export function childrenOf(base: BaseState): Record<string, Related[]> {
+  const children: Record<string, Related[]> = {}
+  for (const link of base.links) {
+    if (link.kind !== 'subtask') continue
+    // Родителя, которого нет на этой доске, пропускаем: раскрывать
+    // подзадачи не у чего, а сама связь видна с карточки-подзадачи.
+    if (!base.cards[link.fromCard]) continue
+    ;(children[link.fromCard] ??= []).push(resolve(base, link.toCard, 'subtask'))
+  }
+  for (const list of Object.values(children)) {
+    list.sort((a, b) => a.title.localeCompare(b.title, 'ru'))
+  }
+  return children
+}
+
 export function cardDetails(base: BaseState, cardId: string): CardDetails | null {
   const card = base.cards[cardId]
   if (!card) return null

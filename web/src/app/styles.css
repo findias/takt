@@ -1120,6 +1120,70 @@ textarea.description {
   height: 0.25rem;
 }
 
+/* Полоса разбиения, она же кнопка раскрытия. Кнопка занимает всю строку
+   и выглядит не кнопкой: щёлкают по мере разбиения, а не по «элементу
+   управления», и вторая обведённая кнопка в ширину колонки спорила бы
+   с меню действий. */
+.card-progress-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  /* WCAG 2.5.8: цель нажатия 24×24. Полоса тонкая, поэтому высоту
+     держит сама кнопка. */
+  min-height: var(--target);
+}
+.card-progress-toggle .progress {
+  flex: 1;
+  height: 0.25rem;
+}
+.card-progress-toggle svg {
+  flex: none;
+  color: var(--ink-3);
+}
+.card-progress-toggle:hover svg {
+  color: var(--accent);
+}
+
+/* Раскрытые подзадачи: список под родителем, с отступом и чертой слева —
+   отступ говорит «это внутри», черта не даёт ему рассыпаться на строки
+   без хозяина. */
+.subtasks {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.subtask {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-xs);
+  min-width: 0;
+}
+.subtask .link {
+  padding: 0;
+  text-align: left;
+  min-height: var(--target);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Сделанная подзадача приглушена и зачёркнута: одним цветом отличать
+   её нельзя — это критерий WCAG 1.4.1. */
+.subtask--done {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+.subtask--done .link {
+  color: var(--ink-3);
+}
+
 /* Номер и родительская задача — одной строкой над названием, мельче
    и тише его: это подписи «что это» и «где я», а не второе название.
    В одной строке, а не двумя: две тихие строки перед названием
