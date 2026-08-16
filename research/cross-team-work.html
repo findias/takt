@@ -1,0 +1,529 @@
+<title>Работа через границу команд</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<style>
+/* decision sheet — компактная надстройка над системой research-документов */
+.sheet{padding-top:3rem}
+.sheet .masthead{padding-top:0}
+.band{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:2.8rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--rule);
+}
+.band h2{font-size:clamp(1.3rem,2.6vw,1.6rem)}
+.tag{
+  font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;font-weight:650;
+  padding:.22rem .5rem;border:1px solid var(--rule-strong);color:var(--ink-3);
+  white-space:nowrap;flex:none;
+}
+.tag.hard{color:var(--risk);border-color:var(--risk)}
+.tag.keep{color:var(--accent);border-color:var(--accent)}
+.tag.soft{color:var(--warn);border-color:var(--warn)}
+.tag.never{color:var(--ink-3)}
+.rows{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.row{
+  display:grid;grid-template-columns:15.5rem 1fr;gap:1.3rem;
+  background:var(--surface);padding:.9rem 1.1rem;
+}
+.row .what{font-size:.9rem;font-weight:650;line-height:1.35}
+.row .what code{font-size:.78rem;font-weight:400;display:inline-block;margin-top:.25rem}
+.row .why{font-size:.88rem;color:var(--ink-2);margin:0}
+.row .why em{color:var(--ink-3);font-style:normal;font-size:.82rem;display:block;margin-top:.3rem}
+.dont{list-style:none;padding:0;margin:1rem 0 0}
+.dont li{
+  padding:.6rem 0 .6rem 1.5rem;border-bottom:1px solid var(--rule);margin:0;
+  font-size:.92rem;position:relative;
+}
+.dont li:last-child{border-bottom:none}
+.dont li::before{
+  content:"×";position:absolute;left:.35rem;top:.62rem;
+  color:var(--risk);font-weight:650;
+}
+.dont b{color:var(--ink)}
+@media (max-width:720px){
+  .row{grid-template-columns:1fr;gap:.35rem}
+}
+</style>
+
+<article class="doc sheet">
+
+<header class="masthead">
+  <p class="kicker mono">Разбор постановки · этап 11.4 · август 2026</p>
+  <h1>Работа через границу команд</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">Связь двух карточек и постановка работы одной команды в другую — не одно и то же. Разбор отвечает на четыре вопроса плана: чем «моя подзадача у соседей» отличается от «их задача, от которой я завишу», кто владеет сроком, у кого работа видна в работе и на чьих метриках она сказывается. Кода в разборе нет — есть решения, из которых он следует.</p>
+</header>
+
+<dl class="meta">
+  <div><dt>Повод</dt><dd>этап 11.4</dd></div>
+  <div><dt>Новых таблиц</dt><dd>ноль</dd></div>
+  <div><dt>Новых сущностей</dt><dd>ноль</dd></div>
+  <div><dt>Найдено попутно</dt><dd>одна ложь на экране</dd></div>
+</dl>
+
+<div class="band">
+  <span class="tag keep">без изменений</span>
+  <h2>Что уже устроено и работает</h2>
+</div>
+
+<p>Разбор начинается с того, что есть, потому что половина ответов уже записана в схеме — просто не сведена вместе и не доведена до экрана.</p>
+
+<div class="tablewrap wide">
+<table>
+  <caption>Инвентарь: что относится к работе через границу</caption>
+  <thead><tr><th>Что</th><th>Как устроено</th><th>Где</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Связь карточек</strong></td>
+      <td>Три вида: <code>subtask</code>, <code>blocks</code>, <code>relates</code>. Связь принадлежит паре карточек, а не доске — именно поэтому она вынесена в таблицу, а не в поле <code>parent_id</code>. У подзадачи ровно один родитель: частичный уникальный индекс.</td>
+      <td><code>card_links</code>, 0004</td>
+    </tr>
+    <tr>
+      <td><strong>Подзадача на чужой доске</strong></td>
+      <td>Разрешена с самого начала: единственное ограничение — общая организация, и его обеспечивает изоляция арендатора.</td>
+      <td><code>links.go</code></td>
+    </tr>
+    <tr>
+      <td><strong>Запись в чужую доску</strong></td>
+      <td>Уже разрешена. <code>app_writable_boards()</code> пускает участника в любую доску с видимостью <code>org</code>, а это умолчание. Постановка задачи соседям не требует ни одного нового права.</td>
+      <td>0006, 0007</td>
+    </tr>
+    <tr>
+      <td><strong>Что видно о чужой карточке</strong></td>
+      <td>Снимок доски отдаёт по чужой карточке пять вещей: название, доску, команду, сделана ли, заблокирована ли. Колонки среди них нет.</td>
+      <td><code>board.go:550</code></td>
+    </tr>
+    <tr>
+      <td><strong>Единица оценки</strong></td>
+      <td>Одна на организацию, не на доску. Значит вес подзадач складывается через границу команд и прогресс по весу не врёт.</td>
+      <td><code>orgs.estimate_unit</code>, 0014</td>
+    </tr>
+    <tr>
+      <td><strong>Срок</strong></td>
+      <td>Поля срока нет ни у одной карточки. Есть обещание доски: «85% работы проходит доску за 8 дней». Пустое по умолчанию — доска без истории обещать не может.</td>
+      <td><code>boards.sle_days</code>, 0026</td>
+    </tr>
+    <tr>
+      <td><strong>Метрики</strong></td>
+      <td>Считаются по доске: время цикла, пропускная способность, возраст работы, полосы потока — всё с параметром <code>boardID</code>.</td>
+      <td><code>internal/metrics</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p class="tnote">Из семи строк шесть — «работает и менять не надо». Правки требует одна: состав того, что известно о чужой карточке.</p>
+
+<div class="band">
+  <span class="tag hard">различение</span>
+  <h2>Два отношения, а не одно</h2>
+</div>
+
+<p>Оба отношения выглядят одинаково: две карточки, две доски, две команды, стрелка между ними. Разница не в стрелке, а в том, <strong>кто владеет причиной существования работы</strong>.</p>
+
+<div class="diagram wide">
+  <div class="dgrid">
+    <div class="dlane">
+      <div class="dlabel">Постановка</div>
+      <div class="dboxes">
+        <div class="dbox hot"><b>Моя задача</b><span>без неё соседской работы не было бы</span></div>
+        <div class="dbox"><b>→ Их карточка</b><span>появилась потому, что попросили</span></div>
+      </div>
+    </div>
+    <div class="dlane">
+      <div class="dlabel">Зависимость</div>
+      <div class="dboxes">
+        <div class="dbox"><b>Их задача</b><span>была бы и без меня, по их плану</span></div>
+        <div class="dbox hot"><b>→ Моя карточка</b><span>стоит и ждёт</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p>Отличить одно от другого можно вопросом, на который есть однозначный ответ: <em>исчезнет ли эта работа вместе с родителем?</em> Подзадача, которую попросили сделать, — исчезнет: отменили разбитую задачу, отменяется и кусок. Задача, от которой я завишу, — нет: моя отмена у соседей не меняет ничего.</p>
+
+<div class="note pick">
+  <span class="lbl">Вывод</span>
+  <p>Различать уже есть чем: <code>subtask</code> отвечает «моя, делают соседи», <code>blocks</code> — «их, я жду». Ни четвёртого вида связи, ни признака «межкомандная» заводить не нужно: пересечение границы выводится сравнением команд двух досок и потому не хранится.</p>
+</div>
+
+<p>Чего действительно нет — так это того, чтобы правилам этого различия следовал интерфейс. Сегодня в подзадачи предлагаются только карточки этой же доски, а <code>CREATE_SUBTASK</code> кладёт новую карточку на текущую доску, потому что параметра доски у неё нет. То есть постановка работы соседям возможна в API и недостижима из интерфейса.</p>
+
+<div class="band">
+  <span class="tag never">отвергнуто</span>
+  <h2>Соблазн: завести «заявку»</h2>
+</div>
+
+<p>Напрашивается отдельная сущность с собственным жизненным циклом: подана → принята → отклонена → выполнена. У неё был бы свой список входящих, свой счётчик, свои уведомления.</p>
+
+<p>Отвергается по тому же доводу, по которому в 4.2 убрана роль в команде: это <strong>второй способ работе существовать</strong>. В момент, когда заявку примут, она превратится в карточку — и дальше две записи об одной работе будут обязаны совпадать, не будучи обязанными совпасть. На вопрос «что сейчас с этим делом» появятся два ответа.</p>
+
+<div class="note pick">
+  <span class="lbl">Решение</span>
+  <p>Запрос — это карточка на доске исполнителя. Всё, что нужно очереди заявок, у доски уже есть: колонка входа с политикой входа, лимит незавершённой работы, обещание срока. Заводить рядом вторую очередь значит объявить, что своей доске команда не хозяйка.</p>
+</div>
+
+<div class="band">
+  <span class="tag hard">четыре ответа</span>
+  <h2>Кто чем владеет</h2>
+</div>
+
+<h3>Сроком — доска исполнителя, и заказчик его не двигает</h3>
+
+<p>Поля срока в системе нет намеренно: канбан обещает не дату, а распределение. Значит вопрос «кто владеет сроком» имеет ответ, не требующий ни одного нового поля: обещание принадлежит доске, на которой работа лежит. Заказчик его <em>видит</em> и не может изменить — единственное распределение, при котором обещание чего-то стоит.</p>
+
+<p>И «когда будет» перестаёт быть предметом переписки: обещание доски исполнителя уже посчитано, а рядом с ним лежит её время цикла в процентилях. Работа сводится к тому, чтобы показать это у чужой подзадачи, а не выдумать поле «срок», которое заказчик проставит по своему желанию, а исполнитель не признает.</p>
+
+<h3>Работой — исполнитель, целиком</h3>
+
+<p>Карточка лежит в его колонке, входит в его лимит, стареет по его правилам и попадает в его полосы потока. Менять здесь нечего. Но заказчику сегодня недоступно главное — <strong>взяли или ещё лежит</strong>: о чужой карточке известно только «сделана или нет» и «заблокирована или нет». «Третью неделю в очереди» и «делают со вчера» выглядят на экране одинаково, а разница между ними и есть весь смысл спрашивать.</p>
+
+<div class="note">
+  <span class="lbl">Поправка</span>
+  <p>В состав чужой карточки добавляется колонка и её вид. Разметка колонок (2.3) уже различает очередь, работу и завершение — значит показать три положения дел вместо двух можно тем, что посчитано.</p>
+</div>
+
+<h3>Метриками — тоже исполнитель</h3>
+
+<p>Время цикла и пропускная способность считаются там, где работа лежала, — он её и делал. Правильно и остаётся как есть.</p>
+
+<div class="note warn">
+  <span class="lbl">Долг, записанный осознанно</span>
+  <p>У заказчика ожидание соседа не измеряется ничем. Его карточка стоит и стареет — возраст незавершённой работы это показывает, — но причина не видна.</p>
+  <p>Не лечится автоматической блокировкой родителя: блокировка — интервал, из которого считается время в блоке, и наполнять его выведенными, а не объявленными интервалами значит испортить единственную честную меру. Снимет отсрочку вопрос «сколько мы ждём соседей» на настоящих данных; считается проигрыванием тех же связей, хранить для этого нечего.</p>
+</div>
+
+<h3>Отказом — исполнитель, и отказ должен быть виден</h3>
+
+<p>Команда, которой поставили работу, обязана иметь возможность не взять. Отдельного действия для этого не нужно: отказ — это архивация карточки, всё как с любой другой. Нужно, чтобы заказчик <em>узнал</em> — а вот здесь сегодня ложь на экране, см. ниже.</p>
+
+<p>Обратное — архивация родителя — подзадачу не трогает. У неё свой владелец, и стирать чужую начатую работу по своей отмене нельзя; заказчик может только попросить снять.</p>
+
+<div class="band">
+  <span class="tag hard">найдено попутно</span>
+  <h2>Архивированная чужая подзадача врёт</h2>
+</div>
+
+<p>Соседи отказались и убрали карточку в архив. Заказчик видит: <em>«Карточка недоступна · В подразделении, которого вам не видно»</em>.</p>
+
+<p>Причина складывается из двух половин, каждая из которых по отдельности верна. Связь в снимке доски остаётся, а чужие карточки читаются с условием <code>archived_at is null</code> (<code>board.go:557</code>) — значит в снимке связь есть, а карточки под неё нет. Разбор на клиенте (<code>entities/card/model.ts</code>) на этот случай имеет одну ветку: карточка есть, доска недоступна.</p>
+
+<div class="note risk">
+  <span class="lbl">Почему это не мелочь</span>
+  <p>Два разных положения дел требуют разных следующих шагов: недоступную карточку идти искать бесполезно, от отказа надо идти договариваться. Показаны они одним текстом, причём для отказа — ложным. Это ровно та ошибка, которую уже чинили у архивной доски (<code>board_archived</code>), и чинится она так же: отдавать архивную чужую карточку с признаком, а не прятать.</p>
+</div>
+
+<div class="band">
+  <span class="tag soft">из разбора следует</span>
+  <h2>Работы</h2>
+</div>
+
+<div class="wide rows">
+  <div class="row">
+    <div class="what">Доска назначения у подзадачи<br><code>CREATE_SUBTASK · boardId</code></div>
+    <p class="why">Необязательный параметр; пусто — эта доска, как сейчас. Проверка — обычная проверка записи, доска должна быть в <code>app_writable_boards()</code>. Отдельного права «может ставить задачи этой доске» не заводить: это гранулярные разрешения, отложенные осознанно до реальных жалоб.<em>Карточка ложится в первую колонку доски назначения — политика входа и лимит колонки применяются как есть.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Отказ по правилам исполнителя</div>
+    <p class="why">Если у соседей вход в колонку закрыт или лимит жёсткий, постановка отказывается тем же сообщением, что и своя карточка. Это и значит «команда владеет своей очередью»: чужой заказ не обходит правил доски.</p>
+  </div>
+  <div class="row">
+    <div class="what">Выбор доски в интерфейсе</div>
+    <p class="why">Рядом с полем «Что нужно сделать?», по умолчанию — эта доска. Предлагаются доски, доступные на запись; их же список нужен и <code>candidatesForSubtask</code>, который сегодня знает только свою доску.</p>
+  </div>
+  <div class="row">
+    <div class="what">Состав чужой карточки<br><code>LinkedCard</code></div>
+    <p class="why">Плюс колонка, вид колонки и обещание её доски. Один запрос на доску, как и сейчас: связей десятки, а запросов должно остаться столько же, сколько было.</p>
+  </div>
+  <div class="row">
+    <div class="what">Архивная чужая карточка</div>
+    <p class="why">Отдавать с признаком архива вместо того, чтобы пропадать. Клиент различает случай признаком, а не текстом.</p>
+  </div>
+</div>
+
+<div class="band">
+  <span class="tag never">не делать</span>
+  <h2>Что решено не делать</h2>
+</div>
+
+<ul class="dont wide">
+  <li><b>Сущность «заявка» со своим жизненным циклом</b> — никогда. Второй способ работе существовать; довод выше.</li>
+  <li><b>Четвёртый вид связи или признак «межкомандная»</b> — не нужен: пересечение границы выводится из команд двух досок, а два отношения уже различены видом связи.</li>
+  <li><b>Поле «срок» на карточке</b> — обещание принадлежит доске. Срок, который заказчик проставляет исполнителю, — это дата, под которой никто не подписывался.</li>
+  <li><b>Автоматическая блокировка родителя незакрытой чужой подзадачей</b> — испортит время в блоке, единственную честную меру ожидания.</li>
+  <li><b>Право «может ставить задачи этой доске»</b> — до этапа 4.3 и до жалоб. Сегодня запись в доску с видимостью <code>org</code> уже разрешена, а закрытая доска соседей и не должна принимать заказы молча.</li>
+</ul>
+
+</article>
