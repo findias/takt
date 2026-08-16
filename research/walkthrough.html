@@ -1,0 +1,438 @@
+<title>Сквозная проверка</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<style>
+/* decision sheet — компактная надстройка над системой research-документов */
+.sheet{padding-top:3rem}
+.sheet .masthead{padding-top:0}
+.band{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:2.8rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--rule);
+}
+.band h2{font-size:clamp(1.3rem,2.6vw,1.6rem)}
+.tag{
+  font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;font-weight:650;
+  padding:.22rem .5rem;border:1px solid var(--rule-strong);color:var(--ink-3);
+  white-space:nowrap;flex:none;
+}
+.tag.hard{color:var(--risk);border-color:var(--risk)}
+.tag.keep{color:var(--accent);border-color:var(--accent)}
+.tag.soft{color:var(--warn);border-color:var(--warn)}
+.tag.never{color:var(--ink-3)}
+.rows{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.row{
+  display:grid;grid-template-columns:15.5rem 1fr;gap:1.3rem;
+  background:var(--surface);padding:.9rem 1.1rem;
+}
+.row .what{font-size:.9rem;font-weight:650;line-height:1.35}
+.row .what code{font-size:.78rem;font-weight:400;display:inline-block;margin-top:.25rem}
+.row .why{font-size:.88rem;color:var(--ink-2);margin:0}
+.row .why em{color:var(--ink-3);font-style:normal;font-size:.82rem;display:block;margin-top:.3rem}
+.dont{list-style:none;padding:0;margin:1rem 0 0}
+.dont li{
+  padding:.6rem 0 .6rem 1.5rem;border-bottom:1px solid var(--rule);margin:0;
+  font-size:.92rem;position:relative;
+}
+.dont li:last-child{border-bottom:none}
+.dont li::before{
+  content:"×";position:absolute;left:.35rem;top:.62rem;
+  color:var(--risk);font-weight:650;
+}
+.dont b{color:var(--ink)}
+@media (max-width:720px){
+  .row{grid-template-columns:1fr;gap:.35rem}
+}
+</style>
+
+<article class="doc sheet">
+
+<header class="masthead">
+  <p class="kicker mono">Отчёт о проходе · этап 11.6 · 16 августа 2026</p>
+  <h1>Сквозная проверка</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">Чистая база, все тридцать три миграции с нуля, свой сервер. Заведены руками все задуманные объекты — организация, дерево подразделений, доски трёх видов, люди четырёх ролей, карточка со всеми свойствами, итерации, поля, метки, связи, вебхуки, ключи, — и по ним пройдено. Здесь записано, что работает, что работает не так и чего нет вовсе.</p>
+</header>
+
+<dl class="meta">
+  <div><dt>Проверок</dt><dd>81</dd></div>
+  <div><dt>Не сошлось по делу</dt><dd>9</dd></div>
+  <div><dt>Из них «нет вовсе»</dt><dd>3</dd></div>
+  <div><dt>Поломок</dt><dd>0</dd></div>
+</dl>
+
+<div class="band">
+  <span class="tag keep">условия</span>
+  <h2>Как проверялось</h2>
+</div>
+
+<p>Отдельная база в docker, поднятая с нуля, — не та, на которой идёт разработка. Все миграции применены одной цепочкой: это заодно и проверка порядка миграций, которую дев-база не ловит, потому что копит состояние.</p>
+
+<p>Дальше — два прохода. <strong>Через API</strong> заводилось всё, что заводится: так быстрее и так видно ответы, которых на экране нет. <strong>Через браузер</strong> смотрелись экраны: то, ради чего этот пункт стоит последним, — работает ли собранное вместе, а не по частям. Приёмник вебхуков поднимался отдельным процессом и записывал всё пришедшее.</p>
+
+<div class="note">
+  <span class="lbl">О счёте «не сошлось»</span>
+  <p>Первый прогон дал четырнадцать расхождений. Пять из них оказались ошибками сценария, а не системы: операция метки называется <code>LABEL_CARD</code>, а не <code>TOGGLE_LABEL</code>; подписке на вебхуки нужно название; повтор по <code>Idempotency-Key</code> работает только для сервисных клиентов и для человека за браузером намеренно не включается; создание отвечает 201, а не 200. Они пересданы и в счёт не входят.</p>
+</div>
+
+<div class="band">
+  <span class="tag keep">работает</span>
+  <h2>Что прошло</h2>
+</div>
+
+<div class="tablewrap wide">
+<table>
+  <caption>Проверено и сошлось</caption>
+  <thead><tr><th>Область</th><th>Что именно</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Организация и люди</strong></td><td>Регистрация организации с владельцем. Приглашение по ссылке с заведением аккаунта на почту из приглашения. Четыре человека трёх ролей. Состав организации.</td></tr>
+    <tr><td><strong>Структура</strong></td><td>Дерево в три уровня и второй корень. Состав узлов. Администратор подразделения. Наблюдатель всей организации. Перенос подразделения под другого родителя и обратно.</td></tr>
+    <tr><td><strong>Права</strong></td><td>Участник пишет, наблюдатель читает и получает отказ на запись словами, а не «не найдено». Журнал действий открыт наблюдателю организации. Администратор подразделения заводит отдел под собой и получает отказ на корневой.</td></tr>
+    <tr><td><strong>Видимость</strong></td><td>Доска организации видна всем, командная — своей команде и наблюдателю, закрытая — никому, кроме вписанных, включая наблюдателя организации.</td></tr>
+    <tr><td><strong>Разметка колонки</strong></td><td>Политика входа текстом, лимит и его жёсткость. На доске видно и то, и другое, и счётчик «1 из 3».</td></tr>
+    <tr><td><strong>Карточка</strong></td><td>Номер вида <code>ОБЩА-8</code>. Описание, оценка, метка, двое исполнителей, своё поле, перенос, блокировка с причиной и снятие, подзадача на своей доске, подзадача на доске соседей, зависимость от карточки чужой доски.</td></tr>
+    <tr><td><strong>Обсуждение</strong></td><td>Реплика с упоминанием, ответ веткой, правка и история правок.</td></tr>
+    <tr><td><strong>Итерации</strong></td><td>Итерация с целью и датами, вход карточки, закрытие. Закрытая карточек не принимает и отвечает конфликтом.</td></tr>
+    <tr><td><strong>Метрики</strong></td><td>Обещание доски. Отчёт потока считается; прогноз методом Монте-Карло даёт точки. Пустые показатели объясняются словами, а не нулями.</td></tr>
+    <tr><td><strong>Ленты</strong></td><td>Лента доски — 16 событий. Журнал действий — 33 записи, включая записи об удалении.</td></tr>
+    <tr><td><strong>Вебхуки</strong></td><td>Подписка с секретом, показанным один раз. Доставка дошла с подписью <code>x-signature</code>, меткой времени и идентификатором доставки. Журнал доставок.</td></tr>
+    <tr><td><strong>Ключи</strong></td><td>Ключ заведён, значение показано один раз. Чтение по ключу проходит, запись отклоняется по разрешениям.</td></tr>
+    <tr><td><strong>Контракт</strong></td><td>Версия в адресе, OpenAPI, машиночитаемые коды ошибок, заголовки предела частоты, безопасный повтор по ключу и отказ при предъявлении того же ключа к другому запросу.</td></tr>
+    <tr><td><strong>Удаление</strong></td><td>Карточка насовсем, доска из архива по набранному названию, обезличивание человека. Записи об этом в журнале действий.</td></tr>
+    <tr><td><strong>Выгрузка</strong></td><td>Файл организации, 26 разделов, журнал по отдельной просьбе.</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="tnote">Ни одного отказа, который выглядел бы поломкой: сообщения объясняют, что делать, а не сообщают код.</p>
+
+<div class="band">
+  <span class="tag hard">работает не так</span>
+  <h2>Шесть мест</h2>
+</div>
+
+<div class="wide rows">
+  <div class="row">
+    <div class="what">Закрытую доску нельзя завести одним действием<br><code>PUT /api/boards/{id}/access → 409</code></div>
+    <p class="why">Перевод доски в «только вписанным» отклоняется, пока автор не вписал себя в её состав: политика проверяет, что новый ряд остаётся виден тому, кто его пишет, а создатель доски в её состав не попадает сам. Отказ подсказывает выход текстом — «впишите себя в её состав», — и после этого всё проходит.<em>Порядок известен только из отказа. Либо создателя вписывать в состав при создании, либо делать это молча при закрытии доски.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Закрытая итерация исчезает с экрана</div>
+    <p class="why">Итерации моделировались интервалами ради одного вопроса — «что было в спринте на момент его закрытия» (0015). Данные для ответа есть: <code>closedAt</code> приходит в снимке, интервалы вхождения записаны. Но интерфейс показывает только открытые, и посмотреть закрытую нечем ни на доске, ни в панели карточки.<em>Модель заложена под отчёт, отчёта нет.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Метку нельзя повесить из карточки</div>
+    <p class="why">В панели карточки, куда заходят с ней работать, есть исполнители, оценка, свои поля, описание, подзадачи, связи и итерация — и нет меток. Повесить метку можно только из меню карточки на доске.<em>Одно свойство карточки живёт не там, где остальные.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Доски подразделения не видны в структуре</div>
+    <p class="why">Этап 2.1 обещал в этом экране «доски узла». Раскрытие узла даёт только состав людей; чтобы узнать, какие доски у подразделения, надо идти в список досок и открывать «Доступ» у каждой.</p>
+  </div>
+  <div class="row">
+    <div class="what">Служебные личности ключей стоят в списке людей</div>
+    <p class="why">Ключ имеет собственную личность в <code>users</code> и через неё состоит в организации — это решение 5.1, и оно верное: действие ключа принадлежит тому, у кого есть имя. Но интерфейс их не отличает: «Интеграция с 1С» стоит между людьми, с выпадающим списком ролей, кнопкой «Исключить» и кнопкой «Удалить данные». Последняя отвечает отказом, и это правильно, — но предлагать её незачем.<em>Почта вида <code>client-…@clients.invalid</code> выдаёт их только тому, кто знает, куда смотреть.</em></p>
+  </div>
+  <div class="row">
+    <div class="what">Мелочи, замеченные там же</div>
+    <p class="why">В журнале действий раздел <code>export</code> показывается сырым словом: перевода для него нет. Закрытие итерации спрашивает нативным <code>window.confirm</code>, хотя в проекте есть свой диалог. Журнал действий участнику отвечает пустым списком, а не отказом, — «пусто» и «не для вас» выглядят одинаково.</p>
+  </div>
+</div>
+
+<div class="band">
+  <span class="tag never">нет вовсе</span>
+  <h2>Чего нет</h2>
+</div>
+
+<ul class="dont wide">
+  <li><b>Интерфейса вебхуков.</b> Подписки, их секреты и журнал доставок живут только в API. Всё остальное из этапа 5 на экране есть — ключи, разрешения, срок действия, отзыв.</li>
+  <li><b>Экрана архивных карточек.</b> Убранную карточку можно вернуть только из всплывающего уведомления сразу после архивации; когда оно исчезло, карточка недостижима. У досок архив есть.</li>
+  <li><b>Отчёта по закрытой итерации.</b> Отдельным пунктом от того, что закрытая итерация не показывается: даже показав её, состав на момент закрытия сейчас никто не читает — а он записан.</li>
+</ul>
+
+<div class="band">
+  <span class="tag soft">вывод</span>
+  <h2>Что из этого следует</h2>
+</div>
+
+<p>Поломок нет. Всё, что заложено в схему, доведено до API и работает; отказы объясняют себя словами. Разрыв, который виден на этом проходе, лежит в одном месте и всегда в одну сторону: <strong>данные есть, а экрана нет</strong>. Закрытая итерация, доски подразделения, вебхуки, архив карточек — во всех четырёх случаях сервер отвечает, а спросить его некому.</p>
+
+<p>Это ровно тот же разрыв, который закрывали этапы 2 и 10, и он воспроизводится: каждая новая подсистема приезжает сперва в базу, потом в API, и последний шаг делается не всегда. Дешевле всего он обходится тогда, когда его делают сразу, — а замечается только на таком проходе, как этот.</p>
+
+<div class="note pick">
+  <span class="lbl">Порядок починки</span>
+  <p>Сперва то, что молча теряет уже записанное: закрытая итерация и архив карточек — в обоих случаях данные копятся, а прочесть их нечем. Потом то, что вводит в заблуждение: ключи в списке людей и порядок создания закрытой доски. Потом недостающие экраны: доски узла, вебхуки. Метки в карточке и три мелочи — когда придётся рядом.</p>
+</div>
+
+</article>
