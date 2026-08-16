@@ -886,3 +886,47 @@ test('удаление насовсем спрашивает и называет
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'Дубль сметы')).toHaveCount(0)
 })
+
+test('закрытая итерация остаётся на экране и отвечает отчётом', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со спринтами')
+  await addCard(page, 'Очередь', 'Смета по объекту')
+  await addCard(page, 'Очередь', 'Регламент приёмки')
+
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 34')
+  await page.getByLabel('Начало').fill('2026-08-10')
+  await page.getByLabel('Конец').fill('2026-08-16')
+  await page.getByPlaceholder('Цель').fill('Закрыть смету')
+  await page.getByRole('button', { name: 'Создать' }).click()
+  await expect(page.getByRole('button', { name: /Неделя 34/ })).toBeVisible()
+
+  // Обе карточки в итерации.
+  for (const title of ['Смета по объекту', 'Регламент приёмки']) {
+    await cardIn(page, 'Очередь', title).click()
+    await page.getByRole('tab', { name: 'Работа' }).click()
+    await page.getByLabel('Итерация карточки').selectOption({ label: 'Неделя 34' })
+    // Именно кнопка панели: у итерации рядом своя, «закрыть».
+    await page.getByRole('complementary').getByRole('button', { name: 'Закрыть' }).click()
+  }
+
+  // Одна доведена до конца.
+  const card = cardIn(page, 'Очередь', 'Смета по объекту')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
+  await expect(page.getByRole('region', { name: 'Готово' }).getByText('Смета по объекту')).toBeVisible()
+
+  // Закрываем итерацию — и она не исчезает с экрана: закрытие делается
+  // ради ответа «что было в спринте», а до этого в этот же миг ответ
+  // и пропадал.
+  await page.getByRole('button', { name: 'закрыть', exact: true }).click()
+  await page.locator('dialog').getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByText('Закрытые:')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Неделя 34', exact: true }).click()
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText('1 из 2')).toBeVisible()
+  await expect(panel.getByText(/состав застыл/)).toBeVisible()
+  await expect(panel.getByText(/Смета по объекту/)).toBeVisible()
+})

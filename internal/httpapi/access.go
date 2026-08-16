@@ -44,6 +44,8 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
+	mux.HandleFunc("GET /api/boards/{id}/iterations/{iterationId}/report",
+		s.authed(s.handleIterationReport))
 }
 
 func (s *Server) handleBoardAccess(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -256,6 +258,23 @@ func (s *Server) handleCreateIteration(w http.ResponseWriter, r *http.Request, p
 // Обратного действия у закрытия нет намеренно: закрытие — утверждение
 // «вот что было сделано», и переоткрытие превратило бы отчёты
 // в движущуюся мишень.
+// Отчёт по итерации: что было в её составе на момент закрытия, что
+// из этого сделано, что добавили после начала и что убрали по дороге.
+// Чтение, поэтому открыт всем, кому видна доска, — включая наблюдателя.
+func (s *Server) handleIterationReport(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	rep, err := s.boards.IterationReport(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), r.PathValue("iterationId"))
+	if errors.Is(err, board.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "итерация не найдена")
+		return
+	}
+	if err != nil {
+		s.fail(w, "отчёт по итерации", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, rep)
+}
+
 func (s *Server) handleCloseIteration(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	if !p.CanEdit() {
 		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")

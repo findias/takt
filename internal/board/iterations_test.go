@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Итерации. Проверяется главное свойство модели: вхождение — интервал,
@@ -181,5 +183,135 @@ func TestIterationsOfForeignBoardAreInvisible(t *testing.T) {
 	}
 	if len(list) != 0 {
 		t.Errorf("из чужой организации видно %d итераций", len(list))
+	}
+}
+
+// --- отчёт по итерации (этап 11.6) ---
+
+// Отчёт отвечает на вопрос, ради которого вхождение сделано интервалом:
+// что было в составе на момент закрытия, что из этого доведено до конца,
+// что прилетело после начала и что выкинули по дороге.
+func TestIterationReportAnswersWhatWasInTheSprint(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	done := cols[2].ID
+	it := f.iteration("Спринт 1")
+
+	// Итерация начинается в прошлом: иначе «добавлено после начала»
+	// неотличимо — всё, что заводит тест, заводится сегодня.
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update iterations set starts_on = current_date - 7 where id = $1`, it.ID)
+		return err
+	})
+
+	planned := f.createCard("Запланировано и сделано", f.columnA)
+	kept := f.createCard("Запланировано и не сделано", f.columnA)
+	late := f.createCard("Прилетело по дороге", f.columnA)
+	dropped := f.createCard("Выкинуто по дороге", f.columnA)
+	for _, id := range []string{planned, kept, late, dropped} {
+		f.mustApply("ADD_TO_ITERATION", map[string]any{"cardId": id, "iterationId": it.ID})
+	}
+	// Запланированное вошло в день начала, прилетевшее — сегодня.
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx, `
+			update iteration_cards set added_at = (current_date - 7)::timestamptz
+			 where iteration_id = $1 and card_id <> $2`, it.ID, late)
+		return err
+	})
+
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": planned, "estimate": 3})
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": kept, "estimate": 5})
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": late, "estimate": 2})
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": planned, "toColumnId": done, "place": "end"})
+	f.mustApply("REMOVE_FROM_ITERATION", map[string]any{"cardId": dropped, "iterationId": it.ID})
+
+	if err := f.svc.CloseIteration(f.ctx, f.orgID, f.actorID, f.boardID, it.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	rep, err := f.svc.IterationReport(f.ctx, f.orgID, f.actorID, f.boardID, it.ID)
+	if err != nil {
+		t.Fatalf("отчёт: %v", err)
+	}
+	if rep.Iteration.ClosedAt == nil {
+		t.Fatal("отчёт по закрытой итерации не знает о закрытии")
+	}
+	if rep.Totals.Committed != 3 || rep.Totals.Done != 1 || rep.Totals.Dropped != 1 {
+		t.Errorf("сводка %+v, ожидалось 3 в составе, 1 сделана, 1 выкинута", rep.Totals)
+	}
+	// Все три карточки состава оценены — весу можно верить.
+	if !rep.Totals.ByWeight || rep.Totals.CommittedWeight != 10 || rep.Totals.DoneWeight != 3 {
+		t.Errorf("вес %+v, ожидалось 3 из 10", rep.Totals)
+	}
+
+	byTitle := map[string]IterationCard{}
+	for _, c := range rep.Cards {
+		byTitle[c.Title] = c
+	}
+	if !byTitle["Запланировано и сделано"].Done {
+		t.Error("сделанная карточка не отмечена сделанной")
+	}
+	if byTitle["Запланировано и не сделано"].Done {
+		t.Error("несделанная карточка отмечена сделанной")
+	}
+	if !byTitle["Прилетело по дороге"].LateAdd {
+		t.Error("добавленная после начала не отмечена")
+	}
+	if byTitle["Запланировано и сделано"].LateAdd {
+		t.Error("запланированная отмечена как добавленная после начала")
+	}
+	if !byTitle["Выкинуто по дороге"].Dropped {
+		t.Error("выкинутая не отмечена выкинутой")
+	}
+	// Выкинутая осталась в отчёте: о ней и спрашивают на разборе.
+	if len(rep.Cards) != 4 {
+		t.Errorf("в отчёте %d карточек, ожидалось 4 вместе с выкинутой", len(rep.Cards))
+	}
+}
+
+// Состав застыл в момент закрытия: работа, законченная позже, в этой
+// итерации не сделана. Отчёт, считающий иначе, льстит.
+func TestIterationReportCountsOnlyWorkFinishedBeforeClosing(t *testing.T) {
+	f := newFixture(t)
+	done := f.columns()[2].ID
+	it := f.iteration("Спринт 2")
+	id := f.createCard("Доделано после закрытия", f.columnA)
+	f.mustApply("ADD_TO_ITERATION", map[string]any{"cardId": id, "iterationId": it.ID})
+	if err := f.svc.CloseIteration(f.ctx, f.orgID, f.actorID, f.boardID, it.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": id, "toColumnId": done, "place": "end"})
+
+	rep, err := f.svc.IterationReport(f.ctx, f.orgID, f.actorID, f.boardID, it.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Totals.Committed != 1 || rep.Totals.Done != 0 {
+		t.Errorf("сводка %+v, ожидалось 1 в составе и ни одной сделанной", rep.Totals)
+	}
+}
+
+// Неоценённая карточка в составе делает вес недостоверным целиком:
+// сумма без неё врёт в меньшую сторону.
+func TestIterationReportDoesNotTrustPartialWeight(t *testing.T) {
+	f := newFixture(t)
+	it := f.iteration("Спринт 3")
+	a := f.createCard("Оценена", f.columnA)
+	b := f.createCard("Не оценена", f.columnA)
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": a, "estimate": 4})
+	for _, id := range []string{a, b} {
+		f.mustApply("ADD_TO_ITERATION", map[string]any{"cardId": id, "iterationId": it.ID})
+	}
+
+	rep, err := f.svc.IterationReport(f.ctx, f.orgID, f.actorID, f.boardID, it.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Totals.ByWeight {
+		t.Error("вес объявлен достоверным, хотя одна карточка состава не оценена")
+	}
+	if rep.Iteration.ClosedAt != nil {
+		t.Error("открытая итерация показана закрытой")
 	}
 }

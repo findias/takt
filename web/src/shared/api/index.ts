@@ -302,6 +302,45 @@ export type LinkedCard = {
   archived: boolean
 }
 
+/** Карточка в отчёте по итерации вместе с тем, что с ней стало
+ *  к моменту отсчёта. */
+export type IterationCard = {
+  id: string
+  number: string
+  title: string
+  estimate: number | null
+  /** Доведена до конца к моменту отсчёта — не вообще: работа, законченная
+   *  через неделю после закрытия спринта, в этом спринте не сделана. */
+  done: boolean
+  /** Вошла позже начала итерации. По первому входу: карточка, вышедшая
+   *  и вернувшаяся, добавлена не дважды. */
+  lateAdd: boolean
+  /** Убрана из итерации до момента отсчёта — в составе её нет, но она
+   *  в нём была, и об этом спрашивают на разборе. */
+  dropped: boolean
+  archived: boolean
+}
+
+/** Отчёт по итерации: то, ради чего вхождение сделано интервалом. */
+export type IterationReport = {
+  iteration: Iteration
+  /** Момент, на который посчитано: закрытие у закрытой, «сейчас»
+   *  у открытой. Без него числа нельзя ни перепроверить, ни сравнить. */
+  at: string
+  cards: IterationCard[]
+  totals: {
+    committed: number
+    done: number
+    lateAdded: number
+    dropped: number
+    /** Можно ли верить весу: одна неоценённая карточка состава делает
+     *  сумму меньше, чем было. */
+    byWeight: boolean
+    committedWeight: number
+    doneWeight: number
+  }
+}
+
 /** Итерация доски. Вхождение карточки — интервал, а не поле, поэтому
  *  «что было в итерации тогда» читается отдельно от «что в ней сейчас». */
 export type Iteration = {
@@ -612,6 +651,9 @@ export const api = {
   ) => request<Iteration>('POST', `/api/boards/${boardId}/iterations`, body),
   /** Обратного действия нет намеренно: закрытие — утверждение о том, что
    *  было сделано, и переоткрытие превратило бы отчёты в движущуюся мишень. */
+  /** Отчёт по итерации: состав на момент закрытия и что с ним стало. */
+  iterationReport: (boardId: string, iterationId: string) =>
+    request<IterationReport>('GET', `/api/boards/${boardId}/iterations/${iterationId}/report`),
   closeIteration: (boardId: string, iterationId: string) =>
     request<void>('POST', `/api/boards/${boardId}/iterations/${iterationId}/close`),
 

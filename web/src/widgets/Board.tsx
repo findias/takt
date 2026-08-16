@@ -13,6 +13,7 @@ import type {
 } from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
+import { IterationReport } from '../features/board/IterationReport.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { BoardSkeleton, EmptyState, ErrorState } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
@@ -426,6 +427,9 @@ export function Board({
   // Какую карточку спрашивают удалить. Диалог один на доску, а не один
   // на карточку: пятьсот скрытых диалогов — это пятьсот узлов разметки
   // ради вопроса, который задают раз в месяц.
+  // По какой итерации открыт отчёт. Закрытая итерация — это утверждение
+  // «вот что было сделано», и посмотреть его должно быть можно.
+  const [reportOf, setReportOf] = useState<Iteration | null>(null)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const askDelete = useCallback((cardId: string) => setPendingDelete(cardId), [])
   const showCard = useCallback((cardId: string) => {
@@ -634,7 +638,12 @@ export function Board({
         <div className="row row--between">
           <div className="row">
             <FlowHint columns={columnList} />
-            <Iterations boardId={boardId} iterations={base.iterations} onChanged={board.reload} />
+            <Iterations
+              boardId={boardId}
+              iterations={base.iterations}
+              onChanged={board.reload}
+              onReport={setReportOf}
+            />
           </div>
           <button className="btn btn--quiet" onClick={() => setPalette(true)}>
             <SearchIcon />
@@ -725,6 +734,19 @@ export function Board({
       )}
 
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
+
+      {reportOf && (
+        <IterationReport
+          boardId={boardId}
+          iteration={reportOf}
+          unit={unit}
+          onOpenCard={(cardId) => {
+            setReportOf(null)
+            showCard(cardId)
+          }}
+          onClose={() => setReportOf(null)}
+        />
+      )}
 
       {/* Вопрос задаётся один раз и называет карточку: подтверждение
           «вы уверены?» без имени того, что исчезнет, отвечают не читая. */}
@@ -858,10 +880,13 @@ function Iterations({
   boardId,
   iterations,
   onChanged,
+  onReport,
 }: {
   boardId: string
   iterations: Iteration[]
   onChanged: () => void
+  /** Открыть отчёт по итерации. */
+  onReport: (iteration: Iteration) => void
 }) {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -870,6 +895,10 @@ function Iterations({
   // от своего диалога, останавливает страницу целиком.
   const [toClose, setToClose] = useState<Iteration | null>(null)
   const open = iterations.filter((i) => i.closedAt === null)
+  // Закрытые не пропадают с экрана. Итерация закрывается ради ответа
+  // «что было в спринте на момент закрытия» — а до сих пор в этот момент
+  // она и исчезала, унося ответ вместе с собой.
+  const closed = iterations.filter((i) => i.closedAt !== null)
 
   const act = (p: Promise<unknown>) => {
     setError(null)
@@ -898,18 +927,29 @@ function Iterations({
         </p>
       </ConfirmDialog>
       <div className="row row--tight">
-        {open.length === 0 && !adding && <span className="muted small">Итераций нет</span>}
+        {/* «Итераций нет» — только когда их нет вовсе. Рядом со списком
+            закрытых эта надпись противоречила бы сама себе. */}
+        {iterations.length === 0 && !adding && <span className="muted small">Итераций нет</span>}
         {open.map((i) => (
           <span key={i.id} className="mark" title={i.goal}>
-            {i.name} · {i.startsOn}—{i.endsOn} · {i.cardCount}
-            <button
-              className="link"
-              onClick={() => setToClose(i)}
-            >
+            <button className="link" onClick={() => onReport(i)}>
+              {i.name} · {i.startsOn}—{i.endsOn} · {i.cardCount}
+            </button>
+            <button className="link" onClick={() => setToClose(i)}>
               закрыть
             </button>
           </span>
         ))}
+        {closed.length > 0 && (
+          <>
+            <span className="muted small">Закрытые:</span>
+            {closed.map((i) => (
+              <button key={i.id} className="link" title={i.goal} onClick={() => onReport(i)}>
+                {i.name}
+              </button>
+            ))}
+          </>
+        )}
         {!adding && (
           <button className="link" onClick={() => setAdding(true)}>
             + итерация

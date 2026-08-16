@@ -155,6 +155,148 @@ func (s *Service) CardsAt(ctx context.Context, orgID, userID, iterationID string
 	return out, err
 }
 
+// IterationCard — карточка в отчёте по итерации вместе с тем, что с ней
+// стало к моменту отсчёта.
+type IterationCard struct {
+	ID       string   `json:"id"`
+	Number   string   `json:"number"`
+	Title    string   `json:"title"`
+	Estimate *float64 `json:"estimate"`
+	// Доведена до конца к моменту отсчёта. Именно к моменту, а не вообще:
+	// работа, законченная через неделю после закрытия спринта, в этом
+	// спринте не сделана, и отчёт, который считает иначе, льстит.
+	Done bool `json:"done"`
+	// Вошла в итерацию позже её начала. Считается по первому входу:
+	// карточка, вышедшая и вернувшаяся, добавлена не дважды.
+	LateAdd bool `json:"lateAdd"`
+	// Убрана из итерации до момента отсчёта — то есть в составе её нет,
+	// но она в нём была, и об этом спрашивают на разборе.
+	Dropped bool `json:"dropped"`
+	// Убрана с доски. К составу отношения не имеет: карточку архивируют
+	// и после закрытия итерации, а состав уже застыл.
+	Archived bool `json:"archived"`
+}
+
+// IterationTotals — сводка отчёта в штуках и в весе.
+type IterationTotals struct {
+	Committed int `json:"committed"`
+	Done      int `json:"done"`
+	LateAdded int `json:"lateAdded"`
+	Dropped   int `json:"dropped"`
+	// ByWeight говорит, можно ли верить весу: если хоть одна карточка
+	// состава не оценена, сумма врёт в меньшую сторону. Та же осторожность,
+	// что у прогресса подзадач: ошибаться тут можно только против себя.
+	ByWeight        bool    `json:"byWeight"`
+	CommittedWeight float64 `json:"committedWeight"`
+	DoneWeight      float64 `json:"doneWeight"`
+}
+
+// IterationReport — то, ради чего вхождение сделано интервалом.
+type IterationReport struct {
+	Iteration Iteration `json:"iteration"`
+	// Момент, на который всё посчитано: закрытие для закрытой итерации,
+	// «сейчас» для открытой. Отдаётся наружу, потому что без него числа
+	// нельзя ни перепроверить, ни сравнить между собой.
+	At     time.Time       `json:"at"`
+	Cards  []IterationCard `json:"cards"`
+	Totals IterationTotals `json:"totals"`
+}
+
+// Report собирает отчёт по итерации на момент её закрытия — или на сейчас,
+// если она ещё идёт.
+//
+// Вопрос «что было в спринте на момент закрытия» и есть причина, по
+// которой вхождение карточки моделируется интервалом, а не полем. До сих
+// пор ответ на него был записан в базе и не читался ниоткуда.
+func (s *Service) IterationReport(ctx context.Context, orgID, userID, boardID, iterationID string) (IterationReport, error) {
+	var rep IterationReport
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
+			select `+iterationFields+`, coalesce(i.closed_at, now())
+			  from iterations i
+			 where i.id = $1 and i.board_id = $2`, iterationID, boardID).
+			Scan(&rep.Iteration.ID, &rep.Iteration.Name, &rep.Iteration.Goal,
+				&rep.Iteration.StartsOn, &rep.Iteration.EndsOn,
+				&rep.Iteration.ClosedAt, &rep.At)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+
+		// Интервалы схлопываются по карточке: она могла выйти и вернуться,
+		// и тогда строк у неё две. В составе она, если хоть один интервал
+		// открыт на момент отсчёта; добавленной поздно — по первому входу.
+		rows, err := tx.Query(ctx, `
+			with moment as (
+				select coalesce(closed_at, now()) as t, starts_on
+				  from iterations where id = $1
+			),
+			spans as (
+				select ic.card_id,
+				       min(ic.added_at) as first_added,
+				       bool_or(ic.removed_at is null or ic.removed_at > m.t) as inside
+				  from iteration_cards ic, moment m
+				 where ic.iteration_id = $1 and ic.added_at <= m.t
+				 group by ic.card_id
+			)
+			select c.id, c.number, c.title, c.estimate,
+			       c.outcome = 'done' and c.finished_at is not null and c.finished_at <= m.t,
+			       s.first_added::date > m.starts_on,
+			       not s.inside,
+			       c.archived_at is not null
+			  from spans s
+			  join cards c on c.id = s.card_id, moment m
+			 order by s.first_added`, iterationID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		rep.Cards = []IterationCard{}
+		rep.Totals.ByWeight = true
+		for rows.Next() {
+			var c IterationCard
+			if err := rows.Scan(&c.ID, &c.Number, &c.Title, &c.Estimate,
+				&c.Done, &c.LateAdd, &c.Dropped, &c.Archived); err != nil {
+				return err
+			}
+			rep.Cards = append(rep.Cards, c)
+
+			if c.Dropped {
+				rep.Totals.Dropped++
+				continue
+			}
+			rep.Totals.Committed++
+			if c.LateAdd {
+				rep.Totals.LateAdded++
+			}
+			if c.Estimate == nil {
+				rep.Totals.ByWeight = false
+			} else {
+				rep.Totals.CommittedWeight += *c.Estimate
+			}
+			if c.Done {
+				rep.Totals.Done++
+				if c.Estimate != nil {
+					rep.Totals.DoneWeight += *c.Estimate
+				}
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		// Пустой состав весом не меряется: «0 из 0 очков» — это не ответ.
+		if rep.Totals.Committed == 0 {
+			rep.Totals.ByWeight = false
+		}
+		rep.Iteration.CardCount = rep.Totals.Committed
+		return nil
+	})
+	return rep, err
+}
+
 // --- операции над карточкой ---
 
 type iterationCardPayload struct {
