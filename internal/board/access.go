@@ -323,6 +323,84 @@ func (s *Service) setArchived(ctx context.Context, orgID, actorID, boardID strin
 }
 
 // Archived перечисляет убранные доски — иначе вернуть их будет неоткуда.
+// ArchivedCard — карточка, убранная с доски: чем она была и откуда ушла.
+type ArchivedCard struct {
+	ID     string `json:"id"`
+	Number string `json:"number"`
+	Title  string `json:"title"`
+	// Колонка, в которой карточка стояла в момент архивации. Название,
+	// а не только идентификатор: колонку могли заархивировать следом,
+	// и тогда по идентификатору сказать было бы нечего.
+	ColumnID   string    `json:"columnId"`
+	ColumnName string    `json:"columnName"`
+	ArchivedAt time.Time `json:"archivedAt"`
+	Actor      *string   `json:"actor"`
+	Outcome    *string   `json:"outcome"`
+	// Вернётся ли карточка на доску. Ложь означает, что её колонка тоже
+	// в архиве: возврат откажет, и знать об этом надо до нажатия,
+	// а не после.
+	Restorable bool `json:"restorable"`
+}
+
+// ArchivedCardsLimit — сколько карточек архива отдаётся за раз. Архив
+// растёт неограниченно, и отдавать его целиком значит однажды отдать
+// доску за три года одним ответом.
+const ArchivedCardsLimit = 100
+
+// ArchivedCards читает архив карточек доски, свежие первыми.
+//
+// До сих пор убранную карточку можно было вернуть только из всплывающего
+// уведомления сразу после архивации: исчезло оно — и карточка становилась
+// недостижимой, оставаясь при этом в базе и в выгрузке организации.
+//
+// Курсор — момент архивации, а не номер страницы: архив дописывается,
+// и смещение по номеру на нём однажды покажет одну и ту же карточку
+// дважды.
+func (s *Service) ArchivedCards(ctx context.Context, orgID, userID, boardID string, before *time.Time) ([]ArchivedCard, error) {
+	out := []ArchivedCard{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		var exists bool
+		if err := tx.QueryRow(ctx, `
+			select exists (select 1 from boards
+			                where id = $1 and archived_at is null)`, boardID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrNotFound
+		}
+
+		// Кто убрал — из журнала переходов: в самой карточке этого нет,
+		// а событие «archived» пишется в той же транзакции, что и она.
+		rows, err := tx.Query(ctx, `
+			select c.id, c.number, c.title, c.column_id, col.name,
+			       c.archived_at, c.outcome, col.archived_at is null,
+			       (select u.name
+			          from card_events e left join users u on u.id = e.actor_id
+			         where e.card_id = c.id and e.type = 'archived'
+			         order by e.id desc limit 1)
+			  from cards c
+			  join board_columns col on col.id = c.column_id
+			 where c.board_id = $1 and c.archived_at is not null
+			   and ($2::timestamptz is null or c.archived_at < $2)
+			 order by c.archived_at desc
+			 limit $3`, boardID, before, ArchivedCardsLimit)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var c ArchivedCard
+			if err := rows.Scan(&c.ID, &c.Number, &c.Title, &c.ColumnID, &c.ColumnName,
+				&c.ArchivedAt, &c.Outcome, &c.Restorable, &c.Actor); err != nil {
+				return err
+			}
+			out = append(out, c)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
 func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, error) {
 	out := []Info{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {

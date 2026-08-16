@@ -746,6 +746,15 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 	col, err := loadColumn(ctx, tx, boardID, columnID)
+	var conflict *ConflictError
+	if errors.As(err, &conflict) {
+		// Колонка на доске есть, но она тоже в архиве. Говорить об этом
+		// «колонка не найдена» значит отправить человека искать поломку
+		// там, где её нет: вернуть карточку некуда, пока не вернут колонку.
+		return Patch{}, conflictf("",
+			"колонка «%s», где стояла карточка, тоже в архиве — сначала верните её",
+			columnName(ctx, tx, columnID))
+	}
 	if err != nil {
 		return Patch{}, err
 	}
@@ -991,6 +1000,17 @@ func loadColumn(ctx context.Context, tx pgx.Tx, boardID, columnID string) (Colum
 		return Column{}, err
 	}
 	return c, nil
+}
+
+// columnName достаёт название колонки в обход её архивности — только
+// ради сообщения об ошибке, где безымянный идентификатор бесполезен.
+func columnName(ctx context.Context, tx pgx.Tx, columnID string) string {
+	var name string
+	if err := tx.QueryRow(ctx,
+		`select name from board_columns where id = $1`, columnID).Scan(&name); err != nil {
+		return "которой уже нет"
+	}
+	return name
 }
 
 // enforceWIP отвечает конфликтом, если карточка не помещается в колонку

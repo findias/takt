@@ -76,7 +76,7 @@ type CardProps = {
   /** Удалить насовсем. Пусто — значит нельзя: право владельца выражено
    *  отсутствием обработчика, а не спрятанным пунктом меню, который
    *  ответит отказом. */
-  onDelete?: (cardId: string) => void
+  onDelete?: (cardId: string, title: string) => void
 }
 
 function CardViewInner({
@@ -458,7 +458,7 @@ function CardViewInner({
                         label: 'Удалить навсегда',
                         icon: <TrashIcon />,
                         danger: true,
-                        onSelect: () => onDelete(cardId),
+                        onSelect: () => onDelete(cardId, title),
                       },
                     ]
                   : []),

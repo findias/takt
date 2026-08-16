@@ -61,8 +61,10 @@ type ColumnProps = {
   onUpdateColumn: (patch: ColumnPatch) => void
   onRenameCard: (cardId: string, title: string) => void
   onArchiveCard: (cardId: string) => void
-  /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца. */
-  onDeleteCard?: (cardId: string) => void
+  /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца.
+   *  Название передаётся вместе с идентификатором: диалог один на доску,
+   *  и спрашивают из него в том числе про архивные карточки. */
+  onDeleteCard?: (cardId: string, title: string) => void
 }
 
 /**

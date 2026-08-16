@@ -302,6 +302,23 @@ export type LinkedCard = {
   archived: boolean
 }
 
+/** Карточка, убранная с доски: чем она была и откуда ушла. */
+export type ArchivedCard = {
+  id: string
+  number: string
+  title: string
+  columnId: string
+  /** Название колонки, а не только идентификатор: колонку могли
+   *  заархивировать следом, и тогда по идентификатору сказать нечего. */
+  columnName: string
+  archivedAt: string
+  actor: string | null
+  outcome: 'done' | 'discarded' | null
+  /** Вернётся ли карточка. Ложь означает, что её колонка тоже в архиве:
+   *  знать об этом надо до нажатия, а не после отказа. */
+  restorable: boolean
+}
+
 /** Карточка в отчёте по итерации вместе с тем, что с ней стало
  *  к моменту отсчёта. */
 export type IterationCard = {
@@ -658,6 +675,21 @@ export const api = {
     request<void>('POST', `/api/boards/${boardId}/iterations/${iterationId}/close`),
 
   archivedBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards/archived'),
+  /** Архив карточек доски. Курсор — момент архивации: архив дописывается,
+   *  и смещение по номеру страницы однажды покажет карточку дважды. */
+  archivedCards: (boardId: string, before?: string) =>
+    request<{ cards: ArchivedCard[]; next: string | null }>(
+      'GET',
+      `/api/boards/${boardId}/archived-cards` + (before ? `?before=${encodeURIComponent(before)}` : ''),
+    ),
+  /** Вернуть карточку из архива. Обычная операция доски — здесь только
+   *  ради архива, где своего состояния доски нет. */
+  restoreCard: (boardId: string, cardId: string) =>
+    request<OperationResult>('POST', `/api/boards/${boardId}/operations`, {
+      operationId: crypto.randomUUID(),
+      type: 'RESTORE_CARD',
+      payload: { cardId },
+    }),
   /** Убирает доску с глаз, не удаляя: карточки и журнал остаются, по ним
    *  считается поток. Поэтому у действия есть обратное. */
   archiveBoard: (boardId: string) => request<void>('DELETE', `/api/boards/${boardId}`),

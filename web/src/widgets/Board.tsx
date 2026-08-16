@@ -14,6 +14,7 @@ import type {
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { IterationReport } from '../features/board/IterationReport.tsx'
+import { CardArchive } from '../features/board/CardArchive.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { BoardSkeleton, EmptyState, ErrorState } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
@@ -38,6 +39,7 @@ import {
 import type { Grouping } from '../features/board/grouping.ts'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
+  ArchiveIcon,
   ChevronLeftIcon,
   CloseIcon,
   FlowIcon,
@@ -110,6 +112,9 @@ export function Board({
   const setOpenCard = onCard
   const [showFlow, setShowFlow] = useState(false)
   const [showAccess, setShowAccess] = useState(false)
+  // Архив карточек. До него убранную карточку можно было вернуть только
+  // из всплывающего уведомления — исчезло оно, и карточка недостижима.
+  const [showArchive, setShowArchive] = useState(false)
   const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
   const [palette, setPalette] = useState(false)
   // На узком экране колонки не помещаются рядом, и горизонтальная
@@ -229,6 +234,17 @@ export function Board({
         run: () => {
           setOpenCard(null)
           setShowFlow(true)
+        },
+      },
+      {
+        id: 'archive',
+        title: 'Показать архив карточек',
+        hint: 'убранные с доски',
+        icon: <ArchiveIcon />,
+        run: () => {
+          setOpenCard(null)
+          setShowFlow(false)
+          setShowArchive(true)
         },
       },
       {
@@ -430,8 +446,16 @@ export function Board({
   // По какой итерации открыт отчёт. Закрытая итерация — это утверждение
   // «вот что было сделано», и посмотреть его должно быть можно.
   const [reportOf, setReportOf] = useState<Iteration | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
-  const askDelete = useCallback((cardId: string) => setPendingDelete(cardId), [])
+  // Название хранится вместе с идентификатором, а не берётся из доски:
+  // карточку спрашивают удалить и из архива, а там её на доске уже нет.
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
+  const askDelete = useCallback(
+    (cardId: string, title: string) => setPendingDelete({ id: cardId, title }),
+    [],
+  )
+  // Меняется после удаления: архив перечитывает себя, потому что своего
+  // состояния доски у него нет.
+  const [archiveKey, setArchiveKey] = useState(0)
   const showCard = useCallback((cardId: string) => {
     setShowFlow(false)
     setOpenCard(cardId)
@@ -663,6 +687,18 @@ export function Board({
             <FlowIcon />
             Поток
           </button>
+          <button
+            className="btn btn--quiet"
+            aria-expanded={showArchive}
+            onClick={() => {
+              setOpenCard(null)
+              setShowFlow(false)
+              setShowArchive((v) => !v)
+            }}
+          >
+            <ArchiveIcon />
+            Архив
+          </button>
         </div>
       </div>
 
@@ -735,6 +771,17 @@ export function Board({
 
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
 
+      {showArchive && (
+        <CardArchive
+          boardId={boardId}
+          canDelete={isOwner}
+          reloadKey={archiveKey}
+          onRestored={board.reload}
+          onDelete={askDelete}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
+
       {reportOf && (
         <IterationReport
           boardId={boardId}
@@ -757,14 +804,14 @@ export function Board({
         danger
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => {
-          const id = pendingDelete
+          const card = pendingDelete
           setPendingDelete(null)
-          if (id) void board.deleteCard(id)
+          if (card) void board.deleteCard(card.id).then(() => setArchiveKey((k) => k + 1))
         }}
       >
         <p>
-          «{(pendingDelete && base.cards[pendingDelete]?.title) ?? 'Карточка'}» исчезнет вместе
-          с историей её работы, связями и обсуждением. Вернуть будет нечем — в отличие от архива.
+          «{pendingDelete?.title ?? 'Карточка'}» исчезнет вместе с историей её работы, связями
+          и обсуждением. Вернуть будет нечем — в отличие от архива.
         </p>
         <p className="muted small">
           В журнале действий останется запись о том, кто её удалил и что в ней было.

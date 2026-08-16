@@ -930,3 +930,27 @@ test('закрытая итерация остаётся на экране и о
   await expect(panel.getByText(/состав застыл/)).toBeVisible()
   await expect(panel.getByText(/Смета по объекту/)).toBeVisible()
 })
+
+test('убранная карточка достижима из архива и возвращается', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с архивом')
+  await addCard(page, 'Очередь', 'Отменённая закупка')
+
+  const card = cardIn(page, 'Очередь', 'Отменённая закупка')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+  await expect(cardIn(page, 'Очередь', 'Отменённая закупка')).toHaveCount(0)
+
+  // Перезагрузка уносит всплывающее уведомление — единственный путь
+  // к убранной карточке, который был до архива.
+  await page.reload()
+  await page.getByRole('button', { name: 'Архив' }).click()
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText(/Отменённая закупка/)).toBeVisible()
+  await expect(panel.getByText(/Очередь · убрана/)).toBeVisible()
+
+  await panel.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(cardIn(page, 'Очередь', 'Отменённая закупка')).toBeVisible()
+  await expect(panel.getByText('Архив пуст.')).toBeVisible()
+})

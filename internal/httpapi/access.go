@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
@@ -21,6 +22,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/boards/{id}/members/{userId}", s.authed(s.handleAddBoardMember))
 	mux.HandleFunc("DELETE /api/boards/{id}/members/{userId}", s.authed(s.handleRemoveBoardMember))
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
+	mux.HandleFunc("GET /api/boards/{id}/archived-cards", s.authed(s.handleArchivedCards))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
 	// Отдельный путь, а не флаг у DELETE: у этих двух действий разная
@@ -148,6 +150,37 @@ func (s *Server) handleArchivedBoards(w http.ResponseWriter, r *http.Request, p 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"boards": boards})
+}
+
+// Архив карточек доски. Курсор — момент архивации: архив дописывается,
+// и смещение по номеру страницы однажды покажет одну карточку дважды.
+func (s *Server) handleArchivedCards(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var before *time.Time
+	if raw := r.URL.Query().Get("before"); raw != "" {
+		t, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "непонятный курсор")
+			return
+		}
+		before = &t
+	}
+	cards, err := s.boards.ArchivedCards(r.Context(), p.OrgID, p.ID, r.PathValue("id"), before)
+	if errors.Is(err, board.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "доска не найдена")
+		return
+	}
+	if err != nil {
+		s.fail(w, "архив карточек", err)
+		return
+	}
+	// Следующий курсор отдаёт сервер, а не выводит клиент: время
+	// последней карточки известно здесь точно, а на той стороне его
+	// пришлось бы восстанавливать из строки и однажды ошибиться.
+	var next *time.Time
+	if len(cards) == board.ArchivedCardsLimit {
+		next = &cards[len(cards)-1].ArchivedAt
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"cards": cards, "next": next})
 }
 
 // Убранная доска не удаляется: карточки и журнал переходов остаются, по

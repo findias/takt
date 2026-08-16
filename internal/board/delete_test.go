@@ -2,6 +2,7 @@ package board
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -194,5 +195,79 @@ func TestDeleteBoardErasesFlowAndKeepsTheLedger(t *testing.T) {
 		 where subject = 'cards' and action = 'delete'
 		   and payload -> 'new' ->> 'board_id' = $1::text`, f.boardID); n != 0 {
 		t.Errorf("карточки доски получили %d отдельных записей в журнале", n)
+	}
+}
+
+// --- архив карточек (починка находки 11.6) ---
+
+func TestArchivedCardsAreReachableAgain(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	id := f.createCard("Отложенное дело", cols[0].ID)
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": id})
+
+	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	if err != nil {
+		t.Fatalf("архив карточек: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("в архиве %d карточек, ожидалась одна", len(list))
+	}
+	c := list[0]
+	if c.Title != "Отложенное дело" || c.ColumnName != cols[0].Name {
+		t.Errorf("о карточке нечего сказать: %+v", c)
+	}
+	if c.Actor == nil {
+		t.Error("не видно, кто убрал карточку")
+	}
+	// Убранная незавершённой — это отказ от работы, и в архиве это видно.
+	if c.Outcome == nil || *c.Outcome != "discarded" {
+		t.Errorf("исход в архиве: %v, ожидалось discarded", c.Outcome)
+	}
+	if !c.Restorable {
+		t.Error("карточка объявлена невозвратимой, хотя её колонка на доске")
+	}
+
+	// Возврат работает и убирает карточку из архива.
+	f.mustApply("RESTORE_CARD", map[string]any{"cardId": id})
+	list, err = f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Errorf("после возврата в архиве осталось %d карточек", len(list))
+	}
+}
+
+// Карточка, чья колонка тоже уехала в архив, вернуться не может — и это
+// должно быть сказано до нажатия, а не после.
+func TestArchivedCardKnowsItCannotComeBack(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	id := f.createCard("В убранной колонке", cols[1].ID)
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": id})
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update board_columns set archived_at = now() where id = $1`, cols[1].ID)
+		return err
+	})
+
+	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].Restorable {
+		t.Fatalf("карточка объявлена возвратимой, хотя её колонка в архиве: %+v", list)
+	}
+
+	// А если всё-таки попробовать — отказ называет причину, а не отвечает
+	// «колонка не найдена».
+	_, err = f.apply("RESTORE_CARD", map[string]any{"cardId": id})
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("ожидался конфликт, получено %v", err)
+	}
+	if !strings.Contains(conflict.Message, "тоже в архиве") {
+		t.Errorf("отказ не объясняет причину: %q", conflict.Message)
 	}
 }
