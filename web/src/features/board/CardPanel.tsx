@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
+import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { PlusIcon } from '../../shared/ui/icons.tsx'
@@ -31,6 +32,23 @@ import type { Related } from '../../entities/card/model.ts'
  * видно, где она идёт и чья это команда, иначе «три из пяти» превращается
  * в число без смысла.
  */
+/**
+ * Разделы карточки.
+ *
+ * Разделение по смыслу, а не поровну: на «Работе» лежит всё, чем задачу
+ * делают, — описание, исполнители, оценка, поля, подзадачи, связи.
+ * Обсуждение и история вынесены не потому, что они менее важны, а потому
+ * что растут сами: история прибавляется с каждым движением карточки
+ * и в общем свитке вытесняла вниз то, ради чего карточку открывали.
+ */
+type TabId = 'work' | 'talk' | 'history'
+
+const TABS = [
+  { id: 'work', label: 'Работа' },
+  { id: 'talk', label: 'Обсуждение' },
+  { id: 'history', label: 'История' },
+]
+
 export function CardPanel({
   base,
   boardId,
@@ -76,6 +94,14 @@ export function CardPanel({
   onField: (cardId: string, fieldId: string, value: string | number | boolean | null) => void
 }) {
   const [mode, setMode] = usePanelMode()
+  const [tab, setTab] = useState<TabId>('work')
+  const ids = useTabIds()
+
+  // Вкладка сбрасывается на «Работу» при переходе к другой карточке
+  // и намеренно не запоминается, в отличие от режима панели: человек,
+  // заглянувший в историю одной задачи, открывает следующую, чтобы
+  // работать, а не чтобы снова читать историю.
+  useEffect(() => setTab('work'), [cardId])
 
   const details = cardDetails(base, cardId)
   if (!details) return null
@@ -93,135 +119,163 @@ export function CardPanel({
       label={`Карточка ${card.number} «${card.title}»`}
       onClose={onClose}
     >
-      {card.blocked ? (
-        <div className="blocked">
-          <div className="stack">
-            <strong>Заблокирована</strong>
-            <span className="small">{card.blocked.reason}</span>
-            <span className="muted small">
-              с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
-            </span>
-          </div>
-          {canEdit && <button onClick={() => onUnblock(card.id)}>Снять</button>}
-        </div>
-      ) : (
-        canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
-      )}
-
-      <IterationPicker
-        iterations={base.iterations}
-        current={base.cardIterations[card.id] ?? null}
-        canEdit={canEdit}
-        onChange={(id) => onIteration(card.id, id)}
+      <Tabs
+        base={ids}
+        tabs={TABS}
+        active={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        label="Разделы карточки"
       />
 
-      <Assignees
-        people={base.people}
-        assignees={base.cardAssignees[card.id] ?? []}
-        canEdit={canEdit}
-        onAssign={(userId, on) => onAssign(card.id, userId, on)}
-      />
+      <TabPanel base={ids} id={tab}>
+        {tab === 'work' && (
+          <>
+            {card.blocked ? (
+              <div className="blocked">
+                <div className="stack">
+                  <strong>Заблокирована</strong>
+                  <span className="small">{card.blocked.reason}</span>
+                  <span className="muted small">
+                    с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
+                  </span>
+                </div>
+                {canEdit && <button onClick={() => onUnblock(card.id)}>Снять</button>}
+              </div>
+            ) : (
+              canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
+            )}
 
-      <Estimate
-        value={card.estimate}
-        unit={unit}
-        canEdit={canEdit}
-        onSave={(value) => onEstimate(card.id, value)}
-      />
-
-      <Fields
-        fields={base.fields}
-        values={base.fieldValues[card.id] ?? []}
-        canEdit={canEdit}
-        onSet={(fieldId, value) => onField(card.id, fieldId, value)}
-      />
-
-      <Description
-        value={card.description}
-        canEdit={canEdit}
-        onSave={(text) => onDescribe(card.id, text)}
-      />
-
-      {details.parent && (
-        <section className="stack">
-          <h3 className="section-title">Часть задачи</h3>
-          <RelatedRow
-            related={details.parent}
-            canEdit={canEdit}
-            onOpen={onOpenCard}
-            onRemove={() => onUnlink(details.parent!.id, card.id, 'subtask')}
-          />
-        </section>
-      )}
-
-      <section className="stack">
-        <div className="row row--between">
-          <h3 className="section-title">Подзадачи</h3>
-          {label && <span className="muted small">{label}</span>}
-        </div>
-
-        {label && (
-          <div
-            className="progress"
-            role="progressbar"
-            aria-valuenow={card.progress?.done ?? 0}
-            aria-valuemin={0}
-            aria-valuemax={card.progress?.total ?? 0}
-            aria-label={`Готово ${label}`}
-          >
-            <div className="progress-fill" style={{ width: `${progressRatio(card) * 100}%` }} />
-          </div>
-        )}
-
-        {details.subtasks.length === 0 && (
-          <p className="muted small">
-            Подзадач нет. Подзадача может идти на доске другой команды — прогресс всё равно
-            посчитается здесь.
-          </p>
-        )}
-        {details.subtasks.map((s) => (
-          <RelatedRow
-            key={s.id}
-            related={s}
-            canEdit={canEdit}
-            onOpen={onOpenCard}
-            onRemove={() => onUnlink(card.id, s.id, 'subtask')}
-          />
-        ))}
-
-        {canEdit && <NewSubtask onCreate={(title) => onSubtask(card.id, title)} />}
-
-        {/* Связать существующую — отдельный путь и подписан отдельно:
-            без подписи два ряда полей подряд читались как одно
-            непонятное место. */}
-        {canEdit && (
-          <LinkPicker
-            base={base}
-            details={details}
-            onPick={(toCard, kind) => onLink(card.id, toCard, kind)}
-          />
-        )}
-      </section>
-
-      <Discussion boardId={boardId} cardId={card.id} meId={meId} canEdit={canEdit} />
-
-      <History boardId={boardId} cardId={card.id} version={card.version} />
-
-      {details.related.length > 0 && (
-        <section className="stack">
-          <h3 className="section-title">Связи</h3>
-          {details.related.map((r) => (
-            <RelatedRow
-              key={`${r.kind}-${r.id}`}
-              related={r}
+            <IterationPicker
+              iterations={base.iterations}
+              current={base.cardIterations[card.id] ?? null}
               canEdit={canEdit}
-              showKind
-              onOpen={onOpenCard}
-              onRemove={() => onUnlink(card.id, r.id, r.kind)}
+              onChange={(id) => onIteration(card.id, id)}
             />
-          ))}
-        </section>
-      )}
+
+            <Assignees
+              people={base.people}
+              assignees={base.cardAssignees[card.id] ?? []}
+              canEdit={canEdit}
+              onAssign={(userId, on) => onAssign(card.id, userId, on)}
+            />
+
+            <Estimate
+              value={card.estimate}
+              unit={unit}
+              canEdit={canEdit}
+              onSave={(value) => onEstimate(card.id, value)}
+            />
+
+            <Fields
+              fields={base.fields}
+              values={base.fieldValues[card.id] ?? []}
+              canEdit={canEdit}
+              onSet={(fieldId, value) => onField(card.id, fieldId, value)}
+            />
+
+            <Description
+              value={card.description}
+              canEdit={canEdit}
+              onSave={(text) => onDescribe(card.id, text)}
+            />
+
+            {details.parent && (
+              <section className="stack">
+                <h3 className="section-title">Часть задачи</h3>
+                <RelatedRow
+                  related={details.parent}
+                  canEdit={canEdit}
+                  onOpen={onOpenCard}
+                  onRemove={() => onUnlink(details.parent!.id, card.id, 'subtask')}
+                />
+              </section>
+            )}
+
+            <section className="stack">
+              <div className="row row--between">
+                <h3 className="section-title">Подзадачи</h3>
+                {label && <span className="muted small">{label}</span>}
+              </div>
+
+              {label && (
+                <div
+                  className="progress"
+                  role="progressbar"
+                  aria-valuenow={card.progress?.done ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={card.progress?.total ?? 0}
+                  aria-label={`Готово ${label}`}
+                >
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${progressRatio(card) * 100}%` }}
+                  />
+                </div>
+              )}
+
+              {details.subtasks.length === 0 && (
+                <p className="muted small">
+                  Подзадач нет. Подзадача может идти на доске другой команды — прогресс всё равно
+                  посчитается здесь.
+                </p>
+              )}
+              {details.subtasks.map((s) => (
+                <RelatedRow
+                  key={s.id}
+                  related={s}
+                  canEdit={canEdit}
+                  onOpen={onOpenCard}
+                  onRemove={() => onUnlink(card.id, s.id, 'subtask')}
+                />
+              ))}
+
+              {canEdit && <NewSubtask onCreate={(title) => onSubtask(card.id, title)} />}
+
+              {/* Связать существующую — отдельный путь и подписан отдельно:
+                  без подписи два ряда полей подряд читались как одно
+                  непонятное место. */}
+              {canEdit && (
+                <LinkPicker
+                  base={base}
+                  details={details}
+                  onPick={(toCard, kind) => onLink(card.id, toCard, kind)}
+                />
+              )}
+            </section>
+
+            {/* Связи стоят рядом с подзадачами, а не под историей, где
+                они лежали раньше: история длиннее всего остального
+                вместе, и раздел под ней не находил никто. */}
+            {details.related.length > 0 && (
+              <section className="stack">
+                <h3 className="section-title">Связи</h3>
+                {details.related.map((r) => (
+                  <RelatedRow
+                    key={`${r.kind}-${r.id}`}
+                    related={r}
+                    canEdit={canEdit}
+                    showKind
+                    onOpen={onOpenCard}
+                    onRemove={() => onUnlink(card.id, r.id, r.kind)}
+                  />
+                ))}
+              </section>
+            )}
+          </>
+        )}
+
+        {/* Обсуждение и история заводятся только на своей вкладке.
+            Это не только про место на экране: пока они лежали в общем
+            свитке, открытие любой карточки стоило двух запросов,
+            из которых чаще всего не нужен был ни один. */}
+        {tab === 'talk' && (
+          <Discussion boardId={boardId} cardId={card.id} meId={meId} canEdit={canEdit} />
+        )}
+
+        {tab === 'history' && (
+          <History boardId={boardId} cardId={card.id} version={card.version} />
+        )}
+      </TabPanel>
     </Panel>
   )
 }

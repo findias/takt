@@ -584,6 +584,33 @@ test('на узком экране показывается одна колон�
   await phone.close()
 })
 
+test('история спрятана за вкладкой, а работа открыта сразу', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска вкладок')
+  await addCard(page, 'Очередь', 'Первая задача')
+  await addCard(page, 'Очередь', 'Вторая задача')
+
+  await cardIn(page, 'Очередь', 'Первая задача').getByRole('button', { name: 'Первая задача' }).click()
+
+  // Открывается «Работа»: за карточку садятся работать, а не читать
+  // её историю. Раньше история шла последним разделом того же свитка
+  // и вытесняла вниз всё, ради чего карточку открывали.
+  await expect(page.getByRole('tab', { name: 'Работа' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Подзадачи' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'История' })).toHaveCount(0)
+
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Подзадачи' })).toHaveCount(0)
+
+  // Вкладка не запоминается между карточками: заглянувший в историю
+  // одной задачи открывает следующую, чтобы работать.
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await cardIn(page, 'Очередь', 'Вторая задача').getByRole('button', { name: 'Вторая задача' }).click()
+  await expect(page.getByRole('tab', { name: 'Работа' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Подзадачи' })).toBeVisible()
+})
+
 test('нажатие открывает карточку, а нажатие на её кнопку — нет', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска нажатий')

@@ -434,18 +434,14 @@ input[type='radio'] {
   flex-direction: column;
   gap: var(--space-4);
 }
-/* Подпись и то, что она подписывает: между ними просвет меньше, чем
-   между разделами, — иначе они читаются как две отдельные вещи. */
-.stack--tight {
-  gap: 0;
-  min-width: 0;
-}
 /* Кнопка в вертикальной стопке иначе растягивается во всю ширину,
    а её подпись встаёт по центру — и действие читается как заголовок
    раздела. Так было с «Показать архив» и «Отметить блокировку». */
 .stack > button,
 .panel-card > button,
-.panel-card > form > button {
+.panel-card > form > button,
+.panel-body > button,
+.panel-body > form > button {
   align-self: flex-start;
 }
 .small {
@@ -984,6 +980,18 @@ select {
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--rule);
 }
+/* Номер и название: между ними просвета нет — подпись и то, что она
+   подписывает, читаются как одно, а не как две отдельные вещи.
+   Растяжимость живёт здесь, а не на заголовке: заголовок перестал быть
+   прямым ребёнком шапки, когда над ним встал номер, и оставленный
+   на нём flex ужимал название до ширины самого длинного слова —
+   шапка вырастала в столбец из одиноких слов высотой в 210 пикселей. */
+.panel-heading {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
 .panel-title {
   font-size: var(--text-lg);
   font-weight: 650;
@@ -991,8 +999,6 @@ select {
   margin: 0;
   /* Длинное название переносится, а не растягивает шапку: место справа
      занято управлением режимом. */
-  flex: 1 1 12rem;
-  min-width: 0;
   overflow-wrap: anywhere;
 }
 .panel-card {
@@ -1002,6 +1008,63 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* Содержимое выбранной вкладки. Прежде разделы были прямыми детьми
+   панели и разделялись её просветом; теперь между ними стоит панель
+   вкладки, и просвет держит она. */
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* Прокручиваемой области нужен фокус, но рамка вокруг всего содержимого
+   панели читается как ошибка: показываем её только тогда, когда фокус
+   пришёл с клавиатуры, и внутрь, чтобы она не вылезла за край панели. */
+.panel-body:focus {
+  outline: none;
+}
+.panel-body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Полоса вкладок липнет к верху панели: панель прокручивается целиком,
+   и без этого из длинной истории не было бы видно, чем её закрыть. */
+.tabs {
+  position: sticky;
+  top: calc(var(--space-4) * -1);
+  z-index: 1;
+  display: flex;
+  gap: var(--space-1);
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
+  padding: var(--space-4) var(--space-4) 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.tab {
+  /* WCAG 2.5.8: цель нажатия 24×24. Вкладка — главный переключатель
+     панели, и мельче цели здесь быть не может. */
+  min-height: var(--target);
+  padding: var(--space-1) var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  white-space: nowrap;
+}
+.tab:hover {
+  color: var(--ink-1);
+}
+/* Выбранная вкладка помечена и цветом, и чертой, и насыщенностью:
+   одним цветом её отличать нельзя — это критерий WCAG 1.4.1. */
+.tab--active {
+  color: var(--ink-1);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 .panel-card--side {
   height: 100%;

@@ -108,7 +108,7 @@ export function Panel({
         {/* Название карточки — заголовок, а не подпись раздела. Раньше
             он шёл тем же мелким капслоком, что и «ПОДЗАДАЧИ», и читался
             как служебная метка. */}
-        <div className="stack stack--tight">
+        <div className="panel-heading">
           {eyebrow}
           <h2 className="panel-title">{title}</h2>
         </div>
