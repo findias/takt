@@ -801,3 +801,57 @@ test('ссылка на убранную доску предлагает вер�
   await page.getByRole('button', { name: 'Вернуть из архива' }).click()
   await expect(cardIn(page, 'Очередь', 'Тут была работа')).toBeVisible()
 })
+
+test('работу можно поставить на доску соседей, и видно, что с ней стало', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Поставки')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Платформа')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Поставки')
+  await addCard(page, 'Очередь', 'Выпустить релиз')
+
+  await cardIn(page, 'Очередь', 'Выпустить релиз').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+
+  // Постановка работы соседям — то же одно поле плюс выбор доски.
+  // Отдельной «заявки» нет: запрос это карточка на их доске.
+  await page.getByLabel('Название подзадачи').fill('Поднять квоту на хранилище')
+  await page.getByLabel('Доска подзадачи').selectOption({ label: 'Платформа' })
+  // Правила доски-получателя названы до нажатия, а не после отказа.
+  await expect(page.getByText(/ляжет на доску «Платформа»/)).toBeVisible()
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+
+  // Разбиение её считает, хотя лежит она не здесь.
+  await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
+  const row = page.getByRole('complementary').getByText('Поднять квоту на хранилище')
+  await expect(row).toBeVisible()
+  // И видно, что с ней у них: взялись или лежит.
+  await expect(page.getByText(/Ещё не начали · Очередь/)).toBeVisible()
+
+  // На своей доске её нет — работа принадлежит исполнителю.
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await expect(cardIn(page, 'Очередь', 'Поднять квоту на хранилище')).toHaveCount(0)
+
+  // У соседей она есть, с их номером — и с указанием, чья это часть.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Платформа')
+  const theirs = cardIn(page, 'Очередь', 'Поднять квоту на хранилище')
+  await expect(theirs).toBeVisible()
+  await expect(theirs.getByText('ПЛАТ-1')).toBeVisible()
+
+  // Соседи работу не берут.
+  await theirs.hover()
+  await theirs.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+
+  // Отказ читается отказом, а не отсутствием доступа: раньше архивная
+  // чужая карточка выпадала из ответа, и оставалась одна ветка —
+  // «в подразделении, которого вам не видно».
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Поставки')
+  await cardIn(page, 'Очередь', 'Выпустить релиз').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await expect(page.getByText('Работу не взяли')).toBeVisible()
+  await expect(page.getByText(/которого вам не видно/)).toHaveCount(0)
+})

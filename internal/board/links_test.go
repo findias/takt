@@ -570,3 +570,89 @@ func TestSubtaskOnUnreachableBoardRefused(t *testing.T) {
 		t.Errorf("на доске соседей %d карточек, ожидалось ноль", len(snap.Cards))
 	}
 }
+
+// Отказ соседей — это архивация карточки. Прежде архивная чужая карточка
+// просто выпадала из снимка, и у клиента оставалась одна ветка: «доски
+// вам не видно». Отказ читался как отсутствие доступа.
+func TestRefusedSubtaskComesBackAsArchivedNotMissing(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, _, _ := f.secondBoard()
+
+	res := f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Поднять квоту", "boardId": neighbour})
+	_ = res
+
+	var childID string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx,
+			`select to_card from card_links where from_card = $1 and kind = 'subtask'`,
+			parent).Scan(&childID)
+	})
+
+	// Соседи работу не взяли.
+	f.applyTo(neighbour, "ARCHIVE_CARD", map[string]any{"cardId": childID})
+
+	snap := f.snapshot()
+	var seen *LinkedCard
+	for i, c := range snap.Linked {
+		if c.ID == childID {
+			seen = &snap.Linked[i]
+		}
+	}
+	if seen == nil {
+		t.Fatal("отказавшая карточка пропала из снимка — связь осталась без второй стороны")
+	}
+	if !seen.Archived {
+		t.Error("карточка вернулась без признака архива")
+	}
+	if seen.BoardName == "" || seen.ColumnName == "" {
+		t.Errorf("о карточке нечего сказать: %+v", *seen)
+	}
+
+	// Разбиение её больше не считает: отказ — не сделанная работа
+	// и не оставшаяся, а выбывшая.
+	if p := f.card(parent).Progress; p != nil {
+		t.Errorf("прогресс родителя %+v, ожидалось, что подзадач не осталось", p)
+	}
+}
+
+// О чужой карточке видно, где она стоит и когда её ждать: одного
+// «сделана или нет» мало — «третью неделю в очереди» и «делают со вчера»
+// выглядели одинаково.
+func TestLinkedCardCarriesColumnAndPromise(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, _, neighbourDone := f.secondBoard()
+
+	f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Поднять квоту", "boardId": neighbour})
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update boards set sle_days = 8, sle_probability = 85 where id = $1`, neighbour)
+		return err
+	})
+
+	linked := f.snapshot().Linked
+	if len(linked) != 1 {
+		t.Fatalf("связанных карточек %d, ожидалась одна", len(linked))
+	}
+	if linked[0].ColumnKind != KindQueue {
+		t.Errorf("вид колонки %q, ожидалась очередь", linked[0].ColumnKind)
+	}
+	if linked[0].SLEDays == nil || *linked[0].SLEDays != 8 || linked[0].SLEProbability != 85 {
+		t.Errorf("обещание доски исполнителя не доехало: %+v", linked[0])
+	}
+
+	// Соседи довели работу до конца — колонка меняется вместе с ней.
+	var childID string
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx,
+			`select to_card from card_links where from_card = $1 and kind = 'subtask'`,
+			parent).Scan(&childID)
+	})
+	f.moveOn(neighbour, childID, neighbourDone)
+	if got := f.snapshot().Linked[0].ColumnKind; got != KindDone {
+		t.Errorf("после переноса вид колонки %q, ожидалось завершение", got)
+	}
+}

@@ -539,6 +539,13 @@ input[type='radio'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Строка про чужую работу переносится, а не обрезается: «обычно 8 дней
+   с вероятн…» — это обещание, от которого отрезали половину, то есть
+   ровно ту часть, ради которой его показывают. */
+.member-who span.related-note {
+  white-space: normal;
+  overflow: visible;
+}
 select {
   font: inherit;
   padding: var(--space-1) var(--space-2);

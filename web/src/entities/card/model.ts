@@ -15,6 +15,15 @@ export type Related = {
   title: string
   /** Где карточка лежит: своя доска, чужая, или неизвестно. */
   where: string
+  /** Что с ней происходит у соседей: «В очереди», «В работе», «Готово»,
+   *  «Работу не взяли». Пусто для карточек этой доски — их положение
+   *  видно на самой доске, и повторять его строкой значит показывать
+   *  одно и то же дважды. */
+  stage: string | null
+  /** Обещание доски исполнителя словами. Ответ на «когда будет», который
+   *  не требует ни поля «срок», ни переписки: он уже посчитан, и он
+   *  принадлежит той доске, где работа лежит. */
+  promise: string | null
   done: boolean
   blocked: boolean
   /** Ложь означает, что карточка есть, но доска недоступна: связь
@@ -120,6 +129,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       kind,
       title: own.title,
       where: 'На этой доске',
+      stage: null,
+      promise: null,
       done: own.outcome === 'done',
       blocked: Boolean(own.blocked),
       reachable: true,
@@ -136,6 +147,11 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       where: foreign.teamName
         ? `Доска «${foreign.boardName}» · ${foreign.teamName}`
         : `Доска «${foreign.boardName}»`,
+      stage: stageOf(foreign),
+      // Обещание показывается, пока работа не сделана: обещание сроков
+      // на завершённой работе — это ответ на вопрос, который больше
+      // никто не задаёт.
+      promise: foreign.archived || foreign.outcome ? null : promiseOf(foreign),
       done: foreign.outcome === 'done',
       blocked: foreign.blocked,
       reachable: true,
@@ -149,11 +165,52 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
     kind,
     title: 'Карточка недоступна',
     where: 'В подразделении, которого вам не видно',
+    stage: null,
+    promise: null,
     done: false,
     blocked: false,
     reachable: false,
     onThisBoard: false,
   }
+}
+
+/**
+ * Что делает с работой команда, у которой она лежит.
+ *
+ * Сказано про людей, а не про место, и это не украшение. Место у соседей
+ * уже названо их словом — колонкой, — и назвать его вторым, своим,
+ * значило бы написать «В очереди · Очередь». А вопрос, ради которого
+ * сюда смотрят, про место и не спрашивает: «третью неделю лежит»
+ * и «делают со вчера» — это про то, взялись или нет.
+ */
+const STAGES: Record<LinkedCard['columnKind'], string> = {
+  queue: 'Ещё не начали',
+  in_progress: 'Уже делают',
+  done: 'Сделали',
+}
+
+/**
+ * Что происходит с чужой карточкой: взялись ли за неё и где она стоит.
+ *
+ * Архив первым: убранная карточка — это отказ взять работу, и он важнее
+ * того, в какой колонке она при этом стояла.
+ */
+function stageOf(card: LinkedCard): string {
+  if (card.archived) return 'Работу не взяли'
+  return `${STAGES[card.columnKind]} · ${card.columnName}`
+}
+
+/**
+ * Обещание доски исполнителя словами.
+ *
+ * Это ответ на «когда будет», не требующий поля «срок»: канбан обещает
+ * не дату, а распределение, и обещание принадлежит той доске, где работа
+ * лежит. Доска без обещания молчит — подставлять ей выдуманный срок
+ * значит начинать с неправды.
+ */
+function promiseOf(card: LinkedCard): string | null {
+  if (card.sleDays === null) return null
+  return `обычно ${card.sleDays} ${plural(card.sleDays, UNITS.days)} с вероятностью ${card.sleProbability}%`
 }
 
 // Названия единиц оценки живут здесь, а не в клиенте API: модель берёт

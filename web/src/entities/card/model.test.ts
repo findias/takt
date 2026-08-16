@@ -44,6 +44,11 @@ function foreign(id: string, title: string, extra: Partial<LinkedCard> = {}): Li
     teamName: 'Платформа',
     outcome: null,
     blocked: false,
+    columnName: 'Очередь',
+    columnKind: 'queue',
+    sleDays: null,
+    sleProbability: 85,
+    archived: false,
     ...extra,
   }
 }
@@ -220,4 +225,55 @@ test('в подзадачи не предлагается ни сама карт
   assert.deepEqual(ids.sort(), ['free', 'other'])
   // 'mine' уже подзадача этой карточки, 'taken' — чужая: второй родитель
   // невозможен, и предлагать его значит обещать невыполнимое.
+})
+
+test('про чужую подзадачу видно, взяли ли её и когда ждать', () => {
+  const base = state(
+    [card('parent', 'Релиз')],
+    [
+      { fromCard: 'parent', toCard: 'queued', kind: 'subtask' },
+      { fromCard: 'parent', toCard: 'doing', kind: 'subtask' },
+      { fromCard: 'parent', toCard: 'refused', kind: 'subtask' },
+      { fromCard: 'parent', toCard: 'opaque', kind: 'subtask' },
+    ],
+    [
+      foreign('queued', 'Квота', { sleDays: 8, sleProbability: 85 }),
+      foreign('doing', 'Окно простоя', {
+        columnName: 'В работе',
+        columnKind: 'in_progress',
+        sleDays: 8,
+      }),
+      foreign('refused', 'Переезд стенда', { archived: true }),
+      foreign('opaque', 'Обновить сертификаты', { columnName: 'Приём заявок' }),
+    ],
+  )
+  const byId = Object.fromEntries(cardDetails(base, 'parent')!.subtasks.map((s) => [s.id, s]))
+
+  // Наше слово — про людей, чужое — про место: они не спорят и не
+  // дублируются даже тогда, когда колонка названа «В работе».
+  assert.equal(byId.queued.stage, 'Ещё не начали · Очередь')
+  assert.equal(byId.doing.stage, 'Уже делают · В работе')
+  assert.equal(byId.opaque.stage, 'Ещё не начали · Приём заявок')
+
+  // Ответ на «когда будет» — обещание их доски, а не выдуманный срок.
+  assert.equal(byId.queued.promise, 'обычно 8 дней с вероятностью 85%')
+
+  // Отказ — это архивация карточки, и читаться он должен отказом,
+  // а не отсутствием доступа: искать недоступную карточку бесполезно,
+  // а после отказа идут договариваться.
+  assert.equal(byId.refused.stage, 'Работу не взяли')
+  assert.equal(byId.refused.reachable, true)
+  assert.ok(!byId.refused.where.includes('не видно'))
+  // Обещания у неё нет: её никто не обещал делать.
+  assert.equal(byId.refused.promise, null)
+})
+
+test('у карточки этой доски второй строки нет', () => {
+  const base = state(
+    [card('parent', 'Релиз'), card('mine', 'Своя работа')],
+    [{ fromCard: 'parent', toCard: 'mine', kind: 'subtask' }],
+  )
+  const [sub] = cardDetails(base, 'parent')!.subtasks
+  assert.equal(sub.stage, null)
+  assert.equal(sub.promise, null)
 })

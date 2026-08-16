@@ -256,7 +256,7 @@ type Snapshot struct {
 }
 
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
-// где она лежит, чья это команда и доведена ли она до конца.
+// где она лежит, чья это команда, что с ней происходит и когда её ждать.
 type LinkedCard struct {
 	ID        string  `json:"id"`
 	Title     string  `json:"title"`
@@ -265,6 +265,22 @@ type LinkedCard struct {
 	TeamName  *string `json:"teamName"`
 	Outcome   *string `json:"outcome"`
 	Blocked   bool    `json:"blocked"`
+	// Где она у них стоит. Одного «сделана или нет» мало: «третью неделю
+	// в очереди» и «делают со вчера» выглядели одинаково, а разница между
+	// ними и есть весь смысл спрашивать про чужую работу.
+	ColumnName string `json:"columnName"`
+	ColumnKind string `json:"columnKind"`
+	// Обещание доски исполнителя. Срок принадлежит доске, на которой
+	// работа лежит: заказчик его видит и не двигает — иначе это была бы
+	// дата, под которой никто не подписывался. Пусто — обещания нет.
+	SLEDays        *int `json:"sleDays"`
+	SLEProbability int  `json:"sleProbability"`
+	// Убрана в архив. Отказ соседей взять работу — это архивация
+	// карточки, и он обязан отличаться от «доски вам не видно»: искать
+	// недоступную бесполезно, а после отказа идут договариваться.
+	// Пока архивные карточки просто выпадали из ответа, отказ читался
+	// как отсутствие доступа.
+	Archived bool `json:"archived"`
 }
 
 type Service struct {
@@ -562,14 +578,21 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		return nil
 	}
 
+	// Архивные отсюда не отсекаются намеренно: убранная карточка, выпав
+	// из ответа, оставляла связь без второй стороны, и клиенту оставалась
+	// одна ветка — «доска вам не видна». Отказ соседей показывался как
+	// отсутствие доступа. Различает их признак, а не пропажа.
 	foreignRows, err := tx.Query(ctx, `
 		select c.id, c.title, c.board_id, b.name, t.name, c.outcome,
 		       exists (select 1 from card_blocks cb
-		                where cb.card_id = c.id and cb.unblocked_at is null)
+		                where cb.card_id = c.id and cb.unblocked_at is null),
+		       col.name, col.kind, b.sle_days, b.sle_probability,
+		       c.archived_at is not null
 		  from cards c
 		  join boards b on b.id = c.board_id
+		  join board_columns col on col.id = c.column_id
 		  left join teams t on t.id = b.team_id
-		 where c.id = any ($1) and c.board_id <> $2 and c.archived_at is null`,
+		 where c.id = any ($1) and c.board_id <> $2`,
 		others, boardID)
 	if err != nil {
 		return err
@@ -578,7 +601,8 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for foreignRows.Next() {
 		var c LinkedCard
 		if err := foreignRows.Scan(&c.ID, &c.Title, &c.BoardID, &c.BoardName,
-			&c.TeamName, &c.Outcome, &c.Blocked); err != nil {
+			&c.TeamName, &c.Outcome, &c.Blocked, &c.ColumnName, &c.ColumnKind,
+			&c.SLEDays, &c.SLEProbability, &c.Archived); err != nil {
 			return err
 		}
 		snap.Linked = append(snap.Linked, c)

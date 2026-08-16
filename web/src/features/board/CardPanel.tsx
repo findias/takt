@@ -351,6 +351,13 @@ function RelatedRow({
           {showKind ? `${LINK_KIND_NAMES[related.kind]} · ` : ''}
           {related.where}
         </span>
+        {/* Вторая строка — только про чужую работу: что с ней сейчас
+            и когда её ждать. Своя видна на самой доске. */}
+        {(related.stage || related.promise) && (
+          <span className="muted small related-note">
+            {[related.stage, related.promise].filter(Boolean).join(' · ')}
+          </span>
+        )}
       </div>
       {canEdit && related.reachable && (
         <button className="link" onClick={onRemove}>
