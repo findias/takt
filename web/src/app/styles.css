@@ -2394,3 +2394,27 @@ textarea.description {
   margin-block-start: 0.45em;
   flex: none;
 }
+
+/* Сколько на ком висит. Стоит в строке фильтров и потому обязано быть
+   узким: это сводка, а не список людей. */
+.workload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  /* Черта слева: сводка стоит в одной строке с фильтрами и без неё
+     читается как ещё один фильтр. */
+  padding-inline-start: var(--space-2);
+  border-inline-start: 1px solid var(--rule);
+}
+.workload-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.workload-item--overdue {
+  color: var(--warn);
+  font-weight: 600;
+}

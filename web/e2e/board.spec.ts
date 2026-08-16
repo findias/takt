@@ -1013,3 +1013,30 @@ test('изменения — третий вид, с отбором «тольк
   await feed.first().getByRole('button', { name: 'Согласовать смету' }).click()
   await expect(page.getByRole('heading', { name: 'Согласовать смету' })).toBeVisible()
 })
+
+test('видно, сколько на ком висит', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с загрузкой')
+  await addCard(page, 'Очередь', 'Первая')
+  await addCard(page, 'Очередь', 'Вторая')
+
+  const load = page.locator('.workload')
+  // Пока никто ничего не делает, сводке нечего показывать.
+  await expect(load).toHaveCount(0)
+
+  for (const title of ['Первая', 'Вторая']) {
+    const card = cardIn(page, 'Очередь', title)
+    await card.hover()
+    await card.getByRole('button', { name: /Действия карточки/ }).click()
+    await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  }
+  await expect(load.locator('.workload-item')).toHaveCount(1)
+  await expect(load).toContainText('2')
+
+  // Сделанное не считается нагрузкой: это уже не работа.
+  const done = cardIn(page, 'Очередь', 'Первая')
+  await done.hover()
+  await done.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
+  await expect(load).toContainText('1')
+})

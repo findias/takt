@@ -26,6 +26,7 @@ import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.
 import { Views } from '../features/board/Views.tsx'
 import { SORT_NAMES, TableView, parseSort, sortToQuery } from '../features/board/TableView.tsx'
 import { Changes } from '../features/board/Changes.tsx'
+import { Workload } from '../features/board/Workload.tsx'
 import type { Sort } from '../features/board/TableView.tsx'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
@@ -644,6 +645,9 @@ export function Board({
           hidden={hidden}
           onChange={setFilters}
         />
+        {/* Загрузка считается по показанному: рядом стоит «скрыто N»
+            от фильтра, и числа по всей доске спорили бы с экраном. */}
+        <Workload base={base} order={order} unit={unit} />
         <Views
           boardId={boardId}
           query={query.toString()}
