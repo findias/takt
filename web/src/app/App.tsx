@@ -69,6 +69,7 @@ function Screens() {
         onCard={(cardId) => navigate(boardPath(route.boardId, cardId))}
         unit={principal.estimateUnit}
         meId={principal.id}
+        isOwner={principal.role === 'owner'}
         onBack={() => navigate('/')}
       />
     )

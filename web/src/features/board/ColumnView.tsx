@@ -61,6 +61,8 @@ type ColumnProps = {
   onUpdateColumn: (patch: ColumnPatch) => void
   onRenameCard: (cardId: string, title: string) => void
   onArchiveCard: (cardId: string) => void
+  /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца. */
+  onDeleteCard?: (cardId: string) => void
 }
 
 /**
@@ -219,6 +221,7 @@ export function ColumnView(props: ColumnProps) {
             onNavigate={props.onNavigate}
             onRename={props.onRenameCard}
             onArchive={props.onArchiveCard}
+            onDelete={props.onDeleteCard}
           />
         ))}
         {/* Хвост: до него доходит либо прокрутка, либо клавиатура —

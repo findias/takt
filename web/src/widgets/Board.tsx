@@ -16,6 +16,7 @@ import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { BoardSkeleton, EmptyState, ErrorState } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
+import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
@@ -54,6 +55,7 @@ export function Board({
   onCard,
   unit,
   meId,
+  isOwner,
   onBack,
 }: {
   boardId: string
@@ -63,6 +65,9 @@ export function Board({
   onCard: (cardId: string | null) => void
   unit: EstimateUnit
   meId: string
+  /** Удалять насовсем может только владелец организации: действие
+   *  необратимо, и одного «администратора» для него мало. */
+  isOwner: boolean
   onBack: () => void
 }) {
   const notify = useToast()
@@ -417,6 +422,12 @@ export function Board({
     [rename],
   )
   const archiveCard = useCallback((cardId: string) => void archive(cardId), [archive])
+
+  // Какую карточку спрашивают удалить. Диалог один на доску, а не один
+  // на карточку: пятьсот скрытых диалогов — это пятьсот узлов разметки
+  // ради вопроса, который задают раз в месяц.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const askDelete = useCallback((cardId: string) => setPendingDelete(cardId), [])
   const showCard = useCallback((cardId: string) => {
     setShowFlow(false)
     setOpenCard(cardId)
@@ -549,6 +560,7 @@ export function Board({
         onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
         onRenameCard={renameCard}
         onArchiveCard={archiveCard}
+        onDeleteCard={isOwner ? askDelete : undefined}
       />
     ))
 
@@ -713,6 +725,29 @@ export function Board({
       )}
 
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
+
+      {/* Вопрос задаётся один раз и называет карточку: подтверждение
+          «вы уверены?» без имени того, что исчезнет, отвечают не читая. */}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Удалить навсегда?"
+        confirmLabel="Удалить навсегда"
+        danger
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          const id = pendingDelete
+          setPendingDelete(null)
+          if (id) void board.deleteCard(id)
+        }}
+      >
+        <p>
+          «{(pendingDelete && base.cards[pendingDelete]?.title) ?? 'Карточка'}» исчезнет вместе
+          с историей её работы, связями и обсуждением. Вернуть будет нечем — в отличие от архива.
+        </p>
+        <p className="muted small">
+          В журнале действий останется запись о том, кто её удалил и что в ней было.
+        </p>
+      </ConfirmDialog>
 
       {showAccess && (
         <AccessPanel

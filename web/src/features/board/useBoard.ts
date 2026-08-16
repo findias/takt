@@ -352,6 +352,28 @@ export function useBoard(boardId: string | null, notify: Notify) {
     },
     [run, notify, titleOf],
   )
+  /**
+   * Удалить карточку насовсем.
+   *
+   * В отличие от архивации, здесь нет отмены и потому есть вопрос:
+   * обратимое действие спрашивать не должно, необратимое обязано.
+   * Сам вопрос задаёт доска — здесь только последствие.
+   *
+   * Патч перечитывается снимком: удаление уносит связи, а их прогресс
+   * считается у родителя, который может лежать на другой доске.
+   */
+  const deleteCard = useCallback(
+    async (cardId: string) => {
+      const title = titleOf(cardId)
+      await run('DELETE_CARD', { cardId }, 'Не удалось удалить карточку')
+      reload()
+      notify({
+        text: title ? `«${title}» удалена навсегда` : 'Карточка удалена навсегда',
+        tone: 'info',
+      })
+    },
+    [run, reload, notify, titleOf],
+  )
   const createColumn = useCallback(
     (name: string) => run('CREATE_COLUMN', { name }, 'Не удалось создать колонку'),
     [run],
@@ -575,6 +597,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     describeCard,
     estimateCard,
     archiveCard,
+    deleteCard,
     assignCard,
     toggleLabel,
     createSubtask,

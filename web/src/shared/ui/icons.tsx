@@ -155,6 +155,17 @@ export function ArchiveIcon(props: IconProps) {
   )
 }
 
+/** Удаление насовсем. Отличается от архива нарочито: у архива крышка,
+ *  из-под которой достают, у этого — открытое ведро. */
+export function TrashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16M10 4h4M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </Icon>
+  )
+}
+
 export function FlowIcon(props: IconProps) {
   return (
     <Icon {...props}>

@@ -25,6 +25,7 @@ import {
   OpenIcon,
   PeopleIcon,
   TagIcon,
+  TrashIcon,
 } from '../../shared/ui/icons.tsx'
 
 /**
@@ -72,6 +73,10 @@ type CardProps = {
   onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (cardId: string, title: string) => void
   onArchive: (cardId: string) => void
+  /** Удалить насовсем. Пусто — значит нельзя: право владельца выражено
+   *  отсутствием обработчика, а не спрятанным пунктом меню, который
+   *  ответит отказом. */
+  onDelete?: (cardId: string) => void
 }
 
 function CardViewInner({
@@ -96,6 +101,7 @@ function CardViewInner({
   onNavigate,
   onRename,
   onArchive,
+  onDelete,
 }: CardProps) {
   const title = card?.title ?? '…'
   const ref = useRef<HTMLElement>(null)
@@ -443,6 +449,19 @@ function CardViewInner({
                   danger: true,
                   onSelect: () => onArchive(cardId),
                 },
+                // Необратимое стоит последним и спрашивает подтверждение
+                // — в отличие от архивации, которая не спрашивает ничего
+                // и предлагает вернуть.
+                ...(onDelete
+                  ? [
+                      {
+                        label: 'Удалить навсегда',
+                        icon: <TrashIcon />,
+                        danger: true,
+                        onSelect: () => onDelete(cardId),
+                      },
+                    ]
+                  : []),
               ]}
             >
               <MoreIcon />

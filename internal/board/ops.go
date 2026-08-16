@@ -391,6 +391,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return archiveCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "RESTORE_CARD":
 		return restoreCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "DELETE_CARD":
+		return deleteCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ASSIGN_CARD":
 		return assignCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNASSIGN_CARD":
@@ -752,6 +754,62 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 	return Patch{Cards: []Card{card}}, nil
+}
+
+// deleteCard стирает карточку насовсем — вместе с тем, как шла её работа.
+//
+// Отдельная операция, а не флаг у архивации: архивация обратима и потому
+// не спрашивает, удаление необратимо и потому спрашивает. Смешать их
+// в одну значило бы иметь одно действие с двумя ценами ошибки.
+//
+// Что уходит: сама карточка, её связи, метки, назначения, комментарии,
+// вхождения в итерации — всё каскадом, — и события её потока. Что
+// остаётся: запись в журнале действий с полным содержимым карточки,
+// сделанная триггером в тот же миг. После удаления нельзя узнать, как
+// шла работа, но всегда можно узнать, кто её убрал и что именно.
+func deleteCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
+	var p archiveCardPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор DELETE_CARD: %v", err)
+	}
+	if err := requireOwner(ctx, tx); err != nil {
+		return Patch{}, err
+	}
+
+	// События стираются до карточки, а не после: политика их удаления
+	// смотрит на видимость доски, а не на существование карточки, но
+	// порядок всё равно важен — так удаление читается сверху вниз тем же
+	// порядком, каким оно происходит.
+	var id string
+	if err := tx.QueryRow(ctx,
+		`select id from cards where id = $1 and board_id = $2`,
+		p.CardID, boardID).Scan(&id); errors.Is(err, pgx.ErrNoRows) {
+		return Patch{}, conflictf("", "карточка не найдена на этой доске")
+	} else if err != nil {
+		return Patch{}, err
+	}
+
+	if _, err := tx.Exec(ctx, `delete from card_events where card_id = $1`, id); err != nil {
+		return Patch{}, err
+	}
+	if _, err := tx.Exec(ctx, `delete from cards where id = $1`, id); err != nil {
+		return Patch{}, err
+	}
+	return Patch{RemovedCardIDs: []string{id}}, nil
+}
+
+// requireOwner спрашивает у базы, а не у переданной роли: политики
+// удаления опираются на ту же функцию, и разойтись этим двум ответам
+// негде.
+func requireOwner(ctx context.Context, tx pgx.Tx) error {
+	var owner bool
+	if err := tx.QueryRow(ctx, `select app_is_owner()`).Scan(&owner); err != nil {
+		return err
+	}
+	if !owner {
+		return ErrOwnerOnly
+	}
+	return nil
 }
 
 // --- операции над колонками ---

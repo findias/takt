@@ -86,6 +86,8 @@
               "MOVE_CARD",
               "UPDATE_CARD",
               "ARCHIVE_CARD",
+              "RESTORE_CARD",
+              "DELETE_CARD",
               "CREATE_COLUMN",
               "RENAME_COLUMN",
               "UPDATE_COLUMN",

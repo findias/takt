@@ -696,6 +696,8 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrBadRequest):
 		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, board.ErrOwnerOnly):
+		writeError(w, http.StatusForbidden, board.ErrOwnerOnly.Error())
 	case errors.Is(err, board.ErrIterationClosed),
 		errors.Is(err, board.ErrCardInAnotherIteration):
 		// Не сбой и не ошибка запроса: правило итерации, о котором надо

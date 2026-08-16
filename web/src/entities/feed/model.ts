@@ -66,6 +66,8 @@ const SUBJECTS: Record<string, string> = {
   board_members: 'Состав доски',
   observers: 'Наблюдение',
   boards: 'Доска',
+  cards: 'Карточка',
+  users: 'Личность',
 }
 
 /** Имя, которое стоит показать рядом с записью. */
