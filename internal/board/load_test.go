@@ -186,7 +186,7 @@ func TestNeighbourOfBusyBoardIsNotSlowedDown(t *testing.T) {
 // emptyBoardOf заводит в той же организации отдельную пустую доску.
 func emptyBoardOf(t *testing.T, f *fixture) string {
 	t.Helper()
-	b, err := f.svc.Create(f.ctx, f.orgID, f.actorID, "Соседняя")
+	b, err := f.svc.Create(f.ctx, f.orgID, f.actorID, "Соседняя", "")
 	if err != nil {
 		t.Fatal(err)
 	}

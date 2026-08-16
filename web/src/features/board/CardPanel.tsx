@@ -87,7 +87,10 @@ export function CardPanel({
       mode={mode}
       onMode={setMode}
       title={card.title}
-      label={`Карточка «${card.title}»`}
+      // Номер над названием: открыв карточку по ссылке из переписки,
+      // первым делом сверяют, та ли это задача.
+      eyebrow={<span className="card-number">{card.number}</span>}
+      label={`Карточка ${card.number} «${card.title}»`}
       onClose={onClose}
     >
       {card.blocked ? (

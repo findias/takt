@@ -212,6 +212,9 @@ export type Catchup = {
 export type BoardInfo = {
   id: string
   name: string
+  /** Префикс номеров карточек доски: ПРО в ПРО-142. Задаётся при
+   *  создании и не меняется. */
+  key: string
   version: number
   /** Обещание доски: «85% работы проходит доску за 8 дней». Пусто — обещания нет. */
   sleDays: number | null
@@ -236,6 +239,9 @@ export type Column = {
 
 export type Card = {
   id: string
+  /** Номер задачи: ПРО-142. Единственное имя карточки, которое можно
+   *  назвать вслух и прислать в переписке. Не меняется никогда. */
+  number: string
   columnId: string
   position: string
   title: string

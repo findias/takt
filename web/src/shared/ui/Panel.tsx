@@ -40,6 +40,7 @@ export function Panel({
   mode,
   onMode,
   title,
+  eyebrow,
   label,
   onClose,
   actions,
@@ -48,6 +49,9 @@ export function Panel({
   mode: PanelMode
   onMode: (mode: PanelMode) => void
   title: string
+  /** Строка над заголовком: чем эта панель открыта — номер задачи,
+   *  например. Тише заголовка и не спорит с ним за место. */
+  eyebrow?: React.ReactNode
   label: string
   onClose: () => void
   actions?: React.ReactNode
@@ -104,7 +108,10 @@ export function Panel({
         {/* Название карточки — заголовок, а не подпись раздела. Раньше
             он шёл тем же мелким капслоком, что и «ПОДЗАДАЧИ», и читался
             как служебная метка. */}
-        <h2 className="panel-title">{title}</h2>
+        <div className="stack stack--tight">
+          {eyebrow}
+          <h2 className="panel-title">{title}</h2>
+        </div>
         <div className="row row--tight">
           {actions}
           <select

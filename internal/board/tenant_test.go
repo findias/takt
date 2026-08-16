@@ -24,11 +24,11 @@ func TestTenantsDoNotSeeEachOthersBoards(t *testing.T) {
 	orgA, userA := newTenant(t, db)
 	orgB, userB := newTenant(t, db)
 
-	boardA, err := svc.Create(ctx, orgA, userA, "Доска А")
+	boardA, err := svc.Create(ctx, orgA, userA, "Доска А", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Create(ctx, orgB, userB, "Доска Б"); err != nil {
+	if _, err := svc.Create(ctx, orgB, userB, "Доска Б", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,7 +55,7 @@ func TestOperationOnForeignBoardIsRejected(t *testing.T) {
 	orgA, userA := newTenant(t, db)
 	orgB, userB := newTenant(t, db)
 
-	boardA, err := svc.Create(ctx, orgA, userA, "Доска А")
+	boardA, err := svc.Create(ctx, orgA, userA, "Доска А", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestQueryWithoutTenantScopeSeesNothing(t *testing.T) {
 	svc := New(db)
 
 	orgA, userA := newTenant(t, db)
-	if _, err := svc.Create(ctx, orgA, userA, "Доска А"); err != nil {
+	if _, err := svc.Create(ctx, orgA, userA, "Доска А", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -133,7 +133,8 @@ func TestInsertIntoForeignTenantIsBlocked(t *testing.T) {
 		}
 		// Пишем строку с чужим org_id, находясь в области orgB.
 		_, err := tx.Exec(ctx,
-			`insert into boards (org_id, project_id, name) values ($1, $2, 'Подложенная')`,
+			`insert into boards (org_id, project_id, name, key)
+			 values ($1, $2, 'Подложенная', 'ПОДЛ')`,
 			orgA, projectID)
 		return err
 	})

@@ -106,7 +106,10 @@ export type FilterContext = {
 export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
   const text = f.text.trim().toLowerCase()
   if (text) {
-    const haystack = `${card.title}\n${card.description}`.toLowerCase()
+    // Номер входит в область поиска первым: за ним сюда и приходят.
+    // Человек, которому в переписке прислали ПРО-142, вводит именно
+    // это — и ожидает одну карточку, а не пустой экран.
+    const haystack = `${card.number}\n${card.title}\n${card.description}`.toLowerCase()
     if (!haystack.includes(text)) return false
   }
 

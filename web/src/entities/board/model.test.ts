@@ -28,6 +28,7 @@ const COL_B = 'col-b'
 function card(id: string, columnId: string, position: string, title = id): Card {
   return {
     id,
+    number: `ДОСК-${id}`,
     columnId,
     position,
     title,
@@ -59,7 +60,7 @@ function column(id: string, name: string, position: string, kind: ColumnKind): C
 
 function snapshot(cards: Card[]): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version: 1, sleDays: null, sleProbability: 85 },
+    board: { id: 'board', name: 'Доска', key: 'ДОСК', version: 1, sleDays: null, sleProbability: 85 },
     links: [],
     linked: [],
     iterations: [],

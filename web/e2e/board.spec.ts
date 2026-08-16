@@ -351,6 +351,29 @@ test('фильтр прячет лишнее и живёт в адресе', asy
   expect(page.url()).not.toContain('q=')
 })
 
+test('у задачи есть номер, он виден и находится поиском', async ({ page }) => {
+  await register(page)
+  // Ключ выводится из названия доски: «Продукт» даёт ПРОД.
+  await createBoard(page, 'Продукт')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Разобрать обращения')
+
+  // Номер виден прямо на доске: за ним не надо открывать карточку.
+  await expect(cardIn(page, 'Очередь', 'Согласовать смету').getByText('ПРОД-1')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Разобрать обращения').getByText('ПРОД-2')).toBeVisible()
+
+  // И в панели — над названием: открыв карточку по ссылке из переписки,
+  // первым делом сверяют, та ли это задача.
+  await cardIn(page, 'Очередь', 'Согласовать смету').getByRole('button', { name: 'Согласовать смету' }).click()
+  await expect(page.getByRole('complementary').getByText('ПРОД-1')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  // Поиск по номеру — то, ради чего номер и заводился.
+  await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('ПРОД-2')
+  await expect(cardIn(page, 'Очередь', 'Разобрать обращения')).toBeVisible()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+})
+
 test('фильтр по исполнителю показывает и то, что ни на ком', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с исполнителями')

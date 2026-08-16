@@ -16,6 +16,7 @@ const COL = 'col'
 function card(id: string, over: Partial<Card> = {}): Card {
   return {
     id,
+    number: `ДОСК-${id}`,
     columnId: COL,
     position: 'a0',
     title: id,

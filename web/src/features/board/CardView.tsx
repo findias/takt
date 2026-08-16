@@ -232,22 +232,31 @@ function CardViewInner({
         />
       ) : (
         <>
-          {/* Чья это часть — над названием, а не под ним: сначала
-              «где я», потом «что делать». Раньше об этом можно было
-              узнать, только открыв карточку, и подзадача на доске
-              выглядела самостоятельной работой. */}
-          {parent && (
-            <p className="card-parent">
-              <span aria-hidden="true">↳ </span>
-              {parent.onThisBoard ? (
-                <button className="link" onClick={() => onOpen(parent.id)}>
-                  {parent.title}
-                </button>
-              ) : (
-                // Родитель на чужой доске: назвать можем, открыть — нет.
-                <span className="muted">{parent.title}</span>
+          {/* Номер и чья это часть — над названием, а не под ним:
+              сначала «что это и где я», потом «что делать». Про родителя
+              раньше можно было узнать, только открыв карточку, и
+              подзадача на доске выглядела самостоятельной работой. */}
+          {(card || parent) && (
+            <div className="card-meta">
+              {card && (
+                // Не кнопка и не ссылка: номер выделяют и копируют,
+                // а нажатие на карточку и так её открывает.
+                <span className="card-number">{card.number}</span>
               )}
-            </p>
+              {parent && (
+                <span className="card-parent">
+                  <span aria-hidden="true">↳ </span>
+                  {parent.onThisBoard ? (
+                    <button className="link" onClick={() => onOpen(parent.id)}>
+                      {parent.title}
+                    </button>
+                  ) : (
+                    // Родитель на чужой доске: назвать можем, открыть — нет.
+                    <span className="muted">{parent.title}</span>
+                  )}
+                </span>
+              )}
+            </div>
           )}
 
           <div className="card-head">

@@ -68,6 +68,7 @@ function column(id: string, name: string, position: string): Column {
 function card(id: string, position: string, title = id): Card {
   return {
     id,
+    number: `ДОСК-${id}`,
     columnId: COL_A,
     position,
     title,
@@ -85,7 +86,7 @@ const CARDS = ['первая', 'вторая', 'третья', 'четвёрта
 
 function board(): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version: 1, sleDays: null, sleProbability: 85 },
+    board: { id: 'board', name: 'Доска', key: 'ДОСК', version: 1, sleDays: null, sleProbability: 85 },
     columns: [column(COL_A, 'Очередь', 'a0')],
     cards: CARDS.map((id, i) => card(id, `a${i}`)),
     links: [],

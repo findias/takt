@@ -95,7 +95,7 @@ test('на всех экранах цели нажатия не мельче 24 
 
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Команда' }).click()
-  await expect(page.getByText('В организации')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await tinyTargets(page), 'команда').toEqual([])
 })
 
@@ -107,6 +107,6 @@ test('у каждого элемента управления есть имя', 
   expect(await namelessControls(page), 'список досок').toEqual([])
 
   await page.getByRole('button', { name: 'Команда' }).click()
-  await expect(page.getByText('В организации')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await namelessControls(page), 'команда').toEqual([])
 })

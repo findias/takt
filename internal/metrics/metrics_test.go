@@ -24,6 +24,7 @@ type fixture struct {
 	userID  string
 	boardID string
 	column  string
+	seq     int
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -73,7 +74,8 @@ func newFixture(t *testing.T) *fixture {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
-			insert into boards (org_id, project_id, name) values ($1, $2, 'Доска')
+			insert into boards (org_id, project_id, name, key)
+			values ($1, $2, 'Доска', 'ДОСК')
 			returning id`, f.orgID, projectID).Scan(&f.boardID); err != nil {
 			return err
 		}
@@ -96,12 +98,15 @@ func (f *fixture) inTenant(fn func(pgx.Tx) error) {
 // сколько дней шла (или nil, если ещё идёт), и чем кончилась.
 func (f *fixture) card(title string, startedDaysAgo float64, tookDays *float64, outcome *string) string {
 	f.t.Helper()
+	// Номер выдаём сами: карточки здесь заводятся в обход операций,
+	// а номер обязан быть уникальным — на нём стоит ограничение.
+	f.seq++
 	var id string
 	f.inTenant(func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
-			insert into cards (org_id, board_id, column_id, title, position,
+			insert into cards (org_id, board_id, number, column_id, title, position,
 			                   created_at, started_at, finished_at, outcome)
-			values ($1, $2, $3, $4, $5,
+			values ($1, $2, 'ДОСК-' || $9::int, $3, $4, $5,
 			        now() - $6::numeric * interval '1 day',
 			        now() - $6::numeric * interval '1 day',
 			        case when $7::numeric is null then null
@@ -109,7 +114,7 @@ func (f *fixture) card(title string, startedDaysAgo float64, tookDays *float64, 
 			        $8)
 			returning id`,
 			f.orgID, f.boardID, f.column, title, uuid.NewString(),
-			startedDaysAgo, tookDays, outcome).Scan(&id)
+			startedDaysAgo, tookDays, outcome, f.seq).Scan(&id)
 	})
 	return id
 }

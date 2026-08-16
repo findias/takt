@@ -629,6 +629,9 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 	}
 	var req struct {
 		Name string `json:"name"`
+		// Пусто — ключ выводится из названия. Придумывать префикс номеров
+		// при заведении доски человека заставлять незачем.
+		Key string `json:"key"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -638,7 +641,15 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 		writeError(w, http.StatusBadRequest, "у доски должно быть название")
 		return
 	}
-	b, err := s.boards.Create(r.Context(), p.OrgID, p.ID, req.Name)
+	b, err := s.boards.Create(r.Context(), p.OrgID, p.ID, req.Name, req.Key)
+	if errors.Is(err, board.ErrBadKey) {
+		writeCoded(w, http.StatusBadRequest, "board_key_invalid", board.ErrBadKey.Error())
+		return
+	}
+	if errors.Is(err, board.ErrKeyTaken) {
+		writeCoded(w, http.StatusConflict, "board_key_taken", board.ErrKeyTaken.Error())
+		return
+	}
 	if err != nil {
 		s.fail(w, "создание доски", err)
 		return

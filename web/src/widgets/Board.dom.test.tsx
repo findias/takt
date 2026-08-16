@@ -55,6 +55,7 @@ function column(id: string, name: string, position: string, extra: Partial<Colum
 function card(id: string, columnId: string, position: string, title = id): Card {
   return {
     id,
+    number: `ДОСК-${id}`,
     columnId,
     position,
     title,
@@ -70,7 +71,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
 
 function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1')]): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version: 1, sleDays: null, sleProbability: 85 },
+    board: { id: 'board', name: 'Доска', key: 'ДОСК', version: 1, sleDays: null, sleProbability: 85 },
     columns,
     cards,
     links: [],

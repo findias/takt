@@ -36,6 +36,14 @@ var ErrArchivedBoard = errors.New("доска в архиве")
 // несуществующую поломку.
 var ErrReadOnlyBoard = errors.New("доска доступна вам только для чтения")
 
+// ErrBadKey — ключ доски не годится в префикс номера. ErrKeyTaken — годится,
+// но уже занят. Разные ошибки потому, что и поправить их нужно по-разному:
+// первую — переписав ключ, вторую — выбрав другой.
+var (
+	ErrBadKey   = errors.New("ключ доски — от двух до шести букв или цифр, начиная с буквы")
+	ErrKeyTaken = errors.New("такой ключ уже занят другой доской")
+)
+
 type Info struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
@@ -50,6 +58,21 @@ type Info struct {
 	// неподвижно, и по нему видно, что стало хуже.
 	SLEDays        *int `json:"sleDays"`
 	SLEProbability int  `json:"sleProbability"`
+	// Ключ доски — префикс номеров её карточек: ПРО в ПРО-142. Задаётся
+	// при создании и не меняется: номер карточки хранится целиком, и
+	// смена ключа развела бы на одной доске два разных префикса.
+	Key string `json:"key"`
+}
+
+// boardFields — общий список полей доски, по тем же соображениям, что
+// columnFields и cardFields ниже: список повторяется в нескольких
+// запросах, и разъехавшийся порядок ловится только в рантайме.
+const boardFields = `id, name, version, sle_days, sle_probability, key`
+
+func scanBoard(row pgx.Row) (Info, error) {
+	var b Info
+	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key)
+	return b, err
 }
 
 // Вид колонки. Очередей и стадий работы на доске бывает много, поэтому вид
@@ -89,7 +112,11 @@ func scanColumn(row pgx.Row) (Column, error) {
 }
 
 type Card struct {
-	ID          string `json:"id"`
+	ID string `json:"id"`
+	// Номер задачи: ПРО-142. Единственное имя карточки, которое можно
+	// назвать вслух, написать в переписке и ввести в поиск. Выдаётся при
+	// создании и не меняется никогда — на него ссылаются снаружи.
+	Number      string `json:"number"`
 	ColumnID    string `json:"columnId"`
 	Position    string `json:"position"`
 	Title       string `json:"title"`
@@ -163,12 +190,12 @@ const (
 // GitHub — 8; на нашем масштабе хватает пяти.
 const MaxSubtaskDepth = 5
 
-const cardFields = `id, column_id, position, title, description, version,
+const cardFields = `id, number, column_id, position, title, description, version,
 	column_entered_at, started_at, finished_at, estimate, outcome`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
-	err := row.Scan(&c.ID, &c.ColumnID, &c.Position, &c.Title, &c.Description,
+	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
 		&c.Estimate, &c.Outcome)
 	return c, err
@@ -246,7 +273,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 	out := []Info{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select id, name, version, sle_days, sle_probability
+			select `+boardFields+`
 			  from boards
 			 where archived_at is null
 			 order by created_at`)
@@ -255,9 +282,8 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var b Info
-			if err := rows.Scan(&b.ID, &b.Name, &b.Version,
-				&b.SLEDays, &b.SLEProbability); err != nil {
+			b, err := scanBoard(rows)
+			if err != nil {
 				return err
 			}
 			out = append(out, b)
@@ -268,7 +294,11 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 }
 
 // Create заводит доску с тремя колонками потока по умолчанию.
-func (s *Service) Create(ctx context.Context, orgID, userID, name string) (Info, error) {
+//
+// Пустой key означает «выведи из названия»: ключ нужен всегда, но
+// придумывать его при создании доски человека заставлять незачем —
+// в подавляющем большинстве случаев подойдёт выведенный.
+func (s *Service) Create(ctx context.Context, orgID, userID, name, key string) (Info, error) {
 	var b Info
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		var projectID string
@@ -285,10 +315,7 @@ func (s *Service) Create(ctx context.Context, orgID, userID, name string) (Info,
 			return err
 		}
 
-		err = tx.QueryRow(ctx, `
-			insert into boards (org_id, project_id, name) values ($1, $2, $3)
-			returning id, name, version, sle_days, sle_probability`, orgID, projectID, name).
-			Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability)
+		b, err = insertBoard(ctx, tx, orgID, projectID, name, key)
 		if err != nil {
 			return err
 		}
@@ -325,11 +352,10 @@ func (s *Service) Create(ctx context.Context, orgID, userID, name string) (Info,
 func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (Snapshot, error) {
 	var snap Snapshot
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			select id, name, version, sle_days, sle_probability from boards
-			 where id = $1 and archived_at is null`, boardID).
-			Scan(&snap.Board.ID, &snap.Board.Name, &snap.Board.Version,
-				&snap.Board.SLEDays, &snap.Board.SLEProbability)
+		info, err := scanBoard(tx.QueryRow(ctx, `
+			select `+boardFields+` from boards
+			 where id = $1 and archived_at is null`, boardID))
+		snap.Board = info
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Доска чужой организации неотличима от несуществующей —
 			// и это правильный ответ: подтверждать её существование

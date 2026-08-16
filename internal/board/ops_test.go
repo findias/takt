@@ -90,7 +90,7 @@ func newFixture(t *testing.T) *fixture {
 	svc := New(db)
 	orgID, actorID := newTenant(t, db)
 
-	b, err := svc.Create(ctx, orgID, actorID, "Доска")
+	b, err := svc.Create(ctx, orgID, actorID, "Доска", "")
 	if err != nil {
 		t.Fatalf("создание доски: %v", err)
 	}
@@ -143,6 +143,22 @@ func (f *fixture) applyWithID(opID, kind string, payload any) (Result, error) {
 	}
 	return f.svc.Apply(f.ctx, f.orgID, f.actorID, f.boardID,
 		Request{OperationID: opID, Type: kind, Payload: raw})
+}
+
+// applyTo — операция над другой доской той же организации. Нужна там,
+// где проверяется различие между досками: номера карточек, например.
+func (f *fixture) applyTo(boardID, kind string, payload any) Result {
+	f.t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	res, err := f.svc.Apply(f.ctx, f.orgID, f.actorID, boardID,
+		Request{OperationID: uuid.NewString(), Type: kind, Payload: raw})
+	if err != nil {
+		f.t.Fatalf("операция %s на доске %s не выполнилась: %v", kind, boardID, err)
+	}
+	return res
 }
 
 func (f *fixture) mustApply(kind string, payload any) Result {

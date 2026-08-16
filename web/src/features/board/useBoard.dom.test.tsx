@@ -48,6 +48,7 @@ function column(id: string, name: string, position: string): Column {
 function card(id: string, columnId: string, position: string): Card {
   return {
     id,
+    number: `ДОСК-${id}`,
     columnId,
     position,
     title: id,
@@ -63,7 +64,7 @@ function card(id: string, columnId: string, position: string): Card {
 
 function board(version = 1): Snapshot {
   return {
-    board: { id: 'board', name: 'Доска', version, sleDays: null, sleProbability: 85 },
+    board: { id: 'board', name: 'Доска', key: 'ДОСК', version, sleDays: null, sleProbability: 85 },
     columns: [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1')],
     cards: [card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')],
     links: [],

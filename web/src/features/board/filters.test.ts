@@ -22,6 +22,7 @@ import type { Card } from '../../shared/api/index.ts'
 function card(over: Partial<Card> = {}): Card {
   return {
     id: 'c1',
+    number: 'ДОСК-1',
     columnId: 'col',
     position: 'a0',
     title: 'Согласовать смету',
@@ -84,6 +85,18 @@ test('поиск идёт и по названию, и по описанию', (
     matches(card({ title: 'Другое', description: 'смета внутри описания' }), f, ctx),
     true,
   )
+})
+
+test('поиск находит карточку по её номеру', () => {
+  // За этим за поиском и приходят: человеку прислали ПРО-142
+  // в переписке, он вводит это в строку и ждёт одну карточку.
+  assert.equal(matches(card({ number: 'ПРО-142' }), { ...EMPTY, text: 'ПРО-142' }, ctx), true)
+  assert.equal(matches(card({ number: 'ПРО-142' }), { ...EMPTY, text: 'про-142' }, ctx), true)
+  assert.equal(matches(card({ number: 'ПРО-14' }), { ...EMPTY, text: 'ПРО-142' }, ctx), false)
+  // Номер — подстрока, как и всё остальное: «142» найдёт ПРО-142,
+  // а заодно и ПРО-1420. Отдельного разбора номера здесь нет
+  // намеренно: он потребовал бы второго вида поиска в той же строке.
+  assert.equal(matches(card({ number: 'ПРО-142' }), { ...EMPTY, text: '142' }, ctx), true)
 })
 
 test('исполнитель: конкретный, один из нескольких и «ни на ком»', () => {

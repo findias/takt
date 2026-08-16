@@ -420,16 +420,29 @@ func insertCard(
 		return Card{}, err
 	}
 
+	// Номер выдаёт счётчик доски, а не count(*) по её карточкам:
+	// посчитанный номер переиспользовался бы после архивации последней
+	// карточки, и два разных дела получили бы одно имя. Выданное
+	// не возвращается — счётчик только растёт.
+	var number string
+	err = tx.QueryRow(ctx, `
+		update boards set card_seq = card_seq + 1
+		 where id = $1
+		returning key || '-' || card_seq`, boardID).Scan(&number)
+	if err != nil {
+		return Card{}, err
+	}
+
 	// Карточка, заведённая сразу в стадии работы, считается начатой в этот
 	// же момент: иначе её время цикла окажется меньше реального.
 	c, err := scanCard(tx.QueryRow(ctx, `
-		insert into cards (org_id, board_id, column_id, position, title,
+		insert into cards (org_id, board_id, number, column_id, position, title,
 		                   started_at, finished_at)
-		values ($1, $2, $3, $4, $5,
-		        case when $6::bool then now() end,
-		        case when $7::bool then now() end)
+		values ($1, $2, $3, $4, $5, $6,
+		        case when $7::bool then now() end,
+		        case when $8::bool then now() end)
 		returning `+cardFields,
-		orgID, boardID, col.ID, pos, title,
+		orgID, boardID, number, col.ID, pos, title,
 		col.IsStartedPoint, col.IsFinishedPoint))
 	if err != nil {
 		return Card{}, err

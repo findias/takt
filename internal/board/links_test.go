@@ -24,7 +24,7 @@ func mustJSON(t *testing.T, v any) json.RawMessage {
 // главное свойство связей: подзадача может лежать на доске другой команды.
 func (f *fixture) secondBoard() (boardID, queueID, doneID string) {
 	f.t.Helper()
-	b, err := f.svc.Create(f.ctx, f.orgID, f.actorID, "Соседняя команда")
+	b, err := f.svc.Create(f.ctx, f.orgID, f.actorID, "Соседняя команда", "")
 	if err != nil {
 		f.t.Fatalf("создание второй доски: %v", err)
 	}
