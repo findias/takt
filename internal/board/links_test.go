@@ -656,3 +656,28 @@ func TestLinkedCardCarriesColumnAndPromise(t *testing.T) {
 		t.Errorf("после переноса вид колонки %q, ожидалось завершение", got)
 	}
 }
+
+// Карточка, заведённая сразу за финишем, объявляется сделанной.
+//
+// Отметка времени у неё ставилась и раньше, а исход — нет: два поля
+// об одном расходились молча, и такая карточка не попадала ни
+// в пропускную способность, ни во время цикла.
+func TestCardCreatedPastTheFinishIsDone(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	id := f.createCard("Уже сделано", cols[2].ID)
+
+	c := f.card(id)
+	if c.FinishedAt == nil {
+		t.Fatal("отметка завершения не поставлена")
+	}
+	if c.Outcome == nil || *c.Outcome != "done" {
+		t.Errorf("исход %v, ожидалось done", c.Outcome)
+	}
+
+	// А заведённая в очереди — ни то, ни другое: работа не начиналась.
+	fresh := f.card(f.createCard("Ещё не начато", cols[0].ID))
+	if fresh.FinishedAt != nil || fresh.Outcome != nil {
+		t.Errorf("карточка в очереди объявлена завершённой: %+v", fresh)
+	}
+}

@@ -6,45 +6,41 @@ import type { Page } from '@playwright/test'
 //
 // Это не проверка: здесь ничего не утверждается, кроме того, что экраны
 // открываются. Файлы складываются в screenshots/ и разбираются человеком.
-// Запуск: npm run screens.
+//
+// Снимается демонстрационный стенд, а не наспех заведённые карточки.
+// Раньше сценарий заводил себе шесть пустых карточек — и снимки врали
+// в лучшую сторону: ни длинного названия, ни двух исполнителей рядом,
+// ни блокировки с причиной, ни метрик, которым есть что показать.
+// Почти всякая ошибка вёрстки видна только на настоящих данных.
+//
+// Запуск: make screens (наполнит базу и снимет) либо npm run screens,
+// если данные уже залиты через `board demo`.
 
 const SHOTS = 'screenshots'
+const OWNER = 'anna@example.test'
+const PASSWORD = 'parol12345'
 
-async function register(page: Page, org: string) {
-  const id = Math.random().toString(36).slice(2, 8)
+async function signIn(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
-  await page.getByLabel('Название организации').fill(org)
-  await page.getByLabel('Как вас зовут').fill('Мария Кузнецова')
-  await page.getByLabel('Почта').fill(`shot-${id}@example.test`)
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Создать организацию' }).click()
-  await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
+  await page.getByLabel('Почта').fill(OWNER)
+  await page.getByLabel('Пароль').fill(PASSWORD)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('button', { name: 'Поставки', exact: true })).toBeVisible({
+    timeout: 10_000,
+  })
 }
 
-async function board(page: Page, name: string) {
-  await page.getByPlaceholder('Название новой доски').fill(name)
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+async function openBoard(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 }
 
-async function addCard(page: Page, column: string, title: string) {
-  const section = page.getByRole('region', { name: column })
-  await section.getByRole('button', { name: 'Добавить карточку' }).click()
-  await section.getByPlaceholder('Что нужно сделать?').fill(title)
-  await section.getByRole('button', { name: 'Добавить', exact: true }).click()
-  await expect(
-    section.getByRole('group', { name: new RegExp(`Карточка «${title}»`) }),
-  ).toBeVisible()
-}
-
-async function fill(page: Page) {
-  await addCard(page, 'Очередь', 'Согласовать смету с подрядчиком')
-  await addCard(page, 'Очередь', 'Разобрать обращения за неделю')
-  await addCard(page, 'Очередь', 'Обновить регламент приёмки')
-  await addCard(page, 'В работе', 'Перенести отчётность на новый склад')
-  await addCard(page, 'В работе', 'Договор аренды: продление')
-  await addCard(page, 'Готово', 'Инвентаризация по второму цеху')
+// Панели закрываются возвратом на адрес доски, а не кнопкой: кнопок
+// «Закрыть» на экране бывает несколько, а промахнувшийся снимок
+// замечаешь через двадцать файлов.
+async function backToBoard(page: Page, url: string) {
+  await page.goto(url)
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 }
 
 test('снимки экранов', async ({ page }) => {
@@ -53,83 +49,103 @@ test('снимки экранов', async ({ page }) => {
   await page.goto('/')
   await page.screenshot({ path: `${SHOTS}/01-вход.png` })
 
-  await register(page, 'Северный проект')
-  await page.screenshot({ path: `${SHOTS}/02-список-досок-пустой.png` })
+  await signIn(page)
+  await page.screenshot({ path: `${SHOTS}/02-список-досок.png`, fullPage: true })
 
-  await board(page, 'Поставки')
-  await page.screenshot({ path: `${SHOTS}/03-доска-пустая.png` })
-
-  await fill(page)
-  await page.screenshot({ path: `${SHOTS}/04-доска.png` })
+  await openBoard(page, 'Поставки')
+  const boardUrl = page.url()
+  await page.screenshot({ path: `${SHOTS}/03-доска.png` })
 
   // Тёмная тема — системная.
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.screenshot({ path: `${SHOTS}/05-доска-тёмная.png` })
+  await page.screenshot({ path: `${SHOTS}/04-доска-тёмная.png` })
   await page.emulateMedia({ colorScheme: 'light' })
 
   // Плотный режим — тот самый множитель.
   const denser = page.getByRole('checkbox', { name: 'Плотнее' })
   await denser.check()
   await page.waitForTimeout(200)
-  await page.screenshot({ path: `${SHOTS}/06-доска-плотная.png` })
+  await page.screenshot({ path: `${SHOTS}/05-доска-плотная.png` })
   await denser.uncheck()
 
-  // Панель карточки открывается кнопкой «Открыть» на самой карточке:
-  // действия появляются по наведению.
-  const card = page.getByRole('group', { name: /Согласовать смету/ })
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.screenshot({ path: `${SHOTS}/07a-меню-карточки.png` })
+  // Разбиение работы раскрывается прямо с доски.
+  const parent = page.getByRole('group', { name: /Выпустить релиз склада/ })
+  await parent.getByRole('button', { name: /Подзадачи/ }).click()
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: `${SHOTS}/06-доска-с-подзадачами.png` })
+  await parent.getByRole('button', { name: /Подзадачи/ }).click()
+
+  // Меню карточки: действия появляются по наведению.
+  await parent.hover()
+  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.screenshot({ path: `${SHOTS}/07-меню-карточки.png` })
   await page.keyboard.press('Escape')
-  await card.click()
-  // Карточка открывается обсуждением; подзадачи живут на «Работе».
-  await page.getByRole('tab', { name: 'Работа' }).click()
-  await page.getByLabel('Название подзадачи').fill('Свести смету с прошлым годом')
-  await page.getByRole('button', { name: 'Подзадача' }).click()
-  await page.getByLabel('Добавить исполнителя').selectOption({ index: 1 })
+
+  // Карточка тремя вкладками. Открывается обсуждением.
+  await parent.click()
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/07-панель-сбоку.png` })
+  await page.screenshot({ path: `${SHOTS}/08-карточка-обсуждение.png` })
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/09-карточка-работа.png` })
+  await page.getByRole('tab', { name: 'История' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/10-карточка-история.png` })
 
   const mode = page.getByLabel('Как показывать панель')
   if (await mode.isVisible()) {
     await mode.selectOption('center')
     await page.waitForTimeout(300)
-    await page.screenshot({ path: `${SHOTS}/08-панель-по-центру.png` })
+    await page.screenshot({ path: `${SHOTS}/11-панель-по-центру.png` })
     await mode.selectOption('side')
   }
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await backToBoard(page, boardUrl)
 
-  // Разбиение работы раскрывается прямо с доски.
-  await card.getByRole('button', { name: /Показать подзадачи/ }).click()
-  await page.screenshot({ path: `${SHOTS}/04а-доска-с-подзадачами.png` })
+  // Поток: обещание, время цикла, возраст работы, пропускная способность.
+  await page.getByRole('button', { name: 'Поток' }).click()
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: `${SHOTS}/12-поток.png`, fullPage: true })
+  await backToBoard(page, boardUrl)
 
-  // Доступ к доске — прямо с доски.
+  // Архив карточек.
+  await page.getByRole('button', { name: 'Архив' }).click()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: `${SHOTS}/13-архив-карточек.png` })
+  await backToBoard(page, boardUrl)
+
+  // Отчёт по закрытой итерации.
+  await page.getByRole('button', { name: 'Неделя 32', exact: true }).click()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: `${SHOTS}/14-отчёт-итерации.png` })
+  await backToBoard(page, boardUrl)
+
+  // Доступ к доске — прямо из её шапки.
   await page.getByRole('button', { name: /Видна/ }).click()
   await page.waitForTimeout(400)
-  await page.screenshot({ path: `${SHOTS}/09a-доступ.png` })
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.screenshot({ path: `${SHOTS}/15-доступ.png` })
+  await backToBoard(page, boardUrl)
 
-  // Поток.
-  await page.getByRole('button', { name: 'Поток' }).click()
+  // Поиск и команды одним списком.
+  await page.getByRole('button', { name: /Найти/ }).click()
   await page.waitForTimeout(300)
-  await page.screenshot({ path: `${SHOTS}/09-поток.png` })
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.screenshot({ path: `${SHOTS}/16-поиск.png` })
+  await page.keyboard.press('Escape')
 
-  // Экран команды и структуры.
+  // Экраны организации.
   await page.getByRole('button', { name: 'Все доски' }).click()
-  await expect(page.getByRole('button', { name: 'Поставки', exact: true })).toBeVisible()
-  await page.screenshot({ path: `${SHOTS}/10-список-досок.png` })
   await page.getByRole('button', { name: 'Команда' }).click()
-  await page.waitForTimeout(300)
-  await page.screenshot({ path: `${SHOTS}/11-команда.png`, fullPage: true })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/17-команда.png`, fullPage: true })
   await page.getByRole('button', { name: 'Структура' }).click()
-  await page.waitForTimeout(300)
-  await page.screenshot({ path: `${SHOTS}/12-структура.png` })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/18-структура.png`, fullPage: true })
 
-  // Узкий экран.
+  // Узкий экран: колонки не помещаются рядом, показывается одна.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Доски' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
-  await page.waitForTimeout(300)
-  await page.screenshot({ path: `${SHOTS}/13-узкий-экран.png` })
+  await openBoard(page, 'Поставки')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/19-узкий-экран.png` })
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.screenshot({ path: `${SHOTS}/20-узкий-экран-тёмный.png` })
 })

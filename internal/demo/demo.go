@@ -286,16 +286,35 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		{"Проверить остатки на складе", "Готово", 1, nil, nil, ""},
 	}
 	columns := map[string]string{"Очередь": queue.ID, "В работе": doing.ID, "Готово": done.ID}
+	// Путь до места: в «Готово» карточка приезжает через работу, а не
+	// прыжком — иначе в журнале не окажется начала, и время цикла считать
+	// будет не из чего.
+	route := map[string][]string{
+		"Очередь":  nil,
+		"В работе": {"В работе"},
+		"Готово":   {"В работе", "Готово"},
+	}
 
 	ids := map[string]string{}
 	for _, c := range plan {
+		// Все заводятся в очереди и переносятся дальше операциями, а не
+		// создаются сразу в нужной колонке: так у них появляется история
+		// переходов, без которой лента доски пуста, а полосы потока
+		// показывают один день.
 		res, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
-			"columnId": columns[c.column], "title": c.title, "place": "end"})
+			"columnId": queue.ID, "title": c.title, "place": "end"})
 		if err != nil {
 			return fmt.Errorf("карточка %q: %w", c.title, err)
 		}
 		id := res.Patch.Cards[0].ID
 		ids[c.title] = id
+
+		for _, step := range route[c.column] {
+			if _, err := f.apply(b.ID, "MOVE_CARD", map[string]any{
+				"cardId": id, "toColumnId": columns[step], "place": "end"}); err != nil {
+				return fmt.Errorf("перенос %q в %q: %w", c.title, step, err)
+			}
+		}
 
 		if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
 			"cardId": id, "estimate": c.estimate, "description": c.note}); err != nil {

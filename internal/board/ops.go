@@ -486,13 +486,18 @@ func insertCard(
 	}
 
 	// Карточка, заведённая сразу в стадии работы, считается начатой в этот
-	// же момент: иначе её время цикла окажется меньше реального.
+	// же момент: иначе её время цикла окажется меньше реального. Заведённая
+	// сразу за финишем — сделанной, и по той же причине: отметка времени
+	// у неё уже стоит, а без исхода её не считает ни пропускная
+	// способность, ни время цикла — два поля об одном расходились бы
+	// молча.
 	c, err := scanCard(tx.QueryRow(ctx, `
 		insert into cards (org_id, board_id, number, column_id, position, title,
-		                   started_at, finished_at)
+		                   started_at, finished_at, outcome)
 		values ($1, $2, $3, $4, $5, $6,
 		        case when $7::bool then now() end,
-		        case when $8::bool then now() end)
+		        case when $8::bool then now() end,
+		        case when $8::bool then 'done' end)
 		returning `+cardFields,
 		orgID, boardID, number, col.ID, pos, title,
 		col.IsStartedPoint, col.IsFinishedPoint))
