@@ -175,6 +175,10 @@ export type FlowReport = {
   days: number
   /** Проценты, а не среднее: у времени цикла всегда длинный хвост. */
   cycleTime: { p50: number; p85: number; p95: number; count: number } | null
+  /** Сами точки, а не только проценты: три случая по двадцать дней
+   *  и двадцать по три дают одинаковую медиану и совершенно разный
+   *  разговор на разборе. */
+  finished: { id: string; title: string; finishedOn: string; days: number }[]
   throughput: { week: string; count: number }[]
   wip: number
   aging: { id: string; title: string; column: string; days: number; blocked: boolean }[]

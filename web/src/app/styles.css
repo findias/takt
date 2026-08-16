@@ -2276,3 +2276,27 @@ textarea.description {
 .dialog-actions {
   margin-top: var(--space-4);
 }
+
+/* Диаграммы потока. Рисуются вручную в SVG — библиотека ради полусотни
+   кружков принесла бы свою палитру и свой размер сборки. */
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.chart svg {
+  width: 100%;
+  height: auto;
+  /* Точки и полосы на своём фоне: на бумаге доски график сливается
+     с панелью, а рамка отделяет его от текста вокруг. */
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.chart-note {
+  /* В единицах системы координат: она близка к ширине панели, поэтому
+     на экране это примерно те же десять пикселей. */
+  font-size: 10px;
+  fill: var(--ink-3);
+}

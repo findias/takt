@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
+import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
 import type { FlowReport } from '../../shared/api/index.ts'
 
 /**
@@ -93,6 +94,7 @@ export function Flow({
               {plural(report.cycleTime.count, 'карточке', 'карточкам', 'карточкам')}
               {report.cycleTime.count < 10 && ' — слишком мало, чтобы на это опираться'}.
             </p>
+            <CycleScatter finished={report.finished} cycleTime={report.cycleTime} />
           </>
         )}
       </section>
@@ -106,6 +108,14 @@ export function Flow({
         {report.aging.length === 0 ? (
           <p className="muted small">Ничего не начато.</p>
         ) : (
+          <>
+            {/* Диаграмма перед списком: она отвечает «что застряло»
+                одним взглядом, а список — «что именно». */}
+            <AgingChart
+              aging={report.aging}
+              sleDays={sleDays}
+              median={report.cycleTime?.p50 ?? null}
+            />
           <ul className="member-list">
             {report.aging.map((card) => (
               <li key={card.id}>
@@ -123,8 +133,16 @@ export function Flow({
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
+
+      {report.flow.length > 1 && (
+        <section className="stack">
+          <h3 className="section-title">Как копится работа</h3>
+          <CumulativeFlow flow={report.flow} />
+        </section>
+      )}
 
       <section className="stack">
         <h3 className="section-title">Пропускная способность</h3>

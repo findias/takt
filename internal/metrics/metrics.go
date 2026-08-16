@@ -34,6 +34,11 @@ type Report struct {
 	// Проценты, а не среднее: распределение времени цикла всегда
 	// с длинным хвостом, и среднее по нему не отвечает ни на один вопрос.
 	CycleTime *Percentiles `json:"cycleTime"`
+	// Finished — сами точки: когда карточка закончена и за сколько дней.
+	// Процентили отвечают «сколько обычно», а точки — «как оно
+	// распределено»: три случая по двадцать дней и двадцать по три дают
+	// одинаковую медиану и совершенно разный разговор на разборе.
+	Finished []FinishedCard `json:"finished"`
 	// Throughput — сколько карточек доведено до конца по неделям.
 	Throughput []WeeklyCount `json:"throughput"`
 	// WIP — сколько работы идёт прямо сейчас.
@@ -60,6 +65,16 @@ type Percentiles struct {
 	// карточкам — не проценты, и клиент обязан иметь возможность
 	// об этом сказать.
 	Count int `json:"count"`
+}
+
+// FinishedCard — доведённая до конца карточка на точечной диаграмме.
+type FinishedCard struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	// FinishedOn — день по календарю, а не отметка времени: точки
+	// расставляются по дням, и час на диаграмме не разглядеть.
+	FinishedOn string  `json:"finishedOn"`
+	Days       float64 `json:"days"`
 }
 
 type WeeklyCount struct {
@@ -106,7 +121,8 @@ func (s *Service) Report(ctx context.Context, orgID, userID, boardID string, day
 	if days > 365 {
 		days = 365
 	}
-	report := Report{Days: days, Throughput: []WeeklyCount{}, Aging: []AgingCard{}, Flow: []FlowDay{}}
+	report := Report{Days: days, Throughput: []WeeklyCount{}, Aging: []AgingCard{},
+		Flow: []FlowDay{}, Finished: []FinishedCard{}}
 
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		// Доска должна быть видна: недоступная неотличима от несуществующей.
@@ -164,11 +180,36 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 		out.CycleTime = &p
 	}
 
-	return tx.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		select count(*) from cards
 		 where board_id = $1 and outcome = 'discarded'
 		   and updated_at >= now() - make_interval(days => $2)`,
-		boardID, days).Scan(&out.Discarded)
+		boardID, days).Scan(&out.Discarded); err != nil {
+		return err
+	}
+
+	// Точки той же выборки, что и процентили: разойтись им негде,
+	// потому что условие одно и то же.
+	rows, err := tx.Query(ctx, `
+		select id, title, to_char(finished_at, 'YYYY-MM-DD'),
+		       extract(epoch from (finished_at - started_at)) / 86400.0
+		  from cards
+		 where board_id = $1 and outcome = 'done'
+		   and started_at is not null and finished_at is not null
+		   and finished_at >= now() - make_interval(days => $2)
+		 order by finished_at`, boardID, days)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var c FinishedCard
+		if err := rows.Scan(&c.ID, &c.Title, &c.FinishedOn, &c.Days); err != nil {
+			return err
+		}
+		out.Finished = append(out.Finished, c)
+	}
+	return rows.Err()
 }
 
 func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
