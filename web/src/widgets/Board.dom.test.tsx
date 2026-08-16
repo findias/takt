@@ -7,16 +7,16 @@
 // и требует настоящих событий указателя; клавиатурный путь для WCAG
 // важнее, и он наш.
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Card, Column, Snapshot } from "../shared/api/index.ts";
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Card, Column, Snapshot } from '../shared/api/index.ts'
 
-const snapshot = vi.fn<() => Promise<Snapshot>>();
-const operation = vi.fn();
+const snapshot = vi.fn<() => Promise<Snapshot>>()
+const operation = vi.fn()
 
-vi.mock("../shared/api", async (importOriginal) => {
-  const real = await importOriginal<typeof import("../shared/api")>();
+vi.mock('../shared/api', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../shared/api')>()
   return {
     ...real,
     api: {
@@ -29,69 +29,49 @@ vi.mock("../shared/api", async (importOriginal) => {
       metrics: vi.fn().mockResolvedValue({}),
       comments: vi.fn().mockResolvedValue({ comments: [] }),
     },
-  };
-});
+  }
+})
 
-const { Board } = await import("./Board");
+const { Board } = await import('./Board')
 
-const COL_A = "col-a";
-const COL_B = "col-b";
+const COL_A = 'col-a'
+const COL_B = 'col-b'
 
-function column(
-  id: string,
-  name: string,
-  position: string,
-  extra: Partial<Column> = {},
-): Column {
+function column(id: string, name: string, position: string, extra: Partial<Column> = {}): Column {
   return {
     id,
     name,
     position,
-    kind: "queue",
+    kind: 'queue',
     isStartedPoint: false,
     isFinishedPoint: false,
-    policy: "",
+    policy: '',
     wipLimit: null,
     wipLimitHard: false,
     ...extra,
-  };
+  }
 }
 
-function card(
-  id: string,
-  columnId: string,
-  position: string,
-  title = id,
-): Card {
+function card(id: string, columnId: string, position: string, title = id): Card {
   return {
     id,
     number: `ДОСК-${id}`,
     columnId,
     position,
     title,
-    description: "",
+    description: '',
     version: 1,
-    columnEnteredAt: "2026-08-15T12:00:00Z",
+    columnEnteredAt: '2026-08-15T12:00:00Z',
     startedAt: null,
     finishedAt: null,
     outcome: null,
     estimate: null,
-  };
+  }
 }
 
-function board(
-  cards: Card[],
-  columns = [column(COL_A, "Очередь", "a0"), column(COL_B, "В работе", "a1")],
-): Snapshot {
+function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1')]): Snapshot {
   return {
-    board: {
-      id: "board",
-      name: "Доска",
-      key: "ДОСК",
-      version: 1,
-      sleDays: null,
-      sleProbability: 85,
-    },
+    board: { id: 'board', name: 'Доска', key: 'ДОСК', version: 1, sleDays: null, sleProbability: 85 },
     columns,
     cards,
     links: [],
@@ -104,7 +84,7 @@ function board(
     labels: [],
     cardLabels: {},
     cardAssignees: {},
-  };
+  }
 }
 
 class FakeEventSource {
@@ -113,176 +93,149 @@ class FakeEventSource {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  snapshot.mockReset();
-  operation.mockReset();
-  operation.mockResolvedValue({ version: 2, patch: {} });
-  vi.stubGlobal("EventSource", FakeEventSource);
-});
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  snapshot.mockReset()
+  operation.mockReset()
+  operation.mockResolvedValue({ version: 2, patch: {} })
+  vi.stubGlobal('EventSource', FakeEventSource)
+})
 
 afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-});
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 function show() {
   return render(
-    <Board
-      boardId="board"
-      cardId={null}
-      onCard={() => {}}
-      unit="points"
-      meId="я"
-      isOwner
-      onBack={() => {}}
-    />,
-  );
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+  )
 }
 
-describe("перенос карточки с клавиатуры", () => {
+describe('перенос карточки с клавиатуры', () => {
   // Требование WCAG 2.5.7: всё, что делается перетаскиванием, должно
   // делаться и без него. Это единственный путь, который у нас свой, —
   // мышиный живёт в чужой библиотеке.
-  it("Ctrl со стрелкой отправляет карточку в соседнюю колонку", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    snapshot.mockResolvedValue(board([card("первая", COL_A, "a0")]));
-    show();
+  it('Ctrl со стрелкой отправляет карточку в соседнюю колонку', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
 
-    const cardNode = await screen.findByRole("group", {
-      name: /Карточка «первая»/,
-    });
-    cardNode.focus();
-    await user.keyboard("{Control>}{ArrowRight}{/Control}");
+    const cardNode = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    cardNode.focus()
+    await user.keyboard('{Control>}{ArrowRight}{/Control}')
 
-    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
-    const [, , type, payload] = operation.mock.calls[0];
-    expect(type).toBe("MOVE_CARD");
-    expect(payload).toMatchObject({ cardId: "первая", toColumnId: COL_B });
-  });
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('MOVE_CARD')
+    expect(payload).toMatchObject({ cardId: 'первая', toColumnId: COL_B })
+  })
 
   // Перенос вверх у самой верхней карточки — не ошибка и не повод дёргать
   // сервер: двигаться некуда.
-  it("не отправляет ничего, когда двигаться некуда", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    snapshot.mockResolvedValue(board([card("первая", COL_A, "a0")]));
-    show();
+  it('не отправляет ничего, когда двигаться некуда', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
 
-    const cardNode = await screen.findByRole("group", {
-      name: /Карточка «первая»/,
-    });
-    cardNode.focus();
-    await user.keyboard("{Control>}{ArrowLeft}{/Control}");
-    await user.keyboard("{Control>}{ArrowUp}{/Control}");
+    const cardNode = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    cardNode.focus()
+    await user.keyboard('{Control>}{ArrowLeft}{/Control}')
+    await user.keyboard('{Control>}{ArrowUp}{/Control}')
 
-    expect(operation).not.toHaveBeenCalled();
-  });
+    expect(operation).not.toHaveBeenCalled()
+  })
 
   // Тот, кто не видит экрана, узнаёт о переносе только отсюда. Объявление
   // ставится с задержкой около секунды: смена фокуса иначе перебивает его,
   // и скринридер читает пустоту.
-  it("объявляет результат переноса в живой области", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    snapshot.mockResolvedValue(board([card("первая", COL_A, "a0")]));
-    show();
+  it('объявляет результат переноса в живой области', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
 
-    const cardNode = await screen.findByRole("group", {
-      name: /Карточка «первая»/,
-    });
-    cardNode.focus();
-    await user.keyboard("{Control>}{ArrowRight}{/Control}");
+    const cardNode = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    cardNode.focus()
+    await user.keyboard('{Control>}{ArrowRight}{/Control}')
 
-    const live = document.querySelector('[aria-live="polite"]');
-    expect(live).not.toBeNull();
-    expect(live?.textContent).toBe("");
+    const live = document.querySelector('[aria-live="polite"]')
+    expect(live).not.toBeNull()
+    expect(live?.textContent).toBe('')
 
-    await vi.advanceTimersByTimeAsync(1100);
-    await waitFor(() => expect(live?.textContent).toMatch(/В работе/));
-  });
-});
+    await vi.advanceTimersByTimeAsync(1100)
+    await waitFor(() => expect(live?.textContent).toMatch(/В работе/))
+  })
+})
 
-describe("состояния доски", () => {
+describe('состояния доски', () => {
   // Пустая доска должна объяснять себя. «Ничего не видно» без объяснения
   // читается как поломка — так и было, пока не написали этот текст.
-  it("пустая доска объясняет себя и подсказывает, что делать", async () => {
-    snapshot.mockResolvedValue(board([]));
-    show();
+  it('пустая доска объясняет себя и подсказывает, что делать', async () => {
+    snapshot.mockResolvedValue(board([]))
+    show()
 
     // Ищем по тексту, а не по роли: заметок на экране бывает несколько,
     // и роль сама по себе не говорит, какая именно нужна.
-    const note = (await screen.findByText(/ещё нет карточек/)).closest(
-      '[role="note"]',
-    );
-    expect(note?.textContent).toMatch(/Ctrl со стрелками/);
-  });
+    const note = (await screen.findByText(/ещё нет карточек/)).closest('[role="note"]')
+    expect(note?.textContent).toMatch(/Ctrl со стрелками/)
+  })
 
-  it("доска с карточками ничего не объясняет", async () => {
-    snapshot.mockResolvedValue(board([card("первая", COL_A, "a0")]));
-    show();
+  it('доска с карточками ничего не объясняет', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
 
-    await screen.findByRole("group", { name: /Карточка «первая»/ });
-    expect(screen.queryByText(/ещё нет карточек/)).toBeNull();
-  });
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+    expect(screen.queryByText(/ещё нет карточек/)).toBeNull()
+  })
 
   // Мягкий лимит показывает счётчик и предупреждает, но работать
   // не мешает. Проверяется именно счётчик: он и есть весь смысл лимита
   // на экране.
-  it("счётчик колонки показывает лимит", async () => {
+  it('счётчик колонки показывает лимит', async () => {
     snapshot.mockResolvedValue(
       board(
-        [card("первая", COL_A, "a0"), card("вторая", COL_A, "a1")],
-        [
-          column(COL_A, "Очередь", "a0", { wipLimit: 3 }),
-          column(COL_B, "В работе", "a1"),
-        ],
+        [card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')],
+        [column(COL_A, 'Очередь', 'a0', { wipLimit: 3 }), column(COL_B, 'В работе', 'a1')],
       ),
-    );
-    show();
+    )
+    show()
 
-    const queue = await screen.findByRole("region", { name: "Очередь" });
-    expect(queue.textContent).toMatch(/2\s*\/\s*3/);
-  });
-});
+    const queue = await screen.findByRole('region', { name: 'Очередь' })
+    expect(queue.textContent).toMatch(/2\s*\/\s*3/)
+  })
+})
 
-describe("ходьба по доске", () => {
+describe('ходьба по доске', () => {
   // Tab идёт по всем кнопкам подряд: до третьей карточки во второй
   // колонке ему нужно два десятка нажатий. Стрелки превращают доску
   // в сетку, какой она и выглядит.
-  it("стрелка без модификатора переводит выделение, а не карточку", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it('стрелка без модификатора переводит выделение, а не карточку', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     snapshot.mockResolvedValue(
-      board([card("первая", COL_A, "a0"), card("вторая", COL_A, "a1")]),
-    );
-    show();
+      board([card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')]),
+    )
+    show()
 
-    const first = await screen.findByRole("group", {
-      name: /Карточка «первая»/,
-    });
-    first.focus();
-    await user.keyboard("{ArrowDown}");
+    const first = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    first.focus()
+    await user.keyboard('{ArrowDown}')
 
     await waitFor(() =>
-      expect(document.activeElement?.getAttribute("aria-label")).toMatch(
-        /«вторая»/,
-      ),
-    );
+      expect(document.activeElement?.getAttribute('aria-label')).toMatch(/«вторая»/),
+    )
     // Ничего не двинулось: это переход, а не перенос.
-    expect(operation).not.toHaveBeenCalled();
-  });
+    expect(operation).not.toHaveBeenCalled()
+  })
 
-  it("Enter открывает карточку, E переводит её в переименование", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    snapshot.mockResolvedValue(board([card("первая", COL_A, "a0")]));
-    show();
+  it('Enter открывает карточку, E переводит её в переименование', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
 
-    const cardNode = await screen.findByRole("group", {
-      name: /Карточка «первая»/,
-    });
-    cardNode.focus();
-    await user.keyboard("e");
+    const cardNode = await screen.findByRole('group', { name: /Карточка «первая»/ })
+    cardNode.focus()
+    await user.keyboard('e')
 
     // Появилось поле с прежним названием — значит карточка в правке.
-    await waitFor(() =>
-      expect(screen.getByDisplayValue("первая")).toBeTruthy(),
-    );
-  });
-});
+    await waitFor(() => expect(screen.getByDisplayValue('первая')).toBeTruthy())
+  })
+})
