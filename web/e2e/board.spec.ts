@@ -983,3 +983,33 @@ test('таблица — второй вид на те же данные, и о�
   await page.getByRole('button', { name: 'Доска' }).click()
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 })
+
+test('изменения — третий вид, с отбором «только про меня»', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с лентой')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await addCard(page, 'Очередь', 'Чужая работа')
+
+  // Одна карточка становится моей.
+  const mine = cardIn(page, 'Очередь', 'Согласовать смету')
+  await mine.hover()
+  await mine.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+
+  await page.getByRole('button', { name: 'Изменения' }).click()
+  const feed = page.locator('.feed li')
+  await expect(feed.first()).toBeVisible()
+  const all = await feed.count()
+  // Ищем в самой ленте: то же название лежит и в списке палитры.
+  await expect(feed.getByRole('button', { name: 'Чужая работа' }).first()).toBeVisible()
+
+  // Отбор оставляет только то, что относится ко мне.
+  await page.getByLabel('Только про меня').check()
+  await expect(feed.getByRole('button', { name: 'Чужая работа' })).toHaveCount(0)
+  await expect(feed.first()).toBeVisible()
+  expect(await feed.count()).toBeLessThan(all)
+
+  // Из ленты открывается карточка.
+  await feed.first().getByRole('button', { name: 'Согласовать смету' }).click()
+  await expect(page.getByRole('heading', { name: 'Согласовать смету' })).toBeVisible()
+})

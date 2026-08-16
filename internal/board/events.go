@@ -44,7 +44,15 @@ type Feed struct {
 // Политика видимости уже отсекает чужие доски, поэтому отдельной проверки
 // доступа здесь нет: недоступная доска просто вернёт пустую ленту. Это то
 // же правило, что и везде — существование недоступного не подтверждается.
-func (s *Service) Events(ctx context.Context, orgID, userID, boardID string, cardID string, before *int64) (Feed, error) {
+// Events читает ленту доски. mine оставляет только то, что относится
+// к спрашивающему: события карточек, где он исполнитель, и реплики,
+// в которых его упомянули.
+//
+// Отбор именно такой, потому что лента отвечает на вопрос «что случилось
+// с моей работой». Свои же действия из неё не вычитаются: человек,
+// вернувшийся из отпуска, хочет видеть и то, что делал сам до отъезда,
+// а «кто» в каждой строке и так написано.
+func (s *Service) Events(ctx context.Context, orgID, userID, boardID string, cardID string, before *int64, mine bool) (Feed, error) {
 	feed := Feed{Events: []Event{}}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -55,8 +63,15 @@ func (s *Service) Events(ctx context.Context, orgID, userID, boardID string, car
 			 where e.board_id = $1
 			   and ($2 = '' or e.card_id = $2::uuid)
 			   and ($3::bigint is null or e.id < $3)
+			   and (not $5::bool
+			        or exists (select 1 from card_assignees a
+			                    where a.card_id = e.card_id and a.user_id = $6)
+			        or (e.type = 'commented' and exists (
+			              select 1 from card_comment_mentions m
+			               where m.user_id = $6
+			                 and m.comment_id = (e.payload ->> 'commentId')::uuid)))
 			 order by e.id desc
-			 limit $4`, boardID, cardID, before, FeedLimit+1)
+			 limit $4`, boardID, cardID, before, FeedLimit+1, mine, userID)
 		if err != nil {
 			return err
 		}

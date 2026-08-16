@@ -623,13 +623,16 @@ export const api = {
 
   /** Ленты листаются курсором: журнал растёт, и смещение по номеру
    *  страницы показывало бы одно и то же дважды. */
-  boardEvents: (boardId: string, cardId?: string, before?: number) =>
+  /** Лента доски. mine оставляет только то, что относится к спрашивающему:
+   *  его карточки и реплики, где его упомянули. */
+  boardEvents: (boardId: string, cardId?: string, before?: number, mine?: boolean) =>
     request<Feed>(
       'GET',
       `/api/boards/${boardId}/events?` +
         new URLSearchParams({
           ...(cardId ? { cardId } : {}),
           ...(before ? { before: String(before) } : {}),
+          ...(mine ? { mine: '1' } : {}),
         }).toString(),
     ),
   audit: (before?: number) =>

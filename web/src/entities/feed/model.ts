@@ -32,6 +32,16 @@ export function eventText(event: BoardEvent): string {
       return `связана: ${linkKind(p.kind)}`
     case 'unlinked':
       return `связь снята: ${linkKind(p.kind)}`
+    case 'commented':
+      return 'написано в обсуждении'
+    case 'iteration_added':
+      return 'добавлена в итерацию'
+    case 'iteration_removed':
+      return 'убрана из итерации'
+    case 'estimated':
+      return typeof p.estimate === 'number' ? `оценена в ${p.estimate}` : 'оценка изменена'
+    case 'restored':
+      return 'возвращена на доску'
     case 'blocked':
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
     case 'unblocked':

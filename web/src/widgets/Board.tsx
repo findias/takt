@@ -25,6 +25,7 @@ import type { Filters } from '../features/board/filters.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
 import { SORT_NAMES, TableView, parseSort, sortToQuery } from '../features/board/TableView.tsx'
+import { Changes } from '../features/board/Changes.tsx'
 import type { Sort } from '../features/board/TableView.tsx'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
@@ -151,7 +152,8 @@ export function Board({
   const filters = useMemo(() => parseFilters(query), [query])
   // Вид и сортировка живут в адресе рядом с фильтрами: отсортированный
   // список присылают ссылкой так же, как отфильтрованную доску.
-  const asTable = query.get('view') === 'table'
+  const view = query.get('view') === 'table' ? 'table' : query.get('view') === 'changes' ? 'changes' : 'board'
+  const asTable = view === 'table'
   const sort = useMemo(() => parseSort(query), [query])
   const setFilters = useCallback(
     (next: Filters) => setQuery(filtersToQuery(next, query), { replace: true }),
@@ -687,21 +689,20 @@ export function Board({
             {[
               { key: 'board', name: 'Доска' },
               { key: 'table', name: 'Таблица' },
-            ].map((view) => (
+              { key: 'changes', name: 'Изменения' },
+            ].map((item) => (
               <button
-                key={view.key}
-                className={
-                  (view.key === 'table') === asTable ? 'segment-item segment-item--on' : 'segment-item'
-                }
-                aria-pressed={(view.key === 'table') === asTable}
+                key={item.key}
+                className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
+                aria-pressed={item.key === view}
                 onClick={() => {
                   const next = new URLSearchParams(query)
-                  if (view.key === 'table') next.set('view', 'table')
-                  else next.delete('view')
+                  if (item.key === 'board') next.delete('view')
+                  else next.set('view', item.key)
                   setQuery(next)
                 }}
               >
-                {view.name}
+                {item.name}
               </button>
             ))}
           </div>
@@ -785,7 +786,9 @@ export function Board({
           раскладка. Колонки при этом не рисуются вовсе — прятать их
           стилями значило бы держать в разметке пятьсот невидимых
           карточек. */}
-      {asTable ? (
+      {view === 'changes' ? (
+        <Changes boardId={boardId} onOpenCard={showCard} />
+      ) : asTable ? (
         <TableView
           base={base}
           order={order}

@@ -14,7 +14,7 @@ func TestEventsComeNewestFirstAndCarryTheirAuthor(t *testing.T) {
 		"cardId": id, "toColumnId": f.columnB, "place": "end"})
 	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "title": "Задача, но точнее"})
 
-	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", nil)
+	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestEventsOfOneCardAreSeparable(t *testing.T) {
 	f.mustApply("MOVE_CARD", map[string]any{
 		"cardId": first, "toColumnId": f.columnB, "place": "end"})
 
-	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, first, nil)
+	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, first, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestFeedIsPagedByCursorWithoutGapsOrRepeats(t *testing.T) {
 		f.createCard("Карточка", f.columnA)
 	}
 
-	first, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", nil)
+	first, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestFeedIsPagedByCursorWithoutGapsOrRepeats(t *testing.T) {
 		t.Fatal("продолжение не предложено, хотя события остались")
 	}
 
-	second, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", first.Next)
+	second, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", first.Next, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,11 +111,65 @@ func TestFeedOfForeignBoardIsEmpty(t *testing.T) {
 	f.createCard("Секрет", f.columnA)
 	other := newFixture(t)
 
-	feed, err := f.svc.Events(f.ctx, other.orgID, other.actorID, f.boardID, "", nil)
+	feed, err := f.svc.Events(f.ctx, other.orgID, other.actorID, f.boardID, "", nil, false)
 	if err != nil {
 		t.Fatalf("чужая лента вернула ошибку вместо пустоты: %v", err)
 	}
 	if len(feed.Events) != 0 {
 		t.Errorf("из чужой организации видно %d событий", len(feed.Events))
+	}
+}
+
+// Лента «про меня» отвечает на вопрос «что случилось с моей работой»:
+// события карточек, где я исполнитель, и реплики, где меня упомянули.
+func TestFeedMineKeepsOnlyWhatConcernsMe(t *testing.T) {
+	f := newFixture(t)
+	queue := f.columns()[0].ID
+	mine := f.createCard("Моя работа", queue)
+	other := f.createCard("Чужая работа", queue)
+
+	member := addMember(t, f.svc.db, f.orgID, "member")
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": mine, "userId": member})
+	// Движение обеих карточек: в общей ленте будут обе, в «моей» — одна.
+	f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": other, "toColumnId": f.columns()[1].ID, "place": "end"})
+
+	// И реплика с упоминанием на чужой карточке — она тоже про меня.
+	if _, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, other,
+		"посмотри, пожалуйста", nil, []string{member}); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, "", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	only, err := f.svc.Events(f.ctx, f.orgID, member, f.boardID, "", nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(only.Events) >= len(all.Events) {
+		t.Fatalf("отбор ничего не отсёк: всего %d, про меня %d", len(all.Events), len(only.Events))
+	}
+
+	byCard := map[string]int{}
+	commented := 0
+	for _, e := range only.Events {
+		byCard[e.CardID]++
+		if e.Type == "commented" {
+			commented++
+		}
+	}
+	if byCard[mine] == 0 {
+		t.Error("событий моей карточки в отборе нет")
+	}
+	if commented != 1 {
+		t.Errorf("реплик с упоминанием меня в отборе %d, ожидалась одна", commented)
+	}
+	// Чужая карточка попала в отбор только репликой, не движением.
+	for _, e := range only.Events {
+		if e.CardID == other && e.Type != "commented" {
+			t.Errorf("в отборе чужое событие %q", e.Type)
+		}
 	}
 }

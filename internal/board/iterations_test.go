@@ -151,7 +151,7 @@ func TestIterationChangesLandInCardHistory(t *testing.T) {
 	f.mustApply("ADD_TO_ITERATION", map[string]any{"cardId": card, "iterationId": it.ID})
 	f.mustApply("REMOVE_FROM_ITERATION", map[string]any{"cardId": card, "iterationId": it.ID})
 
-	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, card, nil)
+	feed, err := f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, card, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestIterationChangesLandInCardHistory(t *testing.T) {
 	// Повтор безобиден и не плодит записей.
 	before := len(feed.Events)
 	f.mustApply("REMOVE_FROM_ITERATION", map[string]any{"cardId": card, "iterationId": it.ID})
-	feed, _ = f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, card, nil)
+	feed, _ = f.svc.Events(f.ctx, f.orgID, f.actorID, f.boardID, card, nil, false)
 	if len(feed.Events) != before {
 		t.Errorf("повтор удаления добавил записей: было %d, стало %d", before, len(feed.Events))
 	}

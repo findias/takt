@@ -22,7 +22,8 @@ func (s *Server) registerFeedRoutes(mux *http.ServeMux) {
 
 func (s *Server) handleBoardEvents(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	feed, err := s.boards.Events(r.Context(), p.OrgID, p.ID,
-		r.PathValue("id"), r.URL.Query().Get("cardId"), cursor(r))
+		r.PathValue("id"), r.URL.Query().Get("cardId"), cursor(r),
+		r.URL.Query().Get("mine") == "1")
 	if err != nil {
 		s.fail(w, "лента доски", err)
 		return
