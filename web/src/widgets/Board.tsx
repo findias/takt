@@ -865,6 +865,10 @@ function Iterations({
 }) {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Какую итерацию спрашивают закрыть. Нативный confirm тут был
+  // единственным на всё приложение: он выглядит чужим и, в отличие
+  // от своего диалога, останавливает страницу целиком.
+  const [toClose, setToClose] = useState<Iteration | null>(null)
   const open = iterations.filter((i) => i.closedAt === null)
 
   const act = (p: Promise<unknown>) => {
@@ -875,6 +879,24 @@ function Iterations({
   return (
     <div className="iterations">
       {error && <p className="error">{error}</p>}
+
+      <ConfirmDialog
+        open={toClose !== null}
+        title="Закрыть итерацию?"
+        confirmLabel="Закрыть"
+        danger
+        onCancel={() => setToClose(null)}
+        onConfirm={() => {
+          const it = toClose
+          setToClose(null)
+          if (it) act(api.closeIteration(boardId, it.id))
+        }}
+      >
+        <p>
+          Состав «{toClose?.name}» замрёт: закрытая итерация больше не принимает и не отпускает
+          карточки. Открыть обратно нечем.
+        </p>
+      </ConfirmDialog>
       <div className="row row--tight">
         {open.length === 0 && !adding && <span className="muted small">Итераций нет</span>}
         {open.map((i) => (
@@ -882,11 +904,7 @@ function Iterations({
             {i.name} · {i.startsOn}—{i.endsOn} · {i.cardCount}
             <button
               className="link"
-              onClick={() => {
-                if (window.confirm(`Закрыть «${i.name}»? Состав замрёт, вернуть нельзя.`)) {
-                  act(api.closeIteration(boardId, i.id))
-                }
-              }}
+              onClick={() => setToClose(i)}
             >
               закрыть
             </button>
