@@ -66,6 +66,10 @@
           "version": {
             "type": "integer",
             "description": "Растёт с каждой операцией. По нему разрешаются конфликты."
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "Можно ли в доску писать. Отвечает список досок; в снимке доски поля нет — там на этот вопрос не отвечают."
           }
         }
       },
@@ -85,6 +89,7 @@
               "CREATE_COLUMN",
               "RENAME_COLUMN",
               "UPDATE_COLUMN",
+              "CREATE_SUBTASK",
               "LINK_CARDS",
               "UNLINK_CARDS",
               "BLOCK_CARD",

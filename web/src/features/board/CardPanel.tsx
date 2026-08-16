@@ -7,6 +7,7 @@ import { PlusIcon } from '../../shared/ui/icons.tsx'
 import { LINK_KIND_NAMES, api } from '../../shared/api/index.ts'
 import type {
   BoardEvent,
+  BoardInfo,
   CardField,
   EstimateUnit,
   FieldValue,
@@ -71,6 +72,7 @@ export function CardPanel({
   onOpenCard,
   onAssign,
   onSubtask,
+  subtaskBoards,
   onLink,
   onUnlink,
   onBlock,
@@ -91,8 +93,13 @@ export function CardPanel({
   onOpenCard: (cardId: string) => void
   /** on = назначить, off = снять. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
-  /** Завести новую подзадачу: название — всё, что нужно спросить. */
-  onSubtask: (parentCardId: string, title: string) => void
+  /** Завести новую подзадачу. Доска — только когда её ставят соседям:
+   *  пусто означает «на этой», и в организации с одной доской спрашивать
+   *  нечего. */
+  onSubtask: (parentCardId: string, title: string, boardId?: string) => void
+  /** Куда ещё можно поставить работу: доски организации, доступные
+   *  на запись, кроме этой. Пустой список убирает выбор целиком. */
+  subtaskBoards: BoardInfo[]
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onBlock: (cardId: string, reason: string) => void
@@ -239,7 +246,12 @@ export function CardPanel({
                 />
               ))}
 
-              {canEdit && <NewSubtask onCreate={(title) => onSubtask(card.id, title)} />}
+              {canEdit && (
+                <NewSubtask
+                  boards={subtaskBoards}
+                  onCreate={(title, toBoard) => onSubtask(card.id, title, toBoard)}
+                />
+              )}
 
               {/* Связать существующую — отдельный путь и подписан отдельно:
                   без подписи два ряда полей подряд читались как одно
@@ -753,27 +765,71 @@ function Assignees({
  * Колонка не спрашивается: подзадача ложится в начало доски, а перенести
  * её можно потом — как любую карточку.
  */
-function NewSubtask({ onCreate }: { onCreate: (title: string) => void }) {
+/**
+ * Завести подзадачу одним полем — и, если есть куда, на доске соседей.
+ *
+ * Постановка работы другой команде устроена тем же, чем всякая работа:
+ * карточкой на их доске. Отдельной «заявки» нет намеренно — принятая
+ * заявка превратилась бы в карточку, и две записи об одном деле были бы
+ * обязаны совпадать, не будучи обязанными совпасть.
+ *
+ * Выбор доски не появляется, пока выбирать не из чего: в организации
+ * с одной доской это был бы пункт с единственным ответом.
+ */
+function NewSubtask({
+  boards,
+  onCreate,
+}: {
+  boards: BoardInfo[]
+  onCreate: (title: string, boardId?: string) => void
+}) {
   const [title, setTitle] = useState('')
+  const [boardId, setBoardId] = useState('')
+  const target = boards.find((b) => b.id === boardId)
+
   return (
     <form
-      className="row row--tight"
+      className="stack stack--tight"
       onSubmit={(e) => {
         e.preventDefault()
         if (!title.trim()) return
-        onCreate(title.trim())
+        onCreate(title.trim(), boardId || undefined)
         setTitle('')
       }}
     >
-      <input
-        value={title}
-        placeholder="Что нужно сделать?"
-        aria-label="Название подзадачи"
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <Button kind="primary" type="submit" icon={<PlusIcon />} disabled={!title.trim()}>
-        Подзадача
-      </Button>
+      <div className="row row--tight">
+        <input
+          value={title}
+          placeholder="Что нужно сделать?"
+          aria-label="Название подзадачи"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        {boards.length > 0 && (
+          <select
+            value={boardId}
+            aria-label="Доска подзадачи"
+            onChange={(e) => setBoardId(e.target.value)}
+          >
+            <option value="">На этой доске</option>
+            {boards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <Button kind="primary" type="submit" icon={<PlusIcon />} disabled={!title.trim()}>
+          Подзадача
+        </Button>
+      </div>
+      {/* Сказано до нажатия, а не после отказа: правила доски-получателя
+          заказ не обходит, и это лучше знать заранее. */}
+      {target && (
+        <p className="muted small">
+          Работа ляжет на доску «{target.name}»: в её первую колонку, под её лимит и её обещание
+          срока. Прогресс этой карточки её посчитает.
+        </p>
+      )}
     </form>
   )
 }

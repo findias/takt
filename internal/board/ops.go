@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -93,31 +94,48 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		}
 	}()
 
-	// Доска берётся первой, и порядок здесь существенный. Журнал операций
+	// Доски берутся первыми, и порядок здесь существенный. Журнал операций
 	// под политикой видимости: запись в него для недоступной доски отлетает
 	// нарушением RLS — то есть внутренней ошибкой вместо честного «не
 	// найдена». Блокировка строки заодно сериализует и одновременный повтор
 	// той же операции: второй запрос дождётся и увидит уже занятый
 	// идентификатор.
-	var version int64
-	err = tx.QueryRow(ctx, `
-		select version from boards
-		 where id = $1 and archived_at is null
-		 for update`, boardID).Scan(&version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// Строки нет по одной из двух причин, и различить их важно.
-		// `for update` требует права на изменение, поэтому доска, доступная
-		// только на чтение, сюда тоже не попадает — а отвечать «не найдена»
-		// тому, кто эту доску прямо сейчас видит, значит отправить его
-		// искать несуществующую поломку.
-		//
-		// Второй запрос делается только на этом пути: платить за него
-		// в обычном случае незачем.
-		return Result{}, s.explainMissingBoard(ctx, orgID, actorID, boardID)
+	//
+	// Досок может быть две: подзадача заводится на доске соседей. Тогда
+	// замки берутся в порядке идентификаторов, а не в порядке «своя, потом
+	// чужая». Иначе две встречные постановки — я ставлю им, они мне —
+	// заперли бы одну и ту же пару в противоположном порядке, и одна из
+	// них умерла бы взаимной блокировкой.
+	boards := []string{boardID}
+	if second := targetBoard(req); second != "" && second != boardID {
+		boards = append(boards, second)
 	}
-	if err != nil {
-		return Result{}, err
+	slices.Sort(boards)
+
+	versions := make(map[string]int64, len(boards))
+	for _, id := range boards {
+		var v int64
+		err = tx.QueryRow(ctx, `
+			select version from boards
+			 where id = $1 and archived_at is null
+			 for update`, id).Scan(&v)
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Строки нет по одной из двух причин, и различить их важно.
+			// `for update` требует права на изменение, поэтому доска, доступная
+			// только на чтение, сюда тоже не попадает — а отвечать «не найдена»
+			// тому, кто эту доску прямо сейчас видит, значит отправить его
+			// искать несуществующую поломку.
+			//
+			// Второй запрос делается только на этом пути: платить за него
+			// в обычном случае незачем.
+			return Result{}, s.explainMissingBoard(ctx, orgID, actorID, id)
+		}
+		if err != nil {
+			return Result{}, err
+		}
+		versions[id] = v
 	}
+	version := versions[boardID]
 
 	// Резервируем идентификатор операции. Ноль затронутых строк означает,
 	// что эта операция уже выполнена — возвращаем сохранённый результат.
@@ -156,12 +174,19 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		return Result{}, err
 	}
 
-	err = tx.QueryRow(ctx,
-		`update boards set version = version + 1 where id = $1 returning version`,
-		boardID).Scan(&version)
-	if err != nil {
-		return Result{}, err
+	// Версию поднимают обе доски: на доске соседей появилась карточка,
+	// и если её версия не сдвинется, работа приедет к ним молча — увидят
+	// при следующей перезагрузке и не поймут, откуда взялась.
+	for _, id := range boards {
+		var v int64
+		if err := tx.QueryRow(ctx,
+			`update boards set version = version + 1 where id = $1 returning version`,
+			id).Scan(&v); err != nil {
+			return Result{}, err
+		}
+		versions[id] = v
 	}
+	version = versions[boardID]
 
 	result := Result{Version: version, Patch: patch}
 	encoded, err := json.Marshal(result)
@@ -180,10 +205,17 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	// Оповещение уходит тем же коммитом, что и само изменение: отправленное
 	// отдельно, оно рано или поздно уйдёт без изменения либо изменение
 	// пройдёт без оповещения.
-	if err := realtime.Notify(ctx, tx, realtime.Change{
-		BoardID: boardID, Version: version, ActorID: actorID,
-	}); err != nil {
-		return Result{}, err
+	//
+	// Доске соседей оповещение уходит тоже, а операция записана на доску
+	// операции — значит догнать патчем они не смогут и перечитают снимок.
+	// Это уже предусмотренный путь: пропуск в версиях означает «патчами
+	// не догнать», и молча отдать неполный список было бы хуже.
+	for _, id := range boards {
+		if err := realtime.Notify(ctx, tx, realtime.Change{
+			BoardID: id, Version: versions[id], ActorID: actorID,
+		}); err != nil {
+			return Result{}, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -191,6 +223,24 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	committed = true
 	return result, nil
+}
+
+// targetBoard называет вторую доску, которую заденет операция, — пустую
+// строку, если операция обходится одной.
+//
+// Читается из полезной нагрузки до разбора операции, потому что замки
+// нужно взять раньше, чем что-либо будет прочитано или записано. Разбор
+// здесь нестрогий намеренно: если нагрузка нечитаема, честную ошибку
+// об этом выдаст сама операция, а не проверка порядка замков.
+func targetBoard(req Request) string {
+	if req.Type != "CREATE_SUBTASK" {
+		return ""
+	}
+	var p struct {
+		BoardID string `json:"boardId"`
+	}
+	_ = json.Unmarshal(req.Payload, &p)
+	return p.BoardID
 }
 
 // Changes отдаёт то, что случилось с доской после названной версии.

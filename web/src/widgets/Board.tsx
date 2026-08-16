@@ -4,7 +4,13 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { flowIssues } from '../entities/board/model.ts'
 import { api } from '../shared/api/index.ts'
-import type { BoardAccess as Access, Column, EstimateUnit, Iteration } from '../shared/api/index.ts'
+import type {
+  BoardAccess as Access,
+  BoardInfo,
+  Column,
+  EstimateUnit,
+  Iteration,
+} from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
@@ -433,6 +439,26 @@ export function Board({
     [columnIds, columnsById],
   )
 
+  // Куда можно поставить работу соседям. Спрашивается один раз на доску,
+  // а не на каждое открытие карточки: список короткий, меняется редко,
+  // а панель открывают постоянно.
+  //
+  // Отказ проглатывается намеренно: без списка выбор доски просто
+  // не появится, и подзадача заведётся здесь — то есть ровно так, как
+  // работало до появления выбора.
+  const [subtaskBoards, setSubtaskBoards] = useState<BoardInfo[]>([])
+  useEffect(() => {
+    let alive = true
+    api.listBoards().then(
+      ({ boards }) =>
+        alive && setSubtaskBoards(boards.filter((b) => b.writable && b.id !== boardId)),
+      () => {},
+    )
+    return () => {
+      alive = false
+    }
+  }, [boardId])
+
   // Доска в архиве — не поломка, а положение дел: сказать об этом надо
   // словами и дать то единственное, что здесь делают. Прежде такая
   // ссылка отвечала «доска не найдена», и человек шёл искать поломку
@@ -710,7 +736,10 @@ export function Board({
           onEstimate={(id, value) => void board.estimateCard(id, value)}
           onOpenCard={showCard}
           onAssign={assignCard}
-          onSubtask={(parentCardId, title) => void board.createSubtask(parentCardId, title)}
+          subtaskBoards={subtaskBoards}
+          onSubtask={(parentCardId, title, toBoard) =>
+            void board.createSubtask(parentCardId, title, undefined, toBoard)
+          }
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={(id, reason) => void board.blockCard(id, reason)}

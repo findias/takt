@@ -516,10 +516,10 @@ export function useBoard(boardId: string | null, notify: Notify) {
    * транзакцией.
    */
   const createSubtask = useCallback(
-    (parentCardId: string, title: string, columnId?: string) =>
+    (parentCardId: string, title: string, columnId?: string, boardId?: string) =>
       runAndReload(
         'CREATE_SUBTASK',
-        { parentCardId, title, columnId },
+        { parentCardId, title, columnId, boardId },
         'Не удалось завести подзадачу',
       ),
     [runAndReload],

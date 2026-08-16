@@ -53,16 +53,13 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		return Patch{}, err
 	}
 
-	for _, id := range []string{p.FromCard, p.ToCard} {
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`select exists (select 1 from cards where id = $1 and archived_at is null)`,
-			id).Scan(&exists); err != nil {
-			return Patch{}, err
-		}
-		if !exists {
-			return Patch{}, conflictf("", "карточка не найдена или уже удалена")
-		}
+	fromBoard, err := cardBoard(ctx, tx, p.FromCard)
+	if err != nil {
+		return Patch{}, err
+	}
+	toBoard, err := cardBoard(ctx, tx, p.ToCard)
+	if err != nil {
+		return Patch{}, err
 	}
 
 	if p.Kind == LinkSubtask {
@@ -71,17 +68,40 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		}
 	}
 
-	if err := insertLink(ctx, tx, orgID, actorID, boardID, p); err != nil {
+	if err := insertLink(ctx, tx, orgID, actorID, p, fromBoard, toBoard); err != nil {
 		return Patch{}, err
 	}
 	return linkPatch(ctx, tx, boardID, p)
+}
+
+// cardBoard говорит, на какой доске лежит карточка, и заодно отвечает
+// на вопрос, есть ли она вовсе.
+//
+// Доска нужна событиям. Событие принадлежит доске, на которой лежит его
+// карточка, а не доске, с которой пришла операция: связь через границу
+// команд иначе писала бы соседям в ленту событие о карточке, которой
+// у них нет, и то же событие не попадало бы в ленту той доски, где
+// работа на самом деле лежит.
+func cardBoard(ctx context.Context, tx pgx.Tx, cardID string) (string, error) {
+	var boardID string
+	err := tx.QueryRow(ctx,
+		`select board_id from cards where id = $1 and archived_at is null`,
+		cardID).Scan(&boardID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", conflictf("", "карточка не найдена или уже удалена")
+	}
+	if err != nil {
+		return "", err
+	}
+	return boardID, nil
 }
 
 // insertLink кладёт связь и пишет события. Отдельно от linkCards потому,
 // что связь возникает не только по просьбе связать: подзадача создаётся
 // и связывается одной операцией.
 func insertLink(
-	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, p linkPayload,
+	ctx context.Context, tx pgx.Tx, orgID, actorID string, p linkPayload,
+	fromBoard, toBoard string,
 ) error {
 	tag, err := tx.Exec(ctx, `
 		insert into card_links (org_id, from_card, to_card, kind, created_by)
@@ -105,10 +125,10 @@ func insertLink(
 	// Событие пишется обеим сторонам: и родитель, и подзадача участвуют
 	// в разных отчётах, и связывать их постфактум по времени неправильно.
 	payload := map[string]any{"kind": p.Kind, "fromCard": p.FromCard, "toCard": p.ToCard}
-	if err := logEvent(ctx, tx, orgID, boardID, p.FromCard, actorID, "linked", nil, nil, payload); err != nil {
+	if err := logEvent(ctx, tx, orgID, fromBoard, p.FromCard, actorID, "linked", nil, nil, payload); err != nil {
 		return err
 	}
-	return logEvent(ctx, tx, orgID, boardID, p.ToCard, actorID, "linked", nil, nil, payload)
+	return logEvent(ctx, tx, orgID, toBoard, p.ToCard, actorID, "linked", nil, nil, payload)
 }
 
 type createSubtaskPayload struct {
@@ -118,6 +138,18 @@ type createSubtaskPayload struct {
 	// подзадачу заводят из панели родителя, где колонку не выбирают,
 	// а «начало доски» — единственный ответ, не требующий догадок.
 	ColumnID string `json:"columnId"`
+	// На какой доске завести подзадачу. Пусто — на этой.
+	//
+	// Не пусто — это постановка работы соседям, и устроена она тем же,
+	// чем всякая работа: карточкой на доске исполнителя. Отдельной
+	// сущности «заявка» нет намеренно — принятая заявка превратилась бы
+	// в карточку, и две записи об одном деле были бы обязаны совпадать,
+	// не будучи обязанными совпасть.
+	//
+	// Отдельного права тоже нет: нужна обычная запись в доску, а доску
+	// с видимостью org она уже даёт. Правила доски-получателя при этом
+	// не обходятся — карточка ложится в её колонку и под её лимит.
+	BoardID string `json:"boardId"`
 }
 
 // createSubtask заводит карточку и тут же связывает её с родителем.
@@ -142,17 +174,20 @@ func createSubtask(
 		return Patch{}, badRequestf("не сказано, чьей подзадачей она будет")
 	}
 
-	var parentExists bool
-	if err := tx.QueryRow(ctx,
-		`select exists (select 1 from cards where id = $1 and archived_at is null)`,
-		p.ParentCardID).Scan(&parentExists); err != nil {
+	parentBoard, err := cardBoard(ctx, tx, p.ParentCardID)
+	if err != nil {
 		return Patch{}, err
 	}
-	if !parentExists {
-		return Patch{}, conflictf("", "карточка не найдена или уже удалена")
+
+	// Доска назначения уже заперта и проверена на запись в Apply: обе доски
+	// берутся под замок до разбора операции, иначе две встречные постановки
+	// заперли бы их в разном порядке.
+	target := boardID
+	if p.BoardID != "" {
+		target = p.BoardID
 	}
 
-	col, err := subtaskColumn(ctx, tx, boardID, p.ColumnID)
+	col, err := subtaskColumn(ctx, tx, target, p.ColumnID)
 	if err != nil {
 		return Patch{}, err
 	}
@@ -160,7 +195,7 @@ func createSubtask(
 		return Patch{}, err
 	}
 
-	card, err := insertCard(ctx, tx, orgID, actorID, boardID, col, p.Title, Placement{Place: "end"})
+	card, err := insertCard(ctx, tx, orgID, actorID, target, col, p.Title, Placement{Place: "end"})
 	if err != nil {
 		return Patch{}, err
 	}
@@ -169,7 +204,7 @@ func createSubtask(
 	if err := checkSubtaskTree(ctx, tx, link.FromCard, link.ToCard); err != nil {
 		return Patch{}, err
 	}
-	if err := insertLink(ctx, tx, orgID, actorID, boardID, link); err != nil {
+	if err := insertLink(ctx, tx, orgID, actorID, link, parentBoard, target); err != nil {
 		return Patch{}, err
 	}
 	return linkPatch(ctx, tx, boardID, link)
@@ -211,8 +246,18 @@ func unlinkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 	if tag.RowsAffected() > 0 {
+		// Событие пишется доске самой карточки, а не доске операции — по той
+		// же причине, что и у связывания. Архив здесь не отсекается: связь
+		// снимают и с убранной карточки, а место событию всё равно на её
+		// доске. Строки нет только если нет и карточки, а тогда каскад унёс
+		// бы связь и удалять было бы нечего.
+		var fromBoard string
+		if err := tx.QueryRow(ctx,
+			`select board_id from cards where id = $1`, p.FromCard).Scan(&fromBoard); err != nil {
+			return Patch{}, err
+		}
 		payload := map[string]any{"kind": p.Kind, "fromCard": p.FromCard, "toCard": p.ToCard}
-		if err := logEvent(ctx, tx, orgID, boardID, p.FromCard, actorID, "unlinked", nil, nil, payload); err != nil {
+		if err := logEvent(ctx, tx, orgID, fromBoard, p.FromCard, actorID, "unlinked", nil, nil, payload); err != nil {
 			return Patch{}, err
 		}
 	}

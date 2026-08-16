@@ -62,6 +62,15 @@ type Info struct {
 	// при создании и не меняется: номер карточки хранится целиком, и
 	// смена ключа развела бы на одной доске два разных префикса.
 	Key string `json:"key"`
+	// Можно ли в доску писать. Спрашивает список досок — из него выбирают,
+	// куда поставить работу соседям, и предлагать доску, которая откажет,
+	// значит обещать невыполнимое.
+	//
+	// Пусто, а не «нельзя», когда не спрашивали: снимку доски этот ответ
+	// не нужен, а стоит он прохода по всем доскам организации. Разница
+	// между «нельзя» и «не спрашивали» важна ровно потому, что первое
+	// закрывает выбор, а второе — нет.
+	Writable *bool `json:"writable,omitempty"`
 }
 
 // boardFields — общий список полей доски, по тем же соображениям, что
@@ -272,8 +281,11 @@ func New(db *store.Store) *Service { return &Service{db: db} }
 func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error) {
 	out := []Info{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		// Право записи считается здесь же, одним вызовом на запрос:
+		// функция stable, и планировщик выносит её в InitPlan, а не зовёт
+		// на каждую доску.
 		rows, err := tx.Query(ctx, `
-			select `+boardFields+`
+			select `+boardFields+`, id = any (app_writable_boards())
 			  from boards
 			 where archived_at is null
 			 order by created_at`)
@@ -282,10 +294,13 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		}
 		defer rows.Close()
 		for rows.Next() {
-			b, err := scanBoard(rows)
-			if err != nil {
+			var b Info
+			var writable bool
+			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
+				&b.SLEProbability, &b.Key, &writable); err != nil {
 				return err
 			}
+			b.Writable = &writable
 			out = append(out, b)
 		}
 		return rows.Err()

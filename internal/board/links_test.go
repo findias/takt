@@ -3,6 +3,7 @@ package board
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -417,5 +418,155 @@ func TestCreateSubtaskRefusesWithoutTitleOrParent(t *testing.T) {
 	}
 	if len(snap.Links) != 0 {
 		t.Errorf("связей %d, ожидалось ни одной", len(snap.Links))
+	}
+}
+
+// --- постановка работы на доску соседей (этап 11.4) ---
+
+// boardVersion читает версию доски напрямую: снимок отдаёт её только для
+// той доски, которую спрашивают, а здесь нужны обе.
+func (f *fixture) boardVersion(boardID string) int64 {
+	f.t.Helper()
+	var v int64
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select version from boards where id = $1`, boardID).Scan(&v)
+	})
+	return v
+}
+
+// Постановка задачи соседям — это карточка на их доске, а не заявка рядом
+// с ней. Отсюда и проверки: работа лежит у них, связь видна с обеих сторон,
+// прогресс родителя её считает.
+func TestSubtaskLandsOnNeighbourBoard(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, neighbourQueue, _ := f.secondBoard()
+	before := f.boardVersion(neighbour)
+
+	f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Проверить нагрузку", "boardId": neighbour})
+
+	// Карточка лежит у соседей, в их первой колонке, с их номером.
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, neighbour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var placed *Card
+	for i, c := range snap.Cards {
+		if c.Title == "Проверить нагрузку" {
+			placed = &snap.Cards[i]
+		}
+	}
+	if placed == nil {
+		t.Fatal("подзадача не появилась на доске соседей")
+	}
+	if placed.ColumnID != neighbourQueue {
+		t.Errorf("подзадача легла в колонку %s, ожидалась первая колонка соседей", placed.ColumnID)
+	}
+	if !strings.HasPrefix(placed.Number, snap.Board.Key+"-") {
+		t.Errorf("номер %q не из пространства доски соседей (%s)", placed.Number, snap.Board.Key)
+	}
+
+	// На своей доске карточки нет, а прогресс родителя её считает: работа
+	// принадлежит исполнителю, разбиение — заказчику.
+	for _, c := range f.snapshot().Cards {
+		if c.ID == placed.ID {
+			t.Error("подзадача оказалась и на доске заказчика")
+		}
+	}
+	if p := f.card(parent).Progress; p == nil || p.Total != 1 || p.Done != 0 {
+		t.Fatalf("прогресс родителя: %+v, ожидалось 0 из 1", p)
+	}
+
+	// Версия доски соседей сдвинулась: иначе работа приехала бы к ним молча.
+	if after := f.boardVersion(neighbour); after <= before {
+		t.Errorf("версия доски соседей %d, была %d — оповестить их нечем", after, before)
+	}
+}
+
+// Событие принадлежит доске своей карточки. Иначе лента доски заказчика
+// показывала бы событие о карточке, которой на ней нет, а у исполнителя
+// появление работы не отражалось бы вовсе.
+func TestSubtaskEventsBelongToOwnBoards(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, _, _ := f.secondBoard()
+
+	f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Проверить нагрузку", "boardId": neighbour})
+
+	var childBoard, parentBoard string
+	f.inTenant(func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `
+			select board_id from card_events
+			 where type = 'linked' and card_id <> $1`, parent).Scan(&childBoard); err != nil {
+			return err
+		}
+		return tx.QueryRow(f.ctx, `
+			select board_id from card_events
+			 where type = 'linked' and card_id = $1`, parent).Scan(&parentBoard)
+	})
+	if childBoard != neighbour {
+		t.Errorf("событие подзадачи записано доске %s, ожидалась доска соседей", childBoard)
+	}
+	if parentBoard != f.boardID {
+		t.Errorf("событие родителя записано доске %s, ожидалась доска заказчика", parentBoard)
+	}
+}
+
+// Заказ не обходит правил доски-получателя: жёсткий лимит их колонки
+// отвечает тем же конфликтом, что и своей.
+func TestSubtaskOnNeighbourBoardObeysTheirLimit(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, neighbourQueue, _ := f.secondBoard()
+
+	f.cardOn(neighbour, neighbourQueue, "Своя работа")
+	f.applyTo(neighbour, "UPDATE_COLUMN", map[string]any{
+		"columnId": neighbourQueue, "wipLimit": 1, "wipLimitHard": true})
+
+	_, err := f.apply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Проверить нагрузку", "boardId": neighbour})
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("ожидался конфликт по лимиту соседей, получено %v", err)
+	}
+}
+
+// Закрытая доска чужой команды заказов не принимает — и отвечает тем же,
+// чем ответила бы на любую попытку в неё написать.
+func TestSubtaskOnUnreachableBoardRefused(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, _, _ := f.secondBoard()
+
+	// Доска уезжает в команду. Спрашивает не владелец организации — ему
+	// подвластно всё, что он видит (0011), — а обычный участник со стороны.
+	teamID := f.team("Соседи", nil)
+	f.inTenant(func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update boards set team_id = $2, visibility = 'team' where id = $1`,
+			neighbour, teamID)
+		return err
+	})
+	outsider := addMember(t, f.svc.db, f.orgID, "member")
+
+	_, err := f.svc.Apply(f.ctx, f.orgID, outsider, f.boardID, Request{
+		OperationID: uuid.NewString(),
+		Type:        "CREATE_SUBTASK",
+		Payload: mustJSON(t, map[string]any{
+			"parentCardId": parent, "title": "Проверить нагрузку", "boardId": neighbour}),
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ожидалось «доска не найдена», получено %v", err)
+	}
+
+	// И ничего не завелось по дороге: отказ целен, как и всякая операция.
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, neighbour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.Cards) != 0 {
+		t.Errorf("на доске соседей %d карточек, ожидалось ноль", len(snap.Cards))
 	}
 }
