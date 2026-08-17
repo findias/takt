@@ -745,6 +745,35 @@ test('дата обязательства ставится, видна и отб
   await expect(cardIn(page, 'Очередь', 'К релизу').getByTitle('Дата обязательства')).toHaveCount(0)
 })
 
+// Связь «блокирует» была видна только в панели и только с той стороны,
+// где её завели: почему карточка стоит, приходилось выяснять, открыв её,
+// а сколько работы держит эта — не видно было вовсе.
+test('зависимость видна с обеих сторон и проходится', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска зависимостей')
+  await addCard(page, 'Очередь', 'Держит других')
+  await addCard(page, 'Очередь', 'Ждёт очереди')
+
+  // Связь заводится из панели той карточки, которая держит.
+  await cardIn(page, 'Очередь', 'Держит других').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Держит других»/)
+  await panel.getByText('Связать с существующей карточкой').click()
+  await panel.getByLabel('Вид связи').selectOption('blocks')
+  await panel.getByLabel('Карточка для связи').selectOption({ label: 'Ждёт очереди' })
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // Держащая говорит, сколько работы за ней стоит.
+  await expect(cardIn(page, 'Очередь', 'Держит других').getByText('держит 1')).toBeVisible()
+
+  // Ждущая называет того, кто её держит, и переход туда работает:
+  // связь должна проходиться, а не только показываться.
+  const waiting = cardIn(page, 'Очередь', 'Ждёт очереди')
+  await expect(waiting.getByText('Ждёт:')).toBeVisible()
+  await waiting.getByRole('button', { name: 'Держит других' }).click()
+  await expect(page.getByRole('heading', { name: 'Держит других' })).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

@@ -34,7 +34,7 @@ import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palett
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { childrenOf, parentsOf } from '../entities/card/model.ts'
+import { childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -582,6 +582,12 @@ export function Board({
     [base],
   )
 
+  // Кто кого держит — один обход связей на доску, как подзадачи.
+  const dependencies = useMemo(
+    () => (base ? dependenciesOf(base) : { holds: {}, waitsFor: {} }),
+    [base],
+  )
+
   /** cardId → название итерации: карточке нужно слово, а не ссылка.
    *  Считается один раз на доску — как и всё, что уходит в карточку. */
   const cardIterationNames = useMemo(() => {
@@ -698,6 +704,8 @@ export function Board({
         cardAssignees={base.cardAssignees}
         parents={parents}
         iterations={cardIterationNames}
+        holds={dependencies.holds}
+        waitsFor={dependencies.waitsFor}
         children={children}
         onLabel={toggleLabel}
         selected={picked}

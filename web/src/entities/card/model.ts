@@ -119,6 +119,39 @@ export function childrenOf(base: BaseState): Record<string, Related[]> {
   return children
 }
 
+/**
+ * Кто кого держит: обе стороны связи «блокирует».
+ *
+ * Связь была видна только в панели и только с одной стороны — с той,
+ * где её завели. На доске это значит, что порядок работ приходится
+ * держать в голове: почему карточка стоит, видно, лишь открыв её,
+ * а сколько работы держит эта — не видно вообще.
+ *
+ * Считается одним обходом связей на доску, как `parentsOf`
+ * и `childrenOf`: обход на каждую карточку — это пятьсот обходов
+ * на доску в пятьсот карточек.
+ */
+export function dependenciesOf(base: BaseState): {
+  /** cardId → кого она держит. */
+  holds: Record<string, Related[]>
+  /** cardId → кто держит её. */
+  waitsFor: Record<string, Related[]>
+} {
+  const holds: Record<string, Related[]> = {}
+  const waitsFor: Record<string, Related[]> = {}
+  for (const link of base.links) {
+    if (link.kind !== 'blocks') continue
+    // Направление здесь несёт смысл: from держит to.
+    if (base.cards[link.fromCard]) {
+      ;(holds[link.fromCard] ??= []).push(resolve(base, link.toCard, 'blocks'))
+    }
+    if (base.cards[link.toCard]) {
+      ;(waitsFor[link.toCard] ??= []).push(resolve(base, link.fromCard, 'blocks'))
+    }
+  }
+  return { holds, waitsFor }
+}
+
 export function cardDetails(base: BaseState, cardId: string): CardDetails | null {
   const card = base.cards[cardId]
   if (!card) return null

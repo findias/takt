@@ -401,6 +401,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"Собрать сборку":       "boris@example.test",
 		"Прогнать нагрузочные": "vera@example.test",
 	}
+	partIDs := map[string]string{}
 	for _, title := range []string{"Собрать сборку", "Прогнать нагрузочные"} {
 		res, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
 			"parentCardId": ids["Выпустить релиз склада"], "title": title})
@@ -418,6 +419,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		if part == "" {
 			return fmt.Errorf("подзадача %q не вернулась в патче", title)
 		}
+		partIDs[title] = part
 		if _, err := f.apply(b.ID, "ASSIGN_CARD", map[string]any{
 			"cardId": part, "userId": f.people[parts[title]]}); err != nil {
 			return err
@@ -435,6 +437,16 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 			}
 		}
 	}
+	// Одна часть держит другую: нагрузочные не прогнать, пока не собрана
+	// сборка. Без такой связи на доске не увидеть, зачем она нужна
+	// с обеих сторон — «держит 1» у одной и «ждёт» у другой.
+	if _, err := f.apply(b.ID, "LINK_CARDS", map[string]any{
+		"fromCard": partIDs["Собрать сборку"],
+		"toCard":   partIDs["Прогнать нагрузочные"],
+		"kind":     "blocks"}); err != nil {
+		return err
+	}
+
 	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
 		"parentCardId": ids["Выпустить релиз склада"],
 		"title":        "Поднять квоту на хранилище", "boardId": neighbour.ID}); err != nil {

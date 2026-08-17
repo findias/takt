@@ -58,6 +58,10 @@ type ColumnProps = {
   iterations: Record<string, string>
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
+  /** Две стороны связи «блокирует»: кого карточка держит и кто держит
+   *  её. Считаются на доску — карточка получает готовое. */
+  holds: Record<string, Related[]>
+  waitsFor: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   /** Выделенные карточки — одним набором на доску: массовое действие
    *  спрашивают у доски, а не у колонки. */
@@ -232,6 +236,8 @@ export function ColumnView(props: ColumnProps) {
             parent={props.parents[cardId]}
             iteration={props.iterations[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
+            holds={props.holds[cardId] ?? NO_SUBTASKS}
+            waitsFor={props.waitsFor[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
             selected={props.selected.has(cardId)}
             onSelect={props.onSelect}

@@ -73,6 +73,11 @@ type CardProps = {
    *  а чтобы узнать, на что именно она разбита, карточку приходилось
    *  открывать. */
   subtasks: Related[]
+  /** Кого эта карточка держит и кто держит её. Обе стороны связи
+   *  «блокирует»: без первой не видно, что работа держит чужую,
+   *  без второй — почему она сама стоит. */
+  holds: Related[]
+  waitsFor: Related[]
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   /** Выделена ли карточка для действия над многими сразу. */
   selected: boolean
@@ -114,6 +119,8 @@ function CardViewInner({
   parent,
   iteration,
   subtasks,
+  holds,
+  waitsFor,
   onLabel,
   selected,
   onSelect,
@@ -485,6 +492,40 @@ function CardViewInner({
             </Menu>
           </div>
 
+          {/* Кто держит эту работу. Раньше это было видно, только
+              открыв карточку, — то есть порядок работ приходилось
+              держать в голове. Первый назван и проходим, остальные
+              сосчитаны: в ширину колонки помещается одно имя, а вопрос
+              «к кому идти» почти всегда про первого. */}
+          {waitsFor.length > 0 && (
+            <div className="card-waits">
+              <span className="muted small">Ждёт: </span>
+              {waitsFor[0].onThisBoard ? (
+                <button className="link" onClick={() => onOpen(waitsFor[0].id)}>
+                  {waitsFor[0].title}
+                </button>
+              ) : (
+                // Держит работа с чужой доски: назвать можем, открыть
+                // отсюда — нет.
+                <span className="muted small" title={waitsFor[0].where}>
+                  {waitsFor[0].title}
+                </span>
+              )}
+              {waitsFor.length > 1 && (
+                <span
+                  className="muted small"
+                  title={waitsFor
+                    .slice(1)
+                    .map((w) => w.title)
+                    .join(', ')}
+                >
+                  {' '}
+                  и ещё {waitsFor.length - 1}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Заголовок и кто делает — одна строка: «что за работа»
               и «кого спрашивать» читают вместе, и второй ряд ради
               стопки аватаров стоил бы четырёх пикселей на каждой
@@ -532,7 +573,12 @@ function CardViewInner({
             </Menu>
           </div>
           {card &&
-            (card.blocked || aging || iteration || card.dueOn || card.estimate !== null) && (
+            (card.blocked ||
+              aging ||
+              iteration ||
+              card.dueOn ||
+              holds.length > 0 ||
+              card.estimate !== null) && (
             <div className="card-marks">
               {/* Итерация — ответ на «к чему это привязано снаружи».
                   Тихая пометка: спринт не влияет на то, как работу
@@ -559,6 +605,17 @@ function CardViewInner({
                     </span>
                   )
                 })()}
+              {/* Сколько чужой работы держит эта. Числом: имена
+                  не помещаются в ширину колонки, а вопрос здесь —
+                  «стоит ли из-за неё кто-то», и ответ на него число. */}
+              {holds.length > 0 && (
+                <span
+                  className="mark mark--holds"
+                  title={`Держит: ${holds.map((h) => h.title).join(', ')}`}
+                >
+                  держит {holds.length}
+                </span>
+              )}
               {aging && (
                 <span className="mark mark--aging" title="Возраст считается от начала работы">
                   {aging}
