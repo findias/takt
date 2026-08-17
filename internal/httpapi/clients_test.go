@@ -317,6 +317,44 @@ func TestIdempotencyKeyReplaysTheSameAnswer(t *testing.T) {
 	}
 }
 
+// Тот же ключ с другим телом — тоже ошибка клиента.
+//
+// Сверялись метод и путь, а тело нет: «заведи „Одну“» и «заведи
+// „Другую“» под одним ключом выглядели одним запросом, второй получал
+// 201 с телом первой доски и своей доски не заводил. По ответу это
+// неотличимо от успеха — ошибка доставалась не тому, у кого она есть,
+// а данным через неделю.
+func TestIdempotencyKeyRefusesAnotherBody(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	_, token := owner.apiClient("Интеграция", "boards:read", "boards:write")
+	key := uuid.NewString()
+
+	a.withKey(token, key, "POST", "/api/v1/boards", map[string]any{"name": "Одна"})
+
+	other := a.requestWithKey(token, key, "POST", "/api/v1/boards",
+		map[string]any{"name": "Другая"})
+	if other.code != http.StatusConflict {
+		t.Fatalf("ключ с другим телом: код %d, ожидался 409; тело: %s", other.code, other.body)
+	}
+	if got, _ := field(t, other.body, "code").(string); got != "idempotency_key_reused" {
+		t.Errorf("код ошибки %q; тело: %s", got, other.body)
+	}
+
+	// Отказ пришёл вместо действия: второй доски нет, но и первая
+	// на месте — отказ ничего не откатывает.
+	raw := a.mustToken(token, "GET", "/api/v1/boards", nil, http.StatusOK)
+	var list struct {
+		Boards []struct{ Name string } `json:"boards"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Boards) != 1 || list.Boards[0].Name != "Одна" {
+		t.Fatalf("после отказа доски: %+v", list.Boards)
+	}
+}
+
 type keyed struct {
 	code int
 	body []byte

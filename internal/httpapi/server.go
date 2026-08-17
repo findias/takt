@@ -782,11 +782,15 @@ func (s *Server) staticHandler() http.Handler {
 
 // --- утилиты ответа ---
 
+// maxBodyBytes — предел на тело запроса. Без него чужой запрос решает,
+// сколько нам занять памяти.
+const maxBodyBytes = 1 << 20
+
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	if r.ContentLength == 0 {
 		return true
 	}
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
 	if err := dec.Decode(dst); err != nil {
 		writeError(w, http.StatusBadRequest, "не удалось разобрать тело запроса")
 		return false

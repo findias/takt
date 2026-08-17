@@ -1,7 +1,11 @@
 package httpapi
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -142,6 +146,16 @@ func (s *Server) withIdempotency(
 		return
 	}
 
+	// Тело читается здесь и возвращается обработчику: сверять повтор
+	// по методу и пути мало — один и тот же адрес принимает разные
+	// запросы, и «заведи „Найм“» с «заведи „Продажи“» под одним ключом
+	// нельзя считать одним и тем же.
+	body, ok := readBody(w, r)
+	if !ok {
+		return
+	}
+	fingerprint := fmt.Sprintf("%x", sha256.Sum256(body))
+
 	stored, err := s.replay(r, p, key)
 	if err != nil {
 		s.fail(w, "ключ повтора", err)
@@ -154,6 +168,14 @@ func (s *Server) withIdempotency(
 		if stored.method != r.Method || stored.path != r.URL.Path {
 			writeCoded(w, http.StatusConflict, "idempotency_key_reused",
 				"этот ключ повтора уже использован для другого запроса")
+			return
+		}
+		// Пустой отпечаток — запись, заведённая до того, как отпечатки
+		// появились. Она доживает свои сутки без сверки: отказывать
+		// на ровном месте хуже, чем один раз не проверить.
+		if stored.fingerprint != "" && stored.fingerprint != fingerprint {
+			writeCoded(w, http.StatusConflict, "idempotency_key_reused",
+				"этот ключ повтора уже использован с другим телом запроса")
 			return
 		}
 		w.Header().Set("Idempotent-Replay", "true")
@@ -171,16 +193,38 @@ func (s *Server) withIdempotency(
 	if recorder.status < 200 || recorder.status >= 300 {
 		return
 	}
-	if err := s.remember(r, p, key, recorder.status, recorder.body); err != nil {
+	if err := s.remember(r, p, key, fingerprint, recorder.status, recorder.body); err != nil {
 		s.log.Error("ключ повтора не сохранён", "ключ", key, "err", err)
 	}
+}
+
+// readBody забирает тело целиком и возвращает его на место: дальше
+// по цепочке его будет читать обработчик, и прочитанное однажды тело
+// достанется ему пустым.
+//
+// Предел тот же, что у разбора тела, и по той же причине: без него
+// чужой запрос решает, сколько нам занять памяти.
+func readBody(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	if r.Body == nil {
+		return nil, true
+	}
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "тело запроса слишком велико или оборвалось")
+		return nil, false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	return raw, true
 }
 
 type storedResponse struct {
 	method string
 	path   string
-	status int
-	body   []byte
+	// fingerprint — sha256 от тела первого запроса. Пусто у записей,
+	// заведённых до появления отпечатков.
+	fingerprint string
+	status      int
+	body        []byte
 }
 
 func (s *Server) replay(r *http.Request, p auth.Principal, key string) (*storedResponse, error) {
@@ -188,15 +232,19 @@ func (s *Server) replay(r *http.Request, p auth.Principal, key string) (*storedR
 	err := s.db.InTenant(r.Context(), p.OrgID, p.ID, func(tx pgx.Tx) error {
 		var out storedResponse
 		var body []byte
+		var fingerprint *string
 		err := tx.QueryRow(r.Context(), `
-			select method, path, status, body
+			select method, path, fingerprint, status, body
 			  from api_idempotency where key = $1`, key).
-			Scan(&out.method, &out.path, &out.status, &body)
+			Scan(&out.method, &out.path, &fingerprint, &out.status, &body)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		if err != nil {
 			return err
+		}
+		if fingerprint != nil {
+			out.fingerprint = *fingerprint
 		}
 		out.body = body
 		found = &out
@@ -205,15 +253,17 @@ func (s *Server) replay(r *http.Request, p auth.Principal, key string) (*storedR
 	return found, err
 }
 
-func (s *Server) remember(r *http.Request, p auth.Principal, key string, status int, body []byte) error {
+func (s *Server) remember(
+	r *http.Request, p auth.Principal, key, fingerprint string, status int, body []byte,
+) error {
 	return s.db.InTenant(r.Context(), p.OrgID, p.ID, func(tx pgx.Tx) error {
 		// Гонка двух одинаковых запросов разрешается в пользу первого:
 		// второй просто не запомнится, а его собственный ответ уже ушёл.
 		_, err := tx.Exec(r.Context(), `
-			insert into api_idempotency (org_id, key, method, path, status, body)
-			values ($1, $2, $3, $4, $5, $6)
+			insert into api_idempotency (org_id, key, method, path, fingerprint, status, body)
+			values ($1, $2, $3, $4, $5, $6, $7)
 			on conflict (org_id, key) do nothing`,
-			p.OrgID, key, r.Method, r.URL.Path, status, string(body))
+			p.OrgID, key, r.Method, r.URL.Path, fingerprint, status, string(body))
 		return err
 	})
 }
