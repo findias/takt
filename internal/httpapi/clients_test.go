@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -240,6 +242,70 @@ func TestDirectoryScopeIsGrantedAlone(t *testing.T) {
 	owner.mustDo("POST", "/api/clients",
 		map[string]any{"name": "Каталог", "scopes": []string{"scim:write"}},
 		http.StatusCreated)
+}
+
+// Мелкое из сверки (Р6): предел частоты называет, когда запас
+// восстановится; каталог считается по своим числам; «кто я» отвечает
+// ключу разрешениями.
+func TestKeyLearnsItsLimitsAndItsScopes(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	_, token := owner.apiClient("Интеграция", "boards:read")
+
+	resp := a.headers(token, "GET", "/api/v1/boards")
+	if resp.Header.Get("RateLimit-Limit") != strconv.Itoa(rateBurst) {
+		t.Errorf("предел не назван: %q", resp.Header.Get("RateLimit-Limit"))
+	}
+	// Секунды до полного запаса: один запрос уже потрачен, значит
+	// ноль здесь означал бы, что заголовок ничего не считает.
+	reset, err := strconv.Atoi(resp.Header.Get("RateLimit-Reset"))
+	if err != nil || reset <= 0 {
+		t.Errorf("RateLimit-Reset не число или ноль: %q", resp.Header.Get("RateLimit-Reset"))
+	}
+
+	// Разрешения в ответе «кто я»: без них интеграция не отличает
+	// «не выдали» от «отозвали», а чинятся эти два по-разному.
+	raw := a.mustToken(token, "GET", "/api/v1/me", nil, http.StatusOK)
+	var me struct {
+		Scopes []string `json:"scopes"`
+	}
+	if err := json.Unmarshal(raw, &me); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(me.Scopes, []string{"boards:read"}) {
+		t.Errorf("ключ не узнал своих разрешений: %s", raw)
+	}
+	// У человека разрешений не бывает, и пустой список читался бы как
+	// «ничего не разрешено».
+	human := owner.mustDo("GET", "/api/me", nil, http.StatusOK)
+	if strings.Contains(string(human), "scopes") {
+		t.Errorf("человеку показаны разрешения: %s", human)
+	}
+
+	// Каталог ходит по своим числам: синхронизация идёт пачкой,
+	// и общий предел обрывал бы её на середине списка сотрудников.
+	scim := a.withSCIMKey(t, owner)
+	directory := a.headers(scim.token, "GET", "/scim/v2/Users")
+	if directory.Header.Get("RateLimit-Limit") != strconv.Itoa(scimBurst) {
+		t.Errorf("каталог считается общим ведром: %q", directory.Header.Get("RateLimit-Limit"))
+	}
+}
+
+// headers выполняет запрос ключом и отдаёт ответ целиком: проверяется
+// не тело, а то, что написано над ним.
+func (a *api) headers(token, method, path string) *http.Response {
+	a.t.Helper()
+	req, err := http.NewRequest(method, a.server.URL+path, nil)
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := a.client.Do(req)
+	if err != nil {
+		a.t.Fatalf("%s %s: %v", method, path, err)
+	}
+	_ = resp.Body.Close()
+	return resp
 }
 
 // mustToken — как withToken, но с ожидаемым кодом.

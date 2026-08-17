@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
 )
@@ -23,6 +24,11 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/boards/{id}/members/{userId}", s.authed(s.handleRemoveBoardMember))
 	mux.HandleFunc("GET /api/boards/archived", s.authed(s.handleArchivedBoards))
 	mux.HandleFunc("GET /api/boards/{id}/archived-cards", s.authed(s.handleArchivedCards))
+	// Одна карточка. Нужна не своему клиенту — у него снимок доски, —
+	// а тому, кто пришёл от вебхука с парой идентификаторов и до сих пор
+	// вынужден был читать ради этого всю доску.
+	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}",
+		s.scoped(apiclient.ScopeBoardsRead, s.handleCard))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
 	// Отдельный путь, а не флаг у DELETE: у этих двух действий разная
@@ -144,6 +150,20 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		s.fail(w, what, err)
 	}
 	return true
+}
+
+func (s *Server) handleCard(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	card, err := s.boards.Card(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), r.PathValue("cardId"))
+	if errors.Is(err, board.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "карточка не найдена на этой доске")
+		return
+	}
+	if err != nil {
+		s.fail(w, "карточка", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, card)
 }
 
 func (s *Server) handleArchivedBoards(w http.ResponseWriter, r *http.Request, p auth.Principal) {

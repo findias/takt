@@ -292,6 +292,72 @@ func TestOperationIsIdempotentOverHTTP(t *testing.T) {
 	}
 }
 
+// Одна карточка читается одним запросом.
+//
+// Своему клиенту это не нужно — у него снимок доски, — а интеграция
+// приходит от вебхука с парой идентификаторов, и до сих пор ей
+// приходилось читать ради этого всю доску. Метки и исполнители названы
+// целиком: идентификатор без имени отправил бы за тем же снимком.
+func TestCardIsReadableOnItsOwn(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Одна карточка")
+	created := owner.mustDo("POST", "/api/boards", map[string]any{"name": "Поток"}, http.StatusCreated)
+	boardID := field(t, created, "id").(string)
+	snap := owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	columnID := field(t, snap, "columns").([]any)[0].(map[string]any)["id"].(string)
+
+	made := owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "CREATE_CARD",
+		"payload":     map[string]any{"columnId": columnID, "title": "Задача", "place": "end"},
+	}, http.StatusOK)
+	cardID := field(t, made, "patch", "cards").([]any)[0].(map[string]any)["id"].(string)
+
+	label := owner.mustDo("POST", "/api/labels",
+		map[string]any{"name": "Срочно", "tone": "rose"}, http.StatusCreated)
+	owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "LABEL_CARD",
+		"payload":     map[string]any{"cardId": cardID, "labelId": field(t, label, "id")},
+	}, http.StatusOK)
+
+	raw := owner.mustDo("GET", "/api/boards/"+boardID+"/cards/"+cardID, nil, http.StatusOK)
+	var card struct {
+		ID      string `json:"id"`
+		Number  string `json:"number"`
+		Title   string `json:"title"`
+		BoardID string `json:"boardId"`
+		Labels  []struct {
+			Name string `json:"name"`
+		} `json:"labels"`
+		Assignees []struct{} `json:"assignees"`
+		Links     []struct{} `json:"links"`
+	}
+	if err := json.Unmarshal(raw, &card); err != nil {
+		t.Fatal(err)
+	}
+	if card.ID != cardID || card.Title != "Задача" || card.Number == "" || card.BoardID != boardID {
+		t.Fatalf("карточка пришла неполной: %s", raw)
+	}
+	if len(card.Labels) != 1 || card.Labels[0].Name != "Срочно" {
+		t.Errorf("метка не названа: %s", raw)
+	}
+	// Пустые списки — списки, а не null: разбирать «нет исполнителей»
+	// и «поля нет» по-разному тому, кто снаружи, незачем.
+	if card.Assignees == nil || card.Links == nil {
+		t.Errorf("пустые списки пришли как null: %s", raw)
+	}
+
+	// Карточка чужой доски по этому адресу не находится — как и любое
+	// недоступное: существование его мы не подтверждаем.
+	other := owner.mustDo("POST", "/api/boards",
+		map[string]any{"name": "Другая"}, http.StatusCreated)
+	if code, body := owner.do("GET",
+		"/api/boards/"+field(t, other, "id").(string)+"/cards/"+cardID, nil); code != http.StatusNotFound {
+		t.Errorf("карточка нашлась на чужой доске: код %d; тело: %s", code, body)
+	}
+}
+
 func TestMalformedRequestsAreBadRequests(t *testing.T) {
 	a := newAPI(t)
 	owner := a.registerOrg("Кривые запросы")

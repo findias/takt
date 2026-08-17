@@ -385,8 +385,24 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request, p auth.Principal) {
-	writeJSON(w, http.StatusOK, p)
+// «Кто я» отвечает ключу и разрешениями тоже.
+//
+// Без них интеграция не отличает «разрешение не выдали» от «ключ
+// отозвали»: и то и другое видно только по отказу на попытке, а отказы
+// разные — первый чинит владелец организации, второй означает, что
+// работать больше нечем. Человеку за браузером поля нет вовсе:
+// разрешений у него не бывает, и пустой список читался бы как «ничего
+// не разрешено».
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	granted, ok := scopesOf(r)
+	if !ok {
+		writeJSON(w, http.StatusOK, p)
+		return
+	}
+	writeJSON(w, http.StatusOK, struct {
+		auth.Principal
+		Scopes []string `json:"scopes"`
+	}{Principal: p, Scopes: granted})
 }
 
 // --- организации ---

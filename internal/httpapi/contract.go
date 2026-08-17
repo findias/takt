@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -55,6 +56,15 @@ const (
 	rateBurst  = 120 // столько запросов подряд можно
 	ratePerSec = 2.0 // и столько доливается каждую секунду
 	rateForget = 30 * time.Minute
+
+	// Каталогу ведро своё и просторнее. Синхронизация по своей природе
+	// идёт пачкой: провайдер приходит раз в сутки и приносит всех
+	// разом, по человеку на запрос. Общий предел растянул бы заведение
+	// сотни сотрудников на минуту с отказами посередине — а предел
+	// заведён не против этого, а против интеграции, которая долбится
+	// в цикле.
+	scimBurst  = 600
+	scimPerSec = 20.0
 )
 
 type bucket struct {
@@ -72,18 +82,25 @@ type limiter struct {
 
 func newLimiter() *limiter { return &limiter{buckets: map[string]*bucket{}} }
 
-// allow отвечает, пропускать ли запрос, и сколько запросов осталось.
-func (l *limiter) allow(key string) (bool, int) {
+// allow отвечает, пропускать ли запрос, сколько запросов осталось
+// и через сколько секунд запас снова будет полон.
+//
+// «Полон», а не «можно будет послать следующий»: ведро доливается
+// непрерывно, окна у него нет, и честно назвать можно только момент,
+// когда запас вернётся к обещанному пределу. На вопрос «когда мне
+// повторить» отвечает Retry-After — он приходит вместе с отказом,
+// и там этот вопрос и задают.
+func (l *limiter) allow(key string, burst float64, perSec float64) (bool, int, int) {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	b, ok := l.buckets[key]
 	if !ok {
-		b = &bucket{tokens: rateBurst, seen: now}
+		b = &bucket{tokens: burst, seen: now}
 		l.buckets[key] = b
 	}
-	b.tokens = min(rateBurst, b.tokens+now.Sub(b.seen).Seconds()*ratePerSec)
+	b.tokens = min(burst, b.tokens+now.Sub(b.seen).Seconds()*perSec)
 	b.seen = now
 
 	// Заброшенные вёдра выкидываем здесь же: отдельный сборщик ради
@@ -95,10 +112,17 @@ func (l *limiter) allow(key string) (bool, int) {
 	}
 
 	if b.tokens < 1 {
-		return false, 0
+		return false, 0, resetIn(burst, b.tokens, perSec)
 	}
+	// Отданный запрос вычитается сразу: заголовки описывают состояние
+	// после этого запроса, а не до него.
 	b.tokens--
-	return true, int(b.tokens)
+	return true, int(b.tokens), resetIn(burst, b.tokens, perSec)
+}
+
+// resetIn — через сколько секунд запас снова будет полон.
+func resetIn(burst, tokens, perSec float64) int {
+	return int(math.Ceil((burst - tokens) / perSec))
 }
 
 // limited ограничивает частоту запросов сервисных клиентов. Человек
@@ -112,9 +136,20 @@ func (s *Server) limited(next http.Handler) http.Handler {
 			return
 		}
 
-		allowed, left := s.limiter.allow(token)
-		w.Header().Set("RateLimit-Limit", strconv.Itoa(rateBurst))
+		// Каталог считается отдельно и по своим числам: ведро у него
+		// своё, и общий предел не должен обрывать синхронизацию на
+		// середине списка сотрудников.
+		burst, perSec, key := float64(rateBurst), float64(ratePerSec), token
+		if strings.HasPrefix(r.URL.Path, "/scim/v2/") {
+			burst, perSec, key = scimBurst, scimPerSec, "scim:"+token
+		}
+
+		allowed, left, reset := s.limiter.allow(key, burst, perSec)
+		w.Header().Set("RateLimit-Limit", strconv.Itoa(int(burst)))
 		w.Header().Set("RateLimit-Remaining", strconv.Itoa(left))
+		// Сколько ждать до полного запаса. Отвечает на «как мне себя
+		// вести», тогда как Retry-After ниже — на «когда повторить».
+		w.Header().Set("RateLimit-Reset", strconv.Itoa(reset))
 		if !allowed {
 			// Секунда — время, за которое доливается больше одного
 			// запроса. Просить подождать дольше незачем.
