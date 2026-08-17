@@ -1,0 +1,756 @@
+<title>Интеграционное API: сверка обещаний с кодом</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>
+.sheet{padding-top:3rem}
+.band{display:flex;align-items:baseline;gap:.9rem;margin:2.8rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--rule)}
+.band h2{font-size:clamp(1.3rem,2.6vw,1.6rem)}
+.tag{font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;font-weight:650;padding:.22rem .5rem;border:1px solid var(--rule-strong);color:var(--ink-3);white-space:nowrap;flex:none}
+.tag.have{color:var(--accent);border-color:var(--accent)}
+.tag.gap{color:var(--risk);border-color:var(--risk)}
+.tag.no{color:var(--ink-3)}
+.rows{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:16rem 1fr;gap:1.3rem;background:var(--surface);padding:1rem 1.1rem}
+.row > :first-child{font-weight:650}
+@media (max-width:48rem){.row{grid-template-columns:1fr;gap:.4rem}}
+blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent);background:var(--accent-soft);font-size:.95rem}
+</style>
+
+<main class="sheet">
+<header class="masthead">
+  <h1>Интеграционное API: сверка обещаний с кодом</h1>
+  <div class="lanestrip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <p class="standfirst">
+    Разбор августа 2026. Исследование задумывалось как проектирование, но
+    API к этому времени написан целиком — значит, проектировать нечего,
+    и вопрос ровно один: <em>где обещание расходится с тем, что делает
+    код</em>. Обещания собраны из контракта и комментариев к нему, код
+    прочитан весь, спорное проверено запросами к живому серверу.
+  </p>
+</header>
+
+<dl class="meta">
+  <div><dt>Маршрутов всего</dt><dd>93</dd></div>
+  <div><dt>Из них описано</dt><dd>7</dd></div>
+  <div><dt>Проверяют разрешение</dt><dd>7</dd></div>
+  <div><dt>Расхождений</dt><dd>6</dd></div>
+</dl>
+
+<div class="band"><h2>Что обещано</h2></div>
+
+<p>
+  Обещания записаны в одном месте — в шапке <code>internal/httpapi/contract.go</code>,
+  и там же сказано, кому они даны: «внутри приложения контракта нет и быть
+  не должно… интеграция живёт отдельно, обновляется когда захочет её
+  владелец и имеет право на обещания». Их пять, плюс шестое — само описание
+  машиночитаемым файлом вместо текста в README.
+</p>
+
+<div class="rows">
+  <div class="row"><div>Адрес с версией</div><div>
+    <code>/api/v1/…</code> — обещание чужим; путь без версии принадлежит
+    браузерному клиенту и меняется вместе с сервером.
+  </div></div>
+  <div class="row"><div>Предсказуемые коды</div><div>
+    Рядом с текстом ошибки — код, который не меняется. Текст для человека,
+    ветвиться следует по коду.
+  </div></div>
+  <div class="row"><div>Известные пределы</div><div>
+    Ведро на ключ, заголовки <code>RateLimit-*</code>, <code>Retry-After</code>
+    при отказе.
+  </div></div>
+  <div class="row"><div>Безопасный повтор</div><div>
+    <code>Idempotency-Key</code>: «повторять, не спрашивая разрешения…
+    „попробую ещё раз“ не должно означать „заведу вторую доску“».
+  </div></div>
+  <div class="row"><div>Ключ под задачу</div><div>
+    Разрешения: «ключ выдаётся под конкретную задачу, и „может всё“ у него
+    было бы бессмысленным по назначению».
+  </div></div>
+  <div class="row"><div>Описание вместо текста</div><div>
+    <code>openapi.json</code> едет в бинарнике: «текстовое описание
+    расходится с кодом молча и обнаруживается тем, кто по нему что-то
+    написал».
+  </div></div>
+</div>
+
+<div class="band"><h2>Что оказалось</h2></div>
+
+<div class="tablewrap">
+<table>
+  <caption>Обещание против кода</caption>
+  <thead><tr><th>Обещание</th><th>Как в коде</th><th>Расхождение</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Адрес с версией</strong></td>
+      <td>Обёртка срезает <code>/api/v1</code> и ставит <code>API-Version</code></td>
+      <td class="yes">нет</td>
+    </tr>
+    <tr>
+      <td><strong>Предсказуемые коды</strong></td>
+      <td>Код рядом с текстом у всех ответов; особые случаи названы отдельно</td>
+      <td class="maybe">три кода есть в коде и не описаны</td>
+    </tr>
+    <tr>
+      <td><strong>Известные пределы</strong></td>
+      <td>Ведро 120 + 2/с на ключ, <code>Retry-After: 1</code></td>
+      <td class="maybe">нет <code>RateLimit-Reset</code>; тот же предел у синхронизации каталога</td>
+    </tr>
+    <tr>
+      <td><strong>Безопасный повтор</strong></td>
+      <td>Ключ сверяется по методу и пути, ответ запоминается</td>
+      <td class="no">тело не сверяется — второй запрос молча получает чужой ответ</td>
+    </tr>
+    <tr>
+      <td><strong>Ключ под задачу</strong></td>
+      <td>Разрешение проверяется на 7 маршрутах из 93</td>
+      <td class="no">ключ каталога — владелец организации на всех остальных</td>
+    </tr>
+    <tr>
+      <td><strong>Описание вместо текста</strong></td>
+      <td>7 путей, 3 схемы, тест на наличие трёх путей</td>
+      <td class="no">описана седьмая часть API; исходящей половины нет вовсе</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p class="tnote">
+  Дальше — по одному расхождению, в порядке того, чем каждое кончается
+  для того, кто подключился.
+</p>
+
+<div class="band"><h2 id="r1">Р1. Разрешения проверяются на семи маршрутах из девяноста трёх</h2><span class="tag gap">чинить первым</span></div>
+
+<p>
+  Проверок доступа у ключа две, и это не задумано как две. Первая —
+  роль служебной личности: она <em>выводится</em> из разрешений, потому что
+  «два источника правды о том, что клиенту можно, разошлись бы в первый же
+  день». Ключ только на чтение получает роль наблюдателя, ключ с записью —
+  участника, ключ каталога — <strong>владельца</strong>: политики базы
+  требуют прав владельца, чтобы заводить людей.
+</p>
+
+<p>
+  Вторая — обёртка <code>scoped</code>, которая сверяет выданное разрешение
+  с тем, чего требует маршрут. Её раскатали на доски, структуру, журнал
+  и метрики — семь маршрутов. Остальные восемьдесят шесть о разрешениях
+  не знают, и там работает только роль.
+</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Чем закрыт маршрут</caption>
+  <thead><tr><th>Обёртка</th><th>Маршрутов</th><th>Что проверяет</th></tr></thead>
+  <tbody>
+    <tr><td><code>scoped</code></td><td>7</td><td>роль и разрешение ключа</td></tr>
+    <tr><td><code>authed</code></td><td>45</td><td>только вход; дальше роль вручную в обработчике</td></tr>
+    <tr><td><code>owner</code></td><td>17</td><td>роль владельца — и всё</td></tr>
+    <tr><td><code>scim</code></td><td>12</td><td>разрешение <code>scim:write</code></td></tr>
+    <tr><td>без обёртки</td><td>12</td><td>вход, регистрация, пробы, описание контракта</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Для читающего ключа это ничем не кончается: роль наблюдателя не пустит
+  его писать, куда бы он ни постучался, — проверено, архивация доски
+  ключом <code>boards:read</code> отвечает 403 «у вас доступ только
+  на чтение». А вот ключ каталога — владелец организации, и на всём, кроме
+  семи описанных маршрутов, он им и остаётся.
+</p>
+
+<div class="note risk">
+  <span class="lbl">Проверено запросами</span>
+  <p>Ключ с единственным разрешением <code>scim:write</code>:</p>
+  <ul>
+    <li><code>DELETE /api/boards/{id}</code> — <strong>204</strong>, доска в архиве;</li>
+    <li><code>POST /api/clients</code> — <strong>201</strong>, и в ответе токен нового ключа с разрешением <code>boards:write</code>, которого у самого ключа каталога нет;</li>
+    <li><code>GET /api/export</code> — <strong>200</strong>, выгрузка всей организации;</li>
+    <li><code>GET /api/boards</code> — <strong>403</strong>, «ключу не выдано разрешение boards:read».</li>
+  </ul>
+  <p>
+    Последняя строка и есть суть расхождения: единственный маршрут,
+    который отказывает, — описанный. Комментарий рядом с выдачей роли
+    обещает ровно это и ошибается в объёме: «на доски он не пройдёт, там
+    проверяется разрешение» — верно для четырёх маршрутов доски
+    и неверно для <code>DELETE /api/boards/{id}</code>,
+    <code>/permanently</code>, обсуждений, итераций, меток и полей: они
+    не описаны и потому не проверяются.
+  </p>
+</div>
+
+<p>
+  Обмен, который здесь напрашивается, — не «расписать разрешения по всем
+  маршрутам»: это этап 4.3, отложенный сознательно, и придуманный
+  умозрительно набор прав окажется неверным. Дешевле и честнее сузить один
+  ключ: у <code>scim:write</code> ровно одно назначение — <code>/scim/v2</code>,
+  и за его пределами такому ключу делать нечего. Тогда роль владельца
+  остаётся у него внутри базы, где она нужна политикам, и исчезает
+  снаружи, где она никому не обещалась.
+</p>
+
+<div class="band"><h2 id="r2">Р2. Описание расходится с кодом — молча, как и предсказано</h2><span class="tag gap">чинить</span></div>
+
+<p>
+  Файл заведён именно затем, чтобы этого не было: «текстовое описание
+  расходится с кодом молча». Расхождения два, и оба такого рода, что
+  генератор клиента их не заметит, а человек, читающий описание,
+  сделает по нему неверный вывод.
+</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Дрейф описания</caption>
+  <thead><tr><th>Что описано</th><th>Что в коде</th><th>Чего нет в описании</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>18 типов операций</td>
+      <td>22 в диспетчере <code>ops.go</code></td>
+      <td><code>ASSIGN_CARD</code>, <code>UNASSIGN_CARD</code>, <code>LABEL_CARD</code>, <code>UNLABEL_CARD</code></td>
+    </tr>
+    <tr>
+      <td>8 кодов ошибок</td>
+      <td>11 встречается в ответах</td>
+      <td><code>board_archived</code>, <code>board_key_taken</code>, <code>board_key_invalid</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Второе смешнее первого: <code>board_key_invalid</code> и
+  <code>board_key_taken</code> названы словами в описании ответов
+  <code>POST /boards</code> — в том же файле, на двадцать строк выше
+  перечисления кодов, куда они не попали. Кто сгенерирует по описанию
+  типизированный клиент, получит перечисление, в которое три настоящих
+  кода не влезают.
+</p>
+
+<p>
+  Держать это в согласии вручную нельзя — ровно потому же, почему
+  отказались от текста в README. Сверять должна проверка: перечисление
+  операций против диспетчера, перечисление кодов против литералов
+  <code>writeCoded</code>. Существующий тест контракта проверяет, что
+  в описании есть три пути, — дрейфа такого рода он не видит и не увидит.
+</p>
+
+<div class="band"><h2 id="r3">Р3. Исходящей половины нет в контракте вовсе</h2><span class="tag gap">чинить</span></div>
+
+<p>
+  Интеграция состоит из двух половин: она ходит к нам и мы ходим к ней.
+  Вторая половина написана целиком — подписки, доставки, подпись, повторы
+  с удвоением, журнал, ручной досыл, — и не описана нигде: ни в контракте,
+  ни в README, ни в интерфейсе, который выдаёт секрет.
+</p>
+
+<pre><code>POST https://получатель/hook
+X-Event:       card.moved
+X-Delivery-Id: 4cff444a-…
+X-Timestamp:   1755451487
+X-Signature:   sha256=&lt;hmac-sha256(секрет, "&lt;timestamp&gt;." + тело)&gt;</code></pre>
+
+<p>
+  Метка времени входит в подписанное намеренно — чтобы перехваченный
+  запрос нельзя было повторить когда угодно. Это хорошее решение, и оно
+  бесполезно, пока получатель о нём не знает: секрет ему показывают один
+  раз и не говорят, что с ним делать. Проверить подпись, не читая нашего
+  кода на Go, сегодня нельзя.
+</p>
+
+<div class="note">
+  <span class="lbl">Сюда же</span>
+  <p>
+    В описании нет и того, чем интеграция избегает опроса: потока изменений
+    <code>GET /api/boards/{id}/stream</code> и догона
+    <code>GET /api/boards/{id}/changes?since=</code>. Оба работают, оба —
+    именно то, что спрашивают при внедрении, и оба существуют только
+    в коде. Про <code>mine=1</code> у ленты событий описание тоже молчит.
+  </p>
+</div>
+
+<div class="band"><h2 id="r4">Р4. Подписка на несуществующее событие принимается молча</h2><span class="tag gap">чинить</span></div>
+
+<p>
+  Имена событий сервер не проверяет никак: <code>Create</code> требует,
+  чтобы список был непустым, и на этом останавливается. Подписка
+  на «card.выполнена» и «не событие вовсе» заводится с кодом
+  <strong>201</strong> и не доставляет ничего — навсегда и без единого
+  слова. Это ровно тот отказ, который правило проекта запрещает: «не
+  найдено» вместо «нельзя» отправляет человека искать несуществующую
+  поломку, а здесь нет даже «не найдено».
+</p>
+
+<p>
+  Вторая половина того же расхождения — сколько событий вообще можно
+  выбрать. Доставляется двадцать видов, в интерфейсе предложено восемь,
+  и комментарий рядом со списком в клиенте утверждает: «список здесь,
+  а не приходит с сервера: он же и есть обещание клиенту, а обещания
+  живут в контракте». В контракте этого списка нет.
+</p>
+
+<div class="tablewrap">
+<table>
+  <caption>События карточки: что уходит и что предлагают выбрать</caption>
+  <thead><tr><th>Событие</th><th>Доставляется</th><th>Предложено в интерфейсе</th></tr></thead>
+  <tbody>
+    <tr><td><code>card.created</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.moved</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.renamed</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.estimated</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.blocked</code>, <code>card.unblocked</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.commented</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.archived</code></td><td class="yes">да</td><td class="yes">да</td></tr>
+    <tr><td><code>card.done</code>, <code>card.undone</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.committed</code> — назначен срок</td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.prioritised</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.described</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.restored</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.linked</code>, <code>card.unlinked</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.field_set</code>, <code>card.field_cleared</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+    <tr><td><code>card.iteration_added</code>, <code>card.iteration_removed</code></td><td class="yes">да</td><td class="no">нет</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="tnote">
+  Двенадцать из двадцати выбрать нельзя, и первое из них —
+  <code>card.done</code>: «работа сделана» и есть самое частое, ради чего
+  подписку заводят.
+</p>
+
+<div class="band"><h2 id="r5">Р5. Ключ повтора не смотрит на тело запроса</h2><span class="tag gap">чинить</span></div>
+
+<p>
+  Запомненный ответ сверяется по методу и пути. Тот же ключ, тот же путь,
+  <em>другое тело</em> — считается повтором.
+</p>
+
+<div class="note risk">
+  <span class="lbl">Проверено запросами</span>
+  <p>
+    Два <code>POST /api/boards</code> с одним <code>Idempotency-Key</code>:
+    первый заводит доску «Первая» и отвечает <strong>201</strong>. Второй
+    просит «Совсем другую» и получает <strong>201</strong> с телом
+    первой — <code>{"name":"Первая",…}</code>. Второй доски нет,
+    и по ответу этого не видно: код успешный.
+  </p>
+</div>
+
+<p>
+  Оговорка про «этот ключ уже использован для другого запроса» в коде есть
+  и срабатывает только на другой путь. Она же объясняет, почему так делать
+  нельзя: «молча отдать чужой ответ значило бы соврать» — и ровно это
+  происходит при совпадении пути. Общая практика (черновик IETF
+  <span class="mono">Idempotency-Key</span>, платёжные API) — считать
+  отпечаток тела и на несовпадение отвечать отказом, а не чужим успехом.
+  Отказ здесь безусловно лучше: он приходит к тому, у кого ошибка
+  в клиенте, тогда как молчаливый успех приходит к тому, у кого через
+  неделю не сойдутся данные.
+</p>
+
+<div class="band"><h2 id="r6">Р6. Мелкое, что всплыло попутно</h2><span class="tag no">по мере надобности</span></div>
+
+<ul>
+  <li>
+    <strong>Нет <code>RateLimit-Reset</code>.</strong> Есть предел
+    и остаток, нет момента, когда станет можно; клиенту приходится
+    угадывать по <code>Retry-After</code>, который выдаётся только
+    при отказе.
+  </li>
+  <li>
+    <strong>Один предел на всех.</strong> Синхронизация каталога идёт тем
+    же ведром: 120 подряд, дальше два запроса в секунду. На сотне
+    сотрудников это минуты вместо секунд — не поломка, но и не то, что
+    ожидает провайдер входа.
+  </li>
+  <li>
+    <strong>Ключ не может спросить, что ему можно.</strong>
+    <code>GET /api/me</code> отвечает личностью и ролью, разрешений
+    в ответе нет: интеграция, получившая 403, не может отличить «не выдали»
+    от «отозвали».
+  </li>
+  <li>
+    <strong>Единственной карточки в API нет.</strong> Чтобы посмотреть одну
+    карточку, интеграция читает снимок доски целиком — на пятистах
+    карточках это тридцать миллисекунд базы и мегабайт по сети ради одного
+    заголовка.
+  </li>
+</ul>
+
+<div class="band"><h2>Что сверка подтвердила</h2><span class="tag have">держится</span></div>
+
+<p>
+  Разбор, состоящий из одних поломок, врёт не меньше, чем разбор без них.
+  Решения, которые проверку выдержали и стоили того:
+</p>
+
+<div class="rows">
+  <div class="row"><div>Версия только чужим</div><div>
+    Свой клиент ходит без версии и меняется вместе с сервером; версия —
+    обещание, а не украшение. Обёртка ставит <code>API-Version</code>
+    только там, где обещание дано.
+  </div></div>
+  <div class="row"><div>Ключ только заголовком</div><div>
+    В строке запроса не принимается: адреса попадают в логи прокси
+    и в историю браузера.
+  </div></div>
+  <div class="row"><div>Курсор вместо страниц</div><div>
+    Ленты и архив листаются «то, что старше вот этого». На дописываемом
+    журнале смещение по номеру страницы показывало бы одно дважды
+    и пропускало вклинившееся.
+  </div></div>
+  <div class="row"><div>Код рядом с текстом</div><div>
+    Клиент ветвится по коду; <code>board_archived</code> отличается
+    от «не найдено», потому что следующий шаг у них разный.
+  </div></div>
+  <div class="row"><div>Операции идемпотентны сами</div><div>
+    <code>operationId</code> в теле операции защищает запись на доску
+    даже без <code>Idempotency-Key</code>.
+  </div></div>
+  <div class="row"><div>Доставка из той же транзакции</div><div>
+    Событие не может оказаться записанным без доставки, а доставка —
+    потерянной при записанном событии. Отправляет потом работник, поэтому
+    чужой медленный сервер не задерживает операцию.
+  </div></div>
+  <div class="row"><div>SCIM честно объявляет умения</div><div>
+    <code>ServiceProviderConfig</code> говорит про фильтры, PATCH
+    и массовые запросы правду. «Умеем всё» — верный способ получить запрос,
+    который не обработаем.
+  </div></div>
+</div>
+
+<div class="band"><h2>Порядок починки</h2></div>
+
+<div class="stages">
+  <div class="stage">
+    <div class="st">Первым<em>Р1</em></div>
+    <div>
+      <h3>Сузить ключ каталога до <code>/scim/v2</code></h3>
+      <p>
+        Единственное расхождение, которым можно воспользоваться: ключ
+        синхронизации сегодня выгружает организацию и заводит себе ключи
+        с любыми разрешениями. Правится в одном месте — на входе,
+        а не расписыванием прав по маршрутам.
+      </p>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="st">Вторым<em>Р2, Р3</em></div>
+    <div>
+      <h3>Описание: пополнить и закрыть проверкой</h3>
+      <p>
+        Четыре операции, три кода, подписки с форматом подписи, поток
+        изменений и догон. И проверка, которая сверяет перечисления
+        с кодом, иначе через месяц дрейф вернётся.
+      </p>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="st">Третьим<em>Р4</em></div>
+    <div>
+      <h3>Проверять имена событий и предлагать все</h3>
+      <p>
+        Неизвестное имя — отказ, называющий известные. Список — один,
+        с сервера, и в интерфейс, и в контракт: сегодня их два, и они
+        разные.
+      </p>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="st">Четвёртым<em>Р5</em></div>
+    <div>
+      <h3>Сверять отпечаток тела у ключа повтора</h3>
+      <p>
+        Несовпадение — отказ, а не чужой успех. Ошибка в клиенте должна
+        доставаться клиенту сразу, а не данным через неделю.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <span class="lbl">Как проверялось</span>
+  <p>
+    Маршруты и обёртки посчитаны разбором исходников
+    <code>internal/httpapi</code>; перечисления сверены с диспетчером
+    операций <code>internal/board/ops.go</code> и литералами
+    <code>writeCoded</code>; события — с вызовами <code>logEvent</code>.
+    Р1, Р4 и Р5 подтверждены запросами к поднятому серверу с настоящей
+    базой — временной проверкой, удалённой после разбора: её сценарии
+    описаны выше дословно и повторяются за пять минут.
+  </p>
+</div>
+
+</main>
