@@ -355,7 +355,7 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 
 	var p Progress
 	err = tx.QueryRow(ctx, `
-		select count(*), count(*) filter (where c.outcome = 'done')
+		select count(*), count(*) filter (where `+cardDone+`)
 		  from card_links l
 		  join cards c on c.id = l.to_card and c.archived_at is null
 		 where l.from_card = $1 and l.kind = 'subtask'`, cardID).Scan(&p.Total, &p.Done)
@@ -379,6 +379,84 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 		c.Blocked = &b
 	}
 	return c, nil
+}
+
+// --- отметка «сделано» ---
+
+type setCardDonePayload struct {
+	CardID string `json:"cardId"`
+	// Отмечаем или снимаем отметку. Указывается явно, а не выводится
+	// из текущего состояния: два человека, нажавшие одновременно, иначе
+	// переключили бы отметку дважды и вернули её туда, откуда начали, —
+	// а сказано было одно и то же.
+	Done *bool `json:"done"`
+}
+
+// setCardDone отмечает работу сделанной, не двигая её по доске.
+//
+// Это не подмена потока: цикл и пропускная способность считаются по
+// точке финиша, и отметка в них не входит. Она нужна разбиению —
+// у подзадач вида «согласовать с юристами» переезда по колонкам нет,
+// а вопрос «эта часть уже сделана» есть.
+func setCardDone(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage,
+) (Patch, error) {
+	var p setCardDonePayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор SET_CARD_DONE: %v", err)
+	}
+	if p.Done == nil {
+		return Patch{}, badRequestf("не сказано, отметить или снять отметку")
+	}
+
+	// coalesce, а не now() безусловно: повторная отметка не должна
+	// сдвигать момент — иначе «отмечена третьего дня» превращалось бы
+	// в «отмечена только что» от одного лишнего нажатия.
+	c, err := scanCard(tx.QueryRow(ctx, `
+		update cards
+		   set done_at    = case when $3::bool then coalesce(done_at, now()) end,
+		       version    = version + 1,
+		       updated_at = now()
+		 where id = $1 and board_id = $2 and archived_at is null
+		 returning `+cardFields,
+		p.CardID, boardID, *p.Done))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Patch{}, conflictf("", "карточка не найдена или убрана с доски")
+	}
+	if err != nil {
+		return Patch{}, err
+	}
+
+	kind := "undone"
+	if *p.Done {
+		kind = "done"
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, nil); err != nil {
+		return Patch{}, err
+	}
+
+	// Родитель приезжает вместе с ней: доля разбиения у него только что
+	// изменилась, а узнаёт он об этом ниоткуда — связь не его поле.
+	patch := Patch{Cards: []Card{c}}
+	var parentID string
+	err = tx.QueryRow(ctx, `
+		select from_card from card_links
+		 where to_card = $1 and kind = 'subtask'`, p.CardID).Scan(&parentID)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows): // отмечают не только подзадачи
+	case err != nil:
+		return Patch{}, err
+	default:
+		parent, err := readCard(ctx, tx, boardID, parentID)
+		// Родитель на чужой доске в патч не попадает — там его перечитают
+		// со снимком, как и всё остальное чужое.
+		if err == nil {
+			patch.Cards = append(patch.Cards, parent)
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return Patch{}, err
+		}
+	}
+	return patch, nil
 }
 
 // --- блокировки ---

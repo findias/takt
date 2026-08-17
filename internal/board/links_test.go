@@ -160,6 +160,98 @@ func TestOutcomeSeparatesDoneFromDiscarded(t *testing.T) {
 	}
 }
 
+// Отметка «сделано» отвечает на вопрос о готовности части работы,
+// не двигая карточку по доске и не подменяя собой поток.
+func TestDoneMarkCountsInProgressWithoutTouchingFlow(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	parent := f.createCard("Выпустить рассылку", cols[0].ID)
+	child := f.createCard("Согласовать с юристами", cols[0].ID)
+	f.mustApply("LINK_CARDS", map[string]any{
+		"fromCard": parent, "toCard": child, "kind": "subtask"})
+
+	res := f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": true})
+	if res.Patch.Cards[0].DoneAt == nil {
+		t.Fatal("отметка не отражена в патче")
+	}
+	// Родитель приезжает тем же патчем: его доля разбиения изменилась,
+	// а узнать об этом ему больше неоткуда.
+	if len(res.Patch.Cards) != 2 {
+		t.Fatalf("в патче %d карточек, ожидались подзадача и родитель", len(res.Patch.Cards))
+	}
+	if p := res.Patch.Cards[1].Progress; p == nil || p.Done != 1 || p.Total != 1 {
+		t.Fatalf("прогресс родителя в патче: %+v, ожидалось 1 из 1", p)
+	}
+	if p := f.card(parent).Progress; p == nil || p.Done != 1 || p.Total != 1 {
+		t.Fatalf("прогресс родителя в снимке: %+v, ожидалось 1 из 1", p)
+	}
+
+	// Поток не тронут: отмеченная карточка стоит там же, где стояла,
+	// и завершённой для метрик не считается — иначе появилась бы вторая
+	// пропускная способность, которую никто не мерил.
+	marked := f.card(child)
+	if marked.ColumnID != cols[0].ID {
+		t.Errorf("карточка переехала в %s, а отметка колонок не касается", marked.ColumnID)
+	}
+	if marked.FinishedAt != nil || marked.Outcome != nil {
+		t.Errorf("отметка объявила работу законченной для потока: finishedAt=%v outcome=%v",
+			marked.FinishedAt, marked.Outcome)
+	}
+
+	// Повтор не сдвигает момент: «отмечена третьего дня» не должна
+	// превращаться в «отмечена только что» от лишнего нажатия.
+	was := *marked.DoneAt
+	again := f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": true})
+	if !again.Patch.Cards[0].DoneAt.Equal(was) {
+		t.Errorf("повторная отметка сдвинула момент: было %v, стало %v",
+			was, *again.Patch.Cards[0].DoneAt)
+	}
+
+	off := f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": false})
+	if off.Patch.Cards[0].DoneAt != nil {
+		t.Error("отметка не снялась")
+	}
+	if p := f.card(parent).Progress; p == nil || p.Done != 0 {
+		t.Errorf("после снятия отметки прогресс: %+v, ожидалось 0 из 1", p)
+	}
+
+	// Без явного «отметить или снять» операция не выполняется: молчание
+	// клиента нельзя толковать переключением — два одновременных нажатия
+	// вернули бы отметку туда, откуда начали.
+	if _, err := f.apply("SET_CARD_DONE", map[string]any{"cardId": child}); !errors.Is(err, ErrBadRequest) {
+		t.Errorf("отметка без указания: ожидалась ErrBadRequest, получено %v", err)
+	}
+}
+
+// Отмеченная подзадача считается сделанной и у соседей: доску они ведут
+// свою, а доля разбиения родителя обязана это учитывать.
+func TestDoneMarkOnNeighbourBoardCountsForParent(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+
+	otherBoard, otherQueue, _ := f.secondBoard()
+	child := f.cardOn(otherBoard, otherQueue, "Обновить документацию")
+	f.mustApply("LINK_CARDS", map[string]any{
+		"fromCard": parent, "toCard": child, "kind": "subtask"})
+
+	raw := mustJSON(t, map[string]any{"cardId": child, "done": true})
+	if _, err := f.svc.Apply(f.ctx, f.orgID, f.actorID, otherBoard,
+		Request{OperationID: uuid.NewString(), Type: "SET_CARD_DONE", Payload: raw}); err != nil {
+		t.Fatalf("отметка на чужой доске: %v", err)
+	}
+
+	if p := f.card(parent).Progress; p == nil || p.Done != 1 || p.Total != 1 {
+		t.Fatalf("прогресс родителя: %+v, ожидалось 1 из 1", p)
+	}
+	// Чужая карточка приезжает со снимком отдельным составом — там
+	// готовность тоже должна быть видна, иначе строка подзадачи скажет
+	// «не сделана» рядом с полным прогрессом.
+	linked := f.snapshot().Linked
+	if len(linked) != 1 || !linked[0].Done {
+		t.Errorf("готовность чужой подзадачи в снимке: %+v", linked)
+	}
+}
+
 func TestBlockIsAnIntervalNotAFlag(t *testing.T) {
 	f := newFixture(t)
 	id := f.createCard("Ждём смежников", f.columns()[0].ID)

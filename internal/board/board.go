@@ -155,6 +155,11 @@ type Card struct {
 	// Дата обязательства: то, что обещано наружу. Пусто у большинства
 	// карточек — и это не «дата неизвестна», а «обязательства нет».
 	DueOn *string `json:"dueOn"`
+	// Отметка «сделано»: готовность, объявленная руками и не зависящая
+	// от колонки. Нужна разбиению — пункты вида «согласовать с юристами»
+	// не гоняют по доске, — и входит только в прогресс родителя. Поток
+	// считается по FinishedAt и Outcome, и отметка их не подменяет.
+	DoneAt *time.Time `json:"doneAt"`
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
@@ -212,6 +217,15 @@ const (
 	LinkRelates = "relates"
 )
 
+// cardDone — готовность подзадачи глазами родителя: карточка прошла
+// точку финиша или её отметили руками. Выражение одно на все места,
+// где прогресс считается, — их три, и разъехаться им нельзя: доска
+// и панель карточки показывали бы разную долю сделанного.
+//
+// Псевдоним `c` здесь не случайность, а требование к вызывающему:
+// все три запроса читают подзадачу под этим именем.
+const cardDone = `(c.outcome = 'done' or c.done_at is not null)`
+
 // MaxSubtaskDepth ограничивает глубину дерева подзадач. Предел нужен не
 // ради красоты: без него обход дерева не ограничен, а цена ошибки в связях
 // растёт вместе с глубиной. Azure DevOps держит планку «меньше 14»,
@@ -220,13 +234,13 @@ const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
 	column_entered_at, started_at, finished_at, estimate, outcome, priority,
-	to_char(due_on, 'YYYY-MM-DD')`
+	to_char(due_on, 'YYYY-MM-DD'), done_at`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn)
+		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn, &c.DoneAt)
 	return c, err
 }
 
@@ -302,7 +316,12 @@ type LinkedCard struct {
 	BoardName string  `json:"boardName"`
 	TeamName  *string `json:"teamName"`
 	Outcome   *string `json:"outcome"`
-	Blocked   bool    `json:"blocked"`
+	// Отмечена сделанной руками. Отдельно от Outcome: у соседей своя
+	// доска и свои колонки, и «часть готова» они могут объявить, не
+	// двигая карточку, — а прогресс здесь обязан считать это готовым,
+	// иначе доля разбиения врёт заказчику.
+	Done    bool `json:"done"`
+	Blocked bool `json:"blocked"`
 	// Где она у них стоит. Одного «сделана или нет» мало: «третью неделю
 	// в очереди» и «делают со вчера» выглядели одинаково, а разница между
 	// ними и есть весь смысл спрашивать про чужую работу.
@@ -523,10 +542,10 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	progressRows, err := tx.Query(ctx, `
 		select l.from_card,
 		       count(*)                                   as total,
-		       count(*) filter (where c.outcome = 'done') as done,
+		       count(*) filter (where `+cardDone+`)       as done,
 		       count(*) filter (where c.estimate is null) as unestimated,
 		       coalesce(sum(c.estimate), 0)               as weight,
-		       coalesce(sum(c.estimate) filter (where c.outcome = 'done'), 0) as weight_done
+		       coalesce(sum(c.estimate) filter (where `+cardDone+`), 0) as weight_done
 		  from card_links l
 		  join cards c on c.id = l.to_card and c.archived_at is null
 		 where l.kind = 'subtask'
@@ -648,6 +667,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	// отсутствие доступа. Различает их признак, а не пропажа.
 	foreignRows, err := tx.Query(ctx, `
 		select c.id, c.title, c.board_id, b.name, t.name, c.outcome,
+		       c.done_at is not null,
 		       exists (select 1 from card_blocks cb
 		                where cb.card_id = c.id and cb.unblocked_at is null),
 		       col.name, col.kind, b.sle_days, b.sle_probability,
@@ -665,7 +685,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for foreignRows.Next() {
 		var c LinkedCard
 		if err := foreignRows.Scan(&c.ID, &c.Title, &c.BoardID, &c.BoardName,
-			&c.TeamName, &c.Outcome, &c.Blocked, &c.ColumnName, &c.ColumnKind,
+			&c.TeamName, &c.Outcome, &c.Done, &c.Blocked, &c.ColumnName, &c.ColumnKind,
 			&c.SLEDays, &c.SLEProbability, &c.Archived); err != nil {
 			return err
 		}

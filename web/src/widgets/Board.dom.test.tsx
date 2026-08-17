@@ -69,6 +69,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     comments: 0,
     priority: 'medium',
     dueOn: null,
+    doneAt: null,
   }
 }
 
@@ -283,5 +284,53 @@ describe('одна тревога на карточке', () => {
     expect(due.textContent).toContain('завтра')
     // Возраст ушёл в панель и в отборы: пометка одна.
     expect(screen.queryByTitle('Возраст считается от начала работы')).toBeNull()
+  })
+})
+
+describe('отметка «сделано» у части работы', () => {
+  // Часть вида «согласовать с юристами» по колонкам не ездит, и до
+  // отметки ответить «сделано ли» можно было только переездом в колонку
+  // финиша — обрядом ради счётчика. Проверяется здесь то, что глазами
+  // не видно: что нажатие уходит отдельной операцией и колонку карточки
+  // не трогает.
+  function withSubtask(doneAt: string | null): Snapshot {
+    const parent = card('родитель', COL_A, 'a0', 'Выпустить рассылку')
+    const child = { ...card('часть', COL_A, 'a1', 'Согласовать с юристами'), doneAt }
+    const snap = board([parent, child])
+    return {
+      ...snap,
+      links: [{ fromCard: 'родитель', toCard: 'часть', kind: 'subtask' }],
+      cards: [{ ...parent, progress: { done: doneAt ? 1 : 0, total: 1, byWeight: false } }, child],
+    }
+  }
+
+  it('флажок части отправляет отметку, а не перенос', async () => {
+    snapshot.mockResolvedValue(withSubtask(null))
+    const user = userEvent.setup()
+    show()
+
+    await user.click(await screen.findByRole('button', { name: /Подзадачи: готово/ }))
+    const check = screen.getByRole('checkbox', { name: 'Сделана: Согласовать с юристами' })
+    expect(check.getAttribute('aria-checked')).toBe('false')
+
+    await user.click(check)
+    await waitFor(() => expect(operation).toHaveBeenCalled())
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('SET_CARD_DONE')
+    expect(payload).toEqual({ cardId: 'часть', done: true })
+  })
+
+  it('отмеченная часть предлагает снять отметку, а не поставить снова', async () => {
+    snapshot.mockResolvedValue(withSubtask('2026-08-17T10:00:00Z'))
+    const user = userEvent.setup()
+    show()
+
+    await user.click(await screen.findByRole('button', { name: /Подзадачи: готово/ }))
+    const check = screen.getByRole('checkbox', { name: 'Сделана: Согласовать с юристами' })
+    expect(check.getAttribute('aria-checked')).toBe('true')
+
+    await user.click(check)
+    await waitFor(() => expect(operation).toHaveBeenCalled())
+    expect(operation.mock.calls[0][3]).toEqual({ cardId: 'часть', done: false })
   })
 })

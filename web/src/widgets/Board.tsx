@@ -448,6 +448,7 @@ export function Board({
     prioritiseCard: prioritise,
     commitCard: commit,
     unblockCard: unblock,
+    setCardDone: markDoneAction,
   } = board
   const assignCard = useCallback(
     (cardId: string, userId: string, on: boolean) => void assign(cardId, userId, on),
@@ -474,6 +475,10 @@ export function Board({
     [block],
   )
   const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])
+  const markDone = useCallback(
+    (cardId: string, done: boolean) => void markDoneAction(cardId, done),
+    [markDoneAction],
+  )
   const renameCard = useCallback(
     (cardId: string, title: string) => void rename(cardId, title),
     [rename],
@@ -714,6 +719,7 @@ export function Board({
         onPrioritise={prioritiseCard}
         onBlock={blockCard}
         onUnblock={unblockCard}
+        onMarkDone={markDone}
         columns={columnList}
         onMoveToColumn={moveToColumn}
         onOpenCard={showCard}
@@ -1090,6 +1096,7 @@ export function Board({
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={blockCard}
           onUnblock={unblockCard}
+          onMarkDone={markDone}
           onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
           onIteration={(id, iterationId) => {
             const current = base.cardIterations[id]

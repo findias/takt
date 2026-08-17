@@ -56,6 +56,13 @@ export function eventText(event: BoardEvent): string {
       return typeof p.priority === 'string'
         ? `приоритет: ${priorityLabel(p.priority as Priority).toLowerCase()}`
         : 'изменён приоритет'
+    // «Отмечена», а не «сделана»: слово называет действие человека,
+    // а не факт о работе. Поток о ней по-прежнему судит по колонке
+    // финиша, и ставить эти два события в один ряд нельзя.
+    case 'done':
+      return 'отмечена сделанной'
+    case 'undone':
+      return 'отметка «сделана» снята'
     case 'blocked':
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
     case 'unblocked':

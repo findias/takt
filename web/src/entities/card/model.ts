@@ -182,7 +182,10 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       where: 'На этой доске',
       stage: null,
       promise: null,
-      done: own.outcome === 'done',
+      // Готовность у части работы двух видов: карточка прошла точку
+      // финиша или её отметили руками. Для строки подзадачи это одно
+      // и то же — «сделана», — и прогресс родителя считает их поровну.
+      done: own.outcome === 'done' || own.doneAt !== null,
       blocked: Boolean(own.blocked),
       reachable: true,
       onThisBoard: true,
@@ -206,8 +209,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       // Обещание показывается, пока работа не сделана: обещание сроков
       // на завершённой работе — это ответ на вопрос, который больше
       // никто не задаёт.
-      promise: foreign.archived || foreign.outcome ? null : promiseOf(foreign),
-      done: foreign.outcome === 'done',
+      promise: foreign.archived || foreign.outcome || foreign.done ? null : promiseOf(foreign),
+      done: foreign.outcome === 'done' || foreign.done,
       blocked: foreign.blocked,
       reachable: true,
       onThisBoard: false,

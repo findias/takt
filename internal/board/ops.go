@@ -419,6 +419,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return addToIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "REMOVE_FROM_ITERATION":
 		return removeFromIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_CARD_DONE":
+		return setCardDone(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "BLOCK_CARD":
 		return blockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNBLOCK_CARD":

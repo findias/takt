@@ -42,6 +42,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     comments: 0,
     priority: 'medium',
     dueOn: null,
+    doneAt: null,
   }
 }
 

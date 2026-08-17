@@ -94,6 +94,7 @@
               "CREATE_SUBTASK",
               "LINK_CARDS",
               "UNLINK_CARDS",
+              "SET_CARD_DONE",
               "BLOCK_CARD",
               "UNBLOCK_CARD",
               "SET_CARD_FIELD",

@@ -1247,10 +1247,10 @@ textarea.description {
 }
 
 /* Знак состояния части: пустой квадрат — идёт, залитый с галочкой —
-   готова. Не флажок: нажатием он не переключается (готовность на доске
-   означает колонку финиша), и роли checkbox у него поэтому нет.
+   готова. У своих частей он нажимается и переключает отметку, у чужих
+   только показывает: отмечают работу там, где она лежит.
    Форма, а не только цвет: одной светлотой состояние отличать нельзя
-   — это критерий WCAG 1.4.1, и ради него флажок и заменён знаком. */
+   — это критерий WCAG 1.4.1. */
 .subtask-box {
   inline-size: 0.75rem;
   block-size: 0.75rem;
@@ -1260,13 +1260,15 @@ textarea.description {
   background: var(--surface);
   position: relative;
 }
-.subtask--done .subtask-box {
+.subtask--done .subtask-box,
+.subtask-box--done {
   border-color: var(--accent);
   background: var(--accent);
 }
 /* Галочка — рамка повёрнутого прямоугольника: своя иконка
    в двенадцать пикселей превратилась бы в кашу. */
-.subtask--done .subtask-box::after {
+.subtask--done .subtask-box::after,
+.subtask-box--done::after {
   content: '';
   position: absolute;
   inset: 1px 2px 3px 2px;
@@ -1274,6 +1276,35 @@ textarea.description {
   border-width: 0 0 1.5px 1.5px;
   transform: rotate(-45deg);
 }
+/* Флажок отметки: квадрат маленький, а нажимать по нему надо пальцем.
+   Кнопка вокруг растянута до цели нажатия (WCAG 2.5.8), сам квадрат
+   остаётся прежнего размера — иначе строка части выросла бы в высоту
+   на каждой карточке доски. */
+.subtask-check {
+  inline-size: var(--target);
+  block-size: var(--target);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* Отметка карточки в панели: флажок со словом. Слово обязательно —
+   квадрат без подписи в ряду полей читается как «что-то включено»,
+   а включено здесь именно «сделана». */
+.done-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target);
+  padding: 0 var(--space-2);
+  background: none;
+}
+
 /* Недоступная часть: тот же квадрат, но пунктиром. Она считается
    в мере разбиения — прятать её значит соврать про меру, — а названия
    у неё нет, и это видно. */
@@ -1324,6 +1355,17 @@ textarea.description {
 .board-screen--picking .card-check {
   display: inline-block;
 }
+/* Отмеченная сделанной: приглушённое зачёркнутое название — так же,
+   как строка сделанной части. Своей пометки в ряду у неё нет намеренно
+   — бюджет пометок карточки занят блокировкой и прогрессом, — а рамку
+   и подложку занимают выделение и перетаскивание.
+   Зачёркнуто только название: зачеркнуть карточку целиком значит
+   зачеркнуть срок и людей, которые никуда не делись. */
+.card--done .card-title {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
 /* Выделенная карточка отличается и рамкой, и подложкой: одной рамки
    мало тому, кто не различает цвета, а на доске выделенных бывает
    двадцать и найти их надо взглядом. */
@@ -2231,7 +2273,6 @@ textarea.description {
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
-
 
 /* --- 4. Подзадача: чья она и сколько там разговора -------------------
  *

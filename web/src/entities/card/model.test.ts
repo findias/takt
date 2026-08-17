@@ -41,6 +41,7 @@ function card(id: string, title: string, extra: Partial<Card> = {}): Card {
     comments: 0,
     priority: 'medium',
     dueOn: null,
+    doneAt: null,
     ...extra,
   }
 }
@@ -53,6 +54,7 @@ function foreign(id: string, title: string, extra: Partial<LinkedCard> = {}): Li
     boardName: 'Соседняя',
     teamName: 'Платформа',
     outcome: null,
+    done: false,
     blocked: false,
     columnName: 'Очередь',
     columnKind: 'queue',

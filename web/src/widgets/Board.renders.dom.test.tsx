@@ -82,6 +82,7 @@ function card(id: string, position: string, title = id): Card {
     comments: 0,
     priority: 'medium',
     dueOn: null,
+    doneAt: null,
   }
 }
 

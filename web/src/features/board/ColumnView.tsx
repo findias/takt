@@ -70,6 +70,8 @@ type ColumnProps = {
   onPrioritise: (cardId: string, priority: Priority) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
+  /** Отметить работу сделанной, не двигая её по колонкам. */
+  onMarkDone: (cardId: string, done: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -244,6 +246,7 @@ export function ColumnView(props: ColumnProps) {
             onPrioritise={props.onPrioritise}
             onBlock={props.onBlock}
             onUnblock={props.onUnblock}
+            onMarkDone={props.onMarkDone}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={props.onOpenCard}

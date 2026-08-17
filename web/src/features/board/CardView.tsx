@@ -29,6 +29,7 @@ import { SubtaskRow } from './SubtaskRow.tsx'
 import {
   ArchiveIcon,
   BlockedIcon,
+  CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ClockIcon,
@@ -90,6 +91,10 @@ type CardProps = {
   onPrioritise: (cardId: string, priority: Priority) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
+  /** Отметить работу сделанной, не двигая её по доске. Нужно частям:
+   *  «согласовать с юристами» не ездит по колонкам, а вопрос «сделано
+   *  ли» про неё задают. Поток от отметки не меняется. */
+  onMarkDone: (cardId: string, done: boolean) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   /** Открыть карточку. Идентификатор аргументом, а не в замыкании:
@@ -129,6 +134,7 @@ function CardViewInner({
   onPrioritise,
   onBlock,
   onUnblock,
+  onMarkDone,
   columns,
   onMoveToColumn,
   onOpen,
@@ -308,7 +314,12 @@ function CardViewInner({
   return (
     <article
       ref={ref}
-      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}${selected ? ' card--selected' : ''}`}
+      // Отмеченная сделанной приглушается и зачёркивается — тем же
+      // способом, что строка части: одним цветом состояние отличать
+      // нельзя. Отдельной пометки в ряду не заводим: бюджет пометок
+      // карточки занят блокировкой и прогрессом, а «сделана» — это
+      // состояние названия, а не ещё одно свойство работы.
+      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}${selected ? ' card--selected' : ''}${card?.doneAt ? ' card--done' : ''}`}
       tabIndex={0}
       data-card={cardId}
       role="group"
@@ -451,6 +462,21 @@ function CardViewInner({
                       label: 'Наивысший приоритет',
                       icon: <ClockIcon />,
                       onSelect: () => onPrioritise(cardId, 'highest'),
+                    },
+                // Отметка о готовности доступна не только частям:
+                // связь могут снять, и снимать отметку после этого
+                // было бы неоткуда. Слово «сделана» — про работу,
+                // а не про переезд: колонка карточки не меняется.
+                card?.doneAt
+                  ? {
+                      label: 'Снять отметку «сделана»',
+                      icon: <CheckIcon />,
+                      onSelect: () => onMarkDone(cardId, false),
+                    }
+                  : {
+                      label: 'Отметить сделанной',
+                      icon: <CheckIcon />,
+                      onSelect: () => onMarkDone(cardId, true),
                     },
                 card?.blocked
                   ? {
@@ -742,6 +768,7 @@ function CardViewInner({
                   assignees={s.assignees}
                   replies={s.replies}
                   onOpen={onOpen}
+                  onMarkDone={onMarkDone}
                 />
               ))}
             </ul>

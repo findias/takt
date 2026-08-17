@@ -36,6 +36,7 @@ function card(over: Partial<Card> = {}): Card {
     comments: 0,
     priority: 'medium',
     dueOn: null,
+    doneAt: null,
     ...over,
   }
 }

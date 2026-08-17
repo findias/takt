@@ -31,6 +31,7 @@ export function SubtaskRow({
   assignees,
   replies,
   onOpen,
+  onMarkDone,
 }: {
   subtask: Related
   /** userId → имя. */
@@ -39,6 +40,9 @@ export function SubtaskRow({
   assignees: string[]
   replies: number
   onOpen: (id: string) => void
+  /** Отметить часть сделанной. Отметка не двигает карточку по доске:
+   *  пункты вида «согласовать с юристами» по колонкам не ездят. */
+  onMarkDone: (id: string, done: boolean) => void
 }) {
   // Назвать можно всё, что видно: часть на соседней доске — обычное
   // дело, и её название с доской это ответ на «кто это делает».
@@ -57,13 +61,36 @@ export function SubtaskRow({
         .filter(Boolean)
         .join(' ')}
     >
-      {/* Квадрат — знак состояния, а не флажок: «готово» на доске
-          означает колонку финиша, и отметить её нажатием здесь значило
-          бы решить за человека, в какую именно колонку переехать,
-          — а у подзадачи на чужой доске колонки и вовсе свои.
-          Готовность видна приглушённым зачёркнутым названием: одним
-          цветом отличать нельзя. */}
-      <span className="subtask-box" aria-hidden="true" />
+      {/* Квадрат нажимается у своих частей и только показывает
+          состояние у чужих. Отметка не двигает карточку по доске —
+          иначе пришлось бы решать за человека, в какую колонку она
+          переезжает, а у соседей колонки и вовсе свои. Она говорит
+          одно: эта часть уже сделана. Поток при этом считается
+          по-прежнему точкой финиша.
+          Роль checkbox, а не кнопка с галочкой: состояние обязано
+          читаться вслух, а не выводиться из вида. Готовность видна
+          и приглушённым зачёркнутым названием — одним цветом отличать
+          нельзя. */}
+      {openable ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={subtask.done}
+          className="subtask-check"
+          title={subtask.done ? 'Снять отметку' : 'Отметить сделанной'}
+          aria-label={`Сделана: ${subtask.title}`}
+          onClick={() => onMarkDone(subtask.id, !subtask.done)}
+        >
+          <span className="subtask-box" aria-hidden="true" />
+        </button>
+      ) : (
+        // Та же ширина, что у нажимаемого: иначе строки чужих частей
+        // разъезжаются с остальными на пол-сантиметра, и список
+        // читается как два списка.
+        <span className="subtask-check" aria-hidden="true">
+          <span className="subtask-box" />
+        </span>
+      )}
 
       {openable ? (
         <button className="link" onClick={() => onOpen(subtask.id)}>

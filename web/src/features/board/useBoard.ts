@@ -831,6 +831,25 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload('UNLINK_CARDS', { fromCard, toCard, kind }, 'Не удалось убрать связь'),
     [runAndReload],
   )
+  /**
+   * Отметить работу сделанной, не двигая её по доске.
+   *
+   * Оптимистично, как переименование: флажок, который «нажимается»
+   * через двести миллисекунд, ощущается сломанным сильнее, чем поле,
+   * которое столько же думает. Ответ приносит и прогресс родителя —
+   * его посчитал сервер, здесь считать нечего.
+   */
+  const setCardDone = useCallback(
+    (cardId: string, done: boolean) =>
+      patchCard(
+        cardId,
+        { doneAt: done ? new Date().toISOString() : null },
+        'SET_CARD_DONE',
+        { cardId, done },
+        done ? 'Не удалось отметить сделанной' : 'Не удалось снять отметку',
+      ),
+    [patchCard],
+  )
   const blockCard = useCallback(
     (cardId: string, reason: string) =>
       runAndReload('BLOCK_CARD', { cardId, reason }, 'Не удалось отметить блокировку'),
@@ -885,6 +904,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     createSubtask,
     linkCards,
     unlinkCards,
+    setCardDone,
     blockCard,
     unblockCard,
     setCardField,

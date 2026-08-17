@@ -89,6 +89,7 @@ export function CardPanel({
   onUnlink,
   onBlock,
   onUnblock,
+  onMarkDone,
   onIteration,
   onField,
 }: {
@@ -121,6 +122,8 @@ export function CardPanel({
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
+  /** Отметить работу сделанной, не двигая её по доске. */
+  onMarkDone: (cardId: string, done: boolean) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
@@ -178,6 +181,12 @@ export function CardPanel({
             ) : (
               canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
             )}
+
+            <DoneMark
+              doneAt={card.doneAt}
+              canEdit={canEdit}
+              onChange={(done) => onMarkDone(card.id, done)}
+            />
 
             <DuePicker
               value={card.dueOn}
@@ -279,6 +288,7 @@ export function CardPanel({
                   canEdit={canEdit}
                   onOpen={onOpenCard}
                   onRemove={() => onUnlink(card.id, s.id, 'subtask')}
+                  onMarkDone={onMarkDone}
                 />
               ))}
 
@@ -356,16 +366,24 @@ function RelatedRow({
   showKind,
   onOpen,
   onRemove,
+  onMarkDone,
 }: {
   related: Related
   canEdit: boolean
   showKind?: boolean
   onOpen?: (cardId: string) => void
   onRemove: () => void
+  /** Отметить часть сделанной. Пусто — отметка отсюда невозможна: так
+   *  у связей, которые не подзадачи, и у чужих карточек — их отмечают
+   *  на своей доске. */
+  onMarkDone?: (cardId: string, done: boolean) => void
 }) {
+  // Флажок и галочка отвечают на один вопрос, поэтому вместе их нет:
+  // где отметку можно поставить, состояние показывает сам флажок.
+  const markable = Boolean(onMarkDone) && canEdit && related.onThisBoard
   const title = (
     <>
-      {related.done && <span aria-hidden="true">✓ </span>}
+      {related.done && !markable && <span aria-hidden="true">✓ </span>}
       {related.done && <span className="sr-only">Готово. </span>}
       {related.blocked && <span aria-hidden="true">⛔ </span>}
       {related.blocked && <span className="sr-only">Заблокирована. </span>}
@@ -375,6 +393,19 @@ function RelatedRow({
 
   return (
     <div className={`related${related.reachable ? '' : ' related--hidden'}`}>
+      {markable && (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={related.done}
+          className="subtask-check"
+          title={related.done ? 'Снять отметку' : 'Отметить сделанной'}
+          aria-label={`Сделана: ${related.title}`}
+          onClick={() => onMarkDone?.(related.id, !related.done)}
+        >
+          <span className={`subtask-box${related.done ? ' subtask-box--done' : ''}`} />
+        </button>
+      )}
       <div className="member-who">
         {related.onThisBoard && onOpen ? (
           <button className="link related-open" onClick={() => onOpen(related.id)}>
@@ -776,6 +807,59 @@ function Assignees({
  * Поэтому поле пустое по умолчанию и ничего не подсказывает: пусто
  * означает «обязательства нет», а не «дату забыли».
  */
+/**
+ * Отметка «сделана».
+ *
+ * Готовность, объявленная руками и не зависящая от колонки. Нужна
+ * разбиению: части вида «согласовать с юристами» по доске не ездят,
+ * а вопрос «сделано ли» про них задают — и до сих пор ответить на него
+ * можно было только переездом в колонку финиша, то есть обрядом ради
+ * счётчика.
+ *
+ * Поток она не подменяет, и об этом сказано прямо: цикл и пропускная
+ * способность считаются точкой финиша, и человек, отметивший часть
+ * сделанной, не должен гадать, поехали ли за ней метрики.
+ */
+function DoneMark({
+  doneAt,
+  canEdit,
+  onChange,
+}: {
+  doneAt: string | null
+  canEdit: boolean
+  onChange: (done: boolean) => void
+}) {
+  const done = doneAt !== null
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        {done
+          ? `Отмечена сделанной ${new Date(doneAt).toLocaleDateString('ru-RU')}`
+          : 'Не отмечена сделанной'}
+      </p>
+    )
+  }
+
+  return (
+    <div className="field-row">
+      <span className="field-label">Готовность</span>
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={done}
+        className="done-mark"
+        onClick={() => onChange(!done)}
+      >
+        <span className={`subtask-box${done ? ' subtask-box--done' : ''}`} aria-hidden="true" />
+        <span>Сделана</span>
+      </button>
+      <span className="muted small">
+        {done ? `с ${new Date(doneAt).toLocaleDateString('ru-RU')}` : 'не двигает по доске'}
+      </span>
+    </div>
+  )
+}
+
 function DuePicker({
   value,
   canEdit,
