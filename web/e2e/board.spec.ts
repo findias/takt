@@ -427,6 +427,30 @@ test('выделенные карточки переносятся и убира
   await expect(cardIn(page, 'В работе', 'Вторая пачка')).toBeVisible()
 })
 
+// Закрыть доску можно только вокруг себя — это следует из политик базы,
+// и раньше следовало отказом: перевод в «только вписанным» отклонялся,
+// пока автор не впишет себя в состав. Порядок, известный лишь из отказа,
+// — не порядок, а загадка.
+test('закрытая доска заводится одним действием', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска для своих')
+
+  await page.getByRole('button', { name: /Видна/ }).click()
+  await page.getByLabel('Видна').selectOption('private')
+
+  // Закрывший вписан в состав, и доска осталась у него рабочей.
+  await expect(page.getByRole('button', { name: /Видна: 1 поимённо/ })).toBeVisible()
+  await expect(
+    page.getByLabel('Доступ к доске').getByText('Проверяющий'),
+  ).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  // Это данные, а не состояние экрана.
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Видна: 1 поимённо/ })).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

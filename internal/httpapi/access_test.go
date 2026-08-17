@@ -57,25 +57,29 @@ func TestBoardVisibilityIsChangedOverHTTP(t *testing.T) {
 
 // Закрыть доску можно только вокруг себя. Отказ обязан объяснять, что
 // делать, — база отвечает на это голым нарушением политики.
-func TestClosingBoardAroundSomeoneElseAnswersWithExplanation(t *testing.T) {
+func TestClosingBoardInscribesTheOneWhoClosesIt(t *testing.T) {
 	a := newAPI(t)
 	owner := a.registerOrg("Компания")
 	member := owner.join("member")
 	boardID := owner.board("Найм")
 
+	outsider := owner.join("member")
 	owner.mustDo("PUT", "/api/boards/"+boardID+"/members/"+member.userID, nil, http.StatusNoContent)
 
-	code, raw := owner.do("PUT", "/api/boards/"+boardID+"/access",
+	// Участнику, которого в состав не вписывали, закрыть доску нечем:
+	// состав раздаёт владелец организации. Отказ приходит запретом,
+	// а не «не найдено», и называет того, кто может.
+	code, raw := outsider.do("PUT", "/api/boards/"+boardID+"/access",
 		map[string]any{"visibility": "private"})
-	if code != http.StatusConflict {
-		t.Fatalf("закрытие вокруг чужого: код %d, ожидался 409; тело: %s", code, raw)
+	if code != http.StatusForbidden {
+		t.Fatalf("закрытие доски участником: код %d, ожидался 403; тело: %s", code, raw)
 	}
 	if msg, _ := field(t, raw, "error").(string); msg == "" {
 		t.Error("отказ пришёл без объяснения")
 	}
 
-	// Вписали себя — то же действие проходит.
-	owner.mustDo("PUT", "/api/boards/"+boardID+"/members/"+owner.userID, nil, http.StatusNoContent)
+	// А владельцу — одним действием, без предварительного «впиши себя»:
+	// раньше здесь приходил отказ, из которого человек и узнавал порядок.
 	owner.mustDo("PUT", "/api/boards/"+boardID+"/access",
 		map[string]any{"visibility": "private"}, http.StatusNoContent)
 

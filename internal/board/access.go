@@ -24,11 +24,21 @@ import (
 // никто, включая владельца организации.
 
 var (
-	// ErrWouldLoseAccess — изменение отняло бы доступ у того, кто его делает.
+	// ErrWouldLoseAccess — изменение отняло бы доступ у того, кто его
+	// делает. Остаётся про командную доску: закрытая теперь вписывает
+	// закрывающего сама, а команду за человека выбрать нельзя — он
+	// либо в ней состоит, либо нет.
 	ErrWouldLoseAccess = errors.New(
-		"после этого доска станет вам не видна: впишите себя в её состав или выберите команду, в которой состоите")
+		"после этого доска станет вам не видна: выберите команду, в которой состоите")
 	// ErrTeamRequired — командная доска без команды не бывает.
 	ErrTeamRequired = errors.New("для командной доски нужно выбрать команду")
+	// ErrCloseNeedsRoster — закрыть доску может тот, кто раздаёт её состав.
+	// Закрытие вписывает закрывающего, а состав закрытой доски раздаёт
+	// только владелец организации (см. 4.1): участнику отказ должен
+	// называть, к кому идти, а не предлагать вписать себя самому.
+	ErrCloseNeedsRoster = errors.New(
+		"закрыть доску может тот, кто раздаёт её состав, — владелец организации: " +
+			"попросите вписать вас в доску или закрыть её")
 )
 
 const (
@@ -111,6 +121,22 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 	}
 
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		// Закрыть доску можно только вокруг себя, и закрытие вписывает
+		// закрывающего само. Правило не наше: Postgres проверяет политику
+		// select и на новом ряде, а иначе доска, закрытая вокруг чужих
+		// людей, стала бы неисправимой — редактировать невидимую доску
+		// не может никто, включая владельца организации.
+		//
+		// Раньше это выражалось отказом, и порядок действий — «сперва
+		// впиши себя, потом закрывай» — человек узнавал из него. Порядок,
+		// известный только из отказа, — это не порядок, а загадка: система
+		// знает единственно верную последовательность и молчит о ней,
+		// пока не откажет.
+		if visibility == VisibilityPrivate {
+			if err := inscribe(ctx, tx, orgID, boardID, actorID); err != nil {
+				return err
+			}
+		}
 		tag, err := tx.Exec(ctx, `
 			update boards set visibility = $2, team_id = $3
 			 where id = $1 and archived_at is null`, boardID, visibility, teamID)
@@ -123,6 +149,34 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 		return nil
 	})
 	return translateAccess(err)
+}
+
+// inscribe вписывает в состав доски того, кто её закрывает.
+//
+// В той же транзакции, что и смена видимости: вставка видна проверке
+// политики на новом ряде, потому один вызов и получается одним действием.
+// Порознь это были бы два действия, второе из которых обязано следовать
+// за первым, — а между ними отказ или обрыв оставлял бы доску открытой
+// с лишним человеком в составе.
+func inscribe(ctx context.Context, tx pgx.Tx, orgID, boardID, userID string) error {
+	var already bool
+	if err := tx.QueryRow(ctx, `
+		select exists (select 1 from board_members
+		                where board_id = $1 and user_id = $2)`,
+		boardID, userID).Scan(&already); err != nil {
+		return err
+	}
+	if already {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `
+		insert into board_members (org_id, board_id, user_id)
+		values ($1, $2, $3) on conflict do nothing`, orgID, boardID, userID)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "42501" {
+		return ErrCloseNeedsRoster
+	}
+	return err
 }
 
 func (s *Service) AddMember(ctx context.Context, orgID, actorID, boardID, userID string) error {

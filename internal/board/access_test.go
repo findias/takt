@@ -76,7 +76,11 @@ func TestTeamBoardRequiresTeam(t *testing.T) {
 
 // Главное правило видимости, и единственное, которое приходится объяснять
 // прикладным кодом: база отказывает в нём голым нарушением политики.
-func TestClosingABoardAroundSomeoneElseIsRefusedWithExplanation(t *testing.T) {
+// Закрыть доску можно только вокруг себя — это следует из политик,
+// и раньше следовало отказом: «впишите себя в состав». Порядок,
+// известный только из отказа, — не порядок, а загадка, поэтому закрытие
+// вписывает закрывающего само, в той же транзакции.
+func TestClosingABoardInscribesTheOneWhoClosesIt(t *testing.T) {
 	f := newFixture(t)
 	named := addMember(t, f.svc.db, f.orgID, "member")
 
@@ -84,23 +88,66 @@ func TestClosingABoardAroundSomeoneElseIsRefusedWithExplanation(t *testing.T) {
 		t.Fatalf("добавление в доску: %v", err)
 	}
 
-	err := f.svc.SetAccess(f.ctx, f.orgID, f.actorID, f.boardID, VisibilityPrivate, nil)
-	if !errors.Is(err, ErrWouldLoseAccess) {
-		t.Fatalf("закрытие доски вокруг чужого: %v", err)
-	}
-	if !f.sees(f.actorID) {
-		t.Error("отвергнутое изменение всё-таки применилось")
-	}
-
-	// Впишем себя — и то же действие проходит.
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.actorID, f.boardID, f.actorID); err != nil {
-		t.Fatal(err)
-	}
+	// Одно действие, без предварительного «впиши себя».
 	if err := f.svc.SetAccess(f.ctx, f.orgID, f.actorID, f.boardID, VisibilityPrivate, nil); err != nil {
-		t.Fatalf("закрытие доски вокруг себя: %v", err)
+		t.Fatalf("закрытие доски: %v", err)
 	}
 	if !f.sees(named) || !f.sees(f.actorID) {
 		t.Error("закрытая доска не видна тем, кто в неё вписан")
+	}
+
+	access, err := f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if access.Visibility != VisibilityPrivate {
+		t.Errorf("видимость доски %q, ожидалась закрытая", access.Visibility)
+	}
+	inside := map[string]bool{}
+	for _, m := range access.Members {
+		inside[m.UserID] = true
+	}
+	if !inside[f.actorID] {
+		t.Error("закрывающий не вписан в состав — доска стала бы неисправимой")
+	}
+	if !inside[named] {
+		t.Error("прежний состав потерялся при закрытии")
+	}
+
+	// Повторное закрытие ничего не удваивает и не отказывает.
+	if err := f.svc.SetAccess(f.ctx, f.orgID, f.actorID, f.boardID, VisibilityPrivate, nil); err != nil {
+		t.Fatalf("повторное закрытие: %v", err)
+	}
+	again, err := f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again.Members) != len(access.Members) {
+		t.Errorf("состав после повторного закрытия: %+v", again.Members)
+	}
+}
+
+// Состав закрытой доски раздаёт только владелец организации (4.1),
+// а закрытие вписывает закрывающего — значит, участнику закрыть доску
+// нечем. Отказ обязан называть того, кто может, а не предлагать
+// участнику вписать себя: этого он как раз не умеет.
+func TestClosingABoardByAMemberSaysWhoCan(t *testing.T) {
+	f := newFixture(t)
+	member := addMember(t, f.svc.db, f.orgID, "member")
+
+	err := f.svc.SetAccess(f.ctx, f.orgID, member, f.boardID, VisibilityPrivate, nil)
+	if !errors.Is(err, ErrCloseNeedsRoster) {
+		t.Fatalf("закрытие доски участником: %v", err)
+	}
+	access, err := f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if access.Visibility == VisibilityPrivate {
+		t.Error("отвергнутое закрытие всё-таки применилось")
+	}
+	if len(access.Members) != 0 {
+		t.Errorf("отвергнутое закрытие оставило состав: %+v", access.Members)
 	}
 }
 

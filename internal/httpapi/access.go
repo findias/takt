@@ -122,6 +122,9 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 		writeCoded(w, http.StatusNotFound, "board_archived", board.ErrArchivedBoard.Error())
 	case errors.Is(err, board.ErrWouldLoseAccess):
 		writeError(w, http.StatusConflict, board.ErrWouldLoseAccess.Error())
+	case errors.Is(err, board.ErrCloseNeedsRoster):
+		// Не «нельзя», а «нельзя вам»: отказ называет того, кто может.
+		writeError(w, http.StatusForbidden, board.ErrCloseNeedsRoster.Error())
 	case errors.Is(err, board.ErrReadOnlyBoard):
 		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrNotAuthor):
