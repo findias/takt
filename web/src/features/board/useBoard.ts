@@ -53,6 +53,9 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // читать его внутри обновления состояния нельзя — обновление
   // выполняется позже, и при быстром отказе откатывать оказывается нечего.
   const shown = useRef<BaseState | null>(null)
+  // Сколько правок было у каждой карточки: по номеру видно, устарел ли
+  // ответ, пришедший из сети.
+  const edits = useRef(new Map<string, number>())
 
   const reload = useCallback(async () => {
     if (!boardId) return
@@ -254,6 +257,14 @@ export function useBoard(boardId: string | null, notify: Notify) {
    * Откат точечный, а не «вернуть весь снимок»: пока запрос идёт, доска
    * могла уехать от чужих изменений, и возвращать её целиком значило бы
    * стирать чужую работу. Возвращаем ровно ту карточку, которую трогали.
+   *
+   * Ответ на устаревшую правку не применяется. Пока правку делали
+   * по одной — печатали название и уходили из поля, — это было
+   * незаметно; шаговый ввод оценки показал это сразу: три нажатия «+»
+   * подряд давали двойку, потому что ответ на первую правку приходил
+   * после того, как на экране уже стояла вторая, и возвращал её назад.
+   * Считаем правки на карточку и применяем ответ только на последнюю;
+   * версию доски догонит поток изменений — это уже предусмотренный путь.
    */
   const patchCard = useCallback(
     async (
@@ -265,6 +276,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
     ) => {
       if (!boardId) return
       const previous = shown.current?.cards[cardId] ?? null
+      const seq = (edits.current.get(cardId) ?? 0) + 1
+      edits.current.set(cardId, seq)
       setBase((current) => {
         if (!current) return current
         const card = current.cards[cardId]
@@ -274,9 +287,12 @@ export function useBoard(boardId: string | null, notify: Notify) {
 
       try {
         const result = await api.operation(boardId, crypto.randomUUID(), type, payload)
+        if (edits.current.get(cardId) !== seq) return
         setBase((current) => (current ? applyPatch(current, result) : current))
       } catch (e) {
-        if (previous) {
+        // Откатывать тоже нечего, если поверх уже легла новая правка:
+        // вернулось бы не прежнее значение, а позапрошлое.
+        if (previous && edits.current.get(cardId) === seq) {
           setBase((current) =>
             current ? { ...current, cards: { ...current.cards, [cardId]: previous } } : current,
           )

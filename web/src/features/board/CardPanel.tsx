@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
+import { EstimateStepper } from '../../shared/ui/EstimateStepper.tsx'
 import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
@@ -450,9 +451,6 @@ function Estimate({
   canEdit: boolean
   onSave: (value: number | null) => void
 }) {
-  const [draft, setDraft] = useState(value === null ? '' : String(value))
-  useEffect(() => setDraft(value === null ? '' : String(value)), [value])
-
   if (!canEdit) {
     return (
       <p className="muted small">
@@ -461,36 +459,15 @@ function Estimate({
     )
   }
 
-  const commit = () => {
-    const trimmed = draft.trim()
-    if (trimmed === '') {
-      if (value !== null) onSave(null)
-      return
-    }
-    const parsed = Number(trimmed.replace(',', '.'))
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      setDraft(value === null ? '' : String(value))
-      return
-    }
-    if (parsed !== value) onSave(parsed)
-  }
-
+  // Шаговый ввод вместо числового поля: оценку почти всегда меняют
+  // на единицу — «не два, а три», — и печатать другое число ради
+  // этого значит делать три действия вместо одного. Набрать число
+  // с клавиатуры по-прежнему можно: значение осталось полем.
   return (
-    <label className="row row--tight">
-      <span className="muted small">Оценка</span>
-      <input
-        type="text"
-        inputMode="decimal"
-        className="estimate-input"
-        value={draft}
-        placeholder="—"
-        aria-label={`Оценка карточки, ${UNIT_SHORT[unit]}`}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      />
-      <span className="muted small">{UNIT_SHORT[unit]}</span>
-    </label>
+    <div className="field-row">
+      <span className="field-label">Оценка</span>
+      <EstimateStepper value={value} unit={unit} onChange={onSave} />
+    </div>
   )
 }
 

@@ -261,6 +261,13 @@ export function cardsLabel(n: number): string {
   return `${n} ${plural(n, ['карточка', 'карточки', 'карточек'])}`
 }
 
+/** Единица оценки со склонением при числе: «3 часа», «20 очков».
+ *  Правило склонения одно на весь интерфейс — иначе однажды будет
+ *  написано «2 очков». */
+export function unitLabel(n: number, unit: EstimateUnit): string {
+  return plural(n, UNITS[unit])
+}
+
 /** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */
 function number(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))

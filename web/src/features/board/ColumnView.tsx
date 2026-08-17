@@ -50,7 +50,6 @@ type ColumnProps = {
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
-  onEstimate: (cardId: string, estimate: number | null) => void
   /** Выделенные карточки — одним набором на доску: массовое действие
    *  спрашивают у доски, а не у колонки. */
   selected: Set<string>
@@ -223,7 +222,6 @@ export function ColumnView(props: ColumnProps) {
             parent={props.parents[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
-            onEstimate={props.onEstimate}
             selected={props.selected.has(cardId)}
             onSelect={props.onSelect}
             onBlock={props.onBlock}

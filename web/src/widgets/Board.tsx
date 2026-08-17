@@ -642,7 +642,6 @@ export function Board({
         parents={parents}
         children={children}
         onLabel={toggleLabel}
-        onEstimate={estimateCard}
         selected={picked}
         onSelect={pickCard}
         onBlock={blockCard}

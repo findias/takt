@@ -1808,33 +1808,249 @@ textarea.description {
   background: #8a5a2b;
 }
 
-/* Поле карточки, которое правится нажатием по нему самому: стопка
-   исполнителей, ряд меток, оценка. Значение остаётся значением —
-   рамка появляется под указателем и по фокусу. Кнопка, размеченная
-   как кнопка, превратила бы карточку в панель управления, а читают
-   её как карточку. */
-.card-field {
+/* --- 1. Точки меток --------------------------------------------------
+ *
+ * Метки на карточке существуют в двух видах, и это не «компактный
+ * режим», а разные вопросы. Чипы отвечают «что это за метки» и стоят
+ * в панели. Точки отвечают «одна ли это группа», и на доске нужен
+ * именно этот ответ: три цветных чипа занимают строку целиком, а глаз
+ * на доске в триста карточек всё равно читает только цвет.
+ *
+ * Точка получает цвет «чернил» тона метки, а не фон: фон чипа светлый
+ * и в шесть пикселей не различим. Родное имя метки остаётся в title
+ * и в скрытом тексте — цвет не может быть единственным носителем
+ * смысла (WCAG 1.4.1). */
+.label-dots {
   display: flex;
+  flex: none;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  /* WCAG 2.5.8: цель нажатия 24×24. Отрицательное поле возвращает
-     ряд на место — без него правка по полю раздвинула бы карточку. */
-  min-height: var(--target);
+  gap: 0.15rem;
+}
+.label-dot {
+  /* Шесть пикселей: меньше — грязь при масштабировании, больше —
+     точка начинает спорить с номером карточки. */
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+/* Цвет берётся из тона метки — те же восемь пар, что у .chip--*,
+   но здесь нужна «чернильная» половина пары. */
+.label-dot--slate {
+  color: #2b3733;
+}
+.label-dot--green {
+  color: #12503f;
+}
+.label-dot--blue {
+  color: #1d4a6e;
+}
+.label-dot--violet {
+  color: #3f2f6b;
+}
+.label-dot--rose {
+  color: #6b2f42;
+}
+.label-dot--amber {
+  color: #6b4a12;
+}
+.label-dot--teal {
+  color: #16514e;
+}
+.label-dot--brown {
+  color: #5c3d21;
+}
+/* В тёмной теме чернила по определению не читаются: берём светлую
+   половину пары. Тон остаётся узнаваемым, потому что различает их
+   оттенок, а не светлота. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .label-dot--slate {
+    color: #9fb0ab;
+  }
+  :root:not([data-theme='light']) .label-dot--green {
+    color: #52c1a4;
+  }
+  :root:not([data-theme='light']) .label-dot--blue {
+    color: #6aa6d8;
+  }
+  :root:not([data-theme='light']) .label-dot--violet {
+    color: #9c8bd8;
+  }
+  :root:not([data-theme='light']) .label-dot--rose {
+    color: #d88ba1;
+  }
+  :root:not([data-theme='light']) .label-dot--amber {
+    color: #d8a95a;
+  }
+  :root:not([data-theme='light']) .label-dot--teal {
+    color: #5cbdb8;
+  }
+  :root:not([data-theme='light']) .label-dot--brown {
+    color: #c09272;
+  }
+}
+:root[data-theme='dark'] .label-dot--slate {
+  color: #9fb0ab;
+}
+:root[data-theme='dark'] .label-dot--green {
+  color: #52c1a4;
+}
+:root[data-theme='dark'] .label-dot--blue {
+  color: #6aa6d8;
+}
+:root[data-theme='dark'] .label-dot--violet {
+  color: #9c8bd8;
+}
+:root[data-theme='dark'] .label-dot--rose {
+  color: #d88ba1;
+}
+:root[data-theme='dark'] .label-dot--amber {
+  color: #d8a95a;
+}
+:root[data-theme='dark'] .label-dot--teal {
+  color: #5cbdb8;
+}
+:root[data-theme='dark'] .label-dot--brown {
+  color: #c09272;
+}
+
+/* Верхняя строка карточки: номер слева, точки меток справа. Та же
+   строка, что .card-meta, — второй ряд ради точек заводить нельзя,
+   он стоит четырёх пикселей на каждой карточке доски. */
+.card-meta > .menu:has(> .label-field) {
+  margin-left: auto;
+}
+/* Поле-метки на карточке жмётся к содержимому: рамка вокруг точек
+   не должна занимать полстроки. */
+.label-field {
   padding: 0 var(--space-1);
-  margin: 0 calc(-1 * var(--space-1));
+}
+
+/* --- 2. Правка поля щелчком по полю ----------------------------------
+ *
+ * Меню «…» отвечает на вопрос «что можно сделать с карточкой». Оно
+ * не отвечает на вопрос «сменить исполнителя»: для этого надо
+ * открыть меню, проглядеть общий список людей, меток и колонок
+ * и найти в нём нужную строку. Правка по самому полю короче на два
+ * шага и совпадает с тем, куда человек уже смотрит.
+ *
+ * Обёртка не выглядит кнопкой: обведи стопку аватаров рамкой — и в
+ * колонке появится второй ряд серых прямоугольников. Наведение даёт
+ * подложку, фокус с клавиатуры — обычную обводку из базовых правил. */
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   border: 1px solid transparent;
-  border-radius: var(--radius);
   background: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  padding: 0 var(--space-1);
+  /* WCAG 2.5.8: цель нажатия считается по кнопке, а не по аватару
+     внутри неё. */
+  min-height: var(--target);
+  border-radius: var(--radius);
   cursor: pointer;
 }
-.card-field:hover {
+.field:hover {
   background: var(--surface-2);
   border-color: var(--rule);
 }
+/* Пустое поле обязано быть видно: иначе «назначить исполнителя»
+   существует только в меню, о котором надо знать. Пунктир — принятый
+   знак «здесь пусто, но можно заполнить». */
+.field--empty {
+  border-style: dashed;
+  border-color: var(--rule);
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+/* На карточке пустое поле показывается только при наведении: иначе
+   в каждой строке доски висит по два пунктирных плюса, и доска
+   читается как анкета, а не как работа. Гаснет прозрачностью,
+   а не показом: место остаётся занятым, и строка не прыгает. */
+.card .field--empty {
+  opacity: 0;
+}
+.card:hover .field--empty,
+.card:focus-within .field--empty {
+  opacity: 1;
+}
+/* Наведения на телефоне нет, и спрятанное там недостижимо. */
+@media (pointer: coarse) {
+  .card .field--empty {
+    opacity: 1;
+  }
+}
+
+/* Заголовок и стопка исполнителей — одна строка: «что за работа»
+   и «кого спрашивать» читают вместе. Заголовок занимает всё, что
+   осталось, и переносится; стопка не ужимается. */
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.card-head .card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Поле в панели занимает свою строку и подписано слева. */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target);
+}
+.field-label {
+  flex: none;
+  inline-size: 7rem;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+/* --- 3. Шаговый ввод оценки ------------------------------------------
+ *
+ * Числовое поле требует выделить содержимое и напечатать другое
+ * число; в девяти случаях из десяти оценку меняют на единицу. Кнопки
+ * «−» и «+» рядом со значением делают это одним нажатием и не мешают
+ * набрать число с клавиатуры: значение остаётся полем ввода.
+ *
+ * Единица подписана словом с правильным склонением: «20 очков»,
+ * «3 часа». Единица живёт у доски (estimateUnit), поэтому подпись
+ * приходит снаружи. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.stepper input {
+  inline-size: 3.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.stepper-unit {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  /* Склонение меняет длину слова, и без запаса строка «дёргается»
+     при каждом нажатии. */
+  min-inline-size: 4rem;
+}
+
+/* Оценка на карточке — цифра с подписью единицы, тихая: она нужна
+   при разговоре о загрузке, а не при поиске работы глазами. */
+.card-estimate {
+  flex: none;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
 
 /* Пустое поле — место, которого не видно, пока на карточку не смотрят.
    Доска из пятисот неоценённых карточек иначе превращается в пятьсот
@@ -1862,38 +2078,6 @@ textarea.description {
   .menu:has(> .card-slot) {
     display: inline-flex;
   }
-}
-
-/* Оценка — моноширинная: числа в колонке сравнивают глазами,
-   и разной ширины цифры это сравнение ломают. */
-.chip--estimate {
-  font-family: ui-monospace, Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-  background: var(--surface-2);
-  color: var(--ink-2);
-}
-.card-estimate-input {
-  width: 4rem;
-  flex: none;
-  font: inherit;
-  font-size: var(--text-xs);
-  padding: 0 var(--space-1);
-  min-height: var(--target);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
-}
-.card-block-reason {
-  width: 100%;
-  font: inherit;
-  font-size: var(--text-xs);
-  padding: 0 var(--space-2);
-  min-height: var(--target);
-  border: 1px solid var(--warn);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
 }
 
 /* Место под галочку в меню-переключателе занято всегда: иначе

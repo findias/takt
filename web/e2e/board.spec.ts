@@ -318,15 +318,21 @@ test('метка заводится в организации и вешаетс�
   const card = cardIn(page, 'Очередь', 'Пометить меня')
   await toggleLabel(page, card, 'Срочно')
 
-  await expect(card.getByText('Срочно')).toBeVisible()
+  // На доске метка — точка: чип отвечает «что это за метка» и стоит
+  // в панели, а точка отвечает «одна ли это группа». Имя метки
+  // остаётся в подсказке и в имени поля — цвет не может быть
+  // единственным носителем смысла.
+  await expect(card.getByRole('button', { name: 'Метки: Срочно' })).toBeVisible()
+  // Точная подсказка — у самой точки: у поля она «Метки: Срочно».
+  await expect(card.getByTitle('Срочно', { exact: true })).toBeVisible()
 
   // Переживает перезагрузку — это данные, а не украшение экрана.
   // Ждём подтверждения: метка вешается мгновенно, а уходит следом.
   await savedSince(page, beforeLabel)
   await page.reload()
-  await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toBeVisible({
-    timeout: 10_000,
-  })
+  await expect(
+    cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Метки: Срочно' }),
+  ).toBeVisible({ timeout: 10_000 })
 
   // Метка вешается и из самой карточки: до этого за ней приходилось
   // возвращаться на доску — панель показывала о работе всё, кроме
@@ -343,34 +349,41 @@ test('метка заводится в организации и вешаетс�
 
   // И снимается тем же меню, что вешалась.
   await toggleLabel(page, cardIn(page, 'Очередь', 'Пометить меня'), 'Срочно')
-  await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toHaveCount(0)
+  await expect(
+    cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Метки: ни одной' }),
+  ).toBeVisible()
 })
 
 // Оценку ставят пачкой на планировании, а причина блокировки меняется
 // чаще, чем ставится. И то и другое жило только в панели: открывать
 // карточку ради одного числа — пятнадцать лишних переходов на разбор
 // бэклога.
-test('оценка и блокировка правятся прямо на карточке', async ({ page }) => {
+test('оценка ставится шагами в панели, блокировка — прямо с доски', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с оценками')
   await addCard(page, 'Очередь', 'Оценить меня')
   const card = cardIn(page, 'Очередь', 'Оценить меня')
 
-  // Место под оценку видно тогда, когда на карточку смотрят.
+  // Оценку меняют почти всегда на единицу, и шаги делают это одним
+  // нажатием; печатать число тоже можно — значение осталось полем.
   const beforeEstimate = await boardVersion(page)
-  await card.hover()
-  await card.getByRole('button', { name: 'Оценка не поставлена' }).click()
-  await card.getByLabel(/Оценка карточки/).fill('3')
-  await card.getByLabel(/Оценка карточки/).press('Enter')
-  await expect(card.getByRole('button', { name: /Оценка: 3/ })).toBeVisible()
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Оценить меня»/)
+  for (let i = 0; i < 3; i++) await panel.getByRole('button', { name: 'Увеличить оценку' }).click()
+  await expect(panel.getByLabel('Оценка')).toHaveValue('3')
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
-  // Это данные, а не украшение экрана. Ждём подтверждения: оценка
-  // ставится мгновенно, а уходит следом.
+  // На карточке оценка — тихая цифра: единица одна на всю доску
+  // и живёт в подсказке.
+  await expect(card.getByTitle(/Оценка: 3/)).toBeVisible()
+
+  // Это данные, а не украшение экрана.
   await savedSince(page, beforeEstimate)
   await page.reload()
-  await expect(
-    cardIn(page, 'Очередь', 'Оценить меня').getByRole('button', { name: /Оценка: 3/ }),
-  ).toBeVisible({ timeout: 10_000 })
+  await expect(cardIn(page, 'Очередь', 'Оценить меня').getByTitle(/Оценка: 3/)).toBeVisible({
+    timeout: 10_000,
+  })
 
   // Блокировка ставится с доски и причиной, написанной словами.
   const again = cardIn(page, 'Очередь', 'Оценить меня')
@@ -390,9 +403,6 @@ test('оценка и блокировка правятся прямо на ка
   await expect(again.getByText(/Заблокирована/)).toHaveCount(0)
 })
 
-// Разобрать очередь по колонкам и вымести сделанное — работа, которую
-// делают пачкой. По одной карточке это столько же нажатий, сколько
-// карточек, и на двадцати от неё отказываются вовсе.
 test('выделенные карточки переносятся и убираются пачкой', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с выделением')
