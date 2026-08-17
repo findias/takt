@@ -81,6 +81,13 @@ test('снимки экранов', async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/07-меню-карточки.png` })
   await page.keyboard.press('Escape')
 
+  // Правка по самому полю: исполнители правятся нажатием по стопке,
+  // а не походом в меню «…».
+  await parent.hover()
+  await parent.getByRole('button', { name: /Исполнител/ }).click()
+  await page.screenshot({ path: `${SHOTS}/07б-исполнители-на-карточке.png` })
+  await page.keyboard.press('Escape')
+
   // Карточка тремя вкладками. Открывается обсуждением.
   await parent.click()
   await page.waitForTimeout(400)

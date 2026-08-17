@@ -9,7 +9,12 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
-import { progressLabel, progressRatio } from '../../entities/card/model.ts'
+import {
+  UNIT_SHORT,
+  estimateLabel,
+  progressLabel,
+  progressRatio,
+} from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
@@ -17,14 +22,12 @@ import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import {
   ArchiveIcon,
+  BlockedIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   EditIcon,
   MoreIcon,
   MoveIcon,
-  OpenIcon,
-  PeopleIcon,
-  TagIcon,
   TrashIcon,
 } from '../../shared/ui/icons.tsx'
 
@@ -63,6 +66,12 @@ type CardProps = {
    *  открывать. */
   subtasks: Related[]
   onLabel: (cardId: string, labelId: string, on: boolean) => void
+  /** null снимает оценку. «Не оценена» и «оценена в ноль» — разные
+   *  вещи: первое выкидывает карточку из веса, второе обещает, что
+   *  работы в ней нет. */
+  onEstimate: (cardId: string, estimate: number | null) => void
+  onBlock: (cardId: string, reason: string) => void
+  onUnblock: (cardId: string) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   /** Открыть карточку. Идентификатор аргументом, а не в замыкании:
@@ -94,6 +103,9 @@ function CardViewInner({
   parent,
   subtasks,
   onLabel,
+  onEstimate,
+  onBlock,
+  onUnblock,
   columns,
   onMoveToColumn,
   onOpen,
@@ -108,6 +120,10 @@ function CardViewInner({
   const [dragging, setDragging] = useState(false)
   const [edge, setEdge] = useState<Edge | null>(null)
   const [editing, setEditing] = useState(false)
+  // Причина блокировки пишется на самой карточке: чего ждём — вопрос
+  // к работе, а не к её карточке, и уходить за ним в панель значит
+  // терять доску из виду ради одной строки.
+  const [blocking, setBlocking] = useState(false)
   // Раскрытие подзадач — состояние самой карточки и живёт с ней: это
   // ответ на «что здесь внутри», заданный один раз и здесь же, а не
   // настройка, которую человек ждёт увидеть завтра такой же.
@@ -170,6 +186,12 @@ function CardViewInner({
   const hiddenLabels = own.length - shownLabels.length
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // Клавиши карточки работают, только когда выделена сама карточка.
+    // Внутри неё есть и поля, и меню: стрелка в открытом меню обязана
+    // ходить по пунктам, а «е» в оценке — печататься, а не открывать
+    // переименование. Раньше это было написано только в комментарии.
+    if (e.target !== e.currentTarget) return
+
     const arrows: Record<string, 'left' | 'right' | 'up' | 'down'> = {
       ArrowLeft: 'left',
       ArrowRight: 'right',
@@ -242,6 +264,7 @@ function CardViewInner({
         <EditableText
           value={title}
           autoFocus
+          label="Название карточки"
           onSave={(next) => {
             onRename(cardId, next)
             setEditing(false)
@@ -278,43 +301,44 @@ function CardViewInner({
             </div>
           )}
 
-          <div className="card-head">
-            {/* Заголовок — кнопка: у нажимаемой карточки должна быть
-                явная цель и для скринридера, и для клавиатуры. Двойного
-                клика для переименования больше нет — он спорил
-                с открытием; переименование осталось в меню и на «E». */}
-            <button className="card-title" onClick={() => onOpen(cardId)}>
-              {title}
-            </button>
-            {/* Кто делает — самое частое, о чём спрашивают доску после
-                «что происходит». Инициалы читаются с одного взгляда
-                и занимают двадцать пикселей. */}
-            {shownAssignees.length > 0 && (
-              <div className="avatars">
-                {shownAssignees.map((id) => (
-                  <Avatar key={id} name={people[id] ?? 'Кто-то'} />
-                ))}
-                {hiddenAssignees > 0 && (
-                  <span className="avatar avatar--more" title={`и ещё ${hiddenAssignees}`}>
-                    +{hiddenAssignees}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          {/* Метки — до трёх видимых. Дальше счётчик: четыре цветных
+          {/* Заголовок — кнопка: у нажимаемой карточки должна быть
+              явная цель и для скринридера, и для клавиатуры. Двойного
+              клика для переименования больше нет — он спорил
+              с открытием; переименование осталось в меню и на «E». */}
+          <button className="card-title" onClick={() => onOpen(cardId)}>
+            {title}
+          </button>
+          {/* Метки правятся нажатием по самим меткам, а не пунктами
+              в общем меню: там они шли лентой вперемешку с людьми
+              и переносом, и найти среди них нужную метку было дольше,
+              чем добавить её из панели.
+              Видимых меток — до трёх, дальше счётчик: четыре цветных
               чипа занимают строку целиком и перестают читаться. */}
-          {shownLabels.length > 0 && (
-            <div className="card-labels">
+          {labels.length > 0 && (
+            <Menu
+              label={
+                own.length > 0
+                  ? `Метки: ${own.map((l) => l.name).join(', ')}`
+                  : 'Метки: ни одной'
+              }
+              className={`card-field card-labels${own.length === 0 ? ' card-slot' : ''}`}
+              align="left"
+              items={labels.map((label) => ({
+                label: label.name,
+                checked: cardLabels.includes(label.id),
+                onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
+              }))}
+            >
               {shownLabels.map((label) => (
                 <span key={label.id} className={`chip chip--${label.tone}`}>
                   {label.name}
                 </span>
               ))}
               {hiddenLabels > 0 && <span className="chip chip--more">+{hiddenLabels}</span>}
-            </div>
+              {own.length === 0 && <span className="chip chip--more">метки</span>}
+            </Menu>
           )}
-          {card && (card.blocked || card.progress || aging) && (
+          {card && (card.blocked || aging) && (
             <div className="card-marks">
               {aging && (
                 <span className="mark mark--aging" title="Возраст считается от начала работы">
@@ -322,6 +346,12 @@ function CardViewInner({
                 </span>
               )}
               {card.blocked && (
+                // Причина не правится нажатием по ней, в отличие
+                // от остальных полей: блокировка — интервал, а не
+                // пометка, и «переписать причину» означало бы вторую
+                // блокировку поверх открытой, от которой время в блоке
+                // посчиталось бы дважды. Ошибочную причину снимают
+                // и ставят заново.
                 <span className="mark mark--blocked" title={card.blocked.reason}>
                   {/* Глиф прячем: скринридер прочитает ⛔ как «знак въезд
                       запрещён» — слово рядом надёжнее. */}
@@ -330,6 +360,22 @@ function CardViewInner({
                 </span>
               )}
             </div>
+          )}
+          {blocking && (
+            <EditableText
+              value=""
+              autoFocus
+              label="Причина блокировки"
+              placeholder="Чего ждём"
+              onSave={(reason) => {
+                // Пустая причина не блокирует: блокировка без причины
+                // не отличается от карточки, которая просто стоит.
+                if (reason.trim()) onBlock(cardId, reason.trim())
+                setBlocking(false)
+              }}
+              onCancel={() => setBlocking(false)}
+              className="card-block-reason"
+            />
           )}
           {/* Подзадачи — полосой, а не строчкой среди пометок: «0 из 1»
               в общем ряду читалось как ещё одна пометка, и по доске
@@ -410,32 +456,85 @@ function CardViewInner({
             </ul>
           )}
 
-          <div className="card-actions">
+          <div className="card-foot">
+            {/* Кто делает — самое частое, о чём спрашивают доску после
+                «что происходит», и правится это нажатием по самой
+                стопке. Пункт на человека, и он же снимает: два списка
+                «назначить» и «снять» вдвое длиннее и заставляют помнить,
+                кто где. */}
+            <Menu
+              label={
+                assignees.length > 0
+                  ? `Исполнители: ${assignees.map((id) => people[id] ?? 'Кто-то').join(', ')}`
+                  : 'Исполнителей нет'
+              }
+              className={`card-field${assignees.length === 0 ? ' card-slot' : ''}`}
+              align="left"
+              items={Object.entries(people).map(([id, name]) => ({
+                label: name,
+                checked: assignees.includes(id),
+                onSelect: () => onAssign(cardId, id, !assignees.includes(id)),
+              }))}
+            >
+              <span className="avatars">
+                {shownAssignees.map((id) => (
+                  <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                ))}
+                {hiddenAssignees > 0 && (
+                  <span className="avatar avatar--more">+{hiddenAssignees}</span>
+                )}
+                {/* Пустая стопка — тоже поле, и по нему тоже нажимают:
+                    иначе назначить первого исполнителя было бы не по
+                    чему. */}
+                {assignees.length === 0 && (
+                  // Без класса `avatar`: это не человек, а место под
+                  // него, и считать его аватаром не должны ни фильтр,
+                  // ни проверка «есть ли исполнитель».
+                  <span className="avatar--more" aria-hidden="true">
+                    +
+                  </span>
+                )}
+              </span>
+            </Menu>
+
+            {/* Оценка правится с доски, а не только из панели: её
+                ставят пачкой на планировании, а открывать ради одного
+                числа пятнадцать карточек подряд — пятнадцать лишних
+                переходов. */}
+            {card && (
+              <Estimate
+                value={card.estimate}
+                unit={unit}
+                onSave={(value) => onEstimate(cardId, value)}
+              />
+            )}
+
             {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
                 не помещались и обрезались до «Откры», «Переиме», «Удалит».
-                Перенос стоит в нём же — это не удобство, а требование
-                WCAG 2.5.7: клавиатурного эквивалента недостаточно, нужен
-                путь, выполнимый одним нажатием. */}
+                Осталось в нём то, у чего на карточке нет своего места:
+                люди и метки ушли к самим людям и меткам. Перенос стоит
+                здесь — это не удобство, а требование WCAG 2.5.7:
+                клавиатурного эквивалента недостаточно, нужен путь,
+                выполнимый одним нажатием. */}
             <Menu
               label={`Действия карточки «${title}»`}
+              className="btn btn--icon btn--quiet card-slot"
               items={[
-                { label: 'Открыть', icon: <OpenIcon />, onSelect: () => onOpen(cardId) },
                 { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
-                // Один пункт на человека, и он же снимает: два списка
-                // «назначить» и «снять» вдвое длиннее и заставляют
-                // помнить, кто где.
-                ...Object.entries(people).map(([id, name]) => ({
-                  label: assignees.includes(id) ? `Снять: ${name}` : `Назначить: ${name}`,
-                  icon: <PeopleIcon />,
-                  onSelect: () => onAssign(cardId, id, !assignees.includes(id)),
-                })),
-                ...labels.map((label) => ({
-                  label: cardLabels.includes(label.id)
-                    ? `Снять метку «${label.name}»`
-                    : `Метка «${label.name}»`,
-                  icon: <TagIcon />,
-                  onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
-                })),
+                card?.blocked
+                  ? {
+                      label: 'Снять блокировку',
+                      icon: <BlockedIcon />,
+                      onSelect: () => onUnblock(cardId),
+                    }
+                  : {
+                      // Причину пишут словами: список готовых
+                      // формулировок отвечает не на тот вопрос — важно,
+                      // чего ждём именно здесь.
+                      label: 'Заблокировать…',
+                      icon: <BlockedIcon />,
+                      onSelect: () => setBlocking(true),
+                    },
                 ...columns
                   .filter((c) => c.id !== columnId)
                   .map((c) => ({
@@ -470,6 +569,85 @@ function CardViewInner({
         </>
       )}
     </article>
+  )
+}
+
+/**
+ * Оценка на карточке.
+ *
+ * Числом, а не шаговым вводом: шаг не знает, чему равен, — час, день
+ * и очко растут по-разному, а дробная оценка («полдня») шагами
+ * не набирается вовсе. Пустое поле снимает оценку.
+ */
+function Estimate({
+  value,
+  unit,
+  onSave,
+}: {
+  value: number | null
+  unit: EstimateUnit
+  onSave: (value: number | null) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value === null ? '' : String(value))
+  useEffect(() => setDraft(value === null ? '' : String(value)), [value])
+
+  if (!editing) {
+    const label = estimateLabel(value, unit)
+    return (
+      <button
+        // Неоценённая карточка показывает место под оценку так же,
+        // как пустая стопка исполнителей: тихо и только тогда, когда
+        // на карточку смотрят. Иначе доска из пятисот неоценённых
+        // карточек превращается в пятьсот приглашений что-то заполнить.
+        className={`card-field chip chip--estimate${value === null ? ' card-slot' : ''}`}
+        aria-label={label ? `Оценка: ${label}` : 'Оценка не поставлена'}
+        onClick={() => setEditing(true)}
+      >
+        {label ?? 'оценка'}
+      </button>
+    )
+  }
+
+  const commit = () => {
+    setEditing(false)
+    const trimmed = draft.trim()
+    if (trimmed === '') {
+      if (value !== null) onSave(null)
+      return
+    }
+    const parsed = Number(trimmed.replace(',', '.'))
+    // Не число или не больше нуля — не оценка. Записать такое молча
+    // значит соврать в сумме по человеку и в весе родителя, поэтому
+    // поле возвращается к прежнему значению.
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setDraft(value === null ? '' : String(value))
+      return
+    }
+    if (parsed !== value) onSave(parsed)
+  }
+
+  return (
+    <input
+      autoFocus
+      type="text"
+      inputMode="decimal"
+      className="card-estimate-input"
+      aria-label={`Оценка карточки, ${UNIT_SHORT[unit]}`}
+      // В пустом поле единица заменяет подпись: чип с ней исчезает
+      // ровно тогда, когда в него начинают вводить.
+      placeholder={UNIT_SHORT[unit]}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          setDraft(value === null ? '' : String(value))
+          setEditing(false)
+        }
+      }}
+    />
   )
 }
 

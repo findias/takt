@@ -50,6 +50,9 @@ type ColumnProps = {
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
+  onEstimate: (cardId: string, estimate: number | null) => void
+  onBlock: (cardId: string, reason: string) => void
+  onUnblock: (cardId: string) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -216,6 +219,9 @@ export function ColumnView(props: ColumnProps) {
             parent={props.parents[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
+            onEstimate={props.onEstimate}
+            onBlock={props.onBlock}
+            onUnblock={props.onUnblock}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={props.onOpenCard}

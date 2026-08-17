@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { CheckIcon } from './icons.tsx'
 
 /**
  * Меню действий.
@@ -27,16 +28,32 @@ export type MenuItem = {
   /** Опасное действие показывается иначе и стоит последним. */
   danger?: boolean
   disabled?: boolean
+  /** Пункт-переключатель: назначен исполнитель, висит метка. Задан —
+   *  значит пункт не действие, а состояние, и роль у него другая:
+   *  `menuitemcheckbox` читается вслух вместе с «включено», а галочка
+   *  без роли осталась бы значком, о котором скринридер молчит. */
+  checked?: boolean
 }
 
 export function Menu({
   label,
   items,
+  className = 'btn btn--icon btn--quiet',
+  align = 'right',
   children,
 }: {
   /** Имя кнопки для скринридера: «Действия карточки «Смета»». */
   label: string
   items: MenuItem[]
+  /** С какой стороны раскрывается список. По умолчанию от правого края:
+   *  меню действий прижато к правому краю карточки. Поле, которое правят
+   *  нажатием по нему самому, стоит слева, и список от правого края
+   *  уезжал бы за пределы колонки, где его обрезают карточки. */
+  align?: 'left' | 'right'
+  /** Чем открывается меню. Умолчание — тихая кнопка-иконка; правка
+   *  по самому полю передаёт сюда своё, потому что там открывашка —
+   *  и есть значение: стопка исполнителей, ряд меток, оценка. */
+  className?: string
   /** Содержимое кнопки — обычно иконка. */
   children: ReactNode
 }) {
@@ -70,7 +87,7 @@ export function Menu({
   // управления aria-activedescendant.
   useEffect(() => {
     if (!open) return
-    const nodes = listRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    const nodes = listRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]')
     nodes?.[active]?.focus()
   }, [open, active])
 
@@ -104,7 +121,7 @@ export function Menu({
       <button
         ref={buttonRef}
         type="button"
-        className="btn btn--icon btn--quiet"
+        className={className}
         aria-label={label}
         title={label}
         aria-haspopup="menu"
@@ -119,12 +136,19 @@ export function Menu({
       </button>
 
       {open && (
-        <div className="menu-list" id={menuId} role="menu" aria-label={label} ref={listRef}>
+        <div
+          className={align === 'left' ? 'menu-list menu-list--left' : 'menu-list'}
+          id={menuId}
+          role="menu"
+          aria-label={label}
+          ref={listRef}
+        >
           {items.map((item, i) => (
             <button
               key={item.label}
               type="button"
-              role="menuitem"
+              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+              aria-checked={item.checked}
               tabIndex={i === active ? 0 : -1}
               className={item.danger ? 'menu-item menu-item--danger' : 'menu-item'}
               disabled={item.disabled}
@@ -134,7 +158,16 @@ export function Menu({
                 item.onSelect()
               }}
             >
-              {item.icon}
+              {/* Место под галочку занято всегда: иначе включённый пункт
+                  съезжал бы вправо относительно соседей, и список
+                  переставал бы читаться колонкой. */}
+              {item.checked === undefined ? (
+                item.icon
+              ) : (
+                <span className="menu-check" aria-hidden="true">
+                  {item.checked ? <CheckIcon /> : null}
+                </span>
+              )}
               {item.label}
             </button>
           ))}

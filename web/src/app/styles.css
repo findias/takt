@@ -854,34 +854,20 @@ select {
   border: none;
   text-decoration: underline;
 }
-.card-actions {
-  display: none;
-  /* Кнопка действий прижата к правому краю карточки: так меню,
-     выровненное по её правому краю, раскрывается внутрь колонки,
-     а не за её пределы — где список карточек его обрежет. */
-  justify-content: flex-end;
-  gap: var(--space-1);
-  /* Ряд действий не помещался в ширину колонки и обрезался: было видно
-     «Откры», «Переиме», «Удалит». Перенос по строкам вместо обрезки —
-     действие, которое не прочитать, всё равно что отсутствует. */
-  flex-wrap: wrap;
-  align-items: center;
-  margin-top: var(--space-1);
-  padding-top: var(--space-1);
-  border-top: 1px solid var(--rule);
-}
-.card:hover .card-actions,
-.card:focus-within .card-actions {
+/* Нижний ряд карточки: кто делает, во сколько оценено, меню действий.
+   Ряд отделён отступом, а не чертой: черта под каждой карточкой
+   в колонке из двадцати читается как разлиновка таблицы. */
+.card-foot {
   display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
 }
-.card-actions button {
-  font-size: var(--text-xs);
-  padding: 0 var(--space-1);
-  /* WCAG 2.5.8: цель нажатия 24×24. Кнопки-ссылки в плотных рядах —
-     ровно то место, где это правило обычно и нарушают. */
-  min-height: var(--target);
-  min-width: var(--target);
-  color: var(--ink-2);
+/* Меню действий прижато к правому краю карточки: так список,
+   выровненный по её правому краю, раскрывается внутрь колонки,
+   а не за её пределы — где карточки его обрежут. */
+.card-foot > .menu:last-child {
+  margin-left: auto;
 }
 
 .new-card {
@@ -1582,13 +1568,9 @@ textarea.description {
   :root {
     --target: 44px;
   }
-  /* Действия карточки показываются всегда: наведения на телефоне нет,
-     и спрятанное «по наведению» там просто недостижимо. На широком
-     экране они остаются скрытыми — там ряд кнопок под каждой карточкой
-     съедал бы плотность. */
-  .card-actions {
-    display: flex;
-  }
+  /* Пустые поля и меню карточки живут ниже, вместе с самой карточкой:
+     правило показа на телефоне обязано стоять после правила, которое
+     их прячет, иначе побеждает не оно, а порядок в файле. */
 }
 
 /* Пустая доска объясняет себя: без объяснения она неотличима
@@ -1736,15 +1718,110 @@ textarea.description {
   background: #8a5a2b;
 }
 
-.card-head {
+/* Поле карточки, которое правится нажатием по нему самому: стопка
+   исполнителей, ряд меток, оценка. Значение остаётся значением —
+   рамка появляется под указателем и по фокусу. Кнопка, размеченная
+   как кнопка, превратила бы карточку в панель управления, а читают
+   её как карточку. */
+.card-field {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  /* WCAG 2.5.8: цель нажатия 24×24. Отрицательное поле возвращает
+     ряд на место — без него правка по полю раздвинула бы карточку. */
+  min-height: var(--target);
+  padding: 0 var(--space-1);
+  margin: 0 calc(-1 * var(--space-1));
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.card-head .card-title {
-  flex: 1;
-  min-width: 0;
+.card-field:hover {
+  background: var(--surface-2);
+  border-color: var(--rule);
+}
+
+/* Пустое поле — место, которого не видно, пока на карточку не смотрят.
+   Доска из пятисот неоценённых карточек иначе превращается в пятьсот
+   приглашений что-то заполнить. Тем же живёт и меню действий. */
+.card-slot,
+.menu:has(> .card-slot) {
+  display: none;
+}
+.card:hover .card-slot,
+.card:focus-within .card-slot {
+  display: flex;
+}
+.card:hover .menu:has(> .card-slot),
+.card:focus-within .menu:has(> .card-slot) {
+  display: inline-flex;
+}
+/* На телефоне наведения нет, и спрятанное «по наведению» там просто
+   недостижимо: показываем всегда. Правило стоит здесь, а не в общем
+   блоке про указатель, — там оно проигрывало бы правилу выше
+   по порядку в файле. */
+@media (pointer: coarse) {
+  .card-slot {
+    display: flex;
+  }
+  .menu:has(> .card-slot) {
+    display: inline-flex;
+  }
+}
+
+/* Список поля раскрывается от его левого края: поле стоит слева
+   карточки, и список, выровненный по правому краю, уезжал бы
+   за пределы колонки — там его обрезает список карточек. */
+.menu-list--left {
+  right: auto;
+  left: 0;
+}
+
+/* Оценка — моноширинная: числа в колонке сравнивают глазами,
+   и разной ширины цифры это сравнение ломают. */
+.chip--estimate {
+  font-family: ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.card-estimate-input {
+  width: 4rem;
+  flex: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
+  min-height: var(--target);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.card-block-reason {
+  width: 100%;
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-2);
+  min-height: var(--target);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Место под галочку в меню-переключателе занято всегда: иначе
+   включённый пункт съезжал бы относительно соседей. */
+.menu-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1rem;
 }
 
 /* Заглушки и состояния экрана. Полосы на месте будущих строк, а не

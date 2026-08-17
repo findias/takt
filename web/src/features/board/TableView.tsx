@@ -3,6 +3,7 @@ import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
 import { agingLabel } from '../../entities/board/model.ts'
+import { UNIT_SHORT } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 
@@ -193,12 +194,6 @@ export function TableView({
       </p>
     </div>
   )
-}
-
-const UNIT_SHORT: Record<EstimateUnit, string> = {
-  points: 'очк.',
-  hours: 'ч',
-  days: 'дн.',
 }
 
 /** Возраст считается от начала работы. Неначатая карточка возраста

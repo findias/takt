@@ -237,6 +237,24 @@ export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   return `${base} ${plural(total, UNITS[unit])}`
 }
 
+// Единицы называются коротко: подпись стоит вплотную к числу, и
+// «очков» в каждой строке таблицы повторять незачем.
+export const UNIT_SHORT: Record<EstimateUnit, string> = {
+  points: 'очк.',
+  hours: 'ч',
+  days: 'дн.',
+}
+
+/**
+ * Оценка словами.
+ *
+ * Пусто — значит не оценена, и это не ноль: неоценённая карточка молча
+ * выпадает из веса, а нулевая обещает, что работы в ней нет.
+ */
+export function estimateLabel(value: number | null, unit: EstimateUnit): string | null {
+  return value === null ? null : `${number(value)} ${UNIT_SHORT[unit]}`
+}
+
 /** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */
 function number(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))

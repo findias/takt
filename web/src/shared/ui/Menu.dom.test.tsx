@@ -73,6 +73,33 @@ describe('меню', () => {
     expect(onSelect).toHaveBeenCalledTimes(1)
   })
 
+  // Правка по самому полю: пункт-переключатель отвечает не «сделать»,
+  // а «включено или нет», и это должно быть слышно, а не только видно
+  // по галочке.
+  it('пункт-переключатель называет своё состояние', async () => {
+    const user = userEvent.setup()
+    render(
+      <Menu
+        label="Исполнители"
+        items={[
+          { label: 'Анна', checked: true, onSelect: vi.fn() },
+          { label: 'Борис', checked: false, onSelect: vi.fn() },
+        ]}
+      >
+        …
+      </Menu>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Исполнители' }))
+
+    const items = screen.getAllByRole('menuitemcheckbox')
+    expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+
+    // Стрелки ходят по ним так же: роль другая, поведение то же.
+    expect(document.activeElement?.textContent).toBe('Анна')
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement?.textContent).toBe('Борис')
+  })
+
   it('закрывается по Escape и возвращает фокус кнопке', async () => {
     const user = userEvent.setup()
     const { trigger } = show()

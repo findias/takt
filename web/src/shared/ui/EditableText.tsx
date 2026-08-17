@@ -16,12 +16,21 @@ export function EditableText({
   onCancel,
   className,
   autoFocus,
+  label,
+  placeholder,
 }: {
   value: string
   onSave: (next: string) => void
   onCancel?: () => void
   className?: string
   autoFocus?: boolean
+  /** Имя поля для того, кто читает экран с диктора. Надписи рядом
+   *  у правки на месте нет — поле стоит там, где только что стоял
+   *  текст, и без имени диктор объявляет его просто «поле ввода». */
+  label?: string
+  /** Подсказка внутри пустого поля: у правки на месте пустота ничего
+   *  не объясняет — прежнего текста уже не видно. */
+  placeholder?: string
 }) {
   const [editing, setEditing] = useState(Boolean(autoFocus))
   const [draft, setDraft] = useState(value)
@@ -48,6 +57,8 @@ export function EditableText({
     <input
       autoFocus
       className={className}
+      aria-label={label}
+      placeholder={placeholder}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}

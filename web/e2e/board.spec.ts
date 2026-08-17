@@ -88,6 +88,26 @@ function cardIn(page: Page, column: string, title: string) {
     .getByRole('group', { name: new RegExp(`Карточка «${title}»`) })
 }
 
+/**
+ * Назначить или снять исполнителя прямо на карточке.
+ *
+ * Путь идёт через саму стопку исполнителей, а не через меню «…»:
+ * поля правятся нажатием по ним самим, и пункт меню один на человека —
+ * он же назначает, он же снимает.
+ */
+async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
+  await card.hover()
+  await card.getByRole('button', { name: /Исполнител/ }).click()
+  await page.getByRole('menuitemcheckbox').first().click()
+}
+
+/** То же для метки: нажатие по ряду меток, пункт по названию. */
+async function toggleLabel(page: Page, card: ReturnType<typeof cardIn>, name: string) {
+  await card.hover()
+  await card.getByRole('button', { name: /^Метки/ }).click()
+  await page.getByRole('menuitemcheckbox', { name }).click()
+}
+
 test('от входа до переставленной карточки', async ({ page }) => {
   const who = await register(page)
 
@@ -252,9 +272,7 @@ test('карточка получает исполнителя, и это вид
 
   const beforeAssign = await boardVersion(page)
   const card = cardIn(page, 'Очередь', 'Кому-то делать')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await toggleAssignee(page, card)
 
   // Инициалы — подпись под работой: доска отвечает на вопрос «кто это
   // делает», ради которого её и открывают.
@@ -275,11 +293,7 @@ test('карточка получает исполнителя, и это вид
 
   // Снять — тем же пунктом меню, что и назначить: два списка
   // «назначить» и «снять» вдвое длиннее и заставляют помнить, кто где.
-  await cardIn(page, 'Очередь', 'Кому-то делать').hover()
-  await cardIn(page, 'Очередь', 'Кому-то делать')
-    .getByRole('button', { name: /Действия карточки/ })
-    .click()
-  await page.getByRole('menuitem', { name: /Снять: / }).first().click()
+  await toggleAssignee(page, cardIn(page, 'Очередь', 'Кому-то делать'))
   await expect(cardIn(page, 'Очередь', 'Кому-то делать').locator('.avatar')).toHaveCount(0)
 })
 
@@ -299,9 +313,7 @@ test('метка заводится в организации и вешаетс�
 
   const beforeLabel = await boardVersion(page)
   const card = cardIn(page, 'Очередь', 'Пометить меня')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: 'Метка «Срочно»' }).click()
+  await toggleLabel(page, card, 'Срочно')
 
   await expect(card.getByText('Срочно')).toBeVisible()
 
@@ -314,12 +326,52 @@ test('метка заводится в организации и вешаетс�
   })
 
   // И снимается тем же меню.
-  await cardIn(page, 'Очередь', 'Пометить меня').hover()
-  await cardIn(page, 'Очередь', 'Пометить меня')
-    .getByRole('button', { name: /Действия карточки/ })
-    .click()
-  await page.getByRole('menuitem', { name: 'Снять метку «Срочно»' }).click()
+  await toggleLabel(page, cardIn(page, 'Очередь', 'Пометить меня'), 'Срочно')
   await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toHaveCount(0)
+})
+
+// Оценку ставят пачкой на планировании, а причина блокировки меняется
+// чаще, чем ставится. И то и другое жило только в панели: открывать
+// карточку ради одного числа — пятнадцать лишних переходов на разбор
+// бэклога.
+test('оценка и блокировка правятся прямо на карточке', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с оценками')
+  await addCard(page, 'Очередь', 'Оценить меня')
+  const card = cardIn(page, 'Очередь', 'Оценить меня')
+
+  // Место под оценку видно тогда, когда на карточку смотрят.
+  const beforeEstimate = await boardVersion(page)
+  await card.hover()
+  await card.getByRole('button', { name: 'Оценка не поставлена' }).click()
+  await card.getByLabel(/Оценка карточки/).fill('3')
+  await card.getByLabel(/Оценка карточки/).press('Enter')
+  await expect(card.getByRole('button', { name: /Оценка: 3/ })).toBeVisible()
+
+  // Это данные, а не украшение экрана. Ждём подтверждения: оценка
+  // ставится мгновенно, а уходит следом.
+  await savedSince(page, beforeEstimate)
+  await page.reload()
+  await expect(
+    cardIn(page, 'Очередь', 'Оценить меня').getByRole('button', { name: /Оценка: 3/ }),
+  ).toBeVisible({ timeout: 10_000 })
+
+  // Блокировка ставится с доски и причиной, написанной словами.
+  const again = cardIn(page, 'Очередь', 'Оценить меня')
+  await again.hover()
+  await again.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
+  await again.getByLabel('Причина блокировки').fill('ждём смежников')
+  await again.getByLabel('Причина блокировки').press('Enter')
+  await expect(again.getByText('Заблокирована: ждём смежников')).toBeVisible()
+
+  // Снимается тем же меню. Правки причины поверх открытой блокировки
+  // нет намеренно: блокировка — интервал, и вторая поверх первой
+  // посчитала бы время в блоке дважды.
+  await again.hover()
+  await again.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Снять блокировку' }).click()
+  await expect(again.getByText(/Заблокирована/)).toHaveCount(0)
 })
 
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
@@ -381,9 +433,7 @@ test('фильтр по исполнителю показывает и то, ч�
   await addCard(page, 'Очередь', 'Ничья работа')
 
   const mine = cardIn(page, 'Очередь', 'Моя работа')
-  await mine.hover()
-  await mine.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await toggleAssignee(page, mine)
   await expect(mine.locator('.avatar')).toBeVisible()
 
   // Работа без исполнителя и есть то, что теряется: её надо уметь
@@ -400,9 +450,7 @@ test('группировка раскладывает доску по дорож
   await addCard(page, 'Очередь', 'Ничья работа')
 
   const mine = cardIn(page, 'Очередь', 'Моя работа')
-  await mine.hover()
-  await mine.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await toggleAssignee(page, mine)
   await expect(mine.locator('.avatar')).toBeVisible()
 
   await page.getByLabel('Группировка').selectOption('assignee')
@@ -764,10 +812,12 @@ test('исполнителей у карточки может быть неск�
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   // На доске видны оба — и назначение пережило перезагрузку.
+  // Точное совпадение подписи: имя стоит и на самом аватаре,
+  // и в подсказке стопки, которой её правят.
   await page.reload()
   const card = cardIn(page, 'Очередь', 'Делать вдвоём')
-  await expect(card.getByTitle('Проверяющий')).toBeVisible()
-  await expect(card.getByTitle('Иван Петров')).toBeVisible()
+  await expect(card.getByTitle('Проверяющий', { exact: true })).toBeVisible()
+  await expect(card.getByTitle('Иван Петров', { exact: true })).toBeVisible()
 
   // Фильтр «на мне» показывает работу, о которой договорились вдвоём:
   // иначе один из двоих не найдёт её у себя.
@@ -992,9 +1042,7 @@ test('изменения — третий вид, с отбором «тольк
 
   // Одна карточка становится моей.
   const mine = cardIn(page, 'Очередь', 'Согласовать смету')
-  await mine.hover()
-  await mine.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+  await toggleAssignee(page, mine)
 
   await page.getByRole('button', { name: 'Изменения' }).click()
   const feed = page.locator('.feed li')
@@ -1025,10 +1073,7 @@ test('видно, сколько на ком висит', async ({ page }) => {
   await expect(load).toHaveCount(0)
 
   for (const title of ['Первая', 'Вторая']) {
-    const card = cardIn(page, 'Очередь', title)
-    await card.hover()
-    await card.getByRole('button', { name: /Действия карточки/ }).click()
-    await page.getByRole('menuitem', { name: /Назначить: / }).first().click()
+    await toggleAssignee(page, cardIn(page, 'Очередь', title))
   }
   await expect(load.locator('.workload-item')).toHaveCount(1)
   await expect(load).toContainText('2')

@@ -18,6 +18,7 @@ import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 import { Discussion } from './Discussion.tsx'
 import type { BaseState } from '../../entities/board/model.ts'
 import {
+  UNIT_SHORT,
   candidatesForSubtask,
   cardDetails,
   progressLabel,
@@ -418,14 +419,6 @@ function IterationPicker({
       </select>
     </label>
   )
-}
-
-// Единицы называются коротко: подпись стоит рядом с полем, и повторять
-// «очков» в каждой строке незачем.
-const UNIT_SHORT: Record<EstimateUnit, string> = {
-  points: 'очк.',
-  hours: 'ч',
-  days: 'дн.',
 }
 
 /**

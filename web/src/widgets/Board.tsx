@@ -434,7 +434,15 @@ export function Board({
   // замыкать его значит делать функцию своей у каждой карточки.
   // Зависимости — сами действия, а не объект доски: он собирается
   // заново на каждую отрисовку, и обработчики вместе с ним.
-  const { assignCard: assign, toggleLabel: label, renameCard: rename, archiveCard: archive } = board
+  const {
+    assignCard: assign,
+    toggleLabel: label,
+    renameCard: rename,
+    archiveCard: archive,
+    estimateCard: estimate,
+    blockCard: block,
+    unblockCard: unblock,
+  } = board
   const assignCard = useCallback(
     (cardId: string, userId: string, on: boolean) => void assign(cardId, userId, on),
     [assign],
@@ -443,6 +451,15 @@ export function Board({
     (cardId: string, labelId: string, on: boolean) => void label(cardId, labelId, on),
     [label],
   )
+  const estimateCard = useCallback(
+    (cardId: string, value: number | null) => void estimate(cardId, value),
+    [estimate],
+  )
+  const blockCard = useCallback(
+    (cardId: string, reason: string) => void block(cardId, reason),
+    [block],
+  )
+  const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])
   const renameCard = useCallback(
     (cardId: string, title: string) => void rename(cardId, title),
     [rename],
@@ -586,6 +603,9 @@ export function Board({
         parents={parents}
         children={children}
         onLabel={toggleLabel}
+        onEstimate={estimateCard}
+        onBlock={blockCard}
+        onUnblock={unblockCard}
         columns={columnList}
         onMoveToColumn={moveToColumn}
         onOpenCard={showCard}
@@ -910,7 +930,7 @@ export function Board({
           canEdit
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}
-          onEstimate={(id, value) => void board.estimateCard(id, value)}
+          onEstimate={estimateCard}
           onOpenCard={showCard}
           onAssign={assignCard}
           subtaskBoards={subtaskBoards}
@@ -919,8 +939,8 @@ export function Board({
           }
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
-          onBlock={(id, reason) => void board.blockCard(id, reason)}
-          onUnblock={(id) => void board.unblockCard(id)}
+          onBlock={blockCard}
+          onUnblock={unblockCard}
           onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
           onIteration={(id, iterationId) => {
             const current = base.cardIterations[id]
