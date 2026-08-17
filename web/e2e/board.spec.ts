@@ -580,12 +580,15 @@ test('приоритет виден, отбирается и не трогает
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
   await page.getByRole('checkbox', { name: 'Горит' }).uncheck()
 
-  // Уровень правится и нажатием по нему самому — как исполнители
-  // и метки: спрашивают о нём не реже, а путь был длиннее всех.
-  // У карточки со средним уровнем место под него пустое и появляется,
-  // когда на карточку смотрят.
+  // Поставленный уровень правится нажатием по нему самому — как
+  // исполнители и метки. У карточки со средним уровнем плашки нет
+  // вовсе: умолчание у каждой второй карточки не информация, и путь
+  // к нему — меню «…» или панель.
   const first = cardIn(page, 'Очередь', 'Первая по порядку')
+  await expect(first.getByRole('button', { name: /Приоритет:/ })).toHaveCount(0)
   await first.hover()
+  await first.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
   await first.getByRole('button', { name: /Приоритет:/ }).click()
   await page.getByRole('menuitemcheckbox', { name: 'Высокий' }).click()
   await expect(first.getByText('высокий')).toBeVisible()
@@ -644,6 +647,7 @@ test('shift берёт диапазон, а полоса делает всё с�
   await first.getByRole('checkbox', { name: /Выделить/ }).check()
   await third.hover()
   await third.getByRole('checkbox', { name: /Выделить/ }).click({ modifiers: ['Shift'] })
+  await expect(bar).toContainText('Выделено: 3 карточки')
   await bar.getByRole('button', { name: 'Пометить выделенные' }).click()
   await page.getByRole('menuitem', { name: 'Разобрать' }).click()
   await expect(cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: /Метки: Разобрать/ })).toBeVisible()

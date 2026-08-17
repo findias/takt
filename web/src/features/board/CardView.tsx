@@ -203,6 +203,29 @@ function CardViewInner({
   const shownAssignees = assignees.slice(0, 3)
   const hiddenAssignees = assignees.length - shownAssignees.length
   const own = labels.filter((l) => cardLabels.includes(l.id))
+
+  /**
+   * Одна тревога на карточку.
+   *
+   * Предупреждающих пометок стало четыре — блокировка, горящий срок,
+   * возраст сверх обещания, верхний уровень, — и все они кричали одним
+   * цветом. На доске, где предупреждающим помечено полкартинки,
+   * предупреждение не работает: когда красное всё, красное не значит
+   * ничего.
+   *
+   * Пометки сравнимы между собой, и порядок очевиден: заблокированную
+   * разблокируют раньше, чем обсуждают её возраст, а обещанное наружу
+   * важнее собственного обещания доски. Показывается старшая,
+   * остальные живут в панели и в отборах.
+   */
+  const due = card?.dueOn ? dueLabel(card.dueOn) : null
+  const alarm = card?.blocked
+    ? { text: `Заблокирована: ${card.blocked.reason}`, title: card.blocked.reason }
+    : due?.hot
+      ? { text: due.text, title: 'Дата обязательства' }
+      : aging
+        ? { text: aging, title: 'Возраст считается от начала работы' }
+        : null
   // Кто делает части — объединение по ним же, без повторов и в их
   // порядке. Считается из своих подзадач, а не из снимка доски:
   // частей у карточки единицы, а знание о снимке сломало бы memo.
@@ -328,36 +351,6 @@ function CardViewInner({
               // Не кнопка и не ссылка: номер выделяют и копируют,
               // а нажатие на карточку и так её открывает.
               <span className="card-number">{card.number}</span>
-            )}
-            {/* Приоритет правится нажатием по нему самому — как
-                исполнители и метки: спрашивают о нём не реже, а путь
-                к нему был длиннее всех. Слово, а не значок:
-                «наивысший» отвечает на вопрос, а красная точка требует,
-                чтобы её сначала объяснили.
-                Средний уровень словом не пишется — умолчание у каждой
-                второй карточки это шум, — но место под него остаётся
-                и показывается, когда на карточку смотрят. */}
-            {card && (
-              <Menu
-                label={`Приоритет: ${priorityLabel(card.priority).toLowerCase()}`}
-                className={`field priority-field${
-                  card.priority === 'medium' ? ' field--empty' : ''
-                }`}
-                align="left"
-                items={PRIORITIES.map((level) => ({
-                  label: PRIORITY_NAMES[level],
-                  checked: card.priority === level,
-                  onSelect: () => onPrioritise(cardId, level),
-                }))}
-              >
-                {card.priority === 'medium' ? (
-                  '+ приоритет'
-                ) : (
-                  <span className={`priority-mark priority-mark--${card.priority}`}>
-                    {priorityLabel(card.priority).toLowerCase()}
-                  </span>
-                )}
-              </Menu>
             )}
             {parent && (
               <span className="card-parent">
@@ -547,57 +540,62 @@ function CardViewInner({
             </Menu>
           </div>
           {card &&
-            (card.blocked || aging || iteration || card.dueOn || card.estimate !== null) && (
+            (alarm || iteration || due || card.priority !== 'medium' || card.estimate !== null) && (
             <div className="card-marks">
-              {/* Итерация — ответ на «к чему это привязано снаружи».
-                  Тихая пометка: спринт не влияет на то, как работу
-                  тянут, но без него на доске не видно, что в него
-                  вообще входит. */}
+              {/* Старшая тревога — одна и всегда первой: она отвечает
+                  на вопрос «почему эта работа не идёт», а он важнее
+                  остальных. */}
+              {alarm && (
+                <span className="mark mark--alarm" title={alarm.title}>
+                  {alarm.text}
+                </span>
+              )}
+
+              {/* Приоритет — решение человека, и регистр цвета у него
+                  свой: тёмное поставил кто-то, кирпичное случилось
+                  само. Легенды для этого не нужно.
+                  Средний уровень не пишется вовсе — ни словом,
+                  ни местом под него: умолчание у каждой второй карточки
+                  не информация. Такой карточке уровень ставят из меню
+                  «…» и из панели. */}
+              {card.priority !== 'medium' && (
+                <Menu
+                  label={`Приоритет: ${priorityLabel(card.priority).toLowerCase()}`}
+                  className="field priority-field"
+                  align="left"
+                  items={PRIORITIES.map((level) => ({
+                    label: PRIORITY_NAMES[level],
+                    checked: card.priority === level,
+                    onSelect: () => onPrioritise(cardId, level),
+                  }))}
+                >
+                  <span className={`priority-mark priority-mark--${card.priority}`}>
+                    {priorityLabel(card.priority).toLowerCase()}
+                  </span>
+                </Menu>
+              )}
+
+              {/* Срок, который ещё не жмёт, — тихая пометка: он отвечает
+                  на «к чему это привязано», а не «почему это горит».
+                  Горящий уже показан тревогой, и повторять его здесь
+                  значит сказать одно и то же дважды. */}
+              {due && !due.hot && (
+                <span className="mark mark--quiet" title="Дата обязательства">
+                  {due.text}
+                </span>
+              )}
+
+              {/* Итерация — тоже про «к чему привязано». */}
               {iteration && (
-                <span className="mark" title="Итерация">
+                <span className="mark mark--quiet" title="Итерация">
                   {iteration}
                 </span>
               )}
-              {/* Срок — то, что обещано наружу, и он не спорит с
-                  возрастом: возраст про наше обещание («идёт дольше,
-                  чем доска обещала»), срок про чужое («к четвергу»).
-                  Горящий выделен той же предупреждающей парой. */}
-              {card.dueOn &&
-                (() => {
-                  const due = dueLabel(card.dueOn)
-                  return (
-                    <span
-                      className={due.hot ? 'mark mark--aging' : 'mark'}
-                      title="Дата обязательства"
-                    >
-                      {due.text}
-                    </span>
-                  )
-                })()}
-              {aging && (
-                <span className="mark mark--aging" title="Возраст считается от начала работы">
-                  {aging}
-                </span>
-              )}
-              {card.blocked && (
-                // Причина не правится нажатием по ней, в отличие
-                // от остальных полей: блокировка — интервал, а не
-                // пометка, и «переписать причину» означало бы вторую
-                // блокировку поверх открытой, от которой время в блоке
-                // посчиталось бы дважды. Ошибочную причину снимают
-                // и ставят заново.
-                <span className="mark mark--blocked" title={card.blocked.reason}>
-                  {/* Глиф прячем: скринридер прочитает ⛔ как «знак въезд
-                      запрещён» — слово рядом надёжнее. */}
-                  <span aria-hidden="true">⛔ </span>
-                  Заблокирована: {card.blocked.reason}
-                </span>
-              )}
+
               {/* Оценка — цифра, и тихая: она нужна в разговоре
                   о загрузке, а не при поиске работы глазами. Единица
                   одна на всю доску, и повторять её триста раз незачем
-                  — она в подсказке. Правится оценка в панели: шагами,
-                  потому что меняют её почти всегда на единицу. */}
+                  — она в подсказке. */}
               {card.estimate !== null && (
                 <span
                   className="card-estimate"
