@@ -62,6 +62,17 @@ type Team struct {
 	Boards int `json:"boards"`
 }
 
+// Board — доска подразделения в его составе. Отдаётся ровно то, чем
+// доска называется и открывается: ключ показывает, какими номерами она
+// нумерует задачи, а видимость отвечает на вопрос, который к структуре
+// и задают, — «кто это видит».
+type Board struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Key        string `json:"key"`
+	Visibility string `json:"visibility"`
+}
+
 type Member struct {
 	UserID string `json:"userId"`
 	Name   string `json:"name"`
@@ -201,6 +212,37 @@ func (s *Service) Members(ctx context.Context, orgID, userID, teamID string) ([]
 				return err
 			}
 			out = append(out, m)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
+// Boards отдаёт доски подразделения.
+//
+// Список тот же, что считает `List` числом: политики решают, какие доски
+// видны спрашивающему, и разным людям одно и то же подразделение честно
+// покажет разное. Отбор по team_id, а не по видимости: доска остаётся
+// доской подразделения, даже если видна всей организации, — команда
+// у неё отметка о принадлежности, а не только правило доступа.
+func (s *Service) Boards(ctx context.Context, orgID, userID, teamID string) ([]Board, error) {
+	out := []Board{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select b.id, b.name, b.key, b.visibility
+			  from boards b
+			 where b.team_id = $1 and b.archived_at is null
+			 order by b.name`, teamID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var b Board
+			if err := rows.Scan(&b.ID, &b.Name, &b.Key, &b.Visibility); err != nil {
+				return err
+			}
+			out = append(out, b)
 		}
 		return rows.Err()
 	})

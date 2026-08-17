@@ -89,13 +89,22 @@ export function BoardAccess({
           ))}
         </select>
 
-        {access.visibility === 'team' && (
+        {/* Подразделение выбирается при любой видимости: «чья доска»
+            и «кому видно» — разные вопросы, и доска остаётся доской
+            подразделения, даже когда открыта всей организации. В дереве
+            структуры она видна именно по этой отметке. Пустое значение
+            снимает её, и у командной доски такого выбора нет: команда
+            там и есть правило доступа. */}
+        {teams.length > 0 && (
           <select
             value={access.teamId ?? ''}
             disabled={!canEdit}
             aria-label="Подразделение"
-            onChange={(e) => act(api.setBoardAccess(boardId, 'team', e.target.value))}
+            onChange={(e) =>
+              act(api.setBoardAccess(boardId, access.visibility, e.target.value))
+            }
           >
+            {access.visibility !== 'team' && <option value="">Без подразделения</option>}
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}

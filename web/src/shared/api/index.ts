@@ -73,6 +73,14 @@ export type Team = {
   boards: number
 }
 
+/** Доска подразделения: чем занят узел структуры. */
+export type TeamBoard = {
+  id: string
+  name: string
+  key: string
+  visibility: Visibility
+}
+
 export type TeamMember = {
   userId: string
   name: string
@@ -580,6 +588,7 @@ export const api = {
 
   teamMembers: (id: string) =>
     request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),
+  teamBoards: (id: string) => request<{ boards: TeamBoard[] }>('GET', `/api/teams/${id}/boards`),
   addTeamMember: (id: string, userId: string) =>
     request<void>('PUT', `/api/teams/${id}/members/${userId}`),
   removeTeamMember: (id: string, userId: string) =>
@@ -618,6 +627,8 @@ export const api = {
   boardAccess: (boardId: string) => request<BoardAccess>('GET', `/api/boards/${boardId}/access`),
   setSLE: (boardId: string, days: number | null, probability: number) =>
     request<void>('PUT', `/api/boards/${boardId}/sle`, { days, probability }),
+  /** Пустая строка снимает подразделение, null — не трогает его:
+   *  «кому видно» и «чья доска» меняют порознь. */
   setBoardAccess: (boardId: string, visibility: Visibility, teamId: string | null) =>
     request<void>('PUT', `/api/boards/${boardId}/access`, { visibility, teamId }),
   addBoardMember: (boardId: string, userId: string) =>

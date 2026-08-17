@@ -51,6 +51,64 @@ func (s *session) team(name string, parent any) string {
 	return id
 }
 
+// Раскрытый узел структуры отвечал только «кто здесь», хотя доски
+// подразделения обещаны были ещё этапом 2.1. Список тот же, что дерево
+// считает числом: политики решают, кому какие доски видны, и одно и то
+// же подразделение честно покажет разным людям разное.
+func TestTeamBoardsAreListedAsThePolicyAllows(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	outsider := owner.join("member")
+
+	dev := owner.team("Разработка", nil)
+	other := owner.team("Продажи", nil)
+
+	open := owner.board("Поставки")
+	closed := owner.board("Найм")
+	owner.mustDo("PUT", "/api/boards/"+open+"/access",
+		map[string]any{"visibility": "org", "teamId": dev}, http.StatusNoContent)
+	owner.mustDo("PUT", "/api/boards/"+closed+"/access",
+		map[string]any{"visibility": "team", "teamId": dev}, http.StatusNoContent)
+
+	// Владелец видит обе доски узла — и та, что видна всем, тоже его:
+	// команда у доски отметка о принадлежности, а не только правило
+	// доступа.
+	if got := boardNames(t, owner, dev); len(got) != 2 {
+		t.Errorf("доски узла у владельца: %v, ожидались обе", got)
+	}
+	// Посторонний участник видит только открытую: командную доску чужого
+	// подразделения ему не видно, и число в дереве это тоже покажет.
+	if got := boardNames(t, outsider, dev); len(got) != 1 || got[0] != "Поставки" {
+		t.Errorf("доски узла у постороннего: %v, ожидалась одна открытая", got)
+	}
+	// Чужой узел не забирает себе досок соседа.
+	if got := boardNames(t, owner, other); len(got) != 0 {
+		t.Errorf("доски пустого узла: %v", got)
+	}
+}
+
+func boardNames(t *testing.T, s *session, teamID string) []string {
+	t.Helper()
+	raw := s.mustDo("GET", "/api/teams/"+teamID+"/boards", nil, http.StatusOK)
+	var list struct {
+		Boards []struct {
+			Name string `json:"name"`
+			Key  string `json:"key"`
+		} `json:"boards"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	out := []string{}
+	for _, b := range list.Boards {
+		if b.Key == "" {
+			t.Errorf("доска без ключа: %+v", b)
+		}
+		out = append(out, b.Name)
+	}
+	return out
+}
+
 func TestTeamTreeIsReadableByEveryoneAndChangeableByOwner(t *testing.T) {
 	a := newAPI(t)
 	owner := a.registerOrg("Компания")

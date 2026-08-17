@@ -23,6 +23,10 @@ func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/teams/{id}", s.authed(s.handleArchiveTeam))
 
 	mux.HandleFunc("GET /api/teams/{id}/members", s.authed(s.handleTeamMembers))
+	// Доски подразделения — второй ответ на вопрос «что это за узел»:
+	// без него раскрытие узла давало только людей, а обещано это было
+	// ещё этапом 2.1.
+	mux.HandleFunc("GET /api/teams/{id}/boards", s.authed(s.handleTeamBoards))
 	// Состав подразделения меняет и его администратор, поэтому маршруты
 	// не требуют владельца: решает политика.
 	mux.HandleFunc("PUT /api/teams/{id}/members/{userId}", s.authed(s.handleAddTeamMember))
@@ -114,6 +118,14 @@ func (s *Server) handleTeamMembers(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"members": members})
+}
+
+func (s *Server) handleTeamBoards(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	boards, err := s.teams.Boards(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failTeam(w, "доски команды", err) {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"boards": boards})
 }
 
 func (s *Server) handleAddTeamMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {

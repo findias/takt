@@ -110,7 +110,9 @@ function Screens() {
             <BoardList principal={principal} onOpen={(id) => navigate(boardPath(id))} />
           )}
           {route.name === 'team' && <Team principal={principal} />}
-          {route.name === 'structure' && <Structure principal={principal} />}
+          {route.name === 'structure' && (
+            <Structure principal={principal} onOpenBoard={(id) => navigate(boardPath(id))} />
+          )}
         </main>
       </div>
     </div>

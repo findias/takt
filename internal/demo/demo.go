@@ -224,11 +224,16 @@ func (f *filler) workspace() error {
 		board.VisibilityTeam, ptr(f.teamIDs["Платформа"])); err != nil {
 		return err
 	}
-	// Закрытую доску нельзя закрыть, не вписав себя: создатель в её состав
-	// не попадает сам, и политика не даст сделать доску себе невидимой.
-	if err := f.boards.AddMember(f.ctx, f.orgID, f.owner(), naym.ID, f.owner()); err != nil {
+	// Открытая доска со своим подразделением: «чья доска» и «кому видно»
+	// разные вопросы, и в дереве структуры она видна по первому из них.
+	// Без такой доски на экране структуры не увидеть, что доски узла
+	// вообще бывают.
+	if err := f.boards.SetAccess(f.ctx, f.orgID, f.owner(), postavki.ID,
+		board.VisibilityOrg, ptr(f.teamIDs["Продажи"])); err != nil {
 		return err
 	}
+	// Закрытие вписывает закрывающего само — отдельного «впиши себя»
+	// больше не нужно.
 	if err := f.boards.SetAccess(f.ctx, f.orgID, f.owner(), naym.ID,
 		board.VisibilityPrivate, nil); err != nil {
 		return err

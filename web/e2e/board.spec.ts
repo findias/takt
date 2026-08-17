@@ -451,6 +451,39 @@ test('закрытая доска заводится одним действие
   await expect(page.getByRole('button', { name: /Видна: 1 поимённо/ })).toBeVisible()
 })
 
+// Раскрытый узел структуры отвечал только «кто здесь», хотя доски узла
+// обещаны были ещё этапом 2.1, а число досок в строке узла стояло
+// с самого начала.
+test('узел структуры показывает свои доски и открывает их', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска отдела')
+
+  // Заводим подразделение и отдаём ему доску, оставив её видной всем:
+  // «чья доска» и «кому видно» — разные вопросы.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Структура' }).click()
+  await page.getByRole('button', { name: 'Новое подразделение' }).click()
+  await page.getByPlaceholder('Название').fill('Продажи')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Продажи/ })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await openBoard(page, 'Доска отдела')
+  await page.getByRole('button', { name: /Видна/ }).click()
+  await page.getByLabel('Подразделение').selectOption({ label: 'Продажи' })
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Структура' }).click()
+  await page.getByRole('button', { name: /Продажи/ }).click()
+
+  // Доска узла названа и открывается отсюда: следующий шаг после
+  // ответа «чем занято подразделение» — открыть.
+  const boards = page.getByRole('list').filter({ hasText: 'Доска отдела' })
+  await expect(boards.getByRole('button', { name: 'Доска отдела' })).toBeVisible()
+  await boards.getByRole('button', { name: 'Доска отдела' }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

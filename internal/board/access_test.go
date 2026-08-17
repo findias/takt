@@ -49,17 +49,33 @@ func TestBoardIsHandedToTeamAndBack(t *testing.T) {
 	// терял право её вернуть. Починено миграцией 0011 — владелец
 	// управляет всем, что видит, кроме закрытых досок.
 	//
-	// Обратно в общую — команда при этом снимается: отметка о
-	// принадлежности без командной видимости ни на что не влияет
-	// и только вводит в заблуждение.
+	// Обратно в общую — а подразделение остаётся: «кому видно» и «чья
+	// доска» разные вопросы, и дерево структуры отвечает на второй.
+	// Прежде отметка здесь снималась, и довод был записан — без
+	// командной видимости она ни на что не влияет; работа у неё
+	// появилась вместе с досками узла в структуре.
 	if err := f.svc.SetAccess(f.ctx, f.orgID, f.actorID, f.boardID, VisibilityOrg, nil); err != nil {
 		t.Fatalf("возврат доски организации: %v", err)
 	}
-	if access, _ = f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID); access.TeamID != nil {
-		t.Errorf("команда осталась у общей доски: %+v", access)
+	access, err = f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if access.TeamID == nil || *access.TeamID != dev {
+		t.Errorf("подразделение потерялось при возврате доски организации: %+v", access)
 	}
 	if !f.sees(outsider) {
 		t.Error("общая доска не вернулась постороннему")
+	}
+
+	// Снять отметку можно, и это отдельная просьба: пустая команда
+	// значит «убрать», а не присланная — «не трогать».
+	none := ""
+	if err := f.svc.SetAccess(f.ctx, f.orgID, f.actorID, f.boardID, VisibilityOrg, &none); err != nil {
+		t.Fatalf("снятие подразделения: %v", err)
+	}
+	if access, _ = f.svc.Access(f.ctx, f.orgID, f.actorID, f.boardID); access.TeamID != nil {
+		t.Errorf("подразделение осталось после снятия: %+v", access)
 	}
 }
 

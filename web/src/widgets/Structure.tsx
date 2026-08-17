@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../shared/api/index.ts'
+import { VISIBILITY_NAMES, api } from '../shared/api/index.ts'
 import type {
   Member,
   Observer,
   Principal,
   Team,
   TeamAdmin,
+  TeamBoard,
   TeamMember,
 } from '../shared/api/index.ts'
 import { allowedParents, buildTree, canNestInside, counters } from '../entities/team/model.ts'
@@ -20,7 +21,15 @@ import { Skeleton } from '../shared/ui/states.tsx'
  * действия с него исчезают: показывать кнопку, которая ответит запретом,
  * хуже, чем не показывать её вовсе.
  */
-export function Structure({ principal }: { principal: Principal }) {
+export function Structure({
+  principal,
+  onOpenBoard,
+}: {
+  principal: Principal
+  /** Доска узла открывается отсюда: структура отвечает на вопрос «чем
+   *  занято подразделение», и следующий шаг после ответа — открыть. */
+  onOpenBoard: (boardId: string) => void
+}) {
   const [teams, setTeams] = useState<Team[] | null>(null)
   const [people, setPeople] = useState<Member[]>([])
   const [observers, setObservers] = useState<Observer[]>([])
@@ -76,6 +85,7 @@ export function Structure({ principal }: { principal: Principal }) {
               people={people}
               isOwner={isOwner}
               onAct={act}
+              onOpenBoard={onOpenBoard}
             />
           ))}
         </ul>
@@ -106,12 +116,14 @@ function TeamNode({
   people,
   isOwner,
   onAct,
+  onOpenBoard,
 }: {
   node: TreeNode
   tree: TreeNode[]
   people: Member[]
   isOwner: boolean
   onAct: (p: Promise<unknown>) => void
+  onOpenBoard: (boardId: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const counts = counters(node)
@@ -169,7 +181,16 @@ function TeamNode({
         )}
       </div>
 
-      {open && <TeamMembers teamId={node.id} people={people} isOwner={isOwner} onAct={onAct} />}
+      {open && (
+        <div className="tree-body stack">
+          <TeamMembers teamId={node.id} people={people} isOwner={isOwner} onAct={onAct} />
+          {/* Чем занято подразделение — второй вопрос к узлу после
+              «кто здесь», и до сих пор раскрытие на него не отвечало,
+              хотя число досок в строке узла стояло с самого начала. */}
+          <h3 className="section-title">Доски</h3>
+          <TeamBoards teamId={node.id} onOpen={onOpenBoard} />
+        </div>
+      )}
 
       {node.children.length > 0 && (
         <ul className="tree">
@@ -181,6 +202,7 @@ function TeamNode({
               people={people}
               isOwner={isOwner}
               onAct={onAct}
+              onOpenBoard={onOpenBoard}
             />
           ))}
         </ul>
@@ -215,7 +237,8 @@ function TeamMembers({
   const outside = people.filter((p) => !members?.some((m) => m.userId === p.userId))
 
   return (
-    <div className="tree-body stack">
+    <div className="stack">
+      <h3 className="section-title">Состав</h3>
       {members === null ? (
         <Skeleton lines={2} />
       ) : members.length === 0 ? (
@@ -259,6 +282,56 @@ function TeamMembers({
         </select>
       )}
     </div>
+  )
+}
+
+/**
+ * Доски подразделения.
+ *
+ * Спрашиваются при раскрытии узла, а не приезжают вместе с деревом:
+ * узлов бывает несколько десятков, раскрывают обычно один, и запрос
+ * на каждый узел заранее — это дерево, которое грузится ради того,
+ * чего никто не откроет.
+ */
+function TeamBoards({ teamId, onOpen }: { teamId: string; onOpen: (boardId: string) => void }) {
+  const [boards, setBoards] = useState<TeamBoard[] | null>(null)
+
+  useEffect(() => {
+    api
+      .teamBoards(teamId)
+      .then((r) => setBoards(r.boards))
+      .catch(() => setBoards([]))
+  }, [teamId])
+
+  if (boards === null) return <Skeleton lines={1} />
+  if (boards.length === 0) {
+    return (
+      <p className="muted small">
+        Досок нет. Доска попадает сюда, когда у неё выбрано это подразделение, — и
+        остаётся, даже если видна всей организации: «чья доска» и «кому видно» разные
+        вопросы.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="member-list">
+      {boards.map((b) => (
+        <li key={b.id}>
+          <div className="member-who">
+            <button className="link" onClick={() => onOpen(b.id)}>
+              {b.name}
+            </button>
+            {/* Ключ и видимость рядом: по ключу доску узнают в переписке,
+                а видимость — тот самый вопрос, ради которого в структуру
+                и заглядывают. */}
+            <span className="muted small">
+              {b.key} · {VISIBILITY_NAMES[b.visibility].toLowerCase()}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 

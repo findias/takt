@@ -112,12 +112,23 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 	if visibility == VisibilityTeam && teamID == nil {
 		return ErrTeamRequired
 	}
-	if visibility != VisibilityTeam {
-		// Команда остаётся отметкой о принадлежности и при других
-		// видимостях; на доступ она влияет только при `team`.
-		if visibility == VisibilityOrg {
-			teamID = nil
-		}
+	// Команда — отметка о принадлежности, а не только правило доступа:
+	// доска остаётся доской подразделения и тогда, когда видна всей
+	// организации.
+	//
+	// Раньше возврат в «видна всем» отвязывал доску от узла, и довод
+	// был записан: отметка без командной видимости ни на что не влияет
+	// и только вводит в заблуждение. Довод перестал быть верным, когда
+	// у отметки появилась работа: дерево структуры показывает доски
+	// узла, и «чем занято подразделение» — это вопрос о принадлежности,
+	// а не о видимости.
+	//
+	// Не присланная команда ничего не меняет, пустая — снимает отметку.
+	// Различать приходится потому, что «не трогать» и «убрать» — разные
+	// просьбы, а в JSON отсутствующее поле неотличимо от null.
+	setTeam := teamID != nil
+	if setTeam && *teamID == "" {
+		teamID = nil
 	}
 
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
@@ -138,8 +149,10 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 			}
 		}
 		tag, err := tx.Exec(ctx, `
-			update boards set visibility = $2, team_id = $3
-			 where id = $1 and archived_at is null`, boardID, visibility, teamID)
+			update boards set visibility = $2,
+			       team_id = case when $4 then $3::uuid else team_id end
+			 where id = $1 and archived_at is null`,
+			boardID, visibility, teamID, setTeam)
 		if err != nil {
 			return err
 		}

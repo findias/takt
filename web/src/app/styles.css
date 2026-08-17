@@ -539,6 +539,14 @@ input[type='radio'] {
   flex-direction: column;
   min-width: 0;
 }
+/* Название-кнопка в столбце: без выравнивания влево оно уезжает
+   к середине и перестаёт вставать под соседние строки — кнопка
+   растягивается на всю ширину и центрует текст по себе. */
+.member-who > .link {
+  padding: 0;
+  justify-content: flex-start;
+  text-align: left;
+}
 .member-who span {
   overflow: hidden;
   text-overflow: ellipsis;
