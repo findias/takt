@@ -10,6 +10,8 @@ import {
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
 import {
+  PRIORITIES,
+  PRIORITY_NAMES,
   priorityLabel,
   progressLabel,
   progressRatio,
@@ -305,14 +307,35 @@ function CardViewInner({
               // а нажатие на карточку и так её открывает.
               <span className="card-number">{card.number}</span>
             )}
-            {/* Приоритет — только когда он не средний: умолчание,
-                написанное у каждой второй карточки, это шум. Слово,
-                а не значок: «наивысший» отвечает на вопрос, а красная
-                точка требует, чтобы её сначала объяснили. */}
-            {card && card.priority !== 'medium' && (
-              <span className={`priority-mark priority-mark--${card.priority}`}>
-                {priorityLabel(card.priority).toLowerCase()}
-              </span>
+            {/* Приоритет правится нажатием по нему самому — как
+                исполнители и метки: спрашивают о нём не реже, а путь
+                к нему был длиннее всех. Слово, а не значок:
+                «наивысший» отвечает на вопрос, а красная точка требует,
+                чтобы её сначала объяснили.
+                Средний уровень словом не пишется — умолчание у каждой
+                второй карточки это шум, — но место под него остаётся
+                и показывается, когда на карточку смотрят. */}
+            {card && (
+              <Menu
+                label={`Приоритет: ${priorityLabel(card.priority).toLowerCase()}`}
+                className={`field priority-field${
+                  card.priority === 'medium' ? ' field--empty' : ''
+                }`}
+                align="left"
+                items={PRIORITIES.map((level) => ({
+                  label: PRIORITY_NAMES[level],
+                  checked: card.priority === level,
+                  onSelect: () => onPrioritise(cardId, level),
+                }))}
+              >
+                {card.priority === 'medium' ? (
+                  '+ приоритет'
+                ) : (
+                  <span className={`priority-mark priority-mark--${card.priority}`}>
+                    {priorityLabel(card.priority).toLowerCase()}
+                  </span>
+                )}
+              </Menu>
             )}
             {parent && (
               <span className="card-parent">

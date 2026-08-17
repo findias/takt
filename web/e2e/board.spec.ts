@@ -580,6 +580,16 @@ test('приоритет виден, отбирается и не трогает
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
   await page.getByRole('checkbox', { name: 'Горит' }).uncheck()
 
+  // Уровень правится и нажатием по нему самому — как исполнители
+  // и метки: спрашивают о нём не реже, а путь был длиннее всех.
+  // У карточки со средним уровнем место под него пустое и появляется,
+  // когда на карточку смотрят.
+  const first = cardIn(page, 'Очередь', 'Первая по порядку')
+  await first.hover()
+  await first.getByRole('button', { name: /Приоритет:/ }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Высокий' }).click()
+  await expect(first.getByText('высокий')).toBeVisible()
+
   // Вся шкала — в панели.
   await cardIn(page, 'Очередь', 'Вторая по порядку').click()
   await page.getByRole('tab', { name: 'Работа' }).click()
