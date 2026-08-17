@@ -12,6 +12,7 @@ import type {
   EstimateUnit,
   FieldValue,
   Iteration,
+  Label,
   LinkKind,
 } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
@@ -72,6 +73,7 @@ export function CardPanel({
   onEstimate,
   onOpenCard,
   onAssign,
+  onLabel,
   onSubtask,
   subtaskBoards,
   onLink,
@@ -94,6 +96,7 @@ export function CardPanel({
   onOpenCard: (cardId: string) => void
   /** on = назначить, off = снять. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
+  onLabel: (cardId: string, labelId: string, on: boolean) => void
   /** Завести новую подзадачу. Доска — только когда её ставят соседям:
    *  пусто означает «на этой», и в организации с одной доской спрашивать
    *  нечего. */
@@ -175,6 +178,13 @@ export function CardPanel({
               assignees={base.cardAssignees[card.id] ?? []}
               canEdit={canEdit}
               onAssign={(userId, on) => onAssign(card.id, userId, on)}
+            />
+
+            <Labels
+              labels={base.labels}
+              own={base.cardLabels[card.id] ?? []}
+              canEdit={canEdit}
+              onLabel={(labelId, on) => onLabel(card.id, labelId, on)}
             />
 
             <Estimate
@@ -745,6 +755,83 @@ function Assignees({
           {free.map(([id, name]) => (
             <option key={id} value={id}>
               {name}
+            </option>
+          ))}
+        </select>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Метки карточки.
+ *
+ * До сих пор метку можно было повесить только с доски — из меню
+ * карточки, а потом нажатием по самим меткам. Открывший карточку
+ * за этим возвращался на доску: панель показывает всё о работе,
+ * кроме того, чем она помечена.
+ *
+ * Метки определяются в организации, а не на доске: одинаково названная
+ * метка на двух досках — одна метка, иначе фильтр собирать не из чего.
+ * Поэтому список здесь общий, а не «метки этой доски».
+ */
+function Labels({
+  labels,
+  own,
+  canEdit,
+  onLabel,
+}: {
+  labels: Label[]
+  own: string[]
+  canEdit: boolean
+  onLabel: (labelId: string, on: boolean) => void
+}) {
+  if (labels.length === 0) {
+    return (
+      <section className="stack">
+        <h3 className="section-title">Метки</h3>
+        <p className="muted small">
+          Меток в организации ещё нет. Заводят их на вкладке «Команда» — общими
+          на все доски.
+        </p>
+      </section>
+    )
+  }
+
+  const free = labels.filter((l) => !own.includes(l.id))
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">Метки</h3>
+
+      {own.length === 0 && <p className="muted small">Ни одной.</p>}
+
+      {/* Строкой на метку, как у исполнителей рядом: крестик внутри
+          чипа пришлось бы растить до цели нажатия в 24 пикселя,
+          и чип с коротким словом раздулся бы вдвое. */}
+      {labels
+        .filter((l) => own.includes(l.id))
+        .map((label) => (
+          <div className="related" key={label.id}>
+            <span className={`chip chip--${label.tone}`}>{label.name}</span>
+            {canEdit && (
+              <button className="link" onClick={() => onLabel(label.id, false)}>
+                Снять
+              </button>
+            )}
+          </div>
+        ))}
+
+      {canEdit && free.length > 0 && (
+        <select
+          value=""
+          aria-label="Повесить метку"
+          onChange={(e) => e.target.value && onLabel(e.target.value, true)}
+        >
+          <option value="">Повесить метку…</option>
+          {free.map((label) => (
+            <option key={label.id} value={label.id}>
+              {label.name}
             </option>
           ))}
         </select>

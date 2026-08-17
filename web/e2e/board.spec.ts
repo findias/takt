@@ -306,6 +306,9 @@ test('метка заводится в организации и вешаетс�
   await page.getByPlaceholder('Название метки').fill('Срочно')
   await page.getByRole('button', { name: 'Завести метку' }).click()
   await expect(page.getByText('Срочно')).toBeVisible()
+  await page.getByPlaceholder('Название метки').fill('Важное')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+  await expect(page.getByText('Важное')).toBeVisible()
 
   await page.getByRole('button', { name: 'Доски' }).click()
   await createBoard(page, 'Доска с метками')
@@ -325,7 +328,20 @@ test('метка заводится в организации и вешаетс�
     timeout: 10_000,
   })
 
-  // И снимается тем же меню.
+  // Метка вешается и из самой карточки: до этого за ней приходилось
+  // возвращаться на доску — панель показывала о работе всё, кроме
+  // того, чем она помечена.
+  await cardIn(page, 'Очередь', 'Пометить меня').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Пометить меня»/)
+  await panel.getByLabel('Повесить метку').selectOption({ label: 'Важное' })
+  const row = panel.locator('.related').filter({ hasText: 'Важное' })
+  await expect(row).toHaveCount(1)
+  await row.getByRole('button', { name: 'Снять' }).click()
+  await expect(row).toHaveCount(0)
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // И снимается тем же меню, что вешалась.
   await toggleLabel(page, cardIn(page, 'Очередь', 'Пометить меня'), 'Срочно')
   await expect(cardIn(page, 'Очередь', 'Пометить меня').getByText('Срочно')).toHaveCount(0)
 })

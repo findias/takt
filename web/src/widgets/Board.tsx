@@ -994,6 +994,7 @@ export function Board({
           onEstimate={estimateCard}
           onOpenCard={showCard}
           onAssign={assignCard}
+          onLabel={toggleLabel}
           subtaskBoards={subtaskBoards}
           onSubtask={(parentCardId, title, toBoard) =>
             void board.createSubtask(parentCardId, title, undefined, toBoard)
