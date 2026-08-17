@@ -763,8 +763,14 @@ test('зависимость видна с обеих сторон и прохо
   await panel.getByLabel('Карточка для связи').selectOption({ label: 'Ждёт очереди' })
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
-  // Держащая говорит, сколько работы за ней стоит.
-  await expect(cardIn(page, 'Очередь', 'Держит других').getByText('держит 1')).toBeVisible()
+  // Держащая называет, какую именно работу она держит, и переход
+  // работает: число без имени отвечало бы «стоит кто-то», а вопрос —
+  // «кто именно».
+  const holder = cardIn(page, 'Очередь', 'Держит других')
+  await expect(holder.getByText('Держит:')).toBeVisible()
+  await holder.getByRole('button', { name: 'Ждёт очереди' }).click()
+  await expect(page.getByRole('heading', { name: 'Ждёт очереди' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   // Ждущая называет того, кто её держит, и переход туда работает:
   // связь должна проходиться, а не только показываться.

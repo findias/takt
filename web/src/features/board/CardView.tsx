@@ -492,39 +492,13 @@ function CardViewInner({
             </Menu>
           </div>
 
-          {/* Кто держит эту работу. Раньше это было видно, только
-              открыв карточку, — то есть порядок работ приходилось
-              держать в голове. Первый назван и проходим, остальные
-              сосчитаны: в ширину колонки помещается одно имя, а вопрос
-              «к кому идти» почти всегда про первого. */}
-          {waitsFor.length > 0 && (
-            <div className="card-waits">
-              <span className="muted small">Ждёт: </span>
-              {waitsFor[0].onThisBoard ? (
-                <button className="link" onClick={() => onOpen(waitsFor[0].id)}>
-                  {waitsFor[0].title}
-                </button>
-              ) : (
-                // Держит работа с чужой доски: назвать можем, открыть
-                // отсюда — нет.
-                <span className="muted small" title={waitsFor[0].where}>
-                  {waitsFor[0].title}
-                </span>
-              )}
-              {waitsFor.length > 1 && (
-                <span
-                  className="muted small"
-                  title={waitsFor
-                    .slice(1)
-                    .map((w) => w.title)
-                    .join(', ')}
-                >
-                  {' '}
-                  и ещё {waitsFor.length - 1}
-                </span>
-              )}
-            </div>
-          )}
+          {/* Обе стороны зависимости — одинаковыми строками. Раньше
+              держащая сообщала только число, и «какую именно задачу
+              она держит» приходилось выяснять, открыв карточку:
+              то есть ровно тем способом, от которого эта строка
+              и должна избавлять. */}
+          <Dependency label="Ждёт" cards={waitsFor} onOpen={onOpen} />
+          <Dependency label="Держит" cards={holds} onOpen={onOpen} />
 
           {/* Заголовок и кто делает — одна строка: «что за работа»
               и «кого спрашивать» читают вместе, и второй ряд ради
@@ -573,12 +547,7 @@ function CardViewInner({
             </Menu>
           </div>
           {card &&
-            (card.blocked ||
-              aging ||
-              iteration ||
-              card.dueOn ||
-              holds.length > 0 ||
-              card.estimate !== null) && (
+            (card.blocked || aging || iteration || card.dueOn || card.estimate !== null) && (
             <div className="card-marks">
               {/* Итерация — ответ на «к чему это привязано снаружи».
                   Тихая пометка: спринт не влияет на то, как работу
@@ -605,17 +574,6 @@ function CardViewInner({
                     </span>
                   )
                 })()}
-              {/* Сколько чужой работы держит эта. Числом: имена
-                  не помещаются в ширину колонки, а вопрос здесь —
-                  «стоит ли из-за неё кто-то», и ответ на него число. */}
-              {holds.length > 0 && (
-                <span
-                  className="mark mark--holds"
-                  title={`Держит: ${holds.map((h) => h.title).join(', ')}`}
-                >
-                  держит {holds.length}
-                </span>
-              )}
               {aging && (
                 <span className="mark mark--aging" title="Возраст считается от начала работы">
                   {aging}
@@ -757,6 +715,55 @@ function CardViewInner({
         </>
       )}
     </article>
+  )
+}
+
+/**
+ * Строка зависимости: кого карточка держит или кого ждёт.
+ *
+ * Первый назван и проходим, остальные сосчитаны: в ширину колонки
+ * помещается одно имя, а вопрос «к кому идти» почти всегда про первого.
+ * Полный список — в подсказке и в панели.
+ */
+function Dependency({
+  label,
+  cards,
+  onOpen,
+}: {
+  label: string
+  cards: Related[]
+  onOpen: (cardId: string) => void
+}) {
+  if (cards.length === 0) return null
+  const first = cards[0]
+
+  return (
+    <div className="card-waits">
+      <span className="muted small">{label}: </span>
+      {first.onThisBoard ? (
+        <button className="link" onClick={() => onOpen(first.id)}>
+          {first.title}
+        </button>
+      ) : (
+        // Связанная работа на чужой доске: назвать можем, открыть
+        // отсюда — нет.
+        <span className="muted small" title={first.where}>
+          {first.title}
+        </span>
+      )}
+      {cards.length > 1 && (
+        <span
+          className="muted small"
+          title={cards
+            .slice(1)
+            .map((c) => c.title)
+            .join(', ')}
+        >
+          {' '}
+          и ещё {cards.length - 1}
+        </span>
+      )}
+    </div>
   )
 }
 
