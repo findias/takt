@@ -560,7 +560,9 @@ test('приоритет виден, отбирается и не трогает
   await second.hover()
   await second.getByRole('button', { name: /Действия карточки/ }).click()
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
-  await expect(second.getByText('наивысший')).toBeVisible()
+  // В меню уровень назван полно, на карточке — коротко: в плашке место
+  // меряется знаками. Слова разные намеренно, см. `priorityShort`.
+  await expect(second.getByText('горит')).toBeVisible()
 
   // Наивысшая не всплыла наверх: порядок ручной, и уровень его
   // не трогает.
@@ -591,7 +593,7 @@ test('приоритет виден, отбирается и не трогает
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
   await first.getByRole('button', { name: /Приоритет:/ }).click()
   await page.getByRole('menuitemcheckbox', { name: 'Высокий' }).click()
-  await expect(first.getByText('высокий')).toBeVisible()
+  await expect(first.getByText('важно')).toBeVisible()
 
   // Вся шкала — в панели.
   await cardIn(page, 'Очередь', 'Вторая по порядку').click()
@@ -599,7 +601,7 @@ test('приоритет виден, отбирается и не трогает
   const panel = page.getByLabel(/Карточка .* «Вторая по порядку»/)
   await panel.getByLabel('Приоритет').selectOption({ label: 'Низкий' })
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
-  await expect(cardIn(page, 'Очередь', 'Вторая по порядку').getByText('низкий')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Вторая по порядку').getByText('фоном')).toBeVisible()
 
   // Низкий из «горит» выпадает.
   await page.getByRole('checkbox', { name: 'Горит' }).check()
@@ -638,9 +640,9 @@ test('shift берёт диапазон, а полоса делает всё с�
   // Уровень — всем троим сразу.
   await bar.getByRole('button', { name: 'Приоритет выделенным' }).click()
   await page.getByRole('menuitem', { name: 'Высокий' }).click()
-  await expect(cardIn(page, 'Очередь', 'Первая').getByText('высокий')).toBeVisible()
-  await expect(cardIn(page, 'Очередь', 'Третья').getByText('высокий')).toBeVisible()
-  await expect(cardIn(page, 'Очередь', 'Четвёртая').getByText('высокий')).toHaveCount(0)
+  await expect(cardIn(page, 'Очередь', 'Первая').getByText('важно')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Третья').getByText('важно')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Четвёртая').getByText('важно')).toHaveCount(0)
 
   // Метка — тем же движением, и отмена одна на всю пачку.
   await first.hover()

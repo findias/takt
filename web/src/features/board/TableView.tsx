@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
-import { agingLabel } from '../../entities/board/model.ts'
+import { ageDays, ageLabel, agingLabel } from '../../entities/board/model.ts'
 import {
   UNIT_SHORT,
   cardsLabel,
@@ -211,17 +211,9 @@ export function TableView({
   )
 }
 
-/** Возраст считается от начала работы. Неначатая карточка возраста
- *  не имеет: она не стареет, она ждёт, и это разные вещи. */
-function ageDays(card: Card): number | null {
-  if (!card.startedAt) return null
-  const end = card.finishedAt ? Date.parse(card.finishedAt) : Date.now()
-  return (end - Date.parse(card.startedAt)) / 86_400_000
-}
-
 function ageText(card: Card): string {
-  const days = ageDays(card)
-  if (days === null) return '—'
-  return `${days < 10 ? days.toFixed(1) : Math.round(days)} дн.`
+  // Прочерк, а не пустая ячейка: «возраста нет» — это ответ, а пустое
+  // место читается как «не посчитали».
+  return ageLabel(card) ?? '—'
 }
 

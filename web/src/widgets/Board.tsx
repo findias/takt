@@ -34,7 +34,7 @@ import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palett
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
+import { childrenOf, dependenciesOf, parentsOf, rangeWords } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -1221,7 +1221,7 @@ function Iterations({
         {open.map((i) => (
           <span key={i.id} className="mark" title={i.goal}>
             <button className="link" onClick={() => onReport(i)}>
-              {i.name} · {i.startsOn}—{i.endsOn} · {i.cardCount}
+              {i.name} · {rangeWords(i.startsOn, i.endsOn)} · {i.cardCount}
             </button>
             <button className="link" onClick={() => setToClose(i)}>
               закрыть

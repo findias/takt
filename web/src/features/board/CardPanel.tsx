@@ -24,6 +24,7 @@ import {
   PRIORITIES,
   PRIORITY_NAMES,
   UNIT_SHORT,
+  dateWords,
   dueLabel,
   priorityLabel,
   candidatesForSubtask,
@@ -787,7 +788,13 @@ function DuePicker({
   if (!canEdit) {
     return (
       <p className="muted small">
-        {value ? `Обязательство: ${dueLabel(value).text}` : 'Обязательства нет'}
+        {/* Здесь — и дата, и отсчёт. На доске дату убрали: там вопрос
+            один, «успеваем ли». В панели спрашивают ещё и «на какое
+            число мы это обещали», а отвечать на него, заставляя
+            складывать дни в уме, — издевательство. */}
+        {value
+          ? `Обязательство: ${dateWords(value)} · ${dueLabel(value).text}`
+          : 'Обязательства нет'}
       </p>
     )
   }

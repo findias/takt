@@ -8,13 +8,14 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { agingLabel } from '../../entities/board/model.ts'
+import { ageLabel, agingLabel } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
   dueIsBurning,
   dueLabel,
   priorityLabel,
+  priorityShort,
   progressLabel,
   progressRatio,
   unitLabel,
@@ -198,6 +199,9 @@ function CardViewInner({
   // получает третью метку. Считается на отрисовке: хранить «просрочена»
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
+  // Сколько идёт — у каждой начатой карточки, тихо. Неначатая
+  // не стареет, она ждёт, и числа у неё нет.
+  const age = card ? ageLabel(card) : null
   // Двое — обычный случай, четверо — уже толпа: показываем троих
   // и число остальных, как и с метками. Порядок — назначения: первым
   // стоит тот, кто взялся первым.
@@ -231,7 +235,7 @@ function CardViewInner({
       // пометкой — иначе он вытесняет с доски старение, которое
       // и есть главный сигнал канбана.
       due && dueIsBurning(card?.dueOn ?? null)
-      ? { kind: 'due', text: due.text, title: 'Дата обязательства' }
+      ? { kind: 'due', text: `срок ${due.text}`, title: 'Дата обязательства' }
       : aging
         ? { kind: 'aging', text: aging, title: 'Возраст считается от начала работы' }
         : null
@@ -545,7 +549,12 @@ function CardViewInner({
             </Menu>
           </div>
           {card &&
-            (alarm || iteration || due || card.priority !== 'medium' || card.estimate !== null) && (
+            (alarm ||
+              iteration ||
+              due ||
+              age ||
+              card.priority !== 'medium' ||
+              card.estimate !== null) && (
             <div className="card-marks">
               {/* Старшая тревога — одна и всегда первой: она отвечает
                   на вопрос «почему эта работа не идёт», а он важнее
@@ -565,7 +574,13 @@ function CardViewInner({
                   «…» и из панели. */}
               {card.priority !== 'medium' && (
                 <Menu
-                  label={`Приоритет: ${priorityLabel(card.priority).toLowerCase()}`}
+                  // Видимое слово стоит в имени первым: голосовое
+                  // управление ищет по тому, что человек прочёл
+                  // (WCAG 2.5.3). Полное имя рядом — чтобы диктору
+                  // было понятно, о какой шкале речь.
+                  label={`Приоритет: ${priorityShort(card.priority)} — ${priorityLabel(
+                    card.priority,
+                  ).toLowerCase()}`}
                   className="field"
                   align="left"
                   items={PRIORITIES.map((level) => ({
@@ -575,7 +590,7 @@ function CardViewInner({
                   }))}
                 >
                   <span className={`priority-mark priority-mark--${card.priority}`}>
-                    {priorityLabel(card.priority).toLowerCase()}
+                    {priorityShort(card.priority)}
                   </span>
                 </Menu>
               )}
@@ -588,8 +603,8 @@ function CardViewInner({
                   даже горящий: тревога занята блокировкой, но знать,
                   что при этом горит дата, важно именно ей. */}
               {due && alarm?.kind !== 'due' && (
-                <span className="mark mark--quiet" title="Дата обязательства">
-                  {due.text}
+                <span className="card-due" title="Дата обязательства">
+                  срок {due.text}
                 </span>
               )}
 
@@ -610,6 +625,20 @@ function CardViewInner({
                   title={`Оценка: ${card.estimate} ${unitLabel(card.estimate, unit)}`}
                 >
                   {card.estimate}
+                </span>
+              )}
+
+              {/* Сколько идёт — последним и у самого края: это число
+                  ищут взглядом по колонке, сравнивая карточки между
+                  собой, а не читают в строке слева направо. У края
+                  оно выстраивается в столбик само.
+
+                  Не показывается, когда превышение уже стало тревогой:
+                  «11 дн.» рядом с «Идёт 11 дн. — дольше обещанных 3»
+                  — это одно и то же число дважды. */}
+              {age && alarm?.kind !== 'aging' && (
+                <span className="card-age" title="Идёт от начала работы">
+                  {age}
                 </span>
               )}
             </div>

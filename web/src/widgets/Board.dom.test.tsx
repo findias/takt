@@ -269,8 +269,9 @@ describe('одна тревога на карточке', () => {
 
     const alarm = await screen.findByTitle('Возраст считается от начала работы')
     expect(alarm.className).toContain('mark--alarm')
-    // Срок при этом не пропал — он просто не кричит.
-    expect(screen.getByTitle('Дата обязательства').className).toContain('mark--quiet')
+    // Срок при этом не пропал — он просто не кричит: не таблеткой,
+    // а строчкой текста.
+    expect(screen.getByTitle('Дата обязательства').className).toContain('card-due')
   })
 
   it('завтрашний срок тревогу забирает: из-за него звонят сегодня', async () => {

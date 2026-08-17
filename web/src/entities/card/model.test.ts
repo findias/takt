@@ -15,8 +15,11 @@ import {
   dueIsBurning,
   dueIsHot,
   dueLabel,
+  priorityLabel,
+  priorityShort,
   progressLabel,
   progressRatio,
+  rangeWords,
 } from './model.ts'
 import type { BaseState } from '../board/model.ts'
 import type { Card, Link, LinkedCard } from '../../shared/api/index.ts'
@@ -318,10 +321,14 @@ test('срок горит только сегодняшний и просроч�
 test('срок словами: отсчёт от сегодня — на доске, чистая дата — в журнале', () => {
   const now = new Date(2026, 7, 17)
 
-  assert.equal(dueLabel('2026-08-17', now).text, 'сегодня · 17 авг.')
-  assert.equal(dueLabel('2026-08-18', now).text, 'завтра · 18 авг.')
-  assert.equal(dueLabel('2026-08-21', now).text, 'до 21 авг.')
-  assert.ok(dueLabel('2026-08-15', now).text.startsWith('просрочено'))
+  // Отсчёт, а не число месяца: вопрос к сроку на доске один —
+  // «успеваем ли», и «до 21 авг.» человек всё равно переводит
+  // в «через четыре дня», каждый раз заново.
+  assert.equal(dueLabel('2026-08-17', now).text, 'сегодня')
+  assert.equal(dueLabel('2026-08-18', now).text, 'завтра')
+  assert.equal(dueLabel('2026-08-21', now).text, 'через 4 дн.')
+  assert.equal(dueLabel('2026-08-16', now).text, 'прошёл вчера')
+  assert.equal(dueLabel('2026-08-15', now).text, 'прошёл 2 дн. назад')
 
   // Год — только чужой.
   assert.equal(dateWords('2026-08-21', now), '21 авг.')
@@ -330,4 +337,28 @@ test('срок словами: отсчёт от сегодня — на дос�
   // В журнале отсчёта нет: запись о прошлом не имеет права меняться
   // от того, что прошло время.
   assert.equal(dateWords('2026-08-15', now), '15 авг.')
+})
+
+test('промежуток не повторяет месяц, когда он один', () => {
+  const now = new Date(2026, 7, 17)
+  assert.equal(rangeWords('2026-08-13', '2026-08-19', now), '13—19 авг.')
+  assert.equal(rangeWords('2026-08-28', '2026-09-03', now), '28 авг. — 3 сент.')
+  // Чужой год виден на обоих концах, иначе непонятно, к какому он.
+  assert.ok(rangeWords('2027-01-04', '2027-01-10', now).includes('2027'))
+})
+
+test('уровень назван дважды: коротко на доске, полно там, где сравнивают', () => {
+  // Слова разные не по прихоти: в плашке место меряется знаками,
+  // а в панели и таблице уровни сравнивают друг с другом, и там
+  // нужен порядок, который виден в самом слове.
+  assert.equal(priorityShort('highest'), 'горит')
+  assert.equal(priorityLabel('highest'), 'Наивысший')
+  assert.equal(priorityShort('low'), 'фоном')
+  assert.equal(priorityLabel('low'), 'Низкий')
+
+  // Незнакомый уровень не роняет ни то, ни другое: разошедшиеся
+  // клиент и сервер уже давали белый экран однажды.
+  const странный = 'выдуманный' as never
+  assert.equal(priorityShort(странный), 'выдуманный')
+  assert.equal(priorityLabel(странный), 'выдуманный')
 })
