@@ -1450,11 +1450,19 @@ test('таблица — второй вид на те же данные, и о�
   // в разметке невидимые карточки.
   await expect(page.getByRole('region', { name: 'Очередь' })).toHaveCount(0)
 
+  // Столбцы — то, что сравнивают между строками. Срок и итерация
+  // стоят у каждой строки, даже пустые: пустое место сравнивать
+  // не с чем.
+  await expect(page.getByRole('columnheader', { name: 'Срок' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Итерация' })).toBeVisible()
+
   // Вид и сортировка живут в адресе и переживают перезагрузку.
   await page.getByLabel('Сортировка').selectOption('column')
   await expect(page).toHaveURL(/view=table.*sort=column/)
   await page.reload()
   await expect(page.locator('.board-table tbody tr')).toHaveCount(2)
+  await page.getByLabel('Сортировка').selectOption('due')
+  await expect(page).toHaveURL(/sort=due/)
 
   // Правка по месту: перенос прямо из строки.
   await rows.first().getByRole('button', { name: /Действия карточки/ }).click()

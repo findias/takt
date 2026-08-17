@@ -2,13 +2,16 @@ import { useMemo } from 'react'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
-import { ageDays, ageLabel, agingLabel } from '../../entities/board/model.ts'
+import { ageLabel, agingLabel } from '../../entities/board/model.ts'
 import {
   UNIT_SHORT,
   cardsLabel,
+  dateWords,
+  dueIsBurning,
   priorityLabel,
-  priorityRank,
 } from '../../entities/card/model.ts'
+import { SORT_NAMES, comparator } from './tableSort.ts'
+import type { Sort } from './tableSort.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 
@@ -18,34 +21,19 @@ import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.t
  * Второй вид на те же данные, а не второй экран: колонки, фильтры,
  * группировка и права остаются теми же, меняется только раскладка.
  * Доска отвечает на вопрос «как идёт работа», таблица — на вопросы
- * «где самое старое» и «сколько на ком висит», а на них колонками
- * не отвечают: чтобы сравнить возраст двух карточек в разных колонках,
- * на доске их приходится искать глазами.
+ * «где самое старое», «сколько на ком висит» и «что мы обещали
+ * и на когда», а на них колонками не отвечают: чтобы сравнить возраст
+ * или срок двух карточек в разных колонках, на доске их приходится
+ * искать глазами.
+ *
+ * Отсюда и правило столбцов: в таблице стоит то, что сравнивают между
+ * строками, и стоит у каждой строки — включая пустые значения. Пустое
+ * место сравнивать не с чем, поэтому «нет срока» пишется прочерком,
+ * а не отсутствием ячейки.
  *
  * Сортировка живёт в адресе, как фильтры и группировка: отсортированный
  * вид присылают ссылкой.
  */
-
-export type Sort = 'age' | 'column' | 'estimate' | 'priority'
-
-export const SORT_NAMES: Record<Sort, string> = {
-  age: 'по возрасту',
-  column: 'по колонке',
-  estimate: 'по оценке',
-  priority: 'по приоритету',
-}
-
-export function parseSort(query: URLSearchParams): Sort {
-  const raw = query.get('sort')
-  return raw === 'column' || raw === 'estimate' || raw === 'priority' ? raw : 'age'
-}
-
-export function sortToQuery(sort: Sort, base?: URLSearchParams): URLSearchParams {
-  const query = new URLSearchParams(base)
-  if (sort === 'age') query.delete('sort')
-  else query.set('sort', sort)
-  return query
-}
 
 export function TableView({
   base,
@@ -79,33 +67,14 @@ export function TableView({
     () => Object.fromEntries(columns.map((c, i) => [c.id, i])),
     [columns],
   )
+  const iterationName = useMemo(
+    () => Object.fromEntries(base.iterations.map((i) => [i.id, i.name])),
+    [base.iterations],
+  )
 
   const rows = useMemo(() => {
     const cards = columns.flatMap((c) => (order[c.id] ?? []).map((id) => base.cards[id])).filter(Boolean)
-    // Сортируется ровно то число, которое стоит в колонке «Возраст».
-    // Сортировать по дате старта было бы почти то же самое и всё-таки
-    // не то: у завершённых возраст перестал расти, и они уезжали бы
-    // наверх по одному только тому, что начаты давно.
-    const byAge = (card: Card) => -(ageDays(card) ?? -1)
-    return [...cards].sort((a, b) => {
-      switch (sort) {
-        case 'column':
-          // Внутри колонки — по возрасту: иначе строки одной колонки
-          // выстраиваются в случайном порядке, и глазу не за что взяться.
-          return (position[a.columnId] ?? 0) - (position[b.columnId] ?? 0) || byAge(a) - byAge(b)
-        case 'priority':
-          // Внутри уровня — по возрасту: иначе строки одного уровня
-          // выстраиваются в случайном порядке, и глазу не за что взяться.
-          return priorityRank(a.priority) - priorityRank(b.priority) || byAge(a) - byAge(b)
-        case 'estimate':
-          // Неоценённые вниз: «пусто» — не самое маленькое значение,
-          // а отсутствие ответа, и наверху ему делать нечего.
-          return (b.estimate ?? -1) - (a.estimate ?? -1)
-        default:
-          // Самое старое сверху: ради этого вопроса таблицу и открывают.
-          return byAge(a) - byAge(b)
-      }
-    })
+    return [...cards].sort(comparator(sort, position))
   }, [base.cards, columns, order, position, sort])
 
   if (rows.length === 0) {
@@ -128,6 +97,8 @@ export function TableView({
             <th scope="col">Приоритет</th>
             <th scope="col">Оценка</th>
             <th scope="col">Возраст</th>
+            <th scope="col">Срок</th>
+            <th scope="col">Итерация</th>
             <th scope="col">
               <span className="sr-only">Действия</span>
             </th>
@@ -179,6 +150,19 @@ export function TableView({
                     перешагнувшим обещание: на доске он подсказка,
                     а здесь — то, по чему сравнивают. */}
                 <td className={overdue ? 'table-overdue' : 'muted small'}>{ageText(card)}</td>
+                {/* Срок — датой, а не отсчётом, в отличие от доски.
+                    Доску спрашивают «успеваем ли» и отвечают ей
+                    «через 4 дн.»; список открывают с вопросом «что мы
+                    обещали и на какое число», и на него отвечает
+                    только число. Нехватку отсчёта закрывает порядок:
+                    сортировка по сроку выстраивает столбец календарём.
+                    Горящее — цветом, как перешагнувший возраст: без
+                    него «сегодня» и «прошёл» пришлось бы вычитать
+                    из даты глазами. */}
+                <td className={dueIsBurning(card.dueOn) ? 'table-overdue' : 'muted small'}>
+                  {card.dueOn === null ? '—' : dateWords(card.dueOn)}
+                </td>
+                <td className="muted small">{iterationName[base.cardIterations[card.id]] ?? '—'}</td>
                 <td>
                   <Menu
                     label={`Действия карточки «${card.title}»`}
