@@ -33,6 +33,7 @@ function card(id: string, title: string, extra: Partial<Card> = {}): Card {
     estimate: null,
     comments: 0,
     priority: 'medium',
+    dueOn: null,
     ...extra,
   }
 }

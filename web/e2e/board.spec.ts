@@ -654,6 +654,97 @@ test('shift берёт диапазон, а полоса делает всё с�
   ).toBeVisible()
 })
 
+// Итерации в продукте были с третьего этапа, но жили только в отчёте:
+// на доске не увидеть, что входит в спринт, а «что мы не запланировали»
+// не спросить вовсе.
+test('итерация видна на карточке и отбирается на доске', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со спринтом')
+  await addCard(page, 'Очередь', 'В спринте')
+  await addCard(page, 'Очередь', 'Мимо спринта')
+
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 34')
+  await page.getByLabel('Начало').fill('2026-08-17')
+  await page.getByLabel('Конец').fill('2026-08-23')
+  await page.getByRole('button', { name: 'Создать' }).click()
+
+  await cardIn(page, 'Очередь', 'В спринте').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «В спринте»/)
+  await panel.getByLabel('Итерация карточки').selectOption({ label: 'Неделя 34' })
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // На карточке итерация названа: без этого на доске не видно,
+  // что в спринт входит.
+  await expect(cardIn(page, 'Очередь', 'В спринте').getByText('Неделя 34')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Мимо спринта').getByText('Неделя 34')).toHaveCount(0)
+
+  // Отбор живёт в адресе, как остальные.
+  await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Неделя 34' })
+  await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toHaveCount(0)
+  expect(page.url()).toContain('iteration=')
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'В спринте')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toHaveCount(0)
+
+  // «Не в итерации» — тоже ответ: незапланированная работа и есть та,
+  // что съедает спринт незаметно.
+  await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Не в итерации' })
+  await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'В спринте')).toHaveCount(0)
+})
+
+// Поля срока у всех подряд в системе нет намеренно. Но у части работы
+// дата есть на самом деле — релиз, демонстрация, договор, — и вопрос
+// «успеваем ли к четвергу» про неё считали в уме.
+test('дата обязательства ставится, видна и отбирается', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с обязательствами')
+  await addCard(page, 'Очередь', 'К релизу')
+  await addCard(page, 'Очередь', 'Без обязательств')
+
+  // Дата ставится в панели: она есть не у всякой работы, и место
+  // на карточке под неё не держат.
+  await cardIn(page, 'Очередь', 'К релизу').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «К релизу»/)
+  // Дата собирается по местным частям, а не через toISOString:
+  // полночь по местному времени в UTC — это ещё вчера, и «завтра»
+  // превращалось в «сегодня».
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const iso = [
+    tomorrow.getFullYear(),
+    String(tomorrow.getMonth() + 1).padStart(2, '0'),
+    String(tomorrow.getDate()).padStart(2, '0'),
+  ].join('-')
+  await panel.getByLabel('Дата обязательства').fill(iso)
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  // На карточке срок назван словами: «завтра» читается с одного
+  // взгляда, а дата — разбирается.
+  const card = cardIn(page, 'Очередь', 'К релизу')
+  await expect(card.getByTitle('Дата обязательства')).toContainText('завтра')
+
+  // Отбор «Срок подходит» — про обещанное наружу.
+  await page.getByRole('checkbox', { name: 'Срок подходит' }).check()
+  await expect(cardIn(page, 'Очередь', 'Без обязательств')).toHaveCount(0)
+  await expect(card).toBeVisible()
+  expect(page.url()).toContain('due=1')
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'К релизу')).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Срок подходит' }).uncheck()
+
+  // Обязательство снимается: «обязательства нет» и «дата неизвестна» —
+  // разные вещи, и первое должно быть выразимо.
+  await cardIn(page, 'Очередь', 'К релизу').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel(/Карточка .* «К релизу»/).getByRole('button', { name: 'Снять' }).click()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await expect(cardIn(page, 'Очередь', 'К релизу').getByTitle('Дата обязательства')).toHaveCount(0)
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

@@ -35,6 +35,7 @@ function card(over: Partial<Card> = {}): Card {
     estimate: null,
     comments: 0,
     priority: 'medium',
+    dueOn: null,
     ...over,
   }
 }
@@ -42,6 +43,7 @@ function card(over: Partial<Card> = {}): Card {
 const ctx = {
   labelsOf: () => [] as string[],
   assigneesOf: () => [] as string[],
+  iterationOf: () => undefined as string | undefined,
   sleDays: null,
 }
 
@@ -58,6 +60,8 @@ test('адрес переживает круг: разобрали, собрал
     blocked: true,
     aging: true,
     urgent: true,
+    due: true,
+    iteration: 'it-1',
   }
   const query = filtersToQuery(filters)
   assert.deepEqual(parseFilters(query), filters)
@@ -77,6 +81,33 @@ test('«горит» — это верх шкалы приоритета, а н�
   assert.equal(matches({ ...card(), priority: 'low' }, filters, ctx), false)
   // Отбор один: спрашивают «что у нас горит», а не «покажи низкие».
   assert.equal(activeCount(filters), 1)
+})
+
+test('срок подходит — это сегодня, завтра и просроченное', () => {
+  const now = Date.parse('2026-08-17T10:00:00Z')
+  const filters: Filters = { ...EMPTY, due: true }
+  const at = { ...ctx, now }
+
+  assert.equal(matches({ ...card(), dueOn: '2026-08-15' }, filters, at), true)
+  assert.equal(matches({ ...card(), dueOn: '2026-08-17' }, filters, at), true)
+  assert.equal(matches({ ...card(), dueOn: '2026-08-19' }, filters, at), true)
+  assert.equal(matches({ ...card(), dueOn: '2026-09-30' }, filters, at), false)
+  // Обязательства нет — и спрашивать не о чем.
+  assert.equal(matches(card(), filters, at), false)
+})
+
+test('итерация отбирается, и «не в итерации» — тоже ответ', () => {
+  const inSprint = { ...EMPTY, iteration: 'it-1' }
+  const ctxWith = { ...ctx, iterationOf: () => 'it-1' }
+
+  assert.equal(matches(card(), inSprint, ctxWith), true)
+  assert.equal(matches(card(), inSprint, ctx), false)
+
+  // Незапланированная работа и есть та, что съедает спринт незаметно,
+  // — её надо уметь спросить отдельно.
+  const outside = { ...EMPTY, iteration: 'none' }
+  assert.equal(matches(card(), outside, ctx), true)
+  assert.equal(matches(card(), outside, ctxWith), false)
 })
 
 test('чужие параметры адреса не теряются', () => {

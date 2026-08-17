@@ -191,6 +191,7 @@ export function Board({
     if (!base || isEmpty(filters)) return { order: fullOrder, hidden: 0 }
     const context = {
       labelsOf: (cardId: string) => base.cardLabels[cardId] ?? [],
+      iterationOf: (cardId: string) => base.cardIterations[cardId],
       assigneesOf: (cardId: string) => base.cardAssignees[cardId] ?? [],
       sleDays: base.info.sleDays,
     }
@@ -444,6 +445,7 @@ export function Board({
     estimateCard: estimate,
     blockCard: block,
     prioritiseCard: prioritise,
+    commitCard: commit,
     unblockCard: unblock,
   } = board
   const assignCard = useCallback(
@@ -461,6 +463,10 @@ export function Board({
   const prioritiseCard = useCallback(
     (cardId: string, priority: Priority) => void prioritise(cardId, priority),
     [prioritise],
+  )
+  const commitCard = useCallback(
+    (cardId: string, dueOn: string | null) => void commit(cardId, dueOn),
+    [commit],
   )
   const blockCard = useCallback(
     (cardId: string, reason: string) => void block(cardId, reason),
@@ -570,6 +576,25 @@ export function Board({
   // по обходу на карточку: см. childrenOf.
   const children = useMemo(() => (base ? childrenOf(base) : {}), [base])
 
+  // Отбирают по идущим итерациям: закрытую смотрят отчётом, а не доской.
+  const openIterations = useMemo(
+    () => (base ? base.iterations.filter((i) => !i.closedAt) : []),
+    [base],
+  )
+
+  /** cardId → название итерации: карточке нужно слово, а не ссылка.
+   *  Считается один раз на доску — как и всё, что уходит в карточку. */
+  const cardIterationNames = useMemo(() => {
+    const names: Record<string, string> = {}
+    if (!base) return names
+    const byId = new Map(base.iterations.map((i) => [i.id, i.name]))
+    for (const [cardId, iterationId] of Object.entries(base.cardIterations)) {
+      const name = byId.get(iterationId)
+      if (name) names[cardId] = name
+    }
+    return names
+  }, [base])
+
   const columnList = useMemo(
     () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
     [columnIds, columnsById],
@@ -672,6 +697,7 @@ export function Board({
         cardLabels={base.cardLabels}
         cardAssignees={base.cardAssignees}
         parents={parents}
+        iterations={cardIterationNames}
         children={children}
         onLabel={toggleLabel}
         selected={picked}
@@ -735,6 +761,7 @@ export function Board({
           filters={filters}
           people={peopleList}
           labels={base.labels}
+          iterations={openIterations}
           hidden={hidden}
           onChange={setFilters}
         />
@@ -1045,6 +1072,7 @@ export function Board({
           onAssign={assignCard}
           onLabel={toggleLabel}
           onPrioritise={prioritiseCard}
+          onDue={commitCard}
           subtaskBoards={subtaskBoards}
           onSubtask={(parentCardId, title, toBoard) =>
             void board.createSubtask(parentCardId, title, undefined, toBoard)

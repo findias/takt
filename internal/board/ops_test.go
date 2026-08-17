@@ -200,6 +200,43 @@ func equal(a, b []string) bool {
 	return true
 }
 
+// Дата обязательства есть не у всякой работы, и это главное: пусто —
+// не «дата неизвестна», а «обязательства нет». Поэтому «снять»
+// и «не трогать» — разные просьбы.
+func TestDueDateIsSetAndCleared(t *testing.T) {
+	f := newFixture(t)
+	id := f.createCard("Согласовать смету", f.columns()[0].ID)
+
+	if got := f.card(id).DueOn; got != nil {
+		t.Fatalf("у новой карточки дата %v, ожидалась пустая", *got)
+	}
+
+	res := f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "dueOn": "2026-08-21"})
+	if got := res.Patch.Cards[0].DueOn; got == nil || *got != "2026-08-21" {
+		t.Errorf("дата в патче %v", got)
+	}
+
+	// Не присланная дата ничего не меняет: правка названия не должна
+	// молча стирать обязательство.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "title": "Смета, но точнее"})
+	if got := f.card(id).DueOn; got == nil || *got != "2026-08-21" {
+		t.Errorf("дата потерялась при правке названия: %v", got)
+	}
+
+	// Присланная пустая — снимает.
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "dueOn": nil})
+	if got := f.card(id).DueOn; got != nil {
+		t.Errorf("дата осталась после снятия: %v", *got)
+	}
+
+	// Отказ называет, как писать: разбирать формат по коду ответа
+	// человеку не из чего.
+	if _, err := f.apply("UPDATE_CARD", map[string]any{
+		"cardId": id, "dueOn": "21 августа"}); err == nil {
+		t.Error("дата в свободной форме принята")
+	}
+}
+
 // Приоритет — уровень: он говорит, что важнее. Порядок карточек
 // в колонке при этом остаётся ручным и говорит, что взято следующим:
 // уровень ничего не переставляет сам.

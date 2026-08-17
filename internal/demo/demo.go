@@ -383,6 +383,12 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 			return err
 		}
 	}
+	// Одно обязательство наружу: без него на доске не увидеть, чем срок
+	// отличается от возраста, а «успеваем ли к четвергу» не спросить.
+	if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
+		"cardId": ids["Согласовать смету с подрядчиком"], "dueOn": date(2)}); err != nil {
+		return err
+	}
 	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
 		"cardId": ids["Выпустить релиз склада"],
 		"reason": "смежники не подтвердили формат выгрузки"}); err != nil {

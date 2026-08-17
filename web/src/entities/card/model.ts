@@ -299,6 +299,37 @@ export function priorityRank(priority: Priority): number {
   return at === -1 ? PRIORITIES.length : at
 }
 
+/**
+ * Срок словами и то, горит ли он.
+ *
+ * Пишется днём и месяцем — год добавляется, только если он не текущий:
+ * «до 21 авг» читается с одного взгляда, а «до 21.08.2026» приходится
+ * разбирать. Просроченное названо просроченным, а не «-2 дня»:
+ * отрицательное число дней читают дважды.
+ */
+export function dueLabel(dueOn: string, now: Date = new Date()): { text: string; hot: boolean } {
+  const due = new Date(`${dueOn}T00:00:00`)
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const days = Math.round((due.getTime() - today.getTime()) / 86_400_000)
+  const date = due.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    ...(due.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+  })
+
+  if (days < 0) return { text: `просрочено · ${date}`, hot: true }
+  if (days === 0) return { text: `сегодня · ${date}`, hot: true }
+  if (days === 1) return { text: `завтра · ${date}`, hot: true }
+  return { text: `до ${date}`, hot: days <= 3 }
+}
+
+/** Срок «горит», если он сегодня, завтра, послезавтра или уже прошёл.
+ *  Три дня — не круглое число ради красоты: за меньшее не успевают
+ *  договориться, за большее ещё не начинают беспокоиться. */
+export function dueIsHot(dueOn: string | null, now?: Date): boolean {
+  return dueOn === null ? false : dueLabel(dueOn, now).hot
+}
+
 // Единицы называются коротко: подпись стоит вплотную к числу, и
 // «очков» в каждой строке таблицы повторять незачем.
 export const UNIT_SHORT: Record<EstimateUnit, string> = {

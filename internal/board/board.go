@@ -152,6 +152,9 @@ type Card struct {
 	// что важнее; порядок карточек в колонке остаётся ручным и говорит,
 	// что взято в работу следующим.
 	Priority string `json:"priority"`
+	// Дата обязательства: то, что обещано наружу. Пусто у большинства
+	// карточек — и это не «дата неизвестна», а «обязательства нет».
+	DueOn *string `json:"dueOn"`
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
@@ -216,13 +219,14 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, estimate, outcome, priority`
+	column_entered_at, started_at, finished_at, estimate, outcome, priority,
+	to_char(due_on, 'YYYY-MM-DD')`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.Priority)
+		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn)
 	return c, err
 }
 

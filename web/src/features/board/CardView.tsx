@@ -12,6 +12,7 @@ import { agingLabel } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
+  dueLabel,
   priorityLabel,
   progressLabel,
   progressRatio,
@@ -64,6 +65,9 @@ type CardProps = {
   cardLabels: string[]
   /** Родительская задача, если карточка — чья-то подзадача. */
   parent?: { id: string; title: string; onThisBoard: boolean }
+  /** Итерация, к которой карточка отнесена сейчас. Название, а не
+   *  идентификатор: карточка показывает, а не ищет. */
+  iteration?: string
   /** Подзадачи этой карточки. Раскрываются по кнопке прямо на доске:
    *  до этого разбиение работы было видно только числом «0 из 3»,
    *  а чтобы узнать, на что именно она разбита, карточку приходилось
@@ -108,6 +112,7 @@ function CardViewInner({
   labels,
   cardLabels,
   parent,
+  iteration,
   subtasks,
   onLabel,
   selected,
@@ -526,8 +531,34 @@ function CardViewInner({
               )}
             </Menu>
           </div>
-          {card && (card.blocked || aging || card.estimate !== null) && (
+          {card &&
+            (card.blocked || aging || iteration || card.dueOn || card.estimate !== null) && (
             <div className="card-marks">
+              {/* Итерация — ответ на «к чему это привязано снаружи».
+                  Тихая пометка: спринт не влияет на то, как работу
+                  тянут, но без него на доске не видно, что в него
+                  вообще входит. */}
+              {iteration && (
+                <span className="mark" title="Итерация">
+                  {iteration}
+                </span>
+              )}
+              {/* Срок — то, что обещано наружу, и он не спорит с
+                  возрастом: возраст про наше обещание («идёт дольше,
+                  чем доска обещала»), срок про чужое («к четвергу»).
+                  Горящий выделен той же предупреждающей парой. */}
+              {card.dueOn &&
+                (() => {
+                  const due = dueLabel(card.dueOn)
+                  return (
+                    <span
+                      className={due.hot ? 'mark mark--aging' : 'mark'}
+                      title="Дата обязательства"
+                    >
+                      {due.text}
+                    </span>
+                  )
+                })()}
               {aging && (
                 <span className="mark mark--aging" title="Возраст считается от начала работы">
                   {aging}

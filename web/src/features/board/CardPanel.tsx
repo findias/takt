@@ -24,6 +24,7 @@ import {
   PRIORITIES,
   PRIORITY_NAMES,
   UNIT_SHORT,
+  dueLabel,
   priorityLabel,
   candidatesForSubtask,
   cardDetails,
@@ -80,6 +81,7 @@ export function CardPanel({
   onAssign,
   onLabel,
   onPrioritise,
+  onDue,
   onSubtask,
   subtaskBoards,
   onLink,
@@ -104,6 +106,9 @@ export function CardPanel({
   onAssign: (cardId: string, userId: string, on: boolean) => void
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   onPrioritise: (cardId: string, priority: Priority) => void
+  /** null снимает обязательство. Пусто — не «дата неизвестна»,
+   *  а «обязательства нет». */
+  onDue: (cardId: string, dueOn: string | null) => void
   /** Завести новую подзадачу. Доска — только когда её ставят соседям:
    *  пусто означает «на этой», и в организации с одной доской спрашивать
    *  нечего. */
@@ -172,6 +177,12 @@ export function CardPanel({
             ) : (
               canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
             )}
+
+            <DuePicker
+              value={card.dueOn}
+              canEdit={canEdit}
+              onChange={(next) => onDue(card.id, next)}
+            />
 
             <PriorityPicker
               value={card.priority}
@@ -749,6 +760,53 @@ function Assignees({
         </select>
       )}
     </section>
+  )
+}
+
+/**
+ * Дата обязательства.
+ *
+ * Поля срока у всех подряд в системе нет намеренно: канбан обещает
+ * распределение, а не дату, и срок, поставленный каждой карточке,
+ * превращается в ритуал переноса дат. Но у части работы дата есть
+ * на самом деле — релиз, демонстрация, договор, — и вопрос «успеваем
+ * ли к четвергу» про неё задают вслух.
+ *
+ * Поэтому поле пустое по умолчанию и ничего не подсказывает: пусто
+ * означает «обязательства нет», а не «дату забыли».
+ */
+function DuePicker({
+  value,
+  canEdit,
+  onChange,
+}: {
+  value: string | null
+  canEdit: boolean
+  onChange: (next: string | null) => void
+}) {
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        {value ? `Обязательство: ${dueLabel(value).text}` : 'Обязательства нет'}
+      </p>
+    )
+  }
+
+  return (
+    <label className="field-row">
+      <span className="field-label">Обязательство</span>
+      <input
+        type="date"
+        value={value ?? ''}
+        aria-label="Дата обязательства"
+        onChange={(e) => onChange(e.target.value || null)}
+      />
+      {value && (
+        <button className="link" onClick={() => onChange(null)}>
+          Снять
+        </button>
+      )}
+    </label>
   )
 }
 

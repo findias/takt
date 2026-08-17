@@ -43,6 +43,8 @@ export function eventText(event: BoardEvent): string {
       return typeof p.estimate === 'number' ? `оценена в ${p.estimate}` : 'оценка изменена'
     case 'restored':
       return 'возвращена на доску'
+    case 'committed':
+      return typeof p.dueOn === 'string' ? `срок: ${p.dueOn}` : 'обязательство снято'
     case 'prioritised':
       return typeof p.priority === 'string'
         ? `приоритет: ${priorityLabel(p.priority as Priority).toLowerCase()}`

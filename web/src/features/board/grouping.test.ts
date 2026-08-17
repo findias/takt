@@ -29,6 +29,7 @@ function card(id: string, over: Partial<Card> = {}): Card {
     estimate: null,
     comments: 0,
     priority: 'medium',
+    dueOn: null,
     ...over,
   }
 }

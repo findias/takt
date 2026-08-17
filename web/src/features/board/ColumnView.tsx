@@ -53,6 +53,9 @@ type ColumnProps = {
   cardLabels: Record<string, string[]>
   /** cardId → родительская задача, если карточка чья-то подзадача. */
   parents: Record<string, { id: string; title: string; onThisBoard: boolean }>
+  /** cardId → название его итерации. Названия, а не идентификаторы:
+   *  карточка показывает, и разбирать словарь итераций ей незачем. */
+  iterations: Record<string, string>
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
@@ -227,6 +230,7 @@ export function ColumnView(props: ColumnProps) {
             labels={props.labels}
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
             parent={props.parents[cardId]}
+            iteration={props.iterations[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
             selected={props.selected.has(cardId)}

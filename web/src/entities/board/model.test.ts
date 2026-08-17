@@ -41,6 +41,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     estimate: null,
     comments: 0,
     priority: 'medium',
+    dueOn: null,
   }
 }
 

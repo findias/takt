@@ -730,6 +730,19 @@ export function useBoard(boardId: string | null, notify: Notify) {
       ),
     [patchCard],
   )
+  /** Дата обязательства. Пустая снимает его: «обязательства нет»
+   *  и «дата неизвестна» — разные вещи, и различает их null. */
+  const commitCard = useCallback(
+    (cardId: string, dueOn: string | null) =>
+      patchCard(
+        cardId,
+        { dueOn },
+        'UPDATE_CARD',
+        { cardId, dueOn },
+        'Не удалось изменить дату обязательства',
+      ),
+    [patchCard],
+  )
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
       patchCard(
@@ -859,6 +872,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     describeCard,
     estimateCard,
     prioritiseCard,
+    commitCard,
     archiveCard,
     moveMany,
     archiveMany,

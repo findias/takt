@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Label, Person } from '../../shared/api/index.ts'
+import type { Iteration, Label, Person } from '../../shared/api/index.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { NARROW, useMedia } from '../../shared/lib/useMedia.ts'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
-import { EMPTY, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
+import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
 import type { Filters } from './filters.ts'
 
 /**
@@ -28,12 +28,16 @@ export function FilterBar({
   filters,
   people,
   labels,
+  iterations,
   hidden,
   onChange,
 }: {
   filters: Filters
   people: Person[]
   labels: Label[]
+  /** Открытые итерации доски: закрытые не отбирают — их смотрят
+   *  отчётом, а не доской. */
+  iterations: Iteration[]
   /** Сколько карточек скрыто фильтром — иначе доска выглядит опустевшей. */
   hidden: number
   onChange: (next: Filters) => void
@@ -89,6 +93,25 @@ export function FilterBar({
           ))}
         </select>
 
+        {/* Итерация — ответ на «к чему это привязано снаружи». Без
+            отбора спринт на доске не увидеть: он живёт только
+            в отчёте, а работают на доске. */}
+        {iterations.length > 0 && (
+          <select
+            value={filters.iteration ?? ''}
+            aria-label="Итерация"
+            onChange={(e) => onChange({ ...filters, iteration: e.target.value || null })}
+          >
+            <option value="">Все итерации</option>
+            <option value={NO_ITERATION}>Не в итерации</option>
+            {iterations.map((iteration) => (
+              <option key={iteration.id} value={iteration.id}>
+                {iteration.name}
+              </option>
+            ))}
+          </select>
+        )}
+
         {labels.length > 0 && (
           <select
             value=""
@@ -141,6 +164,18 @@ export function FilterBar({
             onChange={(e) => onChange({ ...filters, urgent: e.target.checked })}
           />
           <span>Горит</span>
+        </label>
+
+        {/* «Срок подходит» — про обещанное наружу, а «Дольше
+            обещанного» — про обещание доски. Это разные вопросы,
+            и складывать их в один отбор нельзя. */}
+        <label className="row row--tight small">
+          <input
+            type="checkbox"
+            checked={filters.due}
+            onChange={(e) => onChange({ ...filters, due: e.target.checked })}
+          />
+          <span>Срок подходит</span>
         </label>
 
         <label className="row row--tight small">

@@ -1,5 +1,6 @@
 import type { Card } from '../../shared/api/index.ts'
 import { agingLabel } from '../../entities/board/model.ts'
+import { dueIsHot } from '../../entities/card/model.ts'
 
 /**
  * Что показывать на доске.
@@ -34,6 +35,14 @@ export type Filters = {
   /** Только высокий и наивысший. Отбор один, а не выбор уровня:
    *  спрашивают «что у нас горит», а не «покажи низкие». */
   urgent: boolean
+  /** Только те, у кого срок сегодня, завтра, послезавтра или прошёл.
+   *  Отбор про обещанное наружу — тем и отличается от «Дольше
+   *  обещанного», которое про обещание доски. */
+  due: boolean
+  /** Идентификатор итерации, `none` — «не в итерации». Итерация —
+   *  это ответ на «к чему это привязано снаружи», и без отбора по ней
+   *  спринт нельзя увидеть на доске: он живёт только в отчёте. */
+  iteration: string | null
 }
 
 export const EMPTY: Filters = {
@@ -43,11 +52,17 @@ export const EMPTY: Filters = {
   blocked: false,
   aging: false,
   urgent: false,
+  due: false,
+  iteration: null,
 }
 
 /** «Ни на ком» — тоже ответ на вопрос «чьё это», и его надо уметь
  *  спросить: работа без исполнителя и есть то, что теряется. */
 export const UNASSIGNED = 'none'
+
+/** «Не в итерации» — по той же причине, что и «ни на ком»: работа,
+ *  которую никуда не положили, и есть та, что теряется. */
+export const NO_ITERATION = 'none'
 
 export function isEmpty(f: Filters): boolean {
   return (
@@ -56,7 +71,9 @@ export function isEmpty(f: Filters): boolean {
     f.labels.length === 0 &&
     !f.blocked &&
     !f.aging &&
-    !f.urgent
+    !f.urgent &&
+    !f.due &&
+    f.iteration === null
   )
 }
 
@@ -75,7 +92,9 @@ export function activeCount(f: Filters): number {
     f.labels.length +
     (f.blocked ? 1 : 0) +
     (f.aging ? 1 : 0) +
-    (f.urgent ? 1 : 0)
+    (f.urgent ? 1 : 0) +
+    (f.due ? 1 : 0) +
+    (f.iteration === null ? 0 : 1)
   )
 }
 
@@ -88,6 +107,8 @@ export function parseFilters(query: URLSearchParams): Filters {
     blocked: query.get('blocked') === '1',
     aging: query.get('aging') === '1',
     urgent: query.get('urgent') === '1',
+    due: query.get('due') === '1',
+    iteration: query.get('iteration'),
   }
 }
 
@@ -108,12 +129,16 @@ export function filtersToQuery(f: Filters, base?: URLSearchParams): URLSearchPar
   set('blocked', f.blocked ? '1' : null)
   set('aging', f.aging ? '1' : null)
   set('urgent', f.urgent ? '1' : null)
+  set('due', f.due ? '1' : null)
+  set('iteration', f.iteration)
   return query
 }
 
 /** Что нужно знать о карточке сверх её самой, чтобы решить судьбу. */
 export type FilterContext = {
   labelsOf: (cardId: string) => string[]
+  /** В какой итерации карточка сейчас. Пусто — ни в какой. */
+  iterationOf: (cardId: string) => string | undefined
   /** Исполнители карточки: их несколько, и «на мне» значит «я среди них». */
   assigneesOf: (cardId: string) => string[]
   sleDays: number | null
@@ -151,6 +176,17 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
   // «Горит» — это высокий и наивысший: спрашивают про верх шкалы,
   // а не про конкретный уровень.
   if (f.urgent && card.priority !== 'high' && card.priority !== 'highest') return false
+
+  if (f.due && !dueIsHot(card.dueOn, ctx.now === undefined ? undefined : new Date(ctx.now))) {
+    return false
+  }
+
+  if (f.iteration) {
+    const own = ctx.iterationOf(card.id)
+    // «Не в итерации» — тоже ответ: незапланированная работа и есть
+    // то, что съедает спринт незаметно.
+    if (f.iteration === NO_ITERATION ? own !== undefined : own !== f.iteration) return false
+  }
 
   return true
 }

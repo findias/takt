@@ -617,6 +617,10 @@ type updateCardPayload struct {
 	// Приоритет. Снять его нельзя: уровень есть у всякой карточки,
 	// и «не решили» ничем не отличается от среднего.
 	Priority *string `json:"priority"`
+	// Дата обязательства. Пусто — обязательства нет, и это не то же
+	// самое, что «дата неизвестна»: поэтому «снять» и «не трогать»
+	// приходится различать.
+	DueOn optionalString `json:"dueOn"`
 }
 
 func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -624,8 +628,14 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор UPDATE_CARD: %v", err)
 	}
-	if p.Title == nil && p.Description == nil && !p.Estimate.Set && p.Priority == nil {
+	if p.Title == nil && p.Description == nil && !p.Estimate.Set && p.Priority == nil &&
+		!p.DueOn.Set {
 		return Patch{}, badRequestf("нечего изменять")
+	}
+	if p.DueOn.Set && p.DueOn.Value != nil {
+		if _, err := time.Parse("2006-01-02", *p.DueOn.Value); err != nil {
+			return Patch{}, badRequestf("дата обязательства пишется как 2026-08-21")
+		}
 	}
 	if p.Priority != nil && !knownPriority(*p.Priority) {
 		return Patch{}, badRequestf("неизвестный приоритет %q", *p.Priority)
@@ -647,12 +657,13 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		       description   = coalesce($3, description),
 		       estimate      = case when $5 then $6 else estimate end,
 		       priority      = coalesce($7, priority),
+		       due_on        = case when $8 then $9::date else due_on end,
 		       version       = version + 1,
 		       updated_at    = now()
 		 where id = $1 and board_id = $4 and archived_at is null
 		 returning `+cardFields,
 		p.CardID, p.Title, p.Description, boardID,
-		p.Estimate.Set, p.Estimate.Value, p.Priority))
+		p.Estimate.Set, p.Estimate.Value, p.Priority, p.DueOn.Set, p.DueOn.Value))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, conflictf("", "карточка уже удалена")
 	}
@@ -675,6 +686,9 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	case p.Priority != nil:
 		kind = "prioritised"
 		payload = map[string]any{"priority": *p.Priority}
+	case p.DueOn.Set:
+		kind = "committed"
+		payload = map[string]any{"dueOn": p.DueOn.Value}
 	}
 	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, payload); err != nil {
 		return Patch{}, err
@@ -918,6 +932,18 @@ type optionalFloat struct {
 }
 
 func (o *optionalFloat) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
+}
+
+// optionalString различает «поле не прислали» и «прислали null».
+// Для даты обязательства это разные намерения: не трогать и снять.
+type optionalString struct {
+	Set   bool
+	Value *string
+}
+
+func (o *optionalString) UnmarshalJSON(b []byte) error {
 	o.Set = true
 	return json.Unmarshal(b, &o.Value)
 }
