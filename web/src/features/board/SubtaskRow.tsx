@@ -21,7 +21,7 @@
  * доступа».
  */
 
-import { Avatar } from '../../shared/ui/Avatar.tsx'
+import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { CommentIcon } from '../../shared/ui/icons.tsx'
 import type { Related } from '../../entities/card/model.ts'
 
@@ -93,12 +93,10 @@ export function SubtaskRow({
         {assignees.length > 0 && (
           <span className="avatars">
             {assignees.slice(0, 2).map((id) => (
-              <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+              <Avatar key={id} name={people[id] ?? 'Кто-то'} size={AVATAR_SMALL} />
             ))}
             {assignees.length > 2 && (
-              <span className="avatar--more" title={`и ещё ${assignees.length - 2}`}>
-                +{assignees.length - 2}
-              </span>
+              <AvatarMore count={assignees.length - 2} size={AVATAR_SMALL} />
             )}
           </span>
         )}

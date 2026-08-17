@@ -4,7 +4,7 @@
 // и снимок затронутого. Читают его люди, и разбирать jsonb глазами
 // им незачем.
 
-import { priorityLabel } from '../card/model.ts'
+import { dateWords, priorityLabel } from '../card/model.ts'
 import type { AuditEntry, BoardEvent, Priority } from '../../shared/api/index.ts'
 
 /** Что произошло с карточкой. */
@@ -44,7 +44,14 @@ export function eventText(event: BoardEvent): string {
     case 'restored':
       return 'возвращена на доску'
     case 'committed':
-      return typeof p.dueOn === 'string' ? `срок: ${p.dueOn}` : 'обязательство снято'
+      // Словами, как и вся остальная лента: одна машинная дата посреди
+      // речи читается как чужая строка. Но без отсчёта от сегодня —
+      // здесь не «просрочено», а «поставили тогда-то вот такой срок»:
+      // запись о прошлом не имеет права меняться от того, что прошло
+      // время.
+      return typeof p.dueOn === 'string'
+        ? `обязательство: ${dateWords(p.dueOn)}`
+        : 'обязательство снято'
     case 'prioritised':
       return typeof p.priority === 'string'
         ? `приоритет: ${priorityLabel(p.priority as Priority).toLowerCase()}`

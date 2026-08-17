@@ -17,6 +17,24 @@ import { initials } from '../lib/initials.ts'
 
 const TONES = 8
 
+/** Размер по умолчанию — один на аватар и на «+2» в конце стопки.
+ *  Числа стояли в двух местах, в разметке и в стилях, и разъехались
+ *  на четыре пикселя: кружок «+2» выпирал из стопки. */
+const SIZE = 20
+
+/** Второй план: кто делает части. Мельче обычного — в полный рост
+ *  эти аватары спорили бы с исполнителями самой карточки. Было
+ *  записано классом `.avatars--small`, который не работал никогда:
+ *  размер приходит вписанным стилем, а он сильнее класса. */
+export const AVATAR_SMALL = 18
+
+/** Размер задаётся вписанным стилем, а не классом, потому что он
+ *  приходит числом из вызова. Класс с размером тот же стиль
+ *  не перебьёт — так уже был мёртвый `.avatars--small`. */
+function sizing(size: number) {
+  return { inlineSize: size, blockSize: size, fontSize: Math.round(size * 0.42) }
+}
+
 /** Разброс по имени. Не криптография: нужно лишь, чтобы два соседних
  *  имени не сливались в один цвет. */
 function toneOf(name: string): number {
@@ -25,17 +43,35 @@ function toneOf(name: string): number {
   return sum % TONES
 }
 
-export function Avatar({ name, size = 20 }: { name: string; size?: number }) {
+export function Avatar({ name, size = SIZE }: { name: string; size?: number }) {
   return (
     <span
       className={`avatar avatar--tone-${toneOf(name)}`}
-      style={{ inlineSize: size, blockSize: size, fontSize: Math.round(size * 0.42) }}
+      style={sizing(size)}
       // Имя целиком — рядом, а не вместо: инициалы читаются глазами,
       // скринридер читает имя.
       title={name}
       aria-hidden="true"
     >
       {initials(name)}
+    </span>
+  )
+}
+
+/**
+ * «И ещё двое» в конце стопки.
+ *
+ * Отдельный компонент, а не модификатор аватара, и класс тоже
+ * отдельный. Имя `avatar--more` три раза подряд читалось как «этому
+ * нужен базовый класс `avatar`», хотя базовый класс ему только вредит:
+ * он красит текст цветом подложки, рассчитанным на заливку оттенком,
+ * которой здесь нет, — «+2» стало бы невидимым. Это не аватар без
+ * лица, это счётчик; общего у них только форма и размер.
+ */
+export function AvatarMore({ count, size = SIZE }: { count: number; size?: number }) {
+  return (
+    <span className="avatar-more" style={sizing(size)} title={`и ещё ${count}`}>
+      +{count}
     </span>
   )
 }

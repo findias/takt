@@ -242,3 +242,45 @@ describe('ходьба по доске', () => {
     await waitFor(() => expect(screen.getByDisplayValue('первая')).toBeTruthy())
   })
 })
+
+describe('одна тревога на карточке', () => {
+  // Тревожная пометка на карточке одна, и порядок между кандидатами
+  // — не оформление, а смысл: если её забирает срок «через три дня»,
+  // старение перестаёт быть видно на доске вовсе. Глазами это
+  // не ловится: чтобы заметить пропажу, надо помнить, что она там
+  // была.
+  const дни = (n: number) => {
+    const d = new Date(Date.now() + n * 86_400_000)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  /** Карточка, которая идёт дольше обещанных доской трёх дней. */
+  function aging(dueOn: string | null): Snapshot {
+    const c = card('старая', COL_B, 'a0')
+    const snap = board([
+      { ...c, startedAt: new Date(Date.now() - 10 * 86_400_000).toISOString(), dueOn },
+    ])
+    return { ...snap, board: { ...snap.board, sleDays: 3 } }
+  }
+
+  it('срок за три дня остаётся тихим, а тревога — про возраст', async () => {
+    snapshot.mockResolvedValue(aging(дни(3)))
+    show()
+
+    const alarm = await screen.findByTitle('Возраст считается от начала работы')
+    expect(alarm.className).toContain('mark--alarm')
+    // Срок при этом не пропал — он просто не кричит.
+    expect(screen.getByTitle('Дата обязательства').className).toContain('mark--quiet')
+  })
+
+  it('завтрашний срок тревогу забирает: из-за него звонят сегодня', async () => {
+    snapshot.mockResolvedValue(aging(дни(1)))
+    show()
+
+    const due = await screen.findByTitle('Дата обязательства')
+    expect(due.className).toContain('mark--alarm')
+    expect(due.textContent).toContain('завтра')
+    // Возраст ушёл в панель и в отборы: пометка одна.
+    expect(screen.queryByTitle('Возраст считается от начала работы')).toBeNull()
+  })
+})

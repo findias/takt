@@ -12,6 +12,7 @@ import { agingLabel } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
+  dueIsBurning,
   dueLabel,
   priorityLabel,
   progressLabel,
@@ -20,7 +21,7 @@ import {
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import type { Card, Column, EstimateUnit, Label, Priority } from '../../shared/api/index.ts'
-import { Avatar } from '../../shared/ui/Avatar.tsx'
+import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { SubtaskRow } from './SubtaskRow.tsx'
@@ -220,11 +221,19 @@ function CardViewInner({
    */
   const due = card?.dueOn ? dueLabel(card.dueOn) : null
   const alarm = card?.blocked
-    ? { text: `Заблокирована: ${card.blocked.reason}`, title: card.blocked.reason }
-    : due?.hot
-      ? { text: due.text, title: 'Дата обязательства' }
+    ? {
+        kind: 'blocked',
+        text: `Заблокирована: ${card.blocked.reason}`,
+        title: card.blocked.reason,
+      }
+    : // Горит, а не «подходит»: тревогу занимает только сегодняшнее
+      // и просроченное. Срок через два-три дня остаётся тихой
+      // пометкой — иначе он вытесняет с доски старение, которое
+      // и есть главный сигнал канбана.
+      due && dueIsBurning(card?.dueOn ?? null)
+      ? { kind: 'due', text: due.text, title: 'Дата обязательства' }
       : aging
-        ? { text: aging, title: 'Возраст считается от начала работы' }
+        ? { kind: 'aging', text: aging, title: 'Возраст считается от начала работы' }
         : null
   // Кто делает части — объединение по ним же, без повторов и в их
   // порядке. Считается из своих подзадач, а не из снимка доски:
@@ -530,11 +539,7 @@ function CardViewInner({
                   {shownAssignees.map((id) => (
                     <Avatar key={id} name={people[id] ?? 'Кто-то'} />
                   ))}
-                  {hiddenAssignees > 0 && (
-                    <span className="avatar--more" title={`и ещё ${hiddenAssignees}`}>
-                      +{hiddenAssignees}
-                    </span>
-                  )}
+                  {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}
                 </span>
               )}
             </Menu>
@@ -561,7 +566,7 @@ function CardViewInner({
               {card.priority !== 'medium' && (
                 <Menu
                   label={`Приоритет: ${priorityLabel(card.priority).toLowerCase()}`}
-                  className="field priority-field"
+                  className="field"
                   align="left"
                   items={PRIORITIES.map((level) => ({
                     label: PRIORITY_NAMES[level],
@@ -577,9 +582,12 @@ function CardViewInner({
 
               {/* Срок, который ещё не жмёт, — тихая пометка: он отвечает
                   на «к чему это привязано», а не «почему это горит».
-                  Горящий уже показан тревогой, и повторять его здесь
-                  значит сказать одно и то же дважды. */}
-              {due && !due.hot && (
+                  Не показывается только тогда, когда он сам стал
+                  тревогой: повторять его дважды в одном ряду незачем.
+                  А вот у заблокированной карточки срок остаётся здесь,
+                  даже горящий: тревога занята блокировкой, но знать,
+                  что при этом горит дата, важно именно ей. */}
+              {due && alarm?.kind !== 'due' && (
                 <span className="mark mark--quiet" title="Дата обязательства">
                   {due.text}
                 </span>
@@ -682,9 +690,9 @@ function CardViewInner({
                   пор доска отвечала «работа разбита», молча о том, кого
                   спрашивать. Аватар отвечает на это без раскрытия. */}
               {subtaskAssignees.length > 0 && (
-                <span className="avatars avatars--small" title="На кого разложены части">
+                <span className="avatars" title="На кого разложены части">
                   {subtaskAssignees.slice(0, 3).map((id) => (
-                    <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                    <Avatar key={id} name={people[id] ?? 'Кто-то'} size={AVATAR_SMALL} />
                   ))}
                 </span>
               )}

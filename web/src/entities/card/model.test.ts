@@ -11,6 +11,10 @@ import {
   candidatesForSubtask,
   cardDetails,
   childrenOf,
+  dateWords,
+  dueIsBurning,
+  dueIsHot,
+  dueLabel,
   progressLabel,
   progressRatio,
 } from './model.ts'
@@ -279,4 +283,51 @@ test('у карточки этой доски второй строки нет',
   const [sub] = cardDetails(base, 'parent')!.subtasks
   assert.equal(sub.stage, null)
   assert.equal(sub.promise, null)
+})
+
+// Пороги срока. Их два, и разница между ними — то, ради чего доска
+// вообще считает обещание: тревога на карточке одна, и если её забирает
+// срок «через три дня», старение перестаёт быть видно.
+
+test('срок горит только сегодняшний и просроченный, подходит — за трое суток', () => {
+  const now = new Date(2026, 7, 17)
+  const дни = (n: number) => {
+    const d = new Date(2026, 7, 17 + n)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  // Горит: из-за этого звонят сегодня.
+  assert.equal(dueIsBurning(дни(-1), now), true)
+  assert.equal(dueIsBurning(дни(0), now), true)
+  assert.equal(dueIsBurning(дни(1), now), true)
+  // А это уже не сегодняшний вопрос — тревогу оно не занимает.
+  assert.equal(dueIsBurning(дни(2), now), false)
+  assert.equal(dueIsBurning(дни(3), now), false)
+
+  // Подходит: вопрос планирования недели, и порог шире.
+  assert.equal(dueIsHot(дни(2), now), true)
+  assert.equal(dueIsHot(дни(3), now), true)
+  assert.equal(dueIsHot(дни(4), now), false)
+
+  // Пусто — не «дата неизвестна», а «обязательства нет»: ни того,
+  // ни другого вопроса к такой карточке нет.
+  assert.equal(dueIsBurning(null, now), false)
+  assert.equal(dueIsHot(null, now), false)
+})
+
+test('срок словами: отсчёт от сегодня — на доске, чистая дата — в журнале', () => {
+  const now = new Date(2026, 7, 17)
+
+  assert.equal(dueLabel('2026-08-17', now).text, 'сегодня · 17 авг.')
+  assert.equal(dueLabel('2026-08-18', now).text, 'завтра · 18 авг.')
+  assert.equal(dueLabel('2026-08-21', now).text, 'до 21 авг.')
+  assert.ok(dueLabel('2026-08-15', now).text.startsWith('просрочено'))
+
+  // Год — только чужой.
+  assert.equal(dateWords('2026-08-21', now), '21 авг.')
+  assert.ok(dateWords('2027-01-09', now).includes('2027'))
+
+  // В журнале отсчёта нет: запись о прошлом не имеет права меняться
+  // от того, что прошло время.
+  assert.equal(dateWords('2026-08-15', now), '15 авг.')
 })

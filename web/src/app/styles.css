@@ -1268,6 +1268,12 @@ textarea.description {
   border-width: 0 0 1.5px 1.5px;
   transform: rotate(-45deg);
 }
+/* Недоступная часть: тот же квадрат, но пунктиром. Она считается
+   в мере разбиения — прятать её значит соврать про меру, — а названия
+   у неё нет, и это видно. */
+.subtask--hidden .subtask-box {
+  border-style: dashed;
+}
 /* Сделанная подзадача приглушена и зачёркнута: одним цветом отличать
    её нельзя — это критерий WCAG 1.4.1. */
 .subtask--done {
@@ -1449,9 +1455,12 @@ textarea.description {
   background: var(--surface-2);
   color: var(--ink-3);
 }
-/* Блокировка вне доски — в списке подписок: там пометка одна, и цвет
-   у неё тот же по той же причине. */
-.mark--blocked {
+/* Отказ вне доски — отключённая подписка в списке вебхуков. Пометка
+   там одна, и цвет у неё тот же по той же причине. Названа по смыслу
+   своего места, а не «блокировкой»: с блокировкой карточки у неё
+   не осталось ничего общего, кроме цвета, и следующая правка пометок
+   карточки красила бы служебную строку заодно. */
+.mark--fail {
   background: var(--warn-soft);
   color: var(--warn);
 }
@@ -1825,17 +1834,18 @@ textarea.description {
 .avatars > * {
   box-shadow: 0 0 0 2px var(--surface);
 }
-.avatar--more {
+/* Счётчик «+2» в конце стопки. Не модификатор аватара: базовый
+   `.avatar` красит текст цветом подложки — он рассчитан на заливку
+   оттенком, а здесь заливки нет, и «+2» пропало бы. Размер и шрифт
+   приходят вписанным стилем из того же места, что у аватаров. */
+.avatar-more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 1.5rem;
-  height: 1.5rem;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--ink-2);
-  font-size: var(--text-xs);
   font-weight: 650;
 }
 
@@ -2198,15 +2208,6 @@ textarea.description {
   align-items: center;
   gap: var(--space-1);
 }
-/* Аватары частей — мельче обычных: они отвечают на вопрос второго
-   плана («кого спрашивать про часть»), и в полный рост спорили бы
-   с исполнителями самой карточки. */
-.avatars--small > * {
-  inline-size: 1.125rem;
-  block-size: 1.125rem;
-  font-size: 0.55rem;
-}
-
 .subtask-replies {
   display: inline-flex;
   align-items: center;
@@ -2215,13 +2216,6 @@ textarea.description {
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
-/* Недоступная часть: тот же квадрат, но пунктиром. Она считается
-   в мере разбиения — прятать её значит соврать про меру, — а названия
-   у неё нет, и это видно. */
-.subtask--hidden .subtask-box {
-  border-style: dashed;
-}
-
 
 /* Пустое поле — место, которого не видно, пока на карточку не смотрят.
    Доска из пятисот неоценённых карточек иначе превращается в пятьсот

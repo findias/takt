@@ -156,7 +156,7 @@ function HookRow({ hook, onAct }: { hook: Webhook; onAct: (p: Promise<unknown>) 
               соседняя система в этот момент считает, что у нас ничего
               не происходит. */}
           {hook.disabled && (
-            <span className="mark mark--blocked">
+            <span className="mark mark--fail">
               Отключена: получатель не отвечал. {hook.lastError ?? ''}
             </span>
           )}

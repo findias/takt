@@ -333,34 +333,75 @@ export function priorityRank(priority: Priority): number {
 }
 
 /**
- * Срок словами и то, горит ли он.
+ * Дата словами и без отсчёта от сегодня: «21 авг».
+ *
+ * Нужна там, где отсчёт был бы враньём, — в журнале. Запись «поставлен
+ * срок» рассказывает о том, что случилось в прошлом, и превращать её
+ * в «просрочено» задним числом нельзя: тогда история начинает
+ * переписываться сама по мере того, как идёт время.
+ */
+export function dateWords(iso: string, now: Date = new Date()): string {
+  const at = new Date(`${iso}T00:00:00`)
+  return at.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    // Год — только чужой: в «21 авг 2026 г.» год читают, ничего
+    // из него не узнавая, триста раз подряд.
+    ...(at.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+  })
+}
+
+/**
+ * Срок словами и сколько до него осталось.
  *
  * Пишется днём и месяцем — год добавляется, только если он не текущий:
  * «до 21 авг» читается с одного взгляда, а «до 21.08.2026» приходится
  * разбирать. Просроченное названо просроченным, а не «-2 дня»:
  * отрицательное число дней читают дважды.
+ *
+ * Возвращается число дней, а не готовый признак «горит», потому что
+ * порогов у срока два и они разные (см. ниже). Признак пришлось бы
+ * либо считать по самому широкому порогу, либо разбирать обратно
+ * из подписи — а разбор собственной подписи строкой ломается о первую
+ * же правку формулировки.
  */
-export function dueLabel(dueOn: string, now: Date = new Date()): { text: string; hot: boolean } {
+export function dueLabel(dueOn: string, now: Date = new Date()): { text: string; days: number } {
   const due = new Date(`${dueOn}T00:00:00`)
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const days = Math.round((due.getTime() - today.getTime()) / 86_400_000)
-  const date = due.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    ...(due.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
-  })
+  const date = dateWords(dueOn, now)
 
-  if (days < 0) return { text: `просрочено · ${date}`, hot: true }
-  if (days === 0) return { text: `сегодня · ${date}`, hot: true }
-  if (days === 1) return { text: `завтра · ${date}`, hot: true }
-  return { text: `до ${date}`, hot: days <= 3 }
+  if (days < 0) return { text: `просрочено · ${date}`, days }
+  if (days === 0) return { text: `сегодня · ${date}`, days }
+  if (days === 1) return { text: `завтра · ${date}`, days }
+  return { text: `до ${date}`, days }
 }
 
-/** Срок «горит», если он сегодня, завтра, послезавтра или уже прошёл.
- *  Три дня — не круглое число ради красоты: за меньшее не успевают
- *  договориться, за большее ещё не начинают беспокоиться. */
+/**
+ * Порогов у срока два, и это не придирка.
+ *
+ * «Срок подходит» — вопрос планирования: что придётся разгребать
+ * на неделе, кому помочь, что перестать брать. Три дня здесь верны:
+ * за меньшее не успевают договориться, за большее ещё не начинают
+ * беспокоиться. Отбор в строке фильтров спрашивает именно это.
+ *
+ * «Срок горит» — вопрос сегодняшнего дня: из-за чего звонят прямо
+ * сейчас. И только это имеет право занять единственную тревожную
+ * пометку на карточке.
+ *
+ * Пороги были одним, и от этого доска потеряла главное: карточка
+ * с датой через три дня забирала тревожный слот и вытесняла
+ * «идёт дольше обещанного» — сигнал, ради которого доска и считает
+ * обещание. Там, где даты стоят у трети карточек, старение переставало
+ * быть видно вообще.
+ */
 export function dueIsHot(dueOn: string | null, now?: Date): boolean {
-  return dueOn === null ? false : dueLabel(dueOn, now).hot
+  return dueOn === null ? false : dueLabel(dueOn, now).days <= 3
+}
+
+/** Срок горит: сегодня, завтра или уже прошёл. */
+export function dueIsBurning(dueOn: string | null, now?: Date): boolean {
+  return dueOn === null ? false : dueLabel(dueOn, now).days <= 1
 }
 
 // Единицы называются коротко: подпись стоит вплотную к числу, и
