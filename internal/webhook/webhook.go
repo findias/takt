@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -58,9 +59,19 @@ type Delivery struct {
 
 type Service struct {
 	db *store.Store
+	// known — имена событий, которые вообще рассылаются. Приходят снаружи,
+	// потому что рождаются они в доске, а доска знает про этот пакет:
+	// список здесь был бы вторым и разошёлся бы с первым.
+	known []string
 }
 
-func New(db *store.Store) *Service { return &Service{db: db} }
+func New(db *store.Store, known []string) *Service {
+	return &Service{db: db, known: known}
+}
+
+// Known — то же имя списка наружу: интерфейс предлагает подписаться
+// ровно на то, что доставляется.
+func (s *Service) Known() []string { return s.known }
 
 func (s *Service) List(ctx context.Context, orgID, userID string) ([]Hook, error) {
 	out := []Hook{}
@@ -97,6 +108,15 @@ func (s *Service) Create(ctx context.Context, orgID, actorID, name, target strin
 	}
 	if len(events) == 0 {
 		return Hook{}, fmt.Errorf("подписка без событий ничего не доставляет")
+	}
+	// Имя события проверяется на входе. Принятая подписка на «card.готово»
+	// выглядит работающей и не доставляет ничего никогда — а узнают об
+	// этом тогда, когда чего-то не дождались, и ищут поломку в доставке.
+	for _, event := range events {
+		if !slices.Contains(s.known, event) {
+			return Hook{}, fmt.Errorf(
+				"события %q не бывает; есть такие: %s", event, strings.Join(s.known, ", "))
+		}
 	}
 
 	secret, err := newSecret()

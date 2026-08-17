@@ -8,13 +8,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/webhook"
 )
@@ -69,7 +72,6 @@ func (r *receiver) answer(status int) {
 	r.mu.Unlock()
 }
 
-// drain разбирает очередь одним заходом работника, как это делает сервер.
 // drain разбирает очередь доставок до конца, а не одной пачкой.
 //
 // Очередь общая на базу, а пачка — десять: в полном прогоне первыми
@@ -99,6 +101,48 @@ func drain(t *testing.T) int {
 		}
 		total += sent
 	}
+}
+
+// Подписка на несуществующее событие раньше заводилась с кодом 201
+// и не доставляла ничего никогда: узнавали об этом тогда, когда
+// не дождались, и шли искать поломку в доставке.
+//
+// Здесь же проверяется, что список событий отдаёт сервер: у интерфейса
+// был свой, вчетверо короче, и «работу сделана» — то, ради чего подписку
+// чаще всего и заводят, — выбрать было нельзя.
+func TestSubscriptionTakesOnlyEventsThatExist(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+
+	code, body := owner.do("POST", "/api/webhooks", map[string]any{
+		"name": "Выдуманное", "url": "https://example.test/hooks",
+		"events": []string{"card.выполнена"},
+	})
+	if code != http.StatusBadRequest {
+		t.Fatalf("подписка на несуществующее событие: код %d; тело: %s", code, body)
+	}
+	// Отказ обязан называть известные: иначе следующая попытка — тоже
+	// угадывание.
+	if !strings.Contains(string(body), "card.done") {
+		t.Errorf("отказ не называет, на что подписываться можно: %s", body)
+	}
+
+	raw := owner.mustDo("GET", "/api/webhooks", nil, http.StatusOK)
+	var list struct {
+		Events []string `json:"events"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(list.Events, board.EventNames()) {
+		t.Errorf("сервер предлагает не то, что доставляет: %v", list.Events)
+	}
+
+	// А на то, что бывает, подписка заводится — включая «работа сделана».
+	owner.mustDo("POST", "/api/webhooks", map[string]any{
+		"name": "Готовое", "url": "https://example.test/hooks",
+		"events": []string{"card.done"},
+	}, http.StatusCreated)
 }
 
 func TestWebhookDeliversSignedEvent(t *testing.T) {

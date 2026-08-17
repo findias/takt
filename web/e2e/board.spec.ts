@@ -517,6 +517,10 @@ test('подписка на события заводится и показыв�
   await register(page)
 
   await page.getByRole('button', { name: 'Команда' }).click()
+  // Список событий приходит с сервера — тот же, что доставляется.
+  // Свой список интерфейса был вчетверо короче, и «работа сделана»,
+  // ради которой подписку чаще всего и заводят, в нём отсутствовала.
+  await expect(page.getByText('Работа отмечена сделанной')).toBeVisible()
   await page.getByLabel('Название подписки').fill('Оповещение дежурного')
   await page.getByLabel('Адрес получателя').fill('https://example.test/hooks/board')
   await page.getByRole('button', { name: 'Завести', exact: true }).click()

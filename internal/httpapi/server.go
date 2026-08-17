@@ -59,7 +59,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 		orgs:    org.New(db),
 		teams:   team.New(db),
 		client:  apiclient.New(db),
-		hooks:   webhook.New(db),
+		hooks:   webhook.New(db, board.EventNames()),
 		metrics: metrics.New(db),
 		hub:     hub,
 		limiter: newLimiter(),

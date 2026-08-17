@@ -571,6 +571,16 @@ input[type='radio'] {
   border-bottom: none;
 }
 
+/* Двадцать флажков в одну переносимую строку читаются неверно: между
+   подписью и следующим флажком тот же зазор, что между флажком и его
+   подписью, — и глаз связывает флажок с левым соседом. Сетка задаёт
+   каждому свою клетку, и вопрос «чей это флажок» не возникает. */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-1) var(--space-4);
+}
+
 .member-who {
   display: flex;
   flex-direction: column;

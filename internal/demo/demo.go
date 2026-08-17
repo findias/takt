@@ -167,7 +167,8 @@ func (f *filler) organization() error {
 	// ни отключения, ни кнопки «повторить». Работник сдаётся после
 	// восьми попыток и подписку отключает, так что стенд не остаётся
 	// с вечным стуком в пустоту.
-	if _, err := webhook.New(f.db).Create(f.ctx, f.orgID, f.owner(), "Оповещение дежурного",
+	hooks := webhook.New(f.db, board.EventNames())
+	if _, err := hooks.Create(f.ctx, f.orgID, f.owner(), "Оповещение дежурного",
 		"https://example.test/hooks/board",
 		[]string{"card.created", "card.moved", "card.blocked"}); err != nil {
 		return fmt.Errorf("подписка на события: %w", err)

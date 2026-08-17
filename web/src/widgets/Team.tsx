@@ -323,7 +323,7 @@ function Clients() {
             Создать
           </button>
         </div>
-        <div className="row row--tight">
+        <div className="checkbox-grid">
           {Object.keys(SCOPE_NAMES).map((scope) => (
             <label key={scope} className="row row--tight">
               <input

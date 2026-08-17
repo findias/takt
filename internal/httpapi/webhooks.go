@@ -25,7 +25,14 @@ func (s *Server) handleListWebhooks(w http.ResponseWriter, r *http.Request, p au
 		s.fail(w, "список подписок", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"webhooks": hooks})
+	// Список событий едет вместе с подписками, а не отдельным запросом:
+	// спрашивают его ровно там же и ровно тогда же. И едет он с сервера
+	// потому, что у интерфейса был свой — вчетверо короче, без «работа
+	// сделана», ради которой подписку чаще всего и заводят.
+	writeJSON(w, http.StatusOK, map[string]any{
+		"webhooks": hooks,
+		"events":   s.hooks.Known(),
+	})
 }
 
 // Ключ подписи возвращается один раз — в ответе на создание. Подписывать

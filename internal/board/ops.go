@@ -1106,8 +1106,8 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 	// записано: доставка не может оказаться потерянной при записанном
 	// событии, а событие — записанным без доставки. Отправит её потом
 	// работник, поэтому чужой медленный сервер не задержит операцию.
-	err := webhook.Enqueue(ctx, tx, orgID, "card."+kind, map[string]any{
-		"event":   "card." + kind,
+	err := webhook.Enqueue(ctx, tx, orgID, EventPrefix+kind, map[string]any{
+		"event":   EventPrefix + kind,
 		"boardId": boardID,
 		"cardId":  cardID,
 		"actorId": actorID,

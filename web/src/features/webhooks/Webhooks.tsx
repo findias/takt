@@ -18,6 +18,9 @@ import { Skeleton } from '../../shared/ui/states.tsx'
  */
 export function Webhooks() {
   const [hooks, setHooks] = useState<Webhook[] | null>(null)
+  // Какие события бывают, знает сервер: свой список здесь уже был
+  // и разошёлся с доставляемым вчетверо.
+  const [known, setKnown] = useState<string[]>([])
   const [fresh, setFresh] = useState<Webhook | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -27,7 +30,10 @@ export function Webhooks() {
   const load = useCallback(() => {
     api
       .listWebhooks()
-      .then((r) => setHooks(r.webhooks))
+      .then((r) => {
+        setHooks(r.webhooks)
+        setKnown(r.events)
+      })
       .catch(() => setHooks([]))
   }, [])
 
@@ -130,8 +136,8 @@ export function Webhooks() {
         </div>
         {/* Подписка без событий ничего не доставляет — сервер такую
             не заводит, и предлагать её незачем. */}
-        <div className="row row--tight">
-          {Object.keys(WEBHOOK_EVENT_NAMES).map((event) => (
+        <div className="checkbox-grid">
+          {known.map((event) => (
             <label key={event} className="row row--tight">
               <input
                 type="checkbox"
@@ -142,7 +148,9 @@ export function Webhooks() {
                   )
                 }
               />
-              <span className="small">{WEBHOOK_EVENT_NAMES[event]}</span>
+              {/* Незнакомое имя показываем как есть: событие доставляется,
+                  и промолчать о нём хуже, чем назвать непонятно. */}
+              <span className="small">{WEBHOOK_EVENT_NAMES[event] ?? event}</span>
             </label>
           ))}
         </div>

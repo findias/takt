@@ -207,21 +207,37 @@ export type Delivery = {
 }
 
 /**
- * События, на которые подписываются.
+ * Слова для событий, на которые подписываются.
  *
- * Список здесь, а не приходит с сервера: он же и есть обещание клиенту,
- * а обещания живут в контракте. Имена — те же, что в журнале карточки
- * (`entities/feed/model.ts`), потому что событие одно и то же.
+ * Сам список приходит с сервера — он там и рождается, — а здесь только
+ * перевод на человеческий. Свой список тут был, и это был второй список:
+ * он отстал от доставляемого вчетверо и не предлагал «работу сделана»,
+ * ради которой подписку чаще всего и заводят.
+ *
+ * Имени, которого здесь нет, показывается как есть: событие уже
+ * доставляется, и промолчать о нём хуже, чем назвать непонятно.
  */
 export const WEBHOOK_EVENT_NAMES: Record<string, string> = {
   'card.created': 'Карточка создана',
-  'card.moved': 'Карточка перенесена',
   'card.renamed': 'Карточка переименована',
+  'card.described': 'Описание изменено',
   'card.estimated': 'Оценка изменена',
+  'card.prioritised': 'Приоритет изменён',
+  'card.committed': 'Срок поставлен или снят',
+  'card.moved': 'Карточка перенесена',
   'card.blocked': 'Карточка заблокирована',
   'card.unblocked': 'Блокировка снята',
+  'card.linked': 'Связь заведена',
+  'card.unlinked': 'Связь снята',
   'card.commented': 'Написано в обсуждении',
+  'card.field_set': 'Своё поле заполнено',
+  'card.field_cleared': 'Своё поле очищено',
+  'card.iteration_added': 'Добавлена в итерацию',
+  'card.iteration_removed': 'Убрана из итерации',
+  'card.done': 'Работа отмечена сделанной',
+  'card.undone': 'Отметка «сделана» снята',
   'card.archived': 'Карточка убрана в архив',
+  'card.restored': 'Карточка возвращена на доску',
 }
 
 export const SCOPE_NAMES: Record<string, string> = {
@@ -681,7 +697,8 @@ export const api = {
     request<ApiClient>('POST', '/api/clients', { name, scopes, expiresAt }),
   revokeClient: (id: string) => request<void>('DELETE', `/api/clients/${id}`),
 
-  listWebhooks: () => request<{ webhooks: Webhook[] }>('GET', '/api/webhooks'),
+  listWebhooks: () =>
+    request<{ webhooks: Webhook[]; events: string[] }>('GET', '/api/webhooks'),
   createWebhook: (name: string, url: string, events: string[]) =>
     request<Webhook>('POST', '/api/webhooks', { name, url, events }),
   deleteWebhook: (id: string) => request<void>('DELETE', `/api/webhooks/${id}`),

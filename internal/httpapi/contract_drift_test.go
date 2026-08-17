@@ -44,14 +44,10 @@ func TestContractEnumerationsMatchCode(t *testing.T) {
 		codesWritten(t),
 		enumAt(t, doc, "components", "schemas", "Error", "properties", "code", "enum"))
 
-	// Имена событий: «card.» приписывается при постановке в очередь
-	// доставки (logEvent), поэтому приписывается и здесь.
-	names := make([]string, 0, len(board.EventKinds))
-	for _, kind := range board.EventKinds {
-		names = append(names, "card."+kind)
-	}
+	// Имена событий — тот же список, который сервер предлагает
+	// интерфейсу и по которому отказывает в подписке.
 	sameSet(t, "имена событий", "описании",
-		names,
+		board.EventNames(),
 		enumAt(t, doc, "components", "schemas", "EventName", "enum"))
 }
 
