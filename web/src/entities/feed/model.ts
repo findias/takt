@@ -4,7 +4,7 @@
 // и снимок затронутого. Читают его люди, и разбирать jsonb глазами
 // им незачем.
 
-import { PRIORITY_NAMES } from '../card/model.ts'
+import { priorityLabel } from '../card/model.ts'
 import type { AuditEntry, BoardEvent, Priority } from '../../shared/api/index.ts'
 
 /** Что произошло с карточкой. */
@@ -44,8 +44,8 @@ export function eventText(event: BoardEvent): string {
     case 'restored':
       return 'возвращена на доску'
     case 'prioritised':
-      return typeof p.priority === 'string' && p.priority in PRIORITY_NAMES
-        ? `приоритет: ${PRIORITY_NAMES[p.priority as Priority].toLowerCase()}`
+      return typeof p.priority === 'string'
+        ? `приоритет: ${priorityLabel(p.priority as Priority).toLowerCase()}`
         : 'изменён приоритет'
     case 'blocked':
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'

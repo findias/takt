@@ -4,9 +4,9 @@ import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
 import { agingLabel } from '../../entities/board/model.ts'
 import {
-  PRIORITY_NAMES,
   UNIT_SHORT,
   cardsLabel,
+  priorityLabel,
   priorityRank,
 } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
@@ -171,7 +171,7 @@ export function TableView({
                 {/* Приоритет назван словом у каждой строки, в отличие
                     от доски: таблицу открывают, чтобы сравнивать,
                     а сравнивать пустое место с пустым местом нельзя. */}
-                <td className="muted small">{PRIORITY_NAMES[card.priority]}</td>
+                <td className="muted small">{priorityLabel(card.priority)}</td>
                 <td className="muted small">
                   {card.estimate === null ? '—' : `${card.estimate} ${UNIT_SHORT[unit]}`}
                 </td>

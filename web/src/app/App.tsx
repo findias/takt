@@ -9,6 +9,7 @@ import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { ToastHost } from '../shared/ui/Toast.tsx'
+import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
 // заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
@@ -30,9 +31,13 @@ const TABS = [
  *  не забота экрана, который их вызвал. */
 export function App() {
   return (
-    <ToastHost>
-      <Screens />
-    </ToastHost>
+    // Граница снаружи всего: ошибка отрисовки любого экрана обязана
+    // оставлять на странице слова и кнопку, а не белое поле.
+    <ErrorBoundary>
+      <ToastHost>
+        <Screens />
+      </ToastHost>
+    </ErrorBoundary>
   )
 }
 

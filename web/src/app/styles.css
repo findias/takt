@@ -303,6 +303,23 @@ input[type='radio'] {
   padding: var(--space-8) var(--space-4);
 }
 
+/* Текст упавшей отрисовки. Моноширинный и с переносом: сообщения
+   бывают длинными, а обрезанное сообщение бесполезно ровно той частью,
+   которую обрезали. Выделяется и копируется — за этим его и показывают. */
+.error-details {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
 /* Каркас рабочих экранов.
  *
  * Раньше доски, команда и структура жили в той же карточке по центру,

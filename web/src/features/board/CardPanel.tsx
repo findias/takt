@@ -24,6 +24,7 @@ import {
   PRIORITIES,
   PRIORITY_NAMES,
   UNIT_SHORT,
+  priorityLabel,
   candidatesForSubtask,
   cardDetails,
   progressLabel,
@@ -773,7 +774,7 @@ function PriorityPicker({
   onChange: (next: Priority) => void
 }) {
   if (!canEdit) {
-    return <p className="muted small">Приоритет: {PRIORITY_NAMES[value].toLowerCase()}</p>
+    return <p className="muted small">Приоритет: {priorityLabel(value).toLowerCase()}</p>
   }
 
   return (

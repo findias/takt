@@ -9,7 +9,12 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
-import { PRIORITY_NAMES, progressLabel, progressRatio, unitLabel } from '../../entities/card/model.ts'
+import {
+  priorityLabel,
+  progressLabel,
+  progressRatio,
+  unitLabel,
+} from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import type { Card, Column, EstimateUnit, Label, Priority } from '../../shared/api/index.ts'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
@@ -306,7 +311,7 @@ function CardViewInner({
                 точка требует, чтобы её сначала объяснили. */}
             {card && card.priority !== 'medium' && (
               <span className={`priority-mark priority-mark--${card.priority}`}>
-                {PRIORITY_NAMES[card.priority].toLowerCase()}
+                {priorityLabel(card.priority).toLowerCase()}
               </span>
             )}
             {parent && (
