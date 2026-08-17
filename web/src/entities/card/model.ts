@@ -32,7 +32,18 @@ export type Related = {
   reachable: boolean
   /** Своя карточка открывается на этой же доске. */
   onThisBoard: boolean
+  /** Кто делает именно эту часть. Части одной карточки почти всегда
+   *  лежат на разных людях, и до сих пор доска отвечала «работа
+   *  разбита», молча о том, кого спрашивать. */
+  assignees: string[]
+  /** Сколько реплик в её обсуждении. У части обсуждение своё, и без
+   *  числа о нём узнают, только зайдя внутрь. */
+  replies: number
 }
+
+/** Общий пустой список исполнителей: новый массив на каждую отрисовку
+ *  ломает мемоизацию строк подзадач. */
+const NO_ONE: string[] = []
 
 export type CardDetails = {
   card: Card
@@ -135,6 +146,10 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       blocked: Boolean(own.blocked),
       reachable: true,
       onThisBoard: true,
+      // Исполнители и разговор — только у своих карточек: про чужую
+      // доску снимок знает название, колонку и обещание, но не состав.
+      assignees: base.cardAssignees[id] ?? NO_ONE,
+      replies: own.comments,
     }
   }
 
@@ -156,6 +171,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       blocked: foreign.blocked,
       reachable: true,
       onThisBoard: false,
+      assignees: NO_ONE,
+      replies: 0,
     }
   }
 
@@ -171,6 +188,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
     blocked: false,
     reachable: false,
     onThisBoard: false,
+    assignees: NO_ONE,
+    replies: 0,
   }
 }
 

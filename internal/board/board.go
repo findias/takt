@@ -155,6 +155,12 @@ type Card struct {
 	Progress *Progress `json:"progress,omitempty"`
 	// Открытая блокировка, если есть.
 	Blocked *Block `json:"blocked,omitempty"`
+	// Сколько реплик в обсуждении. Считается запросом на доску, как
+	// и прогресс: хранимый счётчик пришлось бы поддерживать при каждой
+	// правке и удалении реплики. Нужен он не самой карточке, а строке
+	// подзадачи на доске — у подзадачи своё обсуждение, и без числа
+	// о нём узнают, только зайдя внутрь.
+	Comments int `json:"comments"`
 }
 
 // Progress — доля завершённой работы среди подзадач. Считается запросом,
@@ -527,6 +533,32 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		return err
 	}
 	progressRows.Close()
+
+	// Число реплик. Удалённые не считаются: обсуждение — это то, что
+	// в нём осталось, а не то, что когда-то было написано.
+	commentRows, err := tx.Query(ctx, `
+		select card_id, count(*)
+		  from card_comments
+		 where board_id = $1 and deleted_at is null
+		 group by card_id`, boardID)
+	if err != nil {
+		return err
+	}
+	defer commentRows.Close()
+	for commentRows.Next() {
+		var id string
+		var count int
+		if err := commentRows.Scan(&id, &count); err != nil {
+			return err
+		}
+		if card := byID[id]; card != nil {
+			card.Comments = count
+		}
+	}
+	if err := commentRows.Err(); err != nil {
+		return err
+	}
+	commentRows.Close()
 
 	blockRows, err := tx.Query(ctx, `
 		select b.card_id, b.id, b.reason, b.blocked_at

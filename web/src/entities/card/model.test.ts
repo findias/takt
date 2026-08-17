@@ -31,6 +31,7 @@ function card(id: string, title: string, extra: Partial<Card> = {}): Card {
     finishedAt: null,
     outcome: null,
     estimate: null,
+    comments: 0,
     ...extra,
   }
 }

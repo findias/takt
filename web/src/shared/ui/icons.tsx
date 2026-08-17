@@ -182,6 +182,16 @@ export function FlowIcon(props: IconProps) {
   )
 }
 
+/** Реплика в обсуждении. Не галочка: галочка означает «сделано»,
+ *  а счётчик рядом с подзадачей — «здесь разговаривали». */
+export function CommentIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z" />
+    </Icon>
+  )
+}
+
 export function PeopleIcon(props: IconProps) {
   return (
     <Icon {...props}>

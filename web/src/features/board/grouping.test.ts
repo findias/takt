@@ -27,6 +27,7 @@ function card(id: string, over: Partial<Card> = {}): Card {
     finishedAt: null,
     outcome: null,
     estimate: null,
+    comments: 0,
     ...over,
   }
 }

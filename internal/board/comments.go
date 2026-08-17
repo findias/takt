@@ -8,6 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/konkov/agile/internal/realtime"
 )
 
 // Обсуждение карточки.
@@ -121,10 +123,36 @@ func (s *Service) AddComment(ctx context.Context, orgID, actorID, boardID, cardI
 			}
 		}
 
-		return logEvent(ctx, tx, orgID, boardID, cardID, actorID, "commented",
-			nil, nil, map[string]any{"commentId": c.ID})
+		if err := logEvent(ctx, tx, orgID, boardID, cardID, actorID, "commented",
+			nil, nil, map[string]any{"commentId": c.ID}); err != nil {
+			return err
+		}
+		return touchBoard(ctx, tx, boardID, actorID)
 	})
 	return c, translateComment(err)
+}
+
+// touchBoard двигает версию доски и оповещает открытые экраны.
+//
+// Реплика — изменение доски, а не только карточки: в строке подзадачи
+// стоит число реплик, и без сдвига версии оно оставалось бы вчерашним
+// до следующей перезагрузки. Тем же коммитом, что и сама реплика:
+// оповещение, отправленное отдельно, рано или поздно уйдёт без
+// изменения либо изменение пройдёт без оповещения.
+//
+// Патча при этом нет — обсуждение живёт своим запросом, — поэтому
+// клиент, увидев версию новее своей, перечитает снимок. Это уже
+// предусмотренный путь.
+func touchBoard(ctx context.Context, tx pgx.Tx, boardID, actorID string) error {
+	var version int64
+	if err := tx.QueryRow(ctx,
+		`update boards set version = version + 1 where id = $1 returning version`,
+		boardID).Scan(&version); err != nil {
+		return err
+	}
+	return realtime.Notify(ctx, tx, realtime.Change{
+		BoardID: boardID, Version: version, ActorID: actorID,
+	})
 }
 
 // EditComment меняет текст, сохраняя прежний. Править можно только своё:
@@ -147,11 +175,22 @@ func (s *Service) EditComment(ctx context.Context, orgID, actorID, commentID, bo
 // ссылаются ответы, и вырезав её, мы разорвали бы ветку.
 func (s *Service) DeleteComment(ctx context.Context, orgID, actorID, commentID string) error {
 	return s.changeOwn(ctx, orgID, actorID, commentID, func(ctx context.Context, tx pgx.Tx) (int64, error) {
+		var boardID string
 		tag, err := tx.Exec(ctx, `
 			update card_comments set deleted_at = now(), deleted_by = $2
 			 where id = $1 and author_id = $2 and deleted_at is null`,
 			commentID, actorID)
-		return tag.RowsAffected(), err
+		if err != nil || tag.RowsAffected() == 0 {
+			return tag.RowsAffected(), err
+		}
+		// Удалённая реплика меняет число реплик — доске об этом знать
+		// ровно настолько же, насколько и о новой.
+		if err := tx.QueryRow(ctx,
+			`select board_id::text from card_comments where id = $1`, commentID).
+			Scan(&boardID); err != nil {
+			return tag.RowsAffected(), err
+		}
+		return tag.RowsAffected(), touchBoard(ctx, tx, boardID, actorID)
 	})
 }
 

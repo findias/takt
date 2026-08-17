@@ -15,6 +15,7 @@ import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.t
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
+import { SubtaskRow } from './SubtaskRow.tsx'
 import {
   ArchiveIcon,
   BlockedIcon,
@@ -177,6 +178,10 @@ function CardViewInner({
   const shownAssignees = assignees.slice(0, 3)
   const hiddenAssignees = assignees.length - shownAssignees.length
   const own = labels.filter((l) => cardLabels.includes(l.id))
+  // Кто делает части — объединение по ним же, без повторов и в их
+  // порядке. Считается из своих подзадач, а не из снимка доски:
+  // частей у карточки единицы, а знание о снимке сломало бы memo.
+  const subtaskAssignees = [...new Set(subtasks.flatMap((s) => s.assignees))]
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     // Клавиши карточки работают, только когда выделена сама карточка.
@@ -498,6 +503,18 @@ function CardViewInner({
                   <span className="muted small">{progressLabel(card, unit)}</span>
                 </>
               )}
+
+              {/* Кто делает части — здесь же, у меры: подзадачи одной
+                  карточки почти всегда лежат на разных людях, и до сих
+                  пор доска отвечала «работа разбита», молча о том, кого
+                  спрашивать. Аватар отвечает на это без раскрытия. */}
+              {subtaskAssignees.length > 0 && (
+                <span className="avatars avatars--small" title="На кого разложены части">
+                  {subtaskAssignees.slice(0, 3).map((id) => (
+                    <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                  ))}
+                </span>
+              )}
             </div>
           )}
 
@@ -508,17 +525,14 @@ function CardViewInner({
           {subtasks.length > 0 && (
             <ul className="subtasks" id={`subtasks-${cardId}`} hidden={!open}>
               {subtasks.map((s) => (
-                <li key={s.id} className={s.done ? 'subtask subtask--done' : 'subtask'}>
-                  {s.onThisBoard ? (
-                    <button className="link" onClick={() => onOpen(s.id)}>
-                      {s.title}
-                    </button>
-                  ) : (
-                    // Чужая доска: назвать можем, открыть отсюда — нет.
-                    <span>{s.title}</span>
-                  )}
-                  {!s.onThisBoard && <span className="muted small">{s.where}</span>}
-                </li>
+                <SubtaskRow
+                  key={s.id}
+                  subtask={s}
+                  people={people}
+                  assignees={s.assignees}
+                  replies={s.replies}
+                  onOpen={onOpen}
+                />
               ))}
             </ul>
           )}

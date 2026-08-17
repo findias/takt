@@ -832,6 +832,26 @@ test('подзадачи раскрываются прямо с доски', asy
   // проходиться, а не только показываться.
   await parent.getByRole('button', { name: 'Свести цифры' }).click()
   await expect(page.getByRole('heading', { name: 'Свести цифры' })).toBeVisible()
+
+  // В строке части видно, кто её делает и сколько там разговора: части
+  // одной карточки почти всегда лежат на разных людях, а обсуждение
+  // у каждой своё.
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Свести цифры»/)
+  await panel.getByLabel('Добавить исполнителя').selectOption({ index: 1 })
+  await page.getByRole('tab', { name: 'Обсуждение' }).click()
+  await panel.getByPlaceholder('Написать в обсуждение').fill('Взял на себя')
+  await panel.getByRole('button', { name: 'Отправить' }).click()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  const row = parent.locator('.subtask').filter({ hasText: 'Свести цифры' })
+  await expect(row.locator('.avatar')).toHaveCount(1)
+  await expect(row.getByTitle('Реплик в обсуждении: 1')).toBeVisible()
+
+  // Кого спрашивать — видно и не раскрывая список.
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(parent.getByTitle('На кого разложены части').locator('.avatar')).toHaveCount(1)
 })
 
 test('история спрятана за вкладкой, карточка открывается обсуждением', async ({ page }) => {

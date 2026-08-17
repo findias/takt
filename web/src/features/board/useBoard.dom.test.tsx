@@ -59,6 +59,7 @@ function card(id: string, columnId: string, position: string): Card {
     finishedAt: null,
     outcome: null,
     estimate: null,
+    comments: 0,
   }
 }
 

@@ -334,6 +334,10 @@ export type Card = {
   progress?: { done: number; total: number; byWeight: boolean }
   /** Открытая блокировка, если есть. */
   blocked?: { id: string; reason: string; blockedAt: string }
+  /** Сколько реплик в обсуждении. Нужно строке подзадачи на доске:
+   *  у подзадачи своё обсуждение, и без числа о нём узнают, только
+   *  зайдя внутрь. */
+  comments: number
 }
 
 export type LinkKind = 'subtask' | 'blocks' | 'relates'

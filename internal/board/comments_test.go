@@ -45,6 +45,42 @@ func TestCommentsFormOneLevelThreads(t *testing.T) {
 	}
 }
 
+// Число реплик приезжает со снимком доски: у подзадачи своё обсуждение,
+// и без счётчика в строке о нём узнают, только зайдя внутрь. Удалённые
+// не считаются — обсуждение это то, что в нём осталось.
+func TestSnapshotCarriesCommentCount(t *testing.T) {
+	f := newFixture(t)
+	card := f.createCard("Задача", f.columnA)
+	quiet := f.createCard("Без разговора", f.columnA)
+
+	root, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, card, "Раз", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, card,
+		"Два", &root.ID, nil); err != nil {
+		t.Fatal(err)
+	}
+	gone, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, card, "Лишнее", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.DeleteComment(f.ctx, f.orgID, f.actorID, gone.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	counts := map[string]int{}
+	for _, c := range f.snapshot().Cards {
+		counts[c.ID] = c.Comments
+	}
+	if counts[card] != 2 {
+		t.Errorf("реплик у карточки: %d, ожидалось 2", counts[card])
+	}
+	if counts[quiet] != 0 {
+		t.Errorf("реплик у карточки без обсуждения: %d", counts[quiet])
+	}
+}
+
 // «Изменено» без прежнего текста бесполезно: спрашивают не «правил ли он»,
 // а «что там было написано до».
 func TestEditKeepsThePreviousText(t *testing.T) {

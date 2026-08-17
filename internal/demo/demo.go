@@ -375,10 +375,45 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"reason": "смежники не подтвердили формат выгрузки"}); err != nil {
 		return err
 	}
+	// Части лежат на разных людях, и у одной идёт разговор: без этого
+	// на доске не увидеть, ради чего в строке подзадачи стоят аватар
+	// и счётчик реплик.
+	parts := map[string]string{
+		"Собрать сборку":       "boris@example.test",
+		"Прогнать нагрузочные": "vera@example.test",
+	}
 	for _, title := range []string{"Собрать сборку", "Прогнать нагрузочные"} {
-		if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
-			"parentCardId": ids["Выпустить релиз склада"], "title": title}); err != nil {
+		res, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
+			"parentCardId": ids["Выпустить релиз склада"], "title": title})
+		if err != nil {
 			return err
+		}
+		// В патче связывания первой идёт родительская карточка, второй —
+		// сама часть: берём ту, что не родитель.
+		part := ""
+		for _, c := range res.Patch.Cards {
+			if c.ID != ids["Выпустить релиз склада"] {
+				part = c.ID
+			}
+		}
+		if part == "" {
+			return fmt.Errorf("подзадача %q не вернулась в патче", title)
+		}
+		if _, err := f.apply(b.ID, "ASSIGN_CARD", map[string]any{
+			"cardId": part, "userId": f.people[parts[title]]}); err != nil {
+			return err
+		}
+		if title != "Собрать сборку" {
+			continue
+		}
+		for _, text := range []string{
+			"Сборка встала на шаге с миграциями.",
+			"Поправил, пересобираю.",
+		} {
+			if _, err := f.boards.AddComment(f.ctx, f.orgID,
+				f.people[parts[title]], b.ID, part, text, nil, nil); err != nil {
+				return err
+			}
 		}
 	}
 	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
