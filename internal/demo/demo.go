@@ -34,6 +34,7 @@ import (
 	"github.com/konkov/agile/internal/org"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/team"
+	"github.com/konkov/agile/internal/webhook"
 )
 
 // Password — пароль всех демонстрационных людей. Один на всех: это стенд,
@@ -157,6 +158,19 @@ func (f *filler) organization() error {
 	if _, err := apiclient.New(f.db).Create(f.ctx, f.orgID, f.owner(), "Обмен со складом",
 		[]string{apiclient.ScopeBoardsRead, apiclient.ScopeBoardsWrite}, nil); err != nil {
 		return fmt.Errorf("ключ интеграции: %w", err)
+	}
+
+	// Подписка на события — здесь же и до досок, чтобы к моменту показа
+	// у неё был журнал доставок. Адрес заведомо недостижим, и это
+	// не небрежность: интереснее всего экран подписок выглядит именно
+	// тогда, когда доставка не идёт, — иначе не увидеть ни ошибки,
+	// ни отключения, ни кнопки «повторить». Работник сдаётся после
+	// восьми попыток и подписку отключает, так что стенд не остаётся
+	// с вечным стуком в пустоту.
+	if _, err := webhook.New(f.db).Create(f.ctx, f.orgID, f.owner(), "Оповещение дежурного",
+		"https://example.test/hooks/board",
+		[]string{"card.created", "card.moved", "card.blocked"}); err != nil {
+		return fmt.Errorf("подписка на события: %w", err)
 	}
 	return nil
 }

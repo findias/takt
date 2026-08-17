@@ -172,6 +172,58 @@ export type ApiClient = {
   lastUsedAt: string | null
 }
 
+/**
+ * Подписка на события.
+ *
+ * Ключ подписи приходит один раз, при создании: подписываем им мы,
+ * а хранить его обязан получатель — в базе у нас он есть, но показывать
+ * его второй раз незачем.
+ */
+export type Webhook = {
+  id: string
+  name: string
+  url: string
+  events: string[]
+  secret?: string
+  /** Отключена после того, как получатель долго не отвечал. */
+  disabled: boolean
+  lastError: string | null
+  createdAt: string
+}
+
+/** Одна попытка доставить событие. Журнал нужен затем, чтобы видеть,
+ *  что именно не доехало, и досдать это, когда получателя починят. */
+export type Delivery = {
+  id: string
+  webhookId: string
+  event: string
+  attempts: number
+  delivered: boolean
+  failed: boolean
+  lastStatus: number | null
+  lastError: string | null
+  createdAt: string
+  nextTry: string | null
+}
+
+/**
+ * События, на которые подписываются.
+ *
+ * Список здесь, а не приходит с сервера: он же и есть обещание клиенту,
+ * а обещания живут в контракте. Имена — те же, что в журнале карточки
+ * (`entities/feed/model.ts`), потому что событие одно и то же.
+ */
+export const WEBHOOK_EVENT_NAMES: Record<string, string> = {
+  'card.created': 'Карточка создана',
+  'card.moved': 'Карточка перенесена',
+  'card.renamed': 'Карточка переименована',
+  'card.estimated': 'Оценка изменена',
+  'card.blocked': 'Карточка заблокирована',
+  'card.unblocked': 'Блокировка снята',
+  'card.commented': 'Написано в обсуждении',
+  'card.archived': 'Карточка убрана в архив',
+}
+
 export const SCOPE_NAMES: Record<string, string> = {
   'boards:read': 'Читать доски',
   'boards:write': 'Изменять доски',
@@ -598,6 +650,14 @@ export const api = {
   createClient: (name: string, scopes: string[], expiresAt: string) =>
     request<ApiClient>('POST', '/api/clients', { name, scopes, expiresAt }),
   revokeClient: (id: string) => request<void>('DELETE', `/api/clients/${id}`),
+
+  listWebhooks: () => request<{ webhooks: Webhook[] }>('GET', '/api/webhooks'),
+  createWebhook: (name: string, url: string, events: string[]) =>
+    request<Webhook>('POST', '/api/webhooks', { name, url, events }),
+  deleteWebhook: (id: string) => request<void>('DELETE', `/api/webhooks/${id}`),
+  deliveries: (id: string) =>
+    request<{ deliveries: Delivery[] }>('GET', `/api/webhooks/${id}/deliveries`),
+  retryDelivery: (id: string) => request<void>('POST', `/api/deliveries/${id}/retry`),
 
   listAdmins: () => request<{ admins: TeamAdmin[] }>('GET', '/api/team-admins'),
   grantAdmin: (userId: string, teamId: string) =>

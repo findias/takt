@@ -16,6 +16,7 @@ import type {
 import { actorText, auditText, timeText } from '../entities/feed/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
+import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -192,6 +193,10 @@ export function Team({ principal }: { principal: Principal }) {
       <Labels canEdit={principal.role !== 'viewer'} />
 
       {isOwner && <Clients />}
+
+      {/* Подписки рядом с ключами: и то и другое про то, что уходит
+          наружу, и смотрят на них по одному поводу. */}
+      {isOwner && <Webhooks />}
 
       {isOwner && <Export />}
 

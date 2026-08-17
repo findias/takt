@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
@@ -190,9 +190,23 @@ test('сборка не разрастается', () => {
   // сети, а не только на рабочем месте. Проверка стоит здесь потому,
   // что разрастание происходит не сразу и не одним куском — его
   // замечают, когда уже поздно.
-  const dir = join(import.meta.dirname, '..', 'dist', 'assets')
-  const scripts = readdirSync(dir).filter((name) => name.endsWith('.js'))
-  const total = scripts.reduce((sum, name) => sum + statSync(join(dir, name)).size, 0)
-  console.log(`скрипты: ${Math.round(total / 1024)} КБ`)
+  //
+  // Считается то, что браузер берёт при открытии: входной кусок и всё,
+  // что он тянет за собой предзагрузкой. Экраны организации вынесены
+  // в отдельные куски и приезжают тогда, когда за ними приходят;
+  // складывать их сюда значило бы мерить не то, чего человек ждёт,
+  // — и наказывать за разделение, ради которого оно и сделано.
+  const dist = join(import.meta.dirname, '..', 'dist')
+  const html = readFileSync(join(dist, 'index.html'), 'utf8')
+  const entry = [...html.matchAll(/(?:src|href)="\/([^"]+\.js)"/g)].map((m) => m[1])
+  expect(entry.length).toBeGreaterThan(0)
+  const total = entry.reduce((sum, name) => sum + statSync(join(dist, name)).size, 0)
+
+  // Отложенные куски называются рядом: пусть их не считают, но пусть
+  // будет видно, что они есть и сколько их.
+  const lazy = readdirSync(join(dist, 'assets'))
+    .filter((name) => name.endsWith('.js') && !entry.some((e) => e.endsWith(name)))
+    .map((name) => `${name} ${Math.round(statSync(join(dist, 'assets', name)).size / 1024)} КБ`)
+  console.log(`при открытии: ${Math.round(total / 1024)} КБ; отложено: ${lazy.join(', ') || 'нет'}`)
   expect(total).toBeLessThan(400 * 1024)
 })

@@ -534,6 +534,26 @@ input[type='radio'] {
 .member-list li:last-child {
   border-bottom: none;
 }
+/* Подписка занимает не строку, а блок: под ней раскрывается журнал
+   доставок, и строка списка людей такому не подходит. */
+.hook-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.hook-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.hook-list > li:last-child {
+  border-bottom: none;
+}
+
 .member-who {
   display: flex;
   flex-direction: column;
@@ -559,6 +579,19 @@ input[type='radio'] {
   white-space: normal;
   overflow: visible;
 }
+
+/* Строка доставки: слева событие с подробностями, справа «повторить».
+   Ужимается текст, а не кнопка, — и отказ получателя переносится
+   по строкам, а не обрезается: читают именно его. */
+.delivery-line {
+  flex: 1;
+  min-width: 0;
+}
+.delivery-line span {
+  white-space: normal;
+  overflow: visible;
+}
+
 select {
   font: inherit;
   padding: var(--space-1) var(--space-2);

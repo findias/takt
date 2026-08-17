@@ -484,6 +484,43 @@ test('узел структуры показывает свои доски и о
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 })
 
+// Подписки сервер умеет с пятого этапа, а интерфейса у них не было
+// вовсе: заводили запросом к API, а о том, что доставка встала,
+// узнавали от соседней системы.
+test('подписка на события заводится и показывает свои доставки', async ({ page }) => {
+  await register(page)
+
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByLabel('Название подписки').fill('Оповещение дежурного')
+  await page.getByLabel('Адрес получателя').fill('https://example.test/hooks/board')
+  await page.getByRole('button', { name: 'Завести', exact: true }).click()
+
+  // Ключ подписи показывается один раз: подписываем им мы, хранит его
+  // получатель.
+  await expect(page.getByLabel('Ключ подписи')).toBeVisible()
+  await expect(page.getByText('https://example.test/hooks/board')).toBeVisible()
+
+  // Пока событий не было, журнал доставок пуст и говорит об этом.
+  await page.getByRole('button', { name: 'Доставки' }).click()
+  await expect(page.getByText('Доставок ещё не было')).toBeVisible()
+  await page.getByRole('button', { name: 'Скрыть доставки' }).click()
+
+  // Случилось событие — доставка появилась. Получателя нет, поэтому
+  // она и не доедет; ради этого журнал и существует.
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await createBoard(page, 'Доска с подпиской')
+  await addCard(page, 'Очередь', 'Событие для подписки')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByRole('button', { name: 'Доставки' }).click()
+  await expect(page.getByText('Карточка создана').first()).toBeVisible()
+
+  // Подписка убирается тем же экраном.
+  await page.getByRole('button', { name: /Удалить подписку/ }).click()
+  await expect(page.getByText('https://example.test/hooks/board')).toHaveCount(0)
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

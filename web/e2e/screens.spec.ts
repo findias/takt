@@ -162,6 +162,11 @@ test('снимки экранов', async ({ page }) => {
   await page.getByRole('button', { name: 'Команда' }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/19-команда.png`, fullPage: true })
+
+  // Журнал доставок подписки: ради него к подпискам и возвращаются.
+  await page.getByRole('button', { name: 'Доставки' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/19б-подписки.png`, fullPage: true })
   await page.getByRole('button', { name: 'Структура' }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/20-структура.png`, fullPage: true })

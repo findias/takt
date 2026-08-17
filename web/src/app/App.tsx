@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
 import { InviteScreen } from '../widgets/Invite.tsx'
-import { Team } from '../widgets/Team.tsx'
-import { Structure } from '../widgets/Structure.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
+import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { ToastHost } from '../shared/ui/Toast.tsx'
+
+// Экраны организации едут отдельным куском. Работают на доске, а сюда
+// заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
+// это вместе с доской значит платить за них при каждом открытии доски.
+// Правило то же, что и везде в производительности: самая быстрая
+// работа — та, которой нет.
+const Team = lazy(() => import('../widgets/Team.tsx').then((m) => ({ default: m.Team })))
+const Structure = lazy(() =>
+  import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
+)
 
 const TABS = [
   ['boards', 'Доски'],
@@ -109,9 +118,16 @@ function Screens() {
           {route.name === 'boards' && (
             <BoardList principal={principal} onOpen={(id) => navigate(boardPath(id))} />
           )}
-          {route.name === 'team' && <Team principal={principal} />}
-          {route.name === 'structure' && (
-            <Structure principal={principal} onOpenBoard={(id) => navigate(boardPath(id))} />
+          {/* Заглушка в форме списка, а не слово «загружаем»: кусок
+              приезжает за десятки миллисекунд, и мигать словом дольше,
+              чем показывать раскладку. */}
+          {(route.name === 'team' || route.name === 'structure') && (
+            <Suspense fallback={<Skeleton lines={3} />}>
+              {route.name === 'team' && <Team principal={principal} />}
+              {route.name === 'structure' && (
+                <Structure principal={principal} onOpenBoard={(id) => navigate(boardPath(id))} />
+              )}
+            </Suspense>
           )}
         </main>
       </div>
