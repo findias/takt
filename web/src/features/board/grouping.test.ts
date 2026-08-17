@@ -145,7 +145,39 @@ test('по итерации: вне итерации — тоже ответ', (
   )
 })
 
+test('по уровню: дорожки идут шкалой, а не по алфавиту', () => {
+  // По алфавиту «Высокий» встал бы выше «Наивысшего» — и дорожки
+  // перестали бы читаться сверху вниз. Ради этого порядка на такую
+  // группировку и смотрят: сверху то, что горит.
+  const base = state([
+    card('фоновая', { priority: 'low' }),
+    card('обычная'),
+    card('срочная', { priority: 'highest' }),
+    card('важная', { priority: 'high' }),
+  ])
+  const groups = groupsOf(base, base.order, 'priority')
+
+  assert.deepEqual(
+    groups.map((g) => g.title),
+    ['Наивысший', 'Высокий', 'Средний', 'Низкий'],
+  )
+})
+
+test('по уровню: пустой дорожки «без уровня» нет', () => {
+  // Уровень есть у каждой карточки — значит «без уровня» не состояние,
+  // а пустое место в списке дорожек. Пустых уровней тоже нет: дорожка
+  // «Наивысший» без карточек ничего не сообщает, кроме своей ширины.
+  const base = state([card('обычная')])
+  const groups = groupsOf(base, base.order, 'priority')
+
+  assert.deepEqual(
+    groups.map((g) => [g.id, g.count]),
+    [['medium', 1]],
+  )
+})
+
 test('у каждой группировки есть человеческое название', () => {
   assert.equal(GROUPING_NAMES.assignee, 'По исполнителю')
-  assert.equal(Object.keys(GROUPING_NAMES).length, 4)
+  assert.equal(GROUPING_NAMES.priority, 'По приоритету')
+  assert.equal(Object.keys(GROUPING_NAMES).length, 5)
 })

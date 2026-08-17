@@ -1,4 +1,6 @@
+import { priorityLabel, priorityRank } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
+import type { Priority } from '../../shared/api/index.ts'
 
 /**
  * Группировка доски по горизонтали — то, что в канбане называют
@@ -15,18 +17,21 @@ import type { BaseState } from '../../entities/board/model.ts'
  * Группировка — состояние адреса, как и фильтры: сгруппированный вид
  * посылают ссылкой.
  */
-export type Grouping = 'none' | 'assignee' | 'label' | 'iteration'
+export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority'
 
 export const GROUPING_NAMES: Record<Grouping, string> = {
   none: 'Без группировки',
   assignee: 'По исполнителю',
   label: 'По метке',
   iteration: 'По итерации',
+  priority: 'По приоритету',
 }
 
 export function parseGrouping(query: URLSearchParams): Grouping {
   const value = query.get('group')
-  return value === 'assignee' || value === 'label' || value === 'iteration' ? value : 'none'
+  return value === 'assignee' || value === 'label' || value === 'iteration' || value === 'priority'
+    ? value
+    : 'none'
 }
 
 export function groupingToQuery(grouping: Grouping, base?: URLSearchParams): URLSearchParams {
@@ -54,6 +59,8 @@ export type Group = {
  *
  * Пустые группы не показываются, кроме одной: «без исполнителя»
  * и «без итерации» остаются, потому что именно там теряется работа.
+ * У приоритета такой группы нет вовсе: уровень есть у каждой карточки,
+ * и «без уровня» — не состояние, а пустое место в списке дорожек.
  */
 export function groupsOf(
   base: BaseState,
@@ -80,7 +87,7 @@ export function groupsOf(
   // и вне итерации — то, ради чего на группировку и смотрят.
   const emptyTitle =
     grouping === 'assignee' ? 'Ни на ком' : grouping === 'label' ? 'Без метки' : 'Вне итерации'
-  ensure('none', emptyTitle)
+  if (grouping !== 'priority') ensure('none', emptyTitle)
 
   for (const [columnId, ids] of Object.entries(order)) {
     for (const cardId of ids) {
@@ -103,6 +110,11 @@ export function groupsOf(
           const label = base.labels.find((l) => l.id === labelId)
           if (label) keys.push([label.id, label.name])
         }
+      } else if (grouping === 'priority') {
+        // Уровень назван полно, как в таблице: дорожки сравнивают друг
+        // с другом, и в заголовке нужен порядок, который виден в самом
+        // слове. Короткое «горит» живёт в плашке на карточке.
+        keys.push([card.priority, priorityLabel(card.priority)])
       } else {
         const iterationId = base.cardIterations[cardId]
         const iteration = base.iterations.find((i) => i.id === iterationId)
@@ -118,6 +130,15 @@ export function groupsOf(
   }
 
   const list = [...groups.values()].filter((g) => g.count > 0 || g.id === 'none')
+
+  // Уровни — своим порядком, а не по алфавиту: по алфавиту «Высокий»
+  // встал бы выше «Наивысшего», и дорожки перестали бы читаться сверху
+  // вниз как шкала. Ради этого порядка на группировку по уровню
+  // и смотрят: сверху то, что горит.
+  if (grouping === 'priority') {
+    return list.sort((a, b) => priorityRank(a.id as Priority) - priorityRank(b.id as Priority))
+  }
+
   // Пустая группа — последней: сначала то, что кем-то ведётся.
   return list.sort((a, b) => {
     if (a.id === 'none') return 1

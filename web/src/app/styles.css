@@ -2533,6 +2533,16 @@ textarea.description {
 .board-screen:has(.swimlane + .swimlane) {
   overflow-y: auto;
 }
+/* Дорожка не сжимается. Экран доски — колонка высотой ровно в окно,
+   и её дети по умолчанию ужимаются, когда вместе не влезают. Дорожек
+   не влезает уже две: каждая ужималась до нуля (у неё min-height: 0),
+   а колонки внутри вылезали наружу — заголовок следующей дорожки
+   оказывался под карточками предыдущей. Прокрутка при этом была
+   и работала, поэтому снаружи это выглядело не поломкой вёрстки,
+   а мешаниной. */
+.board-screen:has(.swimlane + .swimlane) .swimlane {
+  flex: none;
+}
 .board-screen:has(.swimlane + .swimlane) .columns {
   flex: none;
   align-items: flex-start;

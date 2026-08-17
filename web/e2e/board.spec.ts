@@ -877,6 +877,29 @@ test('группировка раскладывает доску по дорож
   await page.reload()
   await expect(page.locator('.swimlane')).toHaveCount(2)
 
+  // Дорожки идут одна под другой и друг на друга не налезают.
+  // Проверяется координатами, а не наличием: дорожки рисовались все
+  // и прокрутка работала — просто каждая ужималась до нуля, а колонки
+  // вылезали наружу, и заголовок следующей оказывался под карточками
+  // предыдущей. Окно нарочно низкое: ужимались они только тогда, когда
+  // вместе не влезали в высоту экрана, — на большом мониторе поломки
+  // не видно, на ноутбуке она с первого взгляда.
+  await page.setViewportSize({ width: 1280, height: 500 })
+  const lanes = page.locator('.swimlane')
+  const columns = await lanes.nth(0).locator('.columns').boundingBox()
+  const nextTitle = await lanes.nth(1).locator('.swimlane-title').boundingBox()
+  expect(columns!.y + columns!.height).toBeLessThanOrEqual(nextTitle!.y + 1)
+
+  // По уровню дорожки идут шкалой, а не по алфавиту: «Высокий» встал бы
+  // выше «Наивысшего», и читать их сверху вниз стало бы нечем.
+  // «Без уровня» дорожки нет — уровень есть у каждой карточки.
+  const urgent = cardIn(page, 'Очередь', 'Моя работа')
+  await urgent.hover()
+  await urgent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
+  await page.getByLabel('Группировка').selectOption('priority')
+  await expect(page.locator('.swimlane-title')).toHaveText(['Наивысший', 'Средний'])
+
   await page.getByLabel('Группировка').selectOption('none')
   await expect(page.locator('.swimlane')).toHaveCount(1)
   expect(page.url()).not.toContain('group=')
