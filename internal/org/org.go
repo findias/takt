@@ -40,7 +40,13 @@ var (
 	// ErrServiceIdentity — за личностью стоит ключ, а не человек.
 	// Персональных данных у неё нет, а обезличивание сломало бы подписи
 	// интеграции.
-	ErrServiceIdentity = errors.New("это служебная личность ключа, а не человек")
+	// Отказ говорит, что делать: ключ убирают отзывом ключа, а не
+	// исключением его личности — исключённая личность оставила бы
+	// действующий токен без доступа и без объяснения, почему обмен
+	// с соседней системой вдруг перестал работать.
+	ErrServiceIdentity = errors.New(
+		"это служебная личность ключа, а не человек: " +
+			"отзовите сам ключ в разделе «Ключи для интеграций»")
 )
 
 type Service struct {
@@ -50,12 +56,20 @@ type Service struct {
 func New(db *store.Store) *Service { return &Service{db: db} }
 
 type Member struct {
-	UserID   string    `json:"userId"`
-	Name     string    `json:"name"`
-	Email    string    `json:"email"`
-	Role     string    `json:"role"`
+	UserID string `json:"userId"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	// Kind — человек или ключ. Ключ состоит в организации ровно как
+	// человек, и это правильно: политики обходятся без второй ветки,
+	// а у действия есть автор с именем. Но предлагать ключу роль,
+	// исключение и удаление данных незачем — потому вид и называется.
+	Kind     string    `json:"kind"`
 	JoinedAt time.Time `json:"joinedAt"`
 }
+
+// KindService — личность, за которой стоит ключ интеграции, а не человек.
+const KindService = "service"
 
 type Invite struct {
 	ID        string    `json:"id"`
@@ -104,7 +118,7 @@ func (s *Service) Create(ctx context.Context, name, ownerUserID string) (auth.Me
 // Members возвращает состав организации.
 func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 	rows, err := s.db.Pool.Query(ctx, `
-		select u.id, u.name, u.email, m.role, m.created_at
+		select u.id, u.name, u.email, m.role, u.kind, m.created_at
 		  from memberships m
 		  join users u on u.id = m.user_id
 		 where m.org_id = $1
@@ -116,7 +130,7 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 	out := []Member{}
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -153,6 +167,12 @@ func (s *Service) SetRole(ctx context.Context, orgID, actorID, userID, role stri
 func (s *Service) Remove(ctx context.Context, orgID, actorID, userID string) error {
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
+			return err
+		}
+		// Личность ключа исключать нельзя: токен остался бы действующим,
+		// а доступа у него бы не было — обмен с соседней системой
+		// сломался бы молча. Ключ убирают отзывом ключа.
+		if err := ensureNotService(ctx, tx, userID); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx,
@@ -207,14 +227,8 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			return ErrSharedIdentity
 		}
 
-		var service bool
-		if err := tx.QueryRow(ctx,
-			`select exists (select 1 from api_clients where user_id = $1)`,
-			userID).Scan(&service); err != nil {
+		if err := ensureNotService(ctx, tx, userID); err != nil {
 			return err
-		}
-		if service {
-			return ErrServiceIdentity
 		}
 
 		// Участие снимается первым: его удаление пишется в журнал
@@ -259,6 +273,25 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			orgID, userID)
 		return err
 	})
+}
+
+// ensureNotService отличает ключ от человека.
+//
+// Вид спрашивается у самой личности, а не у `api_clients`: список ключей
+// видит только владелец организации, а вопрос «человек ли это» задаётся
+// и там, где владельца рядом нет.
+func ensureNotService(ctx context.Context, tx pgx.Tx, userID string) error {
+	var kind string
+	if err := tx.QueryRow(ctx, `select kind from users where id = $1`, userID).Scan(&kind); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if kind == KindService {
+		return ErrServiceIdentity
+	}
+	return nil
 }
 
 // ensureOtherOwnerExists не даёт снять последнего владельца: организация

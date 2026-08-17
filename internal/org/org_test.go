@@ -494,6 +494,56 @@ func TestEraseKeepsTheIdentityAndDropsThePerson(t *testing.T) {
 	}
 }
 
+// Ключ состоит в организации ровно как человек — и в этом польза, — но
+// список людей обязан их различать: до этого ключу предлагали роль,
+// «Исключить» и «Удалить данные», причём последнее отвечало отказом.
+func TestServiceIdentityIsNotAPerson(t *testing.T) {
+	f := newFixture(t)
+	org, ownerID := f.org("С интеграцией")
+	botID, _ := f.user("Обмен со складом")
+	if _, err := f.db.Pool.Exec(f.ctx,
+		`update users set kind = 'service' where id = $1`, botID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.Pool.Exec(f.ctx,
+		`insert into memberships (org_id, user_id, role) values ($1, $2, 'member')`,
+		org.OrgID, botID); err != nil {
+		t.Fatal(err)
+	}
+
+	members, err := f.svc.Members(f.ctx, org.OrgID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range members {
+		want := "person"
+		if m.UserID == botID {
+			want = KindService
+		}
+		if m.Kind != want {
+			t.Errorf("вид личности %q: %q, ожидался %q", m.Name, m.Kind, want)
+		}
+	}
+
+	// Исключение ключа оставило бы действующий токен без доступа, и обмен
+	// сломался бы молча. Отказ называет, что делать вместо этого.
+	if err := f.svc.Remove(f.ctx, org.OrgID, ownerID, botID); !errors.Is(err, ErrServiceIdentity) {
+		t.Fatalf("ожидался отказ по служебной личности, получено %v", err)
+	}
+	if err := f.svc.Erase(f.ctx, org.OrgID, ownerID, botID); !errors.Is(err, ErrServiceIdentity) {
+		t.Fatalf("обезличивание ключа: ожидался отказ, получено %v", err)
+	}
+	var still int
+	if err := f.db.Pool.QueryRow(f.ctx,
+		`select count(*) from memberships where org_id = $1 and user_id = $2`,
+		org.OrgID, botID).Scan(&still); err != nil {
+		t.Fatal(err)
+	}
+	if still != 1 {
+		t.Error("ключ исключён вопреки отказу")
+	}
+}
+
 // Личность глобальна, а требование приходит в одну организацию: стереть
 // человека там, где о его удалении не просили, нельзя.
 func TestEraseRefusesSharedIdentity(t *testing.T) {

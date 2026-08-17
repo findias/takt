@@ -631,10 +631,14 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 // на карточке остался бы идентификатором.
 func loadPeople(ctx context.Context, tx pgx.Tx, orgID string, snap *Snapshot) error {
 	snap.People = []Person{}
+	// Ключи интеграций сюда не попадают, хотя состоят в организации
+	// наравне с людьми: работу назначают человеку, а «назначить задачу
+	// ключу» — это предложение, за которым ничего нет. По той же причине
+	// их нет и в отборе по исполнителю.
 	rows, err := tx.Query(ctx, `
 		select u.id, u.name
 		  from memberships m join users u on u.id = m.user_id
-		 where m.org_id = $1
+		 where m.org_id = $1 and u.kind = 'person'
 		 order by u.name`, orgID)
 	if err != nil {
 		return err

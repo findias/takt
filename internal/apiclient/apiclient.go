@@ -151,8 +151,8 @@ func (s *Service) Create(ctx context.Context, orgID, actorID, name string, scope
 		// непригоден, а сессий у неё не бывает.
 		var botID string
 		if err := tx.QueryRow(ctx, `
-			insert into users (email, name, password_hash)
-			values ($1, $2, '!') returning id`,
+			insert into users (email, name, password_hash, kind)
+			values ($1, $2, '!', 'service') returning id`,
 			"client-"+hex.EncodeToString([]byte(c.Prefix))+"@clients.invalid",
 			name).Scan(&botID); err != nil {
 			return err

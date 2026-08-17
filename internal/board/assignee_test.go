@@ -184,3 +184,21 @@ func TestSnapshotCarriesPeople(t *testing.T) {
 		t.Error("владельца доски нет среди тех, кого можно назначить")
 	}
 }
+
+// Ключ интеграции состоит в организации наравне с человеком — так
+// устроены политики, — но работу ему не назначают: «назначить задачу
+// ключу» это предложение, за которым ничего нет.
+func TestServiceIdentityIsNotAssignable(t *testing.T) {
+	f := newFixture(t)
+	botID := f.inviteMember("Обмен со складом")
+	if _, err := f.svc.db.Pool.Exec(f.ctx,
+		`update users set kind = 'service' where id = $1`, botID); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range f.snapshot().People {
+		if p.UserID == botID {
+			t.Error("ключ предлагается в исполнители")
+		}
+	}
+}

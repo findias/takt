@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/konkov/agile/internal/apiclient"
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/org"
@@ -147,6 +148,15 @@ func (f *filler) organization() error {
 			f.orgID, id, p.Role); err != nil {
 			return err
 		}
+	}
+
+	// Ключ интеграции. На стенде он нужен не ради самого ключа, а ради
+	// того, что его служебная личность стоит в списке людей: пока такой
+	// личности нет, экран «Команда» показывает только людей, и ошибку
+	// «ключу предлагают роль и удаление данных» на нём не увидеть.
+	if _, err := apiclient.New(f.db).Create(f.ctx, f.orgID, f.owner(), "Обмен со складом",
+		[]string{apiclient.ScopeBoardsRead, apiclient.ScopeBoardsWrite}, nil); err != nil {
+		return fmt.Errorf("ключ интеграции: %w", err)
 	}
 	return nil
 }

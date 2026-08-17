@@ -510,6 +510,12 @@ func (s *Server) handleSetRole(w http.ResponseWriter, r *http.Request, p auth.Pr
 
 func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	err := s.orgs.Remove(r.Context(), p.OrgID, p.ID, r.PathValue("userId"))
+	// «Нельзя» вместо «не найдено»: личность есть, просто она не человек,
+	// и отказ называет, что с ней делать вместо этого.
+	if errors.Is(err, org.ErrServiceIdentity) {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	s.writeMembershipResult(w, err, "исключение из команды")
 }
 

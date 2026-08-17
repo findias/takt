@@ -84,9 +84,22 @@ export function Team({ principal }: { principal: Principal }) {
             <li key={m.userId}>
               <div className="member-who">
                 <span>{m.name}</span>
-                <span className="muted small">{m.email}</span>
+                {/* У ключа вместо почты — то, чем он является: адрес
+                    у него есть только потому, что личность требует
+                    уникальной почты, и показывать «…@clients.invalid»
+                    значит показывать устройство вместо смысла. */}
+                <span className="muted small">
+                  {m.kind === 'service' ? 'ключ интеграции' : m.email}
+                </span>
               </div>
-              {isOwner && m.userId !== principal.id ? (
+              {/* Ключу не предлагают ни роли, ни исключения, ни удаления
+                  данных: роль у него от заведения, данных нет, а убирают
+                  его отзывом самого ключа — ниже, в «Ключах для
+                  интеграций». Раньше всё это предлагалось, и «Удалить
+                  данные» отвечало отказом. */}
+              {m.kind === 'service' ? (
+                <span className="role-chip">ключ</span>
+              ) : isOwner && m.userId !== principal.id ? (
                 <div className="row">
                   <select
                     value={m.role}
