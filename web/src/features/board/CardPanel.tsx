@@ -120,7 +120,9 @@ export function CardPanel({
   subtaskBoards: BoardInfo[]
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
-  onBlock: (cardId: string, reason: string) => void
+  /** Держащая карточка необязательна: «нет доступа к стенду» карточки
+   *  не имеет, а «ждём согласования сметы» имеет — и по ней ходят. */
+  onBlock: (cardId: string, reason: string, blockingCard?: string) => void
   onUnblock: (cardId: string) => void
   /** Отметить работу сделанной, не двигая её по доске. */
   onMarkDone: (cardId: string, done: boolean) => void
@@ -132,6 +134,10 @@ export function CardPanel({
   const [mode, setMode] = usePanelMode()
   const [tab, setTab] = useState<TabId>(FIRST_TAB)
   const ids = useTabIds()
+  // Какой частью сейчас объявляют блокировку. Причину всё равно пишут
+  // словами: ссылка говорит, кого ждём, а чего именно от него ждут —
+  // только слова.
+  const [holder, setHolder] = useState<Related | null>(null)
 
   // Вкладка сбрасывается при переходе к другой карточке и намеренно
   // не запоминается, в отличие от режима панели: режим — про то, как
@@ -144,6 +150,18 @@ export function CardPanel({
   if (!details) return null
   const { card } = details
   const label = progressLabel(card, unit)
+  // Кто держит эту работу. Ищется среди уже разобранных связей: держат
+  // почти всегда свои части, а карточку с чужой доски снимок принёс
+  // вместе со связью.
+  const blockerId = card.blocked?.blockingCard
+  const blocker = blockerId
+    ? ([...details.subtasks, ...details.related].find((r) => r.id === blockerId) ?? null)
+    : null
+  // Кого держит сама эта карточка. Вопрос обратный к «кто держит нас»,
+  // и без ответа на него часть выглядит обычной работой, хотя из-за неё
+  // стоит задача. Ищется по доске: блокировка живёт на той карточке,
+  // которая стоит, и знать о себе держащая не может.
+  const holdingUp = Object.values(base.cards).filter((c) => c.blocked?.blockingCard === card.id)
 
   return (
     <Panel
@@ -172,14 +190,66 @@ export function CardPanel({
                 <div className="stack">
                   <strong>Заблокирована</strong>
                   <span className="small">{card.blocked.reason}</span>
+                  {/* Кто держит — строкой с переходом: «ждём вот эту
+                      работу» без пути к ней отправляет искать её
+                      поиском по доске. */}
+                  {blocker && (
+                    <span className="small">
+                      Держит:{' '}
+                      {blocker.onThisBoard ? (
+                        <button className="link" onClick={() => onOpenCard(blocker.id)}>
+                          {blocker.title}
+                        </button>
+                      ) : (
+                        <span>
+                          {blocker.title}
+                          <span className="muted"> · {blocker.where}</span>
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {/* Держащая уже сделана — значит блокировка пережила
+                      свою причину. Само оно не снимется: время в блоке
+                      считается из интервала, и закрывать его выведенным
+                      признаком значит портить единственную честную меру.
+                      Но сказать об этом обязаны. */}
+                  {blocker?.done && (
+                    <span className="small">Эта работа уже сделана — блокировку можно снять.</span>
+                  )}
                   <span className="muted small">
                     с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
                   </span>
                 </div>
                 {canEdit && <button onClick={() => onUnblock(card.id)}>Снять</button>}
               </div>
+            ) : holder ? (
+              // Блокировка частью: причину пишут здесь же, а не отдельным
+              // шагом — иначе между «эта часть нас держит» и объяснением
+              // почему стоял бы ещё один экран.
+              <BlockForm
+                holder={holder.title}
+                onBlock={(reason) => {
+                  onBlock(card.id, reason, holder.id)
+                  setHolder(null)
+                }}
+                onCancel={() => setHolder(null)}
+              />
             ) : (
               canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
+            )}
+
+            {holdingUp.length > 0 && (
+              <p className="small">
+                Из-за неё стоит:{' '}
+                {holdingUp.map((c, i) => (
+                  <span key={c.id}>
+                    {i > 0 && ', '}
+                    <button className="link" onClick={() => onOpenCard(c.id)}>
+                      {c.title}
+                    </button>
+                  </span>
+                ))}
+              </p>
             )}
 
             <DoneMark
@@ -289,6 +359,11 @@ export function CardPanel({
                   onOpen={onOpenCard}
                   onRemove={() => onUnlink(card.id, s.id, 'subtask')}
                   onMarkDone={onMarkDone}
+                  // Часть может держать саму задачу, и говорят об этом
+                  // отсюда: у родителя, где видно и остальные части.
+                  // У заблокированной задачи предлагать нечего — вторая
+                  // блокировка поверх открытой отказала бы.
+                  onHold={canEdit && !card.blocked && !s.done ? () => setHolder(s) : undefined}
                 />
               ))}
 
@@ -367,6 +442,7 @@ function RelatedRow({
   onOpen,
   onRemove,
   onMarkDone,
+  onHold,
 }: {
   related: Related
   canEdit: boolean
@@ -377,6 +453,9 @@ function RelatedRow({
    *  у связей, которые не подзадачи, и у чужих карточек — их отмечают
    *  на своей доске. */
   onMarkDone?: (cardId: string, done: boolean) => void
+  /** Объявить, что эта часть держит задачу. Пусто — предлагать нечего:
+   *  задача уже заблокирована, часть сделана или прав нет. */
+  onHold?: () => void
 }) {
   // Флажок и галочка отвечают на один вопрос, поэтому вместе их нет:
   // где отметку можно поставить, состояние показывает сам флажок.
@@ -426,6 +505,13 @@ function RelatedRow({
           </span>
         )}
       </div>
+      {onHold && related.reachable && (
+        // Слово то же, что на доске у держащей стороны зависимости:
+        // «держит» там и «держит» здесь — про одно и то же.
+        <button className="link" onClick={onHold}>
+          Держит
+        </button>
+      )}
       {canEdit && related.reachable && (
         <button className="link" onClick={onRemove}>
           Убрать
@@ -688,11 +774,26 @@ function Description({
   )
 }
 
-function BlockForm({ onBlock }: { onBlock: (reason: string) => void }) {
+function BlockForm({
+  onBlock,
+  holder,
+  onCancel,
+}: {
+  onBlock: (reason: string) => void
+  /** Название части, которая держит: форма открыта не «вообще», а про
+   *  неё, и спрашивать надо про неё же. */
+  holder?: string
+  onCancel?: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
 
-  if (!open) {
+  // Форма про часть открыта всегда: её открыло нажатие «Держит»,
+  // и вторая кнопка «Отметить блокировку» была бы вопросом, на который
+  // уже ответили. Начальным состоянием это не задать — React держит
+  // тот же узел формы, и состояние от прошлого показа переживает
+  // появление части.
+  if (!open && !holder) {
     return (
       <button className="link" onClick={() => setOpen(true)}>
         Отметить блокировку
@@ -702,7 +803,9 @@ function BlockForm({ onBlock }: { onBlock: (reason: string) => void }) {
 
   return (
     <form
-      className="row"
+      // Двумя строками, когда блокирует часть: имя части длинное,
+      // и в одном ряду с полем оно сжимает поле до трёх букв.
+      className="stack"
       onSubmit={(e) => {
         e.preventDefault()
         if (!reason.trim()) return
@@ -711,19 +814,29 @@ function BlockForm({ onBlock }: { onBlock: (reason: string) => void }) {
         setOpen(false)
       }}
     >
+      {holder && <span className="small">Держит «{holder}». Чего от неё ждём?</span>}
+      <div className="row">
       <input
         autoFocus
         value={reason}
-        placeholder="Чего ждём"
+        placeholder={holder ? 'Чего ждём от этой части' : 'Чего ждём'}
         aria-label="Причина блокировки"
         onChange={(e) => setReason(e.target.value)}
       />
       <button type="submit" disabled={!reason.trim()}>
         Отметить
       </button>
-      <button type="button" className="link" onClick={() => setOpen(false)}>
+      <button
+        type="button"
+        className="link"
+        onClick={() => {
+          setOpen(false)
+          onCancel?.()
+        }}
+      >
         Отмена
       </button>
+      </div>
     </form>
   )
 }

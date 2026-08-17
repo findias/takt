@@ -291,6 +291,100 @@ func TestBlockIsAnIntervalNotAFlag(t *testing.T) {
 	}
 }
 
+// Часть работы может держать саму задачу: разбили, одна часть встала
+// поперёк — родитель стоит из-за неё. Держащая названа ссылкой, а не
+// словами: название переименуют, а журнал блокировок обязан остаться
+// правдой о прошлом.
+func TestSubtaskBlocksItsParent(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	queue, work := cols[0].ID, cols[1].ID
+	parent := f.createCard("Выпустить релиз", queue)
+	holding := f.createCard("Согласовать смету", queue)
+	other := f.createCard("Собрать сборку", queue)
+	for _, child := range []string{holding, other} {
+		f.mustApply("LINK_CARDS", map[string]any{
+			"fromCard": parent, "toCard": child, "kind": "subtask"})
+	}
+
+	res := f.mustApply("BLOCK_CARD", map[string]any{
+		"cardId":       parent,
+		"reason":       "ждём смету от подрядчика",
+		"blockingCard": holding})
+	b := res.Patch.Cards[0].Blocked
+	if b == nil || b.BlockingCard == nil || *b.BlockingCard != holding {
+		t.Fatalf("блокировка без ссылки на держащую часть: %+v", b)
+	}
+	if b.Reason != "ждём смету от подрядчика" {
+		t.Errorf("причина потерялась: %q", b.Reason)
+	}
+	if got := f.card(parent).Blocked; got == nil || got.BlockingCard == nil {
+		t.Error("ссылка не доехала до снимка доски")
+	}
+
+	// Заблокирован родитель, а не разбиение: остальные части идут своим
+	// ходом. Иначе одна вставшая часть останавливала бы всю работу,
+	// хотя ровно ради продолжения её и разбивали.
+	f.moveOn(f.boardID, other, work)
+	if got := f.card(other).ColumnID; got != work {
+		t.Errorf("часть не сдвинулась при заблокированном родителе: колонка %s", got)
+	}
+	// И сама держащая — тоже: её как раз и надо доделать, чтобы снять
+	// блокировку.
+	f.moveOn(f.boardID, holding, work)
+	if got := f.card(holding).ColumnID; got != work {
+		t.Errorf("держащая часть не сдвинулась: колонка %s", got)
+	}
+
+	// Вторая блокировка поверх открытой отказывает, называя первую:
+	// «уже заблокирована» без причины отправляет искать её вручную.
+	_, err := f.apply("BLOCK_CARD", map[string]any{
+		"cardId": parent, "reason": "ещё и стенд лежит", "blockingCard": other})
+	var conflict *ConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("повторная блокировка принята: %v", err)
+	}
+	if !strings.Contains(conflict.Message, "ждём смету от подрядчика") {
+		t.Errorf("отказ не назвал действующую причину: %q", conflict.Message)
+	}
+
+	// Держать саму себя карточка не может: это не зависимость, а описка.
+	if _, err := f.apply("BLOCK_CARD", map[string]any{
+		"cardId": other, "reason": "сама себя", "blockingCard": other,
+	}); !errors.Is(err, ErrBadRequest) {
+		t.Errorf("самоблокировка: ожидалась ErrBadRequest, получено %v", err)
+	}
+}
+
+// Часть у соседей держит нашу задачу так же, как своя: работу ставят
+// на чужую доску, и ждём мы именно её.
+func TestBlockingCardMayLiveOnAnotherBoard(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+
+	otherBoard, otherQueue, _ := f.secondBoard()
+	neighbour := f.cardOn(otherBoard, otherQueue, "Поднять квоту на хранилище")
+	f.mustApply("LINK_CARDS", map[string]any{
+		"fromCard": parent, "toCard": neighbour, "kind": "subtask"})
+
+	res := f.mustApply("BLOCK_CARD", map[string]any{
+		"cardId":       parent,
+		"reason":       "без квоты не выкатим",
+		"blockingCard": neighbour})
+	if b := res.Patch.Cards[0].Blocked; b == nil || b.BlockingCard == nil ||
+		*b.BlockingCard != neighbour {
+		t.Fatalf("чужая карточка не стала держащей: %+v", res.Patch.Cards[0].Blocked)
+	}
+
+	// Несуществующая держащая — отказ, а не молчаливая блокировка без
+	// ссылки: иначе человек уверен, что связь есть, а её нет.
+	if _, err := f.apply("BLOCK_CARD", map[string]any{
+		"cardId": parent, "reason": "ждём", "blockingCard": uuid.NewString(),
+	}); err == nil {
+		t.Error("блокировка сослалась на несуществующую карточку")
+	}
+}
+
 func TestMoveEventCarriesFlowMeaning(t *testing.T) {
 	f := newFixture(t)
 	cols := f.columns()

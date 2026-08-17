@@ -471,7 +471,8 @@ export function Board({
     [commit],
   )
   const blockCard = useCallback(
-    (cardId: string, reason: string) => void block(cardId, reason),
+    (cardId: string, reason: string, blockingCard?: string) =>
+      void block(cardId, reason, blockingCard),
     [block],
   )
   const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])

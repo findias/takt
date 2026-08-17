@@ -200,6 +200,11 @@ type Block struct {
 	ID        string    `json:"id"`
 	Reason    string    `json:"reason"`
 	BlockedAt time.Time `json:"blockedAt"`
+	// Работа, которая держит. Пусто — держит что-то вне доски, и об
+	// этом сказано только словами причины. Ссылка, а не название:
+	// карточку переименуют, а журнал блокировок обязан остаться
+	// правдой о прошлом — и заодно по ссылке видно, что с ней стало.
+	BlockingCard *string `json:"blockingCard,omitempty"`
 }
 
 // Link — связь между карточками.
@@ -606,7 +611,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	commentRows.Close()
 
 	blockRows, err := tx.Query(ctx, `
-		select b.card_id, b.id, b.reason, b.blocked_at
+		select b.card_id, b.id, b.reason, b.blocked_at, b.blocking_card
 		  from card_blocks b
 		  join cards c on c.id = b.card_id
 		 where c.board_id = $1 and b.unblocked_at is null`, boardID)
@@ -617,7 +622,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for blockRows.Next() {
 		var cardID string
 		var b Block
-		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt); err != nil {
+		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard); err != nil {
 			return err
 		}
 		if card := byID[cardID]; card != nil {

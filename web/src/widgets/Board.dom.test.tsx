@@ -109,9 +109,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function show() {
+function show(cardId: string | null = null) {
   return render(
-    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+    <Board boardId="board" cardId={cardId} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
   )
 }
 
@@ -332,5 +332,69 @@ describe('отметка «сделано» у части работы', () => {
     await user.click(check)
     await waitFor(() => expect(operation).toHaveBeenCalled())
     expect(operation.mock.calls[0][3]).toEqual({ cardId: 'часть', done: false })
+  })
+})
+
+describe('часть работы держит саму задачу', () => {
+  // Разбили работу, одна часть встала поперёк — задача стоит из-за неё.
+  // Сказать об этом можно было только словами в причине: ни перейти
+  // к держащей, ни увидеть, что с ней стало, было нельзя.
+  function withParts(): Snapshot {
+    const parent = card('родитель', COL_A, 'a0', 'Выпустить релиз')
+    const part = card('часть', COL_A, 'a1', 'Согласовать смету')
+    const snap = board([parent, part])
+    return { ...snap, links: [{ fromCard: 'родитель', toCard: 'часть', kind: 'subtask' }] }
+  }
+
+  it('«Держит» у части спрашивает причину и блокирует задачу ссылкой на неё', async () => {
+    snapshot.mockResolvedValue(withParts())
+    const user = userEvent.setup()
+    show('родитель')
+
+    // Карточка открывается на обсуждении: работа — вторая вкладка.
+    await user.click(await screen.findByRole('tab', { name: 'Работа' }))
+    await user.click(await screen.findByRole('button', { name: 'Держит' }))
+    await user.type(screen.getByLabelText('Причина блокировки'), 'ждём смету от подрядчика')
+    await user.click(screen.getByRole('button', { name: 'Отметить' }))
+
+    await waitFor(() => expect(operation).toHaveBeenCalled())
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('BLOCK_CARD')
+    expect(payload).toEqual({
+      cardId: 'родитель',
+      reason: 'ждём смету от подрядчика',
+      blockingCard: 'часть',
+    })
+  })
+
+  it('у заблокированной задачи видно, кто её держит, и путь к нему', async () => {
+    const base = withParts()
+    snapshot.mockResolvedValue({
+      ...base,
+      cards: base.cards.map((c) =>
+        c.id === 'родитель'
+          ? {
+              ...c,
+              blocked: {
+                id: 'блок',
+                reason: 'ждём смету',
+                blockedAt: '2026-08-17T09:00:00Z',
+                blockingCard: 'часть',
+              },
+            }
+          : c,
+      ),
+    })
+    const user = userEvent.setup()
+    show('родитель')
+    await user.click(await screen.findByRole('tab', { name: 'Работа' }))
+
+    // Название держащей — кнопка: связь должна проходиться, а не только
+    // показываться. На доске такая же карточка есть своим заголовком —
+    // берём ту, что в панели.
+    const holders = await screen.findAllByRole('button', { name: 'Согласовать смету' })
+    expect(holders.some((b) => b.className.includes('link'))).toBe(true)
+    // Предлагать вторую блокировку поверх открытой нечего: она отказала бы.
+    expect(screen.queryByRole('button', { name: 'Держит' })).toBeNull()
   })
 })

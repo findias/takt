@@ -368,9 +368,9 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 
 	var b Block
 	err = tx.QueryRow(ctx, `
-		select id, reason, blocked_at from card_blocks
+		select id, reason, blocked_at, blocking_card from card_blocks
 		 where card_id = $1 and unblocked_at is null`, cardID).
-		Scan(&b.ID, &b.Reason, &b.BlockedAt)
+		Scan(&b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 	case err != nil:
@@ -464,6 +464,14 @@ func setCardDone(
 type blockPayload struct {
 	CardID string `json:"cardId"`
 	Reason string `json:"reason"`
+	// Работа, которая держит. Чаще всего — собственная часть этой же
+	// задачи: разбили работу, одна часть оказалась поперёк остальных,
+	// и родитель стоит из-за неё. Пусто — держит что-то, чему карточки
+	// нет вовсе, и об этом сказано только словами причины.
+	//
+	// Причина остаётся обязательной и при ссылке: ссылка говорит, кого
+	// ждём, а чего именно от него ждут — только слова.
+	BlockingCard string `json:"blockingCard"`
 }
 
 func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -475,24 +483,58 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	if p.Reason == "" {
 		return Patch{}, badRequestf("у блокировки должна быть причина")
 	}
+	if p.BlockingCard != "" {
+		if p.BlockingCard == p.CardID {
+			return Patch{}, badRequestf("карточка не может держать саму себя")
+		}
+		// Держащая карточка может лежать на чужой доске — так и бывает,
+		// когда часть работы поставлена соседям. Проверяется только её
+		// существование; видимость обеспечивают политики базы, и
+		// недоступная сюда просто не попадёт.
+		if _, err := cardBoard(ctx, tx, p.BlockingCard); err != nil {
+			return Patch{}, err
+		}
+	}
 
+	blocking := any(nil)
+	if p.BlockingCard != "" {
+		blocking = p.BlockingCard
+	}
 	tag, err := tx.Exec(ctx, `
-		insert into card_blocks (org_id, card_id, reason, blocked_by)
-		select $1, $2, $3, $4
+		insert into card_blocks (org_id, card_id, reason, blocked_by, blocking_card)
+		select $1, $2, $3, $4, $6
 		 where exists (select 1 from cards
 		                where id = $2 and board_id = $5 and archived_at is null)
 		   and not exists (select 1 from card_blocks
 		                    where card_id = $2 and unblocked_at is null)`,
-		orgID, p.CardID, p.Reason, actorID, boardID)
+		orgID, p.CardID, p.Reason, actorID, boardID, blocking)
 	if err != nil {
 		return Patch{}, err
 	}
 	if tag.RowsAffected() == 0 {
-		return Patch{}, conflictf("", "карточка уже заблокирована или недоступна")
+		// Отказ должен говорить, что делать, а «уже заблокирована»
+		// и «недоступна» ведут в разные стороны: первую разблокируют,
+		// вторую ищут не здесь. Различаем чтением, а не догадкой.
+		var reason string
+		err := tx.QueryRow(ctx, `
+			select reason from card_blocks
+			 where card_id = $1 and unblocked_at is null`, p.CardID).Scan(&reason)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Patch{}, conflictf("", "карточка не найдена или убрана с доски")
+		}
+		if err != nil {
+			return Patch{}, err
+		}
+		return Patch{}, conflictf("",
+			"карточка уже заблокирована: %s. Снимите ту блокировку, прежде чем ставить эту", reason)
 	}
 
+	payload := map[string]any{"reason": p.Reason}
+	if p.BlockingCard != "" {
+		payload["blockingCard"] = p.BlockingCard
+	}
 	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "blocked", nil, nil,
-		map[string]any{"reason": p.Reason}); err != nil {
+		payload); err != nil {
 		return Patch{}, err
 	}
 	c, err := readCard(ctx, tx, boardID, p.CardID)

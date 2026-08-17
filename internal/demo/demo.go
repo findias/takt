@@ -389,11 +389,6 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"cardId": ids["Согласовать смету с подрядчиком"], "dueOn": date(2)}); err != nil {
 		return err
 	}
-	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
-		"cardId": ids["Выпустить релиз склада"],
-		"reason": "смежники не подтвердили формат выгрузки"}); err != nil {
-		return err
-	}
 	// Части лежат на разных людях, и у одной идёт разговор: без этого
 	// на доске не увидеть, ради чего в строке подзадачи стоят аватар
 	// и счётчик реплик.
@@ -470,6 +465,33 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
 		"parentCardId": ids["Выпустить релиз склада"],
 		"title":        "Поднять квоту на хранилище", "boardId": neighbour.ID}); err != nil {
+		return err
+	}
+
+	// Задача стоит из-за собственной части, и часть эта — у соседей.
+	// Блокировка названа ссылкой: без неё «ждём смежников» не проверить
+	// глазами — куда идти и что там сейчас, видно только по карточке.
+	//
+	// Идентификатор берётся из снимка, а не из патча: карточка легла
+	// на чужую доску, и патч доски-заказчика её не несёт — по той же
+	// причине, по которой чужую работу здесь и показывают отдельно.
+	withParts, err := f.boards.Snapshot(f.ctx, f.orgID, f.owner(), b.ID)
+	if err != nil {
+		return err
+	}
+	holder := ""
+	for _, c := range withParts.Linked {
+		if c.Title == "Поднять квоту на хранилище" {
+			holder = c.ID
+		}
+	}
+	if holder == "" {
+		return fmt.Errorf("часть у соседей не нашлась в снимке доски")
+	}
+	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
+		"cardId":       ids["Выпустить релиз склада"],
+		"reason":       "смежники не подтвердили формат выгрузки",
+		"blockingCard": holder}); err != nil {
 		return err
 	}
 

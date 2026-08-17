@@ -850,9 +850,16 @@ export function useBoard(boardId: string | null, notify: Notify) {
       ),
     [patchCard],
   )
+  // Держащая карточка — необязательная часть блокировки: «нет доступа
+  // к стенду» карточки не имеет, а «ждём согласования сметы» имеет,
+  // и по ней ходят.
   const blockCard = useCallback(
-    (cardId: string, reason: string) =>
-      runAndReload('BLOCK_CARD', { cardId, reason }, 'Не удалось отметить блокировку'),
+    (cardId: string, reason: string, blockingCard?: string) =>
+      runAndReload(
+        'BLOCK_CARD',
+        { cardId, reason, blockingCard },
+        'Не удалось отметить блокировку',
+      ),
     [runAndReload],
   )
   const unblockCard = useCallback(
