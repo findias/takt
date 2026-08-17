@@ -23,7 +23,7 @@ import {
   reconcileColumn,
   renderOrder,
 } from '../../entities/board/model.ts'
-import { cardsLabel } from '../../entities/card/model.ts'
+import { PRIORITY_NAMES, cardsLabel } from '../../entities/card/model.ts'
 import type { BaseState, MoveCommand } from '../../entities/board/model.ts'
 
 /**
@@ -491,6 +491,112 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
 
   /**
+   * Пометить выделенные — с возможностью снять.
+   *
+   * Метка ставится, а не переключается у каждой: «пометить десять
+   * карточек» — это одно решение, а переключение дало бы половину
+   * помеченных и половину снятых, то есть результат, который зависит
+   * от того, что было раньше.
+   */
+  const labelMany = useCallback(
+    async (cardIds: string[], labelId: string) => {
+      const name = shown.current?.labels.find((l) => l.id === labelId)?.name ?? 'метка'
+      const { done, failed } = await applyToMany(cardIds, 'LABEL_CARD', (cardId) => ({
+        cardId,
+        labelId,
+      }))
+      if (done.length > 0) {
+        notify({
+          text: `${cardsLabel(done.length)} помечено: «${name}»`,
+          tone: 'info',
+          action: {
+            label: 'Снять',
+            onAct: () =>
+              void applyToMany(done, 'UNLABEL_CARD', (cardId) => ({ cardId, labelId })),
+          },
+        })
+      }
+      if (failed.length > 0) {
+        notify({ text: `Не удалось пометить: ${namesOf(failed)}`, tone: 'warning' })
+      }
+      return done.length
+    },
+    [applyToMany, notify, namesOf],
+  )
+
+  /** Назначить исполнителя на выделенные. Именно добавить: у карточки
+   *  исполнителей несколько, и «назначить» никого не снимает. */
+  const assignMany = useCallback(
+    async (cardIds: string[], userId: string) => {
+      const who = shown.current?.people[userId] ?? 'человек'
+      const { done, failed } = await applyToMany(cardIds, 'ASSIGN_CARD', (cardId) => ({
+        cardId,
+        userId,
+      }))
+      if (done.length > 0) {
+        notify({
+          text: `${cardsLabel(done.length)} назначено: ${who}`,
+          tone: 'info',
+          action: {
+            label: 'Снять',
+            onAct: () =>
+              void applyToMany(done, 'UNASSIGN_CARD', (cardId) => ({ cardId, userId })),
+          },
+        })
+      }
+      if (failed.length > 0) {
+        notify({ text: `Не удалось назначить: ${namesOf(failed)}`, tone: 'warning' })
+      }
+      return done.length
+    },
+    [applyToMany, notify, namesOf],
+  )
+
+  /**
+   * Проставить уровень выделенным — с возвратом прежних.
+   *
+   * Прежние уровни запоминаются до правки, как колонки при переносе:
+   * без них отмена свалила бы всё в один уровень, а карточки пришли
+   * с разными.
+   */
+  const prioritiseMany = useCallback(
+    async (cardIds: string[], priority: Priority) => {
+      const was = new Map<string, Priority>()
+      for (const id of cardIds) {
+        const level = shown.current?.cards[id]?.priority
+        if (level) was.set(id, level)
+      }
+      const { done, failed } = await applyToMany(cardIds, 'UPDATE_CARD', (cardId) => ({
+        cardId,
+        priority,
+      }))
+      if (done.length > 0) {
+        notify({
+          text: `${cardsLabel(done.length)}: приоритет ${PRIORITY_NAMES[priority].toLowerCase()}`,
+          tone: 'info',
+          action: {
+            label: 'Вернуть',
+            onAct: () => {
+              void (async () => {
+                for (const cardId of done) {
+                  const back = was.get(cardId)
+                  if (!back) continue
+                  await applyToMany([cardId], 'UPDATE_CARD', () => ({ cardId, priority: back }))
+                }
+              })()
+            },
+          },
+        })
+      }
+      if (failed.length > 0) {
+        notify({ text: `Не удалось изменить приоритет: ${namesOf(failed)}`, tone: 'warning' })
+      }
+      return done.length
+    },
+    [applyToMany, notify, namesOf],
+  )
+
+  /**
    * Удалить карточку насовсем.
    *
    * В отличие от архивации, здесь нет отмены и потому есть вопрос:
@@ -756,6 +862,9 @@ export function useBoard(boardId: string | null, notify: Notify) {
     archiveCard,
     moveMany,
     archiveMany,
+    labelMany,
+    assignMany,
+    prioritiseMany,
     deleteCard,
     assignCard,
     toggleLabel,

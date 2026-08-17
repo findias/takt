@@ -1,8 +1,8 @@
-import { cardsLabel } from '../../entities/card/model.ts'
-import type { Column } from '../../shared/api/index.ts'
+import { PRIORITIES, PRIORITY_NAMES, cardsLabel } from '../../entities/card/model.ts'
+import type { Column, Label, Priority } from '../../shared/api/index.ts'
 import { Button } from '../../shared/ui/Button.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
-import { ArchiveIcon, MoveIcon } from '../../shared/ui/icons.tsx'
+import { ArchiveIcon, ClockIcon, MoveIcon, PeopleIcon, TagIcon } from '../../shared/ui/icons.tsx'
 
 /**
  * Полоса действий над выделенными карточками.
@@ -11,22 +11,42 @@ import { ArchiveIcon, MoveIcon } from '../../shared/ui/icons.tsx'
  * с выделением: место под неё, занятое постоянно, отнимало бы строку
  * у доски ради того, чем пользуются раз в день.
  *
- * Действий два — перенести и убрать в архив, — и это не начало списка,
- * а весь список. Массово делают ровно то, что делают одинаково:
- * разобрать очередь по колонкам и вымести сделанное. Исполнитель
- * и метка у каждой карточки свои, и «назначить всех на всё» — это
- * не ускорение работы, а способ испортить её одним нажатием.
+ * Действий пять, и все пять про разбор бэклога: это работа, ради
+ * которой полоса и заведена. Десяток карточек, которым надо поставить
+ * один уровень, одну метку, одного исполнителя и перенести в одну
+ * колонку, по одной — это десяток открытий панели.
+ *
+ * Сначала здесь было два действия, и довод против метки с исполнителем
+ * звучал так: «назначить всех на всё» — способ испортить работу одним
+ * нажатием. Довод неверен ровно в той части, где он молчит про отмену:
+ * у каждого действия здесь одна отмена на всю пачку, и испорченное
+ * возвращается тем же одним нажатием.
+ *
+ * Полоса не делает ничего сама: она зовёт по одному обработчику
+ * на действие, а очередь операций и уведомление с отменой живут
+ * в слое данных.
  */
 export function BulkBar({
   count,
   columns,
+  labels,
+  people,
   onMove,
+  onPrioritise,
+  onLabel,
+  onAssign,
   onArchive,
   onClear,
 }: {
   count: number
   columns: Column[]
+  labels: Label[]
+  /** userId → имя. */
+  people: Record<string, string>
   onMove: (columnId: string) => void
+  onPrioritise: (priority: Priority) => void
+  onLabel: (labelId: string) => void
+  onAssign: (userId: string) => void
   onArchive: () => void
   onClear: () => void
 }) {
@@ -53,6 +73,57 @@ export function BulkBar({
       >
         <MoveIcon />
         Перенести
+      </Menu>
+
+      <Menu
+        label="Приоритет выделенным"
+        className="btn"
+        align="left"
+        drop="up"
+        items={PRIORITIES.map((level) => ({
+          label: PRIORITY_NAMES[level],
+          icon: <ClockIcon />,
+          onSelect: () => onPrioritise(level),
+        }))}
+      >
+        <ClockIcon />
+        Приоритет
+      </Menu>
+
+      {/* Метка ставится, а не переключается: «пометить десять карточек»
+          — одно решение, а переключение дало бы половину помеченных
+          и половину снятых, то есть результат, зависящий от того,
+          что было раньше. */}
+      {labels.length > 0 && (
+        <Menu
+          label="Пометить выделенные"
+          className="btn"
+          align="left"
+          drop="up"
+          items={labels.map((label) => ({
+            label: label.name,
+            icon: <TagIcon />,
+            onSelect: () => onLabel(label.id),
+          }))}
+        >
+          <TagIcon />
+          Метка
+        </Menu>
+      )}
+
+      <Menu
+        label="Назначить на выделенные"
+        className="btn"
+        align="left"
+        drop="up"
+        items={Object.entries(people).map(([id, name]) => ({
+          label: name,
+          icon: <PeopleIcon />,
+          onSelect: () => onAssign(id),
+        }))}
+      >
+        <PeopleIcon />
+        Назначить
       </Menu>
 
       {/* Убрать — обратимо и потому без вопроса: отмена предлагается

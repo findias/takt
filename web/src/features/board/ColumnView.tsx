@@ -59,7 +59,7 @@ type ColumnProps = {
   /** Выделенные карточки — одним набором на доску: массовое действие
    *  спрашивают у доски, а не у колонки. */
   selected: Set<string>
-  onSelect: (cardId: string, on: boolean) => void
+  onSelect: (cardId: string, on: boolean, extend?: boolean) => void
   onPrioritise: (cardId: string, priority: Priority) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void

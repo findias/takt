@@ -72,7 +72,8 @@ type CardProps = {
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   /** Выделена ли карточка для действия над многими сразу. */
   selected: boolean
-  onSelect: (cardId: string, on: boolean) => void
+  /** `extend` — shift-щелчок: взять всё между прошлым флажком и этим. */
+  onSelect: (cardId: string, on: boolean, extend?: boolean) => void
   /** Уровень приоритета. Порядок карточек в колонке он не трогает:
    *  уровень говорит, что важнее, порядок — что взято следующим. */
   onPrioritise: (cardId: string, priority: Priority) => void
@@ -300,7 +301,16 @@ function CardViewInner({
               className="card-check"
               checked={selected}
               aria-label={`Выделить «${title}»`}
-              onChange={(e) => onSelect(cardId, e.target.checked)}
+              // Выделение снимается с нажатия, а не с изменения: shift
+              // живёт в событии мыши, а `change` у флажка модификаторов
+              // не несёт вовсе — на этом диапазон и не работал. Пробел
+              // с клавиатуры тоже приходит нажатием, только без shift,
+              // и остаётся обычным переключением.
+              onClick={(e) => onSelect(cardId, e.currentTarget.checked, e.shiftKey)}
+              // Управляемому полю нужен обработчик изменения, иначе React
+              // ругается на «поле только для чтения»; сама правка идёт
+              // выше, по нажатию.
+              onChange={() => {}}
             />
             {card && (
               // Не кнопка и не ссылка: номер выделяют и копируют,
@@ -391,6 +401,83 @@ function CardViewInner({
                 )}
               </Menu>
             )}
+            {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
+                не помещались и обрезались до «Откры», «Переиме», «Удалит».
+                Осталось в нём то, у чего на карточке нет своего места:
+                люди, метки и уровень ушли к самим людям, меткам
+                и уровню. Перенос стоит здесь — это не удобство,
+                а требование WCAG 2.5.7: клавиатурного эквивалента
+                недостаточно, нужен путь, выполнимый одним нажатием.
+
+                Стоит меню в верхней строке, а не отдельным рядом внизу,
+                и это не про красоту. Ряд, появляющийся по наведению,
+                менял высоту карточки — и соседние карточки уезжали
+                из-под курсора между нажатием и отпусканием: попасть
+                по флажку соседа было нельзя. Здесь строка уже занята
+                и её высота от наведения не зависит. */}
+            <Menu
+              label={`Действия карточки «${title}»`}
+              className="btn btn--icon btn--quiet card-slot"
+              items={[
+                { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
+                // Верх шкалы переключается прямо с доски: «это горит»
+                // говорят чаще, чем меняют что-либо ещё, а вся шкала
+                // живёт в панели.
+                card?.priority === 'highest'
+                  ? {
+                      label: 'Вернуть средний приоритет',
+                      icon: <ClockIcon />,
+                      onSelect: () => onPrioritise(cardId, 'medium'),
+                    }
+                  : {
+                      label: 'Наивысший приоритет',
+                      icon: <ClockIcon />,
+                      onSelect: () => onPrioritise(cardId, 'highest'),
+                    },
+                card?.blocked
+                  ? {
+                      label: 'Снять блокировку',
+                      icon: <BlockedIcon />,
+                      onSelect: () => onUnblock(cardId),
+                    }
+                  : {
+                      // Причину пишут словами: список готовых
+                      // формулировок отвечает не на тот вопрос — важно,
+                      // чего ждём именно здесь.
+                      label: 'Заблокировать…',
+                      icon: <BlockedIcon />,
+                      onSelect: () => setBlocking(true),
+                    },
+                ...columns
+                  .filter((c) => c.id !== columnId)
+                  .map((c) => ({
+                    label: `Перенести в «${c.name}»`,
+                    icon: <MoveIcon />,
+                    onSelect: () => onMoveToColumn(cardId, c.id),
+                  })),
+                {
+                  label: 'Убрать в архив',
+                  icon: <ArchiveIcon />,
+                  danger: true,
+                  onSelect: () => onArchive(cardId),
+                },
+                // Необратимое стоит последним и спрашивает подтверждение
+                // — в отличие от архивации, которая не спрашивает ничего
+                // и предлагает вернуть.
+                ...(onDelete
+                  ? [
+                      {
+                        label: 'Удалить навсегда',
+                        icon: <TrashIcon />,
+                        danger: true,
+                        onSelect: () => onDelete(cardId, title),
+                      },
+                    ]
+                  : []),
+              ]}
+            >
+              <MoreIcon />
+            </Menu>
           </div>
 
           {/* Заголовок и кто делает — одна строка: «что за работа»
@@ -579,78 +666,6 @@ function CardViewInner({
             </ul>
           )}
 
-          <div className="card-foot">
-            {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
-                не помещались и обрезались до «Откры», «Переиме», «Удалит».
-                Осталось в нём то, у чего на карточке нет своего места:
-                люди и метки ушли к самим людям и меткам. Перенос стоит
-                здесь — это не удобство, а требование WCAG 2.5.7:
-                клавиатурного эквивалента недостаточно, нужен путь,
-                выполнимый одним нажатием. */}
-            <Menu
-              label={`Действия карточки «${title}»`}
-              className="btn btn--icon btn--quiet card-slot"
-              items={[
-                { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
-                // Верх шкалы переключается прямо с доски: «это горит»
-                // говорят чаще, чем меняют что-либо ещё, а вся шкала
-                // живёт в панели.
-                card?.priority === 'highest'
-                  ? {
-                      label: 'Вернуть средний приоритет',
-                      icon: <ClockIcon />,
-                      onSelect: () => onPrioritise(cardId, 'medium'),
-                    }
-                  : {
-                      label: 'Наивысший приоритет',
-                      icon: <ClockIcon />,
-                      onSelect: () => onPrioritise(cardId, 'highest'),
-                    },
-                card?.blocked
-                  ? {
-                      label: 'Снять блокировку',
-                      icon: <BlockedIcon />,
-                      onSelect: () => onUnblock(cardId),
-                    }
-                  : {
-                      // Причину пишут словами: список готовых
-                      // формулировок отвечает не на тот вопрос — важно,
-                      // чего ждём именно здесь.
-                      label: 'Заблокировать…',
-                      icon: <BlockedIcon />,
-                      onSelect: () => setBlocking(true),
-                    },
-                ...columns
-                  .filter((c) => c.id !== columnId)
-                  .map((c) => ({
-                    label: `Перенести в «${c.name}»`,
-                    icon: <MoveIcon />,
-                    onSelect: () => onMoveToColumn(cardId, c.id),
-                  })),
-                {
-                  label: 'Убрать в архив',
-                  icon: <ArchiveIcon />,
-                  danger: true,
-                  onSelect: () => onArchive(cardId),
-                },
-                // Необратимое стоит последним и спрашивает подтверждение
-                // — в отличие от архивации, которая не спрашивает ничего
-                // и предлагает вернуть.
-                ...(onDelete
-                  ? [
-                      {
-                        label: 'Удалить навсегда',
-                        icon: <TrashIcon />,
-                        danger: true,
-                        onSelect: () => onDelete(cardId, title),
-                      },
-                    ]
-                  : []),
-              ]}
-            >
-              <MoreIcon />
-            </Menu>
-          </div>
         </>
       )}
     </article>

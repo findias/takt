@@ -485,15 +485,41 @@ export function Board({
    * делал бы это за сто действий вместо одного.
    */
   const [picked, setPicked] = useState<Set<string>>(() => new Set())
-  const pickCard = useCallback((cardId: string, on: boolean) => {
+  // С какой карточки начали: от неё считается диапазон при shift-щелчке.
+  // Ref, а не состояние: от него ничего не перерисовывается.
+  const pickedFrom = useRef<string | null>(null)
+  const pickCard = useCallback((cardId: string, on: boolean, extend = false) => {
     setPicked((current) => {
       const next = new Set(current)
+      // Shift-щелчок берёт всё между прошлым флажком и этим — в порядке
+      // колонки, то есть в том, который человек видит. Без него разбор
+      // бэклога остаётся щелчками по одной: двадцать карточек — двадцать
+      // попаданий в квадрат тринадцати пикселей.
+      const from = pickedFrom.current
+      const { order } = stateRef.current
+      if (extend && from && from !== cardId) {
+        const column = Object.values(order).find((ids) => ids.includes(from) && ids.includes(cardId))
+        if (column) {
+          const a = column.indexOf(from)
+          const b = column.indexOf(cardId)
+          for (const id of column.slice(Math.min(a, b), Math.max(a, b) + 1)) {
+            if (on) next.add(id)
+            else next.delete(id)
+          }
+          pickedFrom.current = cardId
+          return next
+        }
+      }
       if (on) next.add(cardId)
       else next.delete(cardId)
+      pickedFrom.current = cardId
       return next
     })
   }, [])
-  const clearPicked = useCallback(() => setPicked(new Set()), [])
+  const clearPicked = useCallback(() => {
+    setPicked(new Set())
+    pickedFrom.current = null
+  }, [])
   /**
    * Кого касается массовое действие.
    *
@@ -915,10 +941,27 @@ export function Board({
         <BulkBar
           count={chosen.length}
           columns={columnList}
+          labels={base.labels}
+          people={base.people}
           onMove={(columnId) => {
             const ids = chosen
             clearPicked()
             void board.moveMany(ids, columnId)
+          }}
+          onPrioritise={(priority) => {
+            const ids = chosen
+            clearPicked()
+            void board.prioritiseMany(ids, priority)
+          }}
+          onLabel={(labelId) => {
+            const ids = chosen
+            clearPicked()
+            void board.labelMany(ids, labelId)
+          }}
+          onAssign={(userId) => {
+            const ids = chosen
+            clearPicked()
+            void board.assignMany(ids, userId)
           }}
           onArchive={() => {
             const ids = chosen

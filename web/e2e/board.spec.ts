@@ -603,6 +603,57 @@ test('приоритет виден, отбирается и не трогает
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toHaveCount(0)
 })
 
+// Разбор бэклога — это десяток карточек подряд, которым надо поставить
+// один уровень и одну метку. По одной это десяток попаданий в квадрат
+// в тринадцать пикселей, а потом десять открытий панели.
+test('shift берёт диапазон, а полоса делает всё сразу', async ({ page }) => {
+  await register(page)
+
+  // Метка нужна общая: они живут в организации, а не на доске.
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByPlaceholder('Название метки').fill('Разобрать')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+  await page.getByRole('button', { name: 'Доски' }).click()
+
+  await createBoard(page, 'Доска разбора')
+  for (const title of ['Первая', 'Вторая', 'Третья', 'Четвёртая']) {
+    await addCard(page, 'Очередь', title)
+  }
+
+  // Щелчок по первой, shift-щелчок по третьей — выделены три подряд,
+  // четвёртая осталась в стороне.
+  const first = cardIn(page, 'Очередь', 'Первая')
+  const third = cardIn(page, 'Очередь', 'Третья')
+  await first.hover()
+  await first.getByRole('checkbox', { name: /Выделить/ }).check()
+  await third.hover()
+  await third.getByRole('checkbox', { name: /Выделить/ }).click({ modifiers: ['Shift'] })
+
+  const bar = page.getByRole('status', { name: 'Действия над выделенными' })
+  await expect(bar).toContainText('Выделено: 3 карточки')
+
+  // Уровень — всем троим сразу.
+  await bar.getByRole('button', { name: 'Приоритет выделенным' }).click()
+  await page.getByRole('menuitem', { name: 'Высокий' }).click()
+  await expect(cardIn(page, 'Очередь', 'Первая').getByText('высокий')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Третья').getByText('высокий')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Четвёртая').getByText('высокий')).toHaveCount(0)
+
+  // Метка — тем же движением, и отмена одна на всю пачку.
+  await first.hover()
+  await first.getByRole('checkbox', { name: /Выделить/ }).check()
+  await third.hover()
+  await third.getByRole('checkbox', { name: /Выделить/ }).click({ modifiers: ['Shift'] })
+  await bar.getByRole('button', { name: 'Пометить выделенные' }).click()
+  await page.getByRole('menuitem', { name: 'Разобрать' }).click()
+  await expect(cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: /Метки: Разобрать/ })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Снять', exact: true }).last().click()
+  await expect(
+    cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: 'Метки: ни одной' }),
+  ).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')
