@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
-import { FIELD_KIND_NAMES, SCOPE_NAMES, TONE_NAMES } from '../shared/api/index.ts'
+import {
+  DIRECTORY_SCOPE,
+  FIELD_KIND_NAMES,
+  SCOPE_NAMES,
+  TONE_NAMES,
+} from '../shared/api/index.ts'
 import type {
   ApiClient,
   AuditEntry,
@@ -219,6 +224,7 @@ function Clients() {
   const [name, setName] = useState('')
   const [scopes, setScopes] = useState<string[]>(['boards:read'])
   const [expires, setExpires] = useState('')
+  const others = scopes.some((s) => s !== DIRECTORY_SCOPE)
 
   const load = useCallback(() => {
     api
@@ -323,6 +329,10 @@ function Clients() {
               <input
                 type="checkbox"
                 checked={scopes.includes(scope)}
+                // Каталог ни с чем не сочетается, и это видно до попытки:
+                // отказ после нажатия «Создать» пришлось бы читать, уже
+                // потеряв набранное.
+                disabled={scope === DIRECTORY_SCOPE ? others : scopes.includes(DIRECTORY_SCOPE)}
                 onChange={(e) =>
                   setScopes((current) =>
                     e.target.checked
@@ -335,6 +345,11 @@ function Clients() {
             </label>
           ))}
         </div>
+        <p className="muted small">
+          Ключ для каталога заводится отдельно: чтобы заводить людей, ему нужны
+          права владельца организации, и работает он только со /scim/v2. Для
+          досок — второй ключ.
+        </p>
       </form>
     </section>
   )

@@ -181,6 +181,67 @@ func TestOnlyOwnerManagesClientsAndTokenIsShownOnce(t *testing.T) {
 	}
 }
 
+// Ключ каталога — владелец организации, потому что этого требуют
+// политики базы при заведении людей. Роль остаётся внутри базы: наружу
+// такому ключу открыт только /scim/v2.
+//
+// Проверяется тем же списком запросов, которым расхождение было найдено
+// (этап 15, Р1): раньше ими архивировалась доска, заводился ключ с любыми
+// разрешениями и выгружалась вся организация.
+func TestDirectoryKeyGoesNoFurtherThanSCIM(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	boardID := owner.board("Найм")
+	scim := a.withSCIMKey(t, owner)
+
+	for _, call := range []struct {
+		method, path string
+		body         any
+	}{
+		{"GET", "/api/boards", nil},
+		{"DELETE", "/api/boards/" + boardID, nil},
+		{"GET", "/api/export", nil},
+		{"GET", "/api/me", nil},
+		{"POST", "/api/clients", map[string]any{
+			"name": "Из каталога", "scopes": []string{"boards:write"}}},
+	} {
+		code, body := a.withToken(scim.token, call.method, call.path, call.body)
+		if code != http.StatusForbidden {
+			t.Errorf("%s %s ключом каталога: код %d, ожидался 403; тело: %s",
+				call.method, call.path, code, body)
+		}
+	}
+
+	// А своё дело он делает по-прежнему.
+	if code, body := scim.do("GET", "/scim/v2/Users", nil); code != http.StatusOK {
+		t.Errorf("каталог не читает людей: код %d; тело: %s", code, body)
+	}
+
+	// Доска на месте: отказ пришёл до действия, а не после.
+	owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+}
+
+// Разрешение каталога ни с чем не сочетается: у ключа с ним права
+// владельца, и остальные разрешения всё равно ничего не значат.
+func TestDirectoryScopeIsGrantedAlone(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+
+	code, body := owner.do("POST", "/api/clients", map[string]any{
+		"name": "Каталог и доски", "scopes": []string{"scim:write", "boards:read"}})
+	if code != http.StatusBadRequest {
+		t.Fatalf("смешанный ключ заведён: код %d; тело: %s", code, body)
+	}
+	// Отказ обязан называть, что делать: завести второй ключ.
+	if !strings.Contains(string(body), "отдельным ключом") {
+		t.Errorf("отказ не объясняет, что делать: %s", body)
+	}
+
+	owner.mustDo("POST", "/api/clients",
+		map[string]any{"name": "Каталог", "scopes": []string{"scim:write"}},
+		http.StatusCreated)
+}
+
 // mustToken — как withToken, но с ожидаемым кодом.
 func (a *api) mustToken(token, method, path string, body any, want int) []byte {
 	a.t.Helper()

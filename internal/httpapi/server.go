@@ -205,6 +205,19 @@ func (s *Server) authed(next func(http.ResponseWriter, *http.Request, auth.Princ
 				writeError(w, http.StatusUnauthorized, "ключ недействителен")
 				return
 			}
+			// Ключ каталога сюда не ходит вовсе. У него роль владельца
+			// организации — этого требуют политики базы, чтобы заводить
+			// людей, — а разрешения проверяются на четырёх маршрутах
+			// доски из девяноста трёх, и на остальных его держала бы
+			// только роль, то есть ничто. Сужаем один ключ, а не
+			// расписываем права по маршрутам: набор прав, придуманный
+			// умозрительно, всё равно окажется неверным (4.3).
+			if apiclient.Directory(scopes) {
+				writeError(w, http.StatusForbidden,
+					"ключ каталога работает только со /scim/v2; "+
+						"для доступа к доскам заведите отдельный ключ")
+				return
+			}
 			s.withIdempotency(w,
 				r.WithContext(context.WithValue(r.Context(), scopesKey{}, scopes)),
 				principal, next)
