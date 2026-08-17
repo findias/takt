@@ -200,6 +200,37 @@ func equal(a, b []string) bool {
 	return true
 }
 
+// Класс обслуживания отвечает не на «что раньше» — на это отвечает
+// порядок карточек в колонке, — а на «по каким правилам это тянут».
+// Поэтому он есть у всякой карточки и по умолчанию обычный: «не решили»
+// от «обычного» ничем не отличается.
+func TestServiceClassIsSetAndDefaultsToStandard(t *testing.T) {
+	f := newFixture(t)
+	id := f.createCard("Согласовать смету", f.columns()[0].ID)
+
+	if got := f.card(id).ServiceClass; got != ClassStandard {
+		t.Fatalf("класс новой карточки %q, ожидался обычный", got)
+	}
+
+	res := f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "serviceClass": ClassExpedite})
+	if got := res.Patch.Cards[0].ServiceClass; got != ClassExpedite {
+		t.Errorf("класс в патче %q, ожидался срочный", got)
+	}
+	if got := f.card(id).ServiceClass; got != ClassExpedite {
+		t.Errorf("класс в снимке %q, ожидался срочный", got)
+	}
+
+	// Отказ называет, что не так: разбирать «неизвестный класс» человеку
+	// проще, чем гадать, почему изменение не применилось.
+	if _, err := f.apply("UPDATE_CARD", map[string]any{
+		"cardId": id, "serviceClass": "срочнейшее"}); err == nil {
+		t.Error("неизвестный класс принят")
+	}
+	if got := f.card(id).ServiceClass; got != ClassExpedite {
+		t.Errorf("отвергнутый класс всё-таки применился: %q", got)
+	}
+}
+
 func TestCreateAppendsToEndByDefault(t *testing.T) {
 	f := newFixture(t)
 	want := []string{"Первая", "Вторая", "Третья"}

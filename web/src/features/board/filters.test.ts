@@ -34,6 +34,7 @@ function card(over: Partial<Card> = {}): Card {
     outcome: null,
     estimate: null,
     comments: 0,
+    serviceClass: 'standard',
     ...over,
   }
 }
@@ -56,6 +57,7 @@ test('адрес переживает круг: разобрали, собрал
     labels: ['l-1', 'l-2'],
     blocked: true,
     aging: true,
+    expedite: true,
   }
   const query = filtersToQuery(filters)
   assert.deepEqual(parseFilters(query), filters)
@@ -64,6 +66,17 @@ test('адрес переживает круг: разобрали, собрал
   // как поломка и мешает сравнивать ссылки глазами.
   const empty = filtersToQuery(EMPTY)
   assert.equal(empty.toString(), '')
+})
+
+test('срочные отбираются классом, а не меткой', () => {
+  const urgent = { ...card(), serviceClass: 'expedite' as const }
+  const filters: Filters = { ...EMPTY, expedite: true }
+
+  assert.equal(matches(urgent, filters, ctx), true)
+  assert.equal(matches(card(), filters, ctx), false)
+  // Отбор один — «что у нас горит»: спрашивать «покажи фоновое»
+  // незачем, а два выбора вместо одного удлиняют строку фильтров.
+  assert.equal(activeCount(filters), 1)
 })
 
 test('чужие параметры адреса не теряются', () => {

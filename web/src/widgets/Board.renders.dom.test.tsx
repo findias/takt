@@ -80,6 +80,7 @@ function card(id: string, position: string, title = id): Card {
     outcome: null,
     estimate: null,
     comments: 0,
+    serviceClass: 'standard',
   }
 }
 

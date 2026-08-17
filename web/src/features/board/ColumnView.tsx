@@ -4,7 +4,13 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { flowMarks, limitLabel, parseLimitDraft } from '../../entities/board/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
-import type { Column, ColumnKind, EstimateUnit, Label } from '../../shared/api/index.ts'
+import type {
+  Column,
+  ColumnKind,
+  EstimateUnit,
+  Label,
+  ServiceClass,
+} from '../../shared/api/index.ts'
 import { IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/icons.tsx'
@@ -54,6 +60,7 @@ type ColumnProps = {
    *  спрашивают у доски, а не у колонки. */
   selected: Set<string>
   onSelect: (cardId: string, on: boolean) => void
+  onClassify: (cardId: string, serviceClass: ServiceClass) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   columns: Column[]
@@ -224,6 +231,7 @@ export function ColumnView(props: ColumnProps) {
             onLabel={props.onLabel}
             selected={props.selected.has(cardId)}
             onSelect={props.onSelect}
+            onClassify={props.onClassify}
             onBlock={props.onBlock}
             onUnblock={props.onUnblock}
             columns={props.columns}

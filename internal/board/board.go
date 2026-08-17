@@ -148,6 +148,10 @@ type Card struct {
 	// Пропускная способность считается только по done, иначе выброшенные
 	// карточки завышают её и все прогнозы по ней.
 	Outcome *string `json:"outcome"`
+	// Класс обслуживания: по каким правилам работу тянут. Не приоритет —
+	// на вопрос «что раньше» отвечает порядок карточек в колонке,
+	// и второго ответа мы не заводим.
+	ServiceClass string `json:"serviceClass"`
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
@@ -212,14 +216,35 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, estimate, outcome`
+	column_entered_at, started_at, finished_at, estimate, outcome, service_class`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome)
+		&c.Estimate, &c.Outcome, &c.ServiceClass)
 	return c, err
+}
+
+// Классы обслуживания. Три, а не четыре: канонический «с фиксированной
+// датой» без самой даты — пустое слово, а поля срока в системе нет.
+const (
+	// ClassExpedite — срочное: пропускают вперёд и держат отдельным
+	// лимитом, потому что оно ломает поток и должно быть редким.
+	ClassExpedite = "expedite"
+	// ClassStandard — обычное: то, ради чего доска и существует.
+	ClassStandard = "standard"
+	// ClassFiller — фоновое: берут, когда нечем занять паузу,
+	// и обещаний по нему не дают.
+	ClassFiller = "filler"
+)
+
+func knownClass(name string) bool {
+	switch name {
+	case ClassExpedite, ClassStandard, ClassFiller:
+		return true
+	}
+	return false
 }
 
 // Snapshot — полный слепок доски. На нашем масштабе доска отдаётся одним

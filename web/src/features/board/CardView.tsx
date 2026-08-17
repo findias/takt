@@ -9,9 +9,9 @@ import {
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { agingLabel } from '../../entities/board/model.ts'
-import { progressLabel, progressRatio, unitLabel } from '../../entities/card/model.ts'
+import { CLASS_NAMES, progressLabel, progressRatio, unitLabel } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
+import type { Card, Column, EstimateUnit, Label, ServiceClass } from '../../shared/api/index.ts'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
@@ -21,6 +21,7 @@ import {
   BlockedIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ClockIcon,
   EditIcon,
   MoreIcon,
   MoveIcon,
@@ -65,6 +66,9 @@ type CardProps = {
   /** Выделена ли карточка для действия над многими сразу. */
   selected: boolean
   onSelect: (cardId: string, on: boolean) => void
+  /** Класс обслуживания: «по каким правилам это тянут». Не приоритет —
+   *  на «что раньше» отвечает порядок карточек в колонке. */
+  onClassify: (cardId: string, serviceClass: ServiceClass) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   columns: Column[]
@@ -100,6 +104,7 @@ function CardViewInner({
   onLabel,
   selected,
   onSelect,
+  onClassify,
   onBlock,
   onUnblock,
   columns,
@@ -294,6 +299,15 @@ function CardViewInner({
               // Не кнопка и не ссылка: номер выделяют и копируют,
               // а нажатие на карточку и так её открывает.
               <span className="card-number">{card.number}</span>
+            )}
+            {/* Класс обслуживания — только когда он не обычный:
+                умолчание, написанное у каждой второй карточки, это шум.
+                Слово, а не значок: «срочное» отвечает на вопрос,
+                а красная точка требует, чтобы её сначала объяснили. */}
+            {card && card.serviceClass !== 'standard' && (
+              <span className={`class-mark class-mark--${card.serviceClass}`}>
+                {CLASS_NAMES[card.serviceClass].toLowerCase()}
+              </span>
             )}
             {parent && (
               <span className="card-parent">
@@ -550,6 +564,21 @@ function CardViewInner({
               className="btn btn--icon btn--quiet card-slot"
               items={[
                 { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
+                // Срочность переключается прямо с доски: «это горит»
+                // говорят чаще, чем меняют что-либо ещё, а полный выбор
+                // из трёх классов живёт в панели — там же, где написано,
+                // чем они отличаются.
+                card?.serviceClass === 'expedite'
+                  ? {
+                      label: 'Вернуть в обычные',
+                      icon: <ClockIcon />,
+                      onSelect: () => onClassify(cardId, 'standard'),
+                    }
+                  : {
+                      label: 'Отметить срочным',
+                      icon: <ClockIcon />,
+                      onSelect: () => onClassify(cardId, 'expedite'),
+                    },
                 card?.blocked
                   ? {
                       label: 'Снять блокировку',

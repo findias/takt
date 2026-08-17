@@ -5,7 +5,14 @@
 // другой команды или на доску, которой спрашивающий не видит. Разложить
 // это по полкам можно без сети — значит, здесь и раскладываем.
 
-import type { Card, EstimateUnit, Link, LinkKind, LinkedCard } from '../../shared/api/index.ts'
+import type {
+  Card,
+  EstimateUnit,
+  Link,
+  LinkKind,
+  LinkedCard,
+  ServiceClass,
+} from '../../shared/api/index.ts'
 import type { BaseState } from '../board/model.ts'
 
 /** Куда ведёт связь и что об этом известно. */
@@ -254,6 +261,22 @@ export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   const base = `${number(done)} из ${number(total)}`
   if (!byWeight || !unit) return base
   return `${base} ${plural(total, UNITS[unit])}`
+}
+
+/** Как класс называется человеку. «Обычное» не показывается на карточке:
+ *  это умолчание, и подпись у каждой второй карточки — шум. */
+export const CLASS_NAMES: Record<ServiceClass, string> = {
+  expedite: 'Срочное',
+  standard: 'Обычное',
+  filler: 'Фоновое',
+}
+
+/** Чем класс отличается на деле — словами, у самого выбора: класс
+ *  не украшение, а обещание о том, как эту работу обслуживают. */
+export const CLASS_HINTS: Record<ServiceClass, string> = {
+  expedite: 'пропускают вперёд, держат отдельным лимитом',
+  standard: 'обычный порядок: тянут сверху колонки',
+  filler: 'берут, когда нечем занять паузу; сроков не обещают',
 }
 
 // Единицы называются коротко: подпись стоит вплотную к числу, и

@@ -329,6 +329,9 @@ export type Card = {
   outcome: 'done' | 'discarded' | null
   /** Оценка в единицах организации. Пусто — не оценена. */
   estimate: number | null
+  /** Класс обслуживания: по каким правилам работу тянут. Не приоритет —
+   *  на «что раньше» отвечает порядок карточек в колонке. */
+  serviceClass: ServiceClass
   /** Прогресс по подзадачам; пусто, если подзадач нет. `byWeight`
    *  говорит, чем он измерен: суммой оценок или штуками. */
   progress?: { done: number; total: number; byWeight: boolean }
@@ -339,6 +342,8 @@ export type Card = {
    *  зайдя внутрь. */
   comments: number
 }
+
+export type ServiceClass = 'expedite' | 'standard' | 'filler'
 
 export type LinkKind = 'subtask' | 'blocks' | 'relates'
 

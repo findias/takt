@@ -15,11 +15,14 @@ import type {
   Iteration,
   Label,
   LinkKind,
+  ServiceClass,
 } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 import { Discussion } from './Discussion.tsx'
 import type { BaseState } from '../../entities/board/model.ts'
 import {
+  CLASS_HINTS,
+  CLASS_NAMES,
   UNIT_SHORT,
   candidatesForSubtask,
   cardDetails,
@@ -75,6 +78,7 @@ export function CardPanel({
   onOpenCard,
   onAssign,
   onLabel,
+  onClassify,
   onSubtask,
   subtaskBoards,
   onLink,
@@ -98,6 +102,7 @@ export function CardPanel({
   /** on = назначить, off = снять. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
   onLabel: (cardId: string, labelId: string, on: boolean) => void
+  onClassify: (cardId: string, serviceClass: ServiceClass) => void
   /** Завести новую подзадачу. Доска — только когда её ставят соседям:
    *  пусто означает «на этой», и в организации с одной доской спрашивать
    *  нечего. */
@@ -166,6 +171,12 @@ export function CardPanel({
             ) : (
               canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
             )}
+
+            <ServiceClassPicker
+              value={card.serviceClass}
+              canEdit={canEdit}
+              onChange={(next) => onClassify(card.id, next)}
+            />
 
             <IterationPicker
               iterations={base.iterations}
@@ -736,6 +747,53 @@ function Assignees({
           ))}
         </select>
       )}
+    </section>
+  )
+}
+
+/**
+ * Класс обслуживания.
+ *
+ * Это не приоритет: на вопрос «что раньше» отвечает порядок карточек
+ * в колонке, и второго ответа мы не заводим — два порядка, обязанных
+ * совпадать и не обязанных совпасть, расходятся в первую же неделю.
+ * Класс отвечает на другой вопрос: по каким правилам эту работу
+ * обслуживают.
+ *
+ * Поэтому у каждого значения рядом написано, что оно означает на деле.
+ * Класс без объявленного правила — это ярлык, который каждый понимает
+ * по-своему, и через месяц срочным оказывается половина доски.
+ */
+function ServiceClassPicker({
+  value,
+  canEdit,
+  onChange,
+}: {
+  value: ServiceClass
+  canEdit: boolean
+  onChange: (next: ServiceClass) => void
+}) {
+  if (!canEdit) {
+    return (
+      <p className="muted small">
+        Класс: {CLASS_NAMES[value].toLowerCase()} — {CLASS_HINTS[value]}
+      </p>
+    )
+  }
+
+  return (
+    <section className="stack stack--tight">
+      <label className="field-row">
+        <span className="field-label">Класс</span>
+        <select value={value} onChange={(e) => onChange(e.target.value as ServiceClass)}>
+          {(Object.keys(CLASS_NAMES) as ServiceClass[]).map((cls) => (
+            <option key={cls} value={cls}>
+              {CLASS_NAMES[cls]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small">{CLASS_HINTS[value]}</p>
     </section>
   )
 }

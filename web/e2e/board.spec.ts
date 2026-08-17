@@ -547,6 +547,45 @@ test('подписка на события заводится и показыв�
   await expect(page.getByText('https://example.test/hooks/board')).toHaveCount(0)
 })
 
+// Класс обслуживания отвечает не на «что раньше» — на это отвечает
+// порядок карточек в колонке, — а на «по каким правилам это тянут».
+// Поэтому он ничего не переставляет: это главное, что здесь проверяется.
+test('класс обслуживания виден, отбирается и не трогает порядок', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с классами')
+  await addCard(page, 'Очередь', 'Первая по порядку')
+  await addCard(page, 'Очередь', 'Вторая по порядку')
+
+  const second = cardIn(page, 'Очередь', 'Вторая по порядку')
+  await second.hover()
+  await second.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Отметить срочным' }).click()
+  await expect(second.getByText('срочное')).toBeVisible()
+
+  // Срочная не всплыла наверх: порядок — ручной, и класс его не трогает.
+  const titles = await page.getByRole('region', { name: 'Очередь' }).locator('.card-title').allInnerTexts()
+  expect(titles).toEqual(['Первая по порядку', 'Вторая по порядку'])
+
+  // Отбор «что у нас горит» живёт в адресе, как и остальные.
+  await page.getByRole('checkbox', { name: 'Срочные' }).check()
+  await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
+  await expect(second).toBeVisible()
+  expect(page.url()).toContain('expedite=1')
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'Срочные' }).uncheck()
+
+  // Полный выбор — в панели, там же написано, чем классы отличаются.
+  await cardIn(page, 'Очередь', 'Вторая по порядку').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Вторая по порядку»/)
+  await panel.getByLabel('Класс').selectOption({ label: 'Фоновое' })
+  await expect(panel.getByText('берут, когда нечем занять паузу; сроков не обещают')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await expect(cardIn(page, 'Очередь', 'Вторая по порядку').getByText('фоновое')).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

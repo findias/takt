@@ -130,6 +130,18 @@ export function FilterBar({
           )
         })}
 
+        {/* «Что у нас горит» — вопрос к доске, который задают чаще
+            остальных отборов, поэтому он стоит отбором, а не выбором
+            из трёх классов: «покажи фоновое» не спрашивает никто. */}
+        <label className="row row--tight small">
+          <input
+            type="checkbox"
+            checked={filters.expedite}
+            onChange={(e) => onChange({ ...filters, expedite: e.target.checked })}
+          />
+          <span>Срочные</span>
+        </label>
+
         <label className="row row--tight small">
           <input
             type="checkbox"

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, NetworkError, api } from '../../shared/api/index.ts'
-import type { Card, ColumnKind, Conflict, LinkKind, Placement } from '../../shared/api/index.ts'
+import type {
+  Card,
+  ColumnKind,
+  Conflict,
+  LinkKind,
+  Placement,
+  ServiceClass,
+} from '../../shared/api/index.ts'
 
 /** Подмножество свойств колонки, которое меняет одна операция. */
 export type ColumnPatch = {
@@ -599,6 +606,24 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [boardId, notify],
   )
 
+  /**
+   * Класс обслуживания карточки.
+   *
+   * Оптимистично, как переименование: класс — свойство карточки,
+   * а не перенос, и ждать ответа сервера, чтобы показать слово,
+   * незачем.
+   */
+  const classifyCard = useCallback(
+    (cardId: string, serviceClass: ServiceClass) =>
+      patchCard(
+        cardId,
+        { serviceClass },
+        'UPDATE_CARD',
+        { cardId, serviceClass },
+        'Не удалось изменить класс обслуживания',
+      ),
+    [patchCard],
+  )
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
       patchCard(
@@ -727,6 +752,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     renameCard,
     describeCard,
     estimateCard,
+    classifyCard,
     archiveCard,
     moveMany,
     archiveMany,

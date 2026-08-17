@@ -370,6 +370,17 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"value": "Северстрой"}); err != nil {
 		return err
 	}
+	// Одна карточка срочная: класс обслуживания видно только на той,
+	// у которой он не обычный, — а на пустой доске не увидеть,
+	// чем срочное отличается от остального.
+	if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
+		"cardId": ids["Согласовать смету с подрядчиком"], "serviceClass": "expedite"}); err != nil {
+		return err
+	}
+	if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
+		"cardId": ids["Обновить регламент приёмки"], "serviceClass": "filler"}); err != nil {
+		return err
+	}
 	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
 		"cardId": ids["Выпустить релиз склада"],
 		"reason": "смежники не подтвердили формат выгрузки"}); err != nil {
