@@ -70,6 +70,9 @@ type CardProps = {
    *  вещи: первое выкидывает карточку из веса, второе обещает, что
    *  работы в ней нет. */
   onEstimate: (cardId: string, estimate: number | null) => void
+  /** Выделена ли карточка для действия над многими сразу. */
+  selected: boolean
+  onSelect: (cardId: string, on: boolean) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   columns: Column[]
@@ -104,6 +107,8 @@ function CardViewInner({
   subtasks,
   onLabel,
   onEstimate,
+  selected,
+  onSelect,
   onBlock,
   onUnblock,
   columns,
@@ -249,7 +254,7 @@ function CardViewInner({
   return (
     <article
       ref={ref}
-      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}`}
+      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}${selected ? ' card--selected' : ''}`}
       tabIndex={0}
       data-card={cardId}
       role="group"
@@ -278,28 +283,39 @@ function CardViewInner({
               сначала «что это и где я», потом «что делать». Про родителя
               раньше можно было узнать, только открыв карточку, и
               подзадача на доске выглядела самостоятельной работой. */}
-          {(card || parent) && (
-            <div className="card-meta">
-              {card && (
-                // Не кнопка и не ссылка: номер выделяют и копируют,
-                // а нажатие на карточку и так её открывает.
-                <span className="card-number">{card.number}</span>
-              )}
-              {parent && (
-                <span className="card-parent">
-                  <span aria-hidden="true">↳ </span>
-                  {parent.onThisBoard ? (
-                    <button className="link" onClick={() => onOpen(parent.id)}>
-                      {parent.title}
-                    </button>
-                  ) : (
-                    // Родитель на чужой доске: назвать можем, открыть — нет.
-                    <span className="muted">{parent.title}</span>
-                  )}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="card-meta">
+            {/* Флажок выделения. Виден по наведению и пока выделение
+                идёт — на доске в пятьсот карточек пятьсот флажков
+                читаются как разлинованный список, а не как работа.
+                Родной флажок, а не своя картинка: он умеет пробел,
+                читается диктором и уже растянут до цели нажатия
+                общим правилом. */}
+            <input
+              type="checkbox"
+              className="card-check"
+              checked={selected}
+              aria-label={`Выделить «${title}»`}
+              onChange={(e) => onSelect(cardId, e.target.checked)}
+            />
+            {card && (
+              // Не кнопка и не ссылка: номер выделяют и копируют,
+              // а нажатие на карточку и так её открывает.
+              <span className="card-number">{card.number}</span>
+            )}
+            {parent && (
+              <span className="card-parent">
+                <span aria-hidden="true">↳ </span>
+                {parent.onThisBoard ? (
+                  <button className="link" onClick={() => onOpen(parent.id)}>
+                    {parent.title}
+                  </button>
+                ) : (
+                  // Родитель на чужой доске: назвать можем, открыть — нет.
+                  <span className="muted">{parent.title}</span>
+                )}
+              </span>
+            )}
+          </div>
 
           {/* Заголовок — кнопка: у нажимаемой карточки должна быть
               явная цель и для скринридера, и для клавиатуры. Двойного

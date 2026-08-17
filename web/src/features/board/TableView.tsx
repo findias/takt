@@ -3,7 +3,7 @@ import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
 import { agingLabel } from '../../entities/board/model.ts'
-import { UNIT_SHORT } from '../../entities/card/model.ts'
+import { UNIT_SHORT, cardsLabel } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 
@@ -190,7 +190,7 @@ export function TableView({
         </tbody>
       </table>
       <p className="muted small">
-        {rows.length} {plural(rows.length, 'карточка', 'карточки', 'карточек')}, {SORT_NAMES[sort]}.
+        {cardsLabel(rows.length)}, {SORT_NAMES[sort]}.
       </p>
     </div>
   )
@@ -210,11 +210,3 @@ function ageText(card: Card): string {
   return `${days < 10 ? days.toFixed(1) : Math.round(days)} дн.`
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  const mod100 = n % 100
-  const mod10 = n % 10
-  if (mod100 >= 11 && mod100 <= 14) return many
-  if (mod10 === 1) return one
-  if (mod10 >= 2 && mod10 <= 4) return few
-  return many
-}

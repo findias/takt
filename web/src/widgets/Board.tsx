@@ -27,6 +27,7 @@ import { Views } from '../features/board/Views.tsx'
 import { SORT_NAMES, TableView, parseSort, sortToQuery } from '../features/board/TableView.tsx'
 import { Changes } from '../features/board/Changes.tsx'
 import { Workload } from '../features/board/Workload.tsx'
+import { BulkBar } from '../features/board/BulkBar.tsx'
 import type { Sort } from '../features/board/TableView.tsx'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
@@ -466,6 +467,44 @@ export function Board({
   )
   const archiveCard = useCallback((cardId: string) => void archive(cardId), [archive])
 
+  /**
+   * Что выделено для действия над многими сразу.
+   *
+   * Местное состояние экрана: выделение не присылают ссылкой и не ждут
+   * увидеть завтра — в отличие от фильтров, которые живут в адресе,
+   * и от режима панели, который живёт в браузере.
+   *
+   * Набор, а не список: выделение проверяется на каждой карточке
+   * при каждой отрисовке доски, и поиск по списку из ста выделенных
+   * делал бы это за сто действий вместо одного.
+   */
+  const [picked, setPicked] = useState<Set<string>>(() => new Set())
+  const pickCard = useCallback((cardId: string, on: boolean) => {
+    setPicked((current) => {
+      const next = new Set(current)
+      if (on) next.add(cardId)
+      else next.delete(cardId)
+      return next
+    })
+  }, [])
+  const clearPicked = useCallback(() => setPicked(new Set()), [])
+  /**
+   * Кого касается массовое действие.
+   *
+   * Пересечение выделенного с показанным: карточка, спрятанная
+   * фильтром, остаётся выделенной, но под действие не попадает —
+   * «в архив» не должно уносить то, чего на экране нет. Тем же счётом
+   * живёт строка загрузки: числа не спорят с тем, что человек видит.
+   */
+  const chosen = useMemo(() => {
+    if (picked.size === 0) return []
+    const shown = new Set(Object.values(order).flat())
+    return [...picked].filter((id) => shown.has(id))
+  }, [picked, order])
+  // Другая доска — другое выделение: идентификаторы чужие, и полоса
+  // действий над ними обещала бы то, чего сделать нельзя.
+  useEffect(() => clearPicked(), [boardId, clearPicked])
+
   // Какую карточку спрашивают удалить. Диалог один на доску, а не один
   // на карточку: пятьсот скрытых диалогов — это пятьсот узлов разметки
   // ради вопроса, который задают раз в месяц.
@@ -604,6 +643,8 @@ export function Board({
         children={children}
         onLabel={toggleLabel}
         onEstimate={estimateCard}
+        selected={picked}
+        onSelect={pickCard}
         onBlock={blockCard}
         onUnblock={unblockCard}
         columns={columnList}
@@ -622,7 +663,7 @@ export function Board({
     ))
 
   return (
-    <div className="board-screen">
+    <div className={chosen.length > 0 ? 'board-screen board-screen--picking' : 'board-screen'}>
       <header className="board-header">
         <button className="btn btn--quiet" onClick={onBack}>
           <ChevronLeftIcon />
@@ -859,6 +900,26 @@ export function Board({
           sleProbability={base.info.sleProbability}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
+        />
+      )}
+
+      {/* Полоса действий над выделенными. Пусто выделено — полосы нет:
+          она обещала бы действие, которому не над чем работать. */}
+      {chosen.length > 0 && (
+        <BulkBar
+          count={chosen.length}
+          columns={columnList}
+          onMove={(columnId) => {
+            const ids = chosen
+            clearPicked()
+            void board.moveMany(ids, columnId)
+          }}
+          onArchive={() => {
+            const ids = chosen
+            clearPicked()
+            void board.archiveMany(ids)
+          }}
+          onClear={clearPicked}
         />
       )}
 

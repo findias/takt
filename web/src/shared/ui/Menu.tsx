@@ -40,6 +40,7 @@ export function Menu({
   items,
   className = 'btn btn--icon btn--quiet',
   align = 'right',
+  drop = 'down',
   children,
 }: {
   /** Имя кнопки для скринридера: «Действия карточки «Смета»». */
@@ -50,6 +51,9 @@ export function Menu({
    *  нажатием по нему самому, стоит слева, и список от правого края
    *  уезжал бы за пределы колонки, где его обрезают карточки. */
   align?: 'left' | 'right'
+  /** Вниз или вверх. Вверх — для кнопок у нижнего края экрана: список
+   *  вниз оттуда открывается за пределы окна, где его не прокрутить. */
+  drop?: 'down' | 'up'
   /** Чем открывается меню. Умолчание — тихая кнопка-иконка; правка
    *  по самому полю передаёт сюда своё, потому что там открывашка —
    *  и есть значение: стопка исполнителей, ряд меток, оценка. */
@@ -137,7 +141,9 @@ export function Menu({
 
       {open && (
         <div
-          className={align === 'left' ? 'menu-list menu-list--left' : 'menu-list'}
+          className={`menu-list${align === 'left' ? ' menu-list--left' : ''}${
+            drop === 'up' ? ' menu-list--up' : ''
+          }`}
           id={menuId}
           role="menu"
           aria-label={label}

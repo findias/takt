@@ -374,6 +374,59 @@ test('оценка и блокировка правятся прямо на ка
   await expect(again.getByText(/Заблокирована/)).toHaveCount(0)
 })
 
+// Разобрать очередь по колонкам и вымести сделанное — работа, которую
+// делают пачкой. По одной карточке это столько же нажатий, сколько
+// карточек, и на двадцати от неё отказываются вовсе.
+test('выделенные карточки переносятся и убираются пачкой', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с выделением')
+  await addCard(page, 'Очередь', 'Первая пачка')
+  await addCard(page, 'Очередь', 'Вторая пачка')
+  await addCard(page, 'Очередь', 'Не трогать')
+
+  // Полосы нет, пока ничего не выделено: она обещала бы действие,
+  // которому не над чем работать.
+  await expect(page.getByRole('status', { name: 'Действия над выделенными' })).toHaveCount(0)
+
+  for (const title of ['Первая пачка', 'Вторая пачка']) {
+    const card = cardIn(page, 'Очередь', title)
+    await card.hover()
+    await card.getByRole('checkbox', { name: `Выделить «${title}»` }).check()
+  }
+
+  const bar = page.getByRole('status', { name: 'Действия над выделенными' })
+  await expect(bar).toContainText('Выделено: 2 карточки')
+
+  const beforeMove = await boardVersion(page)
+  await bar.getByRole('button', { name: 'Перенести выделенные' }).click()
+  await page.getByRole('menuitem', { name: 'В работе' }).click()
+
+  await expect(cardIn(page, 'В работе', 'Первая пачка')).toBeVisible()
+  await expect(cardIn(page, 'В работе', 'Вторая пачка')).toBeVisible()
+  // Невыделенное осталось на месте — ради этого и выделяли.
+  await expect(cardIn(page, 'Очередь', 'Не трогать')).toBeVisible()
+  // Выделение снято: полоса относится к тому, что выделено сейчас.
+  await expect(page.getByRole('status', { name: 'Действия над выделенными' })).toHaveCount(0)
+  await savedSince(page, beforeMove)
+
+  // Убрать пачкой — с одной отменой на всех: двадцать уведомлений
+  // подряд не читает никто.
+  for (const title of ['Первая пачка', 'Вторая пачка']) {
+    const card = cardIn(page, 'В работе', title)
+    await card.hover()
+    await card.getByRole('checkbox', { name: `Выделить «${title}»` }).check()
+  }
+  await bar.getByRole('button', { name: 'В архив' }).click()
+  await expect(cardIn(page, 'В работе', 'Первая пачка')).toHaveCount(0)
+  await expect(cardIn(page, 'В работе', 'Вторая пачка')).toHaveCount(0)
+
+  // Уведомление от переноса ещё висит: берём последнее — то, что
+  // предлагает вернуть только что убранное.
+  await page.getByRole('button', { name: 'Вернуть', exact: true }).last().click()
+  await expect(cardIn(page, 'В работе', 'Первая пачка')).toBeVisible()
+  await expect(cardIn(page, 'В работе', 'Вторая пачка')).toBeVisible()
+})
+
 test('фильтр прячет лишнее и живёт в адресе', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с фильтром')

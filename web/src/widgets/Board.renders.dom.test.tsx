@@ -150,3 +150,25 @@ it('изменение одной карточки не перерисовыва
   const drawn = renders.count - before
   expect(drawn).toBeLessThanOrEqual(2)
 })
+
+// Выделение — набор на всю доску, и наивная передача его каждой карточке
+// перерисовывала бы доску целиком на каждый флажок. Карточке приходит
+// не набор, а «выделена ли она», — и это ровно то, что здесь меряется.
+it('выделение одной карточки не перерисовывает соседние', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  snapshot.mockResolvedValue(board())
+
+  render(
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+  )
+  await screen.findByRole('group', { name: /Карточка «первая»/ })
+  await waitFor(() => expect(renders.count).toBe(CARDS.length))
+
+  const before = renders.count
+  await user.click(screen.getByRole('checkbox', { name: 'Выделить «первая»' }))
+  await screen.findByText(/Выделено: 1 карточка/)
+
+  // Первое выделение к тому же включает показ флажков на всей доске —
+  // но классом на экране, а не свойством каждой карточки.
+  expect(renders.count - before).toBeLessThanOrEqual(2)
+})

@@ -255,6 +255,12 @@ export function estimateLabel(value: number | null, unit: EstimateUnit): string 
   return value === null ? null : `${number(value)} ${UNIT_SHORT[unit]}`
 }
 
+/** «5 карточек» — счётом, а не числом рядом со словом: сообщение
+ *  об отмене и подпись таблицы обязаны читаться вслух как речь. */
+export function cardsLabel(n: number): string {
+  return `${n} ${plural(n, ['карточка', 'карточки', 'карточек'])}`
+}
+
 /** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */
 function number(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))

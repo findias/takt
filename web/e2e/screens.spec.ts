@@ -88,6 +88,16 @@ test('снимки экранов', async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/07б-исполнители-на-карточке.png` })
   await page.keyboard.press('Escape')
 
+  // Выделение и полоса действий над многими сразу.
+  await parent.hover()
+  await parent.getByRole('checkbox').check()
+  const neighbour = page.getByRole('group', { name: /Разобрать обращения/ })
+  await neighbour.hover()
+  await neighbour.getByRole('checkbox').check()
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: `${SHOTS}/07в-выделение-и-массовые-действия.png` })
+  await page.getByRole('button', { name: 'Снять выделение' }).click()
+
   // Карточка тремя вкладками. Открывается обсуждением.
   await parent.click()
   await page.waitForTimeout(400)

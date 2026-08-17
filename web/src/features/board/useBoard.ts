@@ -16,6 +16,7 @@ import {
   reconcileColumn,
   renderOrder,
 } from '../../entities/board/model.ts'
+import { cardsLabel } from '../../entities/card/model.ts'
 import type { BaseState, MoveCommand } from '../../entities/board/model.ts'
 
 /**
@@ -353,6 +354,120 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [run, notify, titleOf],
   )
   /**
+   * Одно действие над многими карточками.
+   *
+   * По операции на карточку, одна за другой, а не пачкой: сервер
+   * сериализует операции по доске, и «пачка» разложилась бы в ту же
+   * очередь — только отказ на середине стал бы неразличим, а половина
+   * сделанного осталась бы без имени.
+   *
+   * Возвращаются оба списка. Сделанное нужно для отмены — вернуть
+   * можно ровно то, что прошло; несделанное нужно, чтобы назвать его
+   * поимённо: «не удалось» без имён отправляет искать, что именно.
+   */
+  const applyToMany = useCallback(
+    async (cardIds: string[], type: string, payload: (cardId: string) => unknown) => {
+      const done: string[] = []
+      const failed: string[] = []
+      if (!boardId) return { done, failed }
+      for (const cardId of cardIds) {
+        try {
+          const result = await api.operation(boardId, crypto.randomUUID(), type, payload(cardId))
+          setBase((current) => (current ? applyPatch(current, result) : current))
+          done.push(cardId)
+        } catch {
+          failed.push(cardId)
+        }
+      }
+      return { done, failed }
+    },
+    [boardId],
+  )
+
+  /** Отказ называет карточки по именам, но не все: двадцать названий
+   *  в одну строку — это не сообщение, а список. */
+  const namesOf = useCallback(
+    (cardIds: string[]) => {
+      const names = cardIds.map((id) => titles.current.get(id) ?? 'без названия')
+      if (names.length <= 3) return names.join(', ')
+      return `${names.slice(0, 3).join(', ')} и ещё ${names.length - 3}`
+    },
+    [],
+  )
+
+  /**
+   * Перенести выделенные в колонку — с возможностью вернуть.
+   *
+   * Прежние колонки запоминаются до переноса: без них отмена вернула бы
+   * всё в одну кучу, а карточки пришли из разных мест.
+   */
+  const moveMany = useCallback(
+    async (cardIds: string[], toColumnId: string) => {
+      const was = new Map<string, string>()
+      for (const id of cardIds) {
+        const columnId = shown.current?.cards[id]?.columnId
+        if (columnId) was.set(id, columnId)
+      }
+      const name = shown.current?.columns[toColumnId]?.name ?? 'другую колонку'
+      const { done, failed } = await applyToMany(cardIds, 'MOVE_CARD', (cardId) => ({
+        cardId,
+        toColumnId,
+        place: 'end',
+      }))
+      if (done.length > 0) {
+        notify({
+          text: `${cardsLabel(done.length)} перенесено в «${name}»`,
+          tone: 'info',
+          action: {
+            label: 'Вернуть',
+            onAct: () => {
+              void (async () => {
+                for (const cardId of done) {
+                  const back = was.get(cardId)
+                  if (!back) continue
+                  await applyToMany([cardId], 'MOVE_CARD', () => ({
+                    cardId,
+                    toColumnId: back,
+                    place: 'end',
+                  }))
+                }
+              })()
+            },
+          },
+        })
+      }
+      if (failed.length > 0) {
+        notify({ text: `Не удалось перенести: ${namesOf(failed)}`, tone: 'warning' })
+      }
+      return done.length
+    },
+    [applyToMany, notify, namesOf],
+  )
+
+  /** Убрать выделенные в архив — одним сообщением и одной отменой
+   *  на всех: двадцать уведомлений подряд не читает никто. */
+  const archiveMany = useCallback(
+    async (cardIds: string[]) => {
+      const { done, failed } = await applyToMany(cardIds, 'ARCHIVE_CARD', (cardId) => ({ cardId }))
+      if (done.length > 0) {
+        notify({
+          text: `${cardsLabel(done.length)} убрано в архив`,
+          tone: 'info',
+          action: {
+            label: 'Вернуть',
+            onAct: () => void applyToMany(done, 'RESTORE_CARD', (cardId) => ({ cardId })),
+          },
+        })
+      }
+      if (failed.length > 0) {
+        notify({ text: `Не удалось убрать: ${namesOf(failed)}`, tone: 'warning' })
+      }
+      return done.length
+    },
+    [applyToMany, notify, namesOf],
+  )
+
+  /**
    * Удалить карточку насовсем.
    *
    * В отличие от архивации, здесь нет отмены и потому есть вопрос:
@@ -597,6 +712,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
     describeCard,
     estimateCard,
     archiveCard,
+    moveMany,
+    archiveMany,
     deleteCard,
     assignCard,
     toggleLabel,

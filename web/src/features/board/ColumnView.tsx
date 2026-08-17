@@ -51,6 +51,10 @@ type ColumnProps = {
   children: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
   onEstimate: (cardId: string, estimate: number | null) => void
+  /** Выделенные карточки — одним набором на доску: массовое действие
+   *  спрашивают у доски, а не у колонки. */
+  selected: Set<string>
+  onSelect: (cardId: string, on: boolean) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   columns: Column[]
@@ -220,6 +224,8 @@ export function ColumnView(props: ColumnProps) {
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
             onEstimate={props.onEstimate}
+            selected={props.selected.has(cardId)}
+            onSelect={props.onSelect}
             onBlock={props.onBlock}
             onUnblock={props.onUnblock}
             columns={props.columns}
