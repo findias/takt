@@ -10,7 +10,7 @@ import type {
   Column,
   EstimateUnit,
   Iteration,
-  ServiceClass,
+  Priority,
 } from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
 import { Flow } from '../features/flow/Flow.tsx'
@@ -443,7 +443,7 @@ export function Board({
     archiveCard: archive,
     estimateCard: estimate,
     blockCard: block,
-    classifyCard: classify,
+    prioritiseCard: prioritise,
     unblockCard: unblock,
   } = board
   const assignCard = useCallback(
@@ -458,9 +458,9 @@ export function Board({
     (cardId: string, value: number | null) => void estimate(cardId, value),
     [estimate],
   )
-  const classifyCard = useCallback(
-    (cardId: string, serviceClass: ServiceClass) => void classify(cardId, serviceClass),
-    [classify],
+  const prioritiseCard = useCallback(
+    (cardId: string, priority: Priority) => void prioritise(cardId, priority),
+    [prioritise],
   )
   const blockCard = useCallback(
     (cardId: string, reason: string) => void block(cardId, reason),
@@ -650,7 +650,7 @@ export function Board({
         onLabel={toggleLabel}
         selected={picked}
         onSelect={pickCard}
-        onClassify={classifyCard}
+        onPrioritise={prioritiseCard}
         onBlock={blockCard}
         onUnblock={unblockCard}
         columns={columnList}
@@ -1001,7 +1001,7 @@ export function Board({
           onOpenCard={showCard}
           onAssign={assignCard}
           onLabel={toggleLabel}
-          onClassify={classifyCard}
+          onPrioritise={prioritiseCard}
           subtaskBoards={subtaskBoards}
           onSubtask={(parentCardId, title, toBoard) =>
             void board.createSubtask(parentCardId, title, undefined, toBoard)

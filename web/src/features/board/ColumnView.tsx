@@ -9,7 +9,7 @@ import type {
   ColumnKind,
   EstimateUnit,
   Label,
-  ServiceClass,
+  Priority,
 } from '../../shared/api/index.ts'
 import { IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
@@ -60,7 +60,7 @@ type ColumnProps = {
    *  спрашивают у доски, а не у колонки. */
   selected: Set<string>
   onSelect: (cardId: string, on: boolean) => void
-  onClassify: (cardId: string, serviceClass: ServiceClass) => void
+  onPrioritise: (cardId: string, priority: Priority) => void
   onBlock: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   columns: Column[]
@@ -231,7 +231,7 @@ export function ColumnView(props: ColumnProps) {
             onLabel={props.onLabel}
             selected={props.selected.has(cardId)}
             onSelect={props.onSelect}
-            onClassify={props.onClassify}
+            onPrioritise={props.onPrioritise}
             onBlock={props.onBlock}
             onUnblock={props.onUnblock}
             columns={props.columns}

@@ -6,7 +6,7 @@ import type {
   Conflict,
   LinkKind,
   Placement,
-  ServiceClass,
+  Priority,
 } from '../../shared/api/index.ts'
 
 /** Подмножество свойств колонки, которое меняет одна операция. */
@@ -607,20 +607,20 @@ export function useBoard(boardId: string | null, notify: Notify) {
   )
 
   /**
-   * Класс обслуживания карточки.
+   * Приоритет карточки.
    *
-   * Оптимистично, как переименование: класс — свойство карточки,
+   * Оптимистично, как переименование: уровень — свойство карточки,
    * а не перенос, и ждать ответа сервера, чтобы показать слово,
    * незачем.
    */
-  const classifyCard = useCallback(
-    (cardId: string, serviceClass: ServiceClass) =>
+  const prioritiseCard = useCallback(
+    (cardId: string, priority: Priority) =>
       patchCard(
         cardId,
-        { serviceClass },
+        { priority },
         'UPDATE_CARD',
-        { cardId, serviceClass },
-        'Не удалось изменить класс обслуживания',
+        { cardId, priority },
+        'Не удалось изменить приоритет',
       ),
     [patchCard],
   )
@@ -752,7 +752,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     renameCard,
     describeCard,
     estimateCard,
-    classifyCard,
+    prioritiseCard,
     archiveCard,
     moveMany,
     archiveMany,

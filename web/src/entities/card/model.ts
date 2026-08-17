@@ -11,7 +11,7 @@ import type {
   Link,
   LinkKind,
   LinkedCard,
-  ServiceClass,
+  Priority,
 } from '../../shared/api/index.ts'
 import type { BaseState } from '../board/model.ts'
 
@@ -263,20 +263,25 @@ export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   return `${base} ${plural(total, UNITS[unit])}`
 }
 
-/** Как класс называется человеку. «Обычное» не показывается на карточке:
- *  это умолчание, и подпись у каждой второй карточки — шум. */
-export const CLASS_NAMES: Record<ServiceClass, string> = {
-  expedite: 'Срочное',
-  standard: 'Обычное',
-  filler: 'Фоновое',
+/** Как уровень называется человеку. «Средний» не показывается
+ *  на карточке: это умолчание, и подпись у каждой второй карточки —
+ *  шум. */
+export const PRIORITY_NAMES: Record<Priority, string> = {
+  highest: 'Наивысший',
+  high: 'Высокий',
+  medium: 'Средний',
+  low: 'Низкий',
 }
 
-/** Чем класс отличается на деле — словами, у самого выбора: класс
- *  не украшение, а обещание о том, как эту работу обслуживают. */
-export const CLASS_HINTS: Record<ServiceClass, string> = {
-  expedite: 'пропускают вперёд, держат отдельным лимитом',
-  standard: 'обычный порядок: тянут сверху колонки',
-  filler: 'берут, когда нечем занять паузу; сроков не обещают',
+/** Порядок уровней сверху вниз: наивысший первым. Список, а не
+ *  сортировка по имени: по алфавиту «Высокий» встал бы выше
+ *  «Наивысшего». */
+export const PRIORITIES: Priority[] = ['highest', 'high', 'medium', 'low']
+
+/** Насколько уровень выше среднего — для сортировки и сравнения.
+ *  Одним местом: второе такое же однажды разойдётся с первым. */
+export function priorityRank(priority: Priority): number {
+  return PRIORITIES.indexOf(priority)
 }
 
 // Единицы называются коротко: подпись стоит вплотную к числу, и

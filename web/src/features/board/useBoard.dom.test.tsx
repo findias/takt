@@ -60,7 +60,7 @@ function card(id: string, columnId: string, position: string): Card {
     outcome: null,
     estimate: null,
     comments: 0,
-    serviceClass: 'standard',
+    priority: 'medium',
   }
 }
 

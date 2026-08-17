@@ -4,8 +4,8 @@
 // и снимок затронутого. Читают его люди, и разбирать jsonb глазами
 // им незачем.
 
-import { CLASS_NAMES } from '../card/model.ts'
-import type { AuditEntry, BoardEvent, ServiceClass } from '../../shared/api/index.ts'
+import { PRIORITY_NAMES } from '../card/model.ts'
+import type { AuditEntry, BoardEvent, Priority } from '../../shared/api/index.ts'
 
 /** Что произошло с карточкой. */
 export function eventText(event: BoardEvent): string {
@@ -43,12 +43,10 @@ export function eventText(event: BoardEvent): string {
       return typeof p.estimate === 'number' ? `оценена в ${p.estimate}` : 'оценка изменена'
     case 'restored':
       return 'возвращена на доску'
-    case 'classified':
-      // Класс — не приоритет, и в ленте это тоже должно читаться
-      // как «изменились правила обслуживания», а не «повысили важность».
-      return typeof p.serviceClass === 'string' && p.serviceClass in CLASS_NAMES
-        ? `класс обслуживания: ${CLASS_NAMES[p.serviceClass as ServiceClass].toLowerCase()}`
-        : 'изменён класс обслуживания'
+    case 'prioritised':
+      return typeof p.priority === 'string' && p.priority in PRIORITY_NAMES
+        ? `приоритет: ${PRIORITY_NAMES[p.priority as Priority].toLowerCase()}`
+        : 'изменён приоритет'
     case 'blocked':
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
     case 'unblocked':

@@ -3,7 +3,12 @@ import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
 import { agingLabel } from '../../entities/board/model.ts'
-import { UNIT_SHORT, cardsLabel } from '../../entities/card/model.ts'
+import {
+  PRIORITY_NAMES,
+  UNIT_SHORT,
+  cardsLabel,
+  priorityRank,
+} from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
 
@@ -21,17 +26,18 @@ import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.t
  * вид присылают ссылкой.
  */
 
-export type Sort = 'age' | 'column' | 'estimate'
+export type Sort = 'age' | 'column' | 'estimate' | 'priority'
 
 export const SORT_NAMES: Record<Sort, string> = {
   age: 'по возрасту',
   column: 'по колонке',
   estimate: 'по оценке',
+  priority: 'по приоритету',
 }
 
 export function parseSort(query: URLSearchParams): Sort {
   const raw = query.get('sort')
-  return raw === 'column' || raw === 'estimate' ? raw : 'age'
+  return raw === 'column' || raw === 'estimate' || raw === 'priority' ? raw : 'age'
 }
 
 export function sortToQuery(sort: Sort, base?: URLSearchParams): URLSearchParams {
@@ -87,6 +93,10 @@ export function TableView({
           // Внутри колонки — по возрасту: иначе строки одной колонки
           // выстраиваются в случайном порядке, и глазу не за что взяться.
           return (position[a.columnId] ?? 0) - (position[b.columnId] ?? 0) || byAge(a) - byAge(b)
+        case 'priority':
+          // Внутри уровня — по возрасту: иначе строки одного уровня
+          // выстраиваются в случайном порядке, и глазу не за что взяться.
+          return priorityRank(a.priority) - priorityRank(b.priority) || byAge(a) - byAge(b)
         case 'estimate':
           // Неоценённые вниз: «пусто» — не самое маленькое значение,
           // а отсутствие ответа, и наверху ему делать нечего.
@@ -115,6 +125,7 @@ export function TableView({
             <th scope="col">Колонка</th>
             <th scope="col">Кто делает</th>
             <th scope="col">Метки</th>
+            <th scope="col">Приоритет</th>
             <th scope="col">Оценка</th>
             <th scope="col">Возраст</th>
             <th scope="col">
@@ -157,6 +168,10 @@ export function TableView({
                     ) : null
                   })}
                 </td>
+                {/* Приоритет назван словом у каждой строки, в отличие
+                    от доски: таблицу открывают, чтобы сравнивать,
+                    а сравнивать пустое место с пустым местом нельзя. */}
+                <td className="muted small">{PRIORITY_NAMES[card.priority]}</td>
                 <td className="muted small">
                   {card.estimate === null ? '—' : `${card.estimate} ${UNIT_SHORT[unit]}`}
                 </td>

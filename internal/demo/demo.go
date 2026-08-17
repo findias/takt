@@ -370,16 +370,18 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"value": "Северстрой"}); err != nil {
 		return err
 	}
-	// Одна карточка срочная: класс обслуживания видно только на той,
-	// у которой он не обычный, — а на пустой доске не увидеть,
-	// чем срочное отличается от остального.
-	if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
-		"cardId": ids["Согласовать смету с подрядчиком"], "serviceClass": "expedite"}); err != nil {
-		return err
-	}
-	if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
-		"cardId": ids["Обновить регламент приёмки"], "serviceClass": "filler"}); err != nil {
-		return err
+	// Уровни приоритета видно только на тех карточках, где он не
+	// средний, — а на доске из одних средних не увидеть, чем верх
+	// шкалы отличается от низа.
+	for title, level := range map[string]string{
+		"Согласовать смету с подрядчиком": "highest",
+		"Разобрать обращения за неделю":   "high",
+		"Обновить регламент приёмки":      "low",
+	} {
+		if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
+			"cardId": ids[title], "priority": level}); err != nil {
+			return err
+		}
 	}
 	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
 		"cardId": ids["Выпустить релиз склада"],

@@ -148,10 +148,10 @@ type Card struct {
 	// Пропускная способность считается только по done, иначе выброшенные
 	// карточки завышают её и все прогнозы по ней.
 	Outcome *string `json:"outcome"`
-	// Класс обслуживания: по каким правилам работу тянут. Не приоритет —
-	// на вопрос «что раньше» отвечает порядок карточек в колонке,
-	// и второго ответа мы не заводим.
-	ServiceClass string `json:"serviceClass"`
+	// Приоритет: низкий, средний, высокий, наивысший. Уровень говорит,
+	// что важнее; порядок карточек в колонке остаётся ручным и говорит,
+	// что взято в работу следующим.
+	Priority string `json:"priority"`
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
@@ -216,32 +216,29 @@ const (
 const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
-	column_entered_at, started_at, finished_at, estimate, outcome, service_class`
+	column_entered_at, started_at, finished_at, estimate, outcome, priority`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.ServiceClass)
+		&c.Estimate, &c.Outcome, &c.Priority)
 	return c, err
 }
 
-// Классы обслуживания. Три, а не четыре: канонический «с фиксированной
-// датой» без самой даты — пустое слово, а поля срока в системе нет.
+// Уровни приоритета. Четыре: середина нужна, чтобы не заставлять
+// выбирать сторону там, где выбирать нечего, а пятый и шестой уровни
+// в работе не различают — живут «обычное», «важное» и «горит».
 const (
-	// ClassExpedite — срочное: пропускают вперёд и держат отдельным
-	// лимитом, потому что оно ломает поток и должно быть редким.
-	ClassExpedite = "expedite"
-	// ClassStandard — обычное: то, ради чего доска и существует.
-	ClassStandard = "standard"
-	// ClassFiller — фоновое: берут, когда нечем занять паузу,
-	// и обещаний по нему не дают.
-	ClassFiller = "filler"
+	PriorityHighest = "highest"
+	PriorityHigh    = "high"
+	PriorityMedium  = "medium"
+	PriorityLow     = "low"
 )
 
-func knownClass(name string) bool {
+func knownPriority(name string) bool {
 	switch name {
-	case ClassExpedite, ClassStandard, ClassFiller:
+	case PriorityHighest, PriorityHigh, PriorityMedium, PriorityLow:
 		return true
 	}
 	return false

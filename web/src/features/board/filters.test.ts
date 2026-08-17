@@ -34,7 +34,7 @@ function card(over: Partial<Card> = {}): Card {
     outcome: null,
     estimate: null,
     comments: 0,
-    serviceClass: 'standard',
+    priority: 'medium',
     ...over,
   }
 }
@@ -57,7 +57,7 @@ test('адрес переживает круг: разобрали, собрал
     labels: ['l-1', 'l-2'],
     blocked: true,
     aging: true,
-    expedite: true,
+    urgent: true,
   }
   const query = filtersToQuery(filters)
   assert.deepEqual(parseFilters(query), filters)
@@ -68,14 +68,14 @@ test('адрес переживает круг: разобрали, собрал
   assert.equal(empty.toString(), '')
 })
 
-test('срочные отбираются классом, а не меткой', () => {
-  const urgent = { ...card(), serviceClass: 'expedite' as const }
-  const filters: Filters = { ...EMPTY, expedite: true }
+test('«горит» — это верх шкалы приоритета, а не один уровень', () => {
+  const filters: Filters = { ...EMPTY, urgent: true }
 
-  assert.equal(matches(urgent, filters, ctx), true)
+  assert.equal(matches({ ...card(), priority: 'highest' }, filters, ctx), true)
+  assert.equal(matches({ ...card(), priority: 'high' }, filters, ctx), true)
   assert.equal(matches(card(), filters, ctx), false)
-  // Отбор один — «что у нас горит»: спрашивать «покажи фоновое»
-  // незачем, а два выбора вместо одного удлиняют строку фильтров.
+  assert.equal(matches({ ...card(), priority: 'low' }, filters, ctx), false)
+  // Отбор один: спрашивают «что у нас горит», а не «покажи низкие».
   assert.equal(activeCount(filters), 1)
 })
 

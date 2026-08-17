@@ -15,14 +15,14 @@ import type {
   Iteration,
   Label,
   LinkKind,
-  ServiceClass,
+  Priority,
 } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 import { Discussion } from './Discussion.tsx'
 import type { BaseState } from '../../entities/board/model.ts'
 import {
-  CLASS_HINTS,
-  CLASS_NAMES,
+  PRIORITIES,
+  PRIORITY_NAMES,
   UNIT_SHORT,
   candidatesForSubtask,
   cardDetails,
@@ -78,7 +78,7 @@ export function CardPanel({
   onOpenCard,
   onAssign,
   onLabel,
-  onClassify,
+  onPrioritise,
   onSubtask,
   subtaskBoards,
   onLink,
@@ -102,7 +102,7 @@ export function CardPanel({
   /** on = назначить, off = снять. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
   onLabel: (cardId: string, labelId: string, on: boolean) => void
-  onClassify: (cardId: string, serviceClass: ServiceClass) => void
+  onPrioritise: (cardId: string, priority: Priority) => void
   /** Завести новую подзадачу. Доска — только когда её ставят соседям:
    *  пусто означает «на этой», и в организации с одной доской спрашивать
    *  нечего. */
@@ -172,10 +172,10 @@ export function CardPanel({
               canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
             )}
 
-            <ServiceClassPicker
-              value={card.serviceClass}
+            <PriorityPicker
+              value={card.priority}
               canEdit={canEdit}
-              onChange={(next) => onClassify(card.id, next)}
+              onChange={(next) => onPrioritise(card.id, next)}
             />
 
             <IterationPicker
@@ -752,49 +752,41 @@ function Assignees({
 }
 
 /**
- * Класс обслуживания.
+ * Приоритет.
  *
- * Это не приоритет: на вопрос «что раньше» отвечает порядок карточек
- * в колонке, и второго ответа мы не заводим — два порядка, обязанных
- * совпадать и не обязанных совпасть, расходятся в первую же неделю.
- * Класс отвечает на другой вопрос: по каким правилам эту работу
- * обслуживают.
+ * Уровень говорит, что важнее. Порядок карточек в колонке он не трогает
+ * и трогать не должен: порядок — решение команды о том, что взято
+ * в работу следующим, и подменять его сортировкой значит спорить с тем,
+ * что люди сами выставили руками.
  *
- * Поэтому у каждого значения рядом написано, что оно означает на деле.
- * Класс без объявленного правила — это ярлык, который каждый понимает
- * по-своему, и через месяц срочным оказывается половина доски.
+ * Четыре уровня, и середина есть намеренно: шкала без середины
+ * заставляет выбирать сторону там, где выбирать нечего, и через месяц
+ * половина доски оказывается «высокой».
  */
-function ServiceClassPicker({
+function PriorityPicker({
   value,
   canEdit,
   onChange,
 }: {
-  value: ServiceClass
+  value: Priority
   canEdit: boolean
-  onChange: (next: ServiceClass) => void
+  onChange: (next: Priority) => void
 }) {
   if (!canEdit) {
-    return (
-      <p className="muted small">
-        Класс: {CLASS_NAMES[value].toLowerCase()} — {CLASS_HINTS[value]}
-      </p>
-    )
+    return <p className="muted small">Приоритет: {PRIORITY_NAMES[value].toLowerCase()}</p>
   }
 
   return (
-    <section className="stack stack--tight">
-      <label className="field-row">
-        <span className="field-label">Класс</span>
-        <select value={value} onChange={(e) => onChange(e.target.value as ServiceClass)}>
-          {(Object.keys(CLASS_NAMES) as ServiceClass[]).map((cls) => (
-            <option key={cls} value={cls}>
-              {CLASS_NAMES[cls]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="muted small">{CLASS_HINTS[value]}</p>
-    </section>
+    <label className="field-row">
+      <span className="field-label">Приоритет</span>
+      <select value={value} onChange={(e) => onChange(e.target.value as Priority)}>
+        {PRIORITIES.map((level) => (
+          <option key={level} value={level}>
+            {PRIORITY_NAMES[level]}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

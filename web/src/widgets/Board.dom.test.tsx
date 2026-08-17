@@ -67,7 +67,7 @@ function card(id: string, columnId: string, position: string, title = id): Card 
     outcome: null,
     estimate: null,
     comments: 0,
-    serviceClass: 'standard',
+    priority: 'medium',
   }
 }
 

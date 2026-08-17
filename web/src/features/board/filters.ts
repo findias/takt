@@ -31,9 +31,9 @@ export type Filters = {
   blocked: boolean
   /** Только те, что идут дольше обещанного. */
   aging: boolean
-  /** Только срочные. Отбор один, а не выбор из трёх классов:
-   *  спрашивают «что у нас горит», а не «покажи фоновое». */
-  expedite: boolean
+  /** Только высокий и наивысший. Отбор один, а не выбор уровня:
+   *  спрашивают «что у нас горит», а не «покажи низкие». */
+  urgent: boolean
 }
 
 export const EMPTY: Filters = {
@@ -42,7 +42,7 @@ export const EMPTY: Filters = {
   labels: [],
   blocked: false,
   aging: false,
-  expedite: false,
+  urgent: false,
 }
 
 /** «Ни на ком» — тоже ответ на вопрос «чьё это», и его надо уметь
@@ -56,7 +56,7 @@ export function isEmpty(f: Filters): boolean {
     f.labels.length === 0 &&
     !f.blocked &&
     !f.aging &&
-    !f.expedite
+    !f.urgent
   )
 }
 
@@ -75,7 +75,7 @@ export function activeCount(f: Filters): number {
     f.labels.length +
     (f.blocked ? 1 : 0) +
     (f.aging ? 1 : 0) +
-    (f.expedite ? 1 : 0)
+    (f.urgent ? 1 : 0)
   )
 }
 
@@ -87,7 +87,7 @@ export function parseFilters(query: URLSearchParams): Filters {
     labels: labels ? labels.split(',').filter(Boolean) : [],
     blocked: query.get('blocked') === '1',
     aging: query.get('aging') === '1',
-    expedite: query.get('expedite') === '1',
+    urgent: query.get('urgent') === '1',
   }
 }
 
@@ -107,7 +107,7 @@ export function filtersToQuery(f: Filters, base?: URLSearchParams): URLSearchPar
   set('labels', f.labels.join(','))
   set('blocked', f.blocked ? '1' : null)
   set('aging', f.aging ? '1' : null)
-  set('expedite', f.expedite ? '1' : null)
+  set('urgent', f.urgent ? '1' : null)
   return query
 }
 
@@ -148,7 +148,9 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
 
   if (f.aging && !agingLabel(card, ctx.sleDays, ctx.now)) return false
 
-  if (f.expedite && card.serviceClass !== 'expedite') return false
+  // «Горит» — это высокий и наивысший: спрашивают про верх шкалы,
+  // а не про конкретный уровень.
+  if (f.urgent && card.priority !== 'high' && card.priority !== 'highest') return false
 
   return true
 }

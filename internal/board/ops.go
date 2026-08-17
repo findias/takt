@@ -614,9 +614,9 @@ type updateCardPayload struct {
 	// Оценка различает «не трогать» и «снять»: у карточки без оценки
 	// и у карточки, оценку которой не присылали, разная судьба.
 	Estimate optionalFloat `json:"estimate"`
-	// Класс обслуживания. Снять его нельзя: класс есть у всякой
-	// карточки, и «не решили» ничем не отличается от «обычного».
-	ServiceClass *string `json:"serviceClass"`
+	// Приоритет. Снять его нельзя: уровень есть у всякой карточки,
+	// и «не решили» ничем не отличается от среднего.
+	Priority *string `json:"priority"`
 }
 
 func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -624,11 +624,11 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор UPDATE_CARD: %v", err)
 	}
-	if p.Title == nil && p.Description == nil && !p.Estimate.Set && p.ServiceClass == nil {
+	if p.Title == nil && p.Description == nil && !p.Estimate.Set && p.Priority == nil {
 		return Patch{}, badRequestf("нечего изменять")
 	}
-	if p.ServiceClass != nil && !knownClass(*p.ServiceClass) {
-		return Patch{}, badRequestf("неизвестный класс обслуживания %q", *p.ServiceClass)
+	if p.Priority != nil && !knownPriority(*p.Priority) {
+		return Patch{}, badRequestf("неизвестный приоритет %q", *p.Priority)
 	}
 	if p.Estimate.Set && p.Estimate.Value != nil && *p.Estimate.Value <= 0 {
 		return Patch{}, badRequestf("оценка должна быть больше нуля")
@@ -646,13 +646,13 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		   set title         = coalesce($2, title),
 		       description   = coalesce($3, description),
 		       estimate      = case when $5 then $6 else estimate end,
-		       service_class = coalesce($7, service_class),
+		       priority      = coalesce($7, priority),
 		       version       = version + 1,
 		       updated_at    = now()
 		 where id = $1 and board_id = $4 and archived_at is null
 		 returning `+cardFields,
 		p.CardID, p.Title, p.Description, boardID,
-		p.Estimate.Set, p.Estimate.Value, p.ServiceClass))
+		p.Estimate.Set, p.Estimate.Value, p.Priority))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, conflictf("", "карточка уже удалена")
 	}
@@ -672,9 +672,9 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	case p.Estimate.Set:
 		kind = "estimated"
 		payload = map[string]any{"estimate": p.Estimate.Value}
-	case p.ServiceClass != nil:
-		kind = "classified"
-		payload = map[string]any{"serviceClass": *p.ServiceClass}
+	case p.Priority != nil:
+		kind = "prioritised"
+		payload = map[string]any{"priority": *p.Priority}
 	}
 	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, payload); err != nil {
 		return Patch{}, err

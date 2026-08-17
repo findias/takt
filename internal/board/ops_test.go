@@ -200,34 +200,33 @@ func equal(a, b []string) bool {
 	return true
 }
 
-// Класс обслуживания отвечает не на «что раньше» — на это отвечает
-// порядок карточек в колонке, — а на «по каким правилам это тянут».
-// Поэтому он есть у всякой карточки и по умолчанию обычный: «не решили»
-// от «обычного» ничем не отличается.
-func TestServiceClassIsSetAndDefaultsToStandard(t *testing.T) {
+// Приоритет — уровень: он говорит, что важнее. Порядок карточек
+// в колонке при этом остаётся ручным и говорит, что взято следующим:
+// уровень ничего не переставляет сам.
+func TestPriorityIsSetAndDefaultsToMedium(t *testing.T) {
 	f := newFixture(t)
 	id := f.createCard("Согласовать смету", f.columns()[0].ID)
 
-	if got := f.card(id).ServiceClass; got != ClassStandard {
-		t.Fatalf("класс новой карточки %q, ожидался обычный", got)
+	if got := f.card(id).Priority; got != PriorityMedium {
+		t.Fatalf("приоритет новой карточки %q, ожидался средний", got)
 	}
 
-	res := f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "serviceClass": ClassExpedite})
-	if got := res.Patch.Cards[0].ServiceClass; got != ClassExpedite {
-		t.Errorf("класс в патче %q, ожидался срочный", got)
+	res := f.mustApply("UPDATE_CARD", map[string]any{"cardId": id, "priority": PriorityHighest})
+	if got := res.Patch.Cards[0].Priority; got != PriorityHighest {
+		t.Errorf("приоритет в патче %q, ожидался наивысший", got)
 	}
-	if got := f.card(id).ServiceClass; got != ClassExpedite {
-		t.Errorf("класс в снимке %q, ожидался срочный", got)
+	if got := f.card(id).Priority; got != PriorityHighest {
+		t.Errorf("приоритет в снимке %q, ожидался наивысший", got)
 	}
 
-	// Отказ называет, что не так: разбирать «неизвестный класс» человеку
-	// проще, чем гадать, почему изменение не применилось.
+	// Отказ называет, что не так: разбирать «неизвестный приоритет»
+	// человеку проще, чем гадать, почему изменение не применилось.
 	if _, err := f.apply("UPDATE_CARD", map[string]any{
-		"cardId": id, "serviceClass": "срочнейшее"}); err == nil {
-		t.Error("неизвестный класс принят")
+		"cardId": id, "priority": "срочнейший"}); err == nil {
+		t.Error("неизвестный приоритет принят")
 	}
-	if got := f.card(id).ServiceClass; got != ClassExpedite {
-		t.Errorf("отвергнутый класс всё-таки применился: %q", got)
+	if got := f.card(id).Priority; got != PriorityHighest {
+		t.Errorf("отвергнутый приоритет всё-таки применился: %q", got)
 	}
 }
 

@@ -28,7 +28,7 @@ function card(id: string, over: Partial<Card> = {}): Card {
     outcome: null,
     estimate: null,
     comments: 0,
-    serviceClass: 'standard',
+    priority: 'medium',
     ...over,
   }
 }

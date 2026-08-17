@@ -132,14 +132,15 @@ export function FilterBar({
 
         {/* «Что у нас горит» — вопрос к доске, который задают чаще
             остальных отборов, поэтому он стоит отбором, а не выбором
-            из трёх классов: «покажи фоновое» не спрашивает никто. */}
+            уровня: «покажи низкие» не спрашивает никто. Горит — это
+            верх шкалы, высокий и наивысший вместе. */}
         <label className="row row--tight small">
           <input
             type="checkbox"
-            checked={filters.expedite}
-            onChange={(e) => onChange({ ...filters, expedite: e.target.checked })}
+            checked={filters.urgent}
+            onChange={(e) => onChange({ ...filters, urgent: e.target.checked })}
           />
-          <span>Срочные</span>
+          <span>Горит</span>
         </label>
 
         <label className="row row--tight small">
