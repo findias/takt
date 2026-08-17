@@ -49,6 +49,9 @@
               "conflict",
               "too_many_requests",
               "idempotency_key_reused",
+              "board_archived",
+              "board_key_taken",
+              "board_key_invalid",
               "internal"
             ]
           }
@@ -73,6 +76,53 @@
           }
         }
       },
+      "EventName": {
+        "type": "string",
+        "description": "Имя события. Список закрытый: подписка на имя, которого здесь нет, не доставит ничего никогда.",
+        "enum": [
+          "card.created",
+          "card.renamed",
+          "card.described",
+          "card.estimated",
+          "card.prioritised",
+          "card.committed",
+          "card.moved",
+          "card.blocked",
+          "card.unblocked",
+          "card.linked",
+          "card.unlinked",
+          "card.commented",
+          "card.field_set",
+          "card.field_cleared",
+          "card.iteration_added",
+          "card.iteration_removed",
+          "card.done",
+          "card.undone",
+          "card.archived",
+          "card.restored"
+        ]
+      },
+      "Delivery": {
+        "type": "object",
+        "description": "Тело доставки вебхука. Приходит POST'ом на адрес подписки.",
+        "required": ["event", "boardId", "cardId", "actorId", "payload", "at"],
+        "properties": {
+          "event": { "$ref": "#/components/schemas/EventName" },
+          "boardId": { "type": "string", "format": "uuid" },
+          "cardId": { "type": "string", "format": "uuid" },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Кто сделал. У ключа своя личность в организации, поэтому здесь всегда кто-то есть."
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Подробности, свои у каждого вида события: название при renamed, оценка при estimated, колонки при moved."
+          },
+          "at": { "type": "string", "format": "date-time" }
+        }
+      },
       "Operation": {
         "type": "object",
         "required": ["operationId", "type", "payload"],
@@ -88,6 +138,10 @@
               "ARCHIVE_CARD",
               "RESTORE_CARD",
               "DELETE_CARD",
+              "ASSIGN_CARD",
+              "UNASSIGN_CARD",
+              "LABEL_CARD",
+              "UNLABEL_CARD",
               "CREATE_COLUMN",
               "RENAME_COLUMN",
               "UPDATE_COLUMN",
@@ -229,6 +283,122 @@
         }
       }
     },
+    "/boards/{id}/stream": {
+      "get": {
+        "summary": "Поток изменений доски",
+        "description": "Server-Sent Events. По проводу едет не патч, а версия: «доска доехала до такой-то» — увидев версию новее своей, читатель перечитывает снимок или догоняет патчами через /changes. Событие называется board, данные — объект {boardId, version, actorId}; строки, начинающиеся с двоеточия, — пульс раз в 25 секунд, его положено пропускать. Разрыв — обычное дело; переподключение с ним справляется само, а пропущенное добирается через /changes.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Поток text/event-stream",
+            "content": { "text/event-stream": { "schema": { "type": "string" } } }
+          },
+          "404": { "description": "Доски нет либо она недоступна" }
+        }
+      }
+    },
+    "/boards/{id}/changes": {
+      "get": {
+        "summary": "Догнать пропущенное",
+        "description": "Патчи после названной версии вместо целого снимка — то, чем закрывают разрыв потока. Ответ full=true означает «патчами не догнать»: изменения старше того, что помнит доска, и нужен снимок целиком.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          {
+            "name": "since",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Версия доски, которая у вас уже есть."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Версия, патчи по порядку и признак full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": { "type": "integer" },
+                    "results": { "type": "array", "items": { "type": "object" } },
+                    "full": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Нет параметра since" }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "summary": "Подписки организации",
+        "description": "Управление подписками — только владельцу организации и только сессией: ключу роль владельца не достаётся. Подписки заводят на экране «Команда»; здесь они описаны потому, что читающий контракт должен знать, откуда берётся то, что ему приходит.",
+        "responses": { "200": { "description": "Список подписок" } }
+      },
+      "post": {
+        "summary": "Завести подписку",
+        "description": "Ключ подписи возвращается один раз — им проверяется X-Signature у каждой доставки. Повторно его не показывают: в базе он есть, но отдать его второй раз значит завести второй способ его узнать.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url", "events"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "url": { "type": "string", "format": "uri" },
+                  "events": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/EventName" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Подписка вместе с ключом подписи" } }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "summary": "Убрать подписку",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Убрана" },
+          "404": { "description": "Подписки нет" }
+        }
+      }
+    },
+    "/webhooks/{id}/deliveries": {
+      "get": {
+        "summary": "Журнал доставок подписки",
+        "description": "Что уходило, дошло ли, чем ответил получатель и когда следующая попытка. Смотрят в него тогда, когда что-то не доехало.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": { "200": { "description": "Доставки, свежие сверху" } }
+      }
+    },
+    "/deliveries/{id}/retry": {
+      "post": {
+        "summary": "Досдать доставку",
+        "description": "Повторить можно только недоставленное: повторять доставленное значит по своей воле прислать получателю событие дважды.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Поставлено в очередь" },
+          "404": { "description": "Доставки нет либо она уже дошла" }
+        }
+      }
+    },
     "/boards/{id}/events": {
       "get": {
         "summary": "Лента событий доски",
@@ -271,6 +441,53 @@
         "responses": {
           "200": { "description": "Документ: version, exported_at, org и разделы по таблицам" },
           "403": { "description": "Не владелец организации" }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "card": {
+      "post": {
+        "summary": "Событие карточки — то, что мы присылаем вам",
+        "description": "Приходит POST'ом на адрес подписки, по одному событию на запрос.\n\nПодпись. Заголовок X-Signature содержит «sha256=» и шестнадцатеричный HMAC-SHA256 от строки «<X-Timestamp>.<тело запроса байт в байт>», ключ — секрет подписки. Метка времени входит в подписанное намеренно: без неё перехваченный запрос можно повторить когда угодно. Сравнивать подписи следует сравнением, не зависящим от длины совпадения, а доставку старше нескольких минут — отбрасывать.\n\nПовторы. Доставка гарантируется «не менее одного раза»: получатель обязан отличать повтор от нового события по X-Delivery-Id — он один и тот же у всех попыток. Успехом считается любой ответ 2xx; на всё остальное и на молчание попытка повторяется с удвоением паузы — 30 секунд, минута, две и так далее до часа, всего восемь попыток. Исчерпав их, доставка сдаётся, а подписка отключается: молча копить недоставленное годами хуже, чем перестать и сказать об этом.\n\nПорядок не обещан: события уходят параллельно, и «перенесена» может прийти раньше «создана». Порядок восстанавливается по полю at.",
+        "parameters": [
+          {
+            "name": "X-Event",
+            "in": "header",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/EventName" },
+            "description": "Имя события — то же, что в теле."
+          },
+          {
+            "name": "X-Delivery-Id",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "description": "Одна и та же у всех попыток одной доставки. По ней отличают повтор."
+          },
+          {
+            "name": "X-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Секунды Unix, момент попытки. Входит в подписанное."
+          },
+          {
+            "name": "X-Signature",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^sha256=[0-9a-f]{64}$" },
+            "description": "sha256=<hex(HMAC-SHA256(секрет, \"<X-Timestamp>.\" + тело))>"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Delivery" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "Принято. Успехом считается любой 2xx; тело ответа не читается." }
         }
       }
     }

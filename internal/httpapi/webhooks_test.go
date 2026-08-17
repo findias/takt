@@ -70,6 +70,12 @@ func (r *receiver) answer(status int) {
 }
 
 // drain разбирает очередь одним заходом работника, как это делает сервер.
+// drain разбирает очередь доставок до конца, а не одной пачкой.
+//
+// Очередь общая на базу, а пачка — десять: в полном прогоне первыми
+// созревшими оказываются чужие доставки, и своя остаётся нетронутой.
+// Так проверка и падала под нагрузкой, рассказывая про доставку, за
+// которую никто не брался, — «attempts: 0».
 func drain(t *testing.T) int {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
@@ -79,12 +85,20 @@ func drain(t *testing.T) int {
 	}
 	defer db.Close()
 
-	sent, err := webhook.NewWorker(db, slog.New(slog.NewTextHandler(io.Discard, nil))).
-		Once(context.Background())
-	if err != nil {
-		t.Fatalf("разбор очереди: %v", err)
+	worker := webhook.NewWorker(db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	total := 0
+	for {
+		// Неудачная доставка откладывается на потом, поэтому второй раз
+		// в этом же цикле она не попадётся и цикл кончается.
+		sent, err := worker.Once(context.Background())
+		if err != nil {
+			t.Fatalf("разбор очереди: %v", err)
+		}
+		if sent == 0 {
+			return total
+		}
+		total += sent
 	}
-	return sent
 }
 
 func TestWebhookDeliversSignedEvent(t *testing.T) {

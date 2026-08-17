@@ -77,6 +77,18 @@ export function Webhooks() {
               Скопировать
             </button>
           </div>
+          {/* Ключ без правила проверки бесполезен, а правило до сих пор
+              можно было узнать только чтением нашего кода. */}
+          <p className="small muted">
+            Проверяется так: <code>X-Signature</code> — это{' '}
+            <code>sha256=</code> и HMAC-SHA256 от строки «
+            <code>X-Timestamp</code>.тело запроса», ключом служит эта строка.
+            Полностью — в{' '}
+            <a href="/api/v1/openapi.json" target="_blank" rel="noreferrer">
+              описании контракта
+            </a>
+            .
+          </p>
         </div>
       )}
 

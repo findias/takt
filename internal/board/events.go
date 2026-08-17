@@ -19,6 +19,39 @@ import (
 // и почти никогда не до конца.
 const FeedLimit = 50
 
+// EventKinds — все виды событий карточки, в порядке жизни работы.
+//
+// Список нужен наружу: подписчик вебхука получает их под именем
+// «card.<вид>», и до сих пор узнать этот набор можно было только чтением
+// нашего кода на Go. Здесь он один на всех — контракт, интерфейс,
+// проверка подписки, — потому что два списка одного и того же расходятся
+// в первый же день.
+//
+// Полноту держит проверка: она собирает виды из вызовов logEvent и
+// сверяет с этим списком.
+var EventKinds = []string{
+	"created",
+	"renamed",
+	"described",
+	"estimated",
+	"prioritised",
+	"committed",
+	"moved",
+	"blocked",
+	"unblocked",
+	"linked",
+	"unlinked",
+	"commented",
+	"field_set",
+	"field_cleared",
+	"iteration_added",
+	"iteration_removed",
+	"done",
+	"undone",
+	"archived",
+	"restored",
+}
+
 type Event struct {
 	ID     int64  `json:"id"`
 	CardID string `json:"cardId"`

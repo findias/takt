@@ -525,6 +525,10 @@ test('подписка на события заводится и показыв�
   // получатель.
   await expect(page.getByLabel('Ключ подписи')).toBeVisible()
   await expect(page.getByText('https://example.test/hooks/board')).toBeVisible()
+  // Ключ без правила проверки бесполезен, и правило стоит рядом с ним:
+  // узнать его иначе можно было только чтением нашего кода на Go.
+  await expect(page.getByText(/HMAC-SHA256/)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'описании контракта' })).toBeVisible()
 
   // Пока событий не было, журнал доставок пуст и говорит об этом.
   await page.getByRole('button', { name: 'Доставки' }).click()
