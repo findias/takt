@@ -2,6 +2,7 @@
 // переноса и подписи. Всё, что можно проверить без браузера и без сети,
 // вынесено сюда — по той же причине, что и boardModel.
 
+import { plural } from '../../shared/lib/plural.ts'
 import type { Team } from '../../shared/api/index.ts'
 
 /**
@@ -89,16 +90,8 @@ export function canNestInside(node: TreeNode): boolean {
 /** «3 команды», «1 доска» — короткие подписи под названием узла. */
 export function counters(node: TreeNode): string {
   const parts: string[] = []
-  if (node.members > 0) parts.push(plural(node.members, 'человек', 'человека', 'человек'))
-  if (node.boards > 0) parts.push(plural(node.boards, 'доска', 'доски', 'досок'))
+  if (node.members > 0) parts.push(`${node.members} ${plural(node.members, 'человек', 'человека', 'человек')}`)
+  if (node.boards > 0) parts.push(`${node.boards} ${plural(node.boards, 'доска', 'доски', 'досок')}`)
   return parts.join(' · ')
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  const mod100 = n % 100
-  const mod10 = n % 10
-  if (mod100 >= 11 && mod100 <= 14) return `${n} ${many}`
-  if (mod10 === 1) return `${n} ${one}`
-  if (mod10 >= 2 && mod10 <= 4) return `${n} ${few}`
-  return `${n} ${many}`
-}

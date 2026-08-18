@@ -1,3 +1,4 @@
+import { plural } from '../../shared/lib/plural.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
 
 /**
@@ -67,7 +68,12 @@ export function CumulativeFlow({ flow }: { flow: FlowReport['flow'] }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Накопительная диаграмма потока за ${flow.length} дней. Сейчас: в очереди ${last.queued}, в работе ${last.inProgress}, сделано ${last.done}.`}
+        aria-label={`Накопительная диаграмма потока за ${flow.length} ${plural(
+          flow.length,
+          'день',
+          'дня',
+          'дней',
+        )}. Сейчас: в очереди ${last.queued}, в работе ${last.inProgress}, сделано ${last.done}.`}
       >
         <Grid top={top} />
         {/* Сверху вниз: каждая следующая полоса перекрывает нижнюю
@@ -119,7 +125,17 @@ export function CycleScatter({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Время цикла по карточкам: ${finished.length} точек, от ${round(Math.min(...days))} до ${round(Math.max(...days))} дней.`}
+        aria-label={`Время цикла по карточкам: ${finished.length} ${plural(
+          finished.length,
+          'точка',
+          'точки',
+          'точек',
+        )}, от ${round(Math.min(...days))} до ${round(Math.max(...days))} ${plural(
+          Math.max(...days),
+          'дня',
+          'дней',
+          'дней',
+        )}.`}
       >
         <Grid top={top} />
         {/* Подписи расходятся по вертикали, если сами линии сошлись:
@@ -195,7 +211,17 @@ export function AgingChart({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Возраст идущей работы: ${aging.length} карточек, самая старая ${round(Math.max(...aging.map((c) => c.days)))} дней.`}
+        aria-label={`Возраст идущей работы: ${aging.length} ${plural(
+          aging.length,
+          'карточка',
+          'карточки',
+          'карточек',
+        )}, самая старая ${round(Math.max(...aging.map((c) => c.days)))} ${plural(
+          Math.max(...aging.map((c) => c.days)),
+          'день',
+          'дня',
+          'дней',
+        )}.`}
       >
         <Grid top={top} />
         {median !== null && (

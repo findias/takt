@@ -3,6 +3,7 @@ import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
 import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
 import { dateWords } from '../../entities/card/model.ts'
+import { plural } from '../../shared/lib/plural.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
 
 /**
@@ -270,14 +271,6 @@ function round(value: number): string {
   return value < 10 ? value.toFixed(1) : String(Math.round(value))
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  const mod100 = n % 100
-  const mod10 = n % 10
-  if (mod100 >= 11 && mod100 <= 14) return many
-  if (mod10 === 1) return one
-  if (mod10 >= 2 && mod10 <= 4) return few
-  return many
-}
 
 /**
  * Обещание доски.

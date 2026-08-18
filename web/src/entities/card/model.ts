@@ -5,6 +5,7 @@
 // другой команды или на доску, которой спрашивающий не видит. Разложить
 // это по полкам можно без сети — значит, здесь и раскладываем.
 
+import { plural } from '../../shared/lib/plural.ts'
 import type {
   Card,
   EstimateUnit,
@@ -272,7 +273,7 @@ function stageOf(card: LinkedCard): string {
  */
 function promiseOf(card: LinkedCard): string | null {
   if (card.sleDays === null) return null
-  return `обычно ${card.sleDays} ${plural(card.sleDays, UNITS.days)} с вероятностью ${card.sleProbability}%`
+  return `обычно ${card.sleDays} ${plural(card.sleDays, ...UNITS.days)} с вероятностью ${card.sleProbability}%`
 }
 
 // Названия единиц оценки живут здесь, а не в клиенте API: модель берёт
@@ -296,7 +297,7 @@ export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   const { done, total, byWeight } = card.progress
   const base = `${number(done)} из ${number(total)}`
   if (!byWeight || !unit) return base
-  return `${base} ${plural(total, UNITS[unit])}`
+  return `${base} ${plural(total, ...UNITS[unit])}`
 }
 
 /** Как уровень называется человеку. «Средний» не показывается
@@ -480,30 +481,19 @@ export function estimateLabel(value: number | null, unit: EstimateUnit): string 
 /** «5 карточек» — счётом, а не числом рядом со словом: сообщение
  *  об отмене и подпись таблицы обязаны читаться вслух как речь. */
 export function cardsLabel(n: number): string {
-  return `${n} ${plural(n, ['карточка', 'карточки', 'карточек'])}`
+  return `${n} ${plural(n, 'карточка', 'карточки', 'карточек')}`
 }
 
 /** Единица оценки со склонением при числе: «3 часа», «20 очков».
  *  Правило склонения одно на весь интерфейс — иначе однажды будет
  *  написано «2 очков». */
 export function unitLabel(n: number, unit: EstimateUnit): string {
-  return plural(n, UNITS[unit])
+  return plural(n, ...UNITS[unit])
 }
 
 /** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */
 function number(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))
-}
-
-function plural(n: number, forms: [string, string, string]): string {
-  // Дробное число склоняется как «часа»: 1.5 часа, 2.5 часа.
-  if (!Number.isInteger(n)) return forms[1]
-  const mod100 = n % 100
-  const mod10 = n % 10
-  if (mod100 >= 11 && mod100 <= 14) return forms[2]
-  if (mod10 === 1) return forms[0]
-  if (mod10 >= 2 && mod10 <= 4) return forms[1]
-  return forms[2]
 }
 
 /** Доля выполненного от нуля до единицы — для полоски. */
