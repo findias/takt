@@ -118,22 +118,37 @@ function fieldValueText(value: unknown, kind: CardField['kind']): string {
  * изменилось, лежат в снимке, который и так приходит с записью, —
  * до сих пор их просто выбрасывали.
  */
-export function auditText(entry: AuditEntry): string {
+export function auditText(entry: AuditEntry, people: Record<string, string> = {}): string {
   const what = SUBJECTS[entry.subject] ?? entry.subject
   const named = subjectName(entry)
   const about = named ? `${what} «${named}»` : what
+  // Записи про людей имени в снимке не хранят — там идентификатор.
+  // Имена лежат на этом же экране, и без них «Состав подразделения:
+  // добавлено» не отвечает на главный вопрос: кого.
+  const who = personName(entry, people)
+  const tail = who ? ` · ${who}` : ''
   switch (entry.action) {
     case 'insert':
-      return `${about}: добавлено`
+      return `${about}: добавлено${tail}`
     case 'update': {
       const changed = changeText(entry)
-      return changed ? `${about}: изменено — ${changed}` : `${about}: изменено`
+      return changed ? `${about}: изменено — ${changed}${tail}` : `${about}: изменено${tail}`
     }
     case 'delete':
-      return `${about}: удалено`
+      return `${about}: удалено${tail}`
     default:
-      return `${about}: ${entry.action}`
+      return `${about}: ${entry.action}${tail}`
   }
+}
+
+function personName(entry: AuditEntry, people: Record<string, string>): string {
+  const id = field(side(entry, 'new'), 'user_id') || field(side(entry, 'old'), 'user_id')
+  return id ? (people[id] ?? '') : ''
+}
+
+function field(row: Record<string, unknown> | null, key: string): string {
+  const value = row?.[key]
+  return typeof value === 'string' ? value : ''
 }
 
 /** Имя затронутого, если оно у него есть: у подразделения и доски есть,

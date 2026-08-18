@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
 import {
   DIRECTORY_SCOPE,
@@ -222,7 +222,7 @@ export function Team({ principal }: { principal: Principal }) {
 
       {isOwner && <Export />}
 
-      <AuditFeed />
+      <AuditFeed people={members ?? []} />
     </div>
   )
 }
@@ -640,7 +640,7 @@ function Export() {
  * здесь был бы хуже: он подтверждал бы, что журнал есть и в нём что-то
  * лежит.
  */
-function AuditFeed() {
+function AuditFeed({ people }: { people: Member[] }) {
   const [entries, setEntries] = useState<AuditEntry[]>([])
   const [next, setNext] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -658,6 +658,13 @@ function AuditFeed() {
 
   useEffect(() => load(), [load])
 
+  // Имена — те же, что показаны выше в составе организации: второго
+  // запроса ради журнала не нужно.
+  const names = useMemo(
+    () => Object.fromEntries(people.map((p) => [p.userId, p.name])),
+    [people],
+  )
+
   if (!loaded || entries.length === 0) return null
 
   return (
@@ -670,7 +677,7 @@ function AuditFeed() {
       <ul className="feed">
         {entries.map((e) => (
           <li key={e.id}>
-            <span>{auditText(e)}</span>
+            <span>{auditText(e, names)}</span>
             <span className="muted small">
               {actorText(e.actor)} · {timeText(e.at)}
             </span>
