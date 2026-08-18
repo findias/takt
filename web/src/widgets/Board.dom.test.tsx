@@ -248,6 +248,53 @@ describe('поток словами, а не машинными строками
     discarded: 0,
   }
 
+  // Прогноз считается из того же прошлого, что и время цикла, но
+  // оговорку имело только время цикла: на трёх доведённых карточках
+  // прогноз спокойно печатал «5 карточек — 161 день», и это читалось
+  // как расчёт, а не как гадание с точностью до дня.
+  it('прогноз на коротком прошлом сам говорит, что опираться на него рано', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    const { api } = await import('../shared/api')
+    vi.spyOn(api, 'metrics').mockResolvedValue({
+      ...metrics,
+      throughput: [
+        { week: '2026-05-04', count: 1 },
+        { week: '2026-05-11', count: 0 },
+        { week: '2026-05-18', count: 1 },
+        { week: '2026-05-25', count: 1 },
+      ],
+      forecast: [{ cards: 5, p50: 105, p85: 140, p95: 161 }],
+    })
+    show()
+
+    await user.click(await screen.findByRole('button', { name: 'Поток' }))
+    const note = await screen.findByText(/тысяча испытаний/)
+    expect(note.textContent).toMatch(/всего 3 карточки за 4 недели/)
+    expect(note.textContent).toMatch(/слишком мало, чтобы на это опираться/)
+  })
+
+  it('на длинном прошлом прогноз ничего не оговаривает', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    const { api } = await import('../shared/api')
+    vi.spyOn(api, 'metrics').mockResolvedValue({
+      ...metrics,
+      throughput: [
+        { week: '2026-05-04', count: 5 },
+        { week: '2026-05-11', count: 4 },
+        { week: '2026-05-18', count: 6 },
+        { week: '2026-05-25', count: 5 },
+      ],
+      forecast: [{ cards: 5, p50: 7, p85: 14, p95: 21 }],
+    })
+    show()
+
+    await user.click(await screen.findByRole('button', { name: 'Поток' }))
+    const note = await screen.findByText(/тысяча испытаний/)
+    expect(note.textContent).not.toMatch(/слишком мало/)
+  })
+
   it('неделя в подсказке столбика названа словами', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
