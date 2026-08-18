@@ -15,6 +15,15 @@ import { Button } from './Button.tsx'
  * доски, отзыв ключа, исключение из организации. Всё обратимое
  * спрашивать не должно — оно предлагает отмену после.
  */
+/** Виден ли элемент. `checkVisibility` знает про `display: none`
+ *  у предков и про `content-visibility`; где его нет — считаем
+ *  по геометрии. */
+function visible(element: HTMLElement): boolean {
+  return typeof element.checkVisibility === 'function'
+    ? element.checkVisibility()
+    : element.offsetParent !== null
+}
+
 export function ConfirmDialog({
   open,
   title,
@@ -46,6 +55,35 @@ export function ConfirmDialog({
     if (open && !dialog.open) dialog.showModal()
     if (!open && dialog.open) dialog.close()
   }, [open])
+
+  // Куда вернуть фокус, когда возвращать некуда.
+  //
+  // Обычно это делает браузер: закрытый диалог отдаёт фокус туда,
+  // откуда его открыли. Но открывают диалог часто из меню карточки,
+  // а оно к этому моменту уже закрылось и спряталось вместе со своей
+  // кнопкой; иногда фокус так и остаётся на кнопке самого диалога,
+  // которую только что убрали с экрана. И в том, и в другом случае
+  // он оказывается на `body` — клавиатуре идти дальше неоткуда.
+  //
+  // Поэтому проверяется не «на чём фокус», а «жив ли тот, на ком он»:
+  // элемент, которого не видно, фокус не держит. Если не жив — фокус
+  // получает сам экран: не то место, где были, но место, из которого
+  // можно двигаться.
+  useEffect(() => {
+    const dialog = ref.current
+    if (!dialog) return
+    const onClose = () => {
+      // Через кадр: сначала браузер делает своё, и перебивать его
+      // нельзя — решение принимается, только если он не справился.
+      requestAnimationFrame(() => {
+        const active = document.activeElement as HTMLElement | null
+        if (active && active !== document.body && active.isConnected && visible(active)) return
+        document.querySelector<HTMLElement>('.board-screen, main')?.focus()
+      })
+    }
+    dialog.addEventListener('close', onClose)
+    return () => dialog.removeEventListener('close', onClose)
+  }, [])
 
   // Escape закрывает диалог силами браузера — но нам нужно узнать
   // об этом, иначе состояние снаружи останется «открыт».

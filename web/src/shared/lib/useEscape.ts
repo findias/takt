@@ -7,11 +7,22 @@ import { useEffect } from 'react'
  * рабочей, как side peek у Notion. Но выйти из неё клавишей человек
  * обязан, иначе панель превращается в ловушку для того, кто пришёл
  * без мыши.
+ *
+ * Слой закрывается один — верхний. Диалог поверх панели закрывался
+ * силами браузера, а этот же Escape доходил до окна и закрывал панель
+ * под ним: человек отвечал «отмена» на вопрос и терял открытую
+ * карточку заодно, а фокус после этого оставался на `body`. Открытый
+ * модальный диалог живёт в верхнем слое, он и отвечает за клавишу.
  */
 export function useEscape(onEscape: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onEscape()
+      if (e.key !== 'Escape') return
+      // Диалоги в приложении все модальные, поэтому открытого хватает
+      // как признака: `:modal` пришлось бы оборачивать в try — его
+      // не знает разбор разметки, которым идут проверки.
+      if (document.querySelector('dialog[open]')) return
+      onEscape()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

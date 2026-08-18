@@ -1630,3 +1630,37 @@ test.describe('низ колонки', () => {
     }
   })
 })
+
+/**
+ * Escape закрывает верхний слой, а не всё разом.
+ *
+ * Диалог поверх панели закрывался силами браузера, а тот же Escape
+ * доходил до окна и закрывал панель под ним: человек отвечал «отмена»
+ * на вопрос и терял открытую карточку заодно, а фокус после этого
+ * оставался на `body` — дальше клавиатуре идти было неоткуда.
+ */
+test('Escape закрывает верхний слой, а не всё разом', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со слоями')
+  await addCard(page, 'Очередь', 'Смета')
+  await addCard(page, 'Очередь', 'Договор')
+
+  // Панель карточки открыта, доска за ней остаётся рабочей — так
+  // и задумано, поэтому меню соседней карточки отсюда достижимо.
+  await cardIn(page, 'Очередь', 'Смета').getByRole('button', { name: 'Смета' }).click()
+  await expect(page.getByRole('complementary')).toBeVisible()
+
+  const other = cardIn(page, 'Очередь', 'Договор')
+  await other.hover()
+  await other.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
+  const dialog = page.locator('dialog')
+  await expect(dialog.getByText(/«Договор» исчезнет/)).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(dialog.getByText(/«Договор» исчезнет/)).toBeHidden()
+  await expect(page.getByRole('complementary')).toBeVisible()
+  // Обе карточки на месте: Escape — это отмена, а не «нет, но всё-таки».
+  await expect(cardIn(page, 'Очередь', 'Договор')).toBeVisible()
+  expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY')
+})

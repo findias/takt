@@ -119,7 +119,10 @@ function Screens() {
           ))}
         </nav>
 
-        <main className="app-main">
+        {/* `tabIndex` — чтобы главной области можно было отдать фокус,
+            когда возвращать его больше некуда: диалог, открытый
+            из спрятавшегося меню, иначе оставлял фокус на `body`. */}
+        <main className="app-main" tabIndex={-1}>
           {route.name === 'boards' && (
             <BoardList principal={principal} onOpen={(id) => navigate(boardPath(id))} />
           )}

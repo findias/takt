@@ -765,7 +765,13 @@ export function Board({
     ))
 
   return (
-    <div className={chosen.length > 0 ? 'board-screen board-screen--picking' : 'board-screen'}>
+    // `tabIndex` — чтобы экрану можно было отдать фокус, когда
+    // возвращать его больше некуда: диалог, открытый из спрятавшегося
+    // меню карточки, иначе оставлял фокус на `body`.
+    <div
+      className={chosen.length > 0 ? 'board-screen board-screen--picking' : 'board-screen'}
+      tabIndex={-1}
+    >
       <header className="board-header">
         <button className="btn btn--quiet" onClick={onBack}>
           <ChevronLeftIcon />
