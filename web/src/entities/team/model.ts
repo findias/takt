@@ -87,11 +87,20 @@ export function canNestInside(node: TreeNode): boolean {
   return node.depth < MAX_TEAM_DEPTH
 }
 
-/** «3 команды», «1 доска» — короткие подписи под названием узла. */
+/**
+ * «3 команды», «1 доска» — короткие подписи под названием узла.
+ *
+ * Пустой узел называет себя словами, а не пустым местом: строка без
+ * подписи стоит в ряду со строками, у которых подпись есть, и читается
+ * как «не загрузилось», а не как «здесь никого». Ноль при непустом
+ * соседе по-прежнему опускается — «1 доска» и так говорит, что людей
+ * нет.
+ */
 export function counters(node: TreeNode): string {
   const parts: string[] = []
   if (node.members > 0) parts.push(`${node.members} ${plural(node.members, 'человек', 'человека', 'человек')}`)
   if (node.boards > 0) parts.push(`${node.boards} ${plural(node.boards, 'доска', 'доски', 'досок')}`)
+  if (parts.length === 0) return 'без людей и досок'
   return parts.join(' · ')
 }
 

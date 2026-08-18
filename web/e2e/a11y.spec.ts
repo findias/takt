@@ -282,7 +282,7 @@ test('флажок не мельче цели нажатия, подпись н�
  * две кнопки про одну и ту же карточку повторяться могут, — а перечень
  * тех, которые уже повторялись по разным объектам.
  */
-const CONTEXTLESS = ['Разметка', 'Добавить карточку', 'Доступ', 'закрыть']
+const CONTEXTLESS = ['Разметка', 'Добавить карточку', 'Доступ', 'закрыть', 'Убрать']
 
 async function contextless(page: Page): Promise<string[]> {
   return page.evaluate((names) => {
@@ -318,4 +318,15 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByRole('button', { name: 'Все доски' }).click()
   await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
   expect(await contextless(page), 'список досок').toEqual([])
+
+  // На «Структуре» «Убрать» значило и «убрать подразделение», и «вывести
+  // человека из состава» — рядом, в одной раскрытой ветке.
+  await page.getByRole('button', { name: 'Структура' }).click()
+  await page.getByRole('button', { name: 'Новое подразделение' }).click()
+  await page.getByPlaceholder('Название').fill('Продажи')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: '▸ Продажи' }).click()
+  await page.getByLabel('Добавить в подразделение').selectOption({ index: 1 })
+  await expect(page.getByRole('button', { name: /^Убрать из состава/ })).toBeVisible()
+  expect(await contextless(page), 'структура').toEqual([])
 })

@@ -141,8 +141,12 @@ function TeamNode({
         </button>
         {counts && <span className="muted small">{counts}</span>}
 
+        {/* Действия узла прижаты к правому краю: имя подразделения
+            и счётчики у каждой строки своей длины, и действия, стоящие
+            за ними встык, едут по горизонтали от строки к строке —
+            глазом столбец не пройти. */}
         {isOwner && (
-          <div className="row row--tight">
+          <div className="row row--tight tree-actions">
             {canNestInside(node) && (
               <NewTeam parent={node.id} label="+ отдел" onCreate={onAct} />
             )}
@@ -174,8 +178,16 @@ function TeamNode({
                 </option>
               ))}
             </select>
-            <button className="link" onClick={() => onAct(api.archiveTeam(node.id))}>
-              Убрать
+            {/* «Убрать» на этом экране значило два разных действия:
+                убрать подразделение и вывести человека из его состава,
+                и стояли они рядом в одной раскрытой ветке. Имя
+                называет объект. */}
+            <button
+              className="link"
+              aria-label={`Убрать подразделение «${node.name}»`}
+              onClick={() => onAct(api.archiveTeam(node.id))}
+            >
+              Убрать подразделение
             </button>
           </div>
         )}
@@ -256,8 +268,12 @@ function TeamMembers({
               </div>
               {m.lead && <span className="role-chip">Ведущий</span>}
               {isOwner && (
-                <button className="link" onClick={() => act(api.removeTeamMember(teamId, m.userId))}>
-                  Убрать
+                <button
+                  className="link"
+                  aria-label={`Убрать из состава: ${m.name}`}
+                  onClick={() => act(api.removeTeamMember(teamId, m.userId))}
+                >
+                  Убрать из состава
                 </button>
               )}
             </li>

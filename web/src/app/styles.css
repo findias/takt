@@ -1043,6 +1043,11 @@ select {
   font-weight: 500;
   text-align: left;
 }
+/* Действия узла — столбцом у правого края, а не хвостом за названием:
+   иначе каждая строка ставит их на своё место. */
+.tree-actions {
+  margin-inline-start: auto;
+}
 .tree-body {
   margin: var(--space-1) 0 var(--space-2) var(--space-6);
   padding-left: var(--space-3);

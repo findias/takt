@@ -123,6 +123,8 @@ test('подписи склоняются по числу и опускают н
   const teens = buildTree([{ ...team('c', 'В', null, 1), members: 12, boards: 21 }])
   assert.equal(counters(teens[0]), '12 человек · 21 доска')
 
+  // Пустой узел говорит словами: пустое место в ряду с подписанными
+  // строками читается как «не загрузилось».
   const empty = buildTree([team('d', 'Г', null, 1)])
-  assert.equal(counters(empty[0]), '')
+  assert.equal(counters(empty[0]), 'без людей и досок')
 })

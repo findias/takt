@@ -190,7 +190,7 @@ test('снимки экранов', async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/20-структура.png`, fullPage: true })
 
   // Раскрытый узел: кто здесь и чем занят.
-  await page.getByRole('button', { name: /Продажи/ }).click()
+  await page.getByRole('button', { name: '▸ Продажи' }).click()
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/20б-узел-структуры.png`, fullPage: true })
 
