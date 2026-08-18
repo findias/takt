@@ -7,6 +7,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { actorText, auditText, eventText } from './model.ts'
+import { WEBHOOK_EVENT_NAMES } from '../../shared/api/events.ts'
 import type { AuditEntry, BoardEvent } from '../../shared/api/index.ts'
 
 function event(type: string, payload: Record<string, unknown> = {}): BoardEvent {
@@ -59,6 +60,49 @@ test('пересечение границы потока называется с
 test('перемещение без снимка колонок не превращается в пустую строку', () => {
   assert.equal(eventText(event('moved')), 'перемещена')
   assert.equal(eventText(event('moved', { to: { name: 'Готово' } })), 'в «Готово»')
+})
+
+test('своё поле в журнале названо по имени, а не ссылкой', () => {
+  // `field_set` с полем `f-17` — машинная строка посреди речи: имя поля
+  // лежит в снимке доски, и без него журнал читать нечем.
+  const fields = [
+    { id: 'f-17', name: 'Заказчик', kind: 'text' as const, options: [] },
+    { id: 'f-18', name: 'Приёмка', kind: 'date' as const, options: [] },
+    { id: 'f-19', name: 'Согласовано', kind: 'checkbox' as const, options: [] },
+  ]
+  assert.equal(
+    eventText(event('field_set', { fieldId: 'f-17', value: 'ООО «Ромашка»' }), fields),
+    '«Заказчик»: ООО «Ромашка»',
+  )
+  // Дата переводится по виду поля, а не по виду строки: угадывать дату
+  // в тексте нельзя — так пишут и обычные строки.
+  assert.match(eventText(event('field_set', { fieldId: 'f-18', value: '2026-08-21' }), fields), /21 авг/)
+  assert.equal(
+    eventText(event('field_set', { fieldId: 'f-19', value: true }), fields),
+    '«Согласовано»: да',
+  )
+  assert.equal(
+    eventText(event('field_cleared', { fieldId: 'f-17' }), fields),
+    'поле «Заказчик» очищено',
+  )
+})
+
+test('поле, которого уже нет, не превращает журнал в машинную строку', () => {
+  // Поле удалили — событие о нём осталось. Общие слова лучше, чем
+  // `field_set`, и лучше, чем пустая строка.
+  assert.equal(eventText(event('field_set', { fieldId: 'ушло', value: 1 })), 'заполнено своё поле')
+  assert.equal(eventText(event('field_cleared', { fieldId: 'ушло' })), 'своё поле очищено')
+})
+
+test('переведены все виды событий, а не почти все', () => {
+  // Два вида из двадцати остались непереведёнными и показывались как
+  // `field_set` — и заметить это можно было только глазами на нужной
+  // карточке. Список видов один на всё приложение: он же объявляет
+  // подписки, и сверяться с ним дешевле, чем помнить.
+  const raw = Object.keys(WEBHOOK_EVENT_NAMES)
+    .map((name) => name.replace(/^card\./, ''))
+    .filter((kind) => eventText(event(kind, { fieldId: 'f-1', value: 'что-то' })) === kind)
+  assert.deepEqual(raw, [])
 })
 
 test('остальные события переводятся по типу', () => {

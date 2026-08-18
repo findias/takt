@@ -956,7 +956,7 @@ export function Board({
           стилями значило бы держать в разметке пятьсот невидимых
           карточек. */}
       {view === 'changes' ? (
-        <Changes boardId={boardId} onOpenCard={showCard} />
+        <Changes boardId={boardId} fields={base.fields} onOpenCard={showCard} />
       ) : asTable ? (
         <TableView
           base={base}

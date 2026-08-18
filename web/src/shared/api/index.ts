@@ -206,39 +206,7 @@ export type Delivery = {
   nextTry: string | null
 }
 
-/**
- * Слова для событий, на которые подписываются.
- *
- * Сам список приходит с сервера — он там и рождается, — а здесь только
- * перевод на человеческий. Свой список тут был, и это был второй список:
- * он отстал от доставляемого вчетверо и не предлагал «работу сделана»,
- * ради которой подписку чаще всего и заводят.
- *
- * Имени, которого здесь нет, показывается как есть: событие уже
- * доставляется, и промолчать о нём хуже, чем назвать непонятно.
- */
-export const WEBHOOK_EVENT_NAMES: Record<string, string> = {
-  'card.created': 'Карточка создана',
-  'card.renamed': 'Карточка переименована',
-  'card.described': 'Описание изменено',
-  'card.estimated': 'Оценка изменена',
-  'card.prioritised': 'Приоритет изменён',
-  'card.committed': 'Срок поставлен или снят',
-  'card.moved': 'Карточка перенесена',
-  'card.blocked': 'Карточка заблокирована',
-  'card.unblocked': 'Блокировка снята',
-  'card.linked': 'Связь заведена',
-  'card.unlinked': 'Связь снята',
-  'card.commented': 'Написано в обсуждении',
-  'card.field_set': 'Своё поле заполнено',
-  'card.field_cleared': 'Своё поле очищено',
-  'card.iteration_added': 'Добавлена в итерацию',
-  'card.iteration_removed': 'Убрана из итерации',
-  'card.done': 'Работа отмечена сделанной',
-  'card.undone': 'Отметка «сделана» снята',
-  'card.archived': 'Карточка убрана в архив',
-  'card.restored': 'Карточка возвращена на доску',
-}
+export { WEBHOOK_EVENT_NAMES } from './events.ts'
 
 export const SCOPE_NAMES: Record<string, string> = {
   'boards:read': 'Читать доски',

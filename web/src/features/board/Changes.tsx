@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../shared/ui/Button.tsx'
 import { api } from '../../shared/api/index.ts'
-import type { BoardEvent } from '../../shared/api/index.ts'
+import type { BoardEvent, CardField } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 
 /**
@@ -18,7 +18,16 @@ import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
  * вернувшийся из отпуска хочет видеть и то, что делал сам до отъезда,
  * а «кто» написано в каждой строке.
  */
-export function Changes({ boardId, onOpenCard }: { boardId: string; onOpenCard: (id: string) => void }) {
+export function Changes({
+  boardId,
+  fields,
+  onOpenCard,
+}: {
+  boardId: string
+  /** Поля доски: своё поле в ленте названо по имени, а не ссылкой. */
+  fields: CardField[]
+  onOpenCard: (id: string) => void
+}) {
   const [events, setEvents] = useState<BoardEvent[] | null>(null)
   const [next, setNext] = useState<number | null>(null)
   const [mine, setMine] = useState(false)
@@ -80,7 +89,7 @@ export function Changes({ boardId, onOpenCard }: { boardId: string; onOpenCard: 
                   <button className="link" onClick={() => onOpenCard(event.cardId)}>
                     {event.cardTitle}
                   </button>{' '}
-                  — {eventText(event)}
+                  — {eventText(event, fields)}
                 </span>
                 <span className="muted small">
                   {actorText(event.actor)} · {timeText(event.at)}

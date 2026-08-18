@@ -5,10 +5,18 @@
 // им незачем.
 
 import { dateWords, priorityLabel } from '../card/model.ts'
-import type { AuditEntry, BoardEvent, Priority } from '../../shared/api/index.ts'
+import type { AuditEntry, BoardEvent, CardField, Priority } from '../../shared/api/index.ts'
 
-/** Что произошло с карточкой. */
-export function eventText(event: BoardEvent): string {
+/**
+ * Что произошло с карточкой.
+ *
+ * Своё поле названо по имени, а не по ссылке: `field_set` с полем
+ * `f-17` — это машинная строка посреди речи, и читать её так же нечем,
+ * как сырой jsonb. Имена приходят из снимка доски; если их не передали
+ * (лента доски, куда снимок не доехал), событие называется общими
+ * словами, но остаётся понятным.
+ */
+export function eventText(event: BoardEvent, fields: CardField[] = []): string {
   const p = event.payload ?? {}
   switch (event.type) {
     case 'created':
@@ -67,11 +75,37 @@ export function eventText(event: BoardEvent): string {
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
     case 'unblocked':
       return 'блокировка снята'
+    case 'field_set': {
+      const field = fields.find((f) => f.id === p.fieldId)
+      if (!field) return 'заполнено своё поле'
+      return `«${field.name}»: ${fieldValueText(p.value, field.kind)}`
+    }
+    case 'field_cleared': {
+      const field = fields.find((f) => f.id === p.fieldId)
+      return field ? `поле «${field.name}» очищено` : 'своё поле очищено'
+    }
     default:
       // Неизвестный тип показываем как есть. Событие уже случилось,
       // и молчать о нём хуже, чем показать непонятно.
       return event.type
   }
+}
+
+/**
+ * Значение своего поля словами.
+ *
+ * Дата переводится словами по виду поля, а не по виду строки: угадывать
+ * дату в тексте нельзя — «2026-08-18» бывает и обычной строкой, которую
+ * человек так и написал.
+ */
+function fieldValueText(value: unknown, kind: CardField['kind']): string {
+  if (typeof value === 'boolean') return value ? 'да' : 'нет'
+  if (typeof value === 'number') return String(value)
+  if (typeof value !== 'string') return 'значение изменено'
+  if (kind === 'date') return dateWords(value)
+  // Длинное значение обрывается: строка журнала — одна строка, и абзац
+  // из своего поля вытесняет из неё всё остальное.
+  return value.length > 60 ? `${value.slice(0, 60)}…` : value
 }
 
 /** Что произошло в организации. */

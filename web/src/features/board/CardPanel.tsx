@@ -416,7 +416,12 @@ export function CardPanel({
         )}
 
         {tab === 'history' && (
-          <History boardId={boardId} cardId={card.id} version={card.version} />
+          <History
+            boardId={boardId}
+            cardId={card.id}
+            version={card.version}
+            fields={base.fields}
+          />
         )}
       </TabPanel>
     </Panel>
@@ -1273,10 +1278,14 @@ function History({
   boardId,
   cardId,
   version,
+  fields,
 }: {
   boardId: string
   cardId: string
   version: number
+  /** Своё поле в журнале названо по имени: без списка полей осталась бы
+   *  ссылка `f-17`, а её читать нечем. */
+  fields: CardField[]
 }) {
   const [events, setEvents] = useState<BoardEvent[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -1301,7 +1310,7 @@ function History({
       <ul className="feed">
         {events.map((e) => (
           <li key={e.id}>
-            <span>{eventText(e)}</span>
+            <span>{eventText(e, fields)}</span>
             <span className="muted small">
               {actorText(e.actor)} · {timeText(e.at)}
             </span>
