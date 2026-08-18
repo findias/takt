@@ -290,6 +290,7 @@ const CONTEXTLESS = [
   'Убрать',
   'Отозвать',
   'Скопировать',
+  'Снять',
 ]
 
 async function contextless(page: Page): Promise<string[]> {
@@ -313,6 +314,25 @@ test('кнопки, которых по нескольку, названы по 
 
   // На доске столько «Разметок» и «Добавить карточку», сколько колонок.
   expect(await contextless(page), 'доска').toEqual([])
+
+  // В панели карточки «Снять» стоит у исполнителя, обязательства, метки
+  // и блокировки — у четырёх разных объектов сразу.
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Работа')
+  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  const card = queue.getByRole('group', { name: /Карточка «Работа»/ })
+  await card.hover()
+  await card.getByRole('button', { name: /Исполнител/ }).click()
+  await page.getByRole('menuitemcheckbox').first().click()
+  await page.keyboard.press('Escape')
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Работа»/)
+  await panel.getByLabel('Дата обязательства').fill('2026-09-01')
+  await expect(panel.getByRole('button', { name: 'Снять обязательство' })).toBeVisible()
+  expect(await contextless(page), 'панель карточки').toEqual([])
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 34')

@@ -220,7 +220,15 @@ export function CardPanel({
                     с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
                   </span>
                 </div>
-                {canEdit && <button onClick={() => onUnblock(card.id)}>Снять</button>}
+                {/* «Снять» в панели стоит у блокировки, обязательства,
+                    исполнителя и метки — четыре разных объекта, одно
+                    слово. Глазами их различают по месту, с диктора они
+                    звучат одинаково; имя называет объект. */}
+                {canEdit && (
+                  <button aria-label="Снять блокировку" onClick={() => onUnblock(card.id)}>
+                    Снять
+                  </button>
+                )}
               </div>
             ) : holder ? (
               // Блокировка частью: причину пишут здесь же, а не отдельным
@@ -903,7 +911,11 @@ function Assignees({
             <span>{people[id] ?? 'Кто-то'}</span>
           </div>
           {canEdit && (
-            <button className="link" onClick={() => onAssign(id, false)}>
+            <button
+              className="link"
+              aria-label={`Снять исполнителя: ${people[id] ?? 'кто-то'}`}
+              onClick={() => onAssign(id, false)}
+            >
               Снять
             </button>
           )}
@@ -1026,7 +1038,7 @@ function DuePicker({
         onChange={(e) => onChange(e.target.value || null)}
       />
       {value && (
-        <button className="link" onClick={() => onChange(null)}>
+        <button className="link" aria-label="Снять обязательство" onClick={() => onChange(null)}>
           Снять
         </button>
       )}
@@ -1125,7 +1137,11 @@ function Labels({
           <div className="related" key={label.id}>
             <span className={`chip chip--${label.tone}`}>{label.name}</span>
             {canEdit && (
-              <button className="link" onClick={() => onLabel(label.id, false)}>
+              <button
+                className="link"
+                aria-label={`Снять метку «${label.name}»`}
+                onClick={() => onLabel(label.id, false)}
+              >
                 Снять
               </button>
             )}
