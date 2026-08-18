@@ -110,3 +110,45 @@ test('у каждого элемента управления есть имя', 
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await namelessControls(page), 'команда').toEqual([])
 })
+
+/**
+ * Открытое меню отдаёт фокус первому пункту.
+ *
+ * Это обещано в самом меню и проверено с подменённой разметкой — но
+ * подменённая разметка не знает про верхний слой, и там проверка
+ * проходила, пока в настоящем браузере фокус оставался на кнопке:
+ * список показывался невидимым один кадр, а невидимое нельзя
+ * сфокусировать, и `focus()` молча ничего не делал. Меню открывалось,
+ * стрелки не работали, `Enter` закрывал его обратно.
+ */
+test('открытое меню отдаёт фокус первому пункту', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
+  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+
+  const card = queue.getByRole('group', { name: /Карточка «Карточка»/ })
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+
+  const focused = () =>
+    page.evaluate(() => ({
+      роль: document.activeElement?.getAttribute('role'),
+      имя: document.activeElement?.textContent?.trim(),
+    }))
+  expect(await focused()).toEqual({ роль: 'menuitem', имя: 'Переименовать' })
+
+  await page.keyboard.press('ArrowDown')
+  expect((await focused()).роль).toBe('menuitem')
+  expect((await focused()).имя).not.toBe('Переименовать')
+
+  // Escape закрывает и возвращает фокус на кнопку, которая открыла.
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))).toMatch(
+    /Действия карточки/,
+  )
+})

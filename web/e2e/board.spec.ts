@@ -1556,3 +1556,55 @@ test('видно, сколько на ком висит', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(load).toContainText('1')
 })
+
+/**
+ * Меню карточки у нижнего края достаётся целиком.
+ *
+ * Колонка прокручивается сама, и список, нарисованный внутри неё,
+ * у нижней карточки обрезался — причём хуже, чем просто обрезался:
+ * пункт за краем не был не виден, он не нажимался, потому что в его
+ * точке лежала колонка. «Убрать в архив» и «Удалить навсегда» стоят
+ * последними, и недостижимыми оказывались именно они.
+ *
+ * Проверяется попаданием (`elementFromPoint`), а не видимостью:
+ * в разметке обрезанный пункт остаётся на месте и «виден» кому угодно,
+ * кроме указателя.
+ */
+test.describe('низ колонки', () => {
+  // Окно пониже: на высоком экране колонка кончается далеко от края,
+  // и обрезать список нечему.
+  test.use({ viewport: { width: 942, height: 700 } })
+
+  test('меню нижней карточки нажимается целиком', async ({ page }) => {
+    await register(page)
+    await createBoard(page, 'Доска с длинной колонкой')
+    for (const title of ['Первая', 'Вторая', 'Третья']) {
+      await addCard(page, 'Очередь', title)
+    }
+
+    const card = cardIn(page, 'Очередь', 'Третья')
+    await card.hover()
+    await card.getByRole('button', { name: /Действия карточки/ }).click()
+
+    const items = page.getByRole('menuitem')
+    const count = await items.count()
+    expect(count).toBeGreaterThan(4)
+
+    for (let i = 0; i < count; i++) {
+      const item = items.nth(i)
+      const label = (await item.textContent())?.trim()
+      const reachable = await item.evaluate((el) => {
+        const box = el.getBoundingClientRect()
+        const under = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2,
+        )
+        return {
+          вОкне: box.top >= 0 && box.bottom <= window.innerHeight,
+          нажимается: under === el || el.contains(under),
+        }
+      })
+      expect(reachable, `пункт «${label}»`).toEqual({ вОкне: true, нажимается: true })
+    }
+  })
+})

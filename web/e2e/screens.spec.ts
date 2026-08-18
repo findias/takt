@@ -88,6 +88,17 @@ test('снимки экранов', async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/07б-исполнители-на-карточке.png` })
   await page.keyboard.press('Escape')
 
+  // То же меню у нижней карточки колонки. Снимок нужен отдельным: список
+  // рисуется в верхнем слое ради этого случая, а на высоком экране
+  // случай не наступает — колонка кончается далеко от края окна.
+  await page.setViewportSize({ width: 942, height: 700 })
+  const lowest = page.locator('.cards .card').last()
+  await lowest.hover()
+  await lowest.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.screenshot({ path: `${SHOTS}/07в-меню-у-нижнего-края.png` })
+  await page.keyboard.press('Escape')
+  await page.setViewportSize({ width: 1440, height: 900 })
+
   // Выделение и полоса действий над многими сразу.
   await parent.hover()
   await parent.getByRole('checkbox').check()
@@ -95,7 +106,7 @@ test('снимки экранов', async ({ page }) => {
   await neighbour.hover()
   await neighbour.getByRole('checkbox').check()
   await page.waitForTimeout(200)
-  await page.screenshot({ path: `${SHOTS}/07в-выделение-и-массовые-действия.png` })
+  await page.screenshot({ path: `${SHOTS}/07г-выделение-и-массовые-действия.png` })
   await page.getByRole('button', { name: 'Снять выделение' }).click()
 
   // Карточка тремя вкладками. Открывается обсуждением.
