@@ -184,19 +184,36 @@ func (s *Service) Deliveries(ctx context.Context, orgID, userID, hookID string) 
 // Retry возвращает сдавшуюся доставку в очередь. Ручной повтор нужен
 // ровно затем, зачем и журнал: получателя починили, и теперь хочется
 // досдать то, что не доехало, не выдумывая события заново.
+//
+// Исход прошлой попытки стирается весь: и причина, и ответ. Оставленный
+// код ответа читался бы вместе со строкой «следующая попытка в 15:00»
+// как ответ на неё — то есть на попытку, которой ещё не было.
+//
+// Вместе с доставкой включается и сама подписка. Сдавшаяся доставка чаще
+// всего и есть та, которой подписку отключили, а работник обходит
+// отключённые стороной: повтор без включения отвечал бы «поставлено
+// в очередь», журнал обещал бы попытку «сейчас» — и не случилось бы
+// ничего. Включить её иначе было нечем: только завести заново, то есть
+// с новым ключом и перенастройкой получателя.
 func (s *Service) Retry(ctx context.Context, orgID, actorID, deliveryID string) error {
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
+		var hookID string
+		err := tx.QueryRow(ctx, `
 			update webhook_deliveries
-			   set failed_at = null, attempts = 0, next_attempt_at = now(), last_error = null
-			 where id = $1 and delivered_at is null`, deliveryID)
+			   set failed_at = null, attempts = 0, next_attempt_at = now(),
+			       last_error = null, last_status = null
+			 where id = $1 and delivered_at is null
+			 returning webhook_id`, deliveryID).Scan(&hookID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
 		if err != nil {
 			return err
 		}
-		if tag.RowsAffected() == 0 {
-			return ErrNotFound
-		}
-		return nil
+		_, err = tx.Exec(ctx, `
+			update webhooks set disabled_at = null, last_error = null
+			 where id = $1 and disabled_at is not null`, hookID)
+		return err
 	})
 }
 

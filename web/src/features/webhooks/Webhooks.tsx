@@ -60,7 +60,7 @@ export function Webhooks() {
         hooks.length > 0 && (
           <ul className="hook-list">
             {hooks.map((h) => (
-              <HookRow key={h.id} hook={h} onAct={act} />
+              <HookRow key={h.id} hook={h} onAct={act} onRefresh={load} />
             ))}
           </ul>
         )
@@ -159,7 +159,15 @@ export function Webhooks() {
   )
 }
 
-function HookRow({ hook, onAct }: { hook: Webhook; onAct: (p: Promise<unknown>) => void }) {
+function HookRow({
+  hook,
+  onAct,
+  onRefresh,
+}: {
+  hook: Webhook
+  onAct: (p: Promise<unknown>) => void
+  onRefresh: () => void
+}) {
   // Журнал доставок раскрывается по требованию: он длинный, а смотрят
   // в него тогда, когда что-то не доехало.
   const [open, setOpen] = useState(false)
@@ -176,9 +184,16 @@ function HookRow({ hook, onAct }: { hook: Webhook; onAct: (p: Promise<unknown>) 
               соседняя система в этот момент считает, что у нас ничего
               не происходит. */}
           {hook.disabled && (
-            <span className="mark mark--fail">
-              Отключена: получатель не отвечал. {hook.lastError ?? ''}
-            </span>
+            <>
+              <span className="mark mark--fail">
+                Отключена: получатель не отвечал. {hook.lastError ?? ''}
+              </span>
+              {/* Что теперь делать — отдельной строкой, а не в той же
+                  отметке: причина отказа приходит от получателя, длины
+                  и вида непредсказуемых, и совет, приписанный к ней
+                  встык, читается её продолжением. */}
+              <span className="muted small">Повтор любой доставки включит подписку снова.</span>
+            </>
           )}
         </div>
         <div className="row row--tight">
@@ -195,7 +210,7 @@ function HookRow({ hook, onAct }: { hook: Webhook; onAct: (p: Promise<unknown>) 
         </div>
       </div>
 
-      {open && <Deliveries hookId={hook.id} />}
+      {open && <Deliveries hookId={hook.id} onRetried={onRefresh} />}
     </li>
   )
 }
@@ -206,7 +221,7 @@ function HookRow({ hook, onAct }: { hook: Webhook; onAct: (p: Promise<unknown>) 
  * Своё состояние, а не общее с подписками: повтор меняет одну доставку,
  * и перечитывать из-за него весь список подписок незачем.
  */
-function Deliveries({ hookId }: { hookId: string }) {
+function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => void }) {
   const [list, setList] = useState<Delivery[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -252,7 +267,13 @@ function Deliveries({ hookId }: { hookId: string }) {
                     setError(null)
                     api
                       .retryDelivery(d.id)
-                      .then(load)
+                      // Досдача включает отключённую подписку обратно,
+                      // значит и список подписок больше не тот: иначе
+                      // отметка «Отключена» осталась бы висеть враньём.
+                      .then(() => {
+                        load()
+                        onRetried()
+                      })
                       .catch((e) =>
                         setError(e instanceof Error ? e.message : 'Не удалось повторить'),
                       )

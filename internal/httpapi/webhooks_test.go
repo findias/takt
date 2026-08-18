@@ -384,6 +384,44 @@ func TestExhaustedSubscriptionIsSwitchedOffAndSaysWhy(t *testing.T) {
 	}
 }
 
+// Отключённую подписку включает досдача: повторяют ровно тогда, когда
+// получателя починили. Без этого повтор отвечал «поставлено в очередь»,
+// журнал обещал попытку «сейчас» — а работник отключённую подписку
+// обходит стороной, и не происходило ничего.
+func TestRetryTurnsTheSubscriptionBackOn(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	target := newReceiver(t)
+	target.answer(http.StatusInternalServerError)
+
+	hookID := brokenHook(t, owner, target)
+
+	var d journalEntry
+	await(t, "попытки не кончились", func() bool {
+		list := deliveries(t, owner, hookID)
+		if len(list) != 1 {
+			t.Fatalf("в журнале %d доставок, ожидалась одна", len(list))
+		}
+		d = list[0]
+		dueNow(t, hookID)
+		return d.Failed
+	})
+	if !subscription(t, owner, hookID).Disabled {
+		t.Fatal("подписка не отключилась, и проверять досдачу не на чем")
+	}
+
+	// Получателя починили.
+	target.answer(http.StatusOK)
+	owner.mustDo("POST", "/api/deliveries/"+d.ID+"/retry", nil, http.StatusNoContent)
+	if subscription(t, owner, hookID).Disabled {
+		t.Fatal("после досдачи подписка осталась отключённой: её доставок работник не берёт, и повтор ничего не значит")
+	}
+	await(t, "досдача не доехала до починенного получателя", func() bool {
+		list := deliveries(t, owner, hookID)
+		return len(list) == 1 && list[0].Delivered
+	})
+}
+
 // brokenHook — подписка на событие, которое сейчас же и случится.
 func brokenHook(t *testing.T, owner *session, target *receiver) string {
 	t.Helper()
