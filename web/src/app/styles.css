@@ -1237,13 +1237,20 @@ textarea.description {
   resize: vertical;
 }
 
+/* Полоса и её заливка — блоки явно. На доске это две вложенные `span`
+   внутри кнопки: строчному элементу ширина и высота не назначаются,
+   и заливка не рисовалась вовсе — полоса стояла пустой при любой доле.
+   В панели те же классы висят на `div`, там всё рисовалось, и потому
+   расхождение долго не было видно. */
 .progress {
+  display: block;
   height: 0.4rem;
   border-radius: 999px;
   background: var(--surface-2);
   overflow: hidden;
 }
 .progress-fill {
+  display: block;
   height: 100%;
   background: var(--accent);
   transition: width 0.2s ease;

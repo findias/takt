@@ -1215,6 +1215,42 @@ test('часть заводится прямо с доски — кнопкой 
   await expect(again.getByRole('button', { name: /Подзадачи: готово 0 из 2/ })).toBeVisible()
 })
 
+// Полоса разбиения — не украшение, а ответ на «как далеко ушла работа»,
+// и читают его с полосы, а не с числа рядом. На доске полоса собрана
+// из двух `span` внутри кнопки: строчному элементу ширина не назначается,
+// и заливка не рисовалась вовсе — при любой доле полоса стояла пустой.
+// В панели те же классы висят на `div`, там всё рисовалось, и потому
+// расхождение долго не было видно.
+test('полоса разбиения заливается, а не только число рядом с ней', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с полосой')
+  await addCard(page, 'Очередь', 'Собрать отчёт')
+  const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
+
+  await parent.hover()
+  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Добавить подзадачу' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Свести цифры')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+
+  const filled = () =>
+    parent.locator('.progress-fill').evaluate((el) => {
+      const bar = (el.parentElement as HTMLElement).getBoundingClientRect().width
+      return bar > 0 ? el.getBoundingClientRect().width / bar : 0
+    })
+
+  expect(await filled(), 'пустая доля — пустая полоса').toBe(0)
+
+  await parent.getByRole('checkbox', { name: 'Сделана: Свести цифры' }).click()
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 1 из 1/ })).toBeVisible()
+  // Через опрос: полоса доезжает переходом в двести миллисекунд,
+  // и замер сразу после нажатия ловит её на полпути.
+  await expect
+    .poll(filled, { message: 'вся работа сделана — полоса залита целиком' })
+    .toBeGreaterThan(0.9)
+})
+
 test('история спрятана за вкладкой, карточка открывается обсуждением', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска вкладок')
