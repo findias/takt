@@ -113,6 +113,11 @@ export function ColumnView(props: ColumnProps) {
   const tailRef = useRef<HTMLDivElement>(null)
   const [over, setOver] = useState(false)
   const [adding, setAdding] = useState(false)
+  // Только что заведённую карточку надо показать: она встаёт в конец
+  // колонки, а конец колонки бывает за краем экрана — форма закрывалась,
+  // и на экране не менялось ничего. Ждать приходится следующего показа:
+  // карточка появляется, когда доска пересобралась.
+  const added = useRef(false)
   const [settings, setSettings] = useState(false)
   const [limit, setLimit] = useState(CHUNK)
 
@@ -134,6 +139,16 @@ export function ColumnView(props: ColumnProps) {
     watcher.observe(element)
     return () => watcher.disconnect()
   }, [limit, total])
+
+  useEffect(() => {
+    if (!added.current) return
+    added.current = false
+    const list = dropRef.current
+    const last = list?.querySelector<HTMLElement>('.card:last-of-type')
+    // `block: nearest` — прокрутить ровно настолько, чтобы карточку
+    // стало видно: доска не должна прыгать, когда прыгать незачем.
+    last?.scrollIntoView({ block: 'nearest' })
+  }, [props.cardIds])
 
   useEffect(() => {
     const element = dropRef.current
@@ -210,7 +225,11 @@ export function ColumnView(props: ColumnProps) {
         <p className="muted small column-policy">{props.column.policy}</p>
       )}
       {!props.collapsed && settings && (
-        <ColumnSettings column={props.column} onUpdate={props.onUpdateColumn} />
+        <ColumnSettings
+          column={props.column}
+          onUpdate={props.onUpdateColumn}
+          onSetLimit={props.onSetLimit}
+        />
       )}
 
       <div
@@ -299,6 +318,7 @@ export function ColumnView(props: ColumnProps) {
           onCancel={() => setAdding(false)}
           onCreate={(title) => {
             props.onCreateCard(title)
+            added.current = true
             setAdding(false)
           }}
         />
@@ -436,12 +456,27 @@ function ColumnCount({
 function ColumnSettings({
   column,
   onUpdate,
+  onSetLimit,
 }: {
   column: Column
   onUpdate: (patch: ColumnPatch) => void
+  /** Лимит правится и здесь, а не только счётчиком в шапке: «сначала
+   *  задайте лимит» стояло там, где задать его было нечем, и человек
+   *  шёл искать поле. */
+  onSetLimit: (limit: number | null) => void
 }) {
   const [policy, setPolicy] = useState(column.policy)
   useEffect(() => setPolicy(column.policy), [column.policy])
+  const [limit, setLimit] = useState(column.wipLimit === null ? '' : String(column.wipLimit))
+  useEffect(
+    () => setLimit(column.wipLimit === null ? '' : String(column.wipLimit)),
+    [column.wipLimit],
+  )
+
+  const commitLimit = () => {
+    const parsed = parseLimitDraft(limit, column.wipLimit)
+    if (parsed.change) onSetLimit(parsed.limit)
+  }
 
   return (
     <div className="column-settings stack">
@@ -474,6 +509,27 @@ function ColumnSettings({
         />
         <span className="small">Здесь работа заканчивается</span>
       </label>
+      {/* Лимит стоит здесь же, над жёсткостью: раньше про него было
+          сказано «сначала задайте лимит», а задать его отсюда было
+          нечем — правился он нажатием по счётчику в шапке колонки,
+          и про это не было сказано нигде. */}
+      <label className="row row--tight">
+        <span className="muted small">Лимит</span>
+        <input
+          type="number"
+          min={1}
+          className="count-edit"
+          value={limit}
+          placeholder="без лимита"
+          aria-label={`Лимит карточек в колонке «${column.name}», пусто — без лимита`}
+          onChange={(e) => setLimit(e.target.value)}
+          onBlur={commitLimit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitLimit()
+            if (e.key === 'Escape') setLimit(column.wipLimit === null ? '' : String(column.wipLimit))
+          }}
+        />
+      </label>
       <label className="row row--tight">
         <input
           type="checkbox"
@@ -482,7 +538,7 @@ function ColumnSettings({
           onChange={(e) => onUpdate({ wipLimitHard: e.target.checked })}
         />
         <span className="small">
-          Жёсткий лимит{column.wipLimit === null ? ' (сначала задайте лимит)' : ''}
+          Жёсткий лимит{column.wipLimit === null ? ' — сначала задайте лимит выше' : ''}
         </span>
       </label>
 

@@ -1635,6 +1635,40 @@ test.describe('низ колонки', () => {
 })
 
 /**
+ * Лимит колонки задаётся там, где о нём сказано.
+ *
+ * В разметке колонки стояло «Жёсткий лимит (сначала задайте лимит)»,
+ * а задать его оттуда было нечем: правился он нажатием по счётчику
+ * в шапке колонки, и про это не было сказано нигде — человек читал
+ * указание и не находил, чем его выполнить.
+ */
+test('лимит колонки задаётся из её разметки', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с лимитом')
+
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Разметка колонки «Очередь»' }).click()
+
+  // Пока лимита нет, жёсткость не предлагают — и говорят, где взять.
+  const hard = queue.getByRole('checkbox', { name: /Жёсткий лимит/ })
+  await expect(hard).toBeDisabled()
+  await expect(queue.getByText(/сначала задайте лимит выше/)).toBeVisible()
+
+  await queue.getByRole('spinbutton', { name: /Лимит карточек в колонке/ }).fill('3')
+  await queue.getByRole('spinbutton', { name: /Лимит карточек в колонке/ }).blur()
+
+  // Лимит доехал: счётчик в шапке показывает его, жёсткость доступна.
+  await expect(queue.getByRole('button', { name: /0\s*\/\s*3/ })).toBeVisible()
+  await expect(hard).toBeEnabled()
+
+  // И переживает перезагрузку — то есть лежит на сервере.
+  await page.reload()
+  await expect(
+    page.getByRole('region', { name: 'Очередь' }).getByRole('button', { name: /0\s*\/\s*3/ }),
+  ).toBeVisible()
+})
+
+/**
  * Escape закрывает верхний слой, а не всё разом.
  *
  * Диалог поверх панели закрывался силами браузера, а тот же Escape
@@ -1666,4 +1700,20 @@ test('Escape закрывает верхний слой, а не всё разо
   // Обе карточки на месте: Escape — это отмена, а не «нет, но всё-таки».
   await expect(cardIn(page, 'Очередь', 'Договор')).toBeVisible()
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY')
+})
+
+/**
+ * Заведённая карточка видна сразу.
+ *
+ * Она встаёт в конец колонки, а конец колонки бывает за краем экрана:
+ * форма закрывалась, и на экране не менялось ничего — человек заводил
+ * её второй раз, думая, что промахнулся.
+ */
+test('новая карточка попадает на глаза, а не в конец за краем', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска длинной колонки')
+  for (let i = 1; i <= 12; i++) await addCard(page, 'Очередь', `Задача ${i}`)
+
+  const last = cardIn(page, 'Очередь', 'Задача 12')
+  await expect(last).toBeInViewport()
 })
