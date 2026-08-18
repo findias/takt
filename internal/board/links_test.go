@@ -937,3 +937,46 @@ func patchedProgress(t *testing.T, res Result, parentID string) *Progress {
 	}
 	return nil
 }
+
+// Часть у соседей: родитель живёт на другой доске, и посчитать долю
+// разбиения заново он может только перечитав снимок. Значит, его доска
+// обязана узнать, что часть сделана, — иначе полоса показывает
+// вчерашнее до перезагрузки страницы. Узнаёт она по версии: та
+// поднимается, клиент видит пропуск и перечитывает снимок.
+func TestNeighbourBoardLearnsThatThePartIsDone(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	neighbour, _, _ := f.secondBoard()
+
+	// Часть заводится сразу на доске соседей — тем же движением, каким
+	// её отдают другой команде.
+	f.mustApply("CREATE_SUBTASK", map[string]any{
+		"parentCardId": parent, "title": "Поднять квоту", "boardId": neighbour})
+
+	var part string
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, neighbour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range snap.Cards {
+		if c.Title == "Поднять квоту" {
+			part = c.ID
+		}
+	}
+	if part == "" {
+		t.Fatal("часть не появилась на доске соседей")
+	}
+
+	before := f.boardVersion(f.boardID)
+	f.applyTo(neighbour, "SET_CARD_DONE", map[string]any{"cardId": part, "done": true})
+
+	// Версия доски родителя сдвинулась: по пропуску в версиях клиент
+	// перечитает снимок и увидит новую долю. Без этого полоса
+	// показывает вчерашнее до перезагрузки страницы.
+	if after := f.boardVersion(f.boardID); after <= before {
+		t.Fatalf("версия доски родителя %d, была %d — узнать о сделанной части нечем", after, before)
+	}
+	if p := f.card(parent).Progress; p == nil || p.Done != 1 || p.Total != 1 {
+		t.Fatalf("доля разбиения родителя: %+v, ожидалось 1 из 1", p)
+	}
+}

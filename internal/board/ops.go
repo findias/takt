@@ -110,6 +110,23 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	if second := targetBoard(req); second != "" && second != boardID {
 		boards = append(boards, second)
 	}
+	// Третья доска — та, где лежит родитель этой карточки, если работу
+	// разбили между командами. Её снимок меняется от нашей операции:
+	// доля разбиения, название части, её блокировка — всё это родитель
+	// показывает у себя, а посчитать заново может только перечитав
+	// снимок. Без оповещения он показывает вчерашнее до перезагрузки
+	// страницы.
+	//
+	// Необязательная: доску соседей нам может быть видно только
+	// на чтение, и тогда её версию не поднять. Это не повод отказывать
+	// в операции над своей карточкой — оповещение просто не уйдёт.
+	optional := ""
+	if parent, err := parentBoardOf(ctx, tx, boardID, req); err != nil {
+		return Result{}, err
+	} else if parent != "" && !slices.Contains(boards, parent) {
+		boards = append(boards, parent)
+		optional = parent
+	}
 	slices.Sort(boards)
 
 	versions := make(map[string]int64, len(boards))
@@ -120,6 +137,12 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 			 where id = $1 and archived_at is null
 			 for update`, id).Scan(&v)
 		if errors.Is(err, pgx.ErrNoRows) {
+			if id == optional {
+				// Доска родителя нам не по зубам: оповестить её мы
+				// не можем, но своя операция от этого не отменяется.
+				boards = slices.Delete(boards, slices.Index(boards, id), slices.Index(boards, id)+1)
+				continue
+			}
 			// Строки нет по одной из двух причин, и различить их важно.
 			// `for update` требует права на изменение, поэтому доска, доступная
 			// только на чтение, сюда тоже не попадает — а отвечать «не найдена»
@@ -223,6 +246,46 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	}
 	committed = true
 	return result, nil
+}
+
+// parentBoardOf называет доску, где лежит родитель карточки этой
+// операции, — пустую строку, если родителя нет или он на этой же доске.
+//
+// Читается до замков, как и всё остальное, что решает, какие замки
+// брать: связь может измениться следом, но оповещение — вещь
+// безобидная, а порядок замков важнее.
+func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) (string, error) {
+	// Только те операции, от которых у родителя меняется показанное:
+	// доля разбиения, название части, её состояние. Остальным платить
+	// за лишний запрос и лишний замок незачем.
+	switch req.Type {
+	case "MOVE_CARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
+		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD":
+	default:
+		return "", nil
+	}
+	var p struct {
+		CardID string `json:"cardId"`
+	}
+	if err := json.Unmarshal(req.Payload, &p); err != nil || p.CardID == "" {
+		// Нечитаемую нагрузку разберёт сама операция и ответит честно.
+		return "", nil
+	}
+	var parentBoard string
+	err := tx.QueryRow(ctx, `
+		select c.board_id from card_links l
+		  join cards c on c.id = l.from_card
+		 where l.to_card = $1 and l.kind = 'subtask'`, p.CardID).Scan(&parentBoard)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows): // карточка не чья-то часть
+		return "", nil
+	case err != nil:
+		return "", err
+	}
+	if parentBoard == boardID {
+		return "", nil
+	}
+	return parentBoard, nil
 }
 
 // targetBoard называет вторую доску, которую заденет операция, — пустую
