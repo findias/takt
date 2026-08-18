@@ -252,6 +252,16 @@ export function CardPanel({
               </p>
             )}
 
+            {/* Описание — первым: это ответ на вопрос «что тут вообще
+                делать», и читают его прежде всех сроков и меток. Стояло
+                шестым, ниже готовности, срока, приоритета, исполнителей
+                и меток, — и находилось не сразу. */}
+            <Description
+              value={card.description}
+              canEdit={canEdit}
+              onSave={(text) => onDescribe(card.id, text)}
+            />
+
             <DoneMark
               doneAt={card.doneAt}
               canEdit={canEdit}
@@ -303,12 +313,6 @@ export function CardPanel({
               values={base.fieldValues[card.id] ?? []}
               canEdit={canEdit}
               onSet={(fieldId, value) => onField(card.id, fieldId, value)}
-            />
-
-            <Description
-              value={card.description}
-              canEdit={canEdit}
-              onSave={(text) => onDescribe(card.id, text)}
             />
 
             {details.parent && (
@@ -758,24 +762,31 @@ function Description({
   // пришёл новый снимок, но не затирает то, что человек уже печатает.
   useEffect(() => setDraft(value), [value])
 
-  if (!canEdit) {
-    return value ? (
-      <p className="description">{value}</p>
-    ) : (
-      <p className="muted small">Описания нет.</p>
-    )
-  }
-
+  // Своя подпись: без неё описание стояло безымянной рамкой сразу
+  // за рамкой последнего своего поля и читалось как ещё одно поле —
+  // тем более что подпись «Описание» была только в плейсхолдере,
+  // а он исчезает от первой буквы.
   return (
-    <textarea
-      className="description"
-      rows={4}
-      value={draft}
-      placeholder="Описание: что нужно сделать и что считать сделанным"
-      aria-label="Описание карточки"
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft !== value && onSave(draft)}
-    />
+    <section className="stack">
+      <h3 className="section-title">Описание</h3>
+      {!canEdit ? (
+        value ? (
+          <p className="description">{value}</p>
+        ) : (
+          <p className="muted small">Описания нет.</p>
+        )
+      ) : (
+        <textarea
+          className="description"
+          rows={4}
+          value={draft}
+          placeholder="Что нужно сделать и что считать сделанным"
+          aria-label="Описание карточки"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => draft !== value && onSave(draft)}
+        />
+      )}
+    </section>
   )
 }
 
