@@ -22,14 +22,18 @@ function event(type: string, payload: Record<string, unknown> = {}): BoardEvent 
   }
 }
 
-function entry(action: AuditEntry['action'], subject: string): AuditEntry {
+function entry(
+  action: AuditEntry['action'],
+  subject: string,
+  payload: Record<string, unknown> = {},
+): AuditEntry {
   return {
     id: 1,
     actor: 'Иван',
     action,
     subject,
     subjectId: null,
-    payload: {},
+    payload,
     at: '2026-08-15T10:00:00Z',
   }
 }
@@ -138,6 +142,56 @@ test('административные записи называют предм�
   assert.equal(auditText(entry('delete', 'observers')), 'Наблюдение: удалено')
   // Незнакомая таблица тоже показывается, а не прячется.
   assert.equal(auditText(entry('insert', 'нечто')), 'нечто: добавлено')
+})
+
+test('запись называет то, с чем это произошло, и что в нём изменилось', () => {
+  // «Доска: изменено» три раза подряд — список таблиц, а не журнал.
+  // Имя и обе стороны лежат в снимке, который и так приходит с записью.
+  assert.equal(
+    auditText(entry('insert', 'boards', { new: { name: 'Поставки', visibility: 'org' } })),
+    'Доска «Поставки»: добавлено',
+  )
+  assert.equal(
+    auditText(
+      entry('update', 'boards', {
+        old: { name: 'Поставки', visibility: 'org' },
+        new: { name: 'Поставки', visibility: 'private' },
+      }),
+    ),
+    'Доска «Поставки»: изменено — видимость: всей организации → только вписанным',
+  )
+  // Несколько изменений — по именам: перечисление переходов не влезает
+  // в строку ленты.
+  assert.equal(
+    auditText(
+      entry('update', 'boards', {
+        old: { name: 'Поставки', key: 'ПОСТ' },
+        new: { name: 'Закупки', key: 'ЗАК' },
+      }),
+    ),
+    'Доска «Закупки»: изменено — название, ключ',
+  )
+  // Роль меняется у того, у кого имени в снимке нет: строка всё равно
+  // отвечает на «что случилось».
+  assert.equal(
+    auditText(
+      entry('update', 'memberships', { old: { role: 'member' }, new: { role: 'viewer' } }),
+    ),
+    'Участие в организации: изменено — роль: участник → наблюдатель',
+  )
+  // Служебные поля меняются сами и ничего не рассказывают: запись
+  // по ним выглядела бы изменённой, ничем не отличаясь от соседней.
+  assert.equal(
+    auditText(
+      entry('update', 'boards', {
+        old: { name: 'Поставки', version: 1 },
+        new: { name: 'Поставки', version: 2 },
+      }),
+    ),
+    'Доска «Поставки»: изменено',
+  )
+  // Старой записи без снимка это не ломает.
+  assert.equal(auditText(entry('update', 'boards')), 'Доска: изменено')
 })
 
 test('действие без установленной личности видно как таковое', () => {

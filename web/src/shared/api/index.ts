@@ -1,6 +1,11 @@
 // Клиент API. Одна точка входа, чтобы обработка ошибок и таймаутов
 // не расползалась по компонентам.
 
+// Названия ролей и видимостей вынесены отдельно: этот модуль читают
+// и там, где нельзя тянуть весь api, — разбор записей журнала идёт
+// в проверках без сборщика. Реэкспорт, чтобы список остался один.
+export { ROLE_NAMES, VISIBILITY_NAMES } from './names.ts'
+
 export type Role = 'owner' | 'member' | 'viewer'
 
 /** Кто выполняет запрос и от имени какой организации. */
@@ -56,11 +61,6 @@ export type InviteInfo = {
   needsAccount: boolean
 }
 
-export const ROLE_NAMES: Record<Role, string> = {
-  owner: 'Владелец',
-  member: 'Участник',
-  viewer: 'Наблюдатель',
-}
 
 /** Подразделение. Дерево строится по parentId; depth приходит с сервера,
  *  чтобы показать, что глубже вкладывать уже нельзя. */
@@ -245,11 +245,6 @@ export type FlowReport = {
 
 export type Visibility = 'org' | 'team' | 'private'
 
-export const VISIBILITY_NAMES: Record<Visibility, string> = {
-  org: 'Всей организации',
-  team: 'Своей команде',
-  private: 'Только вписанным',
-}
 
 export type BoardAccess = {
   visibility: Visibility

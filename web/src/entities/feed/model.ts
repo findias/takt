@@ -5,6 +5,7 @@
 // им незачем.
 
 import { dateWords, priorityLabel } from '../card/model.ts'
+import { ROLE_NAMES, VISIBILITY_NAMES } from '../../shared/api/names.ts'
 import type { AuditEntry, BoardEvent, CardField, Priority } from '../../shared/api/index.ts'
 
 /**
@@ -108,19 +109,108 @@ function fieldValueText(value: unknown, kind: CardField['kind']): string {
   return value.length > 60 ? `${value.slice(0, 60)}…` : value
 }
 
-/** Что произошло в организации. */
+/**
+ * Что произошло в организации.
+ *
+ * Названо и то, с чем это произошло. «Доска: изменено» три раза подряд —
+ * это не журнал, а список таблиц: по нему нельзя ответить ни на один
+ * вопрос, ради которого журнал заводят. Имя объекта и то, что в нём
+ * изменилось, лежат в снимке, который и так приходит с записью, —
+ * до сих пор их просто выбрасывали.
+ */
 export function auditText(entry: AuditEntry): string {
   const what = SUBJECTS[entry.subject] ?? entry.subject
+  const named = subjectName(entry)
+  const about = named ? `${what} «${named}»` : what
   switch (entry.action) {
     case 'insert':
-      return `${what}: добавлено`
-    case 'update':
-      return `${what}: изменено`
+      return `${about}: добавлено`
+    case 'update': {
+      const changed = changeText(entry)
+      return changed ? `${about}: изменено — ${changed}` : `${about}: изменено`
+    }
     case 'delete':
-      return `${what}: удалено`
+      return `${about}: удалено`
     default:
-      return `${what}: ${entry.action}`
+      return `${about}: ${entry.action}`
   }
+}
+
+/** Имя затронутого, если оно у него есть: у подразделения и доски есть,
+ *  у участия и наблюдения — нет, там объект называют по-другому. */
+function subjectName(entry: AuditEntry): string {
+  return name(side(entry, 'new')) || name(side(entry, 'old'))
+}
+
+/**
+ * Что именно изменилось.
+ *
+ * Одно изменившееся поле называется вместе с обеими сторонами, если
+ * значение из известного набора: «видимость» без «было → стало» —
+ * это половина ответа, а ради второй половины и приходят в журнал.
+ * Нескольких хватает по именам: строка в ленте одна, и перечисление
+ * переходов её переполнит.
+ */
+function changeText(entry: AuditEntry): string {
+  const before = side(entry, 'old')
+  const after = side(entry, 'new')
+  if (!before || !after) return ''
+
+  const changed = Object.keys(after).filter(
+    (key) => !NOISE.has(key) && JSON.stringify(before[key]) !== JSON.stringify(after[key]),
+  )
+  if (changed.length === 0) return ''
+
+  const named = changed.map((key) => FIELDS[key] ?? key)
+  if (changed.length === 1) {
+    const key = changed[0]
+    const values = VALUES[key]
+    if (values) return `${named[0]}: ${values(before[key])} → ${values(after[key])}`
+    return named[0]
+  }
+  if (named.length > 3) return `${named.slice(0, 3).join(', ')} и ещё ${named.length - 3}`
+  return named.join(', ')
+}
+
+function side(entry: AuditEntry, which: 'old' | 'new'): Record<string, unknown> | null {
+  const value = entry.payload?.[which]
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+}
+
+// Меняется само и ничего не рассказывает: по этим полям запись выглядела
+// бы изменённой, ничем не отличаясь от соседней.
+const NOISE = new Set(['id', 'org_id', 'version', 'created_at', 'updated_at', 'card_seq'])
+
+const FIELDS: Record<string, string> = {
+  name: 'название',
+  key: 'ключ',
+  role: 'роль',
+  email: 'почта',
+  visibility: 'видимость',
+  team_id: 'подразделение',
+  parent_id: 'вышестоящее подразделение',
+  project_id: 'проект',
+  archived_at: 'архив',
+  discarded_at: 'удаление',
+  accepted_at: 'принято',
+  revoked_at: 'отозвано',
+  expires_at: 'срок действия',
+  sle_days: 'ожидаемый срок',
+  sle_probability: 'доля в срок',
+  audit_retention_days: 'срок хранения журнала',
+}
+
+// Значения, у которых есть человеческое имя. Остальные показываются
+// только именем поля: подставлять в ленту идентификатор — то же самое,
+// что показывать сырой jsonb.
+const VALUES: Record<string, (value: unknown) => string> = {
+  role: (v) => sideValue(ROLE_NAMES, v),
+  visibility: (v) => sideValue(VISIBILITY_NAMES, v),
+}
+
+function sideValue(names: Record<string, string>, value: unknown): string {
+  if (typeof value !== 'string') return 'не задано'
+  return (names[value] ?? value).toLowerCase()
 }
 
 const SUBJECTS: Record<string, string> = {
