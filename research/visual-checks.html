@@ -1,0 +1,965 @@
+<title>Тесткейсы для прохода по интерфейсу</title>
+<style>
+:root{
+  --paper:#F4F6F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAEEEB;
+  --ink:#141D1B;
+  --ink-2:#3D4B47;
+  --ink-3:#6E7C77;
+  --rule:#D3DAD6;
+  --rule-strong:#B4BFBA;
+  --accent:#0E6F5C;
+  --accent-soft:#DCEBE5;
+  --warn:#8A5A00;
+  --warn-soft:#F2E8CE;
+  --risk:#A33D1E;
+  --risk-soft:#F4E1DA;
+  --shadow:0 1px 0 rgba(20,29,27,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1312;
+    --surface:#141C1A;
+    --surface-2:#1C2624;
+    --ink:#E7EEEB;
+    --ink-2:#AFBDB8;
+    --ink-3:#7C8B86;
+    --rule:#26312E;
+    --rule-strong:#3A4844;
+    --accent:#52C1A4;
+    --accent-soft:#122C25;
+    --warn:#D8A445;
+    --warn-soft:#2A2314;
+    --risk:#E28266;
+    --risk-soft:#2D1A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1312;
+  --surface:#141C1A;
+  --surface-2:#1C2624;
+  --ink:#E7EEEB;
+  --ink-2:#AFBDB8;
+  --ink-3:#7C8B86;
+  --rule:#26312E;
+  --rule-strong:#3A4844;
+  --accent:#52C1A4;
+  --accent-soft:#122C25;
+  --warn:#D8A445;
+  --warn-soft:#2A2314;
+  --risk:#E28266;
+  --risk-soft:#2D1A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+.doc{
+  display:grid;
+  grid-template-columns:
+    [full-start] minmax(1.15rem,1fr)
+    [wide-start] minmax(0,210px)
+    [text-start] minmax(0,73ch) [text-end]
+    minmax(0,210px) [wide-end]
+    minmax(1.15rem,1fr) [full-end];
+  row-gap:0;
+  padding-bottom:6rem;
+}
+.doc > *{grid-column:text}
+.doc > .wide{grid-column:wide}
+.doc > .full{grid-column:full}
+
+/* ---------- hero ---------- */
+.masthead{padding:4.5rem 0 0}
+.kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 1.4rem;
+}
+h1{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  font-size:clamp(2.4rem,6vw,3.6rem);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.16rem;line-height:1.6;color:var(--ink-2);
+  margin:0 0 2.2rem;max-width:62ch;
+}
+.lanestrip{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;
+  height:6px;margin:0 0 1.6rem;
+}
+.lanestrip i{display:block;background:var(--rule-strong)}
+.lanestrip i:nth-child(1){background:var(--ink-3)}
+.lanestrip i:nth-child(2){background:var(--warn)}
+.lanestrip i:nth-child(3){background:var(--accent)}
+.lanestrip i:nth-child(4){background:var(--accent)}
+.lanestrip i:nth-child(5){background:var(--rule-strong)}
+
+.meta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border-block:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.meta div{background:var(--paper);padding:.85rem 1rem .95rem}
+.meta dt{
+  font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .3rem;
+}
+.meta dd{margin:0;font-size:.95rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- sections ---------- */
+section{margin:0}
+.sechead{
+  display:flex;align-items:baseline;gap:.9rem;
+  margin:3.6rem 0 1.4rem;padding-top:1.6rem;
+  border-top:1px solid var(--rule);
+}
+.sechead .num{
+  font-size:.78rem;color:var(--accent);letter-spacing:.05em;
+  flex:none;padding-top:.35rem;font-variant-numeric:tabular-nums;
+}
+h2{
+  font-family:Georgia,"Times New Roman",serif;font-weight:400;
+  font-size:clamp(1.55rem,3.4vw,2.05rem);line-height:1.18;
+  letter-spacing:-.01em;margin:0;text-wrap:balance;
+}
+h3{
+  font-size:1.06rem;font-weight:650;letter-spacing:-.005em;
+  margin:2.3rem 0 .7rem;color:var(--ink);
+}
+h4{
+  font-size:.73rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;margin:1.8rem 0 .6rem;
+}
+p{margin:0 0 1.05rem}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,.f:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+strong{font-weight:650}
+em{font-style:italic;color:var(--ink-2)}
+ul,ol{margin:0 0 1.05rem;padding-left:1.35rem}
+li{margin:0 0 .4rem}
+li::marker{color:var(--ink-3)}
+code{
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.86em;background:var(--surface-2);padding:.1em .35em;
+  border:1px solid var(--rule);
+}
+
+/* ---------- notes ---------- */
+.note{
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--rule-strong);
+  padding:1rem 1.2rem;margin:1.6rem 0;box-shadow:var(--shadow);
+}
+.note.pick{border-left-color:var(--accent);background:var(--accent-soft)}
+.note.risk{border-left-color:var(--risk);background:var(--risk-soft)}
+.note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{
+  display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.45rem;font-weight:650;
+}
+.note.pick .lbl{color:var(--accent)}
+.note.risk .lbl{color:var(--risk)}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- tables ---------- */
+.tablewrap{
+  overflow-x:auto;margin:1.6rem 0 .6rem;
+  border:1px solid var(--rule);background:var(--surface);
+}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+caption{
+  caption-side:top;text-align:left;padding:.8rem 1rem;
+  font-size:.71rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1px solid var(--rule);font-weight:650;
+}
+th,td{
+  text-align:left;padding:.6rem .85rem;vertical-align:top;
+  border-bottom:1px solid var(--rule);
+}
+thead th{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{color:var(--ink)}
+.yes{color:var(--accent);font-weight:650}
+.no{color:var(--ink-3)}
+.maybe{color:var(--warn);font-weight:650}
+.tnote{font-size:.78rem;color:var(--ink-3);margin:.5rem 0 2rem}
+
+/* ---------- code ---------- */
+pre{
+  margin:1.4rem 0;padding:1rem 1.1rem;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--rule);
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:.79rem;line-height:1.6;color:var(--ink);
+}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+
+/* ---------- diagram ---------- */
+.diagram{
+  border:1px solid var(--rule);background:var(--surface);
+  padding:1.3rem;margin:1.7rem 0 .6rem;overflow-x:auto;
+}
+.dgrid{display:flex;flex-direction:column;gap:.75rem;min-width:600px}
+.dlane{display:grid;grid-template-columns:8.5rem 1fr;gap:.9rem;align-items:stretch}
+.dlabel{
+  font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:650;padding-top:.7rem;
+  border-right:1px solid var(--rule);
+}
+.dboxes{display:flex;flex-wrap:wrap;gap:.5rem}
+.dbox{
+  border:1px solid var(--rule-strong);background:var(--surface-2);
+  padding:.5rem .7rem;font-size:.78rem;line-height:1.35;flex:1 1 auto;min-width:8.5rem;
+}
+.dbox b{display:block;font-size:.8rem;font-weight:650}
+.dbox span{color:var(--ink-3);font-size:.72rem}
+.dbox.hot{border-color:var(--accent);background:var(--accent-soft)}
+.dflow{
+  text-align:center;font-size:.7rem;color:var(--ink-3);letter-spacing:.1em;
+}
+
+/* ---------- roadmap ---------- */
+.stages{display:flex;flex-direction:column;gap:0;margin:1.6rem 0;border-top:1px solid var(--rule)}
+.stage{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1.2rem;
+  padding:1.1rem 0;border-bottom:1px solid var(--rule);
+}
+.stage .st{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:650;padding-top:.15rem}
+.stage .st em{display:block;font-style:normal;color:var(--ink-3);letter-spacing:0;text-transform:none;font-size:.78rem;margin-top:.2rem}
+.stage h3{margin:0 0 .35rem;font-size:1rem}
+.stage p{margin:0;font-size:.92rem;color:var(--ink-2)}
+
+/* ---------- questions ---------- */
+.qlist{counter-reset:q;list-style:none;padding:0;margin:1.4rem 0}
+.qlist li{
+  counter-increment:q;position:relative;padding:.75rem 0 .75rem 2.4rem;
+  border-bottom:1px solid var(--rule);margin:0;
+}
+.qlist li::before{
+  content:counter(q);position:absolute;left:0;top:.8rem;
+  font-family:ui-monospace,Menlo,monospace;font-size:.75rem;color:var(--accent);
+}
+
+/* ---------- sources ---------- */
+.src{font-size:.85rem;color:var(--ink-2)}
+.src li{margin-bottom:.5rem}
+
+@media (max-width:720px){
+  .dlane{grid-template-columns:1fr}
+  .dlabel{border-right:none;border-bottom:1px solid var(--rule);padding-bottom:.35rem}
+  .stage{grid-template-columns:1fr;gap:.4rem}
+  h1{font-size:2.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>
+.sheet{padding-top:3rem}
+.band{display:flex;align-items:baseline;gap:.9rem;margin:2.8rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--rule)}
+.band h2{font-size:clamp(1.3rem,2.6vw,1.6rem)}
+.tag{font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;font-weight:650;padding:.22rem .5rem;border:1px solid var(--rule-strong);color:var(--ink-3);white-space:nowrap;flex:none}
+.tag.have{color:var(--accent);border-color:var(--accent)}
+.tag.gap{color:var(--risk);border-color:var(--risk)}
+.tag.no{color:var(--ink-3)}
+.rows{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:16rem 1fr;gap:1.3rem;background:var(--surface);padding:1rem 1.1rem}
+.row > :first-child{font-weight:650}
+@media (max-width:48rem){.row{grid-template-columns:1fr;gap:.4rem}}
+blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent);background:var(--accent-soft);font-size:.95rem}
+</style>
+
+<main class="sheet">
+<header class="masthead">
+  <p class="kicker">Проверки глазами · август 2026</p>
+  <h1>Тесткейсы для прохода по интерфейсу в браузере</h1>
+  <p class="standfirst">
+    Набор случаев для ручной проверки в Chrome: вся логика продукта по экранам,
+    названия того, что человек видит, и соответствие дизайн-языку, который
+    проект себе записал. Каждый случай сформулирован так, чтобы его можно было
+    <em>провалить</em>: сказано, чем мерить и что считать поломкой. Случаи,
+    которые ловятся тестами, сюда не входят — здесь то, что видно только
+    в настоящем браузере на настоящих данных.
+  </p>
+</header>
+
+<div class="band"><h2>Как этим пользоваться</h2></div>
+
+<p>
+  Проверка идёт по поднятому стенду с демонстрационными данными: пустой
+  интерфейс ничего не показывает, почти всякая ошибка вёрстки видна только
+  на настоящей длине текста и настоящем числе меток.
+</p>
+
+<div class="rows">
+  <div class="row"><div>Стенд</div><div>
+    <span class="mono">make stand</span> и <span class="mono">make run</span>,
+    вход <span class="mono">anna@example.test</span> / <span class="mono">parol12345</span>.
+    Рядом <span class="mono">boris@</span>, <span class="mono">vera@</span> — участники,
+    <span class="mono">gleb@</span> — наблюдатель: роли проверяются их глазами, а не рассуждением.
+  </div></div>
+  <div class="row"><div>Сборка и сервер</div><div>
+    Сервер перезапускать вместе со сборкой фронтенда. Признак несовпадения —
+    доска не отрисовывается вовсе, и это выглядит как «пусто», а не как ошибка.
+    Возраст процесса: <span class="mono">GET /api/v1/openapi.json</span>.
+  </div></div>
+  <div class="row"><div>Смотреть замером</div><div>
+    Глаз даёт повод, число даёт ответ. Размеры — <span class="mono">getBoundingClientRect()</span>,
+    «нажимается ли» — <span class="mono">document.elementFromPoint(x,y)</span>,
+    «не уехало ли под» — сравнение <span class="mono">left</span> подписи
+    с <span class="mono">right</span> соседа. Утверждение «дорожек две» проходит
+    и на сломанной вёрстке.
+  </div></div>
+  <div class="row"><div>Ширины</div><div>
+    Окно расширения Chrome всегда 942&nbsp;px и не меняется:
+    <span class="mono">resize_window</span> докладывает об успехе впустую.
+    Другие ширины — временным сценарием Playwright
+    (<span class="mono">page.setViewportSize</span>), который потом удаляется.
+    <span class="mono">zoom</span> не годится: медиазапросы его не видят.
+  </div></div>
+  <div class="row"><div>Верить не экрану</div><div>
+    Оптимистичная правка показывает сделанным то, что ещё не доехало.
+    Всё, что меняет данные, сверяется вторым источником: перезагрузкой страницы,
+    ответом API или <span class="mono">psql</span> от <span class="mono">postgres</span>
+    (под ролью приложения политики покажут ноль строк).
+  </div></div>
+  <div class="row"><div>После прохода</div><div>
+    Проверки меняют демо-стенд: снимаются блокировки, заводятся и отзываются
+    приглашения, копится журнал. Либо возвращать данные руками, либо считать
+    стенд одноразовым и пересобирать <span class="mono">make stand</span>.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Вход, приглашение, организация</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л1. Вход отвергает неверный пароль</div><div>
+    Ввести существующую почту и чужой пароль. Отказ называет, что делать, и не
+    говорит, существует ли такая почта, — иначе форма превращается в проверку
+    чужих адресов. Провал: текст вида «пользователь не найден».
+  </div></div>
+  <div class="row"><div>Л2. Регистрация заводит организацию</div><div>
+    Новая почта, пароль, имя, название организации. После входа название стоит
+    в шапке. Провал: организация названа «Моя команда» — поле формы называется
+    <span class="mono">org</span>, незнакомое поле сервер игнорирует молча.
+  </div></div>
+  <div class="row"><div>Л3. Приглашение по ссылке</div><div>
+    Владелец зовёт коллегу на экране «Команда», ссылка копируется одной кнопкой.
+    Открыть её в чистом профиле: видно, кто и куда зовёт, до входа. Принять —
+    попасть внутрь, а адрес приглашения заменяется, а не добавляется в историю:
+    «назад» не должно возвращать к использованной ссылке.
+  </div></div>
+  <div class="row"><div>Л4. Отозванное приглашение</div><div>
+    Отозвать приглашение и открыть его ссылку. Экран объясняет, что ссылка
+    больше не работает, и предлагает, что делать. Провал: белый экран, «не
+    найдено» без объяснения или предложение зарегистрироваться заново.
+  </div></div>
+  <div class="row"><div>Л5. Переключение организации</div><div>
+    У человека в двух организациях переключатель в шапке меняет всё разом:
+    список досок, команду, структуру. Провал: где-то остались данные прежней —
+    это видно на экране «Структура», он загружается отдельно.
+  </div></div>
+  <div class="row"><div>Л6. Выход</div><div>
+    «Выйти» возвращает на форму входа, а кнопка «назад» браузера не показывает
+    доску с данными из памяти. Провал: экран доски мелькает наполненным.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Список досок</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л7. Пусто — это не ошибка</div><div>
+    Новая организация: список объясняет, что досок нет, и даёт завести первую
+    прямо отсюда. Провал: пустая рамка или крутящийся кружок навсегда.
+  </div></div>
+  <div class="row"><div>Л8. Три видимости различимы</div><div>
+    Доски «вся организация», «подразделение», «закрытая» помечены так, что
+    видимость читается из списка, а не из карточки доски. Проверить глазами
+    <span class="mono">gleb@</span>: закрытой чужой доски он не видит вовсе.
+  </div></div>
+  <div class="row"><div>Л9. Ключ доски</div><div>
+    Завести доску с ключом из двух-шести букв: он становится префиксом номеров
+    карточек. Занятый ключ и негодный ключ — <em>разные</em> отказы с разными
+    подсказками. Провал: один текст на оба случая.
+  </div></div>
+  <div class="row"><div>Л10. Архив досок</div><div>
+    Убрать доску в архив: список предлагает вернуть и не задаёт вопросов.
+    Вернуть — доска на месте со всеми карточками.
+  </div></div>
+  <div class="row"><div>Л11. Удаление насовсем</div><div>
+    Удаление называет, что исчезнет, и требует набрать имя доски. Кнопка
+    подтверждения недоступна, пока имя не совпало. Провал: подтверждение
+    активно сразу или текст говорит «вы уверены?» без перечисления потерь.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Доска: колонки и карточки</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л12. Карточка заводится с доски</div><div>
+    Добавить карточку в колонку, ввести название, Enter. Карточка появляется
+    на месте, номер присвоен, поле готово к следующей. Провал: чтобы завести
+    вторую, приходится снова искать кнопку.
+  </div></div>
+  <div class="row"><div>Л13. Перенос мышью</div><div>
+    Перетащить карточку в соседнюю колонку и внутри колонки. После перезагрузки
+    порядок тот же. Провал: карточка вернулась на место — правка не доехала.
+  </div></div>
+  <div class="row"><div>Л14. Перенос без мыши</div><div>
+    У карточки есть меню «Перенести» — оно, а не стрелки, закрывает требование
+    видимого указательного пути. Проверить, что перенос через меню даёт тот же
+    результат, что и перетаскивание.
+  </div></div>
+  <div class="row"><div>Л15. Ходьба стрелками</div><div>
+    Стрелки водят по карточкам как по сетке: вбок — та же позиция сверху,
+    а если в соседней колонке столько карточек нет — последняя. Провал: прыжок
+    в начало колонки.
+  </div></div>
+  <div class="row"><div>Л16. WIP-лимит подсвечивает, но не запрещает</div><div>
+    Набить колонку сверх лимита переносом: превышение видно, перенос состоялся.
+    Провал: запрет — он ломает единственный сценарий, ради которого лимит есть.
+  </div></div>
+  <div class="row"><div>Л17. Бюджет полей карточки</div><div>
+    На карточке дополнительно только блокировка и прогресс по частям. Провал:
+    третье и четвёртое поле, аватары, обложки — они съедают плотность, ради
+    которой доска существует.
+  </div></div>
+  <div class="row"><div>Л18. Блокировка видна и объяснена</div><div>
+    Заблокировать карточку с причиной. Причина читается с доски или из
+    всплывающей подсказки, а не только внутри панели. Снятие блокировки
+    возвращает вид. Проверить <span class="mono">aria-hidden</span> у значка:
+    рядом обязано стоять слово.
+  </div></div>
+  <div class="row"><div>Л19. Прогресс по частям</div><div>
+    Завести часть у карточки — прогресс на родителе меняется. Часть на доске
+    соседей: родитель узнаёт о её готовности. Провал: «0 из 2» на родителе при
+    закрытой части у соседей.
+  </div></div>
+  <div class="row"><div>Л20. Отметка сделанной</div><div>
+    «Отметить сделанной» и «Снять отметку» дают обратимую пару, вид карточки
+    меняется, сортировка не ломается. Провал: карточка исчезает с доски без
+    объяснения, куда.
+  </div></div>
+  <div class="row"><div>Л21. Массовые действия</div><div>
+    Выделить несколько карточек: полоса действий называет, сколько выделено,
+    и что с ними можно сделать. «Снять выделение» возвращает доску.
+    Провал: выделение теряется от любой правки соседней карточки.
+  </div></div>
+  <div class="row"><div>Л22. Длинная колонка</div><div>
+    Колонка на несколько сотен карточек листается плавно,
+    <span class="mono">Ctrl+F</span> находит карточку внизу, а скринридер видит
+    все. Замер: <span class="mono">document.querySelectorAll('[data-card]').length</span>
+    равно числу карточек, а не окну видимости.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Доска: отбор, группировка, виды</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л23. Отбор по метке и исполнителю</div><div>
+    Включить отбор: колонки показывают только подходящее, счётчики совпадают
+    с числом карточек. Провал: счётчик считает всё, а показывает отобранное.
+  </div></div>
+  <div class="row"><div>Л24. Отбор ничего не нашёл</div><div>
+    Сочетание условий, под которое не подходит ни одна карточка: экран говорит,
+    что показывать нечего <em>и</em> что снимает отбор одной кнопкой.
+    Провал: пустая доска без объяснения — читается как потеря данных.
+  </div></div>
+  <div class="row"><div>Л25. Группировка в дорожки</div><div>
+    Проверить все группировки по очереди (исполнитель, метка, приоритет,
+    итерация). Замер обязателен: низ колонок первой дорожки не должен заходить
+    на заголовок второй —
+    <span class="mono">first.getBoundingClientRect().bottom &lt;= second.getBoundingClientRect().top</span>.
+    Именно так однажды нашлось, что дорожки не работали ни одной группировкой
+    с самого их появления.
+  </div></div>
+  <div class="row"><div>Л26. Дорожки в низком окне</div><div>
+    То же самое в окне высотой 600&nbsp;px: поломки раскладки такого рода
+    воспроизводятся только при нехватке места.
+  </div></div>
+  <div class="row"><div>Л27. Сохранённый вид</div><div>
+    Сохранить вид с отбором и группировкой, перезагрузить, выбрать вид —
+    состояние восстановилось целиком. Провал: восстановился отбор, но не
+    группировка.
+  </div></div>
+  <div class="row"><div>Л28. Таблица</div><div>
+    Переключиться в таблицу: те же карточки, сортировка по столбцам,
+    переход в карточку. Провал: переключатель видов прячет часть кнопок
+    под <span class="mono">overflow: hidden</span> — замер ширины полосы.
+  </div></div>
+  <div class="row"><div>Л29. Поиск и команды</div><div>
+    Палитра открывается с клавиатуры, ищет по номеру, названию и описанию.
+    Проверить именно номер: он стоит в приписке строки и легко теряется при
+    правке поиска.
+  </div></div>
+  <div class="row"><div>Л30. Изменения</div><div>
+    Открыть «Изменения»: показано, что происходило, и это совпадает с историей
+    карточки. Провал: лента пуста на доске, где только что двигали карточки.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Карточка</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л31. Три вкладки</div><div>
+    «Работа», «Обсуждение», «История» переключаются с клавиатуры, вкладка
+    остаётся выбранной при возврате в карточку. Провал: возврат всегда на
+    первую — человек, ведущий обсуждение, платит лишний щелчок за каждую
+    карточку.
+  </div></div>
+  <div class="row"><div>Л32. Ссылка на карточку</div><div>
+    Адрес карточки открывается в новой вкладке и показывает ту же карточку
+    поверх доски. Провал: открывается доска без карточки.
+  </div></div>
+  <div class="row"><div>Л33. Описание</div><div>
+    Править описание, уйти со страницы, вернуться — текст на месте. Пустое
+    описание объясняет, что его нет, и даёт завести. Проверить длинный текст
+    без пробелов: он не растягивает панель.
+  </div></div>
+  <div class="row"><div>Л34. Оценка</div><div>
+    Шаг оценки вверх и вниз, единица подписана та, что выбрана в организации.
+    Провал: у кнопок «Увеличить оценку» и «Уменьшить оценку» цель нажатия
+    меньше 24&nbsp;px — замер обязателен, это самое частое место.
+  </div></div>
+  <div class="row"><div>Л35. Метки</div><div>
+    Повесить и снять метку, завести новую с оттенком. Название метки длиной
+    в тридцать символов не ломает ряд и не уезжает под квадрат цвета —
+    сравнить <span class="mono">left</span> подписи с <span class="mono">right</span> квадрата.
+  </div></div>
+  <div class="row"><div>Л36. Несколько исполнителей</div><div>
+    Назначить двоих, снять одного. На доске видно обоих или честное «+1»,
+    а не молча первый. Провал: назначение исчезает после перезагрузки.
+  </div></div>
+  <div class="row"><div>Л37. Части задачи</div><div>
+    Завести часть, отметить сделанной, перенести часть на доску соседей.
+    Родитель показывает прогресс, часть знает, чья она. Провал: часть
+    заводится, но на доске соседей её не видно.
+  </div></div>
+  <div class="row"><div>Л38. Связи</div><div>
+    Связать с существующей карточкой, вид связи назван словом. Разорвать связь.
+    Провал: связь видна только с одной стороны.
+  </div></div>
+  <div class="row"><div>Л39. Своё поле</div><div>
+    Завести поле, задать значение на карточке, архивировать поле: значения
+    карточек остаются, поле уходит из формы. Отказ объясняет, что произойдёт,
+    до нажатия.
+  </div></div>
+  <div class="row"><div>Л40. Обсуждение веткой</div><div>
+    Ответить на сообщение, увидеть ветку. Править своё сообщение — видно, что
+    оно правлено, и есть история правок. Провал: чужое сообщение правится.
+  </div></div>
+  <div class="row"><div>Л41. История</div><div>
+    Вкладка «История» показывает, что происходило с карточкой, в порядке и
+    с именами. Провал: события есть, но кто их сделал — не сказано.
+  </div></div>
+  <div class="row"><div>Л42. Обязательство и срок</div><div>
+    Поставить дату обязательства и снять её. Просрочка видна на доске.
+    Провал: «Дольше обещанного» показано на карточке без обязательства.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Итерации, поток, архив</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л43. Завести итерацию</div><div>
+    Начало и конец, цель. Карточки добавляются и убираются из итерации,
+    «Без итерации» — это состояние, а не пустая строка.
+  </div></div>
+  <div class="row"><div>Л44. Закрытие итерации спрашивает</div><div>
+    «Закрыть итерацию?» называет, что станет с незавершёнными карточками.
+    Провал: закрытие молча переносит или молча теряет.
+  </div></div>
+  <div class="row"><div>Л45. Отчёт по закрытой итерации</div><div>
+    Отчёт открывается, числа сходятся с доской, а выброшенные карточки
+    названы отдельно и не подмешаны к сделанным.
+  </div></div>
+  <div class="row"><div>Л46. Отчёт по пустой итерации</div><div>
+    Итерация без единой законченной карточки: отчёт объясняет, что считать
+    не из чего, а не рисует нули как достижение.
+  </div></div>
+  <div class="row"><div>Л47. Поток: время цикла</div><div>
+    Проценты, а не среднее; рядом сказано, на скольких карточках посчитано.
+    Провал: проценты по трём карточкам поданы как надёжное число.
+  </div></div>
+  <div class="row"><div>Л48. Поток: окно</div><div>
+    Сменить окно (30 / 90 / 365 дней) — меняются все диаграммы разом.
+    Провал: сменилась одна.
+  </div></div>
+  <div class="row"><div>Л49. Поток на пустой доске</div><div>
+    Новая доска: пустые ряды и честное «считать не из чего», а не отказ и не
+    пустой экран. Это же проверяется по API: ответ 200, а не 404.
+  </div></div>
+  <div class="row"><div>Л50. Старение</div><div>
+    Что идёт сейчас и сколько идёт; заблокированные видно сразу. Провал:
+    заблокированная карточка в списке старения ничем не отличается.
+  </div></div>
+  <div class="row"><div>Л51. Архив карточек</div><div>
+    Убрать карточку в архив, найти её в архиве, вернуть. Возврат не задаёт
+    вопросов — действие обратимо.
+  </div></div>
+  <div class="row"><div>Л52. Удаление карточки навсегда</div><div>
+    Называет, что исчезнет, и требует подтверждения. Провал: та же кнопка
+    и тот же вопрос, что у архивации.
+  </div></div>
+  <div class="row"><div>Л53. Архив на большом объёме</div><div>
+    Архив с сотнями карточек листается, поиск работает, «Показать ещё» не
+    теряет позицию прокрутки.
+  </div></div>
+  <div class="row"><div>Л54. Возврат чужого</div><div>
+    Проверить, что «Вернуть» в архиве возвращает именно ту карточку, на которой
+    нажали: кнопок с этим словом на экране несколько, и слепой поиск по тексту
+    однажды вернул чужую.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Команда, доступ, интеграции</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л55. Роли различимы делом</div><div>
+    Наблюдатель <span class="mono">gleb@</span> видит доску и не может её
+    менять: кнопки не показаны или отключены с объяснением. Провал: кнопка есть,
+    нажатие даёт отказ сервера — это обещание, которого интерфейс не держит.
+  </div></div>
+  <div class="row"><div>Л56. Смена роли</div><div>
+    Владелец меняет роль участника; изменение видно у того, кому сменили, после
+    перезагрузки. Провал: смена видна только владельцу.
+  </div></div>
+  <div class="row"><div>Л57. Исключение и обезличивание — разные</div><div>
+    «Исключить» обратимо приглашением, «Удалить данные человека?» — нет, и это
+    сказано разными словами и разными вопросами.
+  </div></div>
+  <div class="row"><div>Л58. Доступ к доске</div><div>
+    Сменить видимость доски, добавить человека в состав закрытой доски.
+    Тот, кого убрали, доски больше не видит — проверить его глазами.
+  </div></div>
+  <div class="row"><div>Л59. Ключ интеграции показывается один раз</div><div>
+    Завести ключ: значение показано с кнопкой «Скопировать» и предупреждением,
+    что второй раз его не покажут. Перезагрузить — значения нет, есть префикс.
+  </div></div>
+  <div class="row"><div>Л60. Разрешения ключа</div><div>
+    Разрешение каталога (<span class="mono">scim:write</span>) ни с чем не
+    сочетается: соседние флажки гаснут <em>до</em> попытки. Провал: отказ после
+    «Создать», когда набранное уже потеряно.
+  </div></div>
+  <div class="row"><div>Л61. Подписка на события</div><div>
+    Завести подписку, ключ подписи показан один раз. Выдуманное имя события
+    не принимается, а отказ называет те, что бывают.
+  </div></div>
+  <div class="row"><div>Л62. Журнал доставок</div><div>
+    Доставки видны с исходом и числом попыток, «Досдать доставку» повторяет.
+    Отключённая подписка помечена «Отключена» — эта отметка однажды не
+    появлялась вовсе, потому что запись шла без арендатора.
+  </div></div>
+  <div class="row"><div>Л63. Страница контракта</div><div>
+    <span class="mono">/api/v1/docs</span> открывается без входа, показывает
+    описание по-русски и не делает ни одного запроса наружу — вкладка «Сеть»
+    с фильтром по чужим адресам должна остаться пустой.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Структура и наблюдение</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л64. Дерево подразделений</div><div>
+    Три уровня разворачиваются и сворачиваются, «В корень» возвращает наверх.
+    Провал: узел с длинным названием ломает отступы уровней.
+  </div></div>
+  <div class="row"><div>Л65. Состав и ведущий</div><div>
+    Добавить человека в подразделение, назначить ведущего, убрать из состава.
+    «Что было в составе» показывает прошлое, а не только настоящее.
+  </div></div>
+  <div class="row"><div>Л66. Наблюдение</div><div>
+    Выдать наблюдение за подразделением и отозвать его. Наблюдатель видит то,
+    что обещано, и ничего сверх.
+  </div></div>
+  <div class="row"><div>Л67. Пустое подразделение</div><div>
+    Узел без людей и досок объясняет это словами и предлагает действие.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">логика</span><h2>Границы и отказы</h2></div>
+
+<div class="rows">
+  <div class="row"><div>Л68. Сеть пропала</div><div>
+    Отключить сеть в DevTools и сделать правку: интерфейс говорит, что
+    изменения не подтверждены сервером, и не выдаёт их за сохранённые.
+    Вернуть сеть — правка доезжает или честно теряется с объяснением.
+  </div></div>
+  <div class="row"><div>Л69. Закрыть браузер сразу после правки</div><div>
+    Правка и немедленное закрытие вкладки: после возврата состояние либо
+    сохранено, либо его нет и об этом сказано. Провал: показано сохранённым
+    то, чего в базе нет, — сверять от <span class="mono">postgres</span>.
+  </div></div>
+  <div class="row"><div>Л70. Две вкладки</div><div>
+    Одна доска в двух вкладках: правка в первой доезжает во вторую потоком
+    изменений. Разрыв потока закрывается догоном, а не перезагрузкой руками.
+  </div></div>
+  <div class="row"><div>Л71. Чужая доска</div><div>
+    Открыть адрес доски другой организации: «не найдено», а не «нельзя», —
+    и текст объясняет, что делать. Провал: экран отправляет искать
+    несуществующую поломку.
+  </div></div>
+  <div class="row"><div>Л72. Ошибка отрисовки</div><div>
+    Граница ошибок обязана оставлять слова и кнопку «Перезагрузить», а не белое
+    поле. Проверяется временной поломкой в компоненте.
+  </div></div>
+  <div class="row"><div>Л73. Устаревший клиент</div><div>
+    Сервер старше сборки: экран доски перестаёт отрисовываться. Проверить,
+    что это выглядит как ошибка с объяснением, а не как «доска пустая».
+  </div></div>
+</div>
+
+<div class="band"><span class="tag gap">названия</span><h2>Названия того, что человек видит</h2></div>
+
+<p>
+  Названия проверяются не чтением по одному, а перечислением: собрать все
+  видимые подписи экрана и искать повторы и синонимы. Одно понятие — одно
+  слово; одно слово — одно понятие.
+</p>
+
+<div class="rows">
+  <div class="row"><div>Н1. Три глагола на одно действие</div><div>
+    В интерфейсе одновременно «Завести метку», «Завести поле», «Создать
+    организацию», «Создать новую организацию», «Добавить карточку», «Добавить
+    подзадачу». Решить, что значит каждый глагол, и свести к одному правилу:
+    иначе человек ищет «создать» там, где написано «завести».
+  </div></div>
+  <div class="row"><div>Н2. «Закрыть» у двух разных вещей</div><div>
+    «Закрыть» закрывает панель и закрывает итерацию. На экране, где есть и то
+    и другое, второе обязано называться полностью — «Закрыть итерацию».
+  </div></div>
+  <div class="row"><div>Н3. Семейство «Снять»</div><div>
+    «Снять блокировку», «Снять отметку», «Снять выделение», «Снять полномочия»,
+    «Снять обещание», «Снять обязательство». Проверить, не названы ли одним
+    словом два разных понятия — обещание доски и обязательство карточки —
+    и не названы ли разными словами два одинаковых.
+  </div></div>
+  <div class="row"><div>Н4. «Готово», «Готовность», «Сделана»</div><div>
+    Три слова про завершённость на соседних экранах. Выбрать одно для состояния
+    карточки и одно для колонки, остальные вычеркнуть.
+  </div></div>
+  <div class="row"><div>Н5. Пары обратимого</div><div>
+    «В архив» / «Убрать в архив» / «Убрать» против «Вернуть» / «Вернуть из
+    архива». Пара обязана читаться парой: если убирают «в архив», возвращают
+    «из архива», и оба раза одинаково на всех экранах.
+  </div></div>
+  <div class="row"><div>Н6. Действие без объекта</div><div>
+    Пройти по кнопкам, у которых подпись — один глагол («Отметить», «Убрать»,
+    «Снять», «Править»), и проверить, понятен ли объект из соседнего текста
+    <em>без</em> наведения. Скринридер читает кнопку отдельно от окружения.
+  </div></div>
+  <div class="row"><div>Н7. «Разметка» в шапке колонки</div><div>
+    Слово повторяется у каждой колонки и не отвечает на вопрос «разметка чего».
+    Проверить, читается ли оно тем, кто видит доску впервые.
+  </div></div>
+  <div class="row"><div>Н8. Многоточие обещает диалог</div><div>
+    «Заблокировать…», «Перенести…», «Повесить метку…», «Кому…» — многоточие
+    означает «сейчас спросят». Проверить, что оно стоит везде, где спрашивают,
+    и нигде, где действие происходит сразу.
+  </div></div>
+  <div class="row"><div>Н9. Отказы объясняют, что делать</div><div>
+    Собрать все сообщения «Не удалось…» (их около двадцати). Каждое обязано
+    говорить следующий шаг. Провал: «Не удалось сохранить» без продолжения.
+  </div></div>
+  <div class="row"><div>Н10. Пустые состояния</div><div>
+    «Досок пока нет», «В архиве пусто», «Ни одной», «Пока тихо», «Ничего
+    не начато», «Исполнителей нет». Каждое обязано либо предлагать действие,
+    либо объяснять, почему пусто. Одиночное «Ни одной.» ни того ни другого
+    не делает.
+  </div></div>
+  <div class="row"><div>Н11. Термины предметной области</div><div>
+    «Часть задачи» и «Подзадача» — на разных экранах одно и то же. «Обещание
+    доски» и «Обязательство» — тоже кандидаты. Свести к одному словарю
+    и проверить, что он же в отказах сервера.
+  </div></div>
+  <div class="row"><div>Н12. Заголовок вкладки браузера</div><div>
+    На доске в заголовке видно, какая доска открыта; в карточке — какая
+    карточка. Иначе десять вкладок неразличимы.
+  </div></div>
+</div>
+
+<div class="band"><span class="tag">дизайн</span><h2>Соответствие дизайн-языку и современной практике</h2></div>
+
+<p>
+  Правила взяты из собственного дизайн-языка проекта (он выведен из разбора
+  Linear, Jira, Atlassian, Primer, Radix — август 2026); проверяется
+  соблюдение, а не вкус. Где правило требует числа, число названо.
+</p>
+
+<div class="rows">
+  <div class="row"><div>Д1. Ни одного сырого цвета</div><div>
+    <span class="mono">[...document.styleSheets]</span> → искать
+    <span class="mono">#rrggbb</span> и <span class="mono">rgb(</span> вне
+    объявления темы. Всё измеримое — токен; сырое значение в правиле — будущее
+    расхождение тем.
+  </div></div>
+  <div class="row"><div>Д2. Шкала отступов 4/8/12/16/24/32</div><div>
+    Промежуточные значения запрещены. Замер: собрать
+    <span class="mono">padding</span>/<span class="mono">gap</span> у видимых
+    узлов и найти значения не из шкалы — <span class="mono">0.55rem</span>
+    означает, что кто-то подгонял на глаз.
+  </div></div>
+  <div class="row"><div>Д3. Плотность — множитель</div><div>
+    Включить «Плотнее»: отступы сжались, размеры элементов управления и цели
+    нажатия — нет. Провал: второй набор классов вместо
+    <span class="mono">calc(N * var(--scaling))</span>.
+  </div></div>
+  <div class="row"><div>Д4. Тёмная тема — не инверсия</div><div>
+    Проверить <span class="mono">color-scheme</span> на корне (иначе полосы
+    прокрутки и поля остаются светлыми) и переопределение теней: тень на тёмном
+    фоне работает иначе, и оставленная прежней видна сразу.
+  </div></div>
+  <div class="row"><div>Д5. Три состояния темы</div><div>
+    Системная тёмная, явно светлая, явно тёмная. Переключатель обязан
+    побеждать систему в обе стороны.
+  </div></div>
+  <div class="row"><div>Д6. Фокус виден всегда</div><div>
+    Пройти Tab’ом весь экран: обводка в два пикселя с отступом на каждом
+    элементе. Замер: искать <span class="mono">outline: none</span> без замены.
+    Провал даже у одного элемента — дефект, а не недоделка.
+  </div></div>
+  <div class="row"><div>Д7. Пять состояний у каждого элемента</div><div>
+    Покой, наведение, фокус с клавиатуры, нажатие, недоступность. Отсутствие
+    любого — дефект. Проверять на кнопках-ссылках в плотных рядах: у них чаще
+    всего нет нажатия и недоступности.
+  </div></div>
+  <div class="row"><div>Д8. Цель нажатия 24×24</div><div>
+    Замер по всем <span class="mono">button</span> и
+    <span class="mono">a</span>: <span class="mono">rect.width &lt; 24 || rect.height &lt; 24</span>
+    при разведении центров меньше 24&nbsp;px — провал (WCAG 2.5.8 AA).
+    Именно кнопки в плотных рядах не проходят.
+  </div></div>
+  <div class="row"><div>Д9. Движения по умолчанию нет</div><div>
+    Собрать <span class="mono">transition-duration</span> по экрану: ненулевые
+    значения допустимы там, где движение объясняет перемещение объекта,
+    и нигде больше. Две длительности на весь продукт — больше не нужно.
+  </div></div>
+  <div class="row"><div>Д10. Уважение к <span class="mono">prefers-reduced-motion</span></div><div>
+    Включить в DevTools: движение <em>заменено</em>, а не выключено —
+    <span class="mono">transform</span> на <span class="mono">opacity</span>,
+    <span class="mono">scroll-behavior</span> на <span class="mono">auto</span>.
+    Полное отключение теряет объяснение перемещения.
+  </div></div>
+  <div class="row"><div>Д11. Заданный размер флексу не указ</div><div>
+    Половина находок прошлого прохода — отсюда. Замер: у элементов с заданным
+    размером сравнить <span class="mono">getBoundingClientRect()</span>
+    с ожидаемым. Флажок 24&nbsp;px, ставший 16, — это
+    <span class="mono">flex-shrink</span>, а не случайность.
+  </div></div>
+  <div class="row"><div>Д12. Панель сбоку — не диалог</div><div>
+    В режиме «Сбоку» доска остаётся рабочей: листается, карточки переносятся,
+    фокус не заперт, затемнения нет. В режимах «По центру» и «Во весь экран» —
+    наоборот: <span class="mono">aria-modal</span>, ловушка фокуса, возврат
+    фокуса и затемнение. Провал: разница только в ширине.
+  </div></div>
+  <div class="row"><div>Д13. Двух панелей одновременно не бывает</div><div>
+    Открыть карточку и попытаться открыть вторую панель: предыдущая закрылась.
+    Провал: спор за фокус.
+  </div></div>
+  <div class="row"><div>Д14. Верхний слой не ломает наведение</div><div>
+    Меню и подсказки на <span class="mono">popover</span>: наведение на
+    верхний слой не переходит на предка в дереве, и обёртка, показанная
+    «по наведению», не должна прятаться посреди щелчка. Проверять именно
+    щелчком по пункту у края.
+  </div></div>
+  <div class="row"><div>Д15. Первый кадр списка нельзя прятать <span class="mono">visibility</span></div><div>
+    Невидимое по <span class="mono">visibility</span> нельзя сфокусировать:
+    <span class="mono">focus()</span> молча ничего не делает. Проверить,
+    что открытие меню с клавиатуры ставит фокус на первый пункт.
+  </div></div>
+  <div class="row"><div>Д16. Иерархия действий</div><div>
+    На каждой форме главным читается отправка, а не «Отмена». Провал:
+    отправка серой кнопкой, отмена — цветом ссылки.
+  </div></div>
+  <div class="row"><div>Д17. Контраст</div><div>
+    Проверить обе темы: текст 4.5:1, крупный 3:1, границы элементов
+    управления 3:1. Особое внимание — приглушённому тексту
+    (<span class="mono">--ink-3</span>) на цветных подложках меток.
+  </div></div>
+  <div class="row"><div>Д18. Карточка описана контейнером</div><div>
+    Одна и та же карточка живёт в узкой колонке и в широкой панели. Замер:
+    сузить панель до 320&nbsp;px — карточка перестраивается по своей ширине,
+    а не по ширине окна.
+  </div></div>
+  <div class="row"><div>Д19. Ширины 360, 768, 1280, 1920</div><div>
+    Временным сценарием Playwright. На 360 доска остаётся пригодной: колонки
+    листаются, шапка не съедает пол-экрана, ничего не уезжает за край —
+    <span class="mono">document.documentElement.scrollWidth &lt;= innerWidth</span>.
+  </div></div>
+  <div class="row"><div>Д20. Зум 200%</div><div>
+    Увеличение страницы вдвое не прячет кнопки и не режет текст. Это же
+    требование WCAG, и оно ловит те же переполнения, что и узкое окно.
+  </div></div>
+  <div class="row"><div>Д21. Живой регион один</div><div>
+    Один <span class="mono">role="status"</span> на экран, текст ставится
+    с задержкой около секунды, фраза называет объект, откуда, куда и позицию.
+    <span class="mono">role="alert"</span> быть не должно.
+  </div></div>
+  <div class="row"><div>Д22. Фокус после переноса</div><div>
+    Перенести карточку меню и проверить, куда встал фокус: узел
+    перемонтируется, и фокус обязан восстанавливаться руками, а не улетать
+    в начало страницы.
+  </div></div>
+  <div class="row"><div>Д23. Эмодзи не читаются словом</div><div>
+    Все глифы (<span class="mono">⛔</span> и подобные) —
+    <span class="mono">aria-hidden</span>, рядом слово. Иначе скринридер
+    прочитает «знак въезд запрещён».
+  </div></div>
+  <div class="row"><div>Д24. Загрузка объясняет ожидание</div><div>
+    «Загружаем…», «Считаем…», «Читаем…» стоят там, где ожидание заметно,
+    и исчезают вместе с ответом. Провал: кружок навсегда при отказе сервера —
+    отказ обязан заменять ожидание словами.
+  </div></div>
+  <div class="row"><div>Д25. Шрифт системный, вес разумный</div><div>
+    Ни одного веб-шрифта: <span class="mono">performance.getEntriesByType('resource')</span>
+    без <span class="mono">.woff</span>. Заодно проверить, что размер того,
+    что приезжает при открытии, остался в пределах порога сборки.
+  </div></div>
+</div>
+
+<div class="band"><h2>Чего в этом наборе нет намеренно</h2></div>
+
+<p>
+  Здесь нет случаев, которые уже закреплены проверками: пороги первой
+  отрисовки, отклика и размера сборки держит <span class="mono">e2e/perf.spec.ts</span>,
+  перерисовку соседних карточек — <span class="mono">Board.renders.dom.test.tsx</span>,
+  доступность — <span class="mono">e2e/a11y.spec.ts</span>, а сквозные сценарии —
+  <span class="mono">e2e/board.spec.ts</span>. Дублировать их глазами значит
+  тратить проход на то, что и так красное при поломке.
+</p>
+
+<p>
+  Нет и случаев про внешний вид снимков: <span class="mono">npm run screens</span>
+  снимает не всё, и чего он не снимает, того никто не видел ни разу, — поэтому
+  виды из этого набора, которых в снимках нет (дорожки всех группировок, низкое
+  окно, ширина 360, зум 200%, тёмная тема на каждом экране), стоит по итогам
+  прохода добавить в набор снимков, а не проверять глазами второй раз.
+</p>
+
+<p class="muted">
+  Найденное этим проходом кладётся в <span class="mono">ROADMAP.md</span>
+  отдельным списком — как прошлый проход глазами, — а починка идёт отдельными
+  пунктами: разбор отвечает на «где расходится», а не «как исправить».
+</p>
+
+</main>
