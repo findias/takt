@@ -527,7 +527,7 @@ test('подписка на события заводится и показыв�
 
   // Ключ подписи показывается один раз: подписываем им мы, хранит его
   // получатель.
-  await expect(page.getByLabel('Ключ подписи')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Ключ подписи' })).toBeVisible()
   await expect(page.getByText('https://example.test/hooks/board')).toBeVisible()
   // Ключ без правила проверки бесполезен, и правило стоит рядом с ним:
   // узнать его иначе можно было только чтением нашего кода на Go.

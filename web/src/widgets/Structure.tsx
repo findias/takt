@@ -437,8 +437,12 @@ function Observation({
                 </span>
               </div>
               {isOwner && (
-                <button className="link" onClick={() => onAct(api.revokeObservation(o.id))}>
-                  Отозвать
+                <button
+                  className="link"
+                  aria-label={`Отозвать наблюдение: ${o.name}`}
+                  onClick={() => onAct(api.revokeObservation(o.id))}
+                >
+                  Отозвать наблюдение
                 </button>
               )}
             </li>
@@ -526,8 +530,12 @@ function Administration({
                 <span className="muted small">Подразделение «{a.teamName}»</span>
               </div>
               {isOwner && (
-                <button className="link" onClick={() => onAct(api.revokeAdmin(a.id))}>
-                  Снять
+                <button
+                  className="link"
+                  aria-label={`Снять полномочия: ${a.name}`}
+                  onClick={() => onAct(api.revokeAdmin(a.id))}
+                >
+                  Снять полномочия
                 </button>
               )}
             </li>

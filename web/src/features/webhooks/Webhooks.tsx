@@ -79,7 +79,10 @@ export function Webhooks() {
               aria-label="Ключ подписи"
               onFocus={(e) => e.target.select()}
             />
-            <button onClick={() => void navigator.clipboard?.writeText(fresh.secret ?? '')}>
+            <button
+              aria-label="Скопировать ключ подписи"
+              onClick={() => void navigator.clipboard?.writeText(fresh.secret ?? '')}
+            >
               Скопировать
             </button>
           </div>

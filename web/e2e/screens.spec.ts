@@ -43,11 +43,17 @@ async function backToBoard(page: Page, url: string) {
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 }
 
-test('снимки экранов', async ({ page }) => {
+test('снимки экранов', async ({ page, browser }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
 
   await page.goto('/')
   await page.screenshot({ path: `${SHOTS}/01-вход.png` })
+
+  // Заведение организации: с этого экрана всё начинается, а снимка
+  // у него не было вовсе — как и у приглашения ниже.
+  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
+  await page.screenshot({ path: `${SHOTS}/01б-новая-организация.png` })
+  await page.getByRole('button', { name: 'У меня уже есть аккаунт' }).click()
 
   await signIn(page)
   await page.screenshot({ path: `${SHOTS}/02-список-досок.png`, fullPage: true })
@@ -194,6 +200,28 @@ test('снимки экранов', async ({ page }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/20б-узел-структуры.png`, fullPage: true })
 
+  // Приглашение — единственный экран, который видит не хозяин стенда,
+  // а тот, кого позвали. Ссылка живёт один показ, поэтому снимается
+  // в чужом окне, а приглашение потом отзывается: стенд обязан остаться
+  // таким же, каким был.
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByPlaceholder('Почта коллеги').fill('novichok@example.test')
+  await page.getByRole('button', { name: 'Пригласить' }).click()
+  const link = page.getByRole('textbox', { name: 'Ссылка-приглашение' })
+  await expect(link).toBeVisible()
+  const invite = await link.inputValue()
+
+  const guest = await browser.newContext({ locale: 'ru-RU' })
+  const guestPage = await guest.newPage()
+  await guestPage.setViewportSize({ width: 1440, height: 900 })
+  await guestPage.goto(invite)
+  await guestPage.waitForTimeout(400)
+  await guestPage.screenshot({ path: `${SHOTS}/22-приглашение.png` })
+  await guest.close()
+
+  await page.getByRole('button', { name: /^Отозвать приглашение/ }).click()
+  await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toHaveCount(0)
+
   // Узкий экран: колонки не помещаются рядом, показывается одна.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Доски' }).click()
@@ -201,5 +229,5 @@ test('снимки экранов', async ({ page }) => {
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/21-узкий-экран.png` })
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.screenshot({ path: `${SHOTS}/22-узкий-экран-тёмный.png` })
+  await page.screenshot({ path: `${SHOTS}/21б-узкий-экран-тёмный.png` })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ROLE_NAMES, api } from '../shared/api/index.ts'
+import { MIN_PASSWORD, ROLE_NAMES, api } from '../shared/api/index.ts'
 import type { InviteInfo, Principal } from '../shared/api/index.ts'
 import { Button } from '../shared/ui/Button.tsx'
 
@@ -88,9 +88,10 @@ export function InviteScreen({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
-                minLength={8}
+                minLength={MIN_PASSWORD}
                 required
               />
+              <span className="muted small">Не короче {MIN_PASSWORD} символов.</span>
             </label>
           </>
         ) : (

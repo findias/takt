@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../shared/api/index.ts'
+import { MIN_PASSWORD, api } from '../shared/api/index.ts'
 import type { AuthMethods, Principal } from '../shared/api/index.ts'
 
 export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
@@ -92,15 +92,23 @@ export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
           />
         </label>
         <label>
-          Пароль
+          {mode === 'login' ? 'Пароль' : 'Придумайте пароль'}
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={8}
+            minLength={MIN_PASSWORD}
             required
           />
+          {/* Требование сказано до отказа, а не после: придумывать
+              пароль и узнавать правило по отказу — значит придумывать
+              дважды. Внутри подписи, а не под ней: иначе строка висит
+              между полем и кнопкой и читается сама по себе.
+              На входе её нет — там пароль уже есть. */}
+          {mode === 'register' && (
+            <span className="muted small">Не короче {MIN_PASSWORD} символов.</span>
+          )}
         </label>
 
         {error && <p className="error">{error}</p>}

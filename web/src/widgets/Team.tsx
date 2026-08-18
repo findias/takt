@@ -161,8 +161,21 @@ export function Team({ principal }: { principal: Principal }) {
                 её отпечаток. Перешлите её приглашённому.
               </p>
               <div className="row">
-                <input readOnly value={freshLink} onFocus={(e) => e.target.select()} />
-                <button onClick={() => void navigator.clipboard?.writeText(freshLink)}>
+                {/* Поле и кнопка называют, что в них: на этом экране
+                    показывается один раз и ссылка-приглашение, и ключ
+                    доступа, и ключ подписи — с диктора все три поля
+                    были безымянными, а все три кнопки звучали
+                    «Скопировать». */}
+                <input
+                  readOnly
+                  value={freshLink}
+                  aria-label="Ссылка-приглашение"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  aria-label="Скопировать ссылку-приглашение"
+                  onClick={() => void navigator.clipboard?.writeText(freshLink)}
+                >
                   Скопировать
                 </button>
               </div>
@@ -182,8 +195,12 @@ export function Team({ principal }: { principal: Principal }) {
                         {new Date(i.expiresAt).toLocaleDateString('ru-RU')}
                       </span>
                     </div>
-                    <button className="link" onClick={() => act(api.revokeInvite(i.id))}>
-                      Отозвать
+                    <button
+                      className="link"
+                      aria-label={`Отозвать приглашение: ${i.email}`}
+                      onClick={() => act(api.revokeInvite(i.id))}
+                    >
+                      Отозвать приглашение
                     </button>
                   </li>
                 ))}
@@ -257,8 +274,12 @@ function Clients() {
                     : ' · ещё не работал'}
                 </span>
               </div>
+              {/* «Отозвать» стояло и здесь, и у приглашения — на одном
+                  экране, у разных объектов. Глазами их различали
+                  по месту, с диктора они звучали одинаково. */}
               <button
                 className="link"
+                aria-label={`Отозвать ключ «${c.name}»`}
                 onClick={() => {
                   setError(null)
                   api
@@ -267,7 +288,7 @@ function Clients() {
                     .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
                 }}
               >
-                Отозвать
+                Отозвать ключ
               </button>
             </li>
           ))}
@@ -281,8 +302,18 @@ function Clients() {
             отпечаток. Скопируйте и положите туда, откуда его возьмёт интеграция.
           </p>
           <div className="row">
-            <input readOnly value={fresh} onFocus={(e) => e.target.select()} />
-            <button onClick={() => void navigator.clipboard?.writeText(fresh)}>Скопировать</button>
+            <input
+              readOnly
+              value={fresh}
+              aria-label="Ключ доступа"
+              onFocus={(e) => e.target.select()}
+            />
+            <button
+              aria-label="Скопировать ключ доступа"
+              onClick={() => void navigator.clipboard?.writeText(fresh)}
+            >
+              Скопировать
+            </button>
           </div>
         </div>
       )}

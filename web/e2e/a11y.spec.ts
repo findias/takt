@@ -282,7 +282,15 @@ test('флажок не мельче цели нажатия, подпись н�
  * две кнопки про одну и ту же карточку повторяться могут, — а перечень
  * тех, которые уже повторялись по разным объектам.
  */
-const CONTEXTLESS = ['Разметка', 'Добавить карточку', 'Доступ', 'закрыть', 'Убрать']
+const CONTEXTLESS = [
+  'Разметка',
+  'Добавить карточку',
+  'Доступ',
+  'закрыть',
+  'Убрать',
+  'Отозвать',
+  'Скопировать',
+]
 
 async function contextless(page: Page): Promise<string[]> {
   return page.evaluate((names) => {
@@ -329,4 +337,14 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByLabel('Добавить в подразделение').selectOption({ index: 1 })
   await expect(page.getByRole('button', { name: /^Убрать из состава/ })).toBeVisible()
   expect(await contextless(page), 'структура').toEqual([])
+
+  // На «Команде» «Отозвать» стояло у приглашения и у ключа сразу.
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByPlaceholder('Почта коллеги').fill('kolya@example.test')
+  await page.getByRole('button', { name: 'Пригласить' }).click()
+  await page.getByPlaceholder('Для чего ключ').fill('Обмен')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Отозвать ключ/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toBeVisible()
+  expect(await contextless(page), 'команда').toEqual([])
 })
