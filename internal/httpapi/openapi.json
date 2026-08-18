@@ -382,6 +382,124 @@
         }
       }
     },
+    "/boards/{id}/metrics": {
+      "get": {
+        "summary": "Метрики потока по доске",
+        "description": "Разрешение boards:read — это та же доска, только посчитанная. Числа берутся из истории карточек, а не из отдельного хранилища, поэтому отвечают на «как шло», а не «как считали». Время цикла — процентили, а не среднее: у распределения всегда длинный хвост, и среднее по нему не отвечает ни на один вопрос. Выброшенные карточки названы отдельным числом и в пропускную способность не входят — молчать о них значило бы скрывать половину картины.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": { "type": "integer", "default": 90, "minimum": 7, "maximum": 365 },
+            "description": "Окно в днях. Это часть вопроса, а не настройка: команда полугодовой давности — другая команда. Меньше 7 и больше 365 подтягиваются к границе, нечисловое значение берётся как 90."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Отчёт за окно. cycleTime равен null, когда считать не из чего.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["days", "cycleTime", "finished", "throughput", "wip", "aging", "flow", "forecast", "discarded"],
+                  "properties": {
+                    "days": { "type": "integer", "description": "Окно, за которое посчитано, — уже подтянутое к границам." },
+                    "cycleTime": {
+                      "type": ["object", "null"],
+                      "required": ["p50", "p85", "p95", "count"],
+                      "properties": {
+                        "p50": { "type": "number" },
+                        "p85": { "type": "number" },
+                        "p95": { "type": "number" },
+                        "count": { "type": "integer", "description": "На скольких карточках посчитано: проценты по трём карточкам — не проценты, и сказать об этом должно быть чем." }
+                      }
+                    },
+                    "finished": {
+                      "type": "array",
+                      "description": "Точки на диаграмме: что доведено до конца и за сколько дней.",
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "title", "finishedOn", "days"],
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "title": { "type": "string" },
+                          "finishedOn": { "type": "string", "format": "date", "description": "День по календарю: часа на диаграмме не разглядеть." },
+                          "days": { "type": "number" }
+                        }
+                      }
+                    },
+                    "throughput": {
+                      "type": "array",
+                      "description": "Сколько доведено до конца по неделям.",
+                      "items": {
+                        "type": "object",
+                        "required": ["week", "count"],
+                        "properties": {
+                          "week": { "type": "string", "format": "date", "description": "Понедельник недели." },
+                          "count": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "wip": { "type": "integer", "description": "Сколько работы идёт прямо сейчас." },
+                    "aging": {
+                      "type": "array",
+                      "description": "Что идёт сейчас и сколько уже идёт: время цикла говорит о прошлом, возраст — о том, что застряло сейчас.",
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "title", "column", "days", "blocked"],
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "title": { "type": "string" },
+                          "column": { "type": "string" },
+                          "days": { "type": "number" },
+                          "blocked": { "type": "boolean", "description": "Заблокированная карточка стареет, ничего не делая, — в списке старения это первое, что нужно видеть." }
+                        }
+                      }
+                    },
+                    "flow": {
+                      "type": "array",
+                      "description": "Три полосы по дням: в очереди, в работе, сделано.",
+                      "items": {
+                        "type": "object",
+                        "required": ["day", "queued", "inProgress", "done"],
+                        "properties": {
+                          "day": { "type": "string", "format": "date" },
+                          "queued": { "type": "integer" },
+                          "inProgress": { "type": "integer" },
+                          "done": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "forecast": {
+                      "type": ["array", "null"],
+                      "description": "За сколько дней укладываются 50, 85 и 95 испытаний из ста при таком-то числе карточек. null, когда прогнозировать не из чего: без единой законченной карточки складывать нули можно бесконечно, и любое число здесь было бы выдумкой — та же причина, что и у cycleTime.",
+                      "items": {
+                        "type": "object",
+                        "required": ["cards", "p50", "p85", "p95"],
+                        "properties": {
+                          "cards": { "type": "integer" },
+                          "p50": { "type": "integer" },
+                          "p85": { "type": "integer" },
+                          "p95": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "discarded": { "type": "integer", "description": "Сколько убрано с доски незавершёнными." }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Доски нет либо она недоступна — эти случаи неразличимы намеренно. Доска без единой завершённой карточки отвечает 200: пустые ряды и cycleTime равный null — это ответ, а не отказ",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        }
+      }
+    },
     "/webhooks": {
       "get": {
         "summary": "Подписки организации",

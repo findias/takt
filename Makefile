@@ -110,6 +110,25 @@ check: ## Форматирование, vet и все тесты (кроме с�
 	$(MAKE) test-integration
 	cd web && npx tsc -b && npm test
 
+# Отрисовщик страницы описания едет в бинарнике сжатым. Цель нужна
+# редко — только чтобы поднять версию, — но без неё никто не вспомнит,
+# откуда файл взялся и почему в нём правка.
+#
+# Правка одна: подпись «powered by» просит логотип с чужого адреса,
+# а страница обязана открываться там, где интернета нет. Логотип
+# заменён на пустую точку; политика CSP запрещает то же самое ещё раз,
+# на случай, если в новой версии появится второй такой адрес.
+REDOC_VERSION ?= 2.5.3
+
+.PHONY: docs-bundle
+docs-bundle: ## Обновить встроенный отрисовщик страницы описания
+	curl -sL --fail -o /tmp/redoc-$(REDOC_VERSION).js \
+	  "https://cdn.jsdelivr.net/npm/redoc@$(REDOC_VERSION)/bundles/redoc.standalone.js"
+	sed 's|https://cdn.redoc.ly/redoc/logo-mini.svg|data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==|' \
+	  /tmp/redoc-$(REDOC_VERSION).js \
+	  | gzip -9 > internal/httpapi/docs/redoc-$(REDOC_VERSION).js.gz
+	@echo "встроен redoc $(REDOC_VERSION); если версия сменилась — поправьте go:embed в openapi.go"
+
 # --- сборка ---
 
 .PHONY: build

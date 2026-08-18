@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -480,10 +482,102 @@ func TestContractIsPublishedAndValid(t *testing.T) {
 	if doc.OpenAPI == "" || doc.Info.Version != "v1" {
 		t.Errorf("описание без версии: %+v", doc)
 	}
-	// Описание обязано покрывать то, ради чего оно вообще есть.
-	for _, path := range []string{"/boards", "/boards/{id}/operations", "/audit"} {
-		if _, ok := doc.Paths[path]; !ok {
-			t.Errorf("в описании нет %s", path)
+	// Полнота описания проверяется не здесь: перечисления сверяет
+	// TestContractEnumerationsMatchCode, адреса — TestContractDescribesEveryKeyedRoute,
+	// а список из трёх путей рядом с проверкой однажды уже создал
+	// впечатление, что за описанием следят.
+}
+
+// Тот же файл, но отрисованный: страницу открывают глазами, и она
+// обязана открываться без ключа — по той же причине, что и сам файл.
+func TestContractPageIsServedWithoutNetwork(t *testing.T) {
+	a := newAPI(t)
+	code, raw := a.session().do("GET", "/api/v1/docs", nil)
+	if code != http.StatusOK {
+		t.Fatalf("страница описания: код %d", code)
+	}
+	page := string(raw)
+	for _, want := range []string{"/api/v1/openapi.json", "/api/v1/docs/redoc.js"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("на странице нет ссылки на %s: %s", want, page)
 		}
 	}
+	// Ни одной ссылки наружу: образ ставят и там, где интернета нет.
+	for _, outside := range []string{"http://", "https://"} {
+		if strings.Contains(page, outside) {
+			t.Errorf("страница тянет что-то снаружи: %s", page)
+		}
+	}
+}
+
+// Отрисовщик лежит сжатым, а разжать его должно доставаться тому,
+// кто про gzip не сказал: иначе вместо кода он получит двоичный мусор
+// и увидит пустую страницу без единой ошибки.
+func TestContractPageBundleIsServedBothWays(t *testing.T) {
+	a := newAPI(t)
+	compressed := requestBundle(t, a, "gzip")
+	if compressed.Header.Get("content-encoding") != "gzip" {
+		t.Errorf("сжатие не предложено: %v", compressed.Header)
+	}
+	plain := requestBundle(t, a, "")
+	if plain.Header.Get("content-encoding") != "" {
+		t.Errorf("отдано сжатым тому, кто про gzip не говорил: %v", plain.Header)
+	}
+	if len(plain.body) <= len(compressed.body) {
+		t.Errorf("разжатое (%d) не больше сжатого (%d) — что-то отдано не тем",
+			len(plain.body), len(compressed.body))
+	}
+	if !bytes.Contains(plain.body[:2048], []byte("Redoc")) {
+		t.Errorf("в разжатом коде не нашлось отрисовщика: %s", plain.body[:200])
+	}
+}
+
+// Обещание «работает там, где интернета нет» проверяется не на глаз:
+// в сборке Redoc подпись «powered by» просит логотип с cdn.redoc.ly,
+// и при обновлении версии эту правку легко потерять — а увидеть потерю
+// можно только в установке без интернета, то есть уже у чужих людей.
+func TestContractPageBundleAsksNothingFromOutside(t *testing.T) {
+	reader, err := gzip.NewReader(bytes.NewReader(redocBundle))
+	if err != nil {
+		t.Fatalf("встроенный отрисовщик не разжимается: %v", err)
+	}
+	defer reader.Close()
+	code, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(code, []byte("cdn.redoc.ly")) {
+		t.Error("отрисовщик снова тянет картинку с чужого адреса — " +
+			"обновите его через make docs-bundle, а не руками")
+	}
+}
+
+type bundleResponse struct {
+	Header http.Header
+	body   []byte
+}
+
+func requestBundle(t *testing.T, a *api, encoding string) bundleResponse {
+	t.Helper()
+	req, err := http.NewRequest("GET", a.server.URL+"/api/v1/docs/redoc.js", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Пустой заголовок задаётся явно: без него Go подставит gzip сам
+	// и разжимать будет он, а проверка смотрит как раз на то,
+	// что отдал сервер.
+	req.Header.Set("accept-encoding", encoding)
+	resp, err := a.client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("отрисовщик: код %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bundleResponse{Header: resp.Header, body: raw}
 }

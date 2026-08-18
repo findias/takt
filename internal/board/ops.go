@@ -352,7 +352,10 @@ func (s *Service) Changes(ctx context.Context, orgID, userID, boardID string, si
 			// патча от которого у нас нет.
 			if version != last+1 {
 				out.Full = true
-				out.Results = nil
+				// Пустой список, а не null: смысл несёт full, а null
+				// в поле, обещанном массивом, роняет типизированного
+				// клиента там, где он ничего плохого не делает.
+				out.Results = []Result{}
 				return nil
 			}
 			last = version
@@ -367,7 +370,7 @@ func (s *Service) Changes(ctx context.Context, orgID, userID, boardID string, si
 		}
 		if last != out.Version {
 			out.Full = true
-			out.Results = nil
+			out.Results = []Result{}
 		}
 		return nil
 	})
