@@ -253,7 +253,11 @@ export function Board({
     const cards: Command[] = Object.values(base.cards).map((card) => ({
       id: `card-${card.id}`,
       title: card.title,
-      hint: base.columns[card.columnId]?.name,
+      // Номер в приписке, а не только в поиске: его называют вслух
+      // и им же ищут — «посмотри ПОСТ-4», — и увидеть, что нашлось
+      // именно оно, человек должен глазами.
+      hint: `${card.number} · ${base.columns[card.columnId]?.name ?? ''}`,
+      search: card.description,
       icon: <OpenIcon />,
       run: () => {
         setShowFlow(false)

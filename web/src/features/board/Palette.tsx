@@ -20,6 +20,11 @@ export type Command = {
   title: string
   /** Короткая приписка справа: где это или что произойдёт. */
   hint?: string
+  /** Что ещё считается совпадением, кроме названия и приписки, —
+   *  описание карточки. Отдельным полем, потому что показывать абзац
+   *  описания в строке списка нельзя, а искать по нему надо: на доске
+   *  поиск смотрит и в него. */
+  search?: string
   icon?: ReactNode
   run: () => void
 }
@@ -56,13 +61,19 @@ export function Palette({
     return () => dialog.removeEventListener('close', onCloseEvent)
   }, [onClose])
 
-  // Отбор подстрокой без учёта регистра — тот же поиск, что и на доске.
+  // Отбор подстрокой без учёта регистра — тот же поиск, что и на доске,
+  // и это не оборот речи: номер и описание карточки ищутся здесь так же,
+  // как в поле над доской. Номер обещан именем, которое вводят в поиск,
+  // а палитра его не знала — «ПОСТ-4» не находил ничего.
+  //
   // Ранжирования нет намеренно: список короткий, а выдумывать вес
   // совпадения значит объяснять человеку, почему «его» строка не первая.
   const found = useMemo(() => {
     const needle = text.trim().toLowerCase()
     const list = needle
-      ? commands.filter((c) => `${c.title} ${c.hint ?? ''}`.toLowerCase().includes(needle))
+      ? commands.filter((c) =>
+          `${c.title} ${c.hint ?? ''} ${c.search ?? ''}`.toLowerCase().includes(needle),
+        )
       : commands
     return list.slice(0, 20)
   }, [commands, text])

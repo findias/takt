@@ -1003,6 +1003,16 @@ test('палитра находит карточку и выполняет ко�
 
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
+  // По номеру — тоже. Номер обещан именем, которое вводят в поиск,
+  // а палитра смотрела только название и приписку: «ДОСК-2» не находил
+  // ничего, хотя то же самое поле над доской находило.
+  await page.keyboard.press('Control+k')
+  await page.getByRole('combobox', { name: 'Поиск и команды' }).fill('ДОСК-2')
+  await expect(page.getByRole('option', { name: /Договор аренды/ })).toHaveCount(1)
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Договор аренды' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
   // Команда: в том же списке, потому что человек не разделяет
   // «найти» и «сделать», пока не начал набирать.
   await page.keyboard.press('Control+k')
