@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
+import { rangeWords } from '../../entities/card/model.ts'
 import type { EstimateUnit, Iteration, IterationReport as Report } from '../../shared/api/index.ts'
 
 /**
@@ -59,7 +60,7 @@ export function IterationReport({
         <>
           <section className="stack">
             <p className="muted small">
-              {iteration.startsOn}—{iteration.endsOn}
+              {rangeWords(iteration.startsOn, iteration.endsOn)}
               {closed
                 ? ` · закрыта ${dateText(closed)}, состав застыл`
                 : ' · идёт, посчитано на сейчас'}

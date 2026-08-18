@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
 import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
+import { dateWords } from '../../entities/card/model.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
 
 /**
@@ -153,7 +154,10 @@ export function Flow({
           <>
             <Bars
               values={report.throughput.map((w) => w.count)}
-              labels={report.throughput.map((w) => w.week)}
+              // Неделя названа словами: в подсказке столбика стояло
+              // «2026-05-18: 0» — машинная запись там, где человек
+              // ищет глазами «какая это была неделя».
+              labels={report.throughput.map((w) => `неделя ${dateWords(w.week)}`)}
             />
             <p className="muted small">
               По неделям, только доведённое до конца.
@@ -218,7 +222,15 @@ function Figure({ label, value }: { label: string; value: string }) {
 function Bars({ values, labels }: { values: number[]; labels: string[] }) {
   const top = Math.max(1, ...values)
   return (
-    <div className="bars" role="img" aria-label={`Пропускная способность: ${values.join(', ')}`}>
+    <div
+      className="bars"
+      role="img"
+      // Диктору читаются пары «неделя — сколько»: один ряд чисел
+      // без недель не говорит ни о чём, а столбики он не видит.
+      aria-label={`Пропускная способность: ${values
+        .map((value, i) => `${labels[i]} — ${value}`)
+        .join(', ')}`}
+    >
       {values.map((value, i) => (
         <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
           <div className="bar-fill" style={{ height: `${(value / top) * 100}%` }} />

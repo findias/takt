@@ -1448,6 +1448,11 @@ test('закрытая итерация остаётся на экране и о
   const panel = page.getByRole('complementary')
   await expect(panel.getByText('1 из 2')).toBeVisible()
   await expect(panel.getByText(/состав застыл/)).toBeVisible()
+  // Срок итерации словами: в шапке отчёта стояло
+  // «2026-08-10—2026-08-16» — та же машинная запись, которую убрали
+  // из шапки доски.
+  await expect(panel.getByText(/10—16 авг/)).toBeVisible()
+  await expect(panel.getByText(/2026-08-10/)).toHaveCount(0)
   await expect(panel.getByText(/Смета по объекту/)).toBeVisible()
 })
 

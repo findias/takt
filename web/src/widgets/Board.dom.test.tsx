@@ -229,6 +229,44 @@ describe('состояния доски', () => {
   })
 })
 
+describe('поток словами, а не машинными строками', () => {
+  // Подсказка столбика пропускной способности печатала «2026-05-18: 0»
+  // — машинная запись там, где человек ищет глазами «какая это была
+  // неделя». Диктору же читался голый ряд чисел без недель вовсе.
+  const metrics = {
+    days: 91,
+    cycleTime: null,
+    finished: [],
+    throughput: [
+      { week: '2026-05-18', count: 0 },
+      { week: '2026-05-25', count: 3 },
+    ],
+    wip: 0,
+    aging: [],
+    flow: [],
+    forecast: null,
+    discarded: 0,
+  }
+
+  it('неделя в подсказке столбика названа словами', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    const { api } = await import('../shared/api')
+    vi.spyOn(api, 'metrics').mockResolvedValue(metrics)
+    show()
+
+    await user.click(await screen.findByRole('button', { name: 'Поток' }))
+    const bars = await screen.findByRole('img', { name: /Пропускная способность/ })
+    const titles = [...bars.querySelectorAll('.bar')].map((b) => b.getAttribute('title'))
+    expect(titles).toEqual(['неделя 18 мая: 0', 'неделя 25 мая: 3'])
+    // Диктору читаются пары «неделя — сколько»: ряд чисел без недель
+    // не говорит ни о чём, а столбики он не видит.
+    expect(bars.getAttribute('aria-label')).toBe(
+      'Пропускная способность: неделя 18 мая — 0, неделя 25 мая — 3',
+    )
+  })
+})
+
 describe('ходьба по доске', () => {
   // Tab идёт по всем кнопкам подряд: до третьей карточки во второй
   // колонке ему нужно два десятка нажатий. Стрелки превращают доску
