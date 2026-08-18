@@ -1158,12 +1158,16 @@ test('заблокированная часть останавливает и р
   await expect(page.getByRole('button', { name: 'Прогнать нагрузочные' }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
-  const part = cardIn(page, 'Очередь', 'Прогнать нагрузочные')
-  await part.hover()
-  await part.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
-  await part.getByLabel('Причина блокировки').fill('стенд лежит')
-  await part.getByLabel('Причина блокировки').press('Enter')
+  // Часть открывается из родителя — отдельной карточкой в колонке
+  // она не стоит, — и блокируется в своей панели.
+  await parent.getByRole('button', { name: /Подзадачи/ }).click()
+  await parent.getByRole('button', { name: 'Прогнать нагрузочные' }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const partPanel = page.getByLabel(/Карточка .* «Прогнать нагрузочные»/)
+  await partPanel.getByRole('button', { name: 'Заблокировать…' }).click()
+  await partPanel.getByLabel('Причина блокировки').fill('стенд лежит')
+  await partPanel.getByLabel('Причина блокировки').press('Enter')
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   // На родителе видно и то, что он стоит, и почему.
   await expect(parent.getByText('Часть заблокирована: стенд лежит')).toBeVisible()
@@ -1174,9 +1178,10 @@ test('заблокированная часть останавливает и р
   await page.getByRole('checkbox', { name: 'Заблокированные' }).uncheck()
 
   // Часть отпустили — родитель пошёл дальше.
-  await part.hover()
-  await part.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: 'Снять блокировку' }).click()
+  await parent.getByRole('button', { name: 'Прогнать нагрузочные' }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await partPanel.getByRole('button', { name: 'Снять блокировку' }).click()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
   await expect(parent.getByText(/Часть заблокирована/)).toHaveCount(0)
 })
 
@@ -1250,13 +1255,18 @@ test('подзадача заводится из карточки одним п�
   await page.getByLabel('Название подзадачи').fill('Прогнать тесты')
   await page.getByRole('button', { name: 'Подзадача' }).click()
 
-  // Она сразу видна и в списке подзадач, и на самой доске: это одна
-  // и та же карточка, а не запись внутри родителя.
+  // Она сразу видна в списке подзадач.
   await expect(page.getByRole('complementary').getByText('Прогнать тесты')).toBeVisible()
   await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
-  await expect(cardIn(page, 'Очередь', 'Прогнать тесты')).toBeVisible()
+  // Отдельной карточкой в колонке она при этом не стоит: часть —
+  // это часть, а колонка из трёх задач не должна выглядеть колонкой
+  // из десяти. Внутри родителя она видна и оттуда же открывается.
+  await expect(cardIn(page, 'Очередь', 'Прогнать тесты')).toHaveCount(0)
+  const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
+  await parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ }).click()
+  await expect(parent.getByRole('button', { name: 'Прогнать тесты' })).toBeVisible()
 
   // И переживает перезагрузку — то есть связь легла в базу, а не
   // в память вкладки.
@@ -1275,10 +1285,6 @@ test('подзадача заводится из карточки одним п�
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
-  // А на самой доске подзадача говорит, чья она часть, — и по этой
-  // строке тоже можно перейти к родителю.
-  const subtask = cardIn(page, 'Очередь', 'Прогнать тесты')
-  await expect(subtask.getByRole('button', { name: 'Выпустить релиз' })).toBeVisible()
   // Родитель показывает разбиение полосой, и она же раскрывает
   // подзадачи: мера и путь внутрь неё — одно управление, поэтому мера
   // читается вслух как имя кнопки, а не как отдельная полоса.
@@ -1287,6 +1293,14 @@ test('подзадача заводится из карточки одним п�
       name: /Подзадачи: готово 0 из 1/,
     }),
   ).toBeVisible()
+
+  // Отбор, спрятавший родителя, возвращает часть в колонку: работа
+  // не должна исчезать с доски. Своей строкой она называет, чья она
+  // часть, и по этой строке можно перейти к родителю.
+  await page.getByPlaceholder('Найти карточку').fill('Прогнать тесты')
+  const shown = cardIn(page, 'Очередь', 'Прогнать тесты')
+  await expect(shown).toBeVisible()
+  await expect(shown.getByRole('button', { name: 'Выпустить релиз' })).toBeVisible()
 })
 
 test('исполнителей у карточки может быть несколько', async ({ page, browser }) => {

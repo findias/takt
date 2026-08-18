@@ -405,3 +405,49 @@ export function agingLabel(
   if (!(days > sleDays)) return null
   return `Идёт ${Math.floor(days)} дн. — дольше обещанных ${sleDays}`
 }
+
+/**
+ * Порядок колонок без тех карточек, которые видны как чьи-то части.
+ *
+ * Подзадача у нас — обычная карточка: только так её можно отдать другой
+ * команде, оценить, обсудить и провести по потоку. Но на доске родителя
+ * она стояла дважды — своей строкой в колонке и списком внутри
+ * родителя, — и колонка из трёх задач выглядела колонкой из десяти.
+ * Часть перестала читаться частью.
+ *
+ * Прячется только та часть, чей родитель на этом же экране виден:
+ * иначе работа исчезла бы совсем. Отбор, спрятавший родителя, возвращает
+ * часть в колонку — она уже никуда не вложена, и её строка называет
+ * родителя сама.
+ *
+ * Счётчик колонки и лимит одновременной работы считают по-прежнему всё:
+ * спрятанная часть — идущая работа, и вычесть её из ограничения значило
+ * бы сломать главный механизм канбана ради вида.
+ */
+export function withoutParts(
+  base: BaseState,
+  order: Record<string, string[]>,
+): { order: Record<string, string[]>; parts: Record<string, number> } {
+  const parentOf = new Map<string, string>()
+  for (const link of base.links) {
+    if (link.kind === 'subtask' && base.cards[link.toCard]) {
+      parentOf.set(link.toCard, link.fromCard)
+    }
+  }
+  if (parentOf.size === 0) return { order, parts: {} }
+
+  const shown = new Set<string>()
+  for (const ids of Object.values(order)) for (const id of ids) shown.add(id)
+
+  const next: Record<string, string[]> = {}
+  const parts: Record<string, number> = {}
+  for (const [columnId, ids] of Object.entries(order)) {
+    const kept = ids.filter((id) => {
+      const parent = parentOf.get(id)
+      return parent === undefined || !shown.has(parent)
+    })
+    next[columnId] = kept
+    if (kept.length !== ids.length) parts[columnId] = ids.length - kept.length
+  }
+  return { order: next, parts }
+}

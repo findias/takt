@@ -23,6 +23,10 @@ export type Related = {
   title: string
   /** Где карточка лежит: своя доска, чужая, или неизвестно. */
   where: string
+  /** Коротко, у кого она лежит: имя подразделения, а если его нет —
+   *  имя доски. Пусто у своих. Полное «Доска «X» · Команда Y» остаётся
+   *  в `where`, но в строке части оно вытесняет само название. */
+  elsewhere: string | null
   /** Что с ней происходит у соседей: «В очереди», «В работе», «Готово»,
    *  «Работу не взяли». Пусто для карточек этой доски — их положение
    *  видно на самой доске, и повторять его строкой значит показывать
@@ -184,6 +188,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       kind,
       title: own.title,
       where: 'На этой доске',
+      elsewhere: null,
       stage: null,
       promise: null,
       // Готовность у части работы двух видов: карточка прошла точку
@@ -210,6 +215,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       where: foreign.teamName
         ? `Доска «${foreign.boardName}» · ${foreign.teamName}`
         : `Доска «${foreign.boardName}»`,
+      elsewhere: foreign.teamName ?? foreign.boardName,
       stage: stageOf(foreign),
       // Обещание показывается, пока работа не сделана: обещание сроков
       // на завершённой работе — это ответ на вопрос, который больше
@@ -231,6 +237,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
     kind,
     title: 'Карточка недоступна',
     where: 'В подразделении, которого вам не видно',
+    elsewhere: 'у соседей',
     stage: null,
     promise: null,
     done: false,

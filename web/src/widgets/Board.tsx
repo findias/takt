@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { flowIssues } from '../entities/board/model.ts'
+import { flowIssues, withoutParts } from '../entities/board/model.ts'
 import { api } from '../shared/api/index.ts'
 import type {
   BoardAccess as Access,
@@ -188,8 +188,9 @@ export function Board({
   // Фильтр применяется к показу, а не к данным: перетаскивание,
   // счётчики лимита и догон патчами продолжают работать с полной
   // доской, иначе включённый фильтр начал бы менять её поведение.
-  const { order, hidden } = useMemo(() => {
-    if (!base || isEmpty(filters)) return { order: fullOrder, hidden: 0 }
+  const { order, parts, hidden } = useMemo(() => {
+    if (!base) return { order: fullOrder, parts: {} as Record<string, number>, hidden: 0 }
+    if (isEmpty(filters)) return { ...withoutParts(base, fullOrder), hidden: 0 }
     // Карточки, у которых стоит часть. Считается один раз на проход
     // отбора: связей у доски единицы на карточку, а спрашивать по одной
     // значило бы обходить их заново для каждой.
@@ -218,7 +219,7 @@ export function Board({
         return ok
       })
     }
-    return { order: next, hidden }
+    return { ...withoutParts(base, next), hidden }
   }, [base, fullOrder, filters])
 
   // Группировка — тоже состояние адреса: сгруппированный вид посылают
@@ -736,6 +737,7 @@ export function Board({
         columnId={columnId}
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
+        partsInside={parts[columnId] ?? 0}
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}

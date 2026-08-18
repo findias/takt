@@ -17,8 +17,9 @@ import {
   parseLimitDraft,
   reconcileColumn,
   renderOrder,
+  withoutParts,
 } from './model.ts'
-import type { MoveCommand } from './model.ts'
+import type { BaseState, MoveCommand } from './model.ts'
 import type { Card, Column, ColumnKind, Snapshot } from '../../shared/api/index.ts'
 import { initials } from '../../shared/lib/initials.ts'
 
@@ -312,4 +313,42 @@ test('инициалы собираются из имени, а не из про
   assert.equal(initials('  Пётр   Сергеевич Иванов '), 'ПС')
   // Пустое имя бывает у неполных данных — показываем вопрос, а не пустоту.
   assert.equal(initials('   '), '?')
+})
+
+test('часть не стоит в колонке отдельной карточкой, пока виден её родитель', () => {
+  // Подзадача у нас — обычная карточка, иначе её не отдать другой
+  // команде и не провести по потоку. Но на доске родителя она стояла
+  // дважды: своей строкой в колонке и списком внутри родителя.
+  const base = {
+    cards: { p: {}, a: {}, b: {} },
+    links: [
+      { fromCard: 'p', toCard: 'a', kind: 'subtask' },
+      { fromCard: 'p', toCard: 'b', kind: 'subtask' },
+    ],
+  } as unknown as BaseState
+
+  const order = { queue: ['p', 'a', 'b'], work: [] as string[] }
+  // Спрятанные части считаются: в счёт колонки они входят, потому что
+  // лимит одновременной работы считает их на сервере так же.
+  assert.deepEqual(withoutParts(base, order), {
+    order: { queue: ['p'], work: [] },
+    parts: { queue: 2 },
+  })
+
+  // Родителя не видно — часть возвращается в колонку: иначе работа
+  // исчезла бы совсем.
+  assert.deepEqual(withoutParts(base, { queue: ['a', 'b'], work: [] }), {
+    order: { queue: ['a', 'b'], work: [] },
+    parts: {},
+  })
+
+  // Часть на чужой доске в наших колонках и так не стоит.
+  const foreign = {
+    cards: { p: {} },
+    links: [{ fromCard: 'p', toCard: 'x', kind: 'subtask' }],
+  } as unknown as BaseState
+  assert.deepEqual(withoutParts(foreign, { queue: ['p'] }), {
+    order: { queue: ['p'] },
+    parts: {},
+  })
 })

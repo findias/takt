@@ -1050,6 +1050,22 @@ select {
 }
 /* Упёршаяся часть помечена цветом тревоги, как и сама блокировка
    на карточке: одно состояние — один цвет. */
+/* Чья это часть — пометкой, а не хвостом к названию: у части
+   на соседней доске это второй по важности вопрос после «готова ли»,
+   и вычитывать его из строки не должно быть нужно. */
+.subtask-where {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-inline-start: var(--space-2);
+  padding: 0 0.3rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  vertical-align: middle;
+}
 .subtask-blocked {
   display: inline-flex;
   align-items: center;

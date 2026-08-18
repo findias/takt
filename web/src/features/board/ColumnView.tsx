@@ -43,6 +43,10 @@ type ColumnProps = {
   /** Сколько карточек этой колонки скрыл отбор — счётчик, а не признак:
    *  пустая колонка называет число, иначе «Пусто» врёт. */
   hiddenByFilter: number
+  /** Сколько карточек колонки показаны как части своих задач, а не
+   *  своей строкой. В счёт колонки они входят: это идущая работа,
+   *  и лимит одновременной работы считает её на сервере так же. */
+  partsInside: number
   cards: BaseState['cards']
   unit: EstimateUnit
   sleDays: number | null
@@ -181,7 +185,7 @@ export function ColumnView(props: ColumnProps) {
         <div className="row row--tight">
           <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
           <ColumnCount
-            count={props.cardIds.length}
+            count={props.cardIds.length + props.partsInside}
             limit={props.column.wipLimit}
             hard={props.column.wipLimitHard}
             onSetLimit={props.onSetLimit}
@@ -302,7 +306,17 @@ export function ColumnView(props: ColumnProps) {
             Перетащите карточку сюда» при скрытых отбором — враньё:
             человек идёт искать поломку, которой нет, а карточки лежат
             на месте. Кнопка названа та самая, что вернёт их. */}
+        {/* Колонка, в которой остались одни части, не пустая: работа
+            в ней идёт, просто показана внутри своих задач. «Пусто»
+            здесь было бы враньём. */}
+        {props.cardIds.length === 0 && props.hiddenByFilter === 0 && props.partsInside > 0 && (
+          <p className="empty">
+            Здесь только части задач — они показаны внутри самих задач. Всего в колонке:{' '}
+            {props.partsInside}.
+          </p>
+        )}
         {props.cardIds.length === 0 &&
+          props.partsInside === 0 &&
           (props.hiddenByFilter > 0 ? (
             <p className="empty">
               Под отбор ничего не подошло: скрыто {props.hiddenByFilter}. Вернёт кнопка «Показать

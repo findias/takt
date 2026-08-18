@@ -22,7 +22,7 @@
  */
 
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
-import { BlockedIcon, CommentIcon } from '../../shared/ui/icons.tsx'
+import { BlockedIcon, CommentIcon, PeopleIcon } from '../../shared/ui/icons.tsx'
 import type { Related } from '../../entities/card/model.ts'
 
 export function SubtaskRow({
@@ -98,16 +98,28 @@ export function SubtaskRow({
         </button>
       ) : named ? (
         // Часть у соседей: называем её и говорим, чья она, но открываем
-        // не отсюда — она живёт на их доске.
+        // не отсюда — она живёт на их доске. Чья — отдельной пометкой,
+        // а не хвостом к названию: хвост читался продолжением названия
+        // и вместе с ним занимал две строки, так что «ушло к соседям»
+        // приходилось вычитывать.
         <span className="subtask-name">
           {subtask.title}
-          <span className="muted small"> · {subtask.where}</span>
+          <span className="subtask-where" title={subtask.where}>
+            <PeopleIcon size={11} />
+            {subtask.elsewhere}
+          </span>
         </span>
       ) : (
         // Название чужой карточки не наше дело, но её существование —
         // наше: мера разбиения её считает, и спрятать значит соврать
         // про меру.
-        <span className="muted">Нет доступа · {subtask.where}</span>
+        <span className="subtask-name">
+          <span className="muted">Нет доступа</span>
+          <span className="subtask-where" title={subtask.where}>
+            <PeopleIcon size={11} />
+            {subtask.elsewhere}
+          </span>
+        </span>
       )}
 
       <span className="subtask-tail">
