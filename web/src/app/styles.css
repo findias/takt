@@ -456,17 +456,24 @@ input[type='radio'] {
 /* Название доски занимает всё свободное место, действия остаются
    справа. Раньше кнопка растягивалась на всю строку и выдавливала
    «Доступ» и «В архив» на следующую.
-   
+
    Рамки у неё нет: строка списка уже обведена, и вторая рамка внутри
-   первой превращает название доски в поле ввода. */
-.board-list li > .row > button:not(.link) {
+   первой превращает название доски в поле ввода. Под названием стоит
+   вторая строка — ключ, видимость, объём, — поэтому кнопка живёт
+   в столбце и прижата к его началу: растянутая по столбцу, она
+   центрует текст по себе и уезжает от строки под собой. */
+.board-list li .member-who {
   flex: 1;
+}
+.board-list li .member-who > button:not(.link) {
+  align-self: flex-start;
   text-align: left;
   font-weight: 600;
   border-color: transparent;
   background: none;
+  padding-inline: 0;
 }
-.board-list li > .row > button:not(.link):hover {
+.board-list li .member-who > button:not(.link):hover {
   background: var(--surface-2);
   border-color: transparent;
 }

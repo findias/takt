@@ -1717,3 +1717,24 @@ test('новая карточка попадает на глаза, а не в �
   const last = cardIn(page, 'Очередь', 'Задача 12')
   await expect(last).toBeInViewport()
 })
+
+/**
+ * Список досок отвечает тем же, что и дерево подразделений.
+ *
+ * В дереве у доски написано «ПЛАТ · своей команде», а список знал одно
+ * название — и выбирать доску приходилось по нему, при том что «эту
+ * видят все или только мы» и есть вопрос, ради которого в список
+ * заглядывают.
+ */
+test('в списке досок видны ключ, видимость и объём', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Платформа')
+  await addCard(page, 'Очередь', 'Первая')
+  await addCard(page, 'Очередь', 'Вторая')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  const row = page.locator('.board-list li').filter({ hasText: 'Платформа' })
+  await expect(row).toContainText('ПЛАТ')
+  await expect(row).toContainText('всей организации')
+  await expect(row).toContainText('2 карточки')
+})

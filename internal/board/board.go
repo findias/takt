@@ -77,6 +77,16 @@ type Info struct {
 	// между «нельзя» и «не спрашивали» важна ровно потому, что первое
 	// закрывает выбор, а второе — нет.
 	Writable *bool `json:"writable,omitempty"`
+	// Кому доска видна и сколько на ней работы. Тоже только для списка:
+	// список досок был беднее дерева подразделений, где у той же доски
+	// написано «ПЛАТ · своей команде», — и выбирать доску приходилось
+	// по одному названию.
+	//
+	// Пусто, когда не спрашивали, — по той же причине, что и `Writable`:
+	// снимку доски эти ответы не нужны, а счёт карточек стоит прохода
+	// по ним.
+	Visibility *string `json:"visibility,omitempty"`
+	Cards      *int    `json:"cards,omitempty"`
 }
 
 // boardFields — общий список полей доски, по тем же соображениям, что
@@ -363,7 +373,10 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		// функция stable, и планировщик выносит её в InitPlan, а не зовёт
 		// на каждую доску.
 		rows, err := tx.Query(ctx, `
-			select `+boardFields+`, id = any (app_writable_boards())
+			select `+boardFields+`, id = any (app_writable_boards()),
+			       visibility,
+			       (select count(*) from cards c
+			         where c.board_id = boards.id and c.archived_at is null)
 			  from boards
 			 where archived_at is null
 			 order by created_at`)
@@ -374,11 +387,15 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		for rows.Next() {
 			var b Info
 			var writable bool
+			var visibility string
+			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &writable); err != nil {
+				&b.SLEProbability, &b.Key, &writable, &visibility, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
+			b.Visibility = &visibility
+			b.Cards = &cards
 			out = append(out, b)
 		}
 		return rows.Err()

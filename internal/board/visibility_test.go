@@ -355,3 +355,39 @@ func TestBoardRosterIsNotReadableByOutsiders(t *testing.T) {
 		t.Errorf("владелец организации видит %d строк в составе доски", got)
 	}
 }
+
+// Список досок отвечает тем же, что и дерево подразделений.
+//
+// В дереве у доски написано «ПЛАТ · своей команде», а список досок знал
+// только название — и выбирать доску приходилось по нему одному, при том
+// что видимость и есть тот вопрос, ради которого в список заглядывают:
+// «эту видят все или только мы».
+//
+// Счёт карточек считается по видимым: список не имеет права проговариваться
+// о том, чего человеку не видно.
+func TestBoardListTellsVisibilityAndSize(t *testing.T) {
+	f := newFixture(t)
+	for _, title := range []string{"Первая", "Вторая", "Третья"} {
+		f.createCard(title, f.columnA)
+	}
+
+	list, err := f.svc.List(f.ctx, f.orgID, f.actorID)
+	if err != nil {
+		t.Fatalf("список досок: %v", err)
+	}
+	var found *Info
+	for i := range list {
+		if list[i].ID == f.boardID {
+			found = &list[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("своя доска не попала в список")
+	}
+	if found.Visibility == nil || *found.Visibility != "org" {
+		t.Errorf("видимость доски: %v, ожидалась org", found.Visibility)
+	}
+	if found.Cards == nil || *found.Cards != 3 {
+		t.Errorf("карточек в списке: %v, ожидалось 3", found.Cards)
+	}
+}

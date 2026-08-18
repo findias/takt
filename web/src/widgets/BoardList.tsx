@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../shared/api/index.ts'
+import { VISIBILITY_NAMES, api } from '../shared/api/index.ts'
+import { plural } from '../shared/lib/plural.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { BoardAccess } from '../features/access/BoardAccess.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
@@ -66,7 +67,20 @@ export function BoardList({
         {boards?.map((b) => (
           <li key={b.id}>
             <div className="row row--between">
-              <button onClick={() => onOpen(b.id)}>{b.name}</button>
+              {/* Ключ, видимость и объём — то же, что о доске написано
+                  в дереве подразделений: «ПЛАТ · своей команде». Список
+                  знал одно название, и выбирать приходилось по нему —
+                  при том что «эту видят все или только мы» и есть
+                  вопрос, ради которого в список заглядывают. */}
+              <div className="member-who">
+                <button onClick={() => onOpen(b.id)}>{b.name}</button>
+                <span className="muted small">
+                  {b.key}
+                  {b.visibility && ` · ${VISIBILITY_NAMES[b.visibility].toLowerCase()}`}
+                  {b.cards !== undefined &&
+                    ` · ${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`}
+                </span>
+              </div>
               <div className="row row--tight">
                 {/* Имя называет доску: «Доступ» стоит в каждой строке
                     списка, и без названия они звучат одинаково. */}
