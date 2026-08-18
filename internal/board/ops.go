@@ -606,7 +606,11 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 		}); err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{c}}, nil
+	// Пересечение точки финиша делает часть сделанной — значит, доля
+	// разбиения у родителя изменилась, и он едет вместе с ней. Иначе
+	// полоса на родителе оставалась прежней до перезагрузки: часть уже
+	// в «Готово», а над ней по-прежнему «0 из 5».
+	return withParent(ctx, tx, boardID, c)
 }
 
 type updateCardPayload struct {
@@ -695,7 +699,9 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, payload); err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{c}}, nil
+	// Оценка входит в долю разбиения родителя, когда оценены все части:
+	// изменение веса меняет и его полосу.
+	return withParent(ctx, tx, boardID, c)
 }
 
 type archiveCardPayload struct {
@@ -736,7 +742,13 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"from": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
-	return Patch{RemovedCardIDs: []string{id}}, nil
+	// Убранная часть выпадает из доли разбиения: родитель едет следом,
+	// иначе «2 из 5» осталось бы висеть над четырьмя частями.
+	parents, err := parentCards(ctx, tx, boardID, id)
+	if err != nil {
+		return Patch{}, err
+	}
+	return Patch{RemovedCardIDs: []string{id}, Cards: parents}, nil
 }
 
 // restoreCard возвращает карточку на доску.
@@ -793,7 +805,8 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"to": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{card}}, nil
+	// Вернувшаяся часть снова входит в долю разбиения.
+	return withParent(ctx, tx, boardID, card)
 }
 
 // deleteCard стирает карточку насовсем — вместе с тем, как шла её работа.

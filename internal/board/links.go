@@ -345,6 +345,41 @@ func linkPatch(ctx context.Context, tx pgx.Tx, boardID string, p linkPayload) (P
 
 // readCard читает карточку доски вместе с вычисляемым прогрессом и
 // блокировкой — тем же составом, что отдаёт снимок доски.
+// progressOf — доля разбиения одной карточки, ровно та же, что кладёт
+// в снимок enrich.
+//
+// Считается тем же способом намеренно: раньше здесь стоял свой запрос,
+// который всегда считал по штукам, а снимок при оценённых подзадачах
+// считает по весу. Отметка одной части меняла не только долю,
+// но и шкалу — «3 из 8» превращалось в «2 из 5», и полоса прыгала
+// назад на глазах у того, кто только что отметил работу сделанной.
+func progressOf(ctx context.Context, tx pgx.Tx, cardID string) (*Progress, error) {
+	var total, done, unestimated int
+	var weight, weightDone float64
+	err := tx.QueryRow(ctx, `
+		select count(*),
+		       count(*) filter (where `+cardDone+`),
+		       count(*) filter (where c.estimate is null),
+		       coalesce(sum(c.estimate), 0),
+		       coalesce(sum(c.estimate) filter (where `+cardDone+`), 0)
+		  from card_links l
+		  join cards c on c.id = l.to_card and c.archived_at is null
+		 where l.from_card = $1 and l.kind = 'subtask'`, cardID).
+		Scan(&total, &done, &unestimated, &weight, &weightDone)
+	if err != nil {
+		return nil, err
+	}
+	if total == 0 {
+		return nil, nil
+	}
+	// Вес берётся, только если оценены все подзадачи: иначе неоценённая
+	// работа молча исчезла бы из знаменателя.
+	if unestimated == 0 && weight > 0 {
+		return &Progress{Done: weightDone, Total: weight, ByWeight: true}, nil
+	}
+	return &Progress{Done: float64(done), Total: float64(total)}, nil
+}
+
 func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, error) {
 	c, err := scanCard(tx.QueryRow(ctx, `
 		select `+cardFields+` from cards
@@ -353,18 +388,11 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 		return Card{}, err
 	}
 
-	var p Progress
-	err = tx.QueryRow(ctx, `
-		select count(*), count(*) filter (where `+cardDone+`)
-		  from card_links l
-		  join cards c on c.id = l.to_card and c.archived_at is null
-		 where l.from_card = $1 and l.kind = 'subtask'`, cardID).Scan(&p.Total, &p.Done)
+	p, err := progressOf(ctx, tx, cardID)
 	if err != nil {
 		return Card{}, err
 	}
-	if p.Total > 0 {
-		c.Progress = &p
-	}
+	c.Progress = p
 
 	var b Block
 	err = tx.QueryRow(ctx, `
@@ -437,26 +465,46 @@ func setCardDone(
 
 	// Родитель приезжает вместе с ней: доля разбиения у него только что
 	// изменилась, а узнаёт он об этом ниоткуда — связь не его поле.
-	patch := Patch{Cards: []Card{c}}
-	var parentID string
-	err = tx.QueryRow(ctx, `
-		select from_card from card_links
-		 where to_card = $1 and kind = 'subtask'`, p.CardID).Scan(&parentID)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows): // отмечают не только подзадачи
-	case err != nil:
+	return withParent(ctx, tx, boardID, c)
+}
+
+// withParent добавляет к патчу родителя этой карточки, если она чья-то
+// часть. Всё, что меняет готовность части, меняет и долю родителя —
+// а сам он об этом не узнаёт ниоткуда: связь не его поле. Без этого
+// полоса разбиения оставалась прежней до перезагрузки страницы.
+//
+// Родитель на чужой доске в патч не попадает: там его перечитают
+// со снимком, как и всё остальное чужое.
+func withParent(ctx context.Context, tx pgx.Tx, boardID string, c Card) (Patch, error) {
+	parents, err := parentCards(ctx, tx, boardID, c.ID)
+	if err != nil {
 		return Patch{}, err
-	default:
-		parent, err := readCard(ctx, tx, boardID, parentID)
-		// Родитель на чужой доске в патч не попадает — там его перечитают
-		// со снимком, как и всё остальное чужое.
-		if err == nil {
-			patch.Cards = append(patch.Cards, parent)
-		} else if !errors.Is(err, pgx.ErrNoRows) {
-			return Patch{}, err
-		}
 	}
-	return patch, nil
+	return Patch{Cards: append([]Card{c}, parents...)}, nil
+}
+
+// parentCards — родитель этой карточки, если она чья-то часть и родитель
+// живёт на этой же доске. Ноль или одна карточка: подзадача принадлежит
+// одному родителю.
+func parentCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card, error) {
+	var parentID string
+	err := tx.QueryRow(ctx, `
+		select from_card from card_links
+		 where to_card = $1 and kind = 'subtask'`, cardID).Scan(&parentID)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows): // карточка не чья-то часть
+		return nil, nil
+	case err != nil:
+		return nil, err
+	}
+	parent, err := readCard(ctx, tx, boardID, parentID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return []Card{parent}, nil
 }
 
 // --- блокировки ---

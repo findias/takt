@@ -867,3 +867,73 @@ func TestCardCreatedPastTheFinishIsDone(t *testing.T) {
 		t.Errorf("карточка в очереди объявлена завершённой: %+v", fresh)
 	}
 }
+
+// Доля разбиения меняется от того, что случилось с частью, а родитель
+// узнаёт об этом ниоткуда: связь — не его поле. Пока патч его не привозил,
+// «0 из 2» висело над карточкой, часть которой уже в «Готово», — и висело
+// до перезагрузки страницы. Проверяется именно патч, а не снимок: снимок
+// считал долю правильно всегда, потому и не ловилось.
+func TestParentProgressTravelsWithTheChange(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	queue, done := cols[0].ID, cols[len(cols)-1].ID
+	if !cols[len(cols)-1].IsFinishedPoint {
+		t.Fatalf("последняя колонка не точка финиша: %+v", cols[len(cols)-1])
+	}
+
+	parent := f.createCard("Выпустить релиз", queue)
+	first := f.createCard("Собрать сборку", queue)
+	second := f.createCard("Прогнать нагрузочные", queue)
+	for _, child := range []string{first, second} {
+		f.mustApply("LINK_CARDS", map[string]any{
+			"fromCard": parent, "toCard": child, "kind": "subtask"})
+	}
+
+	// Часть переехала за точку финиша — она сделана, и доля родителя
+	// изменилась вместе с ней.
+	res := f.mustApply("MOVE_CARD", map[string]any{
+		"cardId": first, "toColumnId": done, "place": "end"})
+	p := patchedProgress(t, res, parent)
+	if p == nil || p.Done != 1 || p.Total != 2 {
+		t.Fatalf("после переезда части родитель приехал с долей %+v, ожидалось 1 из 2", p)
+	}
+
+	// Отметка руками — то же самое.
+	res = f.mustApply("SET_CARD_DONE", map[string]any{"cardId": second, "done": true})
+	p = patchedProgress(t, res, parent)
+	if p == nil || p.Done != 2 || p.Total != 2 {
+		t.Fatalf("после отметки родитель приехал с долей %+v, ожидалось 2 из 2", p)
+	}
+
+	// Убранная часть выпадает из знаменателя.
+	res = f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": second})
+	p = patchedProgress(t, res, parent)
+	if p == nil || p.Done != 1 || p.Total != 1 {
+		t.Fatalf("после уборки части родитель приехал с долей %+v, ожидалось 1 из 1", p)
+	}
+
+	// Оценка меняет вес: доля считается по весу, когда оценены все части.
+	// Отметка при возврате из архива не снимается — снимем её руками,
+	// иначе обе части сделаны и доля не различает вес.
+	f.mustApply("RESTORE_CARD", map[string]any{"cardId": second})
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": second, "done": false})
+	f.mustApply("UPDATE_CARD", map[string]any{"cardId": first, "estimate": 3})
+	res = f.mustApply("UPDATE_CARD", map[string]any{"cardId": second, "estimate": 1})
+	p = patchedProgress(t, res, parent)
+	if p == nil || !p.ByWeight || p.Done != 3 || p.Total != 4 {
+		t.Fatalf("после оценки родитель приехал с долей %+v, ожидалось 3 из 4 по весу", p)
+	}
+}
+
+// patchedProgress — доля разбиения родителя в приехавшем патче. Именно
+// в патче: снимок доски перечитывают не после каждой операции, и то,
+// чего в патче нет, на экране не меняется.
+func patchedProgress(t *testing.T, res Result, parentID string) *Progress {
+	t.Helper()
+	for _, c := range res.Patch.Cards {
+		if c.ID == parentID {
+			return c.Progress
+		}
+	}
+	return nil
+}
