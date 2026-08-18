@@ -16,6 +16,8 @@ import {
   dueLabel,
   priorityLabel,
   priorityShort,
+  blockedParts,
+  blockedPartsLabel,
   progressLabel,
   progressRatio,
   unitLabel,
@@ -230,13 +232,23 @@ function CardViewInner({
    * остальные живут в панели и в отборах.
    */
   const due = card?.dueOn ? dueLabel(card.dueOn) : null
+  // Часть, которая стоит, останавливает и целое: разбили работу, одна
+  // часть упёрлась — задача не идёт. Раньше об этом знала только сама
+  // часть, а с доски работа выглядела идущей.
+  const stuckParts = blockedParts(subtasks)
   const alarm = card?.blocked
     ? {
         kind: 'blocked',
         text: `Заблокирована: ${card.blocked.reason}`,
         title: card.blocked.reason,
       }
-    : // Горит, а не «подходит»: тревогу занимает только сегодняшнее
+    : stuckParts.length > 0
+      ? {
+          kind: 'blocked',
+          text: blockedPartsLabel(stuckParts) ?? '',
+          title: stuckParts.map((s) => s.title).join(', '),
+        }
+      : // Горит, а не «подходит»: тревогу занимает только сегодняшнее
       // и просроченное. Срок через два-три дня остаётся тихой
       // пометкой — иначе он вытесняет с доски старение, которое
       // и есть главный сигнал канбана.

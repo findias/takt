@@ -22,7 +22,7 @@
  */
 
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
-import { CommentIcon } from '../../shared/ui/icons.tsx'
+import { BlockedIcon, CommentIcon } from '../../shared/ui/icons.tsx'
 import type { Related } from '../../entities/card/model.ts'
 
 export function SubtaskRow({
@@ -111,6 +111,22 @@ export function SubtaskRow({
       )}
 
       <span className="subtask-tail">
+        {/* Какая именно часть упёрлась. Родитель говорит, что стоит
+            из-за части; без пометки в строке приходится открывать их
+            по одной, чтобы узнать какая. */}
+        {subtask.blocked && (
+          <span
+            className="subtask-blocked"
+            title={
+              subtask.blockedReason
+                ? `Заблокирована: ${subtask.blockedReason}`
+                : 'Заблокирована'
+            }
+            aria-label="Заблокирована"
+          >
+            <BlockedIcon size={12} />
+          </span>
+        )}
         {replies > 0 && (
           <span className="subtask-replies" title={`Реплик в обсуждении: ${replies}`}>
             <CommentIcon size={12} />

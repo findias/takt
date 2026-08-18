@@ -1048,6 +1048,13 @@ select {
 .tree-actions {
   margin-inline-start: auto;
 }
+/* Упёршаяся часть помечена цветом тревоги, как и сама блокировка
+   на карточке: одно состояние — один цвет. */
+.subtask-blocked {
+  display: inline-flex;
+  align-items: center;
+  color: var(--warn);
+}
 .tree-body {
   margin: var(--space-1) 0 var(--space-2) var(--space-6);
   padding-left: var(--space-3);

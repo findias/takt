@@ -45,6 +45,7 @@ const ctx = {
   labelsOf: () => [] as string[],
   assigneesOf: () => [] as string[],
   iterationOf: () => undefined as string | undefined,
+  partsBlocked: () => false,
   sleDays: null,
 }
 
@@ -163,6 +164,18 @@ test('исполнитель: конкретный, один из несколь
   const nobody = { ...EMPTY, assignee: UNASSIGNED }
   assert.equal(matches(card(), nobody, ctx), true)
   assert.equal(matches(card(), nobody, withPeople(['u-1'])), false)
+})
+
+test('«заблокированные» показывает и тех, у кого стоит часть', () => {
+  const f = { ...EMPTY, blocked: true }
+  // Работа не идёт и тогда, когда упёрлась её часть: разбили,
+  // одна часть встала — с доски задача выглядела идущей.
+  assert.equal(matches(card(), f, ctx), false)
+  assert.equal(matches(card(), f, { ...ctx, partsBlocked: () => true }), true)
+  assert.equal(
+    matches(card({ blocked: { id: 'b', reason: 'ждём стенд', blockedAt: '' } }), f, ctx),
+    true,
+  )
 })
 
 test('метки складываются по И, а не по ИЛИ', () => {

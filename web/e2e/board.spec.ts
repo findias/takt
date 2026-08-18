@@ -1141,6 +1141,45 @@ test('подзадачи раскрываются прямо с доски', asy
   await expect(parent.getByTitle('На кого разложены части').locator('.avatar')).toHaveCount(1)
 })
 
+// Часть, которая стоит, останавливает и целое: разбили работу, одна
+// часть упёрлась — задача не идёт. Знала об этом только сама часть,
+// а с доски родитель выглядел идущим, и отбор «что не идёт» его
+// не показывал.
+test('заблокированная часть останавливает и родителя', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с упёршейся частью')
+  await addCard(page, 'Очередь', 'Выпустить релиз')
+
+  const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
+  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await expect(page.getByRole('button', { name: 'Прогнать нагрузочные' }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  const part = cardIn(page, 'Очередь', 'Прогнать нагрузочные')
+  await part.hover()
+  await part.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
+  await part.getByLabel('Причина блокировки').fill('стенд лежит')
+  await part.getByLabel('Причина блокировки').press('Enter')
+
+  // На родителе видно и то, что он стоит, и почему.
+  await expect(parent.getByText('Часть заблокирована: стенд лежит')).toBeVisible()
+
+  // И отбор «что не идёт» его показывает.
+  await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
+  await expect(cardIn(page, 'Очередь', 'Выпустить релиз')).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Заблокированные' }).uncheck()
+
+  // Часть отпустили — родитель пошёл дальше.
+  await part.hover()
+  await part.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Снять блокировку' }).click()
+  await expect(parent.getByText(/Часть заблокирована/)).toHaveCount(0)
+})
+
 test('история спрятана за вкладкой, карточка открывается обсуждением', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска вкладок')

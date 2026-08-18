@@ -34,6 +34,9 @@ export type Related = {
   promise: string | null
   done: boolean
   blocked: boolean
+  /** Причина, по которой часть стоит. Известна у своих карточек;
+   *  о чужой снимок знает только сам факт. */
+  blockedReason: string | null
   /** Ложь означает, что карточка есть, но доска недоступна: связь
    *  показываем, содержимое — нет. Скрывать саму связь неправильно:
    *  прогресс родителя её всё равно учитывает. */
@@ -188,6 +191,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       // и то же — «сделана», — и прогресс родителя считает их поровну.
       done: own.outcome === 'done' || own.doneAt !== null,
       blocked: Boolean(own.blocked),
+      blockedReason: own.blocked?.reason ?? null,
       reachable: true,
       onThisBoard: true,
       // Исполнители и разговор — только у своих карточек: про чужую
@@ -213,6 +217,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       promise: foreign.archived || foreign.outcome || foreign.done ? null : promiseOf(foreign),
       done: foreign.outcome === 'done' || foreign.done,
       blocked: foreign.blocked,
+      blockedReason: null,
       reachable: true,
       onThisBoard: false,
       assignees: NO_ONE,
@@ -230,6 +235,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
     promise: null,
     done: false,
     blocked: false,
+    blockedReason: null,
     reachable: false,
     onThisBoard: false,
     assignees: NO_ONE,
@@ -292,6 +298,32 @@ const UNITS: Record<EstimateUnit, [string, string, string]> = {
  * мелкие правки из пяти задач не означают, что работа сделана на
  * шестьдесят процентов, и подпись не должна это скрывать.
  */
+/**
+ * Заблокированные части работы.
+ *
+ * Часть, которая стоит, останавливает и целое: разбили работу, одна
+ * часть упёрлась — задача не идёт, и по доске это обязано быть видно
+ * с того места, где на неё смотрят. Обратное правило записано раньше
+ * и остаётся: заблокированный родитель не останавливает остальные
+ * части, их как раз и продолжают.
+ */
+export function blockedParts(subtasks: Related[]): Related[] {
+  return subtasks.filter((s) => s.blocked)
+}
+
+/** Строка тревоги для родителя, у которого стоят части. */
+export function blockedPartsLabel(parts: Related[]): string | null {
+  if (parts.length === 0) return null
+  if (parts.length > 1) return `Части заблокированы: ${parts.length}`
+  // Причина своей части известна и говорит больше названия: «ждём
+  // доступ к стенду» — это ответ, а «часть заблокирована» — только
+  // повод открыть карточку.
+  const [one] = parts
+  return one.blockedReason
+    ? `Часть заблокирована: ${one.blockedReason}`
+    : `Часть заблокирована: ${one.title}`
+}
+
 export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   if (!card.progress || card.progress.total === 0) return null
   const { done, total, byWeight } = card.progress

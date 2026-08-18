@@ -190,10 +190,21 @@ export function Board({
   // доской, иначе включённый фильтр начал бы менять её поведение.
   const { order, hidden } = useMemo(() => {
     if (!base || isEmpty(filters)) return { order: fullOrder, hidden: 0 }
+    // Карточки, у которых стоит часть. Считается один раз на проход
+    // отбора: связей у доски единицы на карточку, а спрашивать по одной
+    // значило бы обходить их заново для каждой.
+    const stuck = new Set<string>()
+    for (const link of base.links) {
+      if (link.kind !== 'subtask') continue
+      const own = base.cards[link.toCard]
+      const foreign = base.linked[link.toCard]
+      if (own ? Boolean(own.blocked) : Boolean(foreign?.blocked)) stuck.add(link.fromCard)
+    }
     const context = {
       labelsOf: (cardId: string) => base.cardLabels[cardId] ?? [],
       iterationOf: (cardId: string) => base.cardIterations[cardId],
       assigneesOf: (cardId: string) => base.cardAssignees[cardId] ?? [],
+      partsBlocked: (cardId: string) => stuck.has(cardId),
       sleDays: base.info.sleDays,
     }
     const next: Record<string, string[]> = {}

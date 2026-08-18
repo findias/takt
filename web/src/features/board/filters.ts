@@ -141,6 +141,9 @@ export type FilterContext = {
   iterationOf: (cardId: string) => string | undefined
   /** Исполнители карточки: их несколько, и «на мне» значит «я среди них». */
   assigneesOf: (cardId: string) => string[]
+  /** Стоит ли хоть одна её часть. Отбор «заблокированные» спрашивает
+   *  «что не идёт», а работа не идёт и тогда, когда упёрлась её часть. */
+  partsBlocked: (cardId: string) => boolean
   sleDays: number | null
   now?: number
 }
@@ -169,7 +172,9 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
     if (!f.labels.every((id) => own.has(id))) return false
   }
 
-  if (f.blocked && !card.blocked) return false
+  // Заблокирована сама или стоит её часть: и то и другое — ответ
+  // на «что не идёт».
+  if (f.blocked && !card.blocked && !ctx.partsBlocked(card.id)) return false
 
   if (f.aging && !agingLabel(card, ctx.sleDays, ctx.now)) return false
 
