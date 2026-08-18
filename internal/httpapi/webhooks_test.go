@@ -72,6 +72,17 @@ func (r *receiver) answer(status int) {
 	r.mu.Unlock()
 }
 
+// queueWorker — работник очереди со своей связью с базой.
+func queueWorker(t *testing.T) *webhook.Worker {
+	t.Helper()
+	db, err := store.Open(context.Background(), os.Getenv("TEST_DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(db.Close)
+	return webhook.NewWorker(db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
 // drain разбирает очередь доставок до конца, а не одной пачкой.
 //
 // Очередь общая на базу, а пачка — десять: в полном прогоне первыми
@@ -80,14 +91,7 @@ func (r *receiver) answer(status int) {
 // которую никто не брался, — «attempts: 0».
 func drain(t *testing.T) int {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	db, err := store.Open(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	worker := webhook.NewWorker(db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	worker := queueWorker(t)
 	total := 0
 	for {
 		// Неудачная доставка откладывается на потом, поэтому второй раз
@@ -101,6 +105,58 @@ func drain(t *testing.T) int {
 		}
 		total += sent
 	}
+}
+
+// await разбирает очередь, пока не сбудется ожидаемое.
+//
+// Работник в очереди не один. Она общая на базу, и рядом идёт настоящий
+// сервер — `make run` и `make e2e` поднимают его на той же базе, а
+// получатель проверки живёт на этой же машине и потому ему доступен.
+// Доставку он забирает с равным правом, и своего прохода тогда не
+// хватает: между тем, как чужой работник занял строку, и тем, как он
+// записал исход, проходит запрос к получателю. Проверка, заглянувшая
+// в журнал в этот миг, видит «попытка есть, ответа нет» и падает на
+// ровном месте — так и мигало, оба раза рядом с браузерными сценариями.
+//
+// Ждать исход, а не свой проход, вдобавок честнее: доставка обещана
+// «не менее одного раза», и чей работник её сделает — не дело проверки.
+func await(t *testing.T, what string, ready func() bool) {
+	t.Helper()
+	worker := queueWorker(t)
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if _, err := worker.Once(context.Background()); err != nil {
+			t.Fatalf("разбор очереди: %v", err)
+		}
+		if ready() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("не дождались: %s", what)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// journalEntry — строка журнала доставок, как её видит владелец.
+type journalEntry struct {
+	ID         string  `json:"id"`
+	Attempts   int     `json:"attempts"`
+	Delivered  bool    `json:"delivered"`
+	LastStatus *int    `json:"lastStatus"`
+	LastError  *string `json:"lastError"`
+}
+
+func deliveries(t *testing.T, owner *session, hookID string) []journalEntry {
+	t.Helper()
+	raw := owner.mustDo("GET", "/api/webhooks/"+hookID+"/deliveries", nil, http.StatusOK)
+	var journal struct {
+		Deliveries []journalEntry `json:"deliveries"`
+	}
+	if err := json.Unmarshal(raw, &journal); err != nil {
+		t.Fatal(err)
+	}
+	return journal.Deliveries
 }
 
 // Подписка на несуществующее событие раньше заводилась с кодом 201
@@ -173,9 +229,9 @@ func TestWebhookDeliversSignedEvent(t *testing.T) {
 		"payload":     map[string]any{"columnId": snap.Columns[0].ID, "title": "Задача"},
 	}, http.StatusOK)
 
-	if sent := drain(t); sent == 0 {
-		t.Fatal("работник не нашёл доставку в очереди")
-	}
+	await(t, "событие не доехало до получателя", func() bool {
+		return len(target.received()) > 0
+	})
 
 	got := target.received()
 	if len(got) != 1 {
@@ -239,26 +295,17 @@ func TestFailedDeliveryIsKeptWithItsReasonAndCanBeRetried(t *testing.T) {
 		"payload":     map[string]any{"columnId": snap.Columns[0].ID, "title": "Задача"},
 	}, http.StatusOK)
 
-	drain(t)
-
-	raw = owner.mustDo("GET", "/api/webhooks/"+hookID+"/deliveries", nil, http.StatusOK)
-	var journal struct {
-		Deliveries []struct {
-			ID         string  `json:"id"`
-			Attempts   int     `json:"attempts"`
-			Delivered  bool    `json:"delivered"`
-			LastStatus *int    `json:"lastStatus"`
-			LastError  *string `json:"lastError"`
-		} `json:"deliveries"`
-	}
-	if err := json.Unmarshal(raw, &journal); err != nil {
-		t.Fatal(err)
-	}
-	if len(journal.Deliveries) != 1 {
-		t.Fatalf("в журнале %d доставок, ожидалась одна", len(journal.Deliveries))
-	}
-	d := journal.Deliveries[0]
-	if d.Delivered || d.Attempts != 1 || d.LastStatus == nil || *d.LastStatus != 500 {
+	var d journalEntry
+	await(t, "отказ получателя не записан в журнал", func() bool {
+		list := deliveries(t, owner, hookID)
+		if len(list) != 1 {
+			t.Fatalf("в журнале %d доставок, ожидалась одна", len(list))
+		}
+		d = list[0]
+		// Попытка засчитана и ответ записан — исход, а не полдела.
+		return d.Attempts > 0 && d.LastStatus != nil
+	})
+	if d.Delivered || *d.LastStatus != 500 {
 		t.Fatalf("неудачная доставка записана неверно: %+v", d)
 	}
 	if d.LastError == nil || *d.LastError == "" {
@@ -268,15 +315,10 @@ func TestFailedDeliveryIsKeptWithItsReasonAndCanBeRetried(t *testing.T) {
 	// Получателя починили — досдаём вручную, не выдумывая событие заново.
 	target.answer(http.StatusOK)
 	owner.mustDo("POST", "/api/deliveries/"+d.ID+"/retry", nil, http.StatusNoContent)
-	drain(t)
-
-	raw = owner.mustDo("GET", "/api/webhooks/"+hookID+"/deliveries", nil, http.StatusOK)
-	if err := json.Unmarshal(raw, &journal); err != nil {
-		t.Fatal(err)
-	}
-	if !journal.Deliveries[0].Delivered {
-		t.Errorf("после повтора доставка не отмечена доставленной: %+v", journal.Deliveries[0])
-	}
+	await(t, "после повтора доставка не отмечена доставленной", func() bool {
+		list := deliveries(t, owner, hookID)
+		return len(list) == 1 && list[0].Delivered
+	})
 }
 
 // Подписка выносит данные наружу, поэтому заводит и видит её владелец.
