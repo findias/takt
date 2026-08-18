@@ -1248,7 +1248,10 @@ function Iterations({
       <ConfirmDialog
         open={toClose !== null}
         title="Закрыть итерацию?"
-        confirmLabel="Закрыть"
+        // Не просто «Закрыть»: рядом на экране живёт «Закрыть» панели,
+        // и одно и то же слово означало бы то «уйти отсюда», то
+        // «заморозить состав навсегда».
+        confirmLabel="Закрыть итерацию"
         danger
         onCancel={() => setToClose(null)}
         onConfirm={() => {
@@ -1271,7 +1274,13 @@ function Iterations({
             <button className="link" onClick={() => onReport(i)}>
               {i.name} · {rangeWords(i.startsOn, i.endsOn)} · {i.cardCount}
             </button>
-            <button className="link" onClick={() => setToClose(i)}>
+            {/* Имя называет итерацию: кнопок «закрыть» в строке столько
+                же, сколько итераций, и с диктора они звучали одинаково. */}
+            <button
+              className="link"
+              aria-label={`Закрыть итерацию «${i.name}»`}
+              onClick={() => setToClose(i)}
+            >
               закрыть
             </button>
           </span>
@@ -1318,9 +1327,9 @@ function Iterations({
           <input name="endsOn" type="date" required aria-label="Конец" />
           <input name="goal" placeholder="Цель" />
           <button type="submit">Создать</button>
-          <button type="button" className="link" onClick={() => setAdding(false)}>
+          <Button kind="quiet" type="button" onClick={() => setAdding(false)}>
             Отмена
-          </button>
+          </Button>
         </form>
       )}
     </div>

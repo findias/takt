@@ -461,7 +461,7 @@ describe('часть работы держит саму задачу', () => {
     await user.click(await screen.findByRole('tab', { name: 'Работа' }))
     await user.click(await screen.findByRole('button', { name: 'Держит' }))
     await user.type(screen.getByLabelText('Причина блокировки'), 'ждём смету от подрядчика')
-    await user.click(screen.getByRole('button', { name: 'Отметить' }))
+    await user.click(screen.getByRole('button', { name: 'Заблокировать' }))
 
     await waitFor(() => expect(operation).toHaveBeenCalled())
     const [, , type, payload] = operation.mock.calls[0]

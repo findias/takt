@@ -269,3 +269,53 @@ test('флажок не мельче цели нажатия, подпись н�
   })
   expect(under, 'подписи, уехавшие под флажок').toEqual([])
 })
+
+/**
+ * Одинаковые кнопки разных объектов названы по объекту.
+ *
+ * «Разметка» стоит в шапке каждой колонки, «Доступ» — в каждой строке
+ * списка досок, «закрыть» — у каждой открытой итерации. Глазами их
+ * различают по месту, а с диктора все они звучат одинаково, и выбрать
+ * нужную нельзя: имя обязано называть то, над чем действие.
+ *
+ * Список короткий намеренно: это не правило «имена не повторяются» —
+ * две кнопки про одну и ту же карточку повторяться могут, — а перечень
+ * тех, которые уже повторялись по разным объектам.
+ */
+const CONTEXTLESS = ['Разметка', 'Добавить карточку', 'Доступ', 'закрыть']
+
+async function contextless(page: Page): Promise<string[]> {
+  return page.evaluate((names) => {
+    const out: string[] = []
+    for (const el of document.querySelectorAll<HTMLElement>('button, a[href]')) {
+      const box = el.getBoundingClientRect()
+      if (box.width === 0 && box.height === 0) continue
+      const name = (el.getAttribute('aria-label') || el.textContent || '').trim()
+      if (names.includes(name)) out.push(name)
+    }
+    return out
+  }, CONTEXTLESS)
+}
+
+test('кнопки, которых по нескольку, названы по своему объекту', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Имена')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  // На доске столько «Разметок» и «Добавить карточку», сколько колонок.
+  expect(await contextless(page), 'доска').toEqual([])
+
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 34')
+  await page.getByLabel('Начало').fill('2026-08-10')
+  await page.getByLabel('Конец').fill('2026-08-16')
+  await page.getByRole('button', { name: 'Создать' }).click()
+  await expect(page.getByRole('button', { name: /^Неделя 34 ·/ })).toBeVisible()
+  expect(await contextless(page), 'доска с итерацией').toEqual([])
+
+  // В списке досок «Доступ» стоит в каждой строке.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
+  expect(await contextless(page), 'список досок').toEqual([])
+})

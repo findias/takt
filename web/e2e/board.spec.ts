@@ -1429,7 +1429,7 @@ test('закрытая итерация остаётся на экране и о
   await page.getByLabel('Конец').fill('2026-08-16')
   await page.getByPlaceholder('Цель').fill('Закрыть смету')
   await page.getByRole('button', { name: 'Создать' }).click()
-  await expect(page.getByRole('button', { name: /Неделя 34/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Неделя 34 ·/ })).toBeVisible()
 
   // Обе карточки в итерации.
   for (const title of ['Смета по объекту', 'Регламент приёмки']) {
@@ -1450,8 +1450,11 @@ test('закрытая итерация остаётся на экране и о
   // Закрываем итерацию — и она не исчезает с экрана: закрытие делается
   // ради ответа «что было в спринте», а до этого в этот же миг ответ
   // и пропадал.
-  await page.getByRole('button', { name: 'закрыть', exact: true }).click()
-  await page.locator('dialog').getByRole('button', { name: 'Закрыть' }).click()
+  await page.getByRole('button', { name: 'Закрыть итерацию «Неделя 34»' }).click()
+  // В диалоге кнопка называет то, что случится: «Закрыть» рядом
+  // с «Закрыть» панели означало бы то «уйти отсюда», то «заморозить
+  // состав навсегда».
+  await page.locator('dialog').getByRole('button', { name: 'Закрыть итерацию' }).click()
   await expect(page.getByText('Закрытые:')).toBeVisible()
 
   await page.getByRole('button', { name: 'Неделя 34', exact: true }).click()

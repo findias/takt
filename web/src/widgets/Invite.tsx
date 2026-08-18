@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
 import type { InviteInfo, Principal } from '../shared/api/index.ts'
+import { Button } from '../shared/ui/Button.tsx'
 
 /**
  * Приём приглашения по ссылке.
@@ -101,9 +102,9 @@ export function InviteScreen({
         <button type="submit" disabled={busy}>
           {busy ? 'Секунду…' : 'Присоединиться'}
         </button>
-        <button type="button" className="link" onClick={onCancel}>
+        <Button kind="quiet" type="button" onClick={onCancel}>
           Не сейчас
-        </button>
+        </Button>
       </form>
     </div>
   )

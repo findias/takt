@@ -11,7 +11,7 @@ import type {
   Label,
   Priority,
 } from '../../shared/api/index.ts'
-import { IconButton } from '../../shared/ui/Button.tsx'
+import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/icons.tsx'
 import { NO_SUBTASKS } from '../../entities/card/model.ts'
@@ -173,10 +173,13 @@ export function ColumnView(props: ColumnProps) {
           />
         </div>
         <div className="row row--tight">
+          {/* Имя называет колонку: «Разметка» в шапке каждой колонки
+              звучит одинаково, и с диктора их три неотличимых. */}
           {!props.collapsed && (
             <button
               className="link column-settings-toggle"
               aria-expanded={settings}
+              aria-label={`Разметка колонки «${props.name}»`}
               onClick={() => setSettings((v) => !v)}
             >
               Разметка
@@ -301,7 +304,11 @@ export function ColumnView(props: ColumnProps) {
         />
       ) : (
         !props.collapsed && (
-          <button className="add" onClick={() => setAdding(true)}>
+          <button
+            className="add"
+            aria-label={`Добавить карточку в «${props.name}»`}
+            onClick={() => setAdding(true)}
+          >
             <PlusIcon />
             Добавить карточку
           </button>
@@ -344,9 +351,11 @@ function NewCardForm({
         <button type="submit" disabled={!value.trim()}>
           Добавить
         </button>
-        <button type="button" className="link" onClick={onCancel}>
+        {/* Отмена — тихая: цвет ссылки рядом с главным действием
+            перетягивает взгляд на себя, и первым читается «Отмена». */}
+        <Button kind="quiet" type="button" onClick={onCancel}>
           Отмена
-        </button>
+        </Button>
       </div>
     </form>
   )

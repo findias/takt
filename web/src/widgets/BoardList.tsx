@@ -68,9 +68,12 @@ export function BoardList({
             <div className="row row--between">
               <button onClick={() => onOpen(b.id)}>{b.name}</button>
               <div className="row row--tight">
+                {/* Имя называет доску: «Доступ» стоит в каждой строке
+                    списка, и без названия они звучат одинаково. */}
                 <button
                   className="link"
                   aria-expanded={openAccess === b.id}
+                  aria-label={`Доступ к доске «${b.name}»`}
                   onClick={() => setOpenAccess((v) => (v === b.id ? null : b.id))}
                 >
                   Доступ

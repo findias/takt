@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../shared/api/index.ts'
 import type { Comment } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
+import { Button } from '../../shared/ui/Button.tsx'
 
 /**
  * Обсуждение карточки.
@@ -165,16 +166,16 @@ function CommentRow({
           />
           <div className="row row--tight">
             <button type="submit">Сохранить</button>
-            <button
+            <Button
+              kind="quiet"
               type="button"
-              className="link"
               onClick={() => {
                 setDraft(comment.body)
                 setEditing(false)
               }}
             >
               Отмена
-            </button>
+            </Button>
           </div>
         </form>
       ) : (

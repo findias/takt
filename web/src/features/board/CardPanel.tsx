@@ -794,14 +794,14 @@ function BlockForm({
   const [reason, setReason] = useState('')
 
   // Форма про часть открыта всегда: её открыло нажатие «Держит»,
-  // и вторая кнопка «Отметить блокировку» была бы вопросом, на который
+  // и вторая кнопка «Заблокировать…» была бы вопросом, на который
   // уже ответили. Начальным состоянием это не задать — React держит
   // тот же узел формы, и состояние от прошлого показа переживает
   // появление части.
   if (!open && !holder) {
     return (
       <button className="link" onClick={() => setOpen(true)}>
-        Отметить блокировку
+        Заблокировать…
       </button>
     )
   }
@@ -828,19 +828,23 @@ function BlockForm({
         aria-label="Причина блокировки"
         onChange={(e) => setReason(e.target.value)}
       />
-      <button type="submit" disabled={!reason.trim()}>
-        Отметить
-      </button>
-      <button
+      {/* Глагол называет то, что произойдёт. «Отметить» не отвечает
+          на вопрос «что отметить» и в ряду с «Отмена» читается как её
+          пара — два похожих слова, из которых первое ещё и приглушено,
+          пока причина не набрана. */}
+      <Button kind="primary" type="submit" disabled={!reason.trim()}>
+        Заблокировать
+      </Button>
+      <Button
+        kind="quiet"
         type="button"
-        className="link"
         onClick={() => {
           setOpen(false)
           onCancel?.()
         }}
       >
         Отмена
-      </button>
+      </Button>
       </div>
     </form>
   )
