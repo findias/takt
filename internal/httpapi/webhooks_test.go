@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/store"
@@ -75,12 +76,34 @@ func (r *receiver) answer(status int) {
 // queueWorker — работник очереди со своей связью с базой.
 func queueWorker(t *testing.T) *webhook.Worker {
 	t.Helper()
+	return webhook.NewWorker(testStore(t), slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
+func testStore(t *testing.T) *store.Store {
+	t.Helper()
 	db, err := store.Open(context.Background(), os.Getenv("TEST_DATABASE_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(db.Close)
-	return webhook.NewWorker(db, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return db
+}
+
+// dueNow приближает срок следующей попытки. Восемь попыток с удвоением —
+// это около двух часов настоящего ожидания; проверке столько не прожить,
+// а посмотреть, чем кончается последняя попытка, надо.
+func dueNow(t *testing.T, hookID string) {
+	t.Helper()
+	// Без арендатора — как ходит работник: очередь общая.
+	err := testStore(t).InScope(context.Background(), store.Scope{}, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			update webhook_deliveries set next_attempt_at = now()
+			 where webhook_id = $1 and delivered_at is null and failed_at is null`, hookID)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("сдвиг срока попытки: %v", err)
+	}
 }
 
 // drain разбирает очередь доставок до конца, а не одной пачкой.
@@ -143,6 +166,7 @@ type journalEntry struct {
 	ID         string  `json:"id"`
 	Attempts   int     `json:"attempts"`
 	Delivered  bool    `json:"delivered"`
+	Failed     bool    `json:"failed"`
 	LastStatus *int    `json:"lastStatus"`
 	LastError  *string `json:"lastError"`
 }
@@ -319,6 +343,94 @@ func TestFailedDeliveryIsKeptWithItsReasonAndCanBeRetried(t *testing.T) {
 		list := deliveries(t, owner, hookID)
 		return len(list) == 1 && list[0].Delivered
 	})
+}
+
+// Исчерпав попытки, работник сдаётся и отключает подписку: молча копить
+// недоставленное годами хуже, чем перестать и сказать об этом. Сказать —
+// это отметка в списке подписок с причиной; соседняя система в этот
+// момент считает, что у нас ничего не происходит.
+//
+// Проверки на это не было, и отключение не работало вовсе: работник
+// ходит по очереди без арендатора, а менять подписки без арендатора
+// политики не позволяли. Строка обновляла ноль строк и не жаловалась.
+func TestExhaustedSubscriptionIsSwitchedOffAndSaysWhy(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	target := newReceiver(t)
+	target.answer(http.StatusInternalServerError)
+
+	hookID := brokenHook(t, owner, target)
+
+	var d journalEntry
+	await(t, "попытки не кончились", func() bool {
+		list := deliveries(t, owner, hookID)
+		if len(list) != 1 {
+			t.Fatalf("в журнале %d доставок, ожидалась одна", len(list))
+		}
+		d = list[0]
+		if d.Delivered {
+			t.Fatal("получатель отвечает отказом, а доставка отмечена дошедшей")
+		}
+		dueNow(t, hookID)
+		return d.Failed
+	})
+
+	hook := subscription(t, owner, hookID)
+	if !hook.Disabled {
+		t.Fatal("попытки исчерпаны, а подписка числится работающей: она молчит, и об этом не сказано")
+	}
+	if hook.LastError == nil || *hook.LastError == "" {
+		t.Error("подписка отключена без причины: по списку не понять, чинить получателя или адрес")
+	}
+}
+
+// brokenHook — подписка на событие, которое сейчас же и случится.
+func brokenHook(t *testing.T, owner *session, target *receiver) string {
+	t.Helper()
+	raw := owner.mustDo("POST", "/api/webhooks", map[string]any{
+		"name": "Сломанный", "url": target.server.URL,
+		"events": []string{"card.created"},
+	}, http.StatusCreated)
+	hookID, _ := field(t, raw, "id").(string)
+
+	boardID := owner.board("Найм")
+	snapshot := owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	var snap struct {
+		Columns []struct{ ID string } `json:"columns"`
+	}
+	if err := json.Unmarshal(snapshot, &snap); err != nil {
+		t.Fatal(err)
+	}
+	owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(),
+		"type":        "CREATE_CARD",
+		"payload":     map[string]any{"columnId": snap.Columns[0].ID, "title": "Задача"},
+	}, http.StatusOK)
+	return hookID
+}
+
+type subscriptionRow struct {
+	ID        string  `json:"id"`
+	Disabled  bool    `json:"disabled"`
+	LastError *string `json:"lastError"`
+}
+
+func subscription(t *testing.T, owner *session, hookID string) subscriptionRow {
+	t.Helper()
+	raw := owner.mustDo("GET", "/api/webhooks", nil, http.StatusOK)
+	var list struct {
+		Webhooks []subscriptionRow `json:"webhooks"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range list.Webhooks {
+		if h.ID == hookID {
+			return h
+		}
+	}
+	t.Fatalf("подписки %s нет в списке: %s", hookID, raw)
+	return subscriptionRow{}
 }
 
 // Подписка выносит данные наружу, поэтому заводит и видит её владелец.
