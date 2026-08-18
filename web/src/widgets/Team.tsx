@@ -640,10 +640,16 @@ function Export() {
  * здесь был бы хуже: он подтверждал бы, что журнал есть и в нём что-то
  * лежит.
  */
+// Сколько записей показывать сразу. Страница с сервера — пятьдесят,
+// и вся она занимала пол-экрана «Команды»: журнал здесь не главное,
+// а справка, к которой возвращаются с вопросом.
+const FIRST_ENTRIES = 10
+
 function AuditFeed({ people }: { people: Member[] }) {
   const [entries, setEntries] = useState<AuditEntry[]>([])
   const [next, setNext] = useState<number | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [shown, setShown] = useState(FIRST_ENTRIES)
 
   const load = useCallback((before?: number) => {
     api
@@ -672,10 +678,11 @@ function AuditFeed({ people }: { people: Member[] }) {
       <h2 className="section-title">Что происходило</h2>
       <p className="muted small">
         Журнал ведёт база, а не приложение: изменение, сделанное в обход интерфейса,
-        попадает сюда наравне с остальными. Записи только дописываются.
+        попадает сюда наравне с остальными. Записи только дописываются. «Без подписи» —
+        сделанное не человеком: наполнением, миграцией, служебной задачей.
       </p>
       <ul className="feed">
-        {entries.map((e) => (
+        {entries.slice(0, shown).map((e) => (
           <li key={e.id}>
             <span>{auditText(e, names)}</span>
             <span className="muted small">
@@ -684,9 +691,18 @@ function AuditFeed({ people }: { people: Member[] }) {
           </li>
         ))}
       </ul>
-      {next !== null && (
-        <button className="link" onClick={() => load(next)}>
-          Показать раньше
+      {/* Одна кнопка, а не две: показать ещё из уже принесённого
+          и принести следующую страницу — для читателя одно и то же
+          «дальше в прошлое». */}
+      {(shown < entries.length || next !== null) && (
+        <button
+          className="link"
+          onClick={() => {
+            if (shown >= entries.length && next !== null) load(next)
+            setShown((n) => n + FIRST_ENTRIES)
+          }}
+        >
+          Показать ещё
         </button>
       )}
     </section>

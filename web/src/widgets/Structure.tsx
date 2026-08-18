@@ -340,9 +340,11 @@ function TeamBoards({ teamId, onOpen }: { teamId: string; onOpen: (boardId: stri
             </button>
             {/* Ключ и видимость рядом: по ключу доску узнают в переписке,
                 а видимость — тот самый вопрос, ради которого в структуру
-                и заглядывают. */}
+                и заглядывают. Оба названы словами: «ПОСТ · всей
+                организации» — это два обрывка, и первый читается
+                опечаткой. */}
             <span className="muted small">
-              {b.key} · {VISIBILITY_NAMES[b.visibility].toLowerCase()}
+              ключ {b.key} · видна {VISIBILITY_NAMES[b.visibility].toLowerCase()}
             </span>
           </div>
         </li>

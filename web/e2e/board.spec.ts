@@ -491,7 +491,7 @@ test('узел структуры показывает свои доски и о
   await page.getByRole('button', { name: 'Новое подразделение' }).click()
   await page.getByPlaceholder('Название').fill('Продажи')
   await page.getByRole('button', { name: 'Создать', exact: true }).click()
-  await expect(page.getByRole('button', { name: /Продажи/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: '▸ Продажи' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Доски' }).click()
   await openBoard(page, 'Доска отдела')
@@ -500,7 +500,7 @@ test('узел структуры показывает свои доски и о
 
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Структура' }).click()
-  await page.getByRole('button', { name: /Продажи/ }).click()
+  await page.getByRole('button', { name: '▸ Продажи' }).click()
 
   // Доска узла названа и открывается отсюда: следующий шаг после
   // ответа «чем занято подразделение» — открыть.
