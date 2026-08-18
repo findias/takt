@@ -56,6 +56,13 @@ test('снимки экранов', async ({ page }) => {
   const boardUrl = page.url()
   await page.screenshot({ path: `${SHOTS}/03-доска.png` })
 
+  // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
+  // сказать об этом, а не притворяться пустыми.
+  await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
+  await expect(page.getByText(/Под отбор ничего не подошло/).first()).toBeVisible()
+  await page.screenshot({ path: `${SHOTS}/03б-колонка-под-отбором.png` })
+  await page.getByRole('button', { name: 'Показать все' }).click()
+
   // Тёмная тема — системная.
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.screenshot({ path: `${SHOTS}/04-доска-тёмная.png` })

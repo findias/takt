@@ -40,6 +40,9 @@ type ColumnProps = {
   collapsed: boolean
   onToggleCollapsed: () => void
   cardIds: string[]
+  /** Сколько карточек этой колонки скрыл отбор — счётчик, а не признак:
+   *  пустая колонка называет число, иначе «Пусто» врёт. */
+  hiddenByFilter: number
   cards: BaseState['cards']
   unit: EstimateUnit
   sleDays: number | null
@@ -273,9 +276,19 @@ export function ColumnView(props: ColumnProps) {
           </div>
         )}
 
-        {props.cardIds.length === 0 && (
-          <p className="empty">Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.</p>
-        )}
+        {/* Пустая колонка отвечает, почему она пустая. «Пусто.
+            Перетащите карточку сюда» при скрытых отбором — враньё:
+            человек идёт искать поломку, которой нет, а карточки лежат
+            на месте. Кнопка названа та самая, что вернёт их. */}
+        {props.cardIds.length === 0 &&
+          (props.hiddenByFilter > 0 ? (
+            <p className="empty">
+              Под отбор ничего не подошло: скрыто {props.hiddenByFilter}. Вернёт кнопка «Показать
+              все».
+            </p>
+          ) : (
+            <p className="empty">Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.</p>
+          ))}
       </div>
 
       {adding ? (

@@ -107,6 +107,10 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  // Отбор и группировка живут в адресе, а адрес один на весь файл:
+  // без сброса включённый отбор достаётся следующей проверке, и она
+  // ищет карточки, которых на экране уже нет.
+  window.history.replaceState({}, '', '/')
 })
 
 function show(cardId: string | null = null) {
@@ -189,6 +193,23 @@ describe('состояния доски', () => {
 
     await screen.findByRole('group', { name: /Карточка «первая»/ })
     expect(screen.queryByText(/ещё нет карточек/)).toBeNull()
+  })
+
+  // Отбор прячет карточки, а колонка об этом молчала: «Пусто.
+  // Перетащите карточку сюда» при скрытых — враньё, из-за которого
+  // идут искать поломку, которой нет.
+  it('колонка под отбором говорит, что скрыто, а не что пусто', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')]))
+    show()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    // Обе карточки среднего уровня: отбор «Горит» не оставит ни одной.
+    await user.click(screen.getByRole('checkbox', { name: 'Горит' }))
+
+    const queue = await screen.findByRole('region', { name: 'Очередь' })
+    await waitFor(() => expect(queue.textContent).toMatch(/скрыто 2/))
+    expect(queue.textContent).not.toMatch(/Перетащите карточку сюда/)
   })
 
   // Мягкий лимит показывает счётчик и предупреждает, но работать

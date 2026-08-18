@@ -806,7 +806,14 @@ test('фильтр прячет лишнее и живёт в адресе', asy
   await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('договор')
   await expect(cardIn(page, 'В работе', 'Договор аренды')).toBeVisible()
   await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
-  await expect(page.getByText(/скрыто 2/)).toBeVisible()
+  await expect(page.getByText('скрыто 2', { exact: true })).toBeVisible()
+
+  // Опустевшая колонка отвечает, почему она пуста: «Пусто. Перетащите
+  // карточку сюда» при двух скрытых отправляло искать поломку, которой
+  // нет, — карточки лежат на месте.
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await expect(queue).toContainText('Под отбор ничего не подошло: скрыто 2')
+  await expect(queue).not.toContainText('Перетащите карточку сюда')
 
   // Фильтр — состояние адреса: ссылку на отфильтрованный вид можно
   // прислать, и она переживает перезагрузку.

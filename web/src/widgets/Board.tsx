@@ -222,6 +222,29 @@ export function Board({
     [base, order, grouping],
   )
 
+  /**
+   * Сколько карточек скрыл отбор — по колонке каждой дорожки.
+   *
+   * Пустая колонка обязана отличать «здесь ничего нет» от «здесь
+   * ничего не подошло»: «Пусто. Перетащите карточку сюда» при десяти
+   * скрытых отправляет человека искать поломку, которой нет.
+   * Считается по дорожкам, а не по доске: в дорожке счёт свой,
+   * и общий соврал бы ровно так же.
+   */
+  const hiddenIn = useMemo(() => {
+    if (!base || isEmpty(filters)) return {}
+    const shown = new Map(groups.map((group) => [group.id, group.order]))
+    const out: Record<string, Record<string, number>> = {}
+    for (const group of groupsOf(base, fullOrder, grouping)) {
+      const here: Record<string, number> = {}
+      for (const [columnId, ids] of Object.entries(group.order)) {
+        here[columnId] = ids.length - (shown.get(group.id)?.[columnId]?.length ?? 0)
+      }
+      out[group.id] = here
+    }
+    return out
+  }, [base, fullOrder, grouping, groups, filters])
+
   // Что можно найти и что можно сделать — в одном списке: человек,
   // набрав «мет», одинаково может иметь в виду карточку со словом
   // «метка» и команду «сгруппировать по меткам».
@@ -690,7 +713,7 @@ export function Board({
     ? base.columnIds.filter((id) => id === (visibleColumn ?? base.columnIds[0]))
     : base.columnIds
 
-  const renderColumns = (groupOrder: Record<string, string[]>) =>
+  const renderColumns = (groupOrder: Record<string, string[]>, hidden?: Record<string, number>) =>
     shownColumns.map((columnId) => (
       <ColumnView
         key={columnId}
@@ -698,6 +721,7 @@ export function Board({
         columnId={columnId}
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
+        hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
         cards={base.cards}
@@ -963,7 +987,7 @@ export function Board({
             </div>
           )}
           <div className="columns" ref={columnsRef}>
-            {renderColumns(group.order)}
+            {renderColumns(group.order, hiddenIn[group.id])}
             {grouping === 'none' && (
               <NewColumn onCreate={(name) => void board.createColumn(name)} />
             )}

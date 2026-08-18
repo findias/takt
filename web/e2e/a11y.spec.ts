@@ -70,7 +70,10 @@ async function register(page: Page) {
   await page.getByLabel('Почта').fill(`a11y-${id}@example.test`)
   await page.getByLabel('Пароль').fill('parol12345')
   await page.getByRole('button', { name: 'Создать организацию' }).click()
-  await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
+  // Срок больше обычного: организацию заводит каждая проверка этого
+  // файла, идут они разом, а на создании считается хеш пароля —
+  // и вчетвером они не укладываются в пять секунд на занятой машине.
+  await expect(page.getByPlaceholder('Название новой доски')).toBeVisible({ timeout: 20_000 })
 }
 
 test('на всех экранах цели нажатия не мельче 24 пикселей', async ({ page }) => {
