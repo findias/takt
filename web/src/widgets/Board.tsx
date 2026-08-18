@@ -817,73 +817,78 @@ export function Board({
               onReport={setReportOf}
             />
           </div>
-          <button className="btn btn--quiet" onClick={() => setPalette(true)}>
-            <SearchIcon />
-            Найти
-            <span className="muted small">{paletteHint()}</span>
-          </button>
-          {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
-              а не выпадающий список, — вариантов два, и выбранный должен
-              быть виден без нажатия. */}
-          <div className="segment" role="group" aria-label="Вид доски">
-            {[
-              { key: 'board', name: 'Доска' },
-              { key: 'table', name: 'Таблица' },
-              { key: 'changes', name: 'Изменения' },
-            ].map((item) => (
-              <button
-                key={item.key}
-                className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
-                aria-pressed={item.key === view}
-                onClick={() => {
-                  const next = new URLSearchParams(query)
-                  if (item.key === 'board') next.delete('view')
-                  else next.set('view', item.key)
-                  setQuery(next)
-                }}
-              >
-                {item.name}
-              </button>
-            ))}
-          </div>
-          {asTable && (
-            <select
-              value={sort}
-              aria-label="Сортировка"
-              onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
-            >
-              {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
-                <option key={key} value={key}>
-                  {SORT_NAMES[key]}
-                </option>
+          {/* Всё, что переключает взгляд на доску, — одной группой:
+              когда строка не помещается, она переносится целиком,
+              а не рассыпается на «Поток» слева и «Архив» справа. */}
+          <div className="row board-tools">
+            <button className="btn btn--quiet" onClick={() => setPalette(true)}>
+              <SearchIcon />
+              Найти
+              <span className="muted small">{paletteHint()}</span>
+            </button>
+            {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
+                а не выпадающий список, — вариантов три, и выбранный должен
+                быть виден без нажатия. */}
+            <div className="segment" role="group" aria-label="Вид доски">
+              {[
+                { key: 'board', name: 'Доска' },
+                { key: 'table', name: 'Таблица' },
+                { key: 'changes', name: 'Изменения' },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
+                  aria-pressed={item.key === view}
+                  onClick={() => {
+                    const next = new URLSearchParams(query)
+                    if (item.key === 'board') next.delete('view')
+                    else next.set('view', item.key)
+                    setQuery(next)
+                  }}
+                >
+                  {item.name}
+                </button>
               ))}
-            </select>
-          )}
-          <button
-            className="btn btn--quiet"
-            aria-expanded={showFlow}
-            onClick={() => {
-              // Две панели разом перекрывают друг друга, а в модальном
-              // режиме ещё и спорят за фокус. Открываем по одной.
-              setOpenCard(null)
-              setShowFlow((v) => !v)
-            }}
-          >
-            <FlowIcon />
-            Поток
-          </button>
-          <button
-            className="btn btn--quiet"
-            aria-expanded={showArchive}
-            onClick={() => {
-              setOpenCard(null)
-              setShowFlow(false)
-              setShowArchive((v) => !v)
-            }}
-          >
-            <ArchiveIcon />
-            Архив
-          </button>
+            </div>
+            {asTable && (
+              <select
+                value={sort}
+                aria-label="Сортировка"
+                onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
+              >
+                {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_NAMES[key]}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              className="btn btn--quiet"
+              aria-expanded={showFlow}
+              onClick={() => {
+                // Две панели разом перекрывают друг друга, а в модальном
+                // режиме ещё и спорят за фокус. Открываем по одной.
+                setOpenCard(null)
+                setShowFlow((v) => !v)
+              }}
+            >
+              <FlowIcon />
+              Поток
+            </button>
+            <button
+              className="btn btn--quiet"
+              aria-expanded={showArchive}
+              onClick={() => {
+                setOpenCard(null)
+                setShowFlow(false)
+                setShowArchive((v) => !v)
+              }}
+            >
+              <ArchiveIcon />
+              Архив
+            </button>
+          </div>
         </div>
       </div>
 

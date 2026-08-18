@@ -152,3 +152,47 @@ test('открытое меню отдаёт фокус первому пунк�
     /Действия карточки/,
   )
 })
+
+/**
+ * Панель над доской достижима на всех ширинах.
+ *
+ * Переключатель видов раньше сжимался вместе со строкой и прятал
+ * лишнее под `overflow: hidden`: на 942 за краем оставались
+ * «Изменения», на 390 сегмент ужимался до двух пикселей, а «Поток»
+ * и «Архив» уходили за окно целиком — с телефона нельзя было открыть
+ * ни один вид, кроме текущего.
+ *
+ * Проверяется координатами и попаданием: обрезанная кнопка остаётся
+ * в разметке и «видна» кому угодно, кроме указателя.
+ */
+test('панель над доской не обрезается ни на одной ширине', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Панель')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
+  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+
+  for (const width of [1440, 942, 390]) {
+    await page.setViewportSize({ width, height: 800 })
+    const unreachable = await page.evaluate(() => {
+      const out: string[] = []
+      for (const el of document.querySelectorAll<HTMLElement>(
+        '.board-toolbar button, .board-toolbar select',
+      )) {
+        const box = el.getBoundingClientRect()
+        if (box.width === 0 && box.height === 0) continue
+        const name = (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24)
+        const under = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2,
+        )
+        const inWindow = box.left >= -0.5 && box.right <= window.innerWidth + 0.5
+        if (!inWindow || !(under === el || el.contains(under))) out.push(name)
+      }
+      return out
+    })
+    expect(unreachable, `ширина ${width}`).toEqual([])
+  }
+})
