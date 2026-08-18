@@ -1185,6 +1185,36 @@ test('заблокированная часть останавливает и р
   await expect(parent.getByText(/Часть заблокирована/)).toHaveCount(0)
 })
 
+// Работу разбивают тогда же, когда на неё смотрят: до сих пор за этим
+// приходилось открывать панель и искать вкладку.
+test('часть заводится прямо с доски — кнопкой в списке и пунктом меню', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска разбиения с доски')
+  await addCard(page, 'Очередь', 'Собрать отчёт')
+  const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
+
+  // Первая часть — пунктом меню: списка ещё нет, и кнопке в нём взяться
+  // неоткуда.
+  await parent.hover()
+  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Добавить подзадачу' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Свести цифры')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: 'Свести цифры' })).toBeVisible()
+
+  // Вторая — кнопкой в конце списка.
+  await parent.getByRole('button', { name: '+ Подзадача' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Проверить итог')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: 'Проверить итог' })).toBeVisible()
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 2/ })).toBeVisible()
+
+  // И то и другое легло в базу, а не в память вкладки.
+  await page.reload()
+  const again = cardIn(page, 'Очередь', 'Собрать отчёт')
+  await expect(again.getByRole('button', { name: /Подзадачи: готово 0 из 2/ })).toBeVisible()
+})
+
 test('история спрятана за вкладкой, карточка открывается обсуждением', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска вкладок')

@@ -488,6 +488,7 @@ export function Board({
     commitCard: commit,
     unblockCard: unblock,
     setCardDone: markDoneAction,
+    createSubtask: subtaskAction,
   } = board
   const assignCard = useCallback(
     (cardId: string, userId: string, on: boolean) => void assign(cardId, userId, on),
@@ -518,6 +519,10 @@ export function Board({
   const markDone = useCallback(
     (cardId: string, done: boolean) => void markDoneAction(cardId, done),
     [markDoneAction],
+  )
+  const addSubtask = useCallback(
+    (parentCardId: string, title: string) => void subtaskAction(parentCardId, title),
+    [subtaskAction],
   )
   const renameCard = useCallback(
     (cardId: string, title: string) => void rename(cardId, title),
@@ -762,6 +767,7 @@ export function Board({
         onBlock={blockCard}
         onUnblock={unblockCard}
         onMarkDone={markDone}
+        onSubtask={addSubtask}
         columns={columnList}
         onMoveToColumn={moveToColumn}
         onOpenCard={showCard}

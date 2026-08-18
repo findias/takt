@@ -38,6 +38,7 @@ import {
   EditIcon,
   MoreIcon,
   MoveIcon,
+  PlusIcon,
   TrashIcon,
 } from '../../shared/ui/icons.tsx'
 
@@ -97,6 +98,9 @@ type CardProps = {
    *  «согласовать с юристами» не ездит по колонкам, а вопрос «сделано
    *  ли» про неё задают. Поток от отметки не меняется. */
   onMarkDone: (cardId: string, done: boolean) => void
+  /** Завести часть этой работы. Доска — эта же: части у соседей
+   *  заводят в панели, там же выбирают чью. */
+  onSubtask: (parentCardId: string, title: string) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   /** Открыть карточку. Идентификатор аргументом, а не в замыкании:
@@ -137,6 +141,7 @@ function CardViewInner({
   onBlock,
   onUnblock,
   onMarkDone,
+  onSubtask,
   columns,
   onMoveToColumn,
   onOpen,
@@ -155,6 +160,9 @@ function CardViewInner({
   // к работе, а не к её карточке, и уходить за ним в панель значит
   // терять доску из виду ради одной строки.
   const [blocking, setBlocking] = useState(false)
+  // Заведение части прямо с доски: работу разбивают тогда же, когда
+  // на неё смотрят, а не отдельным заходом в панель.
+  const [adding, setAdding] = useState(false)
   // Раскрытие подзадач — состояние самой карточки и живёт с ней: это
   // ответ на «что здесь внутри», заданный один раз и здесь же, а не
   // настройка, которую человек ждёт увидеть завтра такой же.
@@ -490,6 +498,14 @@ function CardViewInner({
                       icon: <CheckIcon />,
                       onSelect: () => onMarkDone(cardId, true),
                     },
+                {
+                  label: 'Добавить подзадачу',
+                  icon: <PlusIcon />,
+                  onSelect: () => {
+                    setOpen(true)
+                    setAdding(true)
+                  },
+                },
                 card?.blocked
                   ? {
                       label: 'Снять блокировку',
@@ -770,7 +786,7 @@ function CardViewInner({
               доски уже лежит в своей колонке, и второй её показ рядом
               с родителем читался бы как вторая задача. Здесь видно, что
               за работа, готова ли она и чья она, если чужая. */}
-          {subtasks.length > 0 && (
+          {(subtasks.length > 0 || adding) && (
             <ul className="subtasks" id={`subtasks-${cardId}`} hidden={!open}>
               {subtasks.map((s) => (
                 <SubtaskRow
@@ -783,6 +799,29 @@ function CardViewInner({
                   onMarkDone={onMarkDone}
                 />
               ))}
+
+              {/* Завести часть можно там же, где на части смотрят.
+                  Последней строкой списка, а не отдельным углом
+                  карточки: список и есть то, к чему её добавляют. */}
+              <li className="subtask subtask--new">
+                {adding ? (
+                  <EditableText
+                    value=""
+                    autoFocus
+                    label="Название подзадачи"
+                    placeholder="Что нужно сделать?"
+                    onSave={(title) => {
+                      if (title.trim()) onSubtask(cardId, title.trim())
+                      setAdding(false)
+                    }}
+                    onCancel={() => setAdding(false)}
+                  />
+                ) : (
+                  <button className="link" onClick={() => setAdding(true)}>
+                    + Подзадача
+                  </button>
+                )}
+              </li>
             </ul>
           )}
 

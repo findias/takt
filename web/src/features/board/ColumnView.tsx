@@ -79,6 +79,7 @@ type ColumnProps = {
   onUnblock: (cardId: string) => void
   /** Отметить работу сделанной, не двигая её по колонкам. */
   onMarkDone: (cardId: string, done: boolean) => void
+  onSubtask: (parentCardId: string, title: string) => void
   columns: Column[]
   onMoveToColumn: (cardId: string, columnId: string) => void
   onOpenCard: (cardId: string) => void
@@ -276,6 +277,7 @@ export function ColumnView(props: ColumnProps) {
             onBlock={props.onBlock}
             onUnblock={props.onUnblock}
             onMarkDone={props.onMarkDone}
+            onSubtask={props.onSubtask}
             columns={props.columns}
             onMoveToColumn={props.onMoveToColumn}
             onOpen={props.onOpenCard}
