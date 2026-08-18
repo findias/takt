@@ -196,3 +196,73 @@ test('панель над доской не обрезается ни на од�
     expect(unreachable, `ширина ${width}`).toEqual([])
   }
 })
+
+/**
+ * Флажок и подпись не сжимаются в тесной строке.
+ *
+ * Размер флажка задан общим правилом — цель нажатия 24×24 по WCAG
+ * 2.5.8, — но заданный размер флексу не указ: в тесной верхней строке
+ * карточки (номер, ссылка на родителя, места под метку и исполнителя,
+ * меню) флажок ужимался до семнадцати пикселей и меньше, а промах
+ * по нему открывает карточку. Тем же способом уезжала под квадрат
+ * подпись флажка: «Жёсткий лимит (сначала задайте лимит)» в разметке
+ * колонки становилась вдвое выше и вставала под ним, а не рядом.
+ *
+ * Ни того, ни другого не видно в разметке: там всё правильно.
+ */
+test('флажок не мельче цели нажатия, подпись не уезжает под него', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Тесная строка')
+  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue
+    .getByPlaceholder('Что нужно сделать?')
+    .fill('Собрать отчёт по всему кварталу и году')
+  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+
+  // Подзадача теснит верхнюю строку: в ней появляется ссылка
+  // на родителя, и места флажку остаётся меньше всего. Название
+  // родителя длинное намеренно — короткое в строку помещается,
+  // и тесно не становится.
+  const parent = queue.getByRole('group', { name: /Карточка «Собрать отчёт/ })
+  await parent.getByRole('button', { name: /Собрать отчёт/ }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Название подзадачи').fill('Свести цифры за весь квартал')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await expect(page.getByRole('button', { name: 'Свести цифры за весь квартал' }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  // Ссылка на родителя появляется на карточке из следующего снимка
+  // доски: без перезагрузки замеряли бы карточку без неё, а тесно
+  // строке становится именно от ссылки.
+  await page.reload()
+  await expect(queue.getByRole('group', { name: /Свести цифры/ })).toBeVisible()
+
+  const squeezed = await page.evaluate((min) => {
+    // Флажки показаны по наведению; замерять надо все, а навести можно
+    // на одну карточку — поэтому показываем их правилом.
+    const style = document.createElement('style')
+    style.textContent = '.card-check{display:inline-block}'
+    document.head.append(style)
+    const small = [...document.querySelectorAll<HTMLElement>('.card-check')]
+      .map((c) => Math.round(c.getBoundingClientRect().width))
+      .filter((w) => w < min)
+    style.remove()
+    return small
+  }, 24)
+  expect(squeezed, 'флажки выделения мельче цели нажатия').toEqual([])
+
+  // Подпись флажка стоит справа от него, а не под ним.
+  await page.getByRole('button', { name: /Разметк/ }).first().click()
+  const under = await page.evaluate(() => {
+    const out: string[] = []
+    for (const label of document.querySelectorAll<HTMLElement>('.column-settings label')) {
+      const box = label.querySelector('input[type="checkbox"]')?.getBoundingClientRect()
+      const text = label.querySelector('span')?.getBoundingClientRect()
+      if (!box || !text) continue
+      if (text.left < box.right) out.push(label.textContent?.trim().slice(0, 24) ?? '')
+    }
+    return out
+  })
+  expect(under, 'подписи, уехавшие под флажок').toEqual([])
+})

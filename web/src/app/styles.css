@@ -281,6 +281,11 @@ label:has(> input[type='radio']) {
   flex-direction: row;
   align-items: center;
   gap: var(--space-2);
+  /* Переносить внутри подписи нечего: перенос уводит текст под квадрат,
+     и получается ровно то, ради чего подпись и завёрнута в `label`, —
+     квадрат отдельно, надпись отдельно. Длинная подпись переносится
+     сама по себе, оставаясь справа от квадрата. */
+  flex-wrap: nowrap;
 }
 input[type='checkbox'],
 input[type='radio'] {
@@ -293,6 +298,10 @@ input[type='radio'] {
      там --target равен 44, и флажок такого размера выглядит кнопкой. */
   inline-size: min(var(--target), 28px);
   block-size: min(var(--target), 28px);
+  /* И не сжимается. Заданный размер флексу не указ: в тесной верхней
+     строке карточки флажок ужимался до семнадцати пикселей и меньше,
+     а промах по нему открывает карточку. */
+  flex-shrink: 0;
   accent-color: var(--accent);
 }
 
@@ -2652,6 +2661,13 @@ textarea.description {
 .filters {
   flex-wrap: wrap;
   padding-bottom: var(--space-2);
+}
+/* Отборы переносятся по строкам, а не сжимаются. Сжатые, они ужимали
+   свои подписи: «Дольше обещанного» на 942 становилось вдвое выше
+   и читалось как две несвязанные строки. */
+.filters-rest {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
 }
 .filters-search {
   display: flex;
