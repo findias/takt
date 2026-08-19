@@ -229,6 +229,49 @@ describe('состояния доски', () => {
   })
 })
 
+describe('заведение карточек подряд', () => {
+  // Работа приходит списком: пять пунктов с планёрки заводят одну
+  // за другой. Форма, закрывающаяся после каждой карточки, означает
+  // поиск кнопки на каждую вторую — это первое, обо что споткнулся
+  // проход по интерфейсу глазами.
+  it('после Enter форма остаётся, поле пустеет и держит фокус', async () => {
+    snapshot.mockResolvedValue(board([]))
+    show()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Добавить карточку в «Очередь»/ }))
+    const field = screen.getByPlaceholderText('Что нужно сделать?')
+    await userEvent.type(field, 'Первая{Enter}')
+
+    expect(operation).toHaveBeenCalledWith('board', expect.any(String), 'CREATE_CARD', {
+      columnId: COL_A,
+      title: 'Первая',
+      place: 'end',
+    })
+    const again = screen.getByPlaceholderText('Что нужно сделать?')
+    expect((again as HTMLTextAreaElement).value).toBe('')
+    expect(document.activeElement).toBe(again)
+
+    // Вторая заводится там же, без единого лишнего нажатия.
+    await userEvent.type(again, 'Вторая{Enter}')
+    expect(operation).toHaveBeenLastCalledWith('board', expect.any(String), 'CREATE_CARD', {
+      columnId: COL_A,
+      title: 'Вторая',
+      place: 'end',
+    })
+  })
+
+  it('закрывает форму человек: Escape', async () => {
+    snapshot.mockResolvedValue(board([]))
+    show()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Добавить карточку в «Очередь»/ }))
+    await userEvent.type(screen.getByPlaceholderText('Что нужно сделать?'), 'Черновик{Escape}')
+
+    expect(screen.queryByPlaceholderText('Что нужно сделать?')).toBeNull()
+    expect(screen.getByRole('button', { name: /Добавить карточку в «Очередь»/ })).toBeTruthy()
+  })
+})
+
 describe('поток словами, а не машинными строками', () => {
   // Подсказка столбика пропускной способности печатала «2026-05-18: 0»
   // — машинная запись там, где человек ищет глазами «какая это была

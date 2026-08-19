@@ -335,7 +335,9 @@ export function ColumnView(props: ColumnProps) {
           onCreate={(title) => {
             props.onCreateCard(title)
             added.current = true
-            setAdding(false)
+            // Форма остаётся открытой: карточки заводят подряд, а закрытая
+            // форма после каждой означает поиск кнопки на каждую вторую.
+            // Закрывают её Escape и «Отмена» — то есть человек, а не мы.
           }}
         />
       ) : (
@@ -354,6 +356,14 @@ export function ColumnView(props: ColumnProps) {
   )
 }
 
+/**
+ * Заведение карточки.
+ *
+ * Форма не закрывается после Enter, а очищается и остаётся с фокусом:
+ * работа приходит списком, и карточки заводят подряд. Закрытая после
+ * каждой форма означала поиск кнопки на каждую вторую карточку — это
+ * и было первым, обо что спотыкался проход по интерфейсу.
+ */
 function NewCardForm({
   onCreate,
   onCancel,
@@ -362,15 +372,29 @@ function NewCardForm({
   onCancel: () => void
 }) {
   const [value, setValue] = useState('')
+  const field = useRef<HTMLTextAreaElement>(null)
+
+  const submit = () => {
+    const title = value.trim()
+    if (!title) return
+    onCreate(title)
+    setValue('')
+    // Фокус возвращается руками: доска перерисовывается новой карточкой,
+    // и без этого он уезжает на `body` — то есть обход с клавиатуры
+    // начинается заново со всей страницы.
+    field.current?.focus()
+  }
+
   return (
     <form
       className="new-card"
       onSubmit={(e) => {
         e.preventDefault()
-        if (value.trim()) onCreate(value.trim())
+        submit()
       }}
     >
       <textarea
+        ref={field}
         autoFocus
         value={value}
         placeholder="Что нужно сделать?"
@@ -379,7 +403,7 @@ function NewCardForm({
           if (e.key === 'Escape') onCancel()
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            if (value.trim()) onCreate(value.trim())
+            submit()
           }
         }}
       />
