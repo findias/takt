@@ -773,6 +773,18 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 
 // staticHandler отдаёт собранный фронтенд и возвращает index.html на любой
 // неизвестный путь: маршрутизация живёт на клиенте.
+//
+// Про кэш сказано явно, потому что молчание здесь толкуется браузером
+// в худшую сторону: без заголовков Chrome держит index.html
+// эвристически — по времени последней правки, — и после выката человек
+// продолжает грузить старый скрипт. Новый сервер и старый клиент дают
+// не ошибку, а пустой экран доски: клиент ждёт полей, которых прежний
+// снимок не отдавал. Ровно это и случилось при проверке правки
+// 19 августа: правка выглядела неработающей, хотя работала.
+//
+// Поэтому: index.html не кэшируется вовсе, а содержимое assets/ —
+// навсегда. Имена там с отпечатком содержимого (index-BQyAfczc.js),
+// значит новая сборка приносит новые имена, и «навсегда» безопасно.
 func (s *Server) staticHandler() http.Handler {
 	root := http.Dir(s.cfg.WebDir)
 	fileServer := http.FileServer(root)
@@ -785,6 +797,11 @@ func (s *Server) staticHandler() http.Handler {
 		}
 		path := filepath.Join(s.cfg.WebDir, filepath.Clean(r.URL.Path))
 		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			if strings.HasPrefix(r.URL.Path, "/assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -792,6 +809,10 @@ func (s *Server) staticHandler() http.Handler {
 			writeError(w, http.StatusNotFound, "фронтенд не собран: выполните make web")
 			return
 		}
+		// `no-cache` — не «не хранить»: копия остаётся, но перед показом
+		// её сверяют с сервером. Это и нужно: index.html весит меньше
+		// килобайта, а сверка возвращает 304 без тела.
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, index)
 	})
 }
