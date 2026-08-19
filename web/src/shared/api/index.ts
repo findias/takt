@@ -830,7 +830,10 @@ export const api = {
    *  сверяет его сам, иначе подтверждение было бы обещанием клиента. */
   deleteBoard: (boardId: string, name: string) =>
     request<void>('DELETE', `/api/boards/${boardId}/permanently`, { name }),
-  createBoard: (name: string) => request<BoardInfo>('POST', '/api/boards', { name }),
+  /** Пустой ключ означает «выведи из названия»: так решает сервер,
+   *  и повторять это правило здесь нельзя — разъедется. */
+  createBoard: (name: string, key = '') =>
+    request<BoardInfo>('POST', '/api/boards', { name, key }),
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),
 
   operation: (boardId: string, operationId: string, type: string, payload: unknown) =>

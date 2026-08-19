@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { VISIBILITY_NAMES, api } from '../shared/api/index.ts'
+import { ApiError, VISIBILITY_NAMES, api } from '../shared/api/index.ts'
 import { plural } from '../shared/lib/plural.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { BoardAccess } from '../features/access/BoardAccess.tsx'
@@ -15,7 +15,14 @@ export function BoardList({
 }) {
   const [boards, setBoards] = useState<BoardInfo[] | null>(null)
   const [name, setName] = useState('')
+  // Ключ спрашивается, но не требуется: пустой означает «выведи
+  // из названия». Поле стоит рядом с названием, потому что после
+  // заведения ключ уже не сменить — он в номерах всех карточек.
+  const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Отказ заведения показывается у формы, а не наверху списка: форма
+  // стоит под досками, и сообщение над ними человек не увидит вовсе.
+  const [failed, setFailed] = useState<{ text: string; aboutKey: boolean } | null>(null)
   const [openAccess, setOpenAccess] = useState<string | null>(null)
   const [archived, setArchived] = useState<BoardInfo[] | null>(null)
   // Какую доску спрашивают удалить и что набрали в подтверждение.
@@ -204,14 +211,24 @@ export function BoardList({
           onSubmit={(e) => {
             e.preventDefault()
             if (!name.trim()) return
+            setFailed(null)
             api
-              .createBoard(name.trim())
+              .createBoard(name.trim(), key.trim())
               .then((b) => {
                 setName('')
+                setKey('')
                 load()
                 onOpen(b.id)
               })
-              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать доску'))
+              .catch((e) => {
+                // Про ключ отвечает код, а не текст: разбор текста
+                // ломается на первой же правке формулировки.
+                const code = e instanceof ApiError ? e.body?.code : undefined
+                setFailed({
+                  text: e instanceof Error ? e.message : 'Не удалось создать доску',
+                  aboutKey: code === 'board_key_invalid' || code === 'board_key_taken',
+                })
+              })
           }}
         >
           <input
@@ -219,10 +236,37 @@ export function BoardList({
             placeholder="Название новой доски"
             onChange={(e) => setName(e.target.value)}
           />
+          {/* Ключ приводится к заглавным при вводе, а не начертанием:
+              `text-transform` в стиле переписал бы и подпись-подсказку,
+              и «Ключ» в пустом поле кричал бы капслоком. */}
+          <input
+            className="key-input"
+            value={key}
+            maxLength={6}
+            aria-label="Ключ доски — префикс номеров карточек"
+            aria-invalid={failed?.aboutKey || undefined}
+            aria-describedby="board-key-hint"
+            placeholder="Ключ"
+            onChange={(e) => setKey(e.target.value.toUpperCase())}
+          />
           <button className="primary" type="submit" disabled={!name.trim()}>
             Создать
           </button>
         </form>
+      )}
+
+      {/* Отказ стоит вплотную к форме, а подсказка — под ним: между
+          полем и объяснением, почему оно не приняло, ничего стоять
+          не должно. */}
+      {failed && <p className="error">{failed.text}</p>}
+      {/* Правило сказано до отказа, а не после: ключ виден в каждом
+          номере карточки и после заведения не меняется, так что узнать
+          о нём из отказа — значит узнать поздно. */}
+      {canEdit && (
+        <p className="muted small" id="board-key-hint">
+          Ключ — начало номеров карточек: ПОСТ-14. Пустой выведем из названия;
+          сменить его потом уже нельзя.
+        </p>
       )}
     </div>
   )

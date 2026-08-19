@@ -437,6 +437,14 @@ input[type='radio'] {
   font-size: var(--text);
 }
 
+/* Ключ — шесть знаков, и поле такое же: широкое поле обещает, что
+   туда влезет слово, а туда влезает префикс. Флексу заданная ширина
+   не указ, поэтому сжатие запрещено явно. */
+.key-input {
+  width: 7ch;
+  flex: 0 0 auto;
+}
+
 .board-list {
   list-style: none;
   margin: 0;
@@ -724,6 +732,15 @@ select {
 .board-header-tail {
   margin-left: auto;
 }
+/* Ключ читается как имя, а не как служебный номер: он звучит в речи
+   («ПОСТ-14»), поэтому стоит тем же цветом, что и подписи, а не серым
+   мелким, каким набрана версия. */
+.board-key {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
 .version,
 .pending {
   font-family: ui-monospace, Menlo, Consolas, monospace;
