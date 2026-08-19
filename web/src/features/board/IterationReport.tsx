@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
-import { rangeWords } from '../../entities/card/model.ts'
+import { UNIT_SHORT, rangeWords } from '../../entities/card/model.ts'
 import type { EstimateUnit, Iteration, IterationReport as Report } from '../../shared/api/index.ts'
 
 /**
@@ -86,7 +86,7 @@ export function IterationReport({
                       «12 из 20» скрывала бы это молча. */}
                   {report.totals.byWeight && (
                     <Figure
-                      label={`сделано ${UNITS[unit]}`}
+                      label={`сделано ${UNIT_SHORT[unit]}`}
                       value={`${num(report.totals.doneWeight)} из ${num(report.totals.committedWeight)}`}
                     />
                   )}
@@ -137,14 +137,8 @@ function marks(c: Report['cards'][number], unit: EstimateUnit): string {
   if (c.dropped) out.push('убрана из итерации')
   if (c.lateAdd) out.push('пришла после начала')
   if (c.archived) out.push('убрана с доски')
-  if (c.estimate !== null) out.push(`${num(c.estimate)} ${UNITS[unit]}`)
+  if (c.estimate !== null) out.push(`${num(c.estimate)} ${UNIT_SHORT[unit]}`)
   return out.join(' · ')
-}
-
-const UNITS: Record<EstimateUnit, string> = {
-  points: 'очк.',
-  hours: 'ч.',
-  days: 'дн.',
 }
 
 function num(value: number): string {

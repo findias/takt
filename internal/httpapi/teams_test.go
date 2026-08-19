@@ -255,3 +255,31 @@ func TestTeamsOfAnotherOrgAreInvisible(t *testing.T) {
 		t.Errorf("архивация чужой команды: код %d, ожидался 404", code)
 	}
 }
+
+// Единицу оценки меняет владелец, и меняется она у всей организации.
+//
+// Через HTTP это проверяется отдельно от службы: путь закрыт обёрткой
+// owner, а «кто я» после смены обязан отдавать новую единицу — иначе
+// клиент показывает старую подпись до перезагрузки.
+func TestEstimateUnitIsOwnerOnlyAndComesBackInWhoAmI(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Часы")
+	member := owner.join("member")
+
+	member.mustDo("PUT", "/api/org/estimate-unit", map[string]any{"unit": "hours"},
+		http.StatusForbidden)
+
+	me := owner.mustDo("PUT", "/api/org/estimate-unit", map[string]any{"unit": "hours"},
+		http.StatusOK)
+	if got := field(t, me, "estimateUnit"); got != "hours" {
+		t.Errorf("после смены «кто я» отдаёт %v, ожидались часы", got)
+	}
+	who := owner.mustDo("GET", "/api/me", nil, http.StatusOK)
+	if got := field(t, who, "estimateUnit"); got != "hours" {
+		t.Errorf("«кто я» отдаёт %v, ожидались часы", got)
+	}
+
+	// Незнакомая единица — отказ с объяснением, а не пятисотая.
+	owner.mustDo("PUT", "/api/org/estimate-unit", map[string]any{"unit": "story-points"},
+		http.StatusBadRequest)
+}

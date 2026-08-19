@@ -665,6 +665,10 @@ export const api = {
   listOrgs: () => request<{ orgs: Membership[]; activeOrgId: string }>('GET', '/api/orgs'),
   createOrg: (name: string) => request<Membership>('POST', '/api/orgs', { name }),
   switchOrg: (orgId: string) => request<Principal>('POST', '/api/session/org', { orgId }),
+  /** В чём организация оценивает работу. Числа не пересчитываются:
+   *  меняется подпись, а не значение. */
+  setEstimateUnit: (unit: EstimateUnit) =>
+    request<Principal>('PUT', '/api/org/estimate-unit', { unit }),
 
   team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
   invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),

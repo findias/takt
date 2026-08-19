@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
+import { UNIT_NAMES } from '../entities/card/model.ts'
 import { CopyButton } from '../shared/ui/CopyButton.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
@@ -10,6 +11,7 @@ import {
 } from '../shared/api/index.ts'
 import type {
   ApiClient,
+  EstimateUnit,
   AuditEntry,
   CardField,
   FieldKind,
@@ -218,6 +220,8 @@ export function Team({ principal }: { principal: Principal }) {
           )}
         </section>
       )}
+
+      {isOwner && <EstimateUnitChoice principal={principal} />}
 
       <CardFields canEdit={principal.role !== 'viewer'} />
 
@@ -488,6 +492,67 @@ function Labels({ canEdit }: { canEdit: boolean }) {
           </button>
         </form>
       )}
+    </section>
+  )
+}
+
+/**
+ * В чём организация оценивает работу.
+ *
+ * Единица общая на все доски: складывать очки с часами бессмысленно,
+ * а прогресс, загрузка людей и отчёт по итерации — это сложение.
+ * Поэтому она и живёт здесь, а не в настройках доски.
+ *
+ * Смена ничего не пересчитывает, и об этом сказано прямо: тройка
+ * останется тройкой, сменится подпись под ней. Пересчёт был бы враньём —
+ * очки не переводятся в часы никаким коэффициентом, это разные способы
+ * обещать, а не разные меры одного.
+ */
+function EstimateUnitChoice({ principal }: { principal: Principal }) {
+  const [unit, setUnit] = useState(principal.estimateUnit)
+  const [error, setError] = useState<string | null>(null)
+  const notify = useToast()
+
+  return (
+    <section className="stack">
+      <h2 className="section-title">Оценка</h2>
+      {error && <p className="error">{error}</p>}
+      <label className="row row--tight">
+        <span className="muted small">Работу оцениваем в</span>
+        <select
+          value={unit}
+          aria-label="Единица оценки"
+          onChange={(e) => {
+            const next = e.target.value as EstimateUnit
+            const was = unit
+            setUnit(next)
+            setError(null)
+            api
+              .setEstimateUnit(next)
+              .then(() =>
+                notify({
+                  text: `Работу оцениваем в ${UNIT_NAMES[next]}. Числа остались прежними.`,
+                  tone: 'info',
+                }),
+              )
+              .catch((e) => {
+                setUnit(was)
+                setError(e instanceof Error ? e.message : 'Не удалось сменить единицу')
+              })
+          }}
+        >
+          {(Object.keys(UNIT_NAMES) as EstimateUnit[]).map((key) => (
+            <option key={key} value={key}>
+              {UNIT_NAMES[key]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small">
+        Числа на карточках не пересчитываются: тройка останется тройкой, сменится
+        подпись под ней. Очки не переводятся в часы никаким коэффициентом — это
+        разные способы обещать.
+      </p>
     </section>
   )
 }

@@ -578,3 +578,49 @@ func TestEraseKeepsTheLastOwner(t *testing.T) {
 		t.Fatalf("ожидался отказ по последнему владельцу, получено %v", err)
 	}
 }
+
+// Единица оценки: очки, часы, дни.
+//
+// Проверка появилась после того, как проход по интерфейсу нашёл дыру:
+// единиц три, они живут в схеме с миграции 0014, а сменить единицу
+// было нечем — ни маршрута, ни экрана, ни операции. Организация
+// оставалась в очках навсегда, и весь путь «часы» не проходил никто.
+func TestEstimateUnitIsChosenByOwnerAndNothingIsRecalculated(t *testing.T) {
+	f := newFixture(t)
+	m, ownerID := f.org("Считаем часами")
+
+	unitNow := func() string {
+		f.t.Helper()
+		var unit string
+		err := f.db.Pool.QueryRow(f.ctx,
+			`select estimate_unit from orgs where id = $1`, m.OrgID).Scan(&unit)
+		if err != nil {
+			f.t.Fatalf("чтение единицы: %v", err)
+		}
+		return unit
+	}
+
+	// Умолчание — очки: организация, которой единицу не выбирали,
+	// не должна оказаться ни в часах, ни в пустоте.
+	if got := unitNow(); got != "points" {
+		t.Errorf("новая организация оценивает в %q, ожидались очки", got)
+	}
+
+	for _, unit := range EstimateUnits {
+		if err := f.svc.SetEstimateUnit(f.ctx, m.OrgID, ownerID, unit); err != nil {
+			t.Fatalf("смена единицы на %q: %v", unit, err)
+		}
+		if got := unitNow(); got != unit {
+			t.Errorf("единица %q, ожидалась %q", got, unit)
+		}
+	}
+
+	// Единица, которой нет в схеме, до базы не доходит: ограничение
+	// там есть, но отказ по нему — пятисотая ошибка, а не объяснение.
+	if err := f.svc.SetEstimateUnit(f.ctx, m.OrgID, ownerID, "story-points"); err == nil {
+		t.Error("незнакомая единица принята")
+	}
+	if got := unitNow(); got != "days" {
+		t.Errorf("после отказа единица %q, ожидалась прежняя days", got)
+	}
+}

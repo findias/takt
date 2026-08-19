@@ -111,6 +111,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
+	// В чём организация оценивает работу. Владелец: единица общая
+	// на все доски, и менять её из карточки было бы правкой всего
+	// исподтишка.
+	mux.HandleFunc("PUT /api/org/estimate-unit", s.owner(s.handleSetEstimateUnit))
 	mux.HandleFunc("DELETE /api/members/{userId}", s.owner(s.handleRemoveMember))
 	// Исключение и обезличивание — разные действия и потому разные пути:
 	// первое обратимо приглашением, второе не обратимо ничем.
@@ -535,6 +539,27 @@ func (s *Server) handleSetRole(w http.ResponseWriter, r *http.Request, p auth.Pr
 	}
 	err := s.orgs.SetRole(r.Context(), p.OrgID, p.ID, r.PathValue("userId"), req.Role)
 	s.writeMembershipResult(w, err, "смена роли")
+}
+
+func (s *Server) handleSetEstimateUnit(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Unit string `json:"unit"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if err := s.orgs.SetEstimateUnit(r.Context(), p.OrgID, p.ID, req.Unit); err != nil {
+		if errors.Is(err, org.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "организация не найдена")
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Отвечаем тем, кто теперь спрашивающий: единица приезжает вместе
+	// с «кто я», и клиенту незачем перечитывать её отдельным запросом.
+	p.EstimateUnit = req.Unit
+	writeJSON(w, http.StatusOK, p)
 }
 
 func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request, p auth.Principal) {

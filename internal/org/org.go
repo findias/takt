@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -322,6 +323,35 @@ func ensureOtherOwnerExists(ctx context.Context, tx pgx.Tx, orgID, exceptUserID 
 		return ErrLastOwner
 	}
 	return nil
+}
+
+// EstimateUnits — в чём организация оценивает работу. Список повторяет
+// ограничение схемы (миграция 0014): значения, которого нет в базе,
+// быть не должно и в коде.
+var EstimateUnits = []string{"points", "hours", "days"}
+
+// SetEstimateUnit меняет единицу оценки организации.
+//
+// Числа не пересчитываются: тройка остаётся тройкой, менялась только
+// подпись под ней. Пересчёт был бы враньём — очки не переводятся в часы
+// никаким коэффициентом, это разные способы обещать, а не разные меры
+// одного. Поэтому смена — решение владельца, и интерфейс говорит о ней
+// прямо, а не показывает как настройку вида.
+func (s *Service) SetEstimateUnit(ctx context.Context, orgID, actorID, unit string) error {
+	if !slices.Contains(EstimateUnits, unit) {
+		return fmt.Errorf("единица оценки бывает только одной из: очки, часы, дни")
+	}
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx,
+			`update orgs set estimate_unit = $2 where id = $1`, orgID, unit)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
 }
 
 // --- приглашения ---

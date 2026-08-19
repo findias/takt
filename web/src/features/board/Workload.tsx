@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { agingLabel } from '../../entities/board/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
+import { UNIT_SHORT } from '../../entities/card/model.ts'
 import type { EstimateUnit } from '../../shared/api/index.ts'
 
 /**
@@ -91,12 +92,6 @@ export function Workload({
   )
 }
 
-const UNITS: Record<EstimateUnit, string> = {
-  points: 'очк.',
-  hours: 'ч',
-  days: 'дн.',
-}
-
 /** Всё, что не поместилось в две цифры, — словами при наведении:
  *  плюс после суммы иначе читается как опечатка. */
 function title(
@@ -104,7 +99,7 @@ function title(
   unit: EstimateUnit,
 ): string {
   const parts = [`${row.name}: ${row.cards} в работе`]
-  if (row.weight > 0) parts.push(`${number(row.weight)} ${UNITS[unit]}`)
+  if (row.weight > 0) parts.push(`${number(row.weight)} ${UNIT_SHORT[unit]}`)
   if (row.unestimated > 0) parts.push(`${row.unestimated} без оценки`)
   if (row.overdue) parts.push('есть карточка дольше обещанного')
   return parts.join(', ')

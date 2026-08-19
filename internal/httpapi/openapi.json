@@ -606,6 +606,32 @@
         "responses": { "200": { "description": "Список подразделений" } }
       }
     },
+    "/org/estimate-unit": {
+      "put": {
+        "summary": "В чём организация оценивает работу",
+        "description": "Только владелец. Единица общая на все доски: складывать очки с часами бессмысленно, а прогресс, загрузка людей и отчёт по итерации — это сложение. Числа на карточках не пересчитываются: меняется подпись, а не значение. Ответ — «кто я» с новой единицей.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["unit"],
+                "properties": {
+                  "unit": { "type": "string", "enum": ["points", "hours", "days"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Кто я, с новой единицей" },
+          "400": { "description": "Единица не из трёх известных" },
+          "403": { "description": "Не владелец организации" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
     "/audit": {
       "get": {
         "summary": "Журнал административных действий",
