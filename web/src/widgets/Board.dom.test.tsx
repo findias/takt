@@ -258,6 +258,30 @@ describe('состояния доски', () => {
   })
 })
 
+// Заголовок вкладки был один на всё приложение — «Доска», — и десять
+// открытых вкладок выглядели одинаково: нужную искали перебором.
+describe('заголовок вкладки', () => {
+  it('называет открытую доску', async () => {
+    const snap = board([card('первая', COL_A, 'a0')])
+    snap.board.name = 'Поставка'
+    snapshot.mockResolvedValue(snap)
+    show()
+
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+    // Отличающее слово первым: вкладка показывает начало и режет конец.
+    await waitFor(() => expect(document.title).toMatch(/^Поставка/))
+  })
+
+  it('открытая карточка называет себя номером', async () => {
+    const snap = board([card('первая', COL_A, 'a0')])
+    snap.board.name = 'Поставка'
+    snapshot.mockResolvedValue(snap)
+    show('первая')
+
+    await waitFor(() => expect(document.title).toMatch(/^ДОСК-первая/))
+  })
+})
+
 describe('поток изменений', () => {
   // EventSource переподключается сам только после обрыва связи. Ответ
   // не-200 он считает окончательным — и закрывается насовсем; именно

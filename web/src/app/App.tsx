@@ -8,6 +8,7 @@ import { BoardList } from '../widgets/BoardList.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
+import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import { ToastHost } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
 
@@ -109,6 +110,16 @@ function Screens() {
     addEventListener('pageshow', restored)
     return () => removeEventListener('pageshow', restored)
   }, [principal])
+
+  // Заголовок вкладки. Доска и карточка называют себя сами: только они
+  // знают, как называется открытое, — а здесь известны лишь разделы.
+  useDocumentTitle(
+    route.name === 'board'
+      ? null
+      : route.name === 'invite'
+        ? 'Приглашение'
+        : (TABS.find(([name]) => name === route.name)?.[1] ?? null),
+  )
 
   // Принятое приглашение заменяет адрес, а не добавляет в историю:
   // возвращаться по «назад» к уже использованной ссылке некуда.

@@ -13,6 +13,7 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { flowIssues, withoutParts } from '../entities/board/model.ts'
 import { api } from '../shared/api/index.ts'
+import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import type {
   BoardAccess as Access,
   BoardInfo,
@@ -197,6 +198,11 @@ export function Board({
   )
 
   const { base, order: fullOrder, moveCard } = board
+
+  // Заголовок вкладки: сначала то, что вкладку отличает. Открытая
+  // карточка важнее доски — на неё и смотрят, когда её держат открытой.
+  const открытая = openCard ? base?.cards[openCard] : undefined
+  useDocumentTitle(открытая ? `${открытая.number} ${открытая.title}` : (base?.info.name ?? null))
 
   /**
    * Зеркало доски для обработчиков.
