@@ -100,6 +100,169 @@ test('на всех экранах цели нажатия не мельче 24 
   await page.getByRole('button', { name: 'Команда' }).click()
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await tinyTargets(page), 'команда').toEqual([])
+
+  // Метка на карточке — отдельный замер: без меток поле-метки показывает
+  // слово и в цель нажатия укладывается, а с одной меткой съёживается
+  // до точки в шесть пикселей. Проход глазами нашёл на стенде кнопку
+  // шириной шестнадцать — на пустой доске такой не бывает, и проверка
+  // её не видела.
+  await page.getByPlaceholder('Название метки').fill('Горит')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+  await expect(page.getByText('Горит')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await page.getByRole('button', { name: 'Доступность', exact: true }).click()
+  const карточка = queue.getByRole('group', { name: /Карточка «Карточка»/ })
+  await карточка.getByRole('button', { name: 'Карточка', exact: true }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Повесить метку').selectOption({ label: 'Горит' })
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+
+  await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()
+  expect(await tinyTargets(page), 'доска с меткой').toEqual([])
+})
+
+/**
+ * Контраст в обеих темах.
+ *
+ * WCAG 1.4.3 — 4.5:1 обычному тексту и 3:1 крупному; 1.4.11 — 3:1
+ * границе элемента управления. Считается по-настоящему: цвет текста
+ * против первой непрозрачной подложки над ним.
+ *
+ * Нашлось проходом глазами и обеими темами сразу: подписи аватаров
+ * красились цветом поверхности — в светлой теме это белым по цветному
+ * кружку (5.4, годно), а в тёмной почти чёрным (3.15). Границы полей
+ * брали цвет волосяной черты между строками: 1.42 в светлой и 1.28
+ * в тёмной вместо трёх.
+ */
+async function lowContrast(page: Page, тема: 'Светлая' | 'Тёмная') {
+  await page.getByLabel('Тема').selectOption({ label: тема })
+  return await page.evaluate(() => {
+    const числа = (s: string) => (s.match(/[\d.]+/g) ?? []).map(Number)
+    const яркость = (c: number[]) => {
+      const [r, g, b] = c.slice(0, 3).map((v) => {
+        v /= 255
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+      })
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const отношение = (a: number[], b: number[]) => {
+      const [x, y] = [яркость(a), яркость(b)]
+      return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+    }
+    // Первая непрозрачная подложка: полупрозрачный фон сам по себе
+    // ничего не говорит о том, на чём в итоге лежит текст.
+    const подложка = (el: Element | null): number[] => {
+      for (let n = el; n; n = n.parentElement) {
+        const c = числа(getComputedStyle(n).backgroundColor)
+        if (c.length < 4 || c[3] > 0.9) return c.slice(0, 3)
+      }
+      return [255, 255, 255]
+    }
+    const out: string[] = []
+    for (const el of document.querySelectorAll('*')) {
+      if (el.children.length) continue
+      const текст = (el.textContent ?? '').trim()
+      if (!текст) continue
+      const box = el.getBoundingClientRect()
+      if (!box.width || !box.height) continue
+      const cs = getComputedStyle(el)
+      const размер = parseFloat(cs.fontSize)
+      const крупный = размер >= 24 || (размер >= 18.66 && parseInt(cs.fontWeight) >= 700)
+      const порог = крупный ? 3 : 4.5
+      const k = отношение(числа(cs.color), подложка(el))
+      if (k < порог) out.push(`текст «${текст.slice(0, 20)}» ${k.toFixed(2)} < ${порог}`)
+    }
+    for (const el of document.querySelectorAll('input, select, textarea')) {
+      const cs = getComputedStyle(el)
+      if (!parseFloat(cs.borderTopWidth)) continue
+      const k = отношение(числа(cs.borderTopColor), подложка(el.parentElement))
+      if (k < 3) out.push(`граница ${el.tagName} ${k.toFixed(2)} < 3`)
+    }
+    return [...new Set(out)]
+  })
+}
+
+test('контраст держится в обеих темах', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Контраст')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  // Исполнитель на карточке — ради подписи аватара: она и падала
+  // в тёмной теме. Без исполнителя аватара на экране нет вовсе,
+  // и проверять было бы нечего.
+  await queue
+    .getByRole('group', { name: /Карточка «Карточка»/ })
+    .getByRole('button', { name: 'Карточка', exact: true })
+    .click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Добавить исполнителя').selectOption({ index: 1 })
+  await page.keyboard.press('Escape')
+  // Аватар скрыт от диктора (имя рядом сказано словами), поэтому ищем
+  // его разметкой, а не ролью.
+  await expect(queue.locator('.avatar').first()).toBeVisible()
+
+  expect(await lowContrast(page, 'Светлая'), 'доска, светлая тема').toEqual([])
+  expect(await lowContrast(page, 'Тёмная'), 'доска, тёмная тема').toEqual([])
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
+  expect(await lowContrast(page, 'Светлая'), 'команда, светлая тема').toEqual([])
+  expect(await lowContrast(page, 'Тёмная'), 'команда, тёмная тема').toEqual([])
+})
+
+/**
+ * Узкое окно: ничего не уезжает за край.
+ *
+ * Требование WCAG 1.4.10 и оно же — проверка зума: страница на 1280
+ * при увеличении вдвое видна ровно так же, как на 640. Меряется
+ * горизонтальная прокрутка всего документа: доска колонки листает сама,
+ * это её работа, а вот страница листаться вбок не должна.
+ *
+ * Нашлось проходом глазами: панельное правило было написано на голом
+ * `.tabs`, а тем же классом названы разделы приложения — полоса
+ * «Доски · Команда · Структура» получала отрицательные поля панели,
+ * вылезала на четыре пикселя за оба края и таскала за собой всю
+ * страницу.
+ */
+test('на узком экране страница не листается вбок', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 760 })
+  await register(page)
+
+  const шире = () =>
+    page.evaluate(() => ({
+      прокрутка: document.documentElement.scrollWidth,
+      окно: window.innerWidth,
+    }))
+
+  expect(await шире(), 'список досок').toEqual({ прокрутка: 360, окно: 360 })
+
+  await page.getByPlaceholder('Название новой доски').fill('Узкое окно')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  expect(await шире(), 'доска').toEqual({ прокрутка: 360, окно: 360 })
+
+  await queue.getByRole('group', { name: /Карточка «Карточка»/ })
+    .getByRole('button', { name: 'Карточка', exact: true })
+    .click()
+  await expect(page.getByRole('tab', { name: 'Работа' })).toBeVisible()
+  expect(await шире(), 'карточка').toEqual({ прокрутка: 360, окно: 360 })
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
+  expect(await шире(), 'команда').toEqual({ прокрутка: 360, окно: 360 })
+
+  await page.getByRole('button', { name: 'Структура' }).click()
+  expect(await шире(), 'структура').toEqual({ прокрутка: 360, окно: 360 })
 })
 
 test('у каждого элемента управления есть имя', async ({ page }) => {

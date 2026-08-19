@@ -57,6 +57,12 @@
      подписи и пояснения, то есть самый мелкий текст на экране. */
   --ink-3: #5e6d69;
   --rule: #d4dad7;
+  /* Граница элемента управления — не то же самое, что черта между
+     строками: WCAG 1.4.11 требует от неё 3:1 к фону, и волосяная
+     линия таблицы этому порогу не отвечает (1.42 в светлой теме,
+     1.28 в тёмной — замерено). Разделители остаются тонкими,
+     а поля и кнопки обводятся заметнее. */
+  --rule-strong: #7c8481;
   --accent: #0e6f5c;
   --accent-soft: #dcebe5;
   --warn: #a33d1e;
@@ -74,6 +80,7 @@
     --ink-2: #aebcb7;
     --ink-3: #8b9a95;
     --rule: #27322f;
+    --rule-strong: #6b7370;
     --accent: #52c1a4;
     --accent-soft: #122c25;
     --warn: #e08264;
@@ -92,6 +99,7 @@
   --ink-2: #aebcb7;
   --ink-3: #8b9a95;
   --rule: #27322f;
+  --rule-strong: #6b7370;
   --accent: #52c1a4;
   --accent-soft: #122c25;
   --warn: #e08264;
@@ -213,6 +221,22 @@ button.link {
   color: var(--accent);
   padding: 0 var(--space-1);
 }
+/* Пять состояний обязательны каждому элементу: покой, наведение, фокус
+   с клавиатуры, нажатие, недоступность. У кнопки-ссылки — а ею набрана
+   половина действий экрана: «Снять», «Разметка», «Убрать из списка» —
+   не было ни наведения, ни нажатия, ни недоступности: наводишь и
+   нажимаешь, а экран молчит до ответа сервера. */
+button.link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+button.link:active:not(:disabled) {
+  opacity: 0.65;
+}
+button.link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
 /* Необратимое рядом с обратимым: «Вернуть» и «Удалить навсегда» стоят
    в одной строке, и одинаковыми им быть нельзя. */
 button.link--danger {
@@ -234,6 +258,9 @@ a.button {
 }
 a.button:hover {
   border-color: var(--accent);
+}
+a.button:active {
+  background: var(--surface-2);
 }
 a.button--wide {
   justify-content: center;
@@ -266,7 +293,7 @@ textarea {
   width: 100%;
   padding: var(--space-1) var(--space-2);
   min-height: var(--target);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
@@ -553,20 +580,10 @@ input[type='radio'] {
   display: flex;
   gap: var(--space-1);
 }
-.tab {
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: none;
-  color: var(--ink-3);
-  padding: var(--space-1) var(--space-2);
-  min-height: var(--target);
-}
-.tab--active {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-  font-weight: 650;
-}
+/* Вид самой вкладки описан ниже, вместе с панельными: одно описание
+   на оба места, иначе разделы приложения и вкладки карточки разъедутся
+   в цвете и насыщенности. Здесь стояло второе, и его целиком
+   перекрывало то. */
 
 .member-list {
   list-style: none;
@@ -658,7 +675,7 @@ select {
   font: inherit;
   padding: var(--space-1) var(--space-2);
   min-height: var(--target);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
@@ -674,7 +691,7 @@ textarea:disabled,
 select:disabled {
   background: var(--surface-2);
   color: var(--ink-3);
-  border-color: var(--rule);
+  border-color: var(--rule-strong);
   cursor: not-allowed;
   opacity: 1;
 }
@@ -1223,8 +1240,12 @@ select:disabled {
 }
 
 /* Полоса вкладок липнет к верху панели: панель прокручивается целиком,
-   и без этого из длинной истории не было бы видно, чем её закрыть. */
-.tabs {
+   и без этого из длинной истории не было бы видно, чем её закрыть.
+   Правило именно панельное: тем же классом названы разделы приложения
+   в шапке, и голый `.tabs` вешал на них отрицательные поля панели —
+   полоса разделов вылезала на четыре пикселя за оба края окна, и вся
+   страница получала горизонтальную прокрутку на узком экране. */
+.panel-card .tabs {
   position: sticky;
   top: calc(var(--space-4) * -1);
   z-index: 1;
@@ -1994,6 +2015,12 @@ textarea.description {
 .btn:hover:not(:disabled) {
   border-color: var(--accent);
 }
+/* Нажатие: цветом, а не движением. Кнопка, не отвечающая на палец,
+   заставляет жать второй раз — а второе нажатие уже уходит на сервер
+   отдельной операцией. */
+.btn:active:not(:disabled) {
+  background: var(--surface-2);
+}
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -2010,6 +2037,10 @@ textarea.description {
 }
 .btn--primary:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+.btn--primary:active:not(:disabled) {
+  filter: brightness(0.92);
+  background: var(--accent);
 }
 .btn--quiet {
   border-color: transparent;
@@ -2079,7 +2110,10 @@ textarea.description {
   font-weight: 650;
   letter-spacing: 0.02em;
   line-height: 1;
-  color: var(--surface);
+  /* Белым в обеих темах: заливка кружка от темы не зависит, а
+     `var(--surface)` в тёмной делал буквы почти чёрными — 3.15
+     к подложке вместо 4.5 (замерено). */
+  color: #fff;
   user-select: none;
 }
 /* Оттенки выводятся из имени и живут здесь, а не в поле «цвет
@@ -2126,7 +2160,9 @@ textarea.description {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 0.15rem;
+  /* Шкала отступов, а не подгонка на глаз: 0.15rem здесь стояло
+     единственным числом вне шкалы на всём экране доски. */
+  gap: var(--space-1);
 }
 .label-dot {
   /* Шесть пикселей: меньше — грязь при масштабировании, больше —
@@ -2270,9 +2306,13 @@ textarea.description {
   margin-left: 0;
 }
 /* Поле-метки на карточке жмётся к содержимому: рамка вокруг точек
-   не должна занимать полстроки. */
+   не должна занимать полстроки. Но не уже цели нажатия: карточка
+   с одной меткой давала кнопку в 16 пикселей — WCAG 2.5.8 требует
+   двадцати четырёх, и мимо такой кнопки промахиваются пальцем. */
 .label-field {
   padding: 0 var(--space-1);
+  min-inline-size: 24px;
+  justify-content: center;
 }
 
 /* --- 2. Правка поля щелчком по полю ----------------------------------
