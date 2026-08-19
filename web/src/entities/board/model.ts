@@ -427,27 +427,38 @@ export function agingLabel(
 export function withoutParts(
   base: BaseState,
   order: Record<string, string[]>,
-): { order: Record<string, string[]>; parts: Record<string, number> } {
+): {
+  order: Record<string, string[]>
+  parts: Record<string, number>
+  /** Сами спрятанные части, колонка → id. Нужны дорожкам: части
+   *  раскладываются по ним так же, как карточки, иначе счётчик каждой
+   *  дорожки показывал бы все части доски разом. */
+  partIds: Record<string, string[]>
+} {
   const parentOf = new Map<string, string>()
   for (const link of base.links) {
     if (link.kind === 'subtask' && base.cards[link.toCard]) {
       parentOf.set(link.toCard, link.fromCard)
     }
   }
-  if (parentOf.size === 0) return { order, parts: {} }
+  if (parentOf.size === 0) return { order, parts: {}, partIds: {} }
 
   const shown = new Set<string>()
   for (const ids of Object.values(order)) for (const id of ids) shown.add(id)
 
   const next: Record<string, string[]> = {}
   const parts: Record<string, number> = {}
+  const partIds: Record<string, string[]> = {}
   for (const [columnId, ids] of Object.entries(order)) {
     const kept = ids.filter((id) => {
       const parent = parentOf.get(id)
       return parent === undefined || !shown.has(parent)
     })
     next[columnId] = kept
-    if (kept.length !== ids.length) parts[columnId] = ids.length - kept.length
+    if (kept.length !== ids.length) {
+      parts[columnId] = ids.length - kept.length
+      partIds[columnId] = ids.filter((id) => !kept.includes(id))
+    }
   }
-  return { order: next, parts }
+  return { order: next, parts, partIds }
 }

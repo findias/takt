@@ -19,6 +19,7 @@ import (
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/store"
@@ -84,7 +85,39 @@ type Invite struct {
 }
 
 // Create заводит организацию и делает создателя её владельцем.
+//
+// Столкновение адресов лечится повтором, а не блокировкой. Свободный
+// адрес подбирается чтением, а занимается отдельной вставкой — и две
+// одинаково названные организации, заведённые в одну секунду, выбирали
+// один и тот же свободный адрес: вторая падала «внутренней ошибкой»
+// на уникальном индексе. Ловилось это редко и не там, где случалось:
+// сквозные проверки, заводящие одноимённую организацию разом, мигали
+// на входе. Повтор дешевле блокировки: столкновение — редкость,
+// а чтение при повторе уже видит занятое.
 func (s *Service) Create(ctx context.Context, name, ownerUserID string) (auth.Membership, error) {
+	var m auth.Membership
+	var err error
+	for попытка := 0; ; попытка++ {
+		m, err = s.create(ctx, name, ownerUserID)
+		// Повторов столько же, сколько бывает одновременных регистраций
+		// в одну секунду с запасом: каждая неудача — это чей-то выигрыш,
+		// то есть очередь разбирается за столько же заходов, сколько
+		// участников.
+		if err == nil || попытка >= 15 || !адресЗанят(err) {
+			return m, err
+		}
+	}
+}
+
+// адресЗанят — вставка не прошла по уникальному индексу адреса.
+// Именно по нему: остальные нарушения уникальности повторять незачем,
+// они не рассосутся.
+func адресЗанят(err error) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && pg.Code == "23505" && pg.ConstraintName == "orgs_slug_key"
+}
+
+func (s *Service) create(ctx context.Context, name, ownerUserID string) (auth.Membership, error) {
 	var m auth.Membership
 	err := s.db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
 		slug, err := uniqueSlug(ctx, tx, name)

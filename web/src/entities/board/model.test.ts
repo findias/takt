@@ -333,6 +333,7 @@ test('часть не стоит в колонке отдельной карто
   assert.deepEqual(withoutParts(base, order), {
     order: { queue: ['p'], work: [] },
     parts: { queue: 2 },
+    partIds: { queue: ['a', 'b'] },
   })
 
   // Родителя не видно — часть возвращается в колонку: иначе работа
@@ -340,6 +341,7 @@ test('часть не стоит в колонке отдельной карто
   assert.deepEqual(withoutParts(base, { queue: ['a', 'b'], work: [] }), {
     order: { queue: ['a', 'b'], work: [] },
     parts: {},
+    partIds: {},
   })
 
   // Часть на чужой доске в наших колонках и так не стоит.
@@ -350,5 +352,6 @@ test('часть не стоит в колонке отдельной карто
   assert.deepEqual(withoutParts(foreign, { queue: ['p'] }), {
     order: { queue: ['p'] },
     parts: {},
+    partIds: {},
   })
 })

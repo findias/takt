@@ -73,6 +73,10 @@ async function register(page: Page) {
   // Срок больше обычного: организацию заводит каждая проверка этого
   // файла, идут они разом, а на создании считается хеш пароля —
   // и вчетвером они не укладываются в пять секунд на занятой машине.
+  //
+  // Мигало здесь ещё и не от сроков: одноимённые организации, заведённые
+  // в одну секунду, выбирали один свободный адрес, и вторая падала
+  // «внутренней ошибкой». Чинилось в `org.Create`, а не здесь.
   await expect(page.getByPlaceholder('Название новой доски')).toBeVisible({ timeout: 20_000 })
 }
 
@@ -249,7 +253,20 @@ test('на узком экране страница не листается вб
   await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
   expect(await шире(), 'доска').toEqual({ прокрутка: 360, окно: 360 })
 
-  await queue.getByRole('group', { name: /Карточка «Карточка»/ })
+  // Часть внутри родителя: она уходит с доски внутрь задачи, но
+  // из счёта колонки не уходит — на ней и расходились два числа.
+  await queue
+    .getByRole('group', { name: /Карточка «Карточка»/ })
+    .getByRole('button', { name: 'Карточка', exact: true })
+    .click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel('Название подзадачи').fill('Часть работы')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await expect(page.getByRole('button', { name: 'Часть работы' }).first()).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await queue
+    .getByRole('group', { name: /Карточка «Карточка»/ })
     .getByRole('button', { name: 'Карточка', exact: true })
     .click()
   await expect(page.getByRole('tab', { name: 'Работа' })).toBeVisible()
@@ -263,6 +280,21 @@ test('на узком экране страница не листается вб
 
   await page.getByRole('button', { name: 'Структура' }).click()
   expect(await шире(), 'структура').toEqual({ прокрутка: 360, окно: 360 })
+
+  // На узком экране колонка одна, а остальные — в переключателе над ней.
+  // Число в переключателе обязано совпадать с числом в шапке самой
+  // колонки: на снимке стенда рядом стояли «Очередь 2» и «Очередь 5» —
+  // переключатель не считал части, спрятанные внутрь родителей,
+  // а шапка считала (их считает в лимите сервер).
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await page.getByRole('button', { name: 'Узкое окно', exact: true }).click()
+  const очередь = page.getByRole('tab', { name: /Очередь/ })
+  await expect(очередь).toBeVisible()
+  const вПереключателе = (await очередь.textContent())?.replace(/\D+/g, '')
+  const вШапке = (
+    await page.getByRole('region', { name: 'Очередь' }).locator('.column-header').textContent()
+  )?.replace(/\D+/g, '')
+  expect(вПереключателе, 'число в переключателе колонок').toBe(вШапке)
 })
 
 test('у каждого элемента управления есть имя', async ({ page }) => {

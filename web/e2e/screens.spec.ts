@@ -81,6 +81,24 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/05-доска-плотная.png` })
   await denser.uncheck()
 
+  // Дорожки: та же доска, разложенная не по колонкам, а по исполнителю,
+  // метке, итерации и важности. В снимках не было ни одной, а раскладка
+  // у каждой своя — и пустая дорожка, и человек без работы, и карточка
+  // с двумя метками, попадающая в две дорожки сразу.
+  const grouping = page.getByLabel('Группировка')
+  for (const [value, file] of [
+    ['assignee', '05б-дорожки-по-исполнителю'],
+    ['label', '05в-дорожки-по-метке'],
+    ['iteration', '05г-дорожки-по-итерации'],
+    ['priority', '05д-дорожки-по-важности'],
+  ] as const) {
+    await grouping.selectOption(value)
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${SHOTS}/${file}.png`, fullPage: true })
+  }
+  await grouping.selectOption('none')
+  await page.waitForTimeout(200)
+
   // Разбиение работы раскрывается прямо с доски.
   const parent = page.getByRole('group', { name: /Выпустить релиз склада/ })
   await parent.getByRole('button', { name: /Подзадачи/ }).click()
@@ -222,9 +240,58 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByRole('button', { name: /^Отозвать приглашение/ }).click()
   await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toHaveCount(0)
 
-  // Узкий экран: колонки не помещаются рядом, показывается одна.
-  await page.setViewportSize({ width: 390, height: 844 })
+  // Тёмная тема на остальных экранах. В снимках она была только
+  // у доски — а расходится тема как раз на мелочах: подписи аватаров,
+  // рамки полей, тени. Проход по дизайн-языку нашёл в тёмной теме два
+  // нарушения контраста, которых в светлой не было вовсе, и увидеть их
+  // было негде: тёмных снимков этих экранов не существовало.
+  await page.emulateMedia({ colorScheme: 'dark' })
   await page.getByRole('button', { name: 'Доски' }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/23-список-досок-тёмный.png`, fullPage: true })
+
+  await openBoard(page, 'Поставки')
+  const dark = page.getByRole('group', { name: /Выпустить релиз склада/ })
+  await dark.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/24-карточка-тёмная.png` })
+  await backToBoard(page, boardUrl)
+
+  await page.getByRole('button', { name: 'Таблица' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/25-таблица-тёмная.png` })
+  await page.getByRole('button', { name: 'Доска' }).click()
+
+  await page.getByRole('button', { name: 'Поток' }).click()
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: `${SHOTS}/26-поток-тёмный.png`, fullPage: true })
+  await backToBoard(page, boardUrl)
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/27-команда-тёмная.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Структура' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/28-структура-тёмная.png`, fullPage: true })
+  await page.emulateMedia({ colorScheme: 'light' })
+
+  // Зум 200%: страница шириной 1440 при увеличении вдвое видна ровно
+  // так же, как окно в 720. Требование WCAG 1.4.10, и ловит оно те же
+  // переполнения, что узкое окно, — только на настольном экране,
+  // где их никто не ищет.
+  await page.setViewportSize({ width: 720, height: 450 })
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await openBoard(page, 'Поставки')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/29-зум-200.png` })
+
+  // Узкий экран: колонки не помещаются рядом, показывается одна.
+  // Триста шестьдесят, а не триста девяносто: это самое узкое из того,
+  // на чём вообще смотрят, и переполнение видно на нём первым.
+  await page.setViewportSize({ width: 360, height: 760 })
+  await page.getByRole('button', { name: 'Все доски' }).click()
   await openBoard(page, 'Поставки')
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/21-узкий-экран.png` })

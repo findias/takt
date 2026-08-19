@@ -260,6 +260,60 @@ describe('состояния доски', () => {
 
 // Заголовок вкладки был один на всё приложение — «Доска», — и десять
 // открытых вкладок выглядели одинаково: нужную искали перебором.
+// Дорожка выводится из полей карточки, а не из места на доске: брошенная
+// в чужую дорожку карточка встала бы обратно в свою. Пустая колонка
+// дорожки обещала перенос — то есть звала сделать то, что не работает.
+describe('пустая колонка дорожки', () => {
+  it('не зовёт перетаскивать, раз дорожка переносом не меняется', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    await user.selectOptions(screen.getByLabelText('Группировка'), 'priority')
+
+    const пустые = await screen.findAllByText(/Пусто/)
+    expect(пустые.length).toBeGreaterThan(0)
+    for (const узел of пустые) {
+      expect(узел.textContent).toMatch(/дорожк/i)
+      expect(узел.textContent).not.toMatch(/Перетащите/)
+    }
+  })
+
+  it('без дорожек зовёт как раньше', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    const пусто = await screen.findByText(/Пусто\./)
+    expect(пусто.textContent).toMatch(/Перетащите карточку сюда/)
+  })
+})
+
+// Часть, показанная внутри родителя, из колонки убрана, но в счёт
+// колонки входит — так же, как её считает сервер в лимите. При дорожках
+// счёт был общий на доску: «здесь только части задач, всего 1» стояло
+// в каждой дорожке, включая те, где не было ни одной части.
+describe('части при дорожках', () => {
+  it('считаются в своей дорожке, а не во всех сразу', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const родитель = card('родитель', COL_A, 'a0')
+    const часть = { ...card('часть', COL_A, 'a1'), priority: 'high' as const }
+    const снимок = board([родитель, часть])
+    снимок.links = [{ fromCard: 'родитель', toCard: 'часть', kind: 'subtask' }]
+    snapshot.mockResolvedValue(снимок)
+    show()
+    await screen.findByRole('group', { name: /Карточка «родитель»/ })
+
+    await user.selectOptions(screen.getByLabelText('Группировка'), 'priority')
+
+    // Дорожек две — «Высокий» с одной спрятанной частью и «Средний»
+    // с самим родителем. Про части говорит ровно одна.
+    const про = await screen.findAllByText(/только части задач/)
+    expect(про).toHaveLength(1)
+  })
+})
+
 describe('заголовок вкладки', () => {
   it('называет открытую доску', async () => {
     const snap = board([card('первая', COL_A, 'a0')])

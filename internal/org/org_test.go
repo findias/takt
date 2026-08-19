@@ -112,6 +112,55 @@ func TestCreatedOrgHasOwnerAndUniqueSlug(t *testing.T) {
 	}
 }
 
+// Одинаковое название в одну секунду — обычное дело: так регистрируются
+// двое из одной команды, не сговариваясь, и так же ведут себя сквозные
+// проверки, заводящие «Проверку доступности» разом. Свободный адрес
+// подбирается чтением, а занимается вставкой, и в этот зазор попадали
+// обе: вторая получала «внутреннюю ошибку» на уникальном индексе.
+// Замер до починки: из шести одновременных проходили одна-две.
+func TestSameNameAtTheSameMomentStillRegisters(t *testing.T) {
+	f := newFixture(t)
+
+	const сколько = 6
+	владельцы := make([]string, сколько)
+	for i := range владельцы {
+		владельцы[i], _ = f.user("Владелец")
+	}
+
+	готово := make(chan error, сколько)
+	адреса := make(chan string, сколько)
+	старт := make(chan struct{})
+	for i := range владельцы {
+		go func(ownerID string) {
+			<-старт
+			m, err := f.svc.Create(context.Background(), "Одно и то же имя", ownerID)
+			if err == nil {
+				адреса <- m.OrgSlug
+				t.Cleanup(func() {
+					_, _ = f.db.Pool.Exec(context.Background(), `delete from orgs where id = $1`, m.OrgID)
+				})
+			}
+			готово <- err
+		}(владельцы[i])
+	}
+	close(старт)
+
+	for range владельцы {
+		if err := <-готово; err != nil {
+			t.Errorf("одновременная регистрация не прошла: %v", err)
+		}
+	}
+
+	видели := map[string]bool{}
+	close(адреса)
+	for адрес := range адреса {
+		if видели[адрес] {
+			t.Errorf("две организации получили один адрес %q", адрес)
+		}
+		видели[адрес] = true
+	}
+}
+
 // Организация без владельца неуправляема, и починить это можно только
 // руками в базе. Поэтому последнего владельца не снимают и не исключают.
 func TestLastOwnerIsProtected(t *testing.T) {

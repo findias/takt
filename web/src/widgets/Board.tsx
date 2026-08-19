@@ -48,7 +48,7 @@ import {
   groupsOf,
   parseGrouping,
 } from '../features/board/grouping.ts'
-import type { Grouping } from '../features/board/grouping.ts'
+import type { Group, Grouping } from '../features/board/grouping.ts'
 import { useToast } from '../shared/ui/Toast.tsx'
 import {
   ArchiveIcon,
@@ -226,8 +226,13 @@ export function Board({
   // Фильтр применяется к показу, а не к данным: перетаскивание,
   // счётчики лимита и догон патчами продолжают работать с полной
   // доской, иначе включённый фильтр начал бы менять её поведение.
-  const { order, parts, hidden } = useMemo(() => {
-    if (!base) return { order: fullOrder, parts: {} as Record<string, number>, hidden: 0 }
+  const { order, partIds, hidden } = useMemo(() => {
+    if (!base)
+      return {
+        order: fullOrder,
+        partIds: {} as Record<string, string[]>,
+        hidden: 0,
+      }
     if (isEmpty(filters)) return { ...withoutParts(base, fullOrder), hidden: 0 }
     // Карточки, у которых стоит часть. Считается один раз на проход
     // отбора: связей у доски единицы на карточку, а спрашивать по одной
@@ -267,10 +272,41 @@ export function Board({
     (next: Grouping) => setQuery(groupingToQuery(next, query), { replace: true }),
     [query],
   )
-  const groups = useMemo(
-    () => (base ? groupsOf(base, order, grouping) : []),
-    [base, order, grouping],
-  )
+  /**
+   * Дорожки — и спрятанные части по дорожкам.
+   *
+   * Часть, показанная внутри родителя, из колонки убрана, но из счёта
+   * не выкинута: сервер считает её в лимите так же. При дорожках счёт
+   * был общий на доску — «Очередь 3» и «здесь только части задач, всего
+   * 3» стояло в каждой дорожке, включая те, где не было ни одной части.
+   *
+   * Раскладываются части вместе с карточками, одним проходом: дорожка,
+   * в которой нет ничего, кроме спрятанной части, обязана существовать —
+   * иначе работа пропадает с доски совсем.
+   */
+  const { groups, partsIn } = useMemo(() => {
+    if (!base) return { groups: [] as Group[], partsIn: {} as Record<string, Record<string, number>> }
+    const вместе: Record<string, string[]> = {}
+    for (const [columnId, ids] of Object.entries(order)) вместе[columnId] = [...ids]
+    for (const [columnId, ids] of Object.entries(partIds)) {
+      вместе[columnId] = [...(вместе[columnId] ?? []), ...ids]
+    }
+    const спрятанные = new Set(Object.values(partIds).flat())
+    const partsIn: Record<string, Record<string, number>> = {}
+    const groups = groupsOf(base, вместе, grouping).map((group) => {
+      const видимые: Record<string, string[]> = {}
+      const здесь: Record<string, number> = {}
+      let count = 0
+      for (const [columnId, ids] of Object.entries(group.order)) {
+        видимые[columnId] = ids.filter((id) => !спрятанные.has(id))
+        здесь[columnId] = ids.length - видимые[columnId].length
+        count += видимые[columnId].length
+      }
+      partsIn[group.id] = здесь
+      return { ...group, order: видимые, count }
+    })
+    return { groups, partsIn }
+  }, [base, order, partIds, grouping])
 
   /**
    * Сколько карточек скрыл отбор — по колонке каждой дорожки.
@@ -786,16 +822,21 @@ export function Board({
     ? base.columnIds.filter((id) => id === (visibleColumn ?? base.columnIds[0]))
     : base.columnIds
 
-  const renderColumns = (groupOrder: Record<string, string[]>, hidden?: Record<string, number>) =>
+  const renderColumns = (
+    groupOrder: Record<string, string[]>,
+    hidden?: Record<string, number>,
+    parts?: Record<string, number>,
+  ) =>
     shownColumns.map((columnId) => (
       <ColumnView
         key={columnId}
         canEdit={canEdit}
+        grouped={grouping !== 'none'}
         name={base.columns[columnId].name}
         columnId={columnId}
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
-        partsInside={parts[columnId] ?? 0}
+        partsInside={parts?.[columnId] ?? 0}
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
@@ -1033,7 +1074,13 @@ export function Board({
                 onClick={() => setVisibleColumn(columnId)}
               >
                 {base.columns[columnId].name}
-                <span className="muted small">{(order[columnId] ?? []).length}</span>
+                {/* Число то же, что в шапке колонки: части, спрятанные
+                    внутрь родителей, считаются и там и здесь. Иначе
+                    на одном экране стояли рядом «Очередь 2»
+                    в переключателе и «Очередь 5» в самой колонке. */}
+                <span className="muted small">
+                  {(order[columnId] ?? []).length + (partIds[columnId] ?? []).length}
+                </span>
               </button>
             )
           })}
@@ -1085,7 +1132,7 @@ export function Board({
             </div>
           )}
           <div className="columns" ref={columnsRef}>
-            {renderColumns(group.order, hiddenIn[group.id])}
+            {renderColumns(group.order, hiddenIn[group.id], partsIn[group.id])}
             {grouping === 'none' && canEdit && (
               <NewColumn onCreate={(name) => void board.createColumn(name)} />
             )}
