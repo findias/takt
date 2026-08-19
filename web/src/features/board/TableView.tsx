@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
@@ -46,6 +47,7 @@ export function TableView({
   onOpenCard,
   onMoveToColumn,
   onAssign,
+  onSort,
 }: {
   base: BaseState
   /** Тот же порядок, что на доске: фильтр уже применён. */
@@ -58,6 +60,9 @@ export function TableView({
   onOpenCard: (cardId: string) => void
   onMoveToColumn: (cardId: string, columnId: string) => void
   onAssign: (cardId: string, userId: string, on: boolean) => void
+  /** Смена порядка по щелчку в заголовок. Пусто — заголовки остаются
+   *  подписями: сортировать без адреса некуда. */
+  onSort?: (sort: Sort) => void
 }) {
   const columnName = useMemo(
     () => Object.fromEntries(columns.map((c) => [c.id, c.name])),
@@ -91,13 +96,23 @@ export function TableView({
           <tr>
             <th scope="col">Ключ</th>
             <th scope="col">Задача</th>
-            <th scope="col">Колонка</th>
+            <SortableHead sort={sort} by="column" onSort={onSort}>
+              Колонка
+            </SortableHead>
             <th scope="col">Кто делает</th>
             <th scope="col">Метки</th>
-            <th scope="col">Приоритет</th>
-            <th scope="col">Оценка</th>
-            <th scope="col">Возраст</th>
-            <th scope="col">Срок</th>
+            <SortableHead sort={sort} by="priority" onSort={onSort}>
+              Приоритет
+            </SortableHead>
+            <SortableHead sort={sort} by="estimate" onSort={onSort}>
+              Оценка
+            </SortableHead>
+            <SortableHead sort={sort} by="age" onSort={onSort}>
+              Возраст
+            </SortableHead>
+            <SortableHead sort={sort} by="due" onSort={onSort}>
+              Срок
+            </SortableHead>
             <th scope="col">Итерация</th>
             <th scope="col">
               <span className="sr-only">Действия</span>
@@ -192,6 +207,52 @@ export function TableView({
         {cardsLabel(rows.length)}, {SORT_NAMES[sort]}.
       </p>
     </div>
+  )
+}
+
+/**
+ * Заголовок столбца, по которому таблицу сортируют.
+ *
+ * Щелчок по заголовку — то, что человек пробует первым: список
+ * «Сортировка» рядом, но рука идёт в заголовок. Раньше она попадала
+ * в подпись, и не происходило ничего.
+ *
+ * `aria-sort` не украшение: без него не видно ни диктору, ни глазу,
+ * по какому столбцу выстроены строки, — это было сказано только
+ * в подписи таблицы и в адресе.
+ */
+function SortableHead({
+  by,
+  sort,
+  onSort,
+  children,
+}: {
+  by: Sort
+  sort: Sort
+  onSort?: (sort: Sort) => void
+  children: ReactNode
+}) {
+  const current = sort === by
+  if (!onSort) {
+    return <th scope="col">{children}</th>
+  }
+  return (
+    <th scope="col" aria-sort={current ? 'ascending' : 'none'}>
+      <button
+        className="link table-sort"
+        aria-label={current ? `${SORT_NAMES[by]} — так и отсортировано` : `Отсортировать ${SORT_NAMES[by]}`}
+        onClick={() => onSort(by)}
+      >
+        {children}
+        {/* Знак читается глазом, слово — диктором: у самого знака
+            `aria-hidden`, потому что «стрелка вверх» ответом не является. */}
+        {current && (
+          <span className="table-sort-mark" aria-hidden="true">
+            ↑
+          </span>
+        )}
+      </button>
+    </th>
   )
 }
 

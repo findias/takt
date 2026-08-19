@@ -747,6 +747,24 @@ select:disabled {
 .board-header-tail {
   margin-left: auto;
 }
+/* Заголовок-сортировка выглядит подписью, а не ссылкой: столбцов
+   девять, и девять цветных подписей превращают шапку в набор кнопок.
+   Отличается он поведением — курсором и подчёркиванием по наведению. */
+.table-sort {
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  min-height: 0;
+  cursor: pointer;
+}
+.table-sort:hover {
+  text-decoration: underline;
+}
+.table-sort-mark {
+  margin-left: var(--space-1);
+  color: var(--accent);
+}
+
 /* Ключ читается как имя, а не как служебный номер: он звучит в речи
    («ПОСТ-14»), поэтому стоит тем же цветом, что и подписи, а не серым
    мелким, каким набрана версия. */

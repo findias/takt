@@ -7,7 +7,7 @@
 // и требует настоящих событий указателя; клавиатурный путь для WCAG
 // важнее, и он наш.
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Card, Column, Snapshot } from '../shared/api/index.ts'
@@ -269,6 +269,35 @@ describe('заведение карточек подряд', () => {
 
     expect(screen.queryByPlaceholderText('Что нужно сделать?')).toBeNull()
     expect(screen.getByRole('button', { name: /Добавить карточку в «Очередь»/ })).toBeTruthy()
+  })
+})
+
+describe('таблица', () => {
+  // Рука идёт в заголовок столбца — это первое, что человек пробует
+  // в любой таблице. Раньше она попадала в подпись, и не происходило
+  // ничего: сортировка жила только в отдельном списке рядом, а по чему
+  // выстроены строки, из таблицы было не видно.
+  it('щелчок в заголовок сортирует, и видно, по какому столбцу', async () => {
+    snapshot.mockResolvedValue(
+      board([
+        { ...card('дешёвая', COL_A, 'a0', 'Дешёвая'), estimate: 1 },
+        { ...card('дорогая', COL_A, 'a1', 'Дорогая'), estimate: 8 },
+      ]),
+    )
+    window.history.replaceState({}, '', '/?view=table')
+    show()
+
+    const head = await screen.findByRole('columnheader', { name: /Оценка/ })
+    expect(head.getAttribute('aria-sort')).toBe('none')
+
+    await userEvent.click(within(head).getByRole('button'))
+
+    expect(
+      screen.getByRole('columnheader', { name: /Оценка/ }).getAttribute('aria-sort'),
+    ).toBe('ascending')
+    const titles = screen.getAllByRole('row').slice(1).map((r) => r.textContent ?? '')
+    expect(titles[0]).toMatch(/Дорогая/)
+    expect(titles[1]).toMatch(/Дешёвая/)
   })
 })
 

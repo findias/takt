@@ -1000,6 +1000,7 @@ export function Board({
           columns={columnList}
           unit={unit}
           sort={sort}
+          onSort={(next) => setQuery(sortToQuery(next, query))}
           people={base.people}
           labels={base.labels}
           onOpenCard={showCard}
