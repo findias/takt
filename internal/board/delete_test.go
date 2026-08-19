@@ -214,7 +214,7 @@ func TestArchivedCardsAreReachableAgain(t *testing.T) {
 	id := f.createCard("Отложенное дело", cols[0].ID)
 	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": id})
 
-	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "")
 	if err != nil {
 		t.Fatalf("архив карточек: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestArchivedCardsAreReachableAgain(t *testing.T) {
 
 	// Возврат работает и убирает карточку из архива.
 	f.mustApply("RESTORE_CARD", map[string]any{"cardId": id})
-	list, err = f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	list, err = f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func TestArchivedCardKnowsItCannotComeBack(t *testing.T) {
 		return err
 	})
 
-	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil)
+	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,5 +277,48 @@ func TestArchivedCardKnowsItCannotComeBack(t *testing.T) {
 	}
 	if !strings.Contains(conflict.Message, "тоже в архиве") {
 		t.Errorf("отказ не объясняет причину: %q", conflict.Message)
+	}
+}
+
+// Поиск по архиву.
+//
+// Проход по интерфейсу нашёл, что архив карточек листается, а искать
+// в нём нечем: на сотне карточек «Показать ещё» приходится жать десять
+// раз, вглядываясь в каждую строку. Поиск идёт на сервере — у клиента
+// на руках только показанная порция, и искать по ней значило бы
+// отвечать «не найдено» о том, что просто не долистали.
+func TestArchiveIsSearchable(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	нужная := f.createCard("Смета на бытовку", cols[0].ID)
+	чужая := f.createCard("Совсем про другое", cols[0].ID)
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": нужная})
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": чужая})
+
+	found, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "бытов")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != 1 || found[0].ID != нужная {
+		t.Fatalf("поиск по названию дал %d карточек: %+v", len(found), found)
+	}
+
+	// По номеру — тем же полем: номер и есть то, чем карточку называют
+	// в переписке.
+	byNumber, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, found[0].Number)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(byNumber) != 1 || byNumber[0].ID != нужная {
+		t.Errorf("поиск по номеру %q дал %+v", found[0].Number, byNumber)
+	}
+
+	// Пустой запрос ничего не отсеивает: это архив, а не отбор.
+	all, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Errorf("пустой запрос дал %d карточек, ожидались обе", len(all))
 	}
 }

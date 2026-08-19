@@ -187,7 +187,8 @@ func (s *Server) handleArchivedCards(w http.ResponseWriter, r *http.Request, p a
 		}
 		before = &t
 	}
-	cards, err := s.boards.ArchivedCards(r.Context(), p.OrgID, p.ID, r.PathValue("id"), before)
+	cards, err := s.boards.ArchivedCards(
+		r.Context(), p.OrgID, p.ID, r.PathValue("id"), before, r.URL.Query().Get("q"))
 	if errors.Is(err, board.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "доска не найдена")
 		return

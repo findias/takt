@@ -42,18 +42,22 @@ export function CardArchive({
   const [next, setNext] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = usePanelMode()
+  // Что ищут в архиве. Архив на сотнях карточек открывают, чтобы найти
+  // одну, а не листать подряд: без поиска «Показать ещё» приходилось
+  // жать десяток раз, вглядываясь в каждую строку.
+  const [query, setQuery] = useState('')
 
   const load = useCallback(
-    (before?: string) => {
+    (before?: string, search = query) => {
       api
-        .archivedCards(boardId, before)
+        .archivedCards(boardId, before, search)
         .then((r) => {
           setCards((prev) => (before && prev ? [...prev, ...r.cards] : r.cards))
           setNext(r.next)
         })
         .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось прочитать архив'))
     },
-    [boardId],
+    [boardId, query],
   )
 
   useEffect(() => load(), [load, reloadKey])
@@ -72,8 +76,23 @@ export function CardArchive({
   return (
     <Panel mode={mode} onMode={setMode} title="Архив" label="Архив карточек" onClose={onClose}>
       {error && <p className="error">{error}</p>}
+      {/* Поиск стоит всегда, а не появляется от числа карточек: строка
+          поиска, возникающая на сто первой карточке, читается как сбой. */}
+      <input
+        type="search"
+        value={query}
+        aria-label="Найти в архиве"
+        placeholder="Найти в архиве"
+        onChange={(e) => setQuery(e.target.value)}
+      />
       {cards === null && !error && <p className="muted small">Читаем…</p>}
-      {cards?.length === 0 && (
+      {cards?.length === 0 && query.trim() !== '' && (
+        <p className="muted small">
+          В архиве ничего не нашлось по запросу «{query.trim()}». Поиск идёт по номеру, названию
+          и описанию.
+        </p>
+      )}
+      {cards?.length === 0 && query.trim() === '' && (
         <p className="muted small">
           Архив пуст. Сюда попадают карточки, убранные с доски: они не удаляются, и вернуть их
           можно отсюда.

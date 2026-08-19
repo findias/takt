@@ -568,6 +568,20 @@ function IterationPicker({
     )
   }
 
+  // Карточку из закрытой итерации не вынуть и в другую не переложить:
+  // закрытая итерация — утверждение о том, что было сделано. Раньше
+  // список всё равно предлагал выбор, и он кончался двумя отказами
+  // подряд — «итерация закрыта», а следом «карточка уже в другой
+  // итерации», причём второй был лишь следствием первого. Дверь,
+  // которой нет, не предлагаем: говорим словами, почему.
+  if (currentIteration?.closedAt) {
+    return (
+      <p className="muted small">
+        Итерация: {currentIteration.name} — закрыта, и состав её больше не меняется.
+      </p>
+    )
+  }
+
   return (
     <label className="row row--tight">
       <span className="muted small">Итерация</span>
@@ -577,9 +591,6 @@ function IterationPicker({
         onChange={(e) => onChange(e.target.value || null)}
       >
         <option value="">Без итерации</option>
-        {currentIteration?.closedAt && (
-          <option value={currentIteration.id}>{currentIteration.name} (закрыта)</option>
-        )}
         {open.map((i) => (
           <option key={i.id} value={i.id}>
             {i.name}

@@ -423,7 +423,14 @@ const ArchivedCardsLimit = 100
 // Курсор — момент архивации, а не номер страницы: архив дописывается,
 // и смещение по номеру на нём однажды покажет одну и ту же карточку
 // дважды.
-func (s *Service) ArchivedCards(ctx context.Context, orgID, userID, boardID string, before *time.Time) ([]ArchivedCard, error) {
+// ArchivedCards читает архив доски порциями по времени архивации.
+//
+// query — поиск по номеру, названию и описанию, тот же, что на доске:
+// архив на сотнях карточек листают не для того, чтобы прокрутить его
+// целиком, а чтобы найти одну. Пустой запрос ничего не отсеивает.
+func (s *Service) ArchivedCards(
+	ctx context.Context, orgID, userID, boardID string, before *time.Time, query string,
+) ([]ArchivedCard, error) {
 	out := []ArchivedCard{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		var exists bool
@@ -449,8 +456,11 @@ func (s *Service) ArchivedCards(ctx context.Context, orgID, userID, boardID stri
 			  join board_columns col on col.id = c.column_id
 			 where c.board_id = $1 and c.archived_at is not null
 			   and ($2::timestamptz is null or c.archived_at < $2)
+			   and ($4 = '' or c.number ilike '%' || $4 || '%'
+			                or c.title ilike '%' || $4 || '%'
+			                or c.description ilike '%' || $4 || '%')
 			 order by c.archived_at desc
-			 limit $3`, boardID, before, ArchivedCardsLimit)
+			 limit $3`, boardID, before, ArchivedCardsLimit, strings.TrimSpace(query))
 		if err != nil {
 			return err
 		}

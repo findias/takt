@@ -817,11 +817,19 @@ export const api = {
   archivedBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards/archived'),
   /** Архив карточек доски. Курсор — момент архивации: архив дописывается,
    *  и смещение по номеру страницы однажды покажет карточку дважды. */
-  archivedCards: (boardId: string, before?: string) =>
-    request<{ cards: ArchivedCard[]; next: string | null }>(
+  archivedCards: (boardId: string, before?: string, query = '') => {
+    // Поиск идёт на сервере: в архиве бывают сотни карточек, а на руках
+    // у клиента только показанная порция — искать по ней значило бы
+    // отвечать «не найдено» о том, что просто не долистали.
+    const params = new URLSearchParams()
+    if (before) params.set('before', before)
+    if (query.trim()) params.set('q', query.trim())
+    const tail = params.toString()
+    return request<{ cards: ArchivedCard[]; next: string | null }>(
       'GET',
-      `/api/boards/${boardId}/archived-cards` + (before ? `?before=${encodeURIComponent(before)}` : ''),
-    ),
+      `/api/boards/${boardId}/archived-cards` + (tail ? `?${tail}` : ''),
+    )
+  },
   /** Вернуть карточку из архива. Обычная операция доски — здесь только
    *  ради архива, где своего состояния доски нет. */
   restoreCard: (boardId: string, cardId: string) =>
