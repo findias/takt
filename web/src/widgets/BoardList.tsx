@@ -7,6 +7,28 @@ import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 
+/**
+ * Вторая строка доски: ключ, кому видна и сколько работы.
+ *
+ * Видимость «своей команде» без названия подразделения ничего
+ * не отвечает тому, кто состоит в нескольких: своей — это какой?
+ * Название берётся из списка подразделений, уже загруженного
+ * для панели доступа.
+ */
+function boardLine(b: BoardInfo, teams: Team[]): string {
+  const parts = [b.key]
+  if (b.visibility === 'team') {
+    const team = teams.find((t) => t.id === b.teamId)
+    parts.push(team ? `подразделению «${team.name}»` : VISIBILITY_NAMES.team.toLowerCase())
+  } else if (b.visibility) {
+    parts.push(VISIBILITY_NAMES[b.visibility].toLowerCase())
+  }
+  if (b.cards !== undefined) {
+    parts.push(`${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`)
+  }
+  return parts.join(' · ')
+}
+
 export function BoardList({
   principal,
   onOpen,
@@ -83,12 +105,7 @@ export function BoardList({
                   вопрос, ради которого в список заглядывают. */}
               <div className="member-who">
                 <button onClick={() => onOpen(b.id)}>{b.name}</button>
-                <span className="muted small">
-                  {b.key}
-                  {b.visibility && ` · ${VISIBILITY_NAMES[b.visibility].toLowerCase()}`}
-                  {b.cards !== undefined &&
-                    ` · ${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`}
-                </span>
+                <span className="muted small">{boardLine(b, teams)}</span>
               </div>
               <div className="row row--tight">
                 {/* Имя называет доску: «Доступ» стоит в каждой строке
@@ -140,6 +157,7 @@ export function BoardList({
 
       <Archive
         boards={archived}
+        teams={teams}
         canEdit={canEdit}
         onOpen={() =>
           api
@@ -206,10 +224,14 @@ export function BoardList({
           В журнале действий останется запись о том, кто её удалил. Наберите название доски, чтобы
           подтвердить.
         </p>
+        {/* В подсказке поля стоит слово «название», а не само название:
+            барьер задуман как заминка, а подсказка-ответ прямо в поле,
+            куда его надо переписать, эту заминку и отменяет. Само
+            название названо выше, в первой строке диалога. */}
         <input
           value={typed}
           aria-label="Название доски для подтверждения"
-          placeholder={toDelete?.name}
+          placeholder="Название доски"
           onChange={(e) => setTyped(e.target.value)}
         />
       </ConfirmDialog>
@@ -290,12 +312,14 @@ export function BoardList({
  */
 function Archive({
   boards,
+  teams,
   canEdit,
   onOpen,
   onRestore,
   onDelete,
 }: {
   boards: BoardInfo[] | null
+  teams: Team[]
   canEdit: boolean
   onOpen: () => void
   onRestore: (id: string) => void
@@ -323,12 +347,7 @@ function Archive({
                 рядом. */}
             <div className="member-who">
               <span>{b.name}</span>
-              <span className="muted small">
-                {b.key}
-                {b.visibility && ` · ${VISIBILITY_NAMES[b.visibility].toLowerCase()}`}
-                {b.cards !== undefined &&
-                  ` · ${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`}
-              </span>
+              <span className="muted small">{boardLine(b, teams)}</span>
             </div>
             {/* Имя называет доску: в архиве этих кнопок столько же,
                 сколько досок, и без названия они звучат одинаково. */}

@@ -477,7 +477,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 		// считаются неархивные: доска в архиве, а работа на ней —
 		// та же, что была.
 		rows, err := tx.Query(ctx, `
-			select `+boardFields+`, visibility,
+			select `+boardFields+`, visibility, team_id,
 			       (select count(*) from cards c
 			         where c.board_id = boards.id and c.archived_at is null)
 			  from boards
@@ -490,12 +490,14 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 		for rows.Next() {
 			var b Info
 			var visibility string
+			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &visibility, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Visibility = &visibility
+			b.TeamID = teamID
 			b.Cards = &cards
 			out = append(out, b)
 		}

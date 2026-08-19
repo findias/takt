@@ -65,7 +65,7 @@ func TestDeleteCardErasesFlowAndKeepsTheLedger(t *testing.T) {
 	var title string
 	f.inTenant(func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
-			select payload -> 'new' ->> 'title' from audit_events
+			select payload -> 'old' ->> 'title' from audit_events
 			 where subject = 'cards' and subject_id = $1 and action = 'delete'`,
 			doomed).Scan(&title)
 	})
@@ -177,15 +177,23 @@ func TestDeleteBoardErasesFlowAndKeepsTheLedger(t *testing.T) {
 		}
 	}
 
-	// Журнал действий остался и знает, какую доску убрали.
+	// Журнал действий остался и знает, какую доску убрали. Исчезнувшее
+	// лежит под `old`: «new» у удаления читается снаружи как «строка
+	// появилась» — разбирающий журнал не обязан знать, что у одного
+	// действия ключи означают не то же, что у остальных.
 	var subject, deletedName string
+	var hasNew bool
 	f.inTenant(func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
-			select subject, payload -> 'new' ->> 'name' from audit_events
-			 where subject_id = $1 and action = 'delete'`, f.boardID).Scan(&subject, &deletedName)
+			select subject, payload -> 'old' ->> 'name', payload ? 'new' from audit_events
+			 where subject_id = $1 and action = 'delete'`, f.boardID).
+			Scan(&subject, &deletedName, &hasNew)
 	})
 	if subject != "boards" || deletedName != name {
 		t.Errorf("в журнале %q/%q, ожидалась запись об удалении доски %q", subject, deletedName, name)
+	}
+	if hasNew {
+		t.Error("у удаления в журнале есть «new»: удалённая строка новой не бывает")
 	}
 
 	// А карточки доски отдельными записями ленту не топят: их унёс
@@ -193,7 +201,7 @@ func TestDeleteBoardErasesFlowAndKeepsTheLedger(t *testing.T) {
 	if n := f.countRows(`
 		select count(*) from audit_events
 		 where subject = 'cards' and action = 'delete'
-		   and payload -> 'new' ->> 'board_id' = $1::text`, f.boardID); n != 0 {
+		   and payload -> 'old' ->> 'board_id' = $1::text`, f.boardID); n != 0 {
 		t.Errorf("карточки доски получили %d отдельных записей в журнале", n)
 	}
 }

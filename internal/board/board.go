@@ -87,6 +87,10 @@ type Info struct {
 	// по ним.
 	Visibility *string `json:"visibility,omitempty"`
 	Cards      *int    `json:"cards,omitempty"`
+	// Какому подразделению доска видна, когда видимость — «своей
+	// команде». Без него строка списка отвечает «своей» тому, кто
+	// состоит в трёх подразделениях сразу, и ответом это не является.
+	TeamID *string `json:"teamId,omitempty"`
 }
 
 // boardFields — общий список полей доски, по тем же соображениям, что
@@ -374,7 +378,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 		// на каждую доску.
 		rows, err := tx.Query(ctx, `
 			select `+boardFields+`, id = any (app_writable_boards()),
-			       visibility,
+			       visibility, team_id,
 			       (select count(*) from cards c
 			         where c.board_id = boards.id and c.archived_at is null)
 			  from boards
@@ -388,13 +392,15 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var b Info
 			var writable bool
 			var visibility string
+			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &writable, &visibility, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
 			b.Visibility = &visibility
+			b.TeamID = teamID
 			b.Cards = &cards
 			out = append(out, b)
 		}

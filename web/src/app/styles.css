@@ -175,7 +175,7 @@ button:hover:not(:disabled) {
 }
 button:disabled {
   opacity: 0.5;
-  cursor: default;
+  cursor: not-allowed;
 }
 /* Иерархия действий. На экране всегда одно главное действие, и оно
    обязано отличаться: серая кнопка среди серых кнопок означает, что
@@ -662,6 +662,21 @@ select {
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
+}
+
+/* «Нельзя» должно читаться, а не угадываться. Прозрачности мало:
+   выпадающий список наблюдателя на экране доступа отличался от рабочего
+   только ею — те же фон, рамка, цвет текста и обычный курсор, и разница
+   замечалась лишь при попытке нажать. Меняем поверхность и курсор:
+   поле, в которое нельзя писать, не должно выглядеть белым и пустым. */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  border-color: var(--rule);
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .note {
@@ -1963,7 +1978,7 @@ textarea.description {
 }
 .btn:disabled {
   opacity: 0.5;
-  cursor: default;
+  cursor: not-allowed;
 }
 .btn[aria-busy='true'] {
   cursor: progress;
