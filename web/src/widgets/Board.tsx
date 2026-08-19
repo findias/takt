@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
@@ -13,11 +22,8 @@ import type {
   Priority,
 } from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
-import { Flow } from '../features/flow/Flow.tsx'
-import { IterationReport } from '../features/board/IterationReport.tsx'
-import { CardArchive } from '../features/board/CardArchive.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
-import { BoardSkeleton, EmptyState, ErrorState } from '../shared/ui/states.tsx'
+import { BoardSkeleton, EmptyState, ErrorState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
@@ -25,9 +31,7 @@ import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../featur
 import type { Filters } from '../features/board/filters.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
-import { TableView } from '../features/board/TableView.tsx'
 import { SORT_NAMES, parseSort, sortToQuery } from '../features/board/tableSort.ts'
-import { Changes } from '../features/board/Changes.tsx'
 import { Workload } from '../features/board/Workload.tsx'
 import { BulkBar } from '../features/board/BulkBar.tsx'
 import type { Sort } from '../features/board/tableSort.ts'
@@ -58,6 +62,26 @@ import {
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
 import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
+
+// Вторичные экраны доски едут отдельными кусками — по тому же доводу,
+// по которому вынесены экраны организации: доска открывается всегда,
+// а таблица, поток, отчёт по итерации, архив и лента изменений —
+// по требованию. Класть их во входной кусок значит заставлять всех
+// платить временем открытия за то, чем пользуются иногда; порог
+// размера сборки на этом и упёрся.
+const TableView = lazy(() =>
+  import('../features/board/TableView.tsx').then((m) => ({ default: m.TableView })),
+)
+const Flow = lazy(() => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })))
+const Changes = lazy(() =>
+  import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })),
+)
+const CardArchive = lazy(() =>
+  import('../features/board/CardArchive.tsx').then((m) => ({ default: m.CardArchive })),
+)
+const IterationReport = lazy(() =>
+  import('../features/board/IterationReport.tsx').then((m) => ({ default: m.IterationReport })),
+)
 
 export function Board({
   boardId,
@@ -992,8 +1016,14 @@ export function Board({
           стилями значило бы держать в разметке пятьсот невидимых
           карточек. */}
       {view === 'changes' ? (
-        <Changes boardId={boardId} fields={base.fields} onOpenCard={showCard} />
+        // Заглушка в форме списка, а не слово «загружаем»: кусок
+        // приезжает за десятки миллисекунд, и мигать словом дольше,
+        // чем показывать раскладку.
+        <Suspense fallback={<Skeleton lines={4} />}>
+          <Changes boardId={boardId} fields={base.fields} onOpenCard={showCard} />
+        </Suspense>
       ) : asTable ? (
+        <Suspense fallback={<Skeleton lines={6} />}>
         <TableView
           base={base}
           order={order}
@@ -1007,6 +1037,7 @@ export function Board({
           onMoveToColumn={moveToColumn}
           onAssign={assignCard}
         />
+        </Suspense>
       ) : (
         <>
       {/* Доска прокручивается вбок сама, когда карточку подносят к краю:
@@ -1035,6 +1066,7 @@ export function Board({
       )}
 
       {showFlow && (
+        <Suspense fallback={<Skeleton lines={4} />}>
         <Flow
           boardId={boardId}
           sleDays={base.info.sleDays}
@@ -1042,6 +1074,7 @@ export function Board({
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />
+        </Suspense>
       )}
 
       {/* Полоса действий над выделенными. Пусто выделено — полосы нет:
@@ -1084,6 +1117,7 @@ export function Board({
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
 
       {showArchive && (
+        <Suspense fallback={<Skeleton lines={3} />}>
         <CardArchive
           boardId={boardId}
           canDelete={isOwner}
@@ -1092,9 +1126,11 @@ export function Board({
           onDelete={askDelete}
           onClose={() => setShowArchive(false)}
         />
+        </Suspense>
       )}
 
       {reportOf && (
+        <Suspense fallback={<Skeleton lines={4} />}>
         <IterationReport
           boardId={boardId}
           iteration={reportOf}
@@ -1105,6 +1141,7 @@ export function Board({
           }}
           onClose={() => setReportOf(null)}
         />
+        </Suspense>
       )}
 
       {/* Вопрос задаётся один раз и называет карточку: подтверждение
