@@ -173,7 +173,7 @@ it('объяснение снимается: на форме новой орга
 
   // Создание организации — не продолжение прерванной работы:
   // рассказывать там про чужую кончившуюся сессию незачем.
-  await userEvent.click(screen.getByRole('button', { name: 'Создать новую организацию' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести новую организацию' }))
   expect(screen.queryByText(/Сессия истекла/)).toBeNull()
 
   await userEvent.click(screen.getByRole('button', { name: 'У меня уже есть аккаунт' }))

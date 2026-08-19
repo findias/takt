@@ -64,12 +64,12 @@ async function namelessControls(page: Page): Promise<string[]> {
 async function register(page: Page) {
   const id = Math.random().toString(36).slice(2, 8)
   await page.goto('/')
-  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
+  await page.getByRole('button', { name: 'Завести новую организацию' }).click()
   await page.getByLabel('Название организации').fill('Проверка доступности')
   await page.getByLabel('Как вас зовут').fill('Проверяющий')
   await page.getByLabel('Почта').fill(`a11y-${id}@example.test`)
   await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Создать организацию' }).click()
+  await page.getByRole('button', { name: 'Завести организацию' }).click()
   // Срок больше обычного: организацию заводит каждая проверка этого
   // файла, идут они разом, а на создании считается хеш пароля —
   // и вчетвером они не укладываются в пять секунд на занятой машине.
@@ -86,11 +86,11 @@ test('на всех экранах цели нажатия не мельче 24 
   expect(await tinyTargets(page), 'список досок').toEqual([])
 
   await page.getByPlaceholder('Название новой доски').fill('Доступность')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
 
   // Действия карточки появляются по наведению — до этого их не измерить.
   await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()
@@ -127,11 +127,11 @@ test('у каждого элемента управления есть имя', 
 test('открытое меню отдаёт фокус первому пункту', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
 
   const card = queue.getByRole('group', { name: /Карточка «Карточка»/ })
   await card.hover()
@@ -171,11 +171,11 @@ test('открытое меню отдаёт фокус первому пунк�
 test('панель над доской не обрезается ни на одной ширине', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Панель')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
 
   for (const width of [1440, 942, 390]) {
     await page.setViewportSize({ width, height: 800 })
@@ -216,13 +216,13 @@ test('панель над доской не обрезается ни на од�
 test('флажок не мельче цели нажатия, подпись не уезжает под него', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Тесная строка')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
   await queue
     .getByPlaceholder('Что нужно сделать?')
     .fill('Собрать отчёт по всему кварталу и году')
-  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
 
   // Подзадача теснит верхнюю строку: в ней появляется ссылка
   // на родителя, и места флажку остаётся меньше всего. Название
@@ -288,7 +288,7 @@ test('флажок не мельче цели нажатия, подпись н�
  */
 const CONTEXTLESS = [
   'Разметка',
-  'Добавить карточку',
+  'Завести карточку',
   'Доступ',
   'закрыть',
   'Убрать',
@@ -313,18 +313,18 @@ async function contextless(page: Page): Promise<string[]> {
 test('кнопки, которых по нескольку, названы по своему объекту', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Имена')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 
-  // На доске столько «Разметок» и «Добавить карточку», сколько колонок.
+  // На доске столько «Разметок» и «Завести карточку», сколько колонок.
   expect(await contextless(page), 'доска').toEqual([])
 
   // В панели карточки «Снять» стоит у исполнителя, обязательства, метки
   // и блокировки — у четырёх разных объектов сразу.
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Добавить карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Работа')
-  await queue.getByRole('button', { name: 'Добавить', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
   const card = queue.getByRole('group', { name: /Карточка «Работа»/ })
   await card.hover()
   await card.getByRole('button', { name: /Исполнител/ }).click()
@@ -342,7 +342,7 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByPlaceholder('Название').fill('Неделя 34')
   await page.getByLabel('Начало').fill('2026-08-10')
   await page.getByLabel('Конец').fill('2026-08-16')
-  await page.getByRole('button', { name: 'Создать' }).click()
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Неделя 34 ·/ })).toBeVisible()
   expect(await contextless(page), 'доска с итерацией').toEqual([])
 
@@ -356,7 +356,7 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByRole('button', { name: 'Структура' }).click()
   await page.getByRole('button', { name: 'Новое подразделение' }).click()
   await page.getByPlaceholder('Название').fill('Продажи')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести подразделение', exact: true }).click()
   await page.getByRole('button', { name: '▸ Продажи' }).click()
   await page.getByLabel('Добавить в подразделение').selectOption({ index: 1 })
   await expect(page.getByRole('button', { name: /^Убрать из состава/ })).toBeVisible()
@@ -367,7 +367,7 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByPlaceholder('Почта коллеги').fill('kolya@example.test')
   await page.getByRole('button', { name: 'Пригласить' }).click()
   await page.getByPlaceholder('Для чего ключ').fill('Обмен')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести ключ', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Отозвать ключ/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toBeVisible()
   expect(await contextless(page), 'команда').toEqual([])

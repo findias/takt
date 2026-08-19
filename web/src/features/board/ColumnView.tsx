@@ -121,6 +121,12 @@ export function ColumnView(props: ColumnProps) {
   const tailRef = useRef<HTMLDivElement>(null)
   const [over, setOver] = useState(false)
   const [adding, setAdding] = useState(false)
+  // Свёрнутая колонка не показывает ничего, кроме счётчика, — а форма
+  // заведения оставалась открытой и торчала из свёрнутой полосы: она
+  // ведь закрывается только человеком. Сворачивание её и закрывает.
+  useEffect(() => {
+    if (props.collapsed) setAdding(false)
+  }, [props.collapsed])
   // Только что заведённую карточку надо показать: она встаёт в конец
   // колонки, а конец колонки бывает за краем экрана — форма закрывалась,
   // и на экране не менялось ничего. Ждать приходится следующего показа:
@@ -335,6 +341,7 @@ export function ColumnView(props: ColumnProps) {
 
       {!props.canEdit ? null : adding ? (
         <NewCardForm
+          column={props.name}
           onCancel={() => setAdding(false)}
           onCreate={(title) => {
             props.onCreateCard(title)
@@ -348,11 +355,11 @@ export function ColumnView(props: ColumnProps) {
         !props.collapsed && (
           <button
             className="add"
-            aria-label={`Добавить карточку в «${props.name}»`}
+            aria-label={`Завести карточку в «${props.name}»`}
             onClick={() => setAdding(true)}
           >
             <PlusIcon />
-            Добавить карточку
+            Завести карточку
           </button>
         )
       )}
@@ -369,9 +376,13 @@ export function ColumnView(props: ColumnProps) {
  * и было первым, обо что спотыкался проход по интерфейсу.
  */
 function NewCardForm({
+  column,
   onCreate,
   onCancel,
 }: {
+  /** Имя колонки — кнопке: «Завести» отдельно от окружения ничего
+   *  не говорит, а диктор читает кнопку именно отдельно. */
+  column: string
   onCreate: (title: string) => void
   onCancel: () => void
 }) {
@@ -412,8 +423,12 @@ function NewCardForm({
         }}
       />
       <div className="row">
-        <button type="submit" disabled={!value.trim()}>
-          Добавить
+        <button
+          type="submit"
+          aria-label={`Завести карточку в «${column}»`}
+          disabled={!value.trim()}
+        >
+          Завести
         </button>
         {/* Отмена — тихая: цвет ссылки рядом с главным действием
             перетягивает взгляд на себя, и первым читается «Отмена». */}

@@ -418,7 +418,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
 
   const createCard = useCallback(
     (columnId: string, title: string) =>
-      run('CREATE_CARD', { columnId, title, place: 'end' }, 'Не удалось создать карточку'),
+      run('CREATE_CARD', { columnId, title, place: 'end' }, 'Не удалось завести карточку'),
     [run],
   )
   const renameCard = useCallback(
@@ -698,7 +698,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [run, reload, notify, titleOf],
   )
   const createColumn = useCallback(
-    (name: string) => run('CREATE_COLUMN', { name }, 'Не удалось создать колонку'),
+    (name: string) => run('CREATE_COLUMN', { name }, 'Не удалось завести колонку'),
     [run],
   )
   const renameColumn = useCallback(

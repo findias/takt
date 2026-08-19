@@ -304,7 +304,7 @@ function OrgHeader({
                 load()
                 onSwitched(p)
               })
-              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать'))
+              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести'))
           }}
         >
           <input
@@ -313,8 +313,8 @@ function OrgHeader({
             placeholder="Название организации"
             onChange={(e) => setName(e.target.value)}
           />
-          <button type="submit" disabled={!name.trim()}>
-            Создать
+          <button type="submit" aria-label="Завести организацию" disabled={!name.trim()}>
+            Завести
           </button>
         </form>
       )}

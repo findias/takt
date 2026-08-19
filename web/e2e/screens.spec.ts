@@ -51,7 +51,7 @@ test('снимки экранов', async ({ page, browser }) => {
 
   // Заведение организации: с этого экрана всё начинается, а снимка
   // у него не было вовсе — как и у приглашения ниже.
-  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
+  await page.getByRole('button', { name: 'Завести новую организацию' }).click()
   await page.screenshot({ path: `${SHOTS}/01б-новая-организация.png` })
   await page.getByRole('button', { name: 'У меня уже есть аккаунт' }).click()
 

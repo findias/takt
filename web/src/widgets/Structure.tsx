@@ -391,8 +391,8 @@ function NewTeam({
         onChange={(e) => setName(e.target.value)}
         onBlur={() => !name.trim() && setOpen(false)}
       />
-      <button type="submit" disabled={!name.trim()}>
-        Создать
+      <button type="submit" aria-label="Завести подразделение" disabled={!name.trim()}>
+        Завести
       </button>
     </form>
   )

@@ -256,7 +256,7 @@ export function BoardList({
                 // ломается на первой же правке формулировки.
                 const code = e instanceof ApiError ? e.body?.code : undefined
                 setFailed({
-                  text: e instanceof Error ? e.message : 'Не удалось создать доску',
+                  text: e instanceof Error ? e.message : 'Не удалось завести доску',
                   aboutKey: code === 'board_key_invalid' || code === 'board_key_taken',
                 })
               })
@@ -280,8 +280,13 @@ export function BoardList({
             placeholder="Ключ"
             onChange={(e) => setKey(e.target.value.toUpperCase())}
           />
-          <button className="primary" type="submit" disabled={!name.trim()}>
-            Создать
+          <button
+            className="primary"
+            type="submit"
+            aria-label="Завести доску"
+            disabled={!name.trim()}
+          >
+            Завести
           </button>
         </form>
       )}
@@ -333,7 +338,13 @@ function Archive({
       </button>
     )
   }
-  if (boards.length === 0) return <p className="muted small">В архиве пусто.</p>
+  if (boards.length === 0)
+    return (
+      <p className="muted small">
+        В архиве пусто. Сюда попадают доски, убранные из списка: они не удаляются,
+        и вернуть их можно отсюда.
+      </p>
+    )
 
   return (
     <section className="stack">

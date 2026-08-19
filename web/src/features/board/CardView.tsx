@@ -410,7 +410,12 @@ function CardViewInner({
             )}
             {parent && (
               <span className="card-parent">
+                {/* Стрелка объясняет связь глазу, а диктору не говорит
+                    ничего: без слова он читал два названия подряд, будто
+                    у карточки два имени. Слово то же, что в панели, —
+                    подзадача, а не «часть». */}
                 <span aria-hidden="true">↳ </span>
+                <span className="sr-only">подзадача задачи </span>
                 {parent.onThisBoard ? (
                   <button className="link" onClick={() => onOpen(parent.id)}>
                     {parent.title}
@@ -512,7 +517,7 @@ function CardViewInner({
                       onSelect: () => onMarkDone(cardId, true),
                     },
                 {
-                  label: 'Добавить подзадачу',
+                  label: 'Завести подзадачу',
                   icon: <PlusIcon />,
                   onSelect: () => {
                     setOpen(true)

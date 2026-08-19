@@ -29,12 +29,12 @@ function newcomer(): Newcomer {
 async function register(page: Page): Promise<Newcomer> {
   const who = newcomer()
   await page.goto('/')
-  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
+  await page.getByRole('button', { name: 'Завести новую организацию' }).click()
   await page.getByLabel('Название организации').fill(who.org)
   await page.getByLabel('Как вас зовут').fill('Замерщик')
   await page.getByLabel('Почта').fill(who.email)
   await page.getByLabel('Пароль').fill(who.password)
-  await page.getByRole('button', { name: 'Создать организацию' }).click()
+  await page.getByRole('button', { name: 'Завести организацию' }).click()
   await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
   return who
 }

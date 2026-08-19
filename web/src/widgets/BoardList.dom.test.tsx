@@ -71,7 +71,7 @@ it('ключ доезжает таким, каким его набрали, и �
 
   await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Поставки')
   await userEvent.type(screen.getByLabelText(/Ключ доски/), 'пост')
-  await userEvent.click(screen.getByRole('button', { name: 'Создать' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
   await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Поставки', 'ПОСТ'))
 })
@@ -81,7 +81,7 @@ it('незаданный ключ уходит пустым: выводит ег
   show()
 
   await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Найм')
-  await userEvent.click(screen.getByRole('button', { name: 'Создать' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
   await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Найм', ''))
 })
@@ -94,7 +94,7 @@ it('занятый ключ и негодный ключ — разные отк
 
   await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Поставки')
   await userEvent.type(screen.getByLabelText(/Ключ доски/), 'ПОСТ')
-  await userEvent.click(screen.getByRole('button', { name: 'Создать' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
   expect(await screen.findByText('такой ключ уже занят другой доской')).toBeTruthy()
   expect(screen.getByLabelText(/Ключ доски/).getAttribute('aria-invalid')).toBe('true')
@@ -108,7 +108,7 @@ it('занятый ключ и негодный ключ — разные отк
       code: 'board_key_invalid',
     }),
   )
-  await userEvent.click(screen.getByRole('button', { name: 'Создать' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
   expect(await screen.findByText(/от двух до шести букв/)).toBeTruthy()
 })
 
@@ -119,7 +119,7 @@ it('отказ не про ключ поле не пятнает', async () => {
   show()
 
   await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Поставки')
-  await userEvent.click(screen.getByRole('button', { name: 'Создать' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
   expect(await screen.findByText('у вас доступ только на чтение')).toBeTruthy()
   expect(screen.getByLabelText(/Ключ доски/).getAttribute('aria-invalid')).toBeNull()

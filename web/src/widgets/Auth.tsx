@@ -158,7 +158,7 @@ export function Auth({
         {error && <p className="error">{error}</p>}
 
         <button className="primary" type="submit" disabled={busy}>
-          {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Создать организацию'}
+          {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Завести организацию'}
         </button>
         <button
           type="button"
@@ -168,7 +168,7 @@ export function Auth({
             setError(null)
           }}
         >
-          {mode === 'login' ? 'Создать новую организацию' : 'У меня уже есть аккаунт'}
+          {mode === 'login' ? 'Завести новую организацию' : 'У меня уже есть аккаунт'}
         </button>
         <p className="muted small">
           Чтобы присоединиться к существующей команде, нужна ссылка-приглашение

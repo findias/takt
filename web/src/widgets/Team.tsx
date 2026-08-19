@@ -340,7 +340,7 @@ function Clients() {
               setExpires('')
               load()
             })
-            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось создать ключ'))
+            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести ключ'))
         }}
       >
         <div className="row row--tight">
@@ -358,8 +358,12 @@ function Clients() {
             aria-label="Действует до"
             onChange={(e) => setExpires(e.target.value)}
           />
-          <button type="submit" disabled={!name.trim() || scopes.length === 0}>
-            Создать
+          <button
+            type="submit"
+            aria-label="Завести ключ"
+            disabled={!name.trim() || scopes.length === 0}
+          >
+            Завести
           </button>
         </div>
         <div className="checkbox-grid">
@@ -369,7 +373,7 @@ function Clients() {
                 type="checkbox"
                 checked={scopes.includes(scope)}
                 // Каталог ни с чем не сочетается, и это видно до попытки:
-                // отказ после нажатия «Создать» пришлось бы читать, уже
+                // отказ после нажатия «Завести» пришлось бы читать, уже
                 // потеряв набранное.
                 disabled={scope === DIRECTORY_SCOPE ? others : scopes.includes(DIRECTORY_SCOPE)}
                 onChange={(e) =>

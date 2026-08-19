@@ -325,7 +325,10 @@ export function CardPanel({
 
             {details.parent && (
               <section className="stack">
-                <h3 className="section-title">Часть задачи</h3>
+                {/* Одно понятие — одно слово: связь называется парой
+                    «родительская задача» и «подзадача». «Часть задачи»
+                    было третьим словом на то же самое. */}
+                <h3 className="section-title">Родительская задача</h3>
                 <RelatedRow
                   related={details.parent}
                   canEdit={canEdit}
@@ -1137,7 +1140,16 @@ function Labels({
     <section className="stack">
       <h3 className="section-title">Метки</h3>
 
-      {own.length === 0 && <p className="muted small">Ни одной.</p>}
+      {/* «Ни одной.» не говорило ни что это, ни что с этим делать.
+          Список меток стоит ниже — на него и указываем; наблюдателю
+          указывать не на что, он метки не вешает. */}
+      {own.length === 0 && (
+        <p className="muted small">
+          {canEdit
+            ? 'Меток на этой карточке нет — повесить можно списком ниже.'
+            : 'Меток на этой карточке нет.'}
+        </p>
+      )}
 
       {/* Строкой на метку, как у исполнителей рядом: крестик внутри
           чипа пришлось бы растить до цели нажатия в 24 пикселя,

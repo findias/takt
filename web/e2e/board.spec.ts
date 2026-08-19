@@ -24,12 +24,12 @@ function newcomer(): Newcomer {
 async function register(page: Page): Promise<Newcomer> {
   const who = newcomer()
   await page.goto('/')
-  await page.getByRole('button', { name: 'Создать новую организацию' }).click()
+  await page.getByRole('button', { name: 'Завести новую организацию' }).click()
   await page.getByLabel('Название организации').fill(who.org)
   await page.getByLabel('Как вас зовут').fill('Проверяющий')
   await page.getByLabel('Почта').fill(who.email)
   await page.getByLabel('Пароль').fill(who.password)
-  await page.getByRole('button', { name: 'Создать организацию' }).click()
+  await page.getByRole('button', { name: 'Завести организацию' }).click()
   await expect(page.getByPlaceholder('Название новой доски')).toBeVisible()
   return who
 }
@@ -44,7 +44,7 @@ async function signIn(page: Page, who: Newcomer) {
 
 async function createBoard(page: Page, name: string) {
   await page.getByPlaceholder('Название новой доски').fill(name)
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 }
 
@@ -55,9 +55,14 @@ async function openBoard(page: Page, name: string) {
 
 async function addCard(page: Page, column: string, title: string) {
   const section = page.getByRole('region', { name: column })
-  await section.getByRole('button', { name: 'Добавить карточку' }).click()
-  await section.getByPlaceholder('Что нужно сделать?').fill(title)
-  await section.getByRole('button', { name: 'Добавить', exact: true }).click()
+  const field = section.getByPlaceholder('Что нужно сделать?')
+  // Форма остаётся открытой после заведения карточки — карточки заводят
+  // подряд. Открывать её второй раз нечем: кнопки в этот момент нет.
+  if (!(await field.isVisible())) {
+    await section.getByRole('button', { name: `Завести карточку в «${column}»` }).click()
+  }
+  await field.fill(title)
+  await section.getByRole('button', { name: `Завести карточку в «${column}»` }).click()
   await expect(cardIn(page, column, title)).toBeVisible()
 }
 
@@ -490,7 +495,7 @@ test('узел структуры показывает свои доски и о
   await page.getByRole('button', { name: 'Структура' }).click()
   await page.getByRole('button', { name: 'Новое подразделение' }).click()
   await page.getByPlaceholder('Название').fill('Продажи')
-  await page.getByRole('button', { name: 'Создать', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести подразделение', exact: true }).click()
   await expect(page.getByRole('button', { name: '▸ Продажи' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Доски' }).click()
@@ -523,7 +528,7 @@ test('подписка на события заводится и показыв�
   await expect(page.getByText('Работа отмечена сделанной')).toBeVisible()
   await page.getByLabel('Название подписки').fill('Оповещение дежурного')
   await page.getByLabel('Адрес получателя').fill('https://example.test/hooks/board')
-  await page.getByRole('button', { name: 'Завести', exact: true }).click()
+  await page.getByRole('button', { name: 'Завести подписку', exact: true }).click()
 
   // Ключ подписи показывается один раз: подписываем им мы, хранит его
   // получатель.
@@ -681,7 +686,7 @@ test('итерация видна на карточке и отбирается 
   await page.getByPlaceholder('Название').fill('Неделя 34')
   await page.getByLabel('Начало').fill('2026-08-17')
   await page.getByLabel('Конец').fill('2026-08-23')
-  await page.getByRole('button', { name: 'Создать' }).click()
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
 
   await cardIn(page, 'Очередь', 'В спринте').click()
   await page.getByRole('tab', { name: 'Работа' }).click()
@@ -934,7 +939,7 @@ test('колонку можно свернуть, и это переживает
   // становиться слепым пятном.
   await expect(done.getByRole('group', { name: /Уже сделано/ })).toBeHidden()
   await expect(done.getByRole('button', { name: /Развернуть «Готово»/ })).toBeVisible()
-  await expect(done.getByRole('button', { name: 'Добавить карточку' })).toHaveCount(0)
+  await expect(done.getByRole('button', { name: 'Завести карточку' })).toHaveCount(0)
 
   // Личное предпочтение смотрящего: не в адресе, но переживает
   // перезагрузку.
@@ -1197,7 +1202,7 @@ test('часть заводится прямо с доски — кнопкой 
   // неоткуда.
   await parent.hover()
   await parent.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: 'Добавить подзадачу' }).click()
+  await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Свести цифры')
   await parent.getByLabel('Название подзадачи').press('Enter')
   await expect(parent.getByRole('button', { name: 'Свести цифры' })).toBeVisible()
@@ -1229,7 +1234,7 @@ test('полоса разбиения заливается, а не только
 
   await parent.hover()
   await parent.getByRole('button', { name: /Действия карточки/ }).click()
-  await page.getByRole('menuitem', { name: 'Добавить подзадачу' }).click()
+  await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Свести цифры')
   await parent.getByLabel('Название подзадачи').press('Enter')
   await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
@@ -1547,7 +1552,7 @@ test('закрытая итерация остаётся на экране и о
   await page.getByLabel('Начало').fill('2026-08-10')
   await page.getByLabel('Конец').fill('2026-08-16')
   await page.getByPlaceholder('Цель').fill('Закрыть смету')
-  await page.getByRole('button', { name: 'Создать' }).click()
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Неделя 34 ·/ })).toBeVisible()
 
   // Обе карточки в итерации.

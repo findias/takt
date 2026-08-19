@@ -1277,7 +1277,9 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setAdding(false)}
       />
-      <button type="submit">Создать</button>
+      <button type="submit" aria-label="Завести колонку">
+        Завести
+      </button>
     </form>
   )
 }
@@ -1426,7 +1428,9 @@ function Iterations({
           <input name="startsOn" type="date" required aria-label="Начало" />
           <input name="endsOn" type="date" required aria-label="Конец" />
           <input name="goal" placeholder="Цель" />
-          <button type="submit">Создать</button>
+          <button type="submit" aria-label="Завести итерацию">
+            Завести
+          </button>
           <Button kind="quiet" type="button" onClick={() => setAdding(false)}>
             Отмена
           </Button>

@@ -362,7 +362,7 @@ describe('доска, которая не загрузилась', () => {
 describe('наблюдатель', () => {
   // Сервер держит границу: наблюдателю на любую операцию отвечает 403
   // «у вас доступ только на чтение». Интерфейс её не держал вовсе —
-  // показывал «Добавить карточку», меню действий, «Разметку»
+  // показывал «Завести карточку», меню действий, «Разметку»
   // и «+ итерация», давал пройти путь до конца и приносил отказ только
   // после Enter. Кнопка, ведущая к отказу, — обещание, которого
   // интерфейс не держит.
@@ -386,7 +386,7 @@ describe('наблюдатель', () => {
     readOnly()
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
-    expect(screen.queryByRole('button', { name: /Добавить карточку/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Завести карточку/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Разметка колонки/ })).toBeNull()
     expect(screen.queryByRole('button', { name: '+ итерация' })).toBeNull()
     expect(screen.queryByRole('button', { name: '+ Колонка' })).toBeNull()
@@ -408,7 +408,7 @@ describe('наблюдатель', () => {
     show()
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
-    expect(screen.getByRole('button', { name: /Добавить карточку в «Очередь»/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Завести карточку в «Очередь»/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: /Действия карточки/ })).toBeTruthy()
   })
 })
@@ -422,7 +422,7 @@ describe('заведение карточек подряд', () => {
     snapshot.mockResolvedValue(board([]))
     show()
 
-    await userEvent.click(await screen.findByRole('button', { name: /Добавить карточку в «Очередь»/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Завести карточку в «Очередь»/ }))
     const field = screen.getByPlaceholderText('Что нужно сделать?')
     await userEvent.type(field, 'Первая{Enter}')
 
@@ -448,11 +448,11 @@ describe('заведение карточек подряд', () => {
     snapshot.mockResolvedValue(board([]))
     show()
 
-    await userEvent.click(await screen.findByRole('button', { name: /Добавить карточку в «Очередь»/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Завести карточку в «Очередь»/ }))
     await userEvent.type(screen.getByPlaceholderText('Что нужно сделать?'), 'Черновик{Escape}')
 
     expect(screen.queryByPlaceholderText('Что нужно сделать?')).toBeNull()
-    expect(screen.getByRole('button', { name: /Добавить карточку в «Очередь»/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Завести карточку в «Очередь»/ })).toBeTruthy()
   })
 })
 

@@ -129,7 +129,11 @@ export function Webhooks() {
             aria-label="Адрес получателя"
             onChange={(e) => setUrl(e.target.value)}
           />
-          <button type="submit" disabled={!name.trim() || !url.trim() || events.length === 0}>
+          <button
+            type="submit"
+            aria-label="Завести подписку"
+            disabled={!name.trim() || !url.trim() || events.length === 0}
+          >
             Завести
           </button>
         </div>
