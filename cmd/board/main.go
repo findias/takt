@@ -87,6 +87,14 @@ func main() {
 				"вход", demo.People[0].Email,
 				"пароль", demo.Password)
 		}
+		// Сверка сразу после наполнения — и при «уже есть» тоже:
+		// стенд протухает от сквозных прогонов, а узнают об этом
+		// обычно глазами и не сразу.
+		if err := demo.Verify(ctx, db); err != nil {
+			log.Error("стенд неполон", "err", err)
+			os.Exit(1)
+		}
+		log.Info("стенд сверен с обещанным")
 
 	case "serve":
 		serve(ctx, cfg, db, log)

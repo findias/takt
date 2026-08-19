@@ -638,11 +638,70 @@ func (f *filler) backdate() error {
 		}
 		// Журнал переходов сдвигается следом: лента доски, где всё
 		// произошло в одну минуту, читается как сбой.
-		_, err := tx.Exec(f.ctx, `
-			update card_events e
-			   set at = c.created_at + (e.id % 7 || ' hours')::interval
-			  from cards c where c.id = e.card_id`)
-		return err
+		//
+		// Не `update`: у card_events нет политики на изменение, и это
+		// не упущение — журнал только дописывается. Прежняя версия
+		// обновляла ноль строк и молчала об этом, как всякая правка
+		// данных под RLS; поломку нашла проверка стенда 19 августа,
+		// а глазами она выглядела как «вся история доски случилась
+		// в одну минуту».
+		//
+		// Поэтому строки перекладываются: удалить (владельцу можно)
+		// и вставить заново с нужным временем (дописывать можно тому,
+		// кто пишет в доску). Порядок вставки — по новому времени,
+		// чтобы растущий id шёл в ту же сторону, что и лента.
+		// Читаем, удаляем, вставляем заново — тремя шагами, а не одним
+		// запросом с data-modifying CTE: тот однажды удалил строки
+		// и не вставил их обратно, и понять почему по одному запросу
+		// нельзя. Демонстрационных событий сотня, скорость здесь
+		// не стоит ни одной непонятной строки.
+		type event struct {
+			org, board, card string
+			actor            *string
+			kind             string
+			from, to         *string
+			payload          []byte
+			at               time.Time
+		}
+		rows, err := tx.Query(f.ctx, `
+			select e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
+			       e.from_column, e.to_column, e.payload,
+			       c.created_at + (e.id % 7 || ' hours')::interval
+			  from card_events e join cards c on c.id = e.card_id
+			 order by 9`)
+		if err != nil {
+			return err
+		}
+		var events []event
+		for rows.Next() {
+			var e event
+			if err := rows.Scan(&e.org, &e.board, &e.card, &e.actor, &e.kind,
+				&e.from, &e.to, &e.payload, &e.at); err != nil {
+				rows.Close()
+				return err
+			}
+			events = append(events, e)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		if _, err := tx.Exec(f.ctx, `delete from card_events`); err != nil {
+			return err
+		}
+		for _, e := range events {
+			if _, err := tx.Exec(f.ctx, `
+				insert into card_events
+					(org_id, board_id, card_id, actor_id, type,
+					 from_column, to_column, payload, at)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+				e.org, e.board, e.card, e.actor, e.kind,
+				e.from, e.to, e.payload, e.at); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
