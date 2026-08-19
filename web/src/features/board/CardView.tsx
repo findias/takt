@@ -53,6 +53,11 @@ import {
  * и померить.
  */
 type CardProps = {
+  /** Может ли смотрящий менять доску. У наблюдателя карточка
+   *  не показывает ни меню, ни флажка выделения: сервер их всё равно
+   *  отвергает, а меню, ведущее к отказу, — обещание, которого
+   *  интерфейс не держит. */
+  canEdit: boolean
   cardId: string
   columnId: string
   card: Card | undefined
@@ -148,6 +153,7 @@ function CardViewInner({
   onMoveByKeyboard,
   onNavigate,
   onRename,
+  canEdit,
   onArchive,
   onDelete,
 }: CardProps) {
@@ -171,6 +177,10 @@ function CardViewInner({
   useEffect(() => {
     const element = ref.current
     if (!element) return
+    // Наблюдатель карточку не таскает: перенос кончился бы отказом
+    // сервера, а карточка, вернувшаяся на место после броска, читается
+    // как поломка, а не как «вам нельзя».
+    if (!canEdit) return
     const data = { kind: 'card', cardId, columnId }
     return combine(
       draggable({
@@ -375,6 +385,7 @@ function CardViewInner({
                 Родной флажок, а не своя картинка: он умеет пробел,
                 читается диктором и уже растянут до цели нажатия
                 общим правилом. */}
+            {canEdit && (
             <input
               type="checkbox"
               className="card-check"
@@ -391,6 +402,7 @@ function CardViewInner({
               // выше, по нажатию.
               onChange={() => {}}
             />
+            )}
             {card && (
               // Не кнопка и не ссылка: номер выделяют и копируют,
               // а нажатие на карточку и так её открывает.
@@ -417,7 +429,7 @@ function CardViewInner({
                 занимали строку целиком в каждой карточке.
                 Правятся нажатием по самим точкам: путь к метке должен
                 быть короче, чем поход в меню мимо людей и колонок. */}
-            {labels.length > 0 && (
+            {canEdit && labels.length > 0 && (
               <Menu
                 label={
                   own.length > 0
@@ -464,6 +476,7 @@ function CardViewInner({
                 из-под курсора между нажатием и отпусканием: попасть
                 по флажку соседа было нельзя. Здесь строка уже занята
                 и её высота от наведения не зависит. */}
+            {canEdit && (
             <Menu
               label={`Действия карточки «${title}»`}
               className="btn btn--icon btn--quiet card-slot"
@@ -550,6 +563,7 @@ function CardViewInner({
             >
               <MoreIcon />
             </Menu>
+            )}
           </div>
 
           {/* Обе стороны зависимости — одинаковыми строками. Раньше
@@ -576,6 +590,7 @@ function CardViewInner({
             {/* Кто делает — правится нажатием по самой стопке. Пункт
                 на человека, и он же снимает: два списка «назначить»
                 и «снять» вдвое длиннее и заставляют помнить, кто где. */}
+            {canEdit && (
             <Menu
               label={
                 assignees.length > 0
@@ -601,6 +616,7 @@ function CardViewInner({
                 </span>
               )}
             </Menu>
+            )}
           </div>
           {card &&
             (alarm ||

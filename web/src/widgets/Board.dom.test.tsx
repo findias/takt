@@ -115,7 +115,7 @@ afterEach(() => {
 
 function show(cardId: string | null = null) {
   return render(
-    <Board boardId="board" cardId={cardId} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+    <Board boardId="board" cardId={cardId} onCard={() => {}} unit="points" meId="я" isOwner canEdit onBack={() => {}} />,
   )
 }
 
@@ -226,6 +226,60 @@ describe('состояния доски', () => {
 
     const queue = await screen.findByRole('region', { name: 'Очередь' })
     expect(queue.textContent).toMatch(/2\s*\/\s*3/)
+  })
+})
+
+describe('наблюдатель', () => {
+  // Сервер держит границу: наблюдателю на любую операцию отвечает 403
+  // «у вас доступ только на чтение». Интерфейс её не держал вовсе —
+  // показывал «Добавить карточку», меню действий, «Разметку»
+  // и «+ итерация», давал пройти путь до конца и приносил отказ только
+  // после Enter. Кнопка, ведущая к отказу, — обещание, которого
+  // интерфейс не держит.
+  function readOnly(cards = [card('первая', COL_A, 'a0')]) {
+    snapshot.mockResolvedValue(board(cards))
+    return render(
+      <Board
+        boardId="board"
+        cardId={null}
+        onCard={() => {}}
+        unit="points"
+        meId="я"
+        isOwner={false}
+        canEdit={false}
+        onBack={() => {}}
+      />,
+    )
+  }
+
+  it('не показывает действий над доской', async () => {
+    readOnly()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    expect(screen.queryByRole('button', { name: /Добавить карточку/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Разметка колонки/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ итерация' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Колонка' })).toBeNull()
+  })
+
+  it('не показывает действий над карточкой', async () => {
+    readOnly()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    expect(screen.queryByRole('button', { name: /Действия карточки/ })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: /Выделить/ })).toBeNull()
+    // Сама карточка при этом читается и открывается: наблюдатель
+    // пришёл смотреть, а не быть выставленным за дверь.
+    expect(screen.getByRole('button', { name: 'первая' })).toBeTruthy()
+  })
+
+  it('тому, кто может писать, всё это показывает', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    expect(screen.getByRole('button', { name: /Добавить карточку в «Очередь»/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Действия карточки/ })).toBeTruthy()
   })
 })
 

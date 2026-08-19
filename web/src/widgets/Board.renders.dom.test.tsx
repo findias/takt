@@ -135,7 +135,7 @@ it('изменение одной карточки не перерисовыва
   })
 
   render(
-    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner canEdit onBack={() => {}} />,
   )
   await screen.findByRole('group', { name: /Карточка «первая»/ })
   await waitFor(() => expect(renders.count).toBe(CARDS.length))
@@ -163,7 +163,7 @@ it('выделение одной карточки не перерисовыва
   snapshot.mockResolvedValue(board())
 
   render(
-    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner onBack={() => {}} />,
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner canEdit onBack={() => {}} />,
   )
   await screen.findByRole('group', { name: /Карточка «первая»/ })
   await waitFor(() => expect(renders.count).toBe(CARDS.length))

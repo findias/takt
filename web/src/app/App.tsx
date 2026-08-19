@@ -150,6 +150,7 @@ function Screens() {
         unit={principal.estimateUnit}
         meId={principal.id}
         isOwner={principal.role === 'owner'}
+        canEdit={principal.role !== 'viewer'}
         onBack={() => navigate('/')}
       />
     )

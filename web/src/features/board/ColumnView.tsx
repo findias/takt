@@ -57,6 +57,9 @@ type ColumnProps = {
   /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
   justMoved: string | null
   labels: Label[]
+  /** Может ли смотрящий менять доску: у наблюдателя действий нет
+   *  вовсе, а не «есть, но откажут». */
+  canEdit: boolean
   cardLabels: Record<string, string[]>
   /** cardId → родительская задача, если карточка чья-то подзадача. */
   parents: Record<string, { id: string; title: string; onThisBoard: boolean }>
@@ -195,7 +198,7 @@ export function ColumnView(props: ColumnProps) {
         <div className="row row--tight">
           {/* Имя называет колонку: «Разметка» в шапке каждой колонки
               звучит одинаково, и с диктора их три неотличимых. */}
-          {!props.collapsed && (
+          {!props.collapsed && props.canEdit && (
             <button
               className="link column-settings-toggle"
               aria-expanded={settings}
@@ -254,6 +257,7 @@ export function ColumnView(props: ColumnProps) {
         {shownCards.map((cardId) => (
           <CardView
             key={cardId}
+            canEdit={props.canEdit}
             cardId={cardId}
             columnId={props.columnId}
             card={props.cards[cardId]}
@@ -329,7 +333,7 @@ export function ColumnView(props: ColumnProps) {
           ))}
       </div>
 
-      {adding ? (
+      {!props.canEdit ? null : adding ? (
         <NewCardForm
           onCancel={() => setAdding(false)}
           onCreate={(title) => {

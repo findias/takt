@@ -90,12 +90,20 @@ export function Board({
   unit,
   meId,
   isOwner,
+  canEdit,
   onBack,
 }: {
   boardId: string
   /** Какая карточка открыта — приходит из адреса, а не хранится здесь:
    *  ссылку на карточку должно быть можно прислать. */
   cardId: string | null
+  /** Может ли смотрящий менять доску. Наблюдателю действий
+   *  не показываем вовсе: сервер их всё равно отвергает, а кнопка,
+   *  ведущая к отказу, — обещание, которого интерфейс не держит.
+   *  Проход по интерфейсу упёрся ровно в это: форма открывалась,
+   *  текст печатался, и только Enter приносил «у вас доступ только
+   *  на чтение». */
+  canEdit: boolean
   onCard: (cardId: string | null) => void
   unit: EstimateUnit
   meId: string
@@ -762,6 +770,7 @@ export function Board({
     shownColumns.map((columnId) => (
       <ColumnView
         key={columnId}
+        canEdit={canEdit}
         name={base.columns[columnId].name}
         columnId={columnId}
         column={base.columns[columnId]}
@@ -896,6 +905,7 @@ export function Board({
             <FlowHint columns={columnList} />
             <Iterations
               boardId={boardId}
+              canEdit={canEdit}
               iterations={base.iterations}
               onChanged={board.reload}
               onReport={setReportOf}
@@ -1056,7 +1066,7 @@ export function Board({
           )}
           <div className="columns" ref={columnsRef}>
             {renderColumns(group.order, hiddenIn[group.id])}
-            {grouping === 'none' && (
+            {grouping === 'none' && canEdit && (
               <NewColumn onCreate={(name) => void board.createColumn(name)} />
             )}
           </div>
@@ -1170,7 +1180,7 @@ export function Board({
       {showAccess && (
         <AccessPanel
           boardId={boardId}
-          canEdit
+          canEdit={canEdit}
           onClose={() => setShowAccess(false)}
           onChanged={loadAccess}
         />
@@ -1183,7 +1193,7 @@ export function Board({
           cardId={openCard}
           unit={unit}
           meId={meId}
-          canEdit
+          canEdit={canEdit}
           onClose={() => setOpenCard(null)}
           onDescribe={(id, text) => void board.describeCard(id, text)}
           onEstimate={estimateCard}
@@ -1278,11 +1288,15 @@ function FlowHint({ columns }: { columns: Column[] }) {
  */
 function Iterations({
   boardId,
+  canEdit,
   iterations,
   onChanged,
   onReport,
 }: {
   boardId: string
+  /** Наблюдателю итерации видны, но заводить и закрывать их он не может:
+   *  показанная кнопка означала бы обещание, которое сервер отвергнет. */
+  canEdit: boolean
   iterations: Iteration[]
   onChanged: () => void
   /** Открыть отчёт по итерации. */
@@ -1340,13 +1354,15 @@ function Iterations({
             </button>
             {/* Имя называет итерацию: кнопок «закрыть» в строке столько
                 же, сколько итераций, и с диктора они звучали одинаково. */}
-            <button
-              className="link"
-              aria-label={`Закрыть итерацию «${i.name}»`}
-              onClick={() => setToClose(i)}
-            >
-              закрыть
-            </button>
+            {canEdit && (
+              <button
+                className="link"
+                aria-label={`Закрыть итерацию «${i.name}»`}
+                onClick={() => setToClose(i)}
+              >
+                закрыть
+              </button>
+            )}
           </span>
         ))}
         {closed.length > 0 && (
@@ -1359,7 +1375,7 @@ function Iterations({
             ))}
           </>
         )}
-        {!adding && (
+        {canEdit && !adding && (
           <button className="link" onClick={() => setAdding(true)}>
             + итерация
           </button>
