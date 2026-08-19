@@ -22,12 +22,33 @@
 
   /* Типографика. Базовый размер — единственное, что масштабируется
      отдельно: так сделано у Linear, и это работает лучше, чем
-     масштабировать всё сразу. */
+     масштабировать всё сразу.
+
+     Шрифт системный, и `system-ui` в стеке стоит первым не для красоты:
+     без него на Линуксе стек проваливался до Arial — то есть до
+     метрической замены Liberation Sans, — и «системным» шрифт не был
+     ни на одной машине с GNOME. Замер: строка интерфейса в нынешнем
+     стеке рисовалась ровно той же ширины, что в Arial (342.89 px),
+     а в `system-ui` — 354.73. Дальше по стеку идут те, кто закрывает
+     кириллицу: Segoe UI на Windows, Noto и Liberation на Линуксе.
+     Эмодзи в конце — их приносят в названия карточек люди, а не мы.
+
+     Размеры набраны в rem, но выбраны так, чтобы при обычном корне
+     ложиться в целые пиксели: 12/13/15/18/22. Прежние 0.85 и 0.95 rem
+     давали 13.6 и 15.2 — подгонка на глаз, растянутая на весь экран. */
+  --font-ui:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Liberation Sans', Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  /* Моноширинный — для машинных обозначений: ключа доски, версии,
+     идентификаторов. Стек был выписан шесть раз и двумя разными
+     наборами; теперь он один. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
   --text-xs: 0.75rem;
-  --text-sm: 0.85rem;
-  --text: 0.95rem;
-  --text-lg: 1.15rem;
-  --text-xl: 1.4rem;
+  --text-sm: 0.8125rem;
+  --text: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
 
   --radius: 4px;
   --radius-lg: 8px;
@@ -155,9 +176,12 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-size: var(--text);
-  line-height: 1.5;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Полтора интерлиньяжа от 15 px давали 22.5 — строка вставала между
+     пикселями. 1.6 даёт ровно 24: та же величина, что цель нажатия
+     и шаг отступов, поэтому строки и элементы управления стоят
+     на одной сетке. */
+  line-height: 1.6;
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
 }
 h1 {
@@ -360,7 +384,7 @@ input[type='radio'] {
   border-radius: var(--radius);
   background: var(--surface-2);
   color: var(--ink-2);
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -710,7 +734,7 @@ select:disabled {
   margin: 0;
 }
 .note input {
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
 
@@ -786,14 +810,14 @@ select:disabled {
    («ПОСТ-14»), поэтому стоит тем же цветом, что и подписи, а не серым
    мелким, каким набрана версия. */
 .board-key {
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--ink-2);
 }
 
 .version,
 .pending {
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--ink-3);
 }
@@ -890,8 +914,12 @@ select:disabled {
   font-weight: 650;
   font-size: var(--text);
 }
+/* Цифра счётчика набрана табличными цифрами, а не моноширинным
+   шрифтом: выровнять её нужно, а выглядеть машинным обозначением —
+   незачем. Моноширинный остаётся ключу доски и версии: они и есть
+   машинные обозначения. */
 .count {
-  font-family: ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-xs);
   /* Счётчик — это кнопка: по ней ставят лимит колонки. Цифра шириной
      в пятнадцать пикселей цель нажатия по WCAG 2.5.8 не проходит. */
@@ -909,7 +937,7 @@ select:disabled {
   font-weight: 650;
 }
 .count-edit {
-  font-family: ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-xs);
   width: 3.5rem;
 }
@@ -1810,6 +1838,18 @@ textarea.description {
 .figure-value {
   font-size: var(--text-xl);
   font-weight: 500;
+}
+
+/* Числа, которые читают столбцом или сравнивают между собой, набраны
+   табличными цифрами: пропорциональная единица уже нуля, и колонка
+   чисел «10 дн. / 5.1 дн. / 3.0 дн.» переставала быть колонкой. */
+.board-table,
+.workload,
+.figure-value,
+.column-header,
+.swimlane-head,
+.board-toolbar {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Столбики без библиотеки: график из десятка значений — это десяток

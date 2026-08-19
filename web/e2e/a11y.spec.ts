@@ -127,6 +127,45 @@ test('на всех экранах цели нажатия не мельче 24 
 })
 
 /**
+ * Размеры текста — целые пиксели.
+ *
+ * Шкала набрана в rem, но выбрана так, чтобы при обычном корне ложиться
+ * в целые: 12/13/15/18/22. Прежние 0.85 и 0.95 rem давали 13.6 и 15.2 —
+ * подгонка на глаз, растянутая на весь экран; дробная строка вдобавок
+ * не ложится на пиксельную сетку и мылит текст на обычном экране.
+ *
+ * Проверяется на настоящем экране, а не в разметке: в правиле стоит
+ * rem, и увидеть получившийся пиксель можно только посчитав.
+ */
+test('размеры текста ложатся в целые пиксели', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Типографика')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+
+  const дробные = await page.evaluate(() => {
+    const out = new Set<string>()
+    for (const el of document.querySelectorAll('*')) {
+      if (el.children.length) continue
+      if (!(el.textContent ?? '').trim()) continue
+      const box = el.getBoundingClientRect()
+      if (!box.width || !box.height) continue
+      const size = parseFloat(getComputedStyle(el).fontSize)
+      if (!Number.isInteger(size)) out.add(`${size}px «${(el.textContent ?? '').trim().slice(0, 16)}»`)
+    }
+    return [...out]
+  })
+  expect(дробные, 'дробные размеры текста').toEqual([])
+
+  // Строка кладётся на ту же сетку, что отступы и цели нажатия: 24.
+  const строка = await page.evaluate(() => getComputedStyle(document.body).lineHeight)
+  expect(строка, 'высота строки').toBe('24px')
+})
+
+/**
  * Контраст в обеих темах.
  *
  * WCAG 1.4.3 — 4.5:1 обычному тексту и 3:1 крупному; 1.4.11 — 3:1
