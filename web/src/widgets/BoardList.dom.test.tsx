@@ -9,9 +9,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
-import type { Principal } from '../shared/api/index.ts'
+import type { BoardInfo, Principal } from '../shared/api/index.ts'
+import { ToastHost } from '../shared/ui/Toast.tsx'
 
 const createBoard = vi.fn()
+const deleteBoard = vi.fn()
+const archivedBoards = vi.fn()
 
 vi.mock('../shared/api', async (importOriginal) => {
   const real = await importOriginal<typeof import('../shared/api')>()
@@ -20,6 +23,8 @@ vi.mock('../shared/api', async (importOriginal) => {
     api: {
       ...real.api,
       createBoard,
+      deleteBoard,
+      archivedBoards,
       listBoards: vi.fn().mockResolvedValue({ boards: [] }),
       team: vi.fn().mockResolvedValue({ members: [] }),
       listTeams: vi.fn().mockResolvedValue({ teams: [] }),
@@ -42,7 +47,22 @@ const ANNA: Principal = {
 }
 
 function show() {
-  return render(<BoardList principal={ANNA} onOpen={() => {}} />)
+  return render(
+    <ToastHost>
+      <BoardList principal={ANNA} onOpen={() => {}} />
+    </ToastHost>,
+  )
+}
+
+const ARCHIVED: BoardInfo = {
+  id: 'b-9',
+  name: 'Найм',
+  key: 'НАЙМ',
+  version: 1,
+  sleDays: null,
+  sleProbability: 85,
+  visibility: 'org',
+  cards: 0,
 }
 
 it('ключ доезжает таким, каким его набрали, и заглавными', async () => {
@@ -103,4 +123,19 @@ it('отказ не про ключ поле не пятнает', async () => {
 
   expect(await screen.findByText('у вас доступ только на чтение')).toBeTruthy()
   expect(screen.getByLabelText(/Ключ доски/).getAttribute('aria-invalid')).toBeNull()
+})
+
+it('удаление насовсем называет удалённое: строка исчезает молча, а это «навсегда»', async () => {
+  archivedBoards.mockResolvedValue({ boards: [ARCHIVED] })
+  deleteBoard.mockResolvedValue(undefined)
+  show()
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Показать архив' }))
+  await userEvent.click(await screen.findByRole('button', { name: /Удалить навсегда: Найм/ }))
+  await userEvent.type(screen.getByLabelText('Название доски для подтверждения'), 'Найм')
+
+  archivedBoards.mockResolvedValue({ boards: [] })
+  await userEvent.click(screen.getByRole('button', { name: 'Удалить навсегда' }))
+
+  expect(await screen.findByText('Доска «Найм» удалена навсегда.')).toBeTruthy()
 })

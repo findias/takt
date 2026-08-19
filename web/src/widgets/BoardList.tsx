@@ -5,6 +5,7 @@ import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { BoardAccess } from '../features/access/BoardAccess.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
+import { useToast } from '../shared/ui/Toast.tsx'
 
 export function BoardList({
   principal,
@@ -30,6 +31,7 @@ export function BoardList({
   const [typed, setTyped] = useState('')
   // Люди и подразделения нужны только настройке доступа, поэтому берутся
   // один раз на список, а не по разу на каждую доску.
+  const notify = useToast()
   const [people, setPeople] = useState<Member[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const canEdit = principal.role !== 'viewer'
@@ -185,7 +187,14 @@ export function BoardList({
           api
             .deleteBoard(board.id, board.name)
             .then(() => api.archivedBoards())
-            .then((r) => setArchived(r.boards))
+            .then((r) => {
+              setArchived(r.boards)
+              // Отменить нечего, поэтому сообщение без действия —
+              // но сказать, что случилось, обязано: строка исчезает
+              // из архива молча, и это ровно то, чего человек боится
+              // после «навсегда».
+              notify({ text: `Доска «${board.name}» удалена навсегда.`, tone: 'warning' })
+            })
             .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось удалить доску'))
         }}
       >
@@ -308,14 +317,36 @@ function Archive({
       <ul className="member-list">
         {boards.map((b) => (
           <li key={b.id}>
-            <span>{b.name}</span>
+            {/* Строка архива говорит о доске то же, что и строка списка:
+                выбирать, какую вернуть и какую стереть, по одному
+                названию — значит выбирать вслепую, а «навсегда» здесь
+                рядом. */}
+            <div className="member-who">
+              <span>{b.name}</span>
+              <span className="muted small">
+                {b.key}
+                {b.visibility && ` · ${VISIBILITY_NAMES[b.visibility].toLowerCase()}`}
+                {b.cards !== undefined &&
+                  ` · ${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`}
+              </span>
+            </div>
+            {/* Имя называет доску: в архиве этих кнопок столько же,
+                сколько досок, и без названия они звучат одинаково. */}
             {canEdit && (
-              <button className="link" onClick={() => onRestore(b.id)}>
+              <button
+                className="link"
+                aria-label={`Вернуть из архива: ${b.name}`}
+                onClick={() => onRestore(b.id)}
+              >
                 Вернуть
               </button>
             )}
             {onDelete && (
-              <button className="link link--danger" onClick={() => onDelete(b)}>
+              <button
+                className="link link--danger"
+                aria-label={`Удалить навсегда: ${b.name}`}
+                onClick={() => onDelete(b)}
+              >
                 Удалить навсегда
               </button>
             )}

@@ -52,3 +52,19 @@ if (!window.IntersectionObserver) {
   window.IntersectionObserver = Stub as unknown as typeof IntersectionObserver
 
 }
+
+// И не знает про модальные диалоги: `<dialog>` в jsdom есть, а
+// `showModal()` — нет. Заглушка делает ровно то, что видно снаружи:
+// открывает, закрывает и сообщает о закрытии. Ловушку фокуса и слой
+// поверх страницы она не изображает — это проверяется в браузере,
+// где они настоящие.
+if (!HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.open = true
+  }
+  HTMLDialogElement.prototype.close = function close(returnValue?: string) {
+    this.open = false
+    if (returnValue !== undefined) this.returnValue = returnValue
+    this.dispatchEvent(new Event('close'))
+  }
+}

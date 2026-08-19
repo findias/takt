@@ -265,6 +265,12 @@ func TestBoardIsArchivedAndBroughtBack(t *testing.T) {
 	if len(archived) != 1 || archived[0].ID != f.boardID {
 		t.Fatalf("архив: %+v", archived)
 	}
+	// Строка архива говорит о доске то же, что и строка списка: из архива
+	// выбирают, какую вернуть и какую стереть насовсем, а по одному
+	// названию этот выбор делается вслепую.
+	if got := archived[0]; got.Key == "" || got.Visibility == nil || got.Cards == nil {
+		t.Errorf("архив без ключа, видимости или объёма: %+v", got)
+	}
 
 	if err := f.svc.Restore(f.ctx, f.orgID, f.actorID, f.boardID); err != nil {
 		t.Fatalf("возврат из архива: %v", err)

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ROLE_NAMES, api } from '../shared/api/index.ts'
+import { CopyButton } from '../shared/ui/CopyButton.tsx'
+import { useToast } from '../shared/ui/Toast.tsx'
 import {
   DIRECTORY_SCOPE,
   FIELD_KIND_NAMES,
@@ -44,10 +46,17 @@ export function Team({ principal }: { principal: Principal }) {
 
   // Кого спрашивают обезличить.
   const [toErase, setToErase] = useState<Member | null>(null)
+  const notify = useToast()
 
-  const act = (p: Promise<unknown>) => {
+  // Сделанное называется словами: строка просто исчезает из списка,
+  // и без сообщения человек не знает, его ли нажатие сработало —
+  // особенно когда строк несколько и они похожи.
+  const act = (p: Promise<unknown>, done?: string) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(() => {
+      load()
+      if (done) notify({ text: done, tone: 'info' })
+    }).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
   }
 
   return (
@@ -172,12 +181,7 @@ export function Team({ principal }: { principal: Principal }) {
                   aria-label="Ссылка-приглашение"
                   onFocus={(e) => e.target.select()}
                 />
-                <button
-                  aria-label="Скопировать ссылку-приглашение"
-                  onClick={() => void navigator.clipboard?.writeText(freshLink)}
-                >
-                  Скопировать
-                </button>
+                <CopyButton value={freshLink} what="ссылку-приглашение" />
               </div>
             </div>
           )}
@@ -198,7 +202,12 @@ export function Team({ principal }: { principal: Principal }) {
                     <button
                       className="link"
                       aria-label={`Отозвать приглашение: ${i.email}`}
-                      onClick={() => act(api.revokeInvite(i.id))}
+                      onClick={() =>
+                        act(
+                          api.revokeInvite(i.id),
+                          `Приглашение для ${i.email} отозвано: ссылка больше не работает.`,
+                        )
+                      }
                     >
                       Отозвать приглашение
                     </button>
@@ -308,12 +317,7 @@ function Clients() {
               aria-label="Ключ доступа"
               onFocus={(e) => e.target.select()}
             />
-            <button
-              aria-label="Скопировать ключ доступа"
-              onClick={() => void navigator.clipboard?.writeText(fresh)}
-            >
-              Скопировать
-            </button>
+            <CopyButton value={fresh} what="ключ доступа" />
           </div>
         </div>
       )}

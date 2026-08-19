@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { WEBHOOK_EVENT_NAMES, api } from '../../shared/api/index.ts'
 import type { Delivery, Webhook } from '../../shared/api/index.ts'
 import { Skeleton } from '../../shared/ui/states.tsx'
+import { CopyButton } from '../../shared/ui/CopyButton.tsx'
 
 /**
  * Подписки на события.
@@ -79,12 +80,7 @@ export function Webhooks() {
               aria-label="Ключ подписи"
               onFocus={(e) => e.target.select()}
             />
-            <button
-              aria-label="Скопировать ключ подписи"
-              onClick={() => void navigator.clipboard?.writeText(fresh.secret ?? '')}
-            >
-              Скопировать
-            </button>
+            <CopyButton value={fresh.secret ?? ''} what="ключ подписи" />
           </div>
           {/* Ключ без правила проверки бесполезен, а правило до сих пор
               можно было узнать только чтением нашего кода. */}

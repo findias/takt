@@ -471,8 +471,16 @@ func (s *Service) ArchivedCards(ctx context.Context, orgID, userID, boardID stri
 func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, error) {
 	out := []Info{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		// Ключ, видимость и объём — то же, что в списке живых досок:
+		// из архива выбирают, какую вернуть и какую стереть насовсем,
+		// и по одному названию этот выбор делается вслепую. Карточки
+		// считаются неархивные: доска в архиве, а работа на ней —
+		// та же, что была.
 		rows, err := tx.Query(ctx, `
-			select id, name, version from boards
+			select `+boardFields+`, visibility,
+			       (select count(*) from cards c
+			         where c.board_id = boards.id and c.archived_at is null)
+			  from boards
 			 where archived_at is not null
 			 order by archived_at desc`)
 		if err != nil {
@@ -481,9 +489,14 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 		defer rows.Close()
 		for rows.Next() {
 			var b Info
-			if err := rows.Scan(&b.ID, &b.Name, &b.Version); err != nil {
+			var visibility string
+			var cards int
+			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
+				&b.SLEProbability, &b.Key, &visibility, &cards); err != nil {
 				return err
 			}
+			b.Visibility = &visibility
+			b.Cards = &cards
 			out = append(out, b)
 		}
 		return rows.Err()
