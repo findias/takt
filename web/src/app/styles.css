@@ -84,6 +84,12 @@
      1.28 в тёмной — замерено). Разделители остаются тонкими,
      а поля и кнопки обводятся заметнее. */
   --rule-strong: #7c8481;
+  /* Галочка внутри флажка. Живёт в теме, потому что её цвет зависит
+     от заливки: в светлой теме квадрат заливается тёмно-зелёным
+     и галочка белая, в тёмной заливка светлая — и галочка тёмная.
+     Родной флажок выбирал этот цвет сам, и в нашей теме он оставался
+     единственным местом, куда мы не могли заглянуть. */
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
   --accent: #0e6f5c;
   --accent-soft: #dcebe5;
   --warn: #a33d1e;
@@ -102,6 +108,7 @@
     --ink-3: #8b9a95;
     --rule: #27322f;
     --rule-strong: #6b7370;
+    --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
     --accent: #52c1a4;
     --accent-soft: #122c25;
     --warn: #e08264;
@@ -121,6 +128,7 @@
   --ink-3: #8b9a95;
   --rule: #27322f;
   --rule-strong: #6b7370;
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
   --accent: #52c1a4;
   --accent-soft: #122c25;
   --warn: #e08264;
@@ -349,6 +357,56 @@ label:has(> input[type='radio']) {
      сама по себе, оставаясь справа от квадрата. */
   flex-wrap: nowrap;
 }
+/* Флажок рисуется нами, а не системой.
+ *
+ * Причины проверяемые. Первая: у родного нет ни наведения, ни нажатия,
+ * ни недоступности в наших цветах — их рисует система, а правило
+ * требует все пять состояний. Вторая: форма и радиус у него свои
+ * в каждом браузере, и рядом с нашими четырьмя пикселями это видно.
+ * Третья: вычисленной границы у родного элемента нет вовсе, поэтому
+ * замер контраста обходил флажки стороной — а в тёмной теме
+ * невыбранный квадрат сливался с полосой отбора, и увидеть это можно
+ * было только глазами.
+ *
+ * Родному он остаётся в режиме высокой контрастности: там систему
+ * не перерисовывают, там ей подчиняются. */
+input[type='checkbox'] {
+  appearance: none;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+input[type='checkbox']:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  background-image: var(--check);
+  background-repeat: no-repeat;
+  background-position: center;
+  /* Галочка меньше квадрата: заполненная до краёв читается пятном,
+     а не знаком. */
+  background-size: 16px 16px;
+}
+input[type='checkbox']:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+input[type='checkbox']:active:not(:disabled) {
+  background-color: var(--surface-2);
+}
+input[type='checkbox']:checked:active:not(:disabled) {
+  background-color: var(--accent);
+  filter: brightness(0.92);
+}
+input[type='checkbox']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (forced-colors: active) {
+  input[type='checkbox'] {
+    appearance: auto;
+  }
+}
+
 input[type='checkbox'],
 input[type='radio'] {
   width: auto;

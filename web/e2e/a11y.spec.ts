@@ -251,6 +251,20 @@ test('контраст держится в обеих темах', async ({ page
   expect(await lowContrast(page, 'Светлая'), 'доска, светлая тема').toEqual([])
   expect(await lowContrast(page, 'Тёмная'), 'доска, тёмная тема').toEqual([])
 
+  // Флажки обязаны попадать в этот же замер. У родного флажка
+  // вычисленной границы нет вовсе — замер молча проходил мимо, и в
+  // тёмной теме невыбранный квадрат сливался с полосой отбора.
+  // Поэтому границу флажка рисуем мы, а проверка следит, что рисуем:
+  // вернётся родной — счётчик разойдётся, а не промолчит.
+  const безГраницы = await page.evaluate(() =>
+    [...document.querySelectorAll('input[type="checkbox"]')].filter((el) => {
+      const box = el.getBoundingClientRect()
+      if (!box.width) return false
+      return parseFloat(getComputedStyle(el).borderTopWidth) === 0
+    }).length,
+  )
+  expect(безГраницы, 'флажки без вычисленной границы — мимо замера контраста').toBe(0)
+
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByRole('button', { name: 'Команда' }).click()
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
