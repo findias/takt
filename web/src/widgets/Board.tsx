@@ -738,13 +738,27 @@ export function Board({
   }
 
   if (board.loadError) {
+    // Доски нет или она чужая — повторять нечего: чужая неотличима
+    // от несуществующей нарочно, и человеку нужен не «Повторить»,
+    // а дорога назад. «Повторить» здесь отправляло бы искать поломку,
+    // которой нет.
+    const пропала = board.loadStatus === 404 || board.loadStatus === 403
     return (
       <div className="board-screen">
         <ErrorState
           what="загрузить доску"
-          error={board.loadError}
-          onRetry={() => void board.reload()}
+          error={
+            пропала
+              ? `${board.loadError}. Возможно, её убрали или доступ к ней закрыли.`
+              : board.loadError
+          }
+          onRetry={пропала ? undefined : () => void board.reload()}
         />
+        {пропала && (
+          <button className="btn" onClick={onBack}>
+            Все доски
+          </button>
+        )}
       </div>
     )
   }

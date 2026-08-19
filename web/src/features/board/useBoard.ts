@@ -45,6 +45,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const [queue, setQueue] = useState<MoveCommand[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Отказ отказу рознь: 503 значит «сервер перезапускают, попробуйте
+  // ещё», а 404 — «этой доски у вас нет», и повторять его до скончания
+  // века незачем. Код держим отдельно, потому что различать по тексту
+  // значит сломать экран при первой правке формулировки.
+  const [loadStatus, setLoadStatus] = useState<number | null>(null)
   // Убранная в архив доска — не ошибка, а положение дел, и лечится оно
   // одной кнопкой. Отличаем по коду ответа, а не по тексту сообщения:
   // разбирать текст значит сломать экран при первой правке формулировки.
@@ -71,10 +76,24 @@ export function useBoard(boardId: string | null, notify: Notify) {
     setArchived(false)
     try {
       const snap = await api.snapshot(boardId)
+      // Снимок не той формы — это не «пустая доска», а расхождение
+      // клиента с сервером: браузер держит старую сборку, а сервер
+      // уехал вперёд (или наоборот). Раньше отсюда вылетало
+      // «a.columns is not iterable» — сообщение чужой библиотеки,
+      // по которому человек не может ни понять, что случилось,
+      // ни догадаться, что помогает обновление страницы.
+      if (!Array.isArray(snap.columns) || !Array.isArray(snap.cards)) {
+        throw new Error(
+          'Ответ сервера не похож на снимок доски. Похоже, страница открыта давно ' +
+            'и устарела: обновите её (Ctrl+R или Cmd+R).',
+        )
+      }
+      setLoadStatus(null)
       setBase(fromSnapshot(snap))
       setQueue([])
     } catch (e) {
       if (e instanceof ApiError && e.body?.code === 'board_archived') setArchived(true)
+      setLoadStatus(e instanceof ApiError ? e.status : null)
       setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить доску')
     } finally {
       setLoading(false)
@@ -84,6 +103,28 @@ export function useBoard(boardId: string | null, notify: Notify) {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  // Не загрузилось — пробуем ещё, сами.
+  //
+  // «Повторить» на экране остаётся, но нажимать её ради того, чтобы
+  // пережить перезапуск сервера, человек не должен: доска обязана
+  // сойтись сама, как сходится после обрыва потока. Проход
+  // по интерфейсу поймал ровно это — вторая вкладка застряла
+  // на «Ошибка 503» и после подъёма сервера так и стояла.
+  //
+  // Архивная доска сюда не попадает: это не сбой, а положение дел,
+  // и повторять запрос за ним незачем.
+  useEffect(() => {
+    if (!loadError || archived) return
+    // Повторяем только то, что может пройти со второй попытки: обрыв
+    // связи (кода нет вовсе) и отказ самого сервера. «Не найдено»
+    // и «нельзя» повтором не лечатся — там нужен другой ход, и он
+    // назван на экране.
+    const стоит = loadStatus === null || loadStatus >= 500
+    if (!стоит) return
+    const again = window.setTimeout(() => void reload(), 5000)
+    return () => window.clearTimeout(again)
+  }, [loadError, loadStatus, archived, reload])
 
   // Очередь разбирается строго по одной команде: сервер сериализует
   // операции по доске, и отправлять их пачкой — значит гадать о порядке.
@@ -209,31 +250,64 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // автор — единственный повод дёрнуться.
   useEffect(() => {
     if (!boardId) return
-    const source = new EventSource(`/api/boards/${boardId}/stream`)
+    let source: EventSource
+    let retry: number | undefined
+    let alive = true
 
-    source.addEventListener('board', (event) => {
-      try {
-        const change = JSON.parse((event as MessageEvent).data) as {
-          version: number
-          actorId: string
+    const listen = (stream: EventSource) => {
+      stream.addEventListener('board', (event) => {
+        try {
+          const change = JSON.parse((event as MessageEvent).data) as {
+            version: number
+            actorId: string
+          }
+          setBase((current) => {
+            if (!current) return current
+            // Версия не новее нашей — новость уже учтена.
+            if (change.version <= current.info.version) return current
+            // Догоняем вне setBase: обновление состояния должно
+            // оставаться чистым.
+            queueMicrotask(catchUp)
+            return current
+          })
+        } catch {
+          // Непонятное сообщение — не повод ронять доску.
         }
-        setBase((current) => {
-          if (!current) return current
-          // Версия не новее нашей — новость уже учтена.
-          if (change.version <= current.info.version) return current
-          // Догоняем вне setBase: обновление состояния должно
-          // оставаться чистым.
-          queueMicrotask(catchUp)
-          return current
-        })
-      } catch {
-        // Непонятное сообщение — не повод ронять доску.
-      }
-    })
+      })
 
-    // Переподключение EventSource умеет сам; наше дело — закрыть поток
-    // при уходе с доски.
-    return () => source.close()
+      // Сам EventSource переподключается только после обрыва связи.
+      // Ответ не-200 он считает окончательным и закрывается насовсем —
+      // а это и приходит, когда сервер перезапускают: браузер стучится
+      // в ещё не поднявшийся порт, получает отказ и больше не
+      // возвращается. Доска после этого молча стоит устаревшей, и узнать
+      // об этом можно только по чужой правке, которая не приехала.
+      // Проход по интерфейсу поймал ровно это: вторая вкладка осталась
+      // на прежней версии навсегда.
+      //
+      // Поэтому закрытый поток открываем заново — через паузу, чтобы
+      // не долбить поднимающийся сервер, — и сразу догоняем пропущенное.
+      stream.addEventListener('error', () => {
+        if (!alive || stream.readyState !== EventSource.CLOSED) return
+        retry = window.setTimeout(() => {
+          if (!alive) return
+          open()
+          void catchUp()
+        }, 3000)
+      })
+    }
+
+    const open = () => {
+      source = new EventSource(`/api/boards/${boardId}/stream`)
+      listen(source)
+    }
+
+    open()
+
+    return () => {
+      alive = false
+      if (retry) window.clearTimeout(retry)
+      source?.close()
+    }
   }, [boardId, catchUp])
 
   const order = useMemo(() => (base ? renderOrder(base, queue) : {}), [base, queue])
@@ -895,6 +969,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     pending: queue.length,
     loading,
     loadError,
+    loadStatus,
     archived,
     reload,
     moveCard,

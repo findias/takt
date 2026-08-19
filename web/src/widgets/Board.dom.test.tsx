@@ -7,13 +7,14 @@
 // и требует настоящих событий указателя; клавиатурный путь для WCAG
 // важнее, и он наш.
 
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Card, Column, Snapshot } from '../shared/api/index.ts'
 
 const snapshot = vi.fn<() => Promise<Snapshot>>()
 const operation = vi.fn()
+const changes = vi.fn()
 
 vi.mock('../shared/api', async (importOriginal) => {
   const real = await importOriginal<typeof import('../shared/api')>()
@@ -23,6 +24,7 @@ vi.mock('../shared/api', async (importOriginal) => {
       ...real.api,
       snapshot,
       operation,
+      changes,
       // Экран доски дёргает соседние ленты при открытии; они здесь
       // не интересны, но молчать должны без ошибок.
       events: vi.fn().mockResolvedValue({ events: [], next: null }),
@@ -33,6 +35,7 @@ vi.mock('../shared/api', async (importOriginal) => {
 })
 
 const { Board } = await import('./Board')
+const { ApiError } = await import('../shared/api')
 
 const COL_A = 'col-a'
 const COL_B = 'col-b'
@@ -91,9 +94,32 @@ function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), 
   }
 }
 
+// Поток изменений подменяется настолько, насколько нужен проверкам:
+// он умеет отдать событие, «закрыться» и рассказать об этом — на этом
+// стоит проверка переоткрытия.
 class FakeEventSource {
-  addEventListener() {}
-  close() {}
+  static readonly CLOSED = 2
+  static открытые: FakeEventSource[] = []
+  readyState = 1
+  private слушатели = new Map<string, ((e: unknown) => void)[]>()
+
+  constructor(readonly url: string) {
+    FakeEventSource.открытые.push(this)
+  }
+
+  addEventListener(kind: string, fn: (e: unknown) => void) {
+    this.слушатели.set(kind, [...(this.слушатели.get(kind) ?? []), fn])
+  }
+
+  close() {
+    this.readyState = FakeEventSource.CLOSED
+  }
+
+  /** Оборвать поток так, как это делает браузер после ответа не-200. */
+  оборвать() {
+    this.readyState = FakeEventSource.CLOSED
+    for (const fn of this.слушатели.get('error') ?? []) fn(new Event('error'))
+  }
 }
 
 beforeEach(() => {
@@ -101,6 +127,9 @@ beforeEach(() => {
   snapshot.mockReset()
   operation.mockReset()
   operation.mockResolvedValue({ version: 2, patch: {} })
+  changes.mockReset()
+  changes.mockResolvedValue({ full: false, results: [] })
+  FakeEventSource.открытые = []
   vi.stubGlobal('EventSource', FakeEventSource)
 })
 
@@ -226,6 +255,83 @@ describe('состояния доски', () => {
 
     const queue = await screen.findByRole('region', { name: 'Очередь' })
     expect(queue.textContent).toMatch(/2\s*\/\s*3/)
+  })
+})
+
+describe('поток изменений', () => {
+  // EventSource переподключается сам только после обрыва связи. Ответ
+  // не-200 он считает окончательным — и закрывается насовсем; именно
+  // это приходит, когда сервер перезапускают. Доска после этого молча
+  // стоит устаревшей: проход по интерфейсу поймал вторую вкладку,
+  // застрявшую на прежней версии навсегда.
+  it('закрывшийся поток открывается заново и догоняет пропущенное', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    changes.mockResolvedValue({ full: false, results: [] })
+    show()
+    await screen.findByRole('group', { name: /Карточка «первая»/ })
+
+    expect(FakeEventSource.открытые).toHaveLength(1)
+    FakeEventSource.открытые[0].оборвать()
+
+    // Пауза перед новой попыткой: долбить поднимающийся сервер незачем.
+    expect(FakeEventSource.открытые).toHaveLength(1)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100)
+    })
+
+    expect(FakeEventSource.открытые).toHaveLength(2)
+    expect(changes).toHaveBeenCalled()
+  })
+})
+
+describe('доска, которая не загрузилась', () => {
+  // Перезапуск сервера ловит открытую доску на «Ошибка 503». Кнопка
+  // «Повторить» рядом есть, но доска обязана сойтись сама: жать её
+  // ради того, чтобы пережить чужую выкладку, человек не должен.
+  // Чужая доска неотличима от несуществующей нарочно. Повторять такой
+  // отказ бессмысленно: он не пройдёт ни со второй попытки, ни с сотой,
+  // а «Повторить» отправляет искать поломку, которой нет.
+  it('«не найдено» не повторяет запрос, а показывает дорогу назад', async () => {
+    snapshot.mockRejectedValue(new ApiError(404, { code: 'not_found', error: 'доска не найдена' }))
+    show()
+
+    expect(await screen.findByText(/доска не найдена/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Все доски' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Повторить' })).toBeNull()
+
+    const попыток = snapshot.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000)
+    })
+    expect(snapshot.mock.calls.length).toBe(попыток)
+  })
+
+  // Клиент из вчерашней сборки против сегодняшнего сервера (или
+  // наоборот) — снимок приходит не той формы. Раньше отсюда вылетало
+  // «a.columns is not iterable»: сообщение чужой библиотеки, по которому
+  // не понять ни что случилось, ни что обновление страницы помогает.
+  it('снимок не той формы объясняется человеку, а не строкой из библиотеки', async () => {
+    snapshot.mockResolvedValue({ info: { id: 'board', name: 'Доска', version: 1 } } as never)
+    show()
+
+    const текст = await screen.findByText(/устарела/)
+    expect(текст.textContent).toMatch(/обновите её/i)
+    expect(screen.queryByText(/is not iterable/)).toBeNull()
+  })
+
+  it('пробует ещё раз сама, без нажатия «Повторить»', async () => {
+    snapshot.mockRejectedValueOnce(new Error('Ошибка 503'))
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    show()
+
+    expect(await screen.findByText(/Не удалось загрузить доску/)).toBeTruthy()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5100)
+    })
+
+    expect(await screen.findByRole('group', { name: /Карточка «первая»/ })).toBeTruthy()
+    expect(screen.queryByText(/Не удалось загрузить доску/)).toBeNull()
   })
 })
 
