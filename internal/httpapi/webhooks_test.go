@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/konkov/agile/internal/board"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 	"github.com/konkov/agile/internal/webhook"
 )
 
@@ -81,12 +81,7 @@ func queueWorker(t *testing.T) *webhook.Worker {
 
 func testStore(t *testing.T) *store.Store {
 	t.Helper()
-	db, err := store.Open(context.Background(), os.Getenv("TEST_DATABASE_URL"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(db.Close)
-	return db
+	return testdb.Open(t)
 }
 
 // dueNow приближает срок следующей попытки. Восемь попыток с удвоением —

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Тесты HTTP-слоя идут против настоящей базы и настоящего маршрутизатора:
@@ -38,10 +38,7 @@ type api struct {
 
 func newAPI(t *testing.T) *api {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
-	}
+	url := testdb.URL(t)
 	db, err := store.Open(context.Background(), url)
 	if err != nil {
 		t.Fatalf("подключение к тестовой базе: %v", err)

@@ -11,7 +11,6 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Вход через корпоративный провайдер проверяется против поддельного
@@ -98,10 +98,7 @@ type federated struct {
 
 func newFederated(t *testing.T, claims map[string]any) *federated {
 	t.Helper()
-	dbURL := os.Getenv("TEST_DATABASE_URL")
-	if dbURL == "" {
-		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
-	}
+	dbURL := testdb.URL(t)
 	ctx := context.Background()
 	db, err := store.Open(ctx, dbURL)
 	if err != nil {

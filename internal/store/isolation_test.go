@@ -2,13 +2,13 @@ package store_test
 
 import (
 	"context"
-	"os"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Изоляция организаций держится политиками базы, а не проверками в коде.
@@ -70,10 +70,7 @@ func TestEveryTenantTableIsUnderForcedRLS(t *testing.T) {
 
 func isolationStore(t *testing.T) *store.Store {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("не задан TEST_DATABASE_URL, проверка изоляции пропущена")
-	}
+	url := testdb.URL(t)
 	db, err := store.Open(context.Background(), url)
 	if err != nil {
 		t.Fatalf("подключение к тестовой базе: %v", err)

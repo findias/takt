@@ -3,13 +3,13 @@ package metrics
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Метрики считаются на данных с известным ответом: отметки проставляются
@@ -29,10 +29,7 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
-	}
+	url := testdb.URL(t)
 	ctx := context.Background()
 	db, err := store.Open(ctx, url)
 	if err != nil {

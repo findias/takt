@@ -3,7 +3,6 @@ package org
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Организации, состав и приглашения.
@@ -30,10 +30,7 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
-	}
+	url := testdb.URL(t)
 	ctx := context.Background()
 	db, err := store.Open(ctx, url)
 	if err != nil {

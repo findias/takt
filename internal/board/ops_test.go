@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/store/testdb"
 )
 
 // Тесты работают против настоящей базы: почти вся логика операций живёт
@@ -23,10 +23,7 @@ import (
 // зелёным на машине без docker.
 func testStore(t *testing.T) *store.Store {
 	t.Helper()
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("не задан TEST_DATABASE_URL, интеграционные тесты пропущены")
-	}
+	url := testdb.URL(t)
 	db, err := store.Open(context.Background(), url)
 	if err != nil {
 		t.Fatalf("подключение к тестовой базе: %v", err)
