@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MIN_PASSWORD, api } from '../shared/api/index.ts'
 import type { AuthMethods, Principal } from '../shared/api/index.ts'
 
-export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
+export function Auth({
+  onSignedIn,
+  notice = null,
+}: {
+  onSignedIn: (p: Principal) => void
+  /** Почему человек снова видит вход: «сеанс кончился». Отказом это
+   *  не называется — он ничего не сделал не так. */
+  notice?: string | null
+}) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [org, setOrg] = useState('')
   const [name, setName] = useState('')
@@ -16,6 +24,10 @@ export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
   )
   const [busy, setBusy] = useState(false)
   const [methods, setMethods] = useState<AuthMethods | null>(null)
+  // Текст для диктора ставится с задержкой: смена экрана перебивает
+  // объявление, начатое в тот же миг, — правило то же, что и на доске.
+  const [said, setSaid] = useState('')
+  const heading = useRef<HTMLHeadingElement>(null)
 
   // Кнопка корпоративного входа появляется, только если он настроен.
   // Показывать её всегда и объяснять отказ после нажатия — значит
@@ -31,6 +43,19 @@ export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
       history.replaceState(null, '', location.pathname)
     }
   }, [])
+
+  // Экран сменился не по нажатию человека: фокус остался на кнопке,
+  // которой больше нет, то есть на `body`, — и клавиатура снова
+  // начинает обход с самого начала страницы.
+  useEffect(() => {
+    if (!notice) {
+      setSaid('')
+      return
+    }
+    heading.current?.focus()
+    const timer = setTimeout(() => setSaid(notice), 1000)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,7 +77,26 @@ export function Auth({ onSignedIn }: { onSignedIn: (p: Principal) => void }) {
   return (
     <div className="centered">
       <form className="panel" onSubmit={submit}>
-        <h1>{mode === 'login' ? 'Вход' : 'Новая организация'}</h1>
+        {/* Заголовку можно отдать фокус: возвращать его после подмены
+            экрана некуда, а `body` значит «обход с начала страницы». */}
+        <h1 ref={heading} tabIndex={-1}>
+          {mode === 'login' ? 'Вход' : 'Новая организация'}
+        </h1>
+
+        {/* Живой регион один на экран и смонтирован всегда: диктор
+            объявляет изменение существующей области, а появление узла
+            с текстом пропускает. */}
+        <p className="sr-only" role="status">
+          {said}
+        </p>
+
+        {/* Пока на форме висит отказ, объяснение не показывается:
+            две плашки об одном нажатии читаются как две поломки. */}
+        {notice && !error && mode === 'login' && (
+          <div className="note">
+            <p className="small">{notice}</p>
+          </div>
+        )}
 
         {mode === 'login' && methods?.oidc.enabled && (
           <>

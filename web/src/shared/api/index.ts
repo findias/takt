@@ -616,8 +616,32 @@ async function request<T>(
 
   const text = await response.text()
   const parsed = text ? JSON.parse(text) : null
+  // Кто вошёл — знает сервер, и «уже никто» он говорит одним кодом
+  // на любой запрос. Разбирать это каждому экрану порознь значит
+  // оставить человека там, где отказывает всё: экран рисует прежние
+  // данные, показывает «нужно войти» и никуда не ведёт.
+  if (response.status === 401) sessionLost()
   if (!response.ok) throw new ApiError(response.status, parsed)
   return parsed as T
+}
+
+const sessionLostHandlers = new Set<() => void>()
+
+/**
+ * Подписка на «сеанса больше нет».
+ *
+ * Слушатель один — каркас приложения; список нужен, чтобы отписка
+ * в тестах и при перемонтировании не отключала чужую подписку.
+ */
+export function onSessionLost(handler: () => void): () => void {
+  sessionLostHandlers.add(handler)
+  return () => {
+    sessionLostHandlers.delete(handler)
+  }
+}
+
+function sessionLost() {
+  for (const handler of sessionLostHandlers) handler()
 }
 
 export type AuthMethods = {

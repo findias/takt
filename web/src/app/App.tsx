@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { ROLE_NAMES, api } from '../shared/api/index.ts'
+import { ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
@@ -44,6 +44,13 @@ export function App() {
 function Screens() {
   const [principal, setPrincipal] = useState<Principal | null>(null)
   const [checking, setChecking] = useState(true)
+  // Вход после обрыва объясняет, почему человек снова здесь: иначе
+  // форма посреди работы выглядит поломкой, а не концом сессии.
+  const [ended, setEnded] = useState(false)
+  // Номер сессии стоит ключом на рабочих экранах: смена человека
+  // за спиной страницы обязана пересобрать их, а не подменить имя
+  // в шапке над чужими карточками.
+  const [session, setSession] = useState(0)
   // Что открыто — состояние адреса, а не компонента: иначе ссылку
   // на доску прислать нельзя, а перезагрузка возвращает в список.
   const route = useRoute()
@@ -55,6 +62,53 @@ function Screens() {
       .catch(() => setPrincipal(null))
       .finally(() => setChecking(false))
   }, [])
+
+  // Сеанс кончился где угодно — на любом запросе любого экрана.
+  // Здесь единственное место, которое имеет право показать вход:
+  // экраны о существовании друг друга не знают и убрать себя не могут.
+  // Пока никто не вошёл, отказ «нужно войти» — обычный ответ на первую
+  // проверку, и говорить о конце сеанса нечего.
+  useEffect(
+    () =>
+      onSessionLost(() => {
+        if (!principal) return
+        setPrincipal(null)
+        setEnded(true)
+      }),
+    [principal],
+  )
+
+  // Страница, возвращённая кнопкой «назад», приезжает из памяти браузера
+  // целиком — с прежним именем в шапке, прежней организацией и прежней
+  // ролью. Ничего из этого не перепроверяется само: запросов страница
+  // не делает, потому что для неё ничего не изменилось. Спрашиваем,
+  // кто вошёл, заново — иначе после выхода «назад» показывает рабочий
+  // экран вышедшего, а после смены человека — данные предыдущего.
+  //
+  // Пока ответ в пути, показываем то же, что и на первой загрузке:
+  // рисовать рабочий экран, не зная, чей он, — ровно та поломка,
+  // которую здесь и чиним.
+  useEffect(() => {
+    const restored = (e: PageTransitionEvent) => {
+      if (!e.persisted) return
+      setChecking(true)
+      api
+        .me()
+        .then((p) => {
+          // Сменился человек или организация — все данные под шапкой
+          // чужие. Экраны перечитывают своё по своим ключам и о смене
+          // сеанса не узнают, поэтому пересобираем их целиком.
+          if (principal && (principal.id !== p.id || principal.orgId !== p.orgId)) {
+            setSession((n) => n + 1)
+          }
+          setPrincipal(p)
+        })
+        .catch(() => setPrincipal(null))
+        .finally(() => setChecking(false))
+    }
+    addEventListener('pageshow', restored)
+    return () => removeEventListener('pageshow', restored)
+  }, [principal])
 
   // Принятое приглашение заменяет адрес, а не добавляет в историю:
   // возвращаться по «назад» к уже использованной ссылке некуда.
@@ -74,10 +128,22 @@ function Screens() {
   }
 
   if (checking) return <div className="centered">Проверяем сессию…</div>
-  if (!principal) return <Auth onSignedIn={setPrincipal} />
+  if (!principal)
+    return (
+      <Auth
+        notice={
+          ended ? 'Сессия истекла — войдите снова. Вы вернётесь на ту же страницу.' : null
+        }
+        onSignedIn={(p) => {
+          setEnded(false)
+          setPrincipal(p)
+        }}
+      />
+    )
   if (route.name === 'board')
     return (
       <Board
+        key={session}
         boardId={route.boardId}
         cardId={route.cardId}
         onCard={(cardId) => navigate(boardPath(route.boardId, cardId))}
@@ -102,7 +168,10 @@ function Screens() {
             navigate('/')
           }}
           onSignOut={() => {
-            void api.logout().finally(() => setPrincipal(null))
+            void api.logout().finally(() => {
+              setEnded(false)
+              setPrincipal(null)
+            })
           }}
         />
 
@@ -122,7 +191,7 @@ function Screens() {
         {/* `tabIndex` — чтобы главной области можно было отдать фокус,
             когда возвращать его больше некуда: диалог, открытый
             из спрятавшегося меню, иначе оставлял фокус на `body`. */}
-        <main className="app-main" tabIndex={-1}>
+        <main className="app-main" tabIndex={-1} key={session}>
           {route.name === 'boards' && (
             <BoardList principal={principal} onOpen={(id) => navigate(boardPath(id))} />
           )}

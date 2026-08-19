@@ -104,6 +104,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
       } catch (e) {
         setQueue((list) => list.filter((c) => c.operationId !== command.operationId))
 
+        // Кончившаяся сессия уводит на вход целым экраном, и тост
+        // об этом же висел бы поверх формы: одно событие, два разных
+        // сообщения — человек ищет две поломки вместо одной.
+        if (e instanceof ApiError && e.status === 401) return
+
         if (e instanceof ApiError && e.isConflict) {
           const conflict = e.body as Conflict
           setBase((current) => {
