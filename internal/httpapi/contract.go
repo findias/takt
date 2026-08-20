@@ -91,10 +91,23 @@ func newLimiter() *limiter { return &limiter{buckets: map[string]*bucket{}} }
 // повторить» отвечает Retry-After — он приходит вместе с отказом,
 // и там этот вопрос и задают.
 func (l *limiter) allow(key string, burst float64, perSec float64) (bool, int, int) {
-	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	b := l.refill(key, burst, perSec)
+	if b.tokens < 1 {
+		return false, 0, resetIn(burst, b.tokens, perSec)
+	}
+	// Отданный запрос вычитается сразу: заголовки описывают состояние
+	// после этого запроса, а не до него.
+	b.tokens--
+	return true, int(b.tokens), resetIn(burst, b.tokens, perSec)
+}
+
+// refill доливает ведро до текущего момента и возвращает его.
+// Вызывается под замком.
+func (l *limiter) refill(key string, burst, perSec float64) *bucket {
+	now := time.Now()
 	b, ok := l.buckets[key]
 	if !ok {
 		b = &bucket{tokens: burst, seen: now}
@@ -110,14 +123,35 @@ func (l *limiter) allow(key string, burst float64, perSec float64) (bool, int, i
 			delete(l.buckets, k)
 		}
 	}
+	return b
+}
 
-	if b.tokens < 1 {
-		return false, 0, resetIn(burst, b.tokens, perSec)
+// left отвечает, осталась ли хоть одна попытка, и через сколько секунд
+// появится следующая. Ничего не тратит: у входа тратит не сам запрос,
+// а его неудача.
+func (l *limiter) left(key string, burst, perSec float64) (bool, int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b := l.refill(key, burst, perSec)
+	if b.tokens >= 1 {
+		return true, 0
 	}
-	// Отданный запрос вычитается сразу: заголовки описывают состояние
-	// после этого запроса, а не до него.
-	b.tokens--
-	return true, int(b.tokens), resetIn(burst, b.tokens, perSec)
+	return false, int(math.Ceil((1 - b.tokens) / perSec))
+}
+
+// spend тратит одну попытку.
+func (l *limiter) spend(key string, burst, perSec float64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b := l.refill(key, burst, perSec)
+	b.tokens = max(0, b.tokens-1)
+}
+
+// forget снимает счёт: вспомнивший пароль — не подбиральщик.
+func (l *limiter) forget(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.buckets, key)
 }
 
 // resetIn — через сколько секунд запас снова будет полон.
@@ -126,8 +160,9 @@ func resetIn(burst, tokens, perSec float64) int {
 }
 
 // limited ограничивает частоту запросов сервисных клиентов. Человек
-// за браузером под ограничение не попадает: он и не может настучать
-// быстрее, чем нажимает.
+// за браузером под это ограничение не попадает: он и не может настучать
+// быстрее, чем нажимает. Перебор пароля выглядит именно так — редко
+// и вежливо, — и считается отдельно, см. attempts.go.
 func (s *Server) limited(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := bearer(r)

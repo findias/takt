@@ -349,8 +349,18 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
+	// Счёт попыток спрашивается до проверки пароля и не зависит от того,
+	// заведён ли такой адрес: иначе отказ «слишком много попыток» сам
+	// сообщал бы, что адрес существует.
+	attempts := loginKey(req.Email)
+	if ok, after := s.limiter.left(attempts, loginBurst, loginPerSec); !ok {
+		tooManyAttempts(w, after)
+		return
+	}
+
 	user, err := auth.Authenticate(r.Context(), s.db.Pool, req.Email, req.Password)
 	if errors.Is(err, auth.ErrBadCredentials) {
+		s.limiter.spend(attempts, loginBurst, loginPerSec)
 		writeError(w, http.StatusUnauthorized, "неверная почта или пароль")
 		return
 	}
@@ -358,6 +368,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, "проверка пароля", err)
 		return
 	}
+	s.limiter.forget(attempts)
 	s.startSession(w, r, user.ID)
 }
 
