@@ -100,6 +100,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/me", s.authed(s.handleMe))
+	// Пароль и чужие сессии — свои у каждого, поэтому не под /api/org
+	// и не под владельцем: отобрать вход у себя может каждый, и это
+	// единственное, чем сегодня отвечают на «пароль утёк».
+	mux.HandleFunc("PUT /api/me/password", s.authed(s.handleChangePassword))
+	mux.HandleFunc("DELETE /api/me/sessions", s.authed(s.handleRevokeSessions))
 
 	// Организации: список своих, создание новой, переключение активной.
 	mux.HandleFunc("GET /api/orgs", s.authed(s.handleListOrgs))
@@ -418,6 +423,59 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request, p auth.Princip
 		auth.Principal
 		Scopes []string `json:"scopes"`
 	}{Principal: p, Scopes: granted})
+}
+
+// Смена пароля. Обрывает все прочие сессии — см. auth.ChangePassword.
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	// Ключом пароль не меняют: у служебной личности его нет вовсе,
+	// а сессий у неё не бывает — обрывать было бы нечего.
+	if _, byKey := scopesOf(r); byKey {
+		writeError(w, http.StatusForbidden, "ключом пароль не меняют: это действие человека")
+		return
+	}
+	var req struct {
+		Current string `json:"current"`
+		Next    string `json:"next"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if len(req.Next) < auth.MinPasswordLen {
+		writeError(w, http.StatusBadRequest, "пароль должен быть не короче 8 символов")
+		return
+	}
+	if req.Next == req.Current {
+		// Отдельным отказом, а не молчаливым успехом: человек, нажавший
+		// «сменить» и получивший «готово», уверен, что сменил.
+		writeError(w, http.StatusBadRequest, "новый пароль совпадает с текущим")
+		return
+	}
+
+	err := auth.ChangePassword(r.Context(), s.db.Pool, p.ID, p.SessionID, req.Current, req.Next)
+	switch {
+	case errors.Is(err, auth.ErrWrongPassword):
+		writeError(w, http.StatusForbidden, auth.ErrWrongPassword.Error())
+	case errors.Is(err, auth.ErrFederated):
+		writeError(w, http.StatusConflict, auth.ErrFederated.Error())
+	case err != nil:
+		s.fail(w, "смена пароля", err)
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// «Выйти на всех устройствах». Своя сессия остаётся: человек нажимает
+// это, чтобы закрыть чужой вход, а не свой.
+func (s *Server) handleRevokeSessions(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if _, byKey := scopesOf(r); byKey {
+		writeError(w, http.StatusForbidden, "у ключа нет сессий: ключ отзывают в разделе «Ключи для интеграций»")
+		return
+	}
+	if err := auth.RevokeOtherSessions(r.Context(), s.db.Pool, p.ID, p.SessionID); err != nil {
+		s.fail(w, "обрыв прочих сессий", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // --- организации ---

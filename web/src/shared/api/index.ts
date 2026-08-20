@@ -661,6 +661,12 @@ export const api = {
   register: (org: string, name: string, email: string, password: string) =>
     request<Principal>('POST', '/api/auth/register', { org, name, email, password }),
   logout: () => request<void>('POST', '/api/auth/logout'),
+  /** Смена пароля обрывает все прочие сессии: пароль меняют, когда он мог
+   *  утечь, а к этому времени он мог стать чужой сессией. */
+  changePassword: (current: string, next: string) =>
+    request<void>('PUT', '/api/me/password', { current, next }),
+  /** «Выйти на всех устройствах»: этот браузер остаётся, остальные — нет. */
+  signOutElsewhere: () => request<void>('DELETE', '/api/me/sessions'),
 
   listOrgs: () => request<{ orgs: Membership[]; activeOrgId: string }>('GET', '/api/orgs'),
   createOrg: (name: string) => request<Membership>('POST', '/api/orgs', { name }),

@@ -117,6 +117,22 @@ it('о конце сессии диктор узнаёт из живого ре�
   await waitFor(() => expect(region?.textContent).toMatch(/Сессия истекла/), { timeout: 2000 })
 })
 
+// Смена пароля делает два дела, а просят об одном: пароль меняют, когда
+// он мог утечь, и сессии, открытые до этого, обрываются заодно. О втором
+// человек не догадается, поэтому о нём говорят вслух.
+it('смена пароля объявляет и то, о чём не просили', async () => {
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+
+  await userEvent.click(screen.getByRole('button', { name: 'Пароль' }))
+  await userEvent.type(screen.getByPlaceholderText('Текущий пароль'), 'parol12345')
+  await userEvent.type(screen.getByPlaceholderText('Новый пароль'), 'novyy-parol-12345')
+  await userEvent.click(screen.getByRole('button', { name: 'Сменить пароль' }))
+
+  await waitFor(() => expect(asked('/api/me/password')).toBe(1))
+  expect(await screen.findByText(/остальные устройства вышли/i)).toBeTruthy()
+})
+
 it('«назад» после смены человека показывает нового, а не прежнего', async () => {
   render(<App />)
   await screen.findByText(ANNA.name)

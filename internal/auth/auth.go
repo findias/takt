@@ -36,6 +36,19 @@ var (
 	ErrBadCredentials = errors.New("неверная почта или пароль")
 	ErrNoSession      = errors.New("нет активной сессии")
 	ErrNoMembership   = errors.New("нет доступа ни к одной организации")
+
+	// ErrWrongPassword — текущий пароль не подошёл. Отдельно
+	// от ErrBadCredentials: там неизвестно, кто пришёл, а здесь человек
+	// уже вошёл и ошибся в одном поле, и отказ должен говорить именно
+	// про это поле.
+	ErrWrongPassword = errors.New("текущий пароль не подошёл")
+
+	// ErrFederated — паролем эта личность не входит. Отказ называет, что
+	// делать: пароль корпоративной учётной записи меняют у провайдера,
+	// и заводить второй пароль здесь значило бы оставить вход, который
+	// не закроется при увольнении.
+	ErrFederated = errors.New(
+		"вы входите через корпоративный провайдер — пароль меняется там же")
 )
 
 // Identity — человек безотносительно организации.
@@ -143,6 +156,59 @@ func CreateSession(ctx context.Context, pool *pgxpool.Pool, userID string) (stri
 		values ($1, $2, $3) returning id`,
 		userID, expires, memberships[0].OrgID).Scan(&id)
 	return id, expires, err
+}
+
+// ChangePassword меняет пароль и обрывает все прочие сессии.
+//
+// Обрыв — не довесок, а половина смысла: пароль меняют, когда он мог
+// утечь, а утёкший пароль к этому времени уже мог стать чужой сессией.
+// Оставить их жить значило бы сменить замок, не отобрав выданные ключи.
+// Своя сессия остаётся: человек только что подтвердил, что это он,
+// и выкидывать его из собственного браузера незачем.
+//
+// Текущий пароль спрашивается по той же причине: сессию могли украсть,
+// и смена пароля из украденной сессии заперла бы хозяина снаружи.
+func ChangePassword(ctx context.Context, pool *pgxpool.Pool,
+	userID, sessionID, current, next string) error {
+
+	var hash string
+	var federated bool
+	err := pool.QueryRow(ctx, `
+		select password_hash, oidc_subject is not null
+		  from users where id = $1`, userID).Scan(&hash, &federated)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNoSession
+	}
+	if err != nil {
+		return err
+	}
+	if federated {
+		return ErrFederated
+	}
+	if !CheckPassword(hash, current) {
+		return ErrWrongPassword
+	}
+
+	fresh, err := HashPassword(next)
+	if err != nil {
+		return err
+	}
+	if _, err := pool.Exec(ctx,
+		`update users set password_hash = $2 where id = $1`, userID, fresh); err != nil {
+		return err
+	}
+	return RevokeOtherSessions(ctx, pool, userID, sessionID)
+}
+
+// RevokeOtherSessions выкидывает человека отовсюду, кроме этого браузера.
+//
+// Отдельно от смены пароля: сессия утекает и без пароля — чужой
+// компьютер, забытая вкладка, — и в этом случае менять пароль незачем,
+// а закрыть чужой вход надо.
+func RevokeOtherSessions(ctx context.Context, pool *pgxpool.Pool, userID, keep string) error {
+	_, err := pool.Exec(ctx,
+		`delete from sessions where user_id = $1 and id <> $2`, userID, keep)
+	return err
 }
 
 func DeleteSession(ctx context.Context, pool *pgxpool.Pool, sessionID string) error {

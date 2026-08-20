@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
+import { MIN_PASSWORD, ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
@@ -9,7 +9,7 @@ import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
-import { ToastHost } from '../shared/ui/Toast.tsx'
+import { ToastHost, useToast } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
@@ -237,6 +237,7 @@ function OrgHeader({
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [changing, setChanging] = useState(false)
 
   const load = useCallback(() => {
     api
@@ -282,6 +283,15 @@ function OrgHeader({
         <button className="link" onClick={() => setCreating((v) => !v)}>
           {creating ? 'Отмена' : 'Новая организация'}
         </button>
+        <button
+          className="link"
+          onClick={() => {
+            setChanging((v) => !v)
+            setError(null)
+          }}
+        >
+          {changing ? 'Отмена' : 'Пароль'}
+        </button>
         <button className="link" onClick={onSignOut}>
           Выйти
         </button>
@@ -319,7 +329,103 @@ function OrgHeader({
         </form>
       )}
 
+      {changing && <PasswordForm onDone={() => setChanging(false)} />}
+
       {error && <p className="error">{error}</p>}
     </header>
+  )
+}
+
+/**
+ * Смена пароля и обрыв чужих сессий.
+ *
+ * Текущий пароль спрашивается не для порядка: сессию могли украсть,
+ * и смена пароля из украденной сессии заперла бы хозяина снаружи.
+ * Об успехе говорит тост, а не строка в форме: форма закрывается, а
+ * сказать надо о втором действии — что остальные устройства вышли, —
+ * о котором никто не просил и иначе не узнает.
+ */
+function PasswordForm({ onDone }: { onDone: () => void }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const notify = useToast()
+
+  const short = next.length > 0 && next.length < MIN_PASSWORD
+
+  return (
+    <form
+      className="password-form"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (busy || !current || next.length < MIN_PASSWORD) return
+        setBusy(true)
+        setError(null)
+        api
+          .changePassword(current, next)
+          .then(() => {
+            setCurrent('')
+            setNext('')
+            notify({ text: 'Пароль сменён, остальные устройства вышли', tone: 'info' })
+            onDone()
+          })
+          .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось сменить'))
+          .finally(() => setBusy(false))
+      }}
+    >
+      <input
+        autoFocus
+        type="password"
+        autoComplete="current-password"
+        value={current}
+        placeholder="Текущий пароль"
+        onChange={(e) => setCurrent(e.target.value)}
+      />
+      <input
+        type="password"
+        autoComplete="new-password"
+        value={next}
+        placeholder="Новый пароль"
+        aria-describedby="password-rule"
+        onChange={(e) => setNext(e.target.value)}
+      />
+      {/* Правило названо до ввода, а не после: придумывать пароль
+          и узнавать требование по отказу — значит придумывать дважды. */}
+      <span id="password-rule" className="muted small">
+        {short ? 'коротко: ' : ''}не короче {MIN_PASSWORD} символов
+      </span>
+      <div className="row">
+        <button
+          type="submit"
+          aria-label="Сменить пароль"
+          disabled={busy || !current || next.length < MIN_PASSWORD}
+        >
+          Сменить
+        </button>
+        {/* Отдельным действием, потому что и повод отдельный: сессия
+            утекает и без пароля — чужой компьютер, забытая вкладка. */}
+        <button
+          type="button"
+          className="link"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            setError(null)
+            api
+              .signOutElsewhere()
+              .then(() => {
+                notify({ text: 'Остальные устройства вышли', tone: 'info' })
+                onDone()
+              })
+              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось'))
+              .finally(() => setBusy(false))
+          }}
+        >
+          Выйти на всех устройствах
+        </button>
+      </div>
+      {error && <p className="error small">{error}</p>}
+    </form>
   )
 }
