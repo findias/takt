@@ -244,6 +244,13 @@ func (s *Service) Remove(ctx context.Context, orgID, actorID, userID string) err
 // и владельцу, — и стирается он сроком хранения организации, а не
 // точечной правкой. Это тот же механизм, который уже есть, и другого
 // честного здесь нет.
+//
+// И второе, чего не покрывает: приглашение, выписанное этому человеку
+// в чужой организации и не принятое. Оно лежит за политикой чужого
+// арендатора, и дотянуться до него отсюда нельзя — так же, как нельзя
+// обезличить человека, состоящего не только здесь (см. ErrSharedIdentity).
+// Такие приглашения убирает срок хранения: месяц после того, как
+// перестали действовать.
 func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) error {
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
@@ -270,6 +277,22 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 		if _, err := tx.Exec(ctx,
 			`delete from memberships where org_id = $1 and user_id = $2`,
 			orgID, userID); err != nil {
+			return err
+		}
+
+		// Приглашения этого человека убираются здесь же, а не ждут своего
+		// месяца в уборке: строка приглашения хранит почту, а обещано,
+		// что персональных данных не останется. Ищем и по адресу, и по
+		// принявшему: адрес найдёт неиспользованные приглашения, принявший —
+		// то, по которому он и пришёл.
+		var email string
+		if err := tx.QueryRow(ctx,
+			`select email from users where id = $1`, userID).Scan(&email); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx,
+			`delete from invites where accepted_by = $1 or lower(email) = lower($2)`,
+			userID, email); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `delete from sessions where user_id = $1`, userID); err != nil {

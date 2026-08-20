@@ -487,6 +487,18 @@ func TestEraseKeepsTheIdentityAndDropsThePerson(t *testing.T) {
 		memberID); err != nil {
 		t.Fatal(err)
 	}
+	// Приглашение, по которому он пришёл: оно хранит его почту, а обещано,
+	// что персональных данных не останется.
+	if err := f.db.InTenant(f.ctx, o.OrgID, ownerID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx, `
+			insert into invites (org_id, email, role, token_hash, invited_by, expires_at,
+			                     accepted_at, accepted_by)
+			values ($1, $2, 'member', $3, $4, now() + interval '7 days', now(), $5)`,
+			o.OrgID, email, "erase-"+uuid.NewString(), ownerID, memberID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := f.svc.Erase(f.ctx, o.OrgID, ownerID, memberID); err != nil {
 		t.Fatalf("обезличивание: %v", err)
@@ -521,6 +533,18 @@ func TestEraseKeepsTheIdentityAndDropsThePerson(t *testing.T) {
 	}
 	if members != 0 || sessions != 0 {
 		t.Errorf("участий %d, сессий %d — ожидался ноль и там и там", members, sessions)
+	}
+
+	// И почта не осталась в приглашении: месяца уборки требование
+	// об удалении данных не ждёт.
+	var invites int
+	if err := f.db.Pool.QueryRow(f.ctx,
+		`select count(*) from invites where lower(email) = lower($1)`, email).
+		Scan(&invites); err != nil {
+		t.Fatal(err)
+	}
+	if invites != 0 {
+		t.Errorf("почта осталась в %d приглашениях", invites)
 	}
 
 	// В журнале организации остался след: кто и над кем.

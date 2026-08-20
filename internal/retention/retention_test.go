@@ -215,3 +215,56 @@ func TestOrganisationStillCannotEraseItsAudit(t *testing.T) {
 		t.Errorf("организация стёрла свой журнал: было %d, стало %d", before, after)
 	}
 }
+
+// Просроченная сессия не пускает и не читается, но лежала вечно.
+// Каждый вход добавляет строку, а выходят не все.
+func TestExpiredSessionsAreRemoved(t *testing.T) {
+	f := newFixture(t)
+	if _, err := f.db.Pool.Exec(f.ctx, `
+		insert into sessions (user_id, expires_at, active_org_id)
+		values ($1, now() - interval '1 day', $2),
+		       ($1, now() + interval '30 days', $2)`, f.userID, f.orgID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.worker.Once(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	var left int
+	if err := f.db.Pool.QueryRow(f.ctx,
+		`select count(*) from sessions where user_id = $1`, f.userID).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 1 {
+		t.Errorf("сессий осталось %d, ожидалась одна живая", left)
+	}
+}
+
+// Приглашение хранит почту приглашённого. Действующее трогать нельзя —
+// по нему ещё придут; отработавшее месяц назад читать уже незачем.
+func TestSpentInvitesAreForgotten(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`
+		insert into invites (org_id, email, role, token_hash, invited_by, expires_at, accepted_at)
+		values
+		  ($1, 'davniy@example.test', 'member', $2, $3, now() - interval '60 days',
+		   now() - interval '60 days'),
+		  ($1, 'vcherashniy@example.test', 'member', $4, $3, now() - interval '2 days', null),
+		  ($1, 'zhdyot@example.test', 'member', $5, $3, now() + interval '5 days', null)`,
+		f.orgID, "h1-"+uuid.NewString(), f.userID, "h2-"+uuid.NewString(), "h3-"+uuid.NewString())
+
+	if err := f.worker.Once(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ушло только давнее. Просроченное позавчера ещё лежит: месяц —
+	// это срок, за который «кого мы звали» перестают спрашивать.
+	if got := f.count(`select count(*) from invites`); got != 2 {
+		t.Errorf("приглашений осталось %d, ожидалось два", got)
+	}
+	if got := f.count(
+		`select count(*) from invites where email = 'davniy@example.test'`); got != 0 {
+		t.Errorf("давнее приглашение осталось")
+	}
+}
