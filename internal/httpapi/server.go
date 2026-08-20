@@ -112,7 +112,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/session/org", s.authed(s.handleSwitchOrg))
 
 	// Команда активной организации.
-	mux.HandleFunc("GET /api/team", s.authed(s.handleTeam))
+	// Состав организации — люди с именами и почтами, самые чувствительные
+	// сведения из всех, что отдаёт сервер. Ключу он закрыт целиком:
+	// дерево подразделений, где почт нет вовсе, и то требует разрешения,
+	// а команду выгружал любой ключ, включая заведённый ради одной доски.
+	mux.HandleFunc("GET /api/team", s.human(s.handleTeam))
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
@@ -258,6 +262,28 @@ func bearer(r *http.Request) (string, bool) {
 	}
 	token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
 	return token, token != ""
+}
+
+// human пускает только человека с сессией.
+//
+// Ключу отказывают не из осторожности: это вызовы своего клиента, они
+// меняются вместе с ним и ничего наружу не обещают. Обёртка scoped
+// и есть обещание ключу — что ею не помечено, того ключу не обещали,
+// а состав организации с именами и почтами до этого отдавался любому
+// ключу, включая заведённый ради чтения одной доски.
+//
+// Отказ называет, чем пользоваться вместо: структура описана
+// в /api/v1/teams, люди — в каталоге по SCIM.
+func (s *Server) human(next func(http.ResponseWriter, *http.Request, auth.Principal)) http.HandlerFunc {
+	return s.authed(func(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+		if _, byKey := scopesOf(r); byKey {
+			writeError(w, http.StatusForbidden,
+				"это вызов интерфейса, а не контракта: структура ключу открыта "+
+					"в /api/v1/teams, люди — в /scim/v2/Users")
+			return
+		}
+		next(w, r, p)
+	})
 }
 
 // owner дополнительно требует роль владельца в активной организации.

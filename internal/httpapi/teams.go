@@ -12,9 +12,14 @@ import (
 // Структура организации: дерево подразделений, их состав и наблюдение.
 //
 // Читать дерево может любой участник — кто с кем работает, не секрет.
-// Менять его может владелец организации: раздача доступа — не рядовое
-// действие, и до появления администратора подразделения (ROADMAP, 4.1)
-// другого держателя этого права нет.
+// Менять его может владелец организации и администратор подразделения
+// в своей области (4.1): раздача доступа не рядовое действие, но и водить
+// за каждой мелочью к владельцу в дереве из пяти уровней нельзя.
+//
+// Решает это политика, а не обёртка маршрута. Обёртка `s.owner` здесь
+// была бы вторым источником правды о правах — и уже им побывала: отзыв
+// наблюдения требовал владельца, тогда как выдачу политика разрешала
+// администратору. Выдал и не снимешь.
 
 func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/teams", s.scoped(apiclient.ScopeStructureRead, s.handleListTeams))
@@ -32,15 +37,19 @@ func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/teams/{id}/members/{userId}", s.authed(s.handleAddTeamMember))
 	mux.HandleFunc("DELETE /api/teams/{id}/members/{userId}", s.authed(s.handleRemoveTeamMember))
 
-	mux.HandleFunc("GET /api/team-admins", s.authed(s.handleListAdmins))
+	// Кто за что отвечает и кто за кем наблюдает — сведения о раздаче
+	// доступа, и ключу они закрыты вместе с составом организации:
+	// в них те же люди с почтами. Дерево без людей ключ читает
+	// описанным /api/v1/teams.
+	mux.HandleFunc("GET /api/team-admins", s.human(s.handleListAdmins))
 	mux.HandleFunc("POST /api/team-admins", s.owner(s.handleGrantAdmin))
 	mux.HandleFunc("DELETE /api/team-admins/{id}", s.owner(s.handleRevokeAdmin))
 
-	mux.HandleFunc("GET /api/observers", s.authed(s.handleListObservers))
-	// Наблюдение за поддеревом выдаёт и администратор этого поддерева,
-	// поэтому маршрут не требует владельца: решает политика.
+	mux.HandleFunc("GET /api/observers", s.human(s.handleListObservers))
+	// Наблюдение за поддеревом выдаёт и снимает администратор этого
+	// поддерева, поэтому маршруты не требуют владельца: решает политика.
 	mux.HandleFunc("POST /api/observers", s.authed(s.handleGrantObservation))
-	mux.HandleFunc("DELETE /api/observers/{id}", s.owner(s.handleRevokeObservation))
+	mux.HandleFunc("DELETE /api/observers/{id}", s.authed(s.handleRevokeObservation))
 }
 
 func (s *Server) handleListTeams(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -193,7 +202,11 @@ func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 	case err == nil:
 		return false
 	case errors.Is(err, team.ErrForbidden):
-		writeError(w, http.StatusForbidden, "это может только владелец организации")
+		// Отказ называет того, кто может: администратор подразделения
+		// распоряжается своей областью, и «только владелец» отправило бы
+		// его просить о том, что он и сам умеет.
+		writeError(w, http.StatusForbidden,
+			"это может владелец организации или администратор этого подразделения")
 	case errors.Is(err, team.ErrNotFound):
 		writeError(w, http.StatusNotFound, "не найдено")
 	case errors.As(err, &tree):

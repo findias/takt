@@ -311,7 +311,7 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
   <div><dt>Дорог внутрь</dt><dd>5</dd></div>
   <div><dt>Маршрутов</dt><dd>97</dd></div>
   <div><dt>Смотрят разрешение ключа</dt><dd>8</dd></div>
-  <div><dt>Расхождений</dt><dd>10</dd></div>
+  <div><dt>Расхождений</dt><dd>11</dd></div>
   <div><dt>Подтверждено прогоном</dt><dd>6</dd></div>
 </dl>
 
@@ -406,7 +406,7 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
 </div>
 <p class="tnote">Выделены места, где код расходится с обещанием или обещания нет вовсе.</p>
 
-<div class="band"><h2>Расхождения</h2><span class="tag gap">десять</span></div>
+<div class="band"><h2>Расхождения</h2><span class="tag gap">одиннадцать</span></div>
 
 <div class="rows">
   <div class="row"><div>Р1. Наблюдение выдаёт администратор, а снимает только владелец
@@ -536,6 +536,18 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
     читает <code>org</code>: имя организации из проверки не доезжает, все
     организации в них называются «Моя команда».
   </div></div>
+
+  <div class="row"><div>Р11. Описано то, чем ключ воспользоваться не может
+    <span class="tag gap">расходится</span></div><div>
+    Найдено 20 августа, уже при починке Р6. <code>GET /webhooks</code>,
+    <code>GET /export</code> и <code>PUT /org/estimate-unit</code> описаны
+    в контракте — и обёрнуты в проверку «только владелец организации».
+    Роль владельца бывает у одного ключа, каталожного, а его дальше
+    <code>/scim/v2</code> не пускают вовсе. Прогон ключом с чтением
+    и записью досок: <strong>все три отвечают 403</strong>. Описание
+    обещает то, чего нет, а проверка дрейфа этого не видит: она сверяет,
+    что путь существует, а не что по нему можно пройти.
+  </div></div>
 </div>
 
 <div class="band"><h2>Что цело</h2><span class="tag have">проверено</span></div>
@@ -588,7 +600,7 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
 <div class="band"><h2>Что из этого следует</h2></div>
 
 <p>
-  Расхождений десять, и ни одно не про «мало проверок». Пять — про то,
+  Расхождений одиннадцать, и ни одно не про «мало проверок». Пять — про то,
   что обещание записано, а наружу не выведено (Р1, Р4, Р6, Р9),
   или выведено не туда (Р3). Три — про то, что правило применено к одному
   из двух одинаковых мест (Р5, Р7, Р8). Остальное — слова, разошедшиеся

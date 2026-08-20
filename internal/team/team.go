@@ -339,8 +339,12 @@ func (s *Service) Grant(ctx context.Context, orgID, actorID, userID string, team
 }
 
 func (s *Service) Revoke(ctx context.Context, orgID, actorID, observerID string) error {
-	return s.exec(ctx, orgID, actorID,
-		`delete from observers where id = $1`, observerID)
+	// Наблюдение видно всем в организации, поэтому «не найдено» на видимой
+	// строке сбивало бы с толку: человек видит запись в списке и слышит,
+	// что её нет. Спрашиваем, было ли что снимать, и отвечаем «нельзя».
+	err := s.exec(ctx, orgID, actorID, `delete from observers where id = $1`, observerID)
+	return s.explain(ctx, orgID, actorID, err,
+		`select exists (select 1 from observers where id = $1)`, observerID)
 }
 
 // --- администраторы подразделений ---
