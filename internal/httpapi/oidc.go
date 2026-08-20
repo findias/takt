@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -139,18 +140,18 @@ func (s *Server) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 		s.backToLogin(w, r, "Провайдер не подтвердил вход")
 		return
 	}
-	if claims.Email != "" && !claims.EmailVerified {
-		// Связывать по неподтверждённой почте нельзя, а заводить учётную
-		// запись на неё — значит поверить в адрес, в который не верит
-		// сам провайдер.
+	// Связывать по неподтверждённой почте нельзя, а заводить учётную запись
+	// на неё — значит поверить в адрес, в который не верит сам провайдер.
+	// Проверяет это сама операция входа; здесь отказ только переводится
+	// в слова для того, кто вернулся из браузера.
+	user, err := auth.FederatedLogin(r.Context(), s.db.Pool,
+		s.oidc.Issuer(), claims.Subject, claims.Email, claims.EmailVerified,
+		claims.Name, s.cfg.OIDC.OrgSlug, auth.RoleMember)
+	if errors.Is(err, auth.ErrUnverifiedEmail) {
 		s.log.Info("провайдер вернул неподтверждённую почту", "sub", claims.Subject)
 		s.backToLogin(w, r, "Провайдер не подтвердил вашу почту")
 		return
 	}
-
-	user, err := auth.FederatedLogin(r.Context(), s.db.Pool,
-		s.oidc.Issuer(), claims.Subject, claims.Email, claims.Name,
-		s.cfg.OIDC.OrgSlug, auth.RoleMember)
 	if err != nil {
 		s.log.Error("зачисление пришедшего от провайдера", "err", err)
 		s.backToLogin(w, r, "Вход не удался, обратитесь к администратору")

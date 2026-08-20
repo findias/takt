@@ -56,7 +56,7 @@ func TestInviteBelongsToTheAddressItNames(t *testing.T) {
 
 	// И главное: он не оказался в чужой организации.
 	me := stranger.mustDo("GET", "/api/me", nil, http.StatusOK)
-	if name, _ := field(t, me, "orgName").(string); name != "Моя команда" {
+	if name, _ := field(t, me, "orgName").(string); name != "Своя контора" {
 		t.Errorf("посторонний сменил организацию на %q", name)
 	}
 	orgs := stranger.mustDo("GET", "/api/orgs", nil, http.StatusOK)

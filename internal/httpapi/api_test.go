@@ -120,8 +120,11 @@ func (a *api) registerOrg(name string) *session {
 	a.t.Helper()
 	s := a.session()
 	s.email = "api-" + uuid.NewString()[:8] + "@example.test"
+	// Поле называется org: незнакомое сервер молча игнорирует, и все
+	// организации в проверках назывались «Моей командой» — именем
+	// по умолчанию. Проверка, опирающаяся на название, проверяла бы не то.
 	s.mustDo("POST", "/api/auth/register", map[string]any{
-		"email": s.email, "password": "parol12345", "name": "Тест", "orgName": name,
+		"email": s.email, "password": "parol12345", "name": "Тест", "org": name,
 	}, http.StatusOK)
 	var me struct{ ID string }
 	body := s.mustDo("GET", "/api/me", nil, http.StatusOK)

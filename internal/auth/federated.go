@@ -35,10 +35,17 @@ var ErrUnverifiedEmail = errors.New("провайдер не подтверди�
 // подрядчика, вошедший через общий провайдер, оказался бы участником
 // организации заказчика.
 func FederatedLogin(ctx context.Context, pool *pgxpool.Pool,
-	issuer, subject, email, name, orgSlug, role string) (Identity, error) {
+	issuer, subject, email string, emailVerified bool,
+	name, orgSlug, role string) (Identity, error) {
 
 	if subject == "" || issuer == "" {
 		return Identity{}, errors.New("провайдер не назвал, кто пришёл")
+	}
+	// Подтверждённость спрашивается здесь, а не только у того, кто вызвал:
+	// правило записано в этом файле, и обещание, живущее в чужом
+	// обработчике, второй вызывающий унаследует уже без него.
+	if email != "" && !emailVerified {
+		return Identity{}, ErrUnverifiedEmail
 	}
 	if name == "" {
 		name = email
