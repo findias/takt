@@ -49,6 +49,7 @@
               "conflict",
               "too_many_requests",
               "too_many_attempts",
+              "invite_other_email",
               "idempotency_key_reused",
               "board_archived",
               "board_key_taken",

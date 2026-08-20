@@ -12,10 +12,13 @@ import { Button } from '../shared/ui/Button.tsx'
  */
 export function InviteScreen({
   token,
+  signedInAs,
   onJoined,
   onCancel,
 }: {
   token: string
+  /** Почта того, кто сейчас в браузере, или null, если никто не вошёл. */
+  signedInAs: string | null
   onJoined: (p: Principal) => void
   onCancel: () => void
 }) {
@@ -32,7 +35,11 @@ export function InviteScreen({
       .catch((e) => setError(e instanceof Error ? e.message : 'Ссылка не работает'))
   }, [token])
 
-  if (error)
+  // Полноэкранный отказ — только когда не открылось само приглашение.
+  // Пока он стоял на любой ошибке, неудача при вступлении подменяла собой
+  // весь экран: «приглашение не открылось» на открытом приглашении,
+  // и человеку некуда было нажать, кроме «на главную».
+  if (error && !info)
     return (
       <div className="centered">
         <div className="panel">
@@ -48,6 +55,26 @@ export function InviteScreen({
     )
 
   if (!info) return <div className="centered">Открываем приглашение…</div>
+
+  // Приглашение адресное. Вошедшему под другой почтой заводить второй
+  // аккаунт не на что — ему нужно выйти, поэтому вместо формы он видит
+  // объяснение и одну кнопку. Сервер это же проверяет и отказывает
+  // с кодом invite_other_email: экран может ошибиться, а он — нет.
+  const wrongAccount =
+    signedInAs !== null && signedInAs.toLowerCase() !== info.email.toLowerCase()
+
+  const signOutAndReopen = () => {
+    setBusy(true)
+    api
+      .logout()
+      // Страница перезагружается, а не прячет форму: приглашение открывается
+      // заново и уже незнакомцу — с полями имени и пароля, если аккаунта нет.
+      .then(() => location.reload())
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Не удалось выйти')
+        setBusy(false)
+      })
+  }
 
   const accept = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,7 +102,21 @@ export function InviteScreen({
           {ROLE_NAMES[info.role].toLowerCase()}.
         </p>
 
-        {info.needsAccount ? (
+        {wrongAccount ? (
+          <>
+            {/* Адрес приглашения назван строкой выше, здесь только второй —
+                тот, под которым человек вошёл. */}
+            <p>
+              Вы вошли как <strong>{signedInAs}</strong> — это другой адрес.
+            </p>
+            <button type="button" disabled={busy} onClick={signOutAndReopen}>
+              Выйти и открыть приглашение заново
+            </button>
+            <Button kind="quiet" type="button" onClick={onCancel}>
+              Не сейчас
+            </Button>
+          </>
+        ) : info.needsAccount ? (
           <>
             <label>
               Как вас зовут
@@ -100,12 +141,18 @@ export function InviteScreen({
           </p>
         )}
 
-        <button type="submit" disabled={busy}>
-          {busy ? 'Секунду…' : 'Присоединиться'}
-        </button>
-        <Button kind="quiet" type="button" onClick={onCancel}>
-          Не сейчас
-        </Button>
+        {error && <p className="error">{error}</p>}
+
+        {!wrongAccount && (
+          <>
+            <button type="submit" disabled={busy}>
+              {busy ? 'Секунду…' : 'Присоединиться'}
+            </button>
+            <Button kind="quiet" type="button" onClick={onCancel}>
+              Не сейчас
+            </Button>
+          </>
+        )}
       </form>
     </div>
   )

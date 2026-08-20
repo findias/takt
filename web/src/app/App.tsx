@@ -129,6 +129,10 @@ function Screens() {
     return (
       <InviteScreen
         token={route.token}
+        // Кто сейчас в браузере: приглашение адресное, и человеку, вошедшему
+        // под другой почтой, форму заведения аккаунта показывать незачем —
+        // ему нужно другое действие.
+        signedInAs={principal?.email ?? null}
         onJoined={(p) => {
           setPrincipal(p)
           leaveInvite()

@@ -725,23 +725,38 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	token := r.PathValue("token")
 
-	userID := ""
+	// Приглашение читается первым делом и для вошедшего тоже: адрес,
+	// на который оно выписано, нужен, чтобы сверить его с тем, кто пришёл.
+	info, err := s.orgs.LookupInvite(r.Context(), token)
+	if errors.Is(err, org.ErrInviteInvalid) {
+		writeError(w, http.StatusNotFound, "ссылка недействительна или срок её действия истёк")
+		return
+	}
+	if err != nil {
+		s.fail(w, "чтение приглашения", err)
+		return
+	}
+
+	userID, whoIsHere := "", ""
 	if cookie, err := r.Cookie(auth.CookieName); err == nil {
 		if p, err := auth.PrincipalBySession(r.Context(), s.db.Pool, cookie.Value); err == nil {
-			userID = p.ID
+			userID, whoIsHere = p.ID, p.Email
 		}
 	}
 
+	// Приглашение адресное, и для вошедшего это должно значить то же,
+	// что и для нового: аккаунт ему заводят на почту из приглашения,
+	// «иначе ссылку можно было бы применить к любому адресу». Пересланная
+	// ссылка иначе работает пропуском на предъявителя, а владелец
+	// организации видит в списке приглашённых не того, кто вошёл.
+	if userID != "" && !strings.EqualFold(strings.TrimSpace(whoIsHere), info.Email) {
+		writeCoded(w, http.StatusForbidden, "invite_other_email",
+			"приглашение выписано на "+info.Email+", а вы вошли как "+whoIsHere+
+				": войдите под тем адресом или попросите приглашение на свой")
+		return
+	}
+
 	if userID == "" {
-		info, err := s.orgs.LookupInvite(r.Context(), token)
-		if errors.Is(err, org.ErrInviteInvalid) {
-			writeError(w, http.StatusNotFound, "ссылка недействительна или срок её действия истёк")
-			return
-		}
-		if err != nil {
-			s.fail(w, "чтение приглашения", err)
-			return
-		}
 		if !info.NeedsAccount {
 			writeError(w, http.StatusUnauthorized, "войдите под этой почтой, чтобы принять приглашение")
 			return
