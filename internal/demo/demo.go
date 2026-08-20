@@ -112,7 +112,42 @@ func Fill(ctx context.Context, db *store.Store) error {
 	if err := f.backdate(); err != nil {
 		return fmt.Errorf("сдвиг отметок в прошлое: %w", err)
 	}
+	if err := f.settleDeliveries(); err != nil {
+		return fmt.Errorf("доставки подписки: %w", err)
+	}
 	return nil
+}
+
+// settleDeliveries доводит доставки недостижимой подписки до конца сразу.
+//
+// Иначе стенд оставляет в общей очереди два десятка доставок, которые
+// созревают все разом. Дорого это не стенду, а проверкам: они ходят
+// по этой же базе, работник берёт пачкой десять самых старых, и каждая
+// попытка стучится в пустоту до десяти секунд — своя доставка проверки
+// не отправляется вовсе, пока её срок ожидания не выйдет. Так месяцами
+// мигала проверка доставки вебхука, и списывалось это на соседей.
+//
+// Экран от этого не беднеет: сдавшаяся доставка показывает и ошибку,
+// и отключённую подписку, и кнопку «повторить» — то есть ровно то,
+// ради чего подписка на недостижимый адрес и заведена. Разница только
+// в том, что этого состояния стенд достигает сразу, а не через два часа
+// удвоений.
+func (f *filler) settleDeliveries() error {
+	const reason = `Post "https://example.test/hooks/board": dial tcp: lookup example.test: no such host`
+	return f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		// Восемь попыток — столько же, после скольких сдаётся работник:
+		// число видно на экране, и оно должно значить то же самое.
+		if _, err := tx.Exec(f.ctx, `
+			update webhook_deliveries
+			   set attempts = 8, failed_at = now(), last_error = $1
+			 where delivered_at is null and failed_at is null`, reason); err != nil {
+			return err
+		}
+		_, err := tx.Exec(f.ctx, `
+			update webhooks set disabled_at = now(), last_error = $1
+			 where disabled_at is null`, reason)
+		return err
+	})
 }
 
 func (f *filler) owner() string { return f.people[People[0].Email] }
@@ -164,9 +199,8 @@ func (f *filler) organization() error {
 	// у неё был журнал доставок. Адрес заведомо недостижим, и это
 	// не небрежность: интереснее всего экран подписок выглядит именно
 	// тогда, когда доставка не идёт, — иначе не увидеть ни ошибки,
-	// ни отключения, ни кнопки «повторить». Работник сдаётся после
-	// восьми попыток и подписку отключает, так что стенд не остаётся
-	// с вечным стуком в пустоту.
+	// ни отключения, ни кнопки «повторить». До конца эти доставки
+	// доводит не работник, а сам стенд — см. settleDeliveries.
 	hooks := webhook.New(f.db, board.EventNames())
 	if _, err := hooks.Create(f.ctx, f.orgID, f.owner(), "Оповещение дежурного",
 		"https://example.test/hooks/board",
