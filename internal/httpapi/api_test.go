@@ -36,7 +36,11 @@ type api struct {
 	impl *Server
 }
 
-func newAPI(t *testing.T) *api {
+func newAPI(t *testing.T) *api { return newAPILogging(t, io.Discard) }
+
+// newAPILogging — тот же сервер, но с видимым логом. Нужен там, где
+// проверяется не ответ, а то, что в лог попало (и что не попало).
+func newAPILogging(t *testing.T, out io.Writer) *api {
 	t.Helper()
 	url := testdb.URL(t)
 	db, err := store.Open(context.Background(), url)
@@ -45,7 +49,7 @@ func newAPI(t *testing.T) *api {
 	}
 	t.Cleanup(db.Close)
 
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	log := slog.New(slog.NewTextHandler(out, nil))
 	// Оповещения слушает настоящий узел: поток изменений — часть API,
 	// и проверять его заглушкой значит проверять заглушку.
 	hub := realtime.NewHub(db, log)
@@ -216,8 +220,8 @@ func TestViewerMayReadButNotWrite(t *testing.T) {
 	parts := strings.Split(strings.TrimSuffix(link, "/"), "/")
 	token := parts[len(parts)-1]
 
-	invited.mustDo("POST", "/api/invites/"+token+"/accept", map[string]any{
-		"name": "Наблюдатель", "password": "parol12345",
+	invited.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": token, "name": "Наблюдатель", "password": "parol12345",
 	}, http.StatusOK)
 
 	// Читать наблюдателю можно.

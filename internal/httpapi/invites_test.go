@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -38,7 +39,7 @@ func TestInviteBelongsToTheAddressItNames(t *testing.T) {
 	// Ссылку переслали, и открыл её другой человек — со своей учётной
 	// записью и своей организацией.
 	stranger := a.registerOrg("Своя контора")
-	code, raw := stranger.do("POST", "/api/invites/"+token+"/accept", nil)
+	code, raw := stranger.do("POST", "/api/invites/accept", map[string]any{"token": token})
 	if code != http.StatusForbidden {
 		t.Fatalf("чужое приглашение принято: код %d, тело: %s", code, raw)
 	}
@@ -65,8 +66,8 @@ func TestInviteBelongsToTheAddressItNames(t *testing.T) {
 
 	// Приглашение при этом цело: тот, кому оно выписано, принимает его.
 	invited := a.session()
-	invited.mustDo("POST", "/api/invites/"+token+"/accept",
-		map[string]any{"name": "Гость", "password": "parol12345"}, http.StatusOK)
+	invited.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": token, "name": "Гость", "password": "parol12345"}, http.StatusOK)
 }
 
 // Второй путь того же правила: аккаунт уже есть, человек вошёл под ним,
@@ -78,12 +79,56 @@ func TestInviteAcceptedByTheSamePersonSignedIn(t *testing.T) {
 	second := a.registerOrg("Вторая")
 
 	token := first.invite(second.email, "member")
-	second.mustDo("POST", "/api/invites/"+token+"/accept", nil, http.StatusOK)
+	second.mustDo("POST", "/api/invites/accept",
+		map[string]any{"token": token}, http.StatusOK)
 
 	var me struct{ OrgName string }
 	_ = json.Unmarshal(second.mustDo("GET", "/api/me", nil, http.StatusOK), &me)
 	orgs := second.mustDo("GET", "/api/orgs", nil, http.StatusOK)
 	if list, _ := field(t, orgs, "orgs").([]any); len(list) != 2 {
 		t.Errorf("организаций стало %d, ожидалось две; тело: %s", len(list), orgs)
+	}
+}
+
+// Токен приглашения не должен попадать в лог.
+//
+// Про ключ это записано прямо: секрет в строке запроса не принимается,
+// «адреса попадают в логи прокси и в историю браузера». Токен приглашения
+// даёт членство в организации — по цене это ключ, а ездил он частью пути,
+// и лог запросов писал путь целиком.
+func TestInviteTokenNeverReachesTheLog(t *testing.T) {
+	var logged bytes.Buffer
+	a := newAPILogging(t, &logged)
+
+	owner := a.registerOrg("Тихий лог")
+	token := owner.invite("tihiy-"+uuid.NewString()[:8]+"@example.test", "member")
+
+	guest := a.session()
+	guest.mustDo("POST", "/api/invites/lookup", map[string]any{"token": token}, http.StatusOK)
+	guest.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": token, "name": "Гость", "password": "parol12345"}, http.StatusOK)
+
+	// Записи о запросах есть — значит, ищем в непустом логе.
+	if !strings.Contains(logged.String(), "/api/invites/accept") {
+		t.Fatalf("в логе нет самих запросов: %s", logged.String())
+	}
+	if strings.Contains(logged.String(), token) {
+		t.Errorf("токен приглашения попал в лог")
+	}
+}
+
+// И старых адресов с токеном в пути больше нет: оставленные, они
+// продолжали бы писать его в лог у всякого, кто ходит по прежней ссылке.
+func TestInviteTokenPathsAreGone(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Прежние адреса")
+	token := owner.invite("staryy-"+uuid.NewString()[:8]+"@example.test", "member")
+
+	anon := a.session()
+	if code, _ := anon.do("GET", "/api/invites/"+token+"/info", nil); code != http.StatusNotFound {
+		t.Errorf("прежний адрес чтения жив: код %d", code)
+	}
+	if code, _ := anon.do("POST", "/api/invites/"+token+"/accept", nil); code != http.StatusNotFound {
+		t.Errorf("прежний адрес приёма жив: код %d", code)
 	}
 }

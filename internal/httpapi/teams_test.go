@@ -24,8 +24,8 @@ func (s *session) join(role string) *session {
 	link, _ := field(s.api.t, inv, "link").(string)
 	parts := strings.Split(strings.TrimSuffix(link, "/"), "/")
 
-	guest.mustDo("POST", "/api/invites/"+parts[len(parts)-1]+"/accept", map[string]any{
-		"name": "Гость", "password": "parol12345"}, http.StatusOK)
+	guest.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": parts[len(parts)-1], "name": "Гость", "password": "parol12345"}, http.StatusOK)
 
 	var me struct{ ID string }
 	body := guest.mustDo("GET", "/api/me", nil, http.StatusOK)

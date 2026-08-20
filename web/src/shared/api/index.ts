@@ -687,9 +687,12 @@ export const api = {
   eraseMember: (userId: string) =>
     request<void>('DELETE', `/api/members/${userId}/identity`),
 
-  inviteInfo: (token: string) => request<InviteInfo>('GET', `/api/invites/${token}/info`),
+  /** Токен приглашения едет в теле, а не в адресе: адреса попадают
+   *  в логи прокси и в историю браузера, а этот токен даёт членство
+   *  в организации. Чтение через POST — плата за это. */
+  inviteInfo: (token: string) => request<InviteInfo>('POST', '/api/invites/lookup', { token }),
   acceptInvite: (token: string, account?: { name: string; password: string }) =>
-    request<Principal>('POST', `/api/invites/${token}/accept`, account ?? {}),
+    request<Principal>('POST', '/api/invites/accept', { token, ...account }),
 
   listTeams: () => request<{ teams: Team[] }>('GET', '/api/teams'),
   createTeam: (name: string, parentId: string | null) =>

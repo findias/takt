@@ -183,8 +183,8 @@ func TestExportIsOwnerOnly(t *testing.T) {
 		map[string]any{"email": member.email, "role": "member"}, http.StatusCreated)
 	link := field(t, inv, "link").(string)
 	parts := strings.Split(strings.TrimSuffix(link, "/"), "/")
-	member.mustDo("POST", "/api/invites/"+parts[len(parts)-1]+"/accept", map[string]any{
-		"name": "Участник", "password": "parol12345"}, http.StatusOK)
+	member.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": parts[len(parts)-1], "name": "Участник", "password": "parol12345"}, http.StatusOK)
 
 	// Участнику отказ виден словами: файл содержит переписку и почтовые
 	// адреса всех, то есть больше, чем видит каждый по отдельности.

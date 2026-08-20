@@ -26,8 +26,9 @@ func (a *api) member(owner *session, role string) *session {
 		map[string]any{"email": s.email, "role": role}, http.StatusCreated)
 	link, _ := field(a.t, inv, "link").(string)
 	parts := strings.Split(strings.TrimSuffix(link, "/"), "/")
-	s.mustDo("POST", "/api/invites/"+parts[len(parts)-1]+"/accept",
-		map[string]any{"name": "Человек", "password": "parol12345"}, http.StatusOK)
+	s.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": parts[len(parts)-1], "name": "Человек", "password": "parol12345",
+	}, http.StatusOK)
 	var me struct{ ID string }
 	_ = json.Unmarshal(s.mustDo("GET", "/api/me", nil, http.StatusOK), &me)
 	s.userID = me.ID

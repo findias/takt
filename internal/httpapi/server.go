@@ -130,8 +130,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/members/{userId}/identity", s.owner(s.handleEraseMember))
 
 	// Приглашение открывают по секретной ссылке — до входа и до аккаунта.
-	mux.HandleFunc("GET /api/invites/{token}/info", s.handleInviteInfo)
-	mux.HandleFunc("POST /api/invites/{token}/accept", s.handleAcceptInvite)
+	//
+	// Токен едет в теле, а не в пути, по той же причине, по которой
+	// в строке запроса не принимается ключ: адреса попадают в логи прокси,
+	// в лог запросов и в историю браузера, а токен приглашения даёт
+	// членство в организации — по цене это ключ. Чтение через POST —
+	// плата за это: тело у GET не ходит.
+	mux.HandleFunc("POST /api/invites/lookup", s.handleInviteInfo)
+	mux.HandleFunc("POST /api/invites/accept", s.handleAcceptInvite)
 
 	s.registerTeamRoutes(mux)
 	s.registerAccessRoutes(mux)
@@ -700,7 +706,13 @@ func (s *Server) writeMembershipResult(w http.ResponseWriter, err error, what st
 // --- приглашения по ссылке ---
 
 func (s *Server) handleInviteInfo(w http.ResponseWriter, r *http.Request) {
-	info, err := s.orgs.LookupInvite(r.Context(), r.PathValue("token"))
+	var req struct {
+		Token string `json:"token"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	info, err := s.orgs.LookupInvite(r.Context(), req.Token)
 	if errors.Is(err, org.ErrInviteInvalid) {
 		writeError(w, http.StatusNotFound, "ссылка недействительна или срок её действия истёк")
 		return
@@ -717,13 +729,14 @@ func (s *Server) handleInviteInfo(w http.ResponseWriter, r *http.Request) {
 // иначе ссылку можно было бы применить к любому адресу.
 func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	var req struct {
+		Token    string `json:"token"`
 		Name     string `json:"name"`
 		Password string `json:"password"`
 	}
 	if !decode(w, r, &req) {
 		return
 	}
-	token := r.PathValue("token")
+	token := req.Token
 
 	// Приглашение читается первым делом и для вошедшего тоже: адрес,
 	// на который оно выписано, нужен, чтобы сверить его с тем, кто пришёл.
