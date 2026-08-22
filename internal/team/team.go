@@ -13,7 +13,6 @@ package team
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -45,6 +44,21 @@ var (
 	// Так же отвечает и назначение исполнителя на доске.
 	ErrNotOrgMember = errors.New("это может быть только участник организации")
 )
+
+// BadRequest — просьба не годится сама по себе, и отказ об этом говорит.
+//
+// Своим видом, а не безымянной ошибкой: проверка пустого названия была
+// и раньше, но её отказ доезжал до общего разбора и превращался
+// во «внутреннюю ошибку». Человек, нажавший «Создать» с пустым полем,
+// получал пятисотку вместо объяснения — то есть шёл искать поломку
+// сервера там, где не заполнил поле.
+//
+// Приставки нет намеренно: «так нельзя: у подразделения должно быть
+// название» — это два раза об одном, и первое слово занимает место,
+// не сообщая ничего.
+type BadRequest struct{ Reason string }
+
+func (e *BadRequest) Error() string { return e.Reason }
 
 // TreeError — отказ, пришедший из ограничений дерева: глубина или цикл.
 // Сообщение приходит из базы: оно там написано для человека, и второй
@@ -147,7 +161,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Team, error
 func (s *Service) Create(ctx context.Context, orgID, actorID, name string, parentID *string) (Team, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return Team{}, fmt.Errorf("у команды должно быть название")
+		return Team{}, &BadRequest{Reason: "у подразделения должно быть название"}
 	}
 
 	var t Team
@@ -164,7 +178,7 @@ func (s *Service) Create(ctx context.Context, orgID, actorID, name string, paren
 func (s *Service) Rename(ctx context.Context, orgID, actorID, teamID, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("у команды должно быть название")
+		return &BadRequest{Reason: "у подразделения должно быть название"}
 	}
 	return s.explain(ctx, orgID, actorID,
 		s.exec(ctx, orgID, actorID,
@@ -263,23 +277,9 @@ type ArchivedTeam struct {
 // придётся угадывать.
 func (s *Service) Restore(ctx context.Context, orgID, actorID, teamID string) error {
 	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		var parentName *string
-		err := tx.QueryRow(ctx, `
-			select p.name
-			  from teams t
-			  left join teams p on p.id = t.parent_id and p.archived_at is not null
-			 where t.id = $1 and t.archived_at is not null`, teamID).Scan(&parentName)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if parentName != nil {
-			return &TreeError{Reason: "сначала верните из архива подразделение «" +
-				*parentName + "»: внутри него это и лежит"}
-		}
-
+		// Живой узел под убранным старшим не встаёт — это держит база
+		// (миграция 0046), одним правилом на все три двери: заведение,
+		// перенос и возврат. Здесь проверки нет намеренно.
 		tag, err := tx.Exec(ctx,
 			`update teams set archived_at = null
 			  where id = $1 and archived_at is not null`, teamID)

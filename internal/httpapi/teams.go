@@ -219,6 +219,7 @@ func (s *Server) handleRevokeObservation(w http.ResponseWriter, r *http.Request,
 // он написан в миграции для того, кто это увидит.
 func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 	var tree *team.TreeError
+	var bad *team.BadRequest
 	switch {
 	case err == nil:
 		return false
@@ -228,6 +229,11 @@ func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 		// его просить о том, что он и сам умеет.
 		writeError(w, http.StatusForbidden,
 			"это может владелец организации или администратор этого подразделения")
+	case errors.As(err, &bad):
+		// Ошибка просящего, а не сервера. Раньше такой отказ доезжал
+		// до общего разбора и превращался во «внутреннюю ошибку»:
+		// пустое название подразделения отвечало пятисоткой.
+		writeError(w, http.StatusBadRequest, bad.Reason)
 	case errors.Is(err, team.ErrNotOrgMember):
 		// 404, а не 400: назван человек, которого в этой организации нет,
 		// и его существование где-то ещё — не наше дело сообщать. Но текст
