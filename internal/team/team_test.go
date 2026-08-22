@@ -25,17 +25,12 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	url := testdb.URL(t)
 	ctx := context.Background()
-	db, err := store.Open(ctx, url)
-	if err != nil {
-		t.Fatalf("подключение к тестовой базе: %v", err)
-	}
-	t.Cleanup(db.Close)
+	db := testdb.Shared(t)
 
 	f := &fixture{svc: New(db), db: db, ctx: ctx, t: t}
 	suffix := uuid.NewString()
-	err = db.Pool.QueryRow(ctx,
+	err := db.Pool.QueryRow(ctx,
 		`insert into orgs (name, slug) values ($1, $2) returning id`,
 		"Тест "+suffix[:8], "team-"+suffix[:8]).Scan(&f.orgID)
 	if err != nil {

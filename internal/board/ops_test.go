@@ -23,13 +23,7 @@ import (
 // зелёным на машине без docker.
 func testStore(t *testing.T) *store.Store {
 	t.Helper()
-	url := testdb.URL(t)
-	db, err := store.Open(context.Background(), url)
-	if err != nil {
-		t.Fatalf("подключение к тестовой базе: %v", err)
-	}
-	t.Cleanup(db.Close)
-	return db
+	return testdb.Shared(t)
 }
 
 type fixture struct {

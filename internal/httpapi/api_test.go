@@ -16,7 +16,6 @@ import (
 
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/store/testdb"
 )
 
@@ -42,12 +41,7 @@ func newAPI(t *testing.T) *api { return newAPILogging(t, io.Discard) }
 // проверяется не ответ, а то, что в лог попало (и что не попало).
 func newAPILogging(t *testing.T, out io.Writer) *api {
 	t.Helper()
-	url := testdb.URL(t)
-	db, err := store.Open(context.Background(), url)
-	if err != nil {
-		t.Fatalf("подключение к тестовой базе: %v", err)
-	}
-	t.Cleanup(db.Close)
+	db := testdb.Shared(t)
 
 	log := slog.New(slog.NewTextHandler(out, nil))
 	// Оповещения слушает настоящий узел: поток изменений — часть API,

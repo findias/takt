@@ -28,13 +28,8 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	url := testdb.URL(t)
 	ctx := context.Background()
-	db, err := store.Open(ctx, url)
-	if err != nil {
-		t.Fatalf("подключение к тестовой базе: %v", err)
-	}
-	t.Cleanup(db.Close)
+	db := testdb.Shared(t)
 
 	f := &fixture{
 		db:     db,
