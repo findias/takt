@@ -137,6 +137,14 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 	case errors.Is(err, board.ErrCloseNeedsRoster):
 		// Не «нельзя», а «нельзя вам»: отказ называет того, кто может.
 		writeError(w, http.StatusForbidden, board.ErrCloseNeedsRoster.Error())
+	case errors.Is(err, board.ErrRosterNotYours):
+		// Тоже «нельзя вам»: доску человек видит, состав — не его.
+		writeError(w, http.StatusForbidden, board.ErrRosterNotYours.Error())
+	case errors.Is(err, board.ErrLastWayIn):
+		// Конфликт, а не запрет: права хватает, но просьба невыполнима —
+		// её исполнение отняло бы доску у самого просящего. Тот же код,
+		// что и у потери доступа при смене видимости.
+		writeError(w, http.StatusConflict, board.ErrLastWayIn.Error())
 	case errors.Is(err, board.ErrReadOnlyBoard):
 		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrNotAuthor):

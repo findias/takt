@@ -45,6 +45,28 @@ var (
 	ErrCloseNeedsRoster = errors.New(
 		"закрыть доску может тот, кто раздаёт её состав, — владелец организации: " +
 			"попросите вписать вас в доску или закрыть её")
+	// ErrRosterNotYours — состав закрытой доски раздаёт владелец
+	// организации, и остальным отказ должен называть это, а не «доска
+	// не найдена»: доску они видят, иначе не дошли бы сюда.
+	ErrRosterNotYours = errors.New(
+		"состав доски раздаёт владелец организации: попросите его вписать " +
+			"или выписать человека")
+	// ErrLastWayIn — выписать самого себя из закрытой доски нельзя.
+	//
+	// Закрытая доска открывается только поимённо, и вписывает в неё один
+	// владелец организации. Значит, выписавший себя теряет доску без
+	// возврата: он её больше не видит, а сам себя вписать не может.
+	// Для владельца это ещё и потеря доски целиком для всей организации —
+	// после него на закрытую доску не осталось бы никого, кто может
+	// её открыть, переназначить или убрать.
+	//
+	// Правило то же, что у смены видимости: собственный доступ не теряют
+	// по неосторожности. Там его держит политика (новый ряд обязан
+	// остаться видимым автору), здесь политика не поможет — удалить
+	// свою строку она разрешает, а расплата приходит следующим запросом.
+	ErrLastWayIn = errors.New(
+		"выписать себя из закрытой доски нельзя: обратно вписывает только " +
+			"владелец организации. Попросите выписать вас или откройте доску")
 )
 
 const (
@@ -64,6 +86,22 @@ type Access struct {
 	TeamID     *string  `json:"teamId"`
 	TeamName   *string  `json:"teamName"`
 	Members    []Person `json:"members"`
+	// RosterComplete говорит, весь ли состав в Members.
+	//
+	// Состав закрытой доски политика показывает владельцу организации
+	// целиком, а вписанному — одну его строку. Само по себе это решение
+	// (миграция 0006: «видно меньше, а не больше»), но экран без этого
+	// признака показывал список из одного человека как весь состав —
+	// то есть на доске втроём человек видел, что он один. Умолчание
+	// превращалось во враньё не потому, что скрыли, а потому, что
+	// не сказали, что скрыли.
+	//
+	// Расширить политику нельзя: условие «строка доски, на которой
+	// я состою» обращается к board_members из политики board_members,
+	// и Postgres отвечает «infinite recursion detected in policy» —
+	// проверено опытом 22 августа 2026, та же стена, о которую
+	// споткнулся этап 4.1.
+	RosterComplete bool `json:"rosterComplete"`
 }
 
 // Access читает, кому доска видна и кто вписан в неё поимённо.
@@ -79,6 +117,11 @@ func (s *Service) Access(ctx context.Context, orgID, userID, boardID string) (Ac
 			return ErrNotFound
 		}
 		if err != nil {
+			return err
+		}
+
+		if err := tx.QueryRow(ctx, `select app_is_owner()`).
+			Scan(&access.RosterComplete); err != nil {
 			return err
 		}
 
@@ -247,12 +290,36 @@ func (s *Service) AddMember(ctx context.Context, orgID, actorID, boardID, userID
 		_, err := tx.Exec(ctx, `
 			insert into board_members (org_id, board_id, user_id)
 			values ($1, $2, $3) on conflict do nothing`, orgID, boardID, userID)
+		// Отказ политики здесь значит ровно одно — состав не наш.
+		// Без этого он доезжал до общего разбора и превращался
+		// в «доска станет вам не видна: выберите команду, в которой
+		// состоите»: слова из другого случая, и человек шёл искать
+		// команду там, где речь про состав.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "42501" {
+			return ErrRosterNotYours
+		}
 		return err
 	})
 }
 
 func (s *Service) RemoveMember(ctx context.Context, orgID, actorID, boardID, userID string) error {
 	return s.memberOp(ctx, orgID, actorID, boardID, func(tx pgx.Tx) error {
+		// Себя из закрытой доски не выписывают: обратной дороги нет.
+		// Спрашивается вид доски, а не роль спрашивающего, — на открытой
+		// доске строка состава ничего не решает, и запрещать там нечего.
+		if userID == actorID {
+			var private bool
+			if err := tx.QueryRow(ctx, `
+				select visibility = 'private' from boards where id = $1`,
+				boardID).Scan(&private); err != nil {
+				return err
+			}
+			if private {
+				return ErrLastWayIn
+			}
+		}
+
 		tag, err := tx.Exec(ctx,
 			`delete from board_members where board_id = $1 and user_id = $2`,
 			boardID, userID)
@@ -260,6 +327,17 @@ func (s *Service) RemoveMember(ctx context.Context, orgID, actorID, boardID, use
 			return err
 		}
 		if tag.RowsAffected() == 0 {
+			// Ноль строк значит одно из двух: человека в составе нет
+			// или состав не наш. Спрашивается роль, а не видимость
+			// строки: чужую строку не владелец не видит тоже, и по ней
+			// эти два случая не различить — ответ вышел бы наугад.
+			var owner bool
+			if err := tx.QueryRow(ctx, `select app_is_owner()`).Scan(&owner); err != nil {
+				return err
+			}
+			if !owner {
+				return ErrRosterNotYours
+			}
 			return ErrNotFound
 		}
 		return nil

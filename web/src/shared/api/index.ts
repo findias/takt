@@ -272,6 +272,10 @@ export type BoardAccess = {
   teamId: string | null
   teamName: string | null
   members: { userId: string; name: string; email: string }[]
+  /** Весь ли состав в members. У закрытой доски политика показывает
+   *  весь состав владельцу организации, остальным — их собственную
+   *  строку; без этого признака список из одного читался бы как весь. */
+  rosterComplete: boolean
 }
 
 /** Ответ на «что я пропустил». Каждый патч назван своей версией —
