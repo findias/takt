@@ -48,6 +48,15 @@ var (
 	// (миграция 0045); каталог узнаёт о нём отказом, а не молчанием,
 	// потому что решать, куда девать доски, всё равно человеку.
 	ErrNotEmpty = errors.New("сначала перенесите доски и вложенные группы")
+	// ErrLastOwner — отключаемый остался бы последним владельцем-человеком.
+	//
+	// Своим видом, а не безымянной ошибкой: без него отказ доезжал
+	// до общего разбора и превращался в пятисотку. Провайдер прочтёт
+	// это в отчёте синхронизации, и прочесть он должен объяснение,
+	// а не «внутреннюю ошибку» — чинить-то ему, а не нам.
+	ErrLastOwner = errors.New(
+		"нельзя отключить последнего владельца организации: " +
+			"назначьте владельцем кого-то ещё и повторите")
 )
 
 // DefaultRole — с чем приходит заведённый провайдером. Участник, а не
@@ -229,10 +238,13 @@ func (s *Service) DeactivateUser(ctx context.Context, orgID, actorID, id string)
 func deactivate(ctx context.Context, tx pgx.Tx, orgID, userID string) error {
 	// Последнего владельца снимать нельзя: организация без владельца
 	// не управляется никем, и вернуть его будет некому.
+	// Считает та же функция, что и при снятии участника руками: «кто
+	// считается владельцем» определено один раз, иначе две копии одного
+	// счёта разойдутся — они уже разошлись бы, если бы считали правильно
+	// только здесь (миграция 0047).
 	var owners int
-	if err := tx.QueryRow(ctx, `
-		select count(*) from memberships
-		 where org_id = $1 and role = 'owner' and user_id <> $2`, orgID, userID).Scan(&owners); err != nil {
+	if err := tx.QueryRow(ctx,
+		`select app_other_person_owners($1, $2)`, orgID, userID).Scan(&owners); err != nil {
 		return err
 	}
 	var role string
@@ -245,7 +257,7 @@ func deactivate(ctx context.Context, tx pgx.Tx, orgID, userID string) error {
 		return err
 	}
 	if role == auth.RoleOwner && owners == 0 {
-		return fmt.Errorf("нельзя снять единственного владельца организации")
+		return ErrLastOwner
 	}
 
 	// Состав команд чистится вместе с участием: команда, в которой числится

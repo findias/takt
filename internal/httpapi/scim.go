@@ -198,6 +198,10 @@ func (s *Server) scimFail(w http.ResponseWriter, what string, err error) {
 		scimError(w, http.StatusNotFound, "не найдено")
 	case errors.Is(err, scim.ErrConflict):
 		scimError(w, http.StatusConflict, "уже есть")
+	case errors.Is(err, scim.ErrLastOwner):
+		// Конфликт, а не сбой: каталог просит невыполнимого, и починить
+		// это может только человек — назначить второго владельца.
+		scimError(w, http.StatusConflict, scim.ErrLastOwner.Error())
 	case errors.Is(err, scim.ErrNotEmpty):
 		// Не пятисотка: это не сбой, а невыполнимая просьба, и решать,
 		// куда девать доски, всё равно человеку. Провайдер покажет

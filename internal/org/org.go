@@ -368,10 +368,12 @@ func ensureOtherOwnerExists(ctx context.Context, tx pgx.Tx, orgID, exceptUserID 
 	if role != auth.RoleOwner {
 		return nil
 	}
+	// Считает база, и считает она людей: у ключа каталога роль владельца
+	// организации, и без этого различения «другой владелец» находился бы
+	// в любой организации, где такой ключ заведён (миграция 0047).
 	var others int
-	err = tx.QueryRow(ctx, `
-		select count(*) from memberships
-		 where org_id = $1 and role = 'owner' and user_id <> $2`, orgID, exceptUserID).Scan(&others)
+	err = tx.QueryRow(ctx,
+		`select app_other_person_owners($1, $2)`, orgID, exceptUserID).Scan(&others)
 	if err != nil {
 		return err
 	}
