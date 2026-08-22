@@ -19,7 +19,7 @@ import type { TreeNode } from './model.ts'
 import type { Team } from '../../shared/api/index.ts'
 
 function team(id: string, name: string, parentId: string | null, depth: number): Team {
-  return { id, name, parentId, depth, members: 0, boards: 0 }
+  return { id, name, parentId, depth, members: 0, boards: 0, fromDirectory: false }
 }
 
 // Компания

@@ -63,6 +63,15 @@ func Verify(ctx context.Context, db *store.Store) error {
 			   from teams where org_id = $1 and archived_at is null`,
 		},
 		{
+			// Без него не показывается предупреждение в составе узла:
+			// состав такого подразделения ведёт каталог, и вписанные
+			// руками исчезают при следующей синхронизации.
+			"подразделение из каталога",
+			`select exists (select 1 from teams
+			                where org_id = $1 and external_id is not null
+			                  and archived_at is null)`,
+		},
+		{
 			// Без него раздел «Убранные подразделения» не показывается,
 			// и вид не попадает в набор снимков — то есть не смотрится
 			// никем и никогда.

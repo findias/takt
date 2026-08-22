@@ -255,7 +255,13 @@ function TeamNode({
 
       {open && (
         <div className="tree-body stack">
-          <TeamMembers teamId={node.id} people={people} isOwner={isOwner} onAct={onAct} />
+          <TeamMembers
+            teamId={node.id}
+            fromDirectory={node.fromDirectory}
+            people={people}
+            isOwner={isOwner}
+            onAct={onAct}
+          />
           {/* Чем занято подразделение — второй вопрос к узлу после
               «кто здесь», и до сих пор раскрытие на него не отвечало,
               хотя число досок в строке узла стояло с самого начала. */}
@@ -285,11 +291,13 @@ function TeamNode({
 
 function TeamMembers({
   teamId,
+  fromDirectory,
   people,
   isOwner,
   onAct,
 }: {
   teamId: string
+  fromDirectory: boolean
   people: Member[]
   isOwner: boolean
   onAct: (p: Promise<unknown>) => void
@@ -311,6 +319,18 @@ function TeamMembers({
   return (
     <div className="stack">
       <h3 className="section-title">Состав</h3>
+      {/* Состав узла из каталога ведёт каталог: провайдеры шлют полную
+          замену, и вписанный руками исчезает при следующей
+          синхронизации. Выбирает это не наша сторона — единственное,
+          что мы можем не делать, это молчать. Раньше молчали: человек
+          вписывал участника, действие отвечало «готово», и участник
+          пропадал без объяснения. */}
+      {fromDirectory && (
+        <p className="muted small">
+          Подразделение ведёт каталог. Вписанные здесь вручную исчезнут при
+          следующей синхронизации — состав меняют в каталоге.
+        </p>
+      )}
       {members === null ? (
         <Skeleton lines={2} />
       ) : members.length === 0 ? (

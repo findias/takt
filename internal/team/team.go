@@ -71,6 +71,16 @@ type Team struct {
 	// Boards считается по видимым доскам: у наблюдателя и у постороннего
 	// одно и то же дерево покажет разные числа, и это правильно.
 	Boards int `json:"boards"`
+	// FromDirectory — узел заведён каталогом по SCIM.
+	//
+	// Различие не косметическое: состав такого узла ведёт каталог,
+	// и полная замена состава при следующей синхронизации сотрёт
+	// вписанных руками. Провайдеры шлют именно замену, и выбирает
+	// это не наша сторона; значит, единственное, что мы можем
+	// не делать, — молчать об этом. Прогон 22 августа 2026: человек
+	// вписал участника (204), каталог прислал пустой список, участник
+	// исчез, и нигде не было сказано, что так будет.
+	FromDirectory bool `json:"fromDirectory"`
 }
 
 // Board — доска подразделения в его составе. Отдаётся ровно то, чем
@@ -112,7 +122,8 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Team, error
 			select t.id, t.name, t.parent_id, cardinality(t.ancestor_ids),
 			       (select count(*) from team_members tm where tm.team_id = t.id),
 			       (select count(*) from boards b
-			         where b.team_id = t.id and b.archived_at is null)
+			         where b.team_id = t.id and b.archived_at is null),
+			       t.external_id is not null
 			  from teams t
 			 where t.archived_at is null
 			 order by t.ancestor_ids, t.name`)
@@ -123,7 +134,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Team, error
 		for rows.Next() {
 			var t Team
 			if err := rows.Scan(&t.ID, &t.Name, &t.ParentID, &t.Depth,
-				&t.Members, &t.Boards); err != nil {
+				&t.Members, &t.Boards, &t.FromDirectory); err != nil {
 				return err
 			}
 			out = append(out, t)
