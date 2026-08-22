@@ -11,10 +11,18 @@ import (
 // Итерации. Проверяется главное свойство модели: вхождение — интервал,
 // поэтому состав восстанавливается на любой момент, а не только «сейчас».
 
+// Даты считаются от сегодня, а не пишутся числами: отчёт делит состав
+// на запланированное и прилетевшее по дороге сравнением с днём начала,
+// то есть зависит от текущей даты. На литералах «01.08 — 14.08» проверка
+// жила до 22 августа 2026 года и умерла от наступления числа —
+// не от правки кода.
 func (f *fixture) iteration(name string) Iteration {
 	f.t.Helper()
+	today := time.Now()
 	it, err := f.svc.CreateIteration(f.ctx, f.orgID, f.actorID, f.boardID,
-		name, "Довести до стенда", "2026-08-01", "2026-08-14")
+		name, "Довести до стенда",
+		today.AddDate(0, 0, -7).Format("2006-01-02"),
+		today.AddDate(0, 0, 7).Format("2006-01-02"))
 	if err != nil {
 		f.t.Fatalf("создание итерации %q: %v", name, err)
 	}
@@ -196,14 +204,6 @@ func TestIterationReportAnswersWhatWasInTheSprint(t *testing.T) {
 	cols := f.columns()
 	done := cols[2].ID
 	it := f.iteration("Спринт 1")
-
-	// Итерация начинается в прошлом: иначе «добавлено после начала»
-	// неотличимо — всё, что заводит тест, заводится сегодня.
-	f.inTenant(func(tx pgx.Tx) error {
-		_, err := tx.Exec(f.ctx,
-			`update iterations set starts_on = current_date - 7 where id = $1`, it.ID)
-		return err
-	})
 
 	planned := f.createCard("Запланировано и сделано", f.columnA)
 	kept := f.createCard("Запланировано и не сделано", f.columnA)
