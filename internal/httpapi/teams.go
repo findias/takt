@@ -115,11 +115,11 @@ func (s *Server) handleUpdateTeam(w http.ResponseWriter, r *http.Request, p auth
 }
 
 func (s *Server) handleArchiveTeam(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	// Отказ «сначала перенесите вложенные команды и доски» приходит
+	// теперь ограничением базы и разбирается общим failTeam как
+	// TreeError: отдельная ветка тут была бы вторым местом, где
+	// то же правило превращается в ответ.
 	err := s.teams.Archive(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
-	if errors.Is(err, team.ErrNotEmpty) {
-		writeError(w, http.StatusConflict, err.Error())
-		return
-	}
 	if s.failTeam(w, "архивация команды", err) {
 		return
 	}

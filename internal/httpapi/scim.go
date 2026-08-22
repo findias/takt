@@ -198,6 +198,11 @@ func (s *Server) scimFail(w http.ResponseWriter, what string, err error) {
 		scimError(w, http.StatusNotFound, "не найдено")
 	case errors.Is(err, scim.ErrConflict):
 		scimError(w, http.StatusConflict, "уже есть")
+	case errors.Is(err, scim.ErrNotEmpty):
+		// Не пятисотка: это не сбой, а невыполнимая просьба, и решать,
+		// куда девать доски, всё равно человеку. Провайдер покажет
+		// текст в отчёте синхронизации — там его и прочтут.
+		scimError(w, http.StatusConflict, scim.ErrNotEmpty.Error())
 	default:
 		s.log.Error("ошибка заведения из каталога", "этап", what, "err", err)
 		scimError(w, http.StatusInternalServerError, "внутренняя ошибка")

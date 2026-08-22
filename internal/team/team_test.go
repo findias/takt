@@ -140,8 +140,13 @@ func TestArchiveRefusesNodeWithChildren(t *testing.T) {
 	root := f.create("Корень", nil)
 	child := f.create("Потомок", &root.ID)
 
-	if err := f.svc.Archive(f.ctx, f.orgID, f.owner, root.ID); !errors.Is(err, ErrNotEmpty) {
-		t.Fatalf("архивация узла с потомком: ожидалось ErrNotEmpty, получено %v", err)
+	// Отказ приходит из базы и несёт её слова: правило живёт там
+	// (миграция 0045), потому что дверей к архивации две — эта
+	// и удаление группы каталогом.
+	var tree *TreeError
+	if err := f.svc.Archive(f.ctx, f.orgID, f.owner, root.ID); !errors.As(err, &tree) ||
+		tree.Reason != ErrNotEmpty.Error() {
+		t.Fatalf("архивация узла с потомком: ожидалось %q, получено %v", ErrNotEmpty, err)
 	}
 
 	if err := f.svc.Move(f.ctx, f.orgID, f.owner, child.ID, nil); err != nil {

@@ -28,6 +28,12 @@ var (
 	// ErrNotEmpty — архивировать узел с живыми потомками или досками
 	// нельзя: иначе доска остаётся у команды, которой больше нет,
 	// и перестаёт быть видна кому бы то ни было.
+	//
+	// Правило держит база (миграция 0045), а эта ошибка осталась ради
+	// одного: сравнивать с ней. Считал его раньше здешний код — и мимо
+	// него прошёл каталог по SCIM, который убирает группу своим
+	// запросом. Одно правило, две двери, охраняется одна: третий такой
+	// случай за день.
 	ErrNotEmpty = errors.New("сначала перенесите вложенные команды и доски")
 	// ErrForbidden — отказ политики. Приходить сюда он не должен:
 	// маршруты уже требуют владельца. Если пришёл — значит появился путь
@@ -166,22 +172,11 @@ func (s *Service) Move(ctx context.Context, orgID, actorID, teamID string, paren
 		`select exists (select 1 from teams where id = $1 and archived_at is null)`, teamID)
 }
 
+// Archive убирает подразделение в архив. Пустоту узла проверяет база
+// (миграция 0045): здесь этого больше нет намеренно — правило, лежащее
+// в двух местах, однажды оказывается выполненным в одном.
 func (s *Service) Archive(ctx context.Context, orgID, actorID, teamID string) error {
 	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		var children, boards int
-		err := tx.QueryRow(ctx, `
-			select (select count(*) from teams
-			         where parent_id = $1 and archived_at is null),
-			       (select count(*) from boards
-			         where team_id = $1 and archived_at is null)`, teamID).
-			Scan(&children, &boards)
-		if err != nil {
-			return err
-		}
-		if children > 0 || boards > 0 {
-			return ErrNotEmpty
-		}
-
 		tag, err := tx.Exec(ctx,
 			`update teams set archived_at = now()
 			  where id = $1 and archived_at is null`, teamID)

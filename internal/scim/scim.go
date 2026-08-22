@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/auth"
 	"github.com/konkov/agile/internal/store"
@@ -41,6 +42,12 @@ import (
 var (
 	ErrNotFound = errors.New("не найдено")
 	ErrConflict = errors.New("уже есть")
+	// ErrNotEmpty — группу нельзя убрать, пока за ней числятся доски
+	// или вложенные группы: они остались бы у команды, которой больше
+	// нет. Правило общее с ручной архивацией и держит его база
+	// (миграция 0045); каталог узнаёт о нём отказом, а не молчанием,
+	// потому что решать, куда девать доски, всё равно человеку.
+	ErrNotEmpty = errors.New("сначала перенесите доски и вложенные группы")
 )
 
 // DefaultRole — с чем приходит заведённый провайдером. Участник, а не
@@ -400,6 +407,10 @@ func (s *Service) DeleteGroup(ctx context.Context, orgID, actorID, id string) er
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
 			`update teams set archived_at = now() where id = $1 and archived_at is null`, id)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23514" {
+			return ErrNotEmpty
+		}
 		if err != nil {
 			return err
 		}
