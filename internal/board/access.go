@@ -32,6 +32,12 @@ var (
 		"после этого доска станет вам не видна: выберите команду, в которой состоите")
 	// ErrTeamRequired — командная доска без команды не бывает.
 	ErrTeamRequired = errors.New("для командной доски нужно выбрать команду")
+	// ErrNotOrgMember — в состав доски назвали того, кого нет
+	// в организации. Отдельно от ErrNotFound потому, что «доска
+	// не найдена» здесь врёт дважды: доска нашлась, не сходится человек,
+	// и отправленный проверять доску не найдёт в ней ничего. Так же
+	// отвечает и назначение исполнителя.
+	ErrNotOrgMember = errors.New("вписать в доску можно только участника организации")
 	// ErrCloseNeedsRoster — закрыть доску может тот, кто раздаёт её состав.
 	// Закрытие вписывает закрывающего, а состав закрытой доски раздаёт
 	// только владелец организации (см. 4.1): участнику отказ должен
@@ -202,7 +208,7 @@ func (s *Service) AddMember(ctx context.Context, orgID, actorID, boardID, userID
 			return err
 		}
 		if !member {
-			return ErrNotFound
+			return ErrNotOrgMember
 		}
 		_, err := tx.Exec(ctx, `
 			insert into board_members (org_id, board_id, user_id)

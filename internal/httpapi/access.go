@@ -119,6 +119,12 @@ func (s *Server) failAccess(w http.ResponseWriter, what string, err error) bool 
 	switch {
 	case err == nil:
 		return false
+	case errors.Is(err, board.ErrNotOrgMember):
+		// 404, а не 400: назван человек, которого в организации нет,
+		// и о его существовании где-то ещё сообщать незачем. Но текст
+		// называет причину — «доска не найдена» отправляло проверять доску,
+		// с которой всё в порядке.
+		writeError(w, http.StatusNotFound, board.ErrNotOrgMember.Error())
 	case errors.Is(err, board.ErrNotFound):
 		writeError(w, http.StatusNotFound, "доска не найдена")
 	case errors.Is(err, board.ErrArchivedBoard):

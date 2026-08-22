@@ -33,6 +33,11 @@ var (
 	// маршруты уже требуют владельца. Если пришёл — значит появился путь
 	// в обход проверки, и ответить надо запретом, а не пятисоткой.
 	ErrForbidden = errors.New("недостаточно прав")
+	// ErrNotOrgMember — назвали человека, которого в организации нет.
+	// Отдельно от ErrNotFound потому, что «не найдено» здесь отправляет
+	// искать не то: ищут подразделение или запись, а не сходится человек.
+	// Так же отвечает и назначение исполнителя на доске.
+	ErrNotOrgMember = errors.New("это может быть только участник организации")
 )
 
 // TreeError — отказ, пришедший из ограничений дерева: глубина или цикл.
@@ -255,19 +260,9 @@ func (s *Service) Boards(ctx context.Context, orgID, userID, teamID string) ([]B
 // и отвечает на него запись администратора, а не пометка рядом с именем.
 func (s *Service) AddMember(ctx context.Context, orgID, actorID, teamID, userID string) error {
 	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		// Человек обязан состоять в организации: команда — это структура
-		// внутри арендатора, а не способ пригласить постороннего.
-		var member bool
-		if err := tx.QueryRow(ctx, `
-			select exists (select 1 from memberships
-			                where org_id = $1 and user_id = $2)`,
-			orgID, userID).Scan(&member); err != nil {
+		if err := ensureInOrg(ctx, tx, orgID, userID); err != nil {
 			return err
 		}
-		if !member {
-			return ErrNotFound
-		}
-
 		_, err := tx.Exec(ctx, `
 			insert into team_members (org_id, team_id, user_id)
 			values ($1, $2, $3)
@@ -320,6 +315,9 @@ func (s *Service) Observers(ctx context.Context, orgID, userID string) ([]Observ
 func (s *Service) Grant(ctx context.Context, orgID, actorID, userID string, teamID *string) (Observer, error) {
 	var o Observer
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		if err := ensureInOrg(ctx, tx, orgID, userID); err != nil {
+			return err
+		}
 		err := tx.QueryRow(ctx, `
 			insert into observers (org_id, user_id, team_id, granted_by)
 			values ($1, $2, $3, $4)
@@ -393,6 +391,9 @@ func (s *Service) Admins(ctx context.Context, orgID, userID string) ([]Admin, er
 func (s *Service) GrantAdmin(ctx context.Context, orgID, actorID, userID, teamID string) (Admin, error) {
 	var a Admin
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		if err := ensureInOrg(ctx, tx, orgID, userID); err != nil {
+			return err
+		}
 		err := tx.QueryRow(ctx, `
 			insert into team_admins (org_id, user_id, team_id, granted_by)
 			values ($1, $2, $3, $4) returning id`,
@@ -416,6 +417,37 @@ func (s *Service) RevokeAdmin(ctx context.Context, orgID, actorID, adminID strin
 }
 
 // --- служебное ---
+
+// ensureInOrg требует, чтобы человек состоял в организации.
+//
+// Это и есть та самая граница, которую у таблиц личности держит код,
+// а не политики: `users` под RLS не попадает намеренно (миграция 0002),
+// и запрос по чужому идентификатору вернёт чужую строку — политики его
+// не остановят. Значит, всякий раз, когда наружу принимается
+// идентификатор человека, состоять в организации он обязан не по вере,
+// а по проверке.
+//
+// Отсутствие проверки видно не отказом, а тишиной: строка заводится,
+// и следом список отдаёт имя и почту постороннего — join к `users`
+// возвращает того, кого ему назвали. Так и было у наблюдения
+// и у прав администратора подразделения до 22 августа: состав
+// подразделения проверял, а эти двое — нет.
+//
+// Отказ называет причину, а не «не найдено»: «не найдено» отправляет
+// искать не то — ищут подразделение или запись, а не сходится человек.
+func ensureInOrg(ctx context.Context, tx pgx.Tx, orgID, userID string) error {
+	var member bool
+	if err := tx.QueryRow(ctx, `
+		select exists (select 1 from memberships
+		                where org_id = $1 and user_id = $2)`,
+		orgID, userID).Scan(&member); err != nil {
+		return err
+	}
+	if !member {
+		return ErrNotOrgMember
+	}
+	return nil
+}
 
 func (s *Service) exec(ctx context.Context, orgID, actorID, sql string, args ...any) error {
 	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {

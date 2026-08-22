@@ -207,6 +207,11 @@ func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 		// его просить о том, что он и сам умеет.
 		writeError(w, http.StatusForbidden,
 			"это может владелец организации или администратор этого подразделения")
+	case errors.Is(err, team.ErrNotOrgMember):
+		// 404, а не 400: назван человек, которого в этой организации нет,
+		// и его существование где-то ещё — не наше дело сообщать. Но текст
+		// называет причину: «не найдено» отправило бы искать подразделение.
+		writeError(w, http.StatusNotFound, "это может быть только участник организации")
 	case errors.Is(err, team.ErrNotFound):
 		writeError(w, http.StatusNotFound, "не найдено")
 	case errors.As(err, &tree):

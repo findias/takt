@@ -195,7 +195,7 @@ func TestBoardRosterIsManaged(t *testing.T) {
 			values ('чужой-' || gen_random_uuid() || '@example.test', 'Ч', 'x')
 			returning id`).Scan(&stranger)
 	})
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.actorID, f.boardID, stranger); !errors.Is(err, ErrNotFound) {
+	if err := f.svc.AddMember(f.ctx, f.orgID, f.actorID, f.boardID, stranger); !errors.Is(err, ErrNotOrgMember) {
 		t.Errorf("посторонний вписан в доску: %v", err)
 	}
 

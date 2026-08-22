@@ -214,7 +214,7 @@ func TestMembersComeOnlyFromTheOrganisation(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = f.db.Pool.Exec(context.Background(), `delete from users where id = $1`, outsider)
 	})
-	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, outsider); !errors.Is(err, ErrNotFound) {
+	if err := f.svc.AddMember(f.ctx, f.orgID, f.owner, team.ID, outsider); !errors.Is(err, ErrNotOrgMember) {
 		t.Errorf("посторонний принят в команду: %v", err)
 	}
 
