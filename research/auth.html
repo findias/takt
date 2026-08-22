@@ -558,7 +558,7 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
   </div></div>
 
   <div class="row"><div>Р11. Описано то, чем ключ воспользоваться не может
-    <span class="tag gap">расходится</span></div><div>
+    <span class="tag have">починено</span></div><div>
     Найдено 20 августа, уже при починке Р6. <code>GET /webhooks</code>,
     <code>GET /export</code> и <code>PUT /org/estimate-unit</code> описаны
     в контракте — и обёрнуты в проверку «только владелец организации».
@@ -567,6 +567,19 @@ blockquote{margin:1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--accent
     и записью досок: <strong>все три отвечают 403</strong>. Описание
     обещает то, чего нет, а проверка дрейфа этого не видит: она сверяет,
     что путь существует, а не что по нему можно пройти.
+    <p><strong>Починено 22 августа:</strong> выбрано убрать из описания.
+    Убраны шесть операций, а не три: за «только владельцем» сидит вся ветка
+    вебхуков — <code>GET</code> и <code>POST /webhooks</code>,
+    <code>DELETE /webhooks/{id}</code>,
+    <code>GET /webhooks/{id}/deliveries</code>,
+    <code>POST /deliveries/{id}/retry</code>, — а прогон нашёл три потому,
+    что проверял по одной операции на область. Исходящая доставка осталась:
+    она описана разделом <code>webhooks</code>, где сказано, что мы
+    присылаем, а не что у нас вызывают, — именно оттуда читающий контракт
+    и узнаёт, откуда берётся приходящее. У проверки адресов появилась третья
+    сторона: описанный маршрут не должен быть за <code>owner</code>,
+    <code>human</code> или <code>scim</code>; обёртка читается разбором
+    исходников, как и всё остальное там.</p>
   </div></div>
 </div>
 

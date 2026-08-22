@@ -59,6 +59,52 @@ func TestContractPathsExistInCode(t *testing.T) {
 	}
 }
 
+// И поперёк обеих: что описано — обязано быть достижимо ключом.
+//
+// Первые две проверки сверяют существование пути, а не доступность,
+// и мимо них прошли шесть операций, обёрнутых в owner: GET и POST
+// /webhooks, DELETE /webhooks/{id}, GET /webhooks/{id}/deliveries,
+// POST /deliveries/{id}/retry, PUT /org/estimate-unit, GET /export.
+// Роль владельца ключу не достаётся ни при каких разрешениях, так что
+// любой рабочий ключ получал на них 403 — описание обещало то, чем
+// нельзя воспользоваться. Описания были честны и сами говорили «только
+// сессией», но раздел paths — это не рассказ, а перечень того, что
+// вызывают; прочитавший его сгенерирует клиент со всеми шестью.
+//
+// Исходящая доставка от этого не пострадала: она описана в разделе
+// webhooks, где ей и место, — там сказано, что мы присылаем, а не что
+// у нас вызывают.
+func TestContractDescribesOnlyWhatAKeyCanReach(t *testing.T) {
+	registered := registeredRoutes(t)
+	for _, route := range describedRoutes(t) {
+		method, path, _ := strings.Cut(route, " ")
+		for _, r := range registered {
+			if r.method != method || contractPath(r.path) != path {
+				continue
+			}
+			if slices.Contains(closedToKeys, r.wrapper) {
+				t.Errorf("в описании есть %s, а обёртка %s ключ туда не пускает: "+
+					"опишите то, что вызывают, — вызов интерфейса описанию не место",
+					route, r.wrapper)
+			}
+		}
+	}
+}
+
+// wrapperOf достаёт имя обёртки из s.owner(…), s.scoped(…, …) и прочих.
+// Пустая строка — обработчик зарегистрирован без обёртки.
+func wrapperOf(handler ast.Expr) string {
+	call, ok := handler.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+	fun, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return ""
+	}
+	return fun.Sel.Name
+}
+
 // contractPath переводит адрес маршрута в адрес описания: снаружи
 // интеграция ходит по /api/v1/…, обёртка versioned срезает версию
 // раньше маршрутизатора, а в описании база вынесена в servers.
@@ -102,7 +148,16 @@ type routeDecl struct {
 	// scope — разрешение из обёртки scoped; пусто у маршрутов, которые
 	// ключу не открывались.
 	scope string
+	// wrapper — имя обёртки, которой обёрнут обработчик: owner, human,
+	// scim, scoped, authed. Пусто у маршрутов без обёртки.
+	wrapper string
 }
+
+// closedToKeys — обёртки, за которые рабочий ключ не проходит:
+// owner требует роль владельца, которой у ключа не бывает; human
+// отказывает всякому ключу вслух; scim пускает только ключ каталога,
+// а его дальше /scim/v2 не выпускают.
+var closedToKeys = []string{"owner", "human", "scim"}
 
 // registeredRoutes читает маршруты разбором исходников, а не у самого
 // http.ServeMux: список зарегистрированных путей он не отдаёт, а список
@@ -127,8 +182,10 @@ func registeredRoutes(t *testing.T) []routeDecl {
 				t.Fatalf("%s: у маршрута %q нет метода — проверка перестала "+
 					"понимать запись, почините её вместе с правкой", path, route)
 			}
-			out = append(out, routeDecl{method: method, path: target,
-				scope: scopeOf(t, path, call.Args[1])})
+			out = append(out, routeDecl{
+				method: method, path: target,
+				scope:   scopeOf(t, path, call.Args[1]),
+				wrapper: wrapperOf(call.Args[1])})
 			return true
 		})
 	}
