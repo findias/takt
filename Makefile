@@ -2,6 +2,12 @@
 SHELL := /bin/bash
 
 DEV_DB_URL ?= postgres://board:board@localhost:55432/board?sslmode=disable
+# Адрес для того, кто умеет заводить базы. Нужен одной проверке — той,
+# что применяет цепочку миграций с нуля в своей, только что заведённой
+# базе. Роль приложения этого не умеет намеренно (nocreatedb), и права
+# ей не выдаются: заводит базу другая роль, а миграции в ней идут уже
+# под ролью приложения — иначе проверялась бы не та цепочка.
+DEV_ADMIN_DB_URL ?= postgres://postgres:postgres@localhost:55432/postgres?sslmode=disable
 DEV_PORT   ?= 8099
 
 .PHONY: help
@@ -87,7 +93,8 @@ test: ## Быстрые тесты без базы
 
 .PHONY: test-integration
 test-integration: db migrate ## Все тесты, включая работающие с настоящей базой
-	TEST_DATABASE_URL="$(DEV_DB_URL)" go test ./... -count=1
+	TEST_DATABASE_URL="$(DEV_DB_URL)" TEST_ADMIN_DATABASE_URL="$(DEV_ADMIN_DB_URL)" \
+	  go test ./... -count=1
 
 .PHONY: test-web
 test-web: ## Тесты клиентской модели доски
