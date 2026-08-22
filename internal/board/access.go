@@ -230,6 +230,39 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 	return s.explained(ctx, orgID, actorID, boardID, translateAccess(err))
 }
 
+// explainRefusal отвечает, почему доска не досталась на правку, — включая
+// доски в архиве.
+//
+// `explainMissingBoard` спрашивает про живую доску и потому не годится
+// там, где речь об архиве: возврат из архива он объявил бы «не найдено»
+// на доску, которую человек видит в списке убранных. А наблюдатель
+// видит её там ровно так же, как видел живую.
+//
+// Три ответа вместо двух. Доски не видно вовсе — «не найдена», и это
+// правда. Видно, но не досталась на запись — «только для чтения»;
+// спрашивается это у той же функции, по которой решают политики,
+// а не догадкой по роли. Видно и досталась, а строк ноль — значит,
+// делать нечего: доска уже в том состоянии, которого просят.
+func (s *Service) explainRefusal(ctx context.Context, orgID, actorID, boardID string) error {
+	var visible, writable bool
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			select exists (select 1 from boards where id = $1),
+			       $1 = any (app_writable_boards())`, boardID).Scan(&visible, &writable)
+	})
+	if err != nil {
+		return err
+	}
+	switch {
+	case !visible:
+		return ErrNotFound
+	case !writable:
+		return ErrReadOnlyBoard
+	default:
+		return ErrNotFound
+	}
+}
+
 // explained заменяет «не найдено» на честный ответ.
 //
 // Ноль изменённых строк значит одно из двух: доски не видно вовсе или
@@ -491,20 +524,27 @@ func (s *Service) Delete(ctx context.Context, orgID, actorID, boardID, confirmNa
 }
 
 func (s *Service) setArchived(ctx context.Context, orgID, actorID, boardID string, archived bool) error {
-	return translateAccess(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+	err := translateAccess(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			update boards set archived_at = case when $2 then now() else null end
 			 where id = $1 and (archived_at is null) = $2`, boardID, archived)
 		if err != nil {
 			return err
 		}
-		// Ноль строк — доска не найдена или уже в нужном состоянии.
-		// Для вызывающего это одно и то же: делать нечего.
+		// Ноль строк — доска не найдена, не досталась на запись или уже
+		// в нужном состоянии. Разбирает это explainRefusal ниже: раньше
+		// все три случая отвечали «доска не найдена», и наблюдатель,
+		// видящий доску в списке убранных, шёл искать несуществующую
+		// поломку.
 		if tag.RowsAffected() == 0 {
 			return ErrNotFound
 		}
 		return nil
 	}))
+	if errors.Is(err, ErrNotFound) {
+		return s.explainRefusal(ctx, orgID, actorID, boardID)
+	}
+	return err
 }
 
 // Archived перечисляет убранные доски — иначе вернуть их будет неоткуда.
