@@ -167,7 +167,24 @@ func (s *Service) SetAccess(ctx context.Context, orgID, actorID, boardID, visibi
 		}
 		return nil
 	})
-	return translateAccess(err)
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(err))
+}
+
+// explained заменяет «не найдено» на честный ответ.
+//
+// Ноль изменённых строк значит одно из двух: доски не видно вовсе или
+// её видно, но она не досталась на запись. Для того, кто её видит,
+// «доска не найдена» — это отправка искать несуществующую поломку,
+// и этим уже ломались: наблюдатель, которому политика не даёт писать,
+// читал «не найдена» и шёл проверять адрес. Для операций над карточками
+// это починено давно (`explainMissingBoard`), а смена видимости
+// и обещание доски отвечали по-старому — при том что рядом стоял
+// комментарий, обещавший разбор, которого в коде не было.
+func (s *Service) explained(ctx context.Context, orgID, actorID, boardID string, err error) error {
+	if errors.Is(err, ErrNotFound) {
+		return s.explainMissingBoard(ctx, orgID, actorID, boardID)
+	}
+	return err
 }
 
 // inscribe вписывает в состав доски того, кто её закрывает.
@@ -282,7 +299,7 @@ func (s *Service) SetSLE(ctx context.Context, orgID, actorID, boardID string, da
 	if probability < 50 || probability > 99 {
 		return badRequestf("вероятность обещания — от 50 до 99 процентов")
 	}
-	return translateAccess(s.db.InScope(ctx,
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(s.db.InScope(ctx,
 		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
 			tag, err := tx.Exec(ctx, `
 				update boards set sle_days = $2, sle_probability = $3
@@ -291,12 +308,12 @@ func (s *Service) SetSLE(ctx context.Context, orgID, actorID, boardID string, da
 				return err
 			}
 			if tag.RowsAffected() == 0 {
-				// Либо доски нет, либо она не досталась на запись —
-				// различает это общий разбор ниже.
+				// Либо доски нет, либо она не досталась на запись:
+				// различает это explained ниже.
 				return ErrNotFound
 			}
 			return nil
-		}))
+		})))
 }
 
 // --- архив ---
