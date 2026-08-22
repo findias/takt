@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/realtime"
@@ -233,6 +234,48 @@ func TestFirstFederatedLoginCreatesPersonAndEnrolsThem(t *testing.T) {
 	}
 	if me["role"] != "member" {
 		t.Errorf("роль после входа: %v", me["role"])
+	}
+
+	// И зачисление подписано им самим. Журнал ведёт база, подпись берётся
+	// из области транзакции, а эта транзакция открывается без области:
+	// до ответа провайдера неизвестны ни арендатор, ни человек. Пока
+	// область не выставлялась перед зачислением, появление человека
+	// в организации попадало в журнал «без подписи» — а на экране
+	// «Команда» так помечено сделанное не человеком.
+	ctx := context.Background()
+	var userID, orgID string
+	if err := f.db.Pool.QueryRow(ctx, `
+		select m.user_id, m.org_id from memberships m
+		  join users u on u.id = m.user_id where u.email = $1`, email).
+		Scan(&userID, &orgID); err != nil {
+		t.Fatalf("членство пришедшего: %v", err)
+	}
+	// Журнал под политикой: без арендатора запрос вернул бы ноль строк
+	// молча, а участнику он и с арендатором не открыт — его видит тот,
+	// кому открыт весь обзор. Поэтому смотрим им же, поднятым
+	// до владельца: проверяется подпись под записью, а не право читать
+	// журнал.
+	if _, err := f.db.Pool.Exec(ctx,
+		`update memberships set role = 'owner' where org_id = $1 and user_id = $2`,
+		orgID, userID); err != nil {
+		t.Fatalf("открыть журнал: %v", err)
+	}
+	var actor *string
+	if err := f.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			select u.name
+			  from audit_events a
+			  left join users u on u.id = a.actor_id
+			 where a.subject = 'memberships' and a.action = 'insert'
+			   and a.subject_id = $1`, userID).Scan(&actor)
+	}); err != nil {
+		t.Fatalf("запись журнала о зачислении: %v", err)
+	}
+	if actor == nil {
+		t.Error("зачисление через провайдера записано без подписи, " +
+			"хотя подписать его есть кем: человек сам и пришёл")
+	} else if *actor != "Пришедший впервые" {
+		t.Errorf("зачисление подписано %q, ожидался пришедший", *actor)
 	}
 }
 

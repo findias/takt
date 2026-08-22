@@ -133,6 +133,21 @@ func FederatedLogin(ctx context.Context, pool *pgxpool.Pool,
 		if err != nil {
 			return Identity{}, err
 		}
+		// Область выставляется перед зачислением — как при регистрации
+		// и при приёме приглашения, и по той же причине: журнал ведёт
+		// база, подпись она берёт из app_current_user(), а транзакция
+		// эта открыта без области — до ответа провайдера ни арендатор,
+		// ни человек не были известны. Без этого появление человека
+		// в организации попадало в журнал без подписи, хотя подписать
+		// его есть кем: он сам и пришёл. Заодно это делало неправдой
+		// сказанное на экране «Команда»: «без подписи» значит там
+		// «сделанное не человеком».
+		if _, err := tx.Exec(ctx, `
+			select set_config('app.current_org', $1, true),
+			       set_config('app.current_user', $2, true)`,
+			orgID, u.ID); err != nil {
+			return Identity{}, err
+		}
 		if _, err := tx.Exec(ctx,
 			`insert into memberships (org_id, user_id, role) values ($1, $2, $3)
 			 on conflict (org_id, user_id) do nothing`, orgID, u.ID, role); err != nil {
