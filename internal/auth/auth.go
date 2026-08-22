@@ -295,6 +295,22 @@ func recoverSession(ctx context.Context, pool *pgxpool.Pool, sessionID string) (
 	return PrincipalBySession(ctx, pool, sessionID)
 }
 
+// SetCookie кладёт сессию в cookie.
+//
+// SameSite=Lax здесь — не настройка удобства, а единственное, что стоит
+// между изменяющими маршрутами и запросом с чужой страницы: Origin
+// не сверяется нигде, Content-Type тоже (decode разбирает тело любого
+// типа), отдельного токена нет. Пока стоит Lax, браузер сам не отправит
+// эту cookie с чужого сайта на POST, и подделка до обработчика
+// не доходит.
+//
+// Отсюда правило: ослабить до None — просят, когда доску встраивают
+// в чужую страницу рамкой, — можно только вместе с проверкой Origin
+// на изменяющих маршрутах. Одна правка здесь снимает защиту сразу
+// со всех, ни одной ошибки при этом не видно, и узнаётся это по чужим
+// действиям от имени человека. Чтобы правка не прошла молча, заведена
+// TestCrossSiteWriteHasSomeDefence: она требует, чтобы межсайтовую
+// запись останавливало хоть что-нибудь — браузер или код.
 func SetCookie(w http.ResponseWriter, sessionID string, expires time.Time, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
