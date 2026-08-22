@@ -83,6 +83,17 @@ export type Team = {
   boards: number
 }
 
+/** Убранное подразделение: из чего выбирают, что вернуть. */
+export type ArchivedTeam = {
+  id: string
+  name: string
+  /** Пусто у корневого. */
+  parentName: string
+  /** Старший тоже в архиве — вернуть сейчас нельзя, сперва его. */
+  parentArchived: boolean
+  archivedAt: string
+}
+
 /** Доска подразделения: чем занят узел структуры. */
 export type TeamBoard = {
   id: string
@@ -703,6 +714,8 @@ export const api = {
   moveTeam: (id: string, parentId: string | null) =>
     request<void>('PATCH', `/api/teams/${id}`, parentId ? { parentId } : { root: true }),
   archiveTeam: (id: string) => request<void>('DELETE', `/api/teams/${id}`),
+  archivedTeams: () => request<{ teams: ArchivedTeam[] }>('GET', '/api/teams/archived'),
+  restoreTeam: (id: string) => request<void>('POST', `/api/teams/${id}/restore`),
 
   teamMembers: (id: string) =>
     request<{ members: TeamMember[] }>('GET', `/api/teams/${id}/members`),

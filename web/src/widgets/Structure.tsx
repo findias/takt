@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { VISIBILITY_NAMES, api } from '../shared/api/index.ts'
 import type {
+  ArchivedTeam,
   Member,
   Observer,
   Principal,
@@ -34,16 +35,24 @@ export function Structure({
   const [people, setPeople] = useState<Member[]>([])
   const [observers, setObservers] = useState<Observer[]>([])
   const [admins, setAdmins] = useState<TeamAdmin[]>([])
+  const [archived, setArchived] = useState<ArchivedTeam[]>([])
   const [error, setError] = useState<string | null>(null)
   const isOwner = principal.role === 'owner'
 
   const load = useCallback(() => {
-    Promise.all([api.listTeams(), api.team(), api.listObservers(), api.listAdmins()])
-      .then(([t, org, obs, adm]) => {
+    Promise.all([
+      api.listTeams(),
+      api.team(),
+      api.listObservers(),
+      api.listAdmins(),
+      api.archivedTeams(),
+    ])
+      .then(([t, org, obs, adm, arch]) => {
         setTeams(t.teams)
         setPeople(org.members)
         setObservers(obs.observers)
         setAdmins(adm.admins)
+        setArchived(arch.teams)
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить структуру'))
   }, [])
@@ -106,7 +115,58 @@ export function Structure({
         isOwner={isOwner}
         onAct={act}
       />
+
+      <ArchivedTeams teams={archived} onAct={act} />
     </div>
+  )
+}
+
+/**
+ * Убранные подразделения — и дорога назад.
+ *
+ * Раздел показывается только когда в архиве что-то есть: пустой он
+ * рассказывал бы про архив тем, кто ни разу ничего не убирал.
+ *
+ * Внутри чего лежал узел — часть выбора, а не украшение: «Ядро» без
+ * ответа на «чьё ядро» из архива не выбрать. Узел, старший которого
+ * тоже убран, вернуть нельзя, и кнопки у него нет: держать кнопку,
+ * которая заведомо ответит отказом, — это отказ, отложенный до нажатия.
+ */
+function ArchivedTeams({
+  teams,
+  onAct,
+}: {
+  teams: ArchivedTeam[]
+  onAct: (p: Promise<unknown>) => void
+}) {
+  if (teams.length === 0) return null
+  return (
+    <section className="stack">
+      <h2 className="section-title">Убранные подразделения</h2>
+      <ul className="member-list">
+        {teams.map((t) => (
+          <li key={t.id}>
+            <div className="member-who">
+              <span>{t.name}</span>
+              <span className="muted small">
+                {t.parentName ? `Подразделение «${t.parentName}»` : 'Корневое подразделение'}
+              </span>
+            </div>
+            {t.parentArchived ? (
+              <span className="muted small">сперва верните «{t.parentName}»</span>
+            ) : (
+              <button
+                className="link"
+                aria-label={`Вернуть из архива: ${t.name}`}
+                onClick={() => onAct(api.restoreTeam(t.id))}
+              >
+                Вернуть
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

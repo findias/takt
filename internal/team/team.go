@@ -195,6 +195,98 @@ func (s *Service) Archive(ctx context.Context, orgID, actorID, teamID string) er
 	}))
 }
 
+// Archived перечисляет убранные подразделения — иначе вернуть их будет
+// неоткуда.
+//
+// До 22 августа 2026 возврата не было вовсе: «Убрать подразделение»
+// уносило узел из дерева без вопроса и без дороги назад. Это нарушало
+// собственное правило проекта сразу с двух сторон — «необратимое
+// спрашивает, обратимое — нет»: действие не спрашивало, как обратимое,
+// и не возвращалось, как необратимое. У досок архив с возвратом есть
+// с самого начала; у подразделений его просто забыли.
+//
+// Родитель показывается именем, а не идентификатором: из архива
+// выбирают, что вернуть, и «Ядро» без ответа на «чьё ядро» — выбор
+// вслепую. Пустое имя родителя значит корень.
+func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]ArchivedTeam, error) {
+	out := []ArchivedTeam{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select t.id, t.name, coalesce(p.name, ''), p.archived_at is not null,
+			       t.archived_at
+			  from teams t
+			  left join teams p on p.id = t.parent_id
+			 where t.archived_at is not null
+			 order by t.archived_at desc`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var a ArchivedTeam
+			if err := rows.Scan(&a.ID, &a.Name, &a.ParentName,
+				&a.ParentArchived, &a.ArchivedAt); err != nil {
+				return err
+			}
+			out = append(out, a)
+		}
+		return rows.Err()
+	})
+	return out, translate(err)
+}
+
+// ArchivedTeam — строка архива подразделений.
+type ArchivedTeam struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// ParentName пуст у корневого подразделения.
+	ParentName string `json:"parentName"`
+	// ParentArchived говорит, что вернуть этот узел сейчас нельзя:
+	// его старший тоже в архиве. Отвечать на это отказом после нажатия
+	// значило бы держать кнопку, которая заведомо не сработает.
+	ParentArchived bool      `json:"parentArchived"`
+	ArchivedAt     time.Time `json:"archivedAt"`
+}
+
+// Restore возвращает подразделение из архива.
+//
+// Родитель обязан быть живым: узел возвращается туда, откуда ушёл,
+// а возвращать его под архивированного старшего — значит поставить его
+// в дерево, которого не видно. Отказ называет старшего по имени,
+// потому что порядок действий («сперва верните его») человеку иначе
+// придётся угадывать.
+func (s *Service) Restore(ctx context.Context, orgID, actorID, teamID string) error {
+	return translate(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var parentName *string
+		err := tx.QueryRow(ctx, `
+			select p.name
+			  from teams t
+			  left join teams p on p.id = t.parent_id and p.archived_at is not null
+			 where t.id = $1 and t.archived_at is not null`, teamID).Scan(&parentName)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if parentName != nil {
+			return &TreeError{Reason: "сначала верните из архива подразделение «" +
+				*parentName + "»: внутри него это и лежит"}
+		}
+
+		tag, err := tx.Exec(ctx,
+			`update teams set archived_at = null
+			  where id = $1 and archived_at is not null`, teamID)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	}))
+}
+
 // --- состав ---
 
 func (s *Service) Members(ctx context.Context, orgID, userID, teamID string) ([]Member, error) {
@@ -284,6 +376,21 @@ func (s *Service) RemoveMember(ctx context.Context, orgID, actorID, teamID, user
 
 // --- наблюдение ---
 
+// Observers перечисляет надзор — и только тот, который что-то значит.
+//
+// Записи на архивированные подразделения отсеиваются, потому что
+// не действуют: `app_observed_teams()` считает наблюдаемое по живым
+// узлам, и надзор за убранным узлом прекращается сам собой. Показывать
+// его значило бы держать в интерфейсе слово, за которым ничего нет, —
+// от этого уже избавились в 4.2, убрав пометку ведущего, и тут то же
+// самое, только хуже: наблюдение обещает надзор, а надзора нет,
+// и не знают об этом обе стороны сразу.
+//
+// Записи не удаляются: узел бывает возвращают из архива, и надзор
+// возвращается вместе с ним. Отсеивается показ, а не право.
+//
+// Наблюдение за организацией целиком (`team_id is null`) остаётся
+// всегда: у него нет узла, которому нечего архивировать.
 func (s *Service) Observers(ctx context.Context, orgID, userID string) ([]Observer, error) {
 	out := []Observer{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
@@ -292,6 +399,7 @@ func (s *Service) Observers(ctx context.Context, orgID, userID string) ([]Observ
 			  from observers o
 			  join users u on u.id = o.user_id
 			  left join teams t on t.id = o.team_id
+			 where o.team_id is null or t.archived_at is null
 			 order by u.name`)
 		if err != nil {
 			return err
@@ -359,6 +467,10 @@ type Admin struct {
 	TeamName string `json:"teamName"`
 }
 
+// Admins — то же правило, что и у наблюдения: администратор
+// архивированного узла не распоряжается ничем, потому что
+// `app_admin_teams()` считает область по живым узлам. Запись остаётся
+// на случай возврата, из списка уходит.
 func (s *Service) Admins(ctx context.Context, orgID, userID string) ([]Admin, error) {
 	out := []Admin{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
@@ -367,6 +479,7 @@ func (s *Service) Admins(ctx context.Context, orgID, userID string) ([]Admin, er
 			  from team_admins a
 			  join users u on u.id = a.user_id
 			  join teams t on t.id = a.team_id
+			 where t.archived_at is null
 			 order by t.name, u.name`)
 		if err != nil {
 			return err

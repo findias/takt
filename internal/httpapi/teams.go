@@ -26,6 +26,11 @@ func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/teams", s.authed(s.handleCreateTeam))
 	mux.HandleFunc("PATCH /api/teams/{id}", s.authed(s.handleUpdateTeam))
 	mux.HandleFunc("DELETE /api/teams/{id}", s.authed(s.handleArchiveTeam))
+	// Архив подразделений и возврат из него. Путь «archived» стоит перед
+	// «{id}» не по правилам маршрутизатора — тот разбирает точные
+	// сегменты раньше шаблонов, — а для читающего: рядом с архивацией.
+	mux.HandleFunc("GET /api/teams/archived", s.authed(s.handleArchivedTeams))
+	mux.HandleFunc("POST /api/teams/{id}/restore", s.authed(s.handleRestoreTeam))
 
 	mux.HandleFunc("GET /api/teams/{id}/members", s.authed(s.handleTeamMembers))
 	// Доски подразделения — второй ответ на вопрос «что это за узел»:
@@ -116,6 +121,22 @@ func (s *Server) handleArchiveTeam(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	if s.failTeam(w, "архивация команды", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleArchivedTeams(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	teams, err := s.teams.Archived(r.Context(), p.OrgID, p.ID)
+	if s.failTeam(w, "архив подразделений", err) {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"teams": teams})
+}
+
+func (s *Server) handleRestoreTeam(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	err := s.teams.Restore(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
+	if s.failTeam(w, "возврат подразделения", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
