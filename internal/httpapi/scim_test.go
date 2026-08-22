@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // SCIM проверяется целиком по проводу: смысл протокола в том, что
@@ -302,5 +303,100 @@ func TestServiceProviderConfigIsHonestAboutWhatWeSupport(t *testing.T) {
 	}
 	if field(t, raw, "patch", "supported") != true {
 		t.Error("PATCH поддержан, но об этом не сказано")
+	}
+}
+
+// Ключ каталога — не владелец организации.
+//
+// Роль владельца он носил ради двух таблиц: политика manage на teams
+// и team_members пускала владельца и администратора поддерева, а каталог
+// не был ни тем, ни другим. Довод «роль нужна, чтобы заводить людей» был
+// неверен: users и memberships под RLS не попадают вовсе.
+//
+// Плата за роль была несоразмерна: в полосе /scim/v2 ключ держала
+// проверка в коде, а не политика, — одного маршрута, обёрнутого s.authed
+// вместо s.scoped, хватило бы, чтобы ключ из чужой системы стал
+// владельцем арендатора. Поэтому проверяется не только «работа делается»,
+// но и «сорвавшись с маршрута, ключ ничего не получает»: право каталога
+// кончается на двух таблицах, и держит его база.
+func TestDirectoryKeyIsNotAnOwner(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Каталог без роли владельца")
+	dir := a.withSCIMKey(t, owner)
+	ctx := context.Background()
+
+	// Работа каталога делается без роли: группа заводится, человек
+	// зачисляется. Обе таблицы — под политикой directory.
+	email := "bez-roli-" + uuid.NewString()[:8] + "@example.test"
+	person := dir.must("POST", "/scim/v2/Users", newUserPayload(email), http.StatusCreated)
+	personID := field(t, person, "id").(string)
+	group := dir.must("POST", "/scim/v2/Groups", map[string]any{
+		"schemas": []string{scimGroupSchema}, "displayName": "Отдел " + uuid.NewString()[:8],
+	}, http.StatusCreated)
+	groupID := field(t, group, "id").(string)
+	dir.must("PATCH", "/scim/v2/Groups/"+groupID, map[string]any{
+		"schemas": []string{scimPatchSchema},
+		"Operations": []map[string]any{
+			{"op": "add", "path": "members", "value": []map[string]any{{"value": personID}}},
+		},
+	}, http.StatusOK)
+
+	// А роли у него нет. Смотрится в базе: наружу роль ключа не выходит
+	// вовсе — и это часть обещания, а не недосмотр.
+	var orgID, botID, role string
+	// memberships под RLS не попадает — оттуда организация и роль читаются
+	// прямо. А вот api_clients под политикой, и без арендатора запрос
+	// вернул бы ноль строк молча: строка ключа читается от лица владельца,
+	// которому она и видна.
+	if err := a.impl.db.Pool.QueryRow(ctx,
+		`select org_id from memberships where user_id = $1`, owner.userID).Scan(&orgID); err != nil {
+		t.Fatalf("организация владельца: %v", err)
+	}
+	if err := a.impl.db.InTenant(ctx, orgID, owner.userID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`select user_id from api_clients where 'scim:write' = any (scopes)`).Scan(&botID)
+	}); err != nil {
+		t.Fatalf("чтение ключа каталога: %v", err)
+	}
+	if err := a.impl.db.Pool.QueryRow(ctx,
+		`select role from memberships where org_id = $1 and user_id = $2`,
+		orgID, botID).Scan(&role); err != nil {
+		t.Fatalf("чтение роли ключа: %v", err)
+	}
+	if role == "owner" {
+		t.Fatalf("у ключа каталога роль владельца организации — ровно то, " +
+			"ради чего заведена политика directory (миграция 0048). " +
+			"Заводит ключи apiclient.Create; роль выводится из разрешений")
+	}
+
+	// И даже дойдя до базы от своего имени — так было бы, окажись
+	// маршрут обёрнут s.authed, — владельцем он не оказывается.
+	err := a.impl.db.InTenant(ctx, orgID, botID, func(tx pgx.Tx) error {
+		var isOwner, isDirectory bool
+		if err := tx.QueryRow(ctx, `select app_is_owner(), app_is_directory()`).
+			Scan(&isOwner, &isDirectory); err != nil {
+			return err
+		}
+		if isOwner {
+			t.Error("база считает ключ каталога владельцем организации")
+		}
+		if !isDirectory {
+			t.Error("база не считает ключ каталога каталогом — работать он не сможет")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("прогон от лица ключа: %v", err)
+	}
+
+	// Право кончается на подразделениях и их составе: доску ключ каталога
+	// не заводит. Отдельной транзакцией, потому что отказ политики рвёт
+	// текущую — и это ровно тот отказ, которого мы здесь ждём.
+	if err := a.impl.db.InTenant(ctx, orgID, botID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`insert into boards (org_id, name, visibility) values ($1, 'Каталогова доска', 'org')`, orgID)
+		return err
+	}); err == nil {
+		t.Error("ключ каталога завёл доску — значит, право каталога шире двух таблиц")
 	}
 }
