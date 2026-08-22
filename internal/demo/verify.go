@@ -63,6 +63,14 @@ func Verify(ctx context.Context, db *store.Store) error {
 			   from teams where org_id = $1 and archived_at is null`,
 		},
 		{
+			// Без него раздел «Убранные подразделения» не показывается,
+			// и вид не попадает в набор снимков — то есть не смотрится
+			// никем и никогда.
+			"убранное подразделение",
+			`select exists (select 1 from teams
+			                where org_id = $1 and archived_at is not null)`,
+		},
+		{
 			"три доски всех трёх видимостей",
 			`select count(distinct visibility) = 3 from boards
 			  where org_id = $1 and archived_at is null`,

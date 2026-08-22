@@ -248,8 +248,21 @@ func (f *filler) structure() error {
 		f.people["boris@example.test"], platforma.ID); err != nil {
 		return err
 	}
-	_, err = f.teams.Grant(f.ctx, f.orgID, f.owner(), f.people["gleb@example.test"], nil)
-	return err
+	if _, err := f.teams.Grant(f.ctx, f.orgID, f.owner(),
+		f.people["gleb@example.test"], nil); err != nil {
+		return err
+	}
+
+	// Убранное подразделение — ради экрана, а не ради данных.
+	// Раздел «Убранные подразделения» показывается только тогда, когда
+	// в архиве что-то есть, и без этого узла его не видел бы никто:
+	// в наборе снимков он просто не появлялся бы. Вид, которого нет
+	// в снимках, — это вид, который никто ни разу не смотрел.
+	kurs, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Курсы", &razrabotka.ID)
+	if err != nil {
+		return err
+	}
+	return f.teams.Archive(f.ctx, f.orgID, f.owner(), kurs.ID)
 }
 
 // --- доски, карточки и всё, что на них висит ---
