@@ -283,3 +283,82 @@ func TestEstimateUnitIsOwnerOnlyAndComesBackInWhoAmI(t *testing.T) {
 	owner.mustDo("PUT", "/api/org/estimate-unit", map[string]any{"unit": "story-points"},
 		http.StatusBadRequest)
 }
+
+// Отключение последнего человека не трогает досок подразделения.
+//
+// Прогон девятого захода: каталог шлёт `active = false` единственному
+// участнику группы. Состав пустеет — и вопрос, который до сих пор никто
+// не задавал: что становится с досками этого узла. Ответ должен быть
+// «ничего»: доска принадлежит подразделению, а не тому, кто в нём
+// состоял, и увольнение — не повод её потерять.
+//
+// Второе, что здесь закреплено: видимость командной доски считается
+// по дереву, а не по составу одного узла. Участник подразделения над
+// опустевшим видит его доску, посторонний — нет; ровно это обещает
+// экран «Структура», и до сих пор обещание держалось само.
+func TestDeactivatingTheLastMemberLeavesTheTeamBoards(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Отдел, который опустел")
+	dir := a.withSCIMKey(t, owner)
+
+	upper := owner.team("Надотдел", nil)
+	empty := owner.team("Отдел одного", upper)
+
+	person := dir.must("POST", "/scim/v2/Users",
+		newUserPayload("odin-"+uuid.NewString()[:8]+"@example.test"), http.StatusCreated)
+	personID := field(t, person, "id").(string)
+	owner.mustDo("PUT", "/api/teams/"+empty+"/members/"+personID, nil, http.StatusNoContent)
+
+	board := owner.mustDo("POST", "/api/boards", map[string]any{"name": "Доска отдела"},
+		http.StatusCreated)
+	boardID := field(t, board, "id").(string)
+	owner.mustDo("PUT", "/api/boards/"+boardID+"/access", map[string]any{
+		"visibility": "team", "teamId": empty,
+	}, http.StatusNoContent)
+
+	dir.must("PATCH", "/scim/v2/Users/"+personID, map[string]any{
+		"schemas": []string{scimPatchSchema},
+		"Operations": []map[string]any{
+			{"op": "replace", "path": "active", "value": false},
+		},
+	}, http.StatusOK)
+
+	// Состав пуст — это и было действие.
+	if members, _ := field(t, owner.mustDo("GET", "/api/teams/"+empty+"/members", nil,
+		http.StatusOK), "members").([]any); len(members) != 0 {
+		t.Errorf("после отключения в составе %d человек", len(members))
+	}
+	// А доска на месте.
+	boards, _ := field(t, owner.mustDo("GET", "/api/teams/"+empty+"/boards", nil,
+		http.StatusOK), "boards").([]any)
+	if len(boards) != 1 {
+		t.Fatalf("у опустевшего подразделения %d досок, ожидалась одна", len(boards))
+	}
+
+	// Видимость считается по дереву: свой сверху видит, посторонний нет.
+	above := owner.join("member")
+	owner.mustDo("PUT", "/api/teams/"+upper+"/members/"+above.userID, nil, http.StatusNoContent)
+	if code, body := above.do("GET", "/api/boards/"+boardID, nil); code != http.StatusOK {
+		t.Errorf("участник надотдела не видит доски пустого отдела: %d %s", code, body)
+	}
+	if code, _ := owner.join("member").do("GET", "/api/boards/"+boardID, nil); code != http.StatusNotFound {
+		t.Errorf("посторонний видит командную доску: код %d, ожидался 404", code)
+	}
+
+	// И третье: доступ, данный поверх состава, опустением не теряется.
+	// Это ровно то, что говорит теперь экран, и говорить он это может
+	// только если так и есть.
+	admin := owner.join("member")
+	owner.mustDo("POST", "/api/team-admins",
+		map[string]any{"userId": admin.userID, "teamId": empty}, http.StatusCreated)
+	if code, body := admin.do("GET", "/api/boards/"+boardID, nil); code != http.StatusOK {
+		t.Errorf("администратор области не видит доски пустого подразделения: %d %s", code, body)
+	}
+
+	watcher := owner.join("viewer")
+	owner.mustDo("POST", "/api/observers",
+		map[string]any{"userId": watcher.userID, "teamId": empty}, http.StatusCreated)
+	if code, body := watcher.do("GET", "/api/boards/"+boardID, nil); code != http.StatusOK {
+		t.Errorf("наблюдатель не видит доски пустого подразделения: %d %s", code, body)
+	}
+}

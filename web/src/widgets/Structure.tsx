@@ -91,6 +91,7 @@ export function Structure({
               key={node.id}
               node={node}
               tree={tree}
+              peopleAbove={false}
               people={people}
               isOwner={isOwner}
               onAct={act}
@@ -173,6 +174,10 @@ function ArchivedTeams({
 function TeamNode({
   node,
   tree,
+  // peopleAbove — есть ли хоть один человек в подразделениях над этим.
+  // Считается спуском, а не по наличию родителя: родитель бывает
+  // и пустым, и тогда «их видят те, кто выше» — неправда.
+  peopleAbove,
   people,
   isOwner,
   onAct,
@@ -180,6 +185,7 @@ function TeamNode({
 }: {
   node: TreeNode
   tree: TreeNode[]
+  peopleAbove: boolean
   people: Member[]
   isOwner: boolean
   onAct: (p: Promise<unknown>) => void
@@ -213,7 +219,17 @@ function TeamNode({
             <button
               className="link"
               onClick={() => {
-                const name = window.prompt('Новое название', node.name)
+                // Узел из каталога переименовать можно, и это не ошибка:
+                // часть провайдеров имена групп не шлёт вовсе. Но там,
+                // где шлёт, введённое здесь вернётся к тому, что
+                // в каталоге, — и сказано это до ввода, а не после.
+                const name = window.prompt(
+                  node.fromDirectory
+                    ? 'Новое название. Имя этому подразделению даёт каталог: ' +
+                        'при следующей синхронизации оно вернётся'
+                    : 'Новое название',
+                  node.name,
+                )
                 if (name && name.trim() && name !== node.name) {
                   onAct(api.renameTeam(node.id, name.trim()))
                 }
@@ -258,6 +274,8 @@ function TeamNode({
           <TeamMembers
             teamId={node.id}
             fromDirectory={node.fromDirectory}
+            boards={node.boards}
+            peopleAbove={peopleAbove}
             people={people}
             isOwner={isOwner}
             onAct={onAct}
@@ -277,6 +295,7 @@ function TeamNode({
               key={child.id}
               node={child}
               tree={tree}
+              peopleAbove={peopleAbove || node.members > 0}
               people={people}
               isOwner={isOwner}
               onAct={onAct}
@@ -292,12 +311,16 @@ function TeamNode({
 function TeamMembers({
   teamId,
   fromDirectory,
+  boards,
+  peopleAbove,
   people,
   isOwner,
   onAct,
 }: {
   teamId: string
   fromDirectory: boolean
+  boards: number
+  peopleAbove: boolean
   people: Member[]
   isOwner: boolean
   onAct: (p: Promise<unknown>) => void
@@ -337,6 +360,19 @@ function TeamMembers({
         <p className="muted small">
           Никого нет. Участник подразделения работает и во всех отделах под ним,
           а ведущим показывается тот, кто за подразделение отвечает.
+          {/* Опустеть подразделение может и само: каталог отключает
+              человека, и последний уходит из состава. Доски при этом
+              остаются за узлом, а командную доску видит только свой —
+              значит, у узла в корне её не видит больше ни один участник.
+              Молчать об этом нельзя: доска не пропала и не сломалась,
+              она просто перестала быть кому-то видна. */}
+          {boards > 0 &&
+            (peopleAbove
+              ? ' Доски подразделения остались за ним: их видят те, кто состоит выше по дереву.'
+              : ' Доски подразделения остались за ним, но рядовому участнику они сейчас' +
+                ' не видны: командную доску видит свой, а своих нет ни здесь, ни выше.' +
+                ' Доступ остаётся у владельца, у администратора этой области' +
+                ' и у наблюдателя за ней.')}
         </p>
       ) : (
         <ul className="member-list">
