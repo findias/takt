@@ -113,6 +113,39 @@ async function toggleLabel(page: Page, card: ReturnType<typeof cardIn>, name: st
   await page.getByRole('menuitemcheckbox', { name }).click()
 }
 
+/**
+ * Поле обсуждения растёт по написанному.
+ *
+ * Раньше третья строка уезжала под собственную полосу прокрутки, и
+ * человек писал в окошко высотой в два ряда. Делает это `field-sizing`
+ * (Baseline newly с 16.06.2026, сверено 23.08.2026), а не скрипт, —
+ * но проверять надо именно в браузере: свойство молодое, и «поддержано»
+ * тут значит «померено», а не «написано в таблице».
+ */
+test('поле обсуждения растёт по написанному и не растёт без предела', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Растущее поле')
+  await addCard(page, 'Очередь', 'Обсудить')
+  await cardIn(page, 'Очередь', 'Обсудить').getByRole('button', { name: 'Обсудить' }).click()
+
+  const поле = page.getByPlaceholder('Написать в обсуждение')
+  const высота = async () => (await поле.boundingBox())!.height
+  const пусто = await высота()
+
+  await поле.fill('Первая строка\nВторая строка\nТретья строка\nЧетвёртая строка')
+  const выросло = await высота()
+  expect(выросло, 'поле не выросло под четырьмя строками').toBeGreaterThan(пусто)
+
+  // Потолок обязателен: без него длинный текст выталкивает за экран
+  // кнопку, которой его отправляют.
+  await поле.fill('строка\n'.repeat(200))
+  const предел = await высота()
+  expect(предел, 'поле переросло свой потолок').toBeLessThanOrEqual(
+    (await page.evaluate(() => window.innerHeight)) * 0.45,
+  )
+  await expect(page.getByRole('button', { name: 'Отправить' })).toBeVisible()
+})
+
 test('от входа до переставленной карточки', async ({ page }) => {
   const who = await register(page)
 

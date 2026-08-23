@@ -54,6 +54,10 @@
               "board_archived",
               "board_key_taken",
               "board_key_invalid",
+              "email_taken",
+              "already_member",
+              "password_wrong",
+              "password_same",
               "internal"
             ]
           }

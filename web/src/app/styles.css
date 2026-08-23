@@ -204,7 +204,15 @@
     --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
     --accent: #6dcbb2;
     --accent-soft: #122c25;
-    --warn: #e08264;
+    /* Отказ пересчитан тем же прибором, что и шкала текста, — и это
+       нашлось только тогда, когда отказ вообще стало видно: прежний
+       оранжевый давал Lc 47 на худшей подложке при пороге 60 для
+       мелкого текста, то есть приглушённая подсказка читалась лучше,
+       чем сообщение об ошибке. Тёмную шкалу расставили по APCA в этапе 2,
+       а этот токен тогда не тронули: на экранах, которые обходила
+       проверка контраста, отказа формы не было ни одного.
+       Теперь oklch(0.82 0.12 38) — Lc 64 на surface-2, 67 на paper. */
+    --warn: #ffa88b;
     --warn-soft: #2d1a15;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
@@ -230,7 +238,8 @@
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
   --accent: #6dcbb2;
   --accent-soft: #122c25;
-  --warn: #e08264;
+  /* См. пояснение в системной тёмной теме выше. */
+  --warn: #ffa88b;
   --warn-soft: #2d1a15;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
   --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
@@ -438,6 +447,18 @@ textarea {
 textarea {
   resize: vertical;
   min-height: 3.4em;
+  /* Поле растёт по написанному. Раньше это делали скриптом — слушали
+     ввод и пересчитывали `scrollHeight` на каждый символ; здесь этого
+     скрипта не было вовсе, и поле обсуждения просто пряталось
+     за собственной полосой прокрутки на третьей строке.
+     `field-sizing` — Baseline newly с 16.06.2026 (сверено 23.08.2026
+     по api.webstatus.dev), полифила не требует: там, где его нет,
+     остаётся прежнее поле с прокруткой.
+
+     Потолок обязателен: без него описание на два экрана выталкивает
+     из виду кнопки, которыми его сохраняют. */
+  field-sizing: content;
+  max-height: 40vh;
 }
 label {
   display: flex;
@@ -649,6 +670,84 @@ input[type='radio'] {
   border-radius: var(--radius);
   margin: 0;
   font-size: var(--text);
+}
+
+/* --- Поле формы: подпись, подсказка, отказ ---------------------------
+ *
+ * Три части в одном столбце и в этом порядке. Подсказка стоит под
+ * полем, а не над ним: над полем она читается как вторая подпись
+ * и отодвигает поле от его имени. Отказ — последним, вплотную:
+ * между полем и объяснением, почему оно не приняло, ничего стоять
+ * не должно. */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.form-field > label {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.form-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+/* Узел отказа стоит всегда — так его объявляет диктор и так не прыгает
+   раскладка. Пустой абзац не создаёт строчного бокса, поэтому высоты
+   у него нет и без `display: none`; скрыть его совсем нельзя: скрытую
+   область диктор не читает даже после того, как в ней появился текст. */
+.form-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--warn);
+}
+.form-error:not(:empty) {
+  /* Отступ появляется вместе с текстом: иначе пустой отказ раздвигает
+     поля на пустое место. */
+  padding-top: var(--space-1);
+}
+/* Отказ уровня формы — плашкой: он относится не к соседнему полю,
+   а ко всей отправке, и читается как отдельное сообщение. */
+.form-error--summary:not(:empty) {
+  padding: var(--space-2) var(--space-3);
+  background: var(--warn-soft);
+  border-radius: var(--radius);
+  font-size: var(--text);
+}
+/* Ряд из полей: у каждого своя подпись сверху, поэтому ряд равняется
+   по низу — по центру кнопка в конце ряда встаёт вровень с подписями,
+   а не с полями. */
+.form-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+/* Отказ в ряду выведен из потока, и это не украшательство: в столбце
+   он делает свою колонку выше соседних, а выравнивание по низу
+   поднимает отвергнутое поле над остальными — ряд ломается ровно
+   в тот момент, когда на него смотрят. Видно это только на снимке
+   заполненной формы. Место под отказ ряд занимает целиком и только
+   когда отказ есть. */
+.form-row .form-field {
+  position: relative;
+}
+.form-row .form-error:not(:empty) {
+  position: absolute;
+  top: 100%;
+  inset-inline-start: 0;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+.form-row:has(.form-error:not(:empty)) {
+  margin-bottom: var(--space-5);
+}
+/* Отвергнутое поле видно и без чтения текста — но текст всё равно
+   стоит рядом: цвет здесь второй признак, а не единственный. */
+:where(input, textarea, select)[aria-invalid='true'] {
+  border-color: var(--warn);
 }
 
 /* Ключ — шесть знаков, и поле такое же: широкое поле обещает, что

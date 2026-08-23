@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { MIN_PASSWORD, ROLE_NAMES, api } from '../shared/api/index.ts'
 import type { InviteInfo, Principal } from '../shared/api/index.ts'
 import { Button } from '../shared/ui/Button.tsx'
+import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 
 /**
  * Приём приглашения по ссылке.
@@ -23,7 +24,10 @@ export function InviteScreen({
   onCancel: () => void
 }) {
   const [info, setInfo] = useState<InviteInfo | null>(null)
+  // Отказ на самом открытии ссылки — не отказ формы: формы на экране
+  // ещё нет, и показывать его у поля некуда.
   const [error, setError] = useState<string | null>(null)
+  const form = useFormErrors()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -76,10 +80,15 @@ export function InviteScreen({
       })
   }
 
-  const accept = async (e: React.FormEvent) => {
+  const accept = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const found = form.check(e.currentTarget)
+    if (Object.keys(found).length > 0) {
+      form.report(found)
+      return
+    }
     setBusy(true)
-    setError(null)
+    form.clear()
     try {
       const principal = await api.acceptInvite(
         token,
@@ -87,7 +96,9 @@ export function InviteScreen({
       )
       onJoined(principal)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось принять приглашение')
+      // Приглашение адресное, почта не редактируется — значит отказ
+      // относится к попытке целиком, а не к какому-то из двух полей.
+      form.reportForm(e instanceof Error ? e.message : 'Не удалось принять приглашение')
     } finally {
       setBusy(false)
     }
@@ -95,7 +106,7 @@ export function InviteScreen({
 
   return (
     <div className="centered">
-      <form className="panel" onSubmit={accept}>
+      <form className="panel" ref={form.ref} noValidate onSubmit={accept}>
         <h1>Вас зовут в «{info.orgName}»</h1>
         <p className="muted small">
           Приглашение для <strong>{info.email}</strong>, роль —{' '}
@@ -118,22 +129,36 @@ export function InviteScreen({
           </>
         ) : info.needsAccount ? (
           <>
-            <label>
-              Как вас зовут
-              <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
-            </label>
-            <label>
-              Придумайте пароль
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                minLength={MIN_PASSWORD}
-                required
-              />
-              <span className="muted small">Не короче {MIN_PASSWORD} символов.</span>
-            </label>
+            <Field label="Как вас зовут" {...form.field('name')}>
+              {(bind) => (
+                <input
+                  {...bind}
+                  name="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoFocus
+                />
+              )}
+            </Field>
+            <Field
+              label="Придумайте пароль"
+              hint={`Не короче ${MIN_PASSWORD} символов.`}
+              {...form.field('password')}
+            >
+              {(bind) => (
+                <input
+                  {...bind}
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  minLength={MIN_PASSWORD}
+                  required
+                />
+              )}
+            </Field>
           </>
         ) : (
           <p className="muted small">
@@ -141,6 +166,9 @@ export function InviteScreen({
           </p>
         )}
 
+        <FormError>{form.formError}</FormError>
+        {/* Отказ выхода — про кнопку «Выйти и открыть заново», а не про
+            форму: она в этом случае и не показана. */}
         {error && <p className="error">{error}</p>}
 
         {!wrongAccount && (

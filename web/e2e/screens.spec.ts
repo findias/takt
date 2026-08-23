@@ -49,14 +49,49 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.goto('/')
   await page.screenshot({ path: `${SHOTS}/01-вход.png` })
 
+  // Отказ формы — состояние, которого в наборе не было, а смотреть
+  // на форму имеет смысл именно в нём: в покое любая форма выглядит
+  // хорошо. Здесь видно сразу и то, где стоит отказ, и то, что
+  // подсказка от него не пропала.
+  await page.getByLabel('Почта').fill(OWNER)
+  await page.getByLabel('Пароль').fill('ne-tot-parol')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('alert')).toContainText('неверная')
+  await page.screenshot({ path: `${SHOTS}/01в-вход-отказ.png` })
+
+  // Тот же отказ в тёмной теме: цвет отказа единственным из палитры
+  // остался не пересчитанным по APCA после этапа 2 — потому что экрана
+  // с ошибкой не было ни в одном снимке и ни в одном замере.
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.screenshot({ path: `${SHOTS}/01д-вход-отказ-тёмный.png` })
+  await page.emulateMedia({ colorScheme: 'light' })
+
   // Заведение организации: с этого экрана всё начинается, а снимка
   // у него не было вовсе — как и у приглашения ниже.
   await page.getByRole('button', { name: 'Завести новую организацию' }).click()
   await page.screenshot({ path: `${SHOTS}/01б-новая-организация.png` })
+
+  // Отказ у поля: пустое имя и короткий пароль разом. Пузырёк браузера
+  // показал бы первый и промолчал об остальных.
+  await page.getByLabel('Придумайте пароль').fill('korotko')
+  await page.getByRole('button', { name: 'Завести организацию' }).click()
+  await expect(page.getByLabel('Как вас зовут')).toHaveAttribute('aria-invalid', 'true')
+  await page.screenshot({ path: `${SHOTS}/01г-регистрация-отказ-полей.png` })
+
   await page.getByRole('button', { name: 'У меня уже есть аккаунт' }).click()
 
   await signIn(page)
   await page.screenshot({ path: `${SHOTS}/02-список-досок.png`, fullPage: true })
+
+  // Отказ сервера, адресованный полю: ключ занят соседней доской.
+  // Отказ стоит под тем полем, которое переписывать, а не общей
+  // строкой под всей формой.
+  await page.getByPlaceholder('Название новой доски').fill('Ещё поставки')
+  await page.getByPlaceholder('Ключ').fill('ПОСТ')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await expect(page.getByLabel(/Ключ доски/)).toHaveAttribute('aria-invalid', 'true')
+  await page.screenshot({ path: `${SHOTS}/02б-занятый-ключ.png` })
+  await page.reload()
 
   await openBoard(page, 'Поставки')
   const boardUrl = page.url()

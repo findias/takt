@@ -345,7 +345,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := s.createUser(r, req.Email, req.Name, req.Password)
 	if errors.Is(err, errEmailTaken) {
-		writeError(w, http.StatusConflict, "такая почта уже зарегистрирована — войдите")
+		// Своим кодом, а не общим «conflict»: отказ относится к одному
+		// полю формы, и форме надо знать, к какому. Разбирать текст
+		// нельзя — он меняется, а поле от этого не меняется.
+		writeCoded(w, http.StatusConflict, "email_taken",
+			"такая почта уже зарегистрирована — войдите")
 		return
 	}
 	if err != nil {
@@ -489,14 +493,17 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request, p 
 	if req.Next == req.Current {
 		// Отдельным отказом, а не молчаливым успехом: человек, нажавший
 		// «сменить» и получивший «готово», уверен, что сменил.
-		writeError(w, http.StatusBadRequest, "новый пароль совпадает с текущим")
+		writeCoded(w, http.StatusBadRequest, "password_same",
+			"новый пароль совпадает с текущим")
 		return
 	}
 
 	err := auth.ChangePassword(r.Context(), s.db.Pool, p.ID, p.SessionID, req.Current, req.Next)
 	switch {
 	case errors.Is(err, auth.ErrWrongPassword):
-		writeError(w, http.StatusForbidden, auth.ErrWrongPassword.Error())
+		// Отказ про текущий пароль, а не про новый: без кода форма
+		// покажет его под обоими полями сразу или ни под одним.
+		writeCoded(w, http.StatusForbidden, "password_wrong", auth.ErrWrongPassword.Error())
 	case errors.Is(err, auth.ErrFederated):
 		writeError(w, http.StatusConflict, auth.ErrFederated.Error())
 	case err != nil:
@@ -616,7 +623,7 @@ func (s *Server) handleInvite(w http.ResponseWriter, r *http.Request, p auth.Pri
 	invite, err := s.orgs.Invite(r.Context(), p.OrgID, p.ID, req.Email, req.Role, s.cfg.BaseURL)
 	switch {
 	case errors.Is(err, org.ErrAlreadyMember):
-		writeError(w, http.StatusConflict, "этот человек уже в команде")
+		writeCoded(w, http.StatusConflict, "already_member", "этот человек уже в команде")
 	case err != nil && !errors.Is(err, org.ErrNotFound):
 		if isUserError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())

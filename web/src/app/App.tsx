@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { MIN_PASSWORD, ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
+import { ApiError, MIN_PASSWORD, ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
@@ -11,6 +11,7 @@ import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import { ToastHost, useToast } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
+import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
 // заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
@@ -321,9 +322,14 @@ function OrgHeader({
               .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести'))
           }}
         >
+          {/* Одно поле в ряду с кнопкой: подпись здесь заняла бы строку
+              над шапкой ради слова, которое уже стоит в кнопке рядом.
+              Но имя у поля обязано быть — иначе диктор читает его как
+              «поле ввода», а `placeholder` исчезает с первым символом. */}
           <input
             autoFocus
             value={name}
+            aria-label="Название организации"
             placeholder="Название организации"
             onChange={(e) => setName(e.target.value)}
           />
@@ -352,20 +358,25 @@ function OrgHeader({
 function PasswordForm({ onDone }: { onDone: () => void }) {
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const form = useFormErrors()
   const notify = useToast()
-
-  const short = next.length > 0 && next.length < MIN_PASSWORD
 
   return (
     <form
       className="password-form"
+      ref={form.ref}
+      noValidate
       onSubmit={(e) => {
         e.preventDefault()
-        if (busy || !current || next.length < MIN_PASSWORD) return
+        if (busy) return
+        const found = form.check(e.currentTarget)
+        if (Object.keys(found).length > 0) {
+          form.report(found)
+          return
+        }
         setBusy(true)
-        setError(null)
+        form.clear()
         api
           .changePassword(current, next)
           .then(() => {
@@ -374,37 +385,58 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
             notify({ text: 'Пароль сменён, остальные устройства вышли', tone: 'info' })
             onDone()
           })
-          .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось сменить'))
+          .catch((e) => {
+            const text = e instanceof Error ? e.message : 'Не удалось сменить'
+            // Оба отказа сервера здесь адресные, и адрес у них разный:
+            // «текущий неверен» — про первое поле, «совпадает
+            // с текущим» — про второе. Общая плашка внизу заставляла бы
+            // человека гадать, какое из двух полей переписывать.
+            const code = e instanceof ApiError ? e.body?.code : undefined
+            if (code === 'password_wrong') form.report({ current: text })
+            else if (code === 'password_same') form.report({ next: text })
+            else form.reportForm(text)
+          })
           .finally(() => setBusy(false))
       }}
     >
-      <input
-        autoFocus
-        type="password"
-        autoComplete="current-password"
-        value={current}
-        placeholder="Текущий пароль"
-        onChange={(e) => setCurrent(e.target.value)}
-      />
-      <input
-        type="password"
-        autoComplete="new-password"
-        value={next}
-        placeholder="Новый пароль"
-        aria-describedby="password-rule"
-        onChange={(e) => setNext(e.target.value)}
-      />
+      <Field label="Текущий пароль" {...form.field('current')}>
+        {(bind) => (
+          <input
+            {...bind}
+            autoFocus
+            name="current"
+            type="password"
+            autoComplete="current-password"
+            value={current}
+            required
+            onChange={(e) => setCurrent(e.target.value)}
+          />
+        )}
+      </Field>
       {/* Правило названо до ввода, а не после: придумывать пароль
           и узнавать требование по отказу — значит придумывать дважды. */}
-      <span id="password-rule" className="muted small">
-        {short ? 'коротко: ' : ''}не короче {MIN_PASSWORD} символов
-      </span>
+      <Field
+        label="Новый пароль"
+        hint={`Не короче ${MIN_PASSWORD} символов.`}
+        {...form.field('next')}
+      >
+        {(bind) => (
+          <input
+            {...bind}
+            name="next"
+            type="password"
+            autoComplete="new-password"
+            value={next}
+            required
+            minLength={MIN_PASSWORD}
+            onChange={(e) => setNext(e.target.value)}
+          />
+        )}
+      </Field>
       <div className="row">
-        <button
-          type="submit"
-          aria-label="Сменить пароль"
-          disabled={busy || !current || next.length < MIN_PASSWORD}
-        >
+        {/* Кнопка не гаснет на незаполненной форме: погашенная кнопка
+            не объясняет, чего не хватает, а отказ у поля — объясняет. */}
+        <button type="submit" aria-label="Сменить пароль" disabled={busy}>
           Сменить
         </button>
         {/* Отдельным действием, потому что и повод отдельный: сессия
@@ -415,21 +447,23 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
           disabled={busy}
           onClick={() => {
             setBusy(true)
-            setError(null)
+            form.clear()
             api
               .signOutElsewhere()
               .then(() => {
                 notify({ text: 'Остальные устройства вышли', tone: 'info' })
                 onDone()
               })
-              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось'))
+              .catch((e) =>
+                form.reportForm(e instanceof Error ? e.message : 'Не удалось'),
+              )
               .finally(() => setBusy(false))
           }}
         >
           Выйти на всех устройствах
         </button>
       </div>
-      {error && <p className="error small">{error}</p>}
+      <FormError>{form.formError}</FormError>
     </form>
   )
 }

@@ -545,6 +545,7 @@ function NewTeam({
       <input
         autoFocus
         value={name}
+        aria-label={title ?? 'Название подразделения'}
         placeholder="Название"
         onChange={(e) => setName(e.target.value)}
         onBlur={() => !name.trim() && setOpen(false)}

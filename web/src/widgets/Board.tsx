@@ -1320,6 +1320,7 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
       <input
         autoFocus
         value={value}
+        aria-label="Название колонки"
         placeholder="Название колонки"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setAdding(false)}
@@ -1471,10 +1472,16 @@ function Iterations({
             setAdding(false)
           }}
         >
-          <input name="name" autoFocus placeholder="Название" required />
+          <input
+            name="name"
+            autoFocus
+            aria-label="Название итерации"
+            placeholder="Название"
+            required
+          />
           <input name="startsOn" type="date" required aria-label="Начало" />
           <input name="endsOn" type="date" required aria-label="Конец" />
-          <input name="goal" placeholder="Цель" />
+          <input name="goal" aria-label="Цель итерации" placeholder="Цель" />
           <button type="submit" aria-label="Завести итерацию">
             Завести
           </button>

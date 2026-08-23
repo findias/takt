@@ -6,6 +6,7 @@ import { BoardAccess } from '../features/access/BoardAccess.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
+import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 
 /**
  * Вторая строка доски: ключ, кому видна и сколько работы.
@@ -45,7 +46,7 @@ export function BoardList({
   const [error, setError] = useState<string | null>(null)
   // Отказ заведения показывается у формы, а не наверху списка: форма
   // стоит под досками, и сообщение над ними человек не увидит вовсе.
-  const [failed, setFailed] = useState<{ text: string; aboutKey: boolean } | null>(null)
+  const form = useFormErrors()
   const [openAccess, setOpenAccess] = useState<string | null>(null)
   const [archived, setArchived] = useState<BoardInfo[] | null>(null)
   // Какую доску спрашивают удалить и что набрали в подтверждение.
@@ -238,11 +239,17 @@ export function BoardList({
 
       {canEdit && (
         <form
-          className="row"
+          className="form-row"
+          ref={form.ref}
+          noValidate
           onSubmit={(e) => {
             e.preventDefault()
-            if (!name.trim()) return
-            setFailed(null)
+            const found = form.check(e.currentTarget)
+            if (Object.keys(found).length > 0) {
+              form.report(found)
+              return
+            }
+            form.clear()
             api
               .createBoard(name.trim(), key.trim())
               .then((b) => {
@@ -255,46 +262,61 @@ export function BoardList({
                 // Про ключ отвечает код, а не текст: разбор текста
                 // ломается на первой же правке формулировки.
                 const code = e instanceof ApiError ? e.body?.code : undefined
-                setFailed({
-                  text: e instanceof Error ? e.message : 'Не удалось завести доску',
-                  aboutKey: code === 'board_key_invalid' || code === 'board_key_taken',
-                })
+                const text = e instanceof Error ? e.message : 'Не удалось завести доску'
+                if (code === 'board_key_invalid' || code === 'board_key_taken') {
+                  form.report({ key: text })
+                } else {
+                  form.reportForm(text)
+                }
               })
           }}
         >
-          <input
-            value={name}
-            placeholder="Название новой доски"
-            onChange={(e) => setName(e.target.value)}
-          />
+          {/* Подписи нет на экране, но есть у поля: действие названо
+              кнопкой в конце ряда, а имя нужно диктору и отказу. */}
+          <Field label="Название новой доски" hiddenLabel {...form.field('name')}>
+            {(bind) => (
+              <input
+                {...bind}
+                name="name"
+                value={name}
+                required
+                placeholder="Название новой доски"
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </Field>
           {/* Ключ приводится к заглавным при вводе, а не начертанием:
               `text-transform` в стиле переписал бы и подпись-подсказку,
-              и «Ключ» в пустом поле кричал бы капслоком. */}
-          <input
-            className="key-input"
-            value={key}
-            maxLength={6}
-            aria-label="Ключ доски — префикс номеров карточек"
-            aria-invalid={failed?.aboutKey || undefined}
-            aria-describedby="board-key-hint"
-            placeholder="Ключ"
-            onChange={(e) => setKey(e.target.value.toUpperCase())}
-          />
-          <button
-            className="primary"
-            type="submit"
-            aria-label="Завести доску"
-            disabled={!name.trim()}
+              и «Ключ» в пустом поле кричал бы капслоком.
+
+              Правило про ключ стоит под формой, а не под полем: оно
+              длиннее самого поля втрое и, поставленное внутрь, растянуло
+              бы свою колонку и разорвало ряд на три строки. Связано
+              с полем всё равно — `describedBy`. */}
+          <Field
+            label="Ключ доски — префикс номеров карточек"
+            hiddenLabel
+            describedBy="board-key-hint"
+            {...form.field('key')}
           >
+            {(bind) => (
+              <input
+                {...bind}
+                name="key"
+                className="key-input"
+                value={key}
+                maxLength={6}
+                placeholder="Ключ"
+                onChange={(e) => setKey(e.target.value.toUpperCase())}
+              />
+            )}
+          </Field>
+          <button className="primary" type="submit" aria-label="Завести доску">
             Завести
           </button>
         </form>
       )}
 
-      {/* Отказ стоит вплотную к форме, а подсказка — под ним: между
-          полем и объяснением, почему оно не приняло, ничего стоять
-          не должно. */}
-      {failed && <p className="error">{failed.text}</p>}
       {/* Правило сказано до отказа, а не после: ключ виден в каждом
           номере карточки и после заведения не меняется, так что узнать
           о нём из отказа — значит узнать поздно. */}
@@ -304,6 +326,9 @@ export function BoardList({
           сменить его потом уже нельзя.
         </p>
       )}
+      {/* Отказ, у которого своего поля нет: «доска в архиве», «нет
+          прав». Про ключ и про название говорят сами поля. */}
+      <FormError>{form.formError}</FormError>
     </div>
   )
 }

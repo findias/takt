@@ -424,6 +424,7 @@ function NewCardForm({
         ref={field}
         autoFocus
         value={value}
+        aria-label="Что нужно сделать?"
         placeholder="Что нужно сделать?"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {

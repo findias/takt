@@ -3,6 +3,7 @@ import { WEBHOOK_EVENT_NAMES, api } from '../../shared/api/index.ts'
 import type { Delivery, Webhook } from '../../shared/api/index.ts'
 import { Skeleton } from '../../shared/ui/states.tsx'
 import { CopyButton } from '../../shared/ui/CopyButton.tsx'
+import { Field, useFormErrors } from '../../shared/ui/Field.tsx'
 
 /**
  * Подписки на события.
@@ -24,6 +25,7 @@ export function Webhooks() {
   const [known, setKnown] = useState<string[]>([])
   const [fresh, setFresh] = useState<Webhook | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const form = useFormErrors()
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [events, setEvents] = useState<string[]>(['card.created'])
@@ -99,9 +101,16 @@ export function Webhooks() {
 
       <form
         className="stack"
+        ref={form.ref}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
-          if (!name.trim() || !url.trim() || events.length === 0) return
+          const found = form.check(e.currentTarget)
+          if (Object.keys(found).length > 0) {
+            form.report(found)
+            return
+          }
+          if (events.length === 0) return
           setError(null)
           api
             .createWebhook(name.trim(), url.trim(), events)
@@ -111,29 +120,47 @@ export function Webhooks() {
               setUrl('')
               load()
             })
-            .catch((e) =>
-              setError(e instanceof Error ? e.message : 'Не удалось завести подписку'),
-            )
+            .catch((e) => {
+              // Отказ здесь почти всегда про адрес: остальное проверено
+              // до отправки. Он и встаёт под адресом — общая плашка
+              // под рядом из трёх полей не говорит, какое переписывать.
+              form.report({
+                url: e instanceof Error ? e.message : 'Не удалось завести подписку',
+              })
+            })
         }}
       >
-        <div className="row row--tight">
-          <input
-            value={name}
-            placeholder="Для чего подписка"
-            aria-label="Название подписки"
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            value={url}
-            placeholder="https://…"
-            aria-label="Адрес получателя"
-            onChange={(e) => setUrl(e.target.value)}
-          />
-          <button
-            type="submit"
-            aria-label="Завести подписку"
-            disabled={!name.trim() || !url.trim() || events.length === 0}
-          >
+        <div className="form-row">
+          <Field label="Название подписки" hiddenLabel {...form.field('name')}>
+            {(bind) => (
+              <input
+                {...bind}
+                name="name"
+                value={name}
+                placeholder="Для чего подписка"
+                required
+                onChange={(e) => setName(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Адрес получателя" hiddenLabel {...form.field('url')}>
+            {(bind) => (
+              <input
+                {...bind}
+                name="url"
+                type="url"
+                value={url}
+                placeholder="https://…"
+                required
+                onChange={(e) => setUrl(e.target.value)}
+              />
+            )}
+          </Field>
+          {/* Кнопка гаснет только там, где нажатие бессмысленно:
+              подписка без событий не доставляет ничего. Про пустые поля
+              скажет отказ у поля — он объясняет, а погашенная кнопка
+              молчит. */}
+          <button type="submit" aria-label="Завести подписку" disabled={events.length === 0}>
             Завести
           </button>
         </div>

@@ -25,6 +25,7 @@ import type {
 import { actorText, auditText, timeText } from '../entities/feed/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
+import { Field, useFormErrors } from '../shared/ui/Field.tsx'
 import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -162,7 +163,6 @@ export function Team({ principal }: { principal: Principal }) {
               setFreshLink(invite.link ?? null)
               load()
             }}
-            onError={setError}
           />
 
           {freshLink && (
@@ -251,6 +251,7 @@ function Clients() {
   const [clients, setClients] = useState<ApiClient[]>([])
   const [fresh, setFresh] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const form = useFormErrors()
   const [name, setName] = useState('')
   const [scopes, setScopes] = useState<string[]>(['boards:read'])
   const [expires, setExpires] = useState('')
@@ -328,9 +329,16 @@ function Clients() {
 
       <form
         className="stack"
+        ref={form.ref}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
-          if (!name.trim() || scopes.length === 0) return
+          const found = form.check(e.currentTarget)
+          if (Object.keys(found).length > 0) {
+            form.report(found)
+            return
+          }
+          if (scopes.length === 0) return
           setError(null)
           api
             .createClient(name.trim(), scopes, expires)
@@ -343,25 +351,41 @@ function Clients() {
             .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести ключ'))
         }}
       >
-        <div className="row row--tight">
-          <input
-            value={name}
-            placeholder="Для чего ключ"
-            onChange={(e) => setName(e.target.value)}
-          />
-          <label className="small">
-            Действует до
-          </label>
-          <input
-            type="date"
-            value={expires}
-            aria-label="Действует до"
-            onChange={(e) => setExpires(e.target.value)}
-          />
+        {/* Ряд из полей, а не из поля и висящей рядом подписи. Подпись
+            «Действует до» стояла отдельным `label` без `for`: на вид
+            подпись, на деле — просто текст, по которому не встаёт фокус
+            и который диктор не читает вместе с полем. Отсюда же и
+            `aria-label`, дублировавший её словом в слово. */}
+        <div className="form-row">
+          <Field label="Для чего ключ" {...form.field('name')}>
+            {(bind) => (
+              <input
+                {...bind}
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            )}
+          </Field>
+          <Field label="Действует до" {...form.field('expires')}>
+            {(bind) => (
+              <input
+                {...bind}
+                name="expires"
+                type="date"
+                value={expires}
+                onChange={(e) => setExpires(e.target.value)}
+              />
+            )}
+          </Field>
           <button
             type="submit"
             aria-label="Завести ключ"
-            disabled={!name.trim() || scopes.length === 0}
+            // Гаснет только там, где нажатие бессмысленно: ключ без прав
+            // не заводится вовсе. Про пустое имя скажет отказ у поля —
+            // погашенная кнопка молчит о том, чего ждёт.
+            disabled={scopes.length === 0}
           >
             Завести
           </button>
@@ -478,6 +502,7 @@ function Labels({ canEdit }: { canEdit: boolean }) {
         >
           <input
             value={name}
+            aria-label="Название метки"
             placeholder="Название метки"
             onChange={(e) => setName(e.target.value)}
           />
@@ -636,6 +661,7 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
         >
           <input
             value={name}
+            aria-label="Название поля"
             placeholder="Название поля"
             onChange={(e) => setName(e.target.value)}
           />
@@ -653,6 +679,7 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
           {kind === 'select' && (
             <input
               value={options}
+              aria-label="Варианты через запятую"
               placeholder="Варианты через запятую"
               onChange={(e) => setOptions(e.target.value)}
             />
@@ -783,41 +810,55 @@ function AuditFeed({ people }: { people: Member[] }) {
   )
 }
 
-function InviteForm({
-  onCreated,
-  onError,
-}: {
-  onCreated: (invite: Invite) => void
-  onError: (message: string) => void
-}) {
+function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<Role>('member')
   const [busy, setBusy] = useState(false)
+  const form = useFormErrors()
 
   return (
     <form
-      className="row"
+      className="form-row"
+      ref={form.ref}
+      noValidate
       onSubmit={(e) => {
         e.preventDefault()
-        if (!email.trim()) return
+        const found = form.check(e.currentTarget)
+        if (Object.keys(found).length > 0) {
+          form.report(found)
+          return
+        }
         setBusy(true)
+        form.clear()
         api
           .invite(email.trim(), role)
           .then((invite) => {
             setEmail('')
             onCreated(invite)
           })
-          .catch((e) => onError(e instanceof Error ? e.message : 'Не удалось пригласить'))
+          // Отказ здесь про адрес — «этот человек уже в команде»,
+          // «адрес не годится», — и стоит под ним. Прежде он уезжал
+          // наверх раздела, к заголовку «В организации», за пределы
+          // формы: там его принимали за отказ всего экрана.
+          .catch((e) =>
+            form.report({ email: e instanceof Error ? e.message : 'Не удалось пригласить' }),
+          )
           .finally(() => setBusy(false))
       }}
     >
-      <input
-        type="email"
-        value={email}
-        placeholder="Почта коллеги"
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
+      <Field label="Почта коллеги" hiddenLabel {...form.field('email')}>
+        {(bind) => (
+          <input
+            {...bind}
+            name="email"
+            type="email"
+            value={email}
+            placeholder="Почта коллеги"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        )}
+      </Field>
       <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label="Роль">
         {(Object.keys(ROLE_NAMES) as Role[]).map((r) => (
           <option key={r} value={r}>
@@ -825,7 +866,9 @@ function InviteForm({
           </option>
         ))}
       </select>
-      <button type="submit" disabled={busy || !email.trim()}>
+      {/* Кнопка гаснет только на время запроса: про пустое поле скажет
+          отказ у поля, а погашенная кнопка молчит о том, чего ждёт. */}
+      <button type="submit" disabled={busy}>
         Пригласить
       </button>
     </form>

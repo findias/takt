@@ -161,6 +161,7 @@ function CommentRow({
             className="description"
             rows={3}
             autoFocus
+            aria-label="Текст сообщения"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />

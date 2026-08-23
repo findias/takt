@@ -125,8 +125,10 @@ it('смена пароля объявляет и то, о чём не прос�
   await screen.findByText(ANNA.orgName)
 
   await userEvent.click(screen.getByRole('button', { name: 'Пароль' }))
-  await userEvent.type(screen.getByPlaceholderText('Текущий пароль'), 'parol12345')
-  await userEvent.type(screen.getByPlaceholderText('Новый пароль'), 'novyy-parol-12345')
+  // По подписи, а не по подсказке в поле: подпись — это то, чем поле
+  // названо, а подсказка исчезает с первым набранным символом.
+  await userEvent.type(screen.getByLabelText('Текущий пароль'), 'parol12345')
+  await userEvent.type(screen.getByLabelText('Новый пароль'), 'novyy-parol-12345')
   await userEvent.click(screen.getByRole('button', { name: 'Сменить пароль' }))
 
   await waitFor(() => expect(asked('/api/me/password')).toBe(1))

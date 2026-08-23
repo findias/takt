@@ -39,6 +39,16 @@ async function tinyTargets(page: Page): Promise<Small[]> {
   }, TARGET)
 }
 
+/**
+ * Элементы управления без имени.
+ *
+ * `placeholder` именем не считается — и это правило проверка сама
+ * нарушала до 23.08.2026: он стоял в списке носителей имени, и оттого
+ * тринадцать полей, у которых имени не было вовсе, проходили её
+ * зелёными. Подсказка в поле исчезает с первым набранным символом,
+ * а часть дикторов не читает её вовсе; поле, названное только ею,
+ * называется «поле ввода».
+ */
 async function namelessControls(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const out: string[] = []
@@ -53,7 +63,6 @@ async function namelessControls(page: Page): Promise<string[]> {
         el.getAttribute('title') ||
         (el.id && document.querySelector(`label[for="${el.id}"]`)) ||
         el.closest('label') ||
-        (el instanceof HTMLInputElement && el.placeholder) ||
         el.textContent?.trim()
       if (!labelled) out.push(`${el.tagName.toLowerCase()}.${el.className || 'без класса'}`)
     }
@@ -311,6 +320,19 @@ test('контраст держится в обеих темах', async ({ page
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await lowContrast(page, 'Светлая'), 'команда, светлая тема').toEqual([])
   expect(await lowContrast(page, 'Тёмная'), 'команда, тёмная тема').toEqual([])
+
+  // Форма с отказом — экран, которого этот замер не видел ни разу,
+  // и оттого цвет отказа единственным из всей палитры остался
+  // не пересчитанным после перехода на APCA: Lc 47 в тёмной теме
+  // при пороге 60. Ошибку показывали реже, чем всё остальное, — и она
+  // единственная жила без проверки.
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await page.getByPlaceholder('Название новой доски').fill('Отказ')
+  await page.getByPlaceholder('Ключ').fill('Ы')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await expect(page.getByLabel(/Ключ доски/)).toHaveAttribute('aria-invalid', 'true')
+  expect(await lowContrast(page, 'Светлая'), 'отказ формы, светлая тема').toEqual([])
+  expect(await lowContrast(page, 'Тёмная'), 'отказ формы, тёмная тема').toEqual([])
 })
 
 /**
@@ -413,6 +435,40 @@ test('у каждого элемента управления есть имя', 
  * сфокусировать, и `focus()` молча ничего не делал. Меню открывалось,
  * стрелки не работали, `Enter` закрывал его обратно.
  */
+/**
+ * Отказ формы словами и у поля, к которому относится.
+ *
+ * В настоящем браузере, а не в jsdom: `validity.tooShort` там
+ * не считается вовсе (прогон 23.08.2026), и порог длины пароля
+ * проверить нечем — поле с восемью обязательными символами и семью
+ * набранными объявляется годным.
+ */
+test('короткий пароль отвергается словами, а не пузырьком браузера', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Завести новую организацию' }).click()
+  await page.getByLabel('Как вас зовут').fill('Проверяющий')
+  await page.getByLabel('Почта').fill('short@example.test')
+  await page.getByLabel('Придумайте пароль').fill('korotko')
+  await page.getByRole('button', { name: 'Завести организацию' }).click()
+
+  const пароль = page.getByLabel('Придумайте пароль')
+  await expect(пароль).toHaveAttribute('aria-invalid', 'true')
+  // Отказ читается диктором вместе с полем: он связан с ним описанием,
+  // а не просто стоит рядом на экране.
+  const описание = await пароль.getAttribute('aria-describedby')
+  expect(описание, 'отказ не связан с полем').toBeTruthy()
+  const текст = (
+    await Promise.all(
+      описание!.split(' ').map((id) => page.locator(`#${id}`).textContent()),
+    )
+  ).join(' ')
+  // Отказ называет числа, а не повторяет правило: правило уже стоит
+  // подсказкой под тем же полем.
+  expect(текст).toContain('Сейчас 7 символов, нужно 8')
+  // И фокус там же: править надо это поле.
+  await expect(пароль).toBeFocused()
+})
+
 test('открытое меню отдаёт фокус первому пункту', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')
@@ -655,7 +711,9 @@ test('кнопки, которых по нескольку, названы по 
   await page.getByRole('button', { name: 'Команда' }).click()
   await page.getByPlaceholder('Почта коллеги').fill('kolya@example.test')
   await page.getByRole('button', { name: 'Пригласить' }).click()
-  await page.getByPlaceholder('Для чего ключ').fill('Обмен')
+  // По подписи: у поля теперь есть настоящая подпись, а `placeholder`
+  // с него снят — см. правило про имя поля выше.
+  await page.getByLabel('Для чего ключ').fill('Обмен')
   await page.getByRole('button', { name: 'Завести ключ', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Отозвать ключ/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toBeVisible()
