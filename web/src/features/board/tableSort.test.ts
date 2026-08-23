@@ -9,7 +9,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { comparator, parseSort, sortToQuery } from './tableSort.ts'
+import { SORT_DIRECTION, comparator, parseSort, sortToQuery } from './tableSort.ts'
 import type { Card } from '../../shared/api/index.ts'
 
 const NOW = Date.parse('2026-08-17T12:00:00Z')
@@ -114,4 +114,38 @@ test('сортировка живёт в адресе, а умолчание в 
 
   assert.equal(sortToQuery('due').toString(), 'sort=due')
   assert.equal(sortToQuery('age', new URLSearchParams('sort=due')).toString(), '')
+})
+
+test('заголовок объявляет то направление, в котором строки и правда идут', () => {
+  // Направление читает диктор, а порядок строк видит зрячий — и до
+  // сегодня они расходились в трёх случаях из пяти: в разметке стояло
+  // «по возрастанию» на все сортировки разом, включая возраст, оценку
+  // и приоритет, которые идут сверху вниз от большего к меньшему.
+  // Ошибка не падает и не видна: чтобы её заметить, надо было слушать
+  // столбец и одновременно на него смотреть.
+  //
+  // Проверяется не текст, а совпадение: у каждой сортировки берутся две
+  // карточки с заведомо разной величиной в её столбце, и порядок,
+  // который даёт `comparator`, сверяется с объявленным направлением.
+  const пары: Record<Parameters<typeof comparator>[0], [Card, Card]> = {
+    // Слева — та, у которой величина столбца меньше.
+    age: [started('младшая', 2), started('старшая', 9)],
+    column: [started('слева', 3), started('справа', 3, { columnId: 'вторая' })],
+    due: [started('раньше', 3, { dueOn: '2026-08-18' }), started('позже', 3, { dueOn: '2026-09-01' })],
+    estimate: [started('мелкая', 3, { estimate: 1 }), started('крупная', 3, { estimate: 8 })],
+    priority: [started('фоном', 3, { priority: 'low' }), started('наивысшая', 3, { priority: 'highest' })],
+  }
+
+  for (const [sort, [меньше, больше]] of Object.entries(пары) as [
+    Parameters<typeof comparator>[0],
+    [Card, Card],
+  ][]) {
+    const первая = order(sort, [больше, меньше])[0]
+    const ожидаем = SORT_DIRECTION[sort] === 'ascending' ? меньше.id : больше.id
+    assert.equal(
+      первая,
+      ожидаем,
+      `${sort}: объявлено ${SORT_DIRECTION[sort]}, а сверху оказалась «${первая}»`,
+    )
+  }
 })

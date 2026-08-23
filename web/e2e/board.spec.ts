@@ -146,6 +146,85 @@ test('поле обсуждения растёт по написанному и 
   await expect(page.getByRole('button', { name: 'Отправить' })).toBeVisible()
 })
 
+/**
+ * Таблица остаётся читаемой, когда её листают.
+ *
+ * Три вещи, которых не видно ни в разметке, ни на снимке спокойного
+ * экрана, и каждая ломается по-своему.
+ *
+ * Шапка: на третьем экране прокрутки столбцы есть, а чем они названы —
+ * надо вспоминать. Замер 23.08.2026 до починки: заголовок стоял
+ * на −3229 пикселей, то есть втрое дальше за краем, чем сам экран.
+ *
+ * Ключ: на узком экране таблица шире окна (790 при 360), и на прокрутке
+ * вбок первый столбец уезжал — строка теряла то единственное, чем она
+ * названа. На широком мониторе этого не увидеть вовсе: там всё влезает.
+ *
+ * Направление: `aria-sort` говорил «по возрастанию» на все пять
+ * сортировок разом, а три из них идут сверху вниз от большего
+ * к меньшему. Диктору говорили обратное тому, что видел зрячий.
+ */
+test('таблицу можно листать, не теряя ни шапки, ни ключа', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Листаемая')
+  // Строк должно быть больше, чем влезает, иначе прокручивать нечего
+  // и проверка проходит, ничего не проверив: первая её редакция
+  // на трёх карточках была зелёной и без всякого закрепления.
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await addCard(page, 'Очередь', `Задача ${n}`)
+  await page.setViewportSize({ width: 1200, height: 400 })
+
+  await page.getByRole('button', { name: 'Таблица', exact: true }).click()
+  const таблица = page.locator('.board-table')
+  await expect(таблица).toBeVisible()
+
+  // Возраст — сортировка по умолчанию, и она убывающая: самое старое
+  // сверху. Заголовок обязан говорить то же самое.
+  await expect(page.locator('th', { hasText: 'Возраст' })).toHaveAttribute(
+    'aria-sort',
+    'descending',
+  )
+  await page.getByRole('button', { name: /Отсортировать по сроку/ }).click()
+  await expect(page.locator('th', { hasText: 'Срок' })).toHaveAttribute('aria-sort', 'ascending')
+
+  // Шапка на месте после прокрутки: ячейка заголовка стоит у верхнего
+  // края области, которая листается, а не уезжает вместе со строками.
+  // Меряется ячейка, а не `thead`: у строки заголовка геометрия
+  // остаётся на месте, и по ней кажется, будто ничего не закреплено, —
+  // на этом первый замер и обманулся.
+  const шапка = await page.evaluate(() => {
+    const wrap = document.querySelector('.table-wrap') as HTMLElement
+    wrap.scrollTop = 400
+    // Не первая ячейка: она закреплена и по горизонтали — как столбец
+    // с ключом, — и потому осталась бы на месте даже без закрепления
+    // шапки. На этом вторая редакция проверки и обманулась: зелёная
+    // и с `position: sticky`, и без него.
+    const th = document.querySelector('.board-table thead th:nth-child(3)') as HTMLElement
+    return {
+      прокручено: Math.round(wrap.scrollTop),
+      верхШапки: Math.round(th.getBoundingClientRect().top),
+      верхОбласти: Math.round(wrap.getBoundingClientRect().top),
+    }
+  })
+  expect(шапка.прокручено, 'прокручивать нечего — проверка ничего не проверяет').toBeGreaterThan(0)
+  expect(
+    Math.abs(шапка.верхШапки - шапка.верхОбласти),
+    'заголовок уехал вместе со строками',
+  ).toBeLessThan(4)
+
+  // Ключ на месте после прокрутки вбок на узком экране.
+  await page.setViewportSize({ width: 360, height: 760 })
+  const ключ = await page.evaluate(() => {
+    const wrap = document.querySelector('.table-wrap') as HTMLElement
+    wrap.scrollLeft = 2000
+    const cell = document.querySelector('.board-table tbody td') as HTMLElement
+    const область = wrap.getBoundingClientRect()
+    const к = cell.getBoundingClientRect()
+    return { шире: wrap.scrollWidth > область.width, виден: к.right > область.left && к.left < область.right }
+  })
+  expect(ключ.шире, 'таблица влезла в узкое окно — прокрутки вбок нет, проверять нечего').toBe(true)
+  expect(ключ.виден, 'первый столбец уехал за край при прокрутке вбок').toBe(true)
+})
+
 test('от входа до переставленной карточки', async ({ page }) => {
   const who = await register(page)
 

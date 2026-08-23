@@ -18,6 +18,7 @@ import { NO_SUBTASKS } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { CardView } from './CardView.tsx'
 import type { ColumnPatch } from './useBoard.ts'
+import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
@@ -121,7 +122,6 @@ const CHUNK = 100
 
 export function ColumnView(props: ColumnProps) {
   const dropRef = useRef<HTMLDivElement>(null)
-  const tailRef = useRef<HTMLDivElement>(null)
   const [over, setOver] = useState(false)
   const [adding, setAdding] = useState(false)
   // Свёрнутая колонка не показывает ничего, кроме счётчика, — а форма
@@ -136,26 +136,12 @@ export function ColumnView(props: ColumnProps) {
   // карточка появляется, когда доска пересобралась.
   const added = useRef(false)
   const [settings, setSettings] = useState(false)
-  const [limit, setLimit] = useState(CHUNK)
 
   const total = props.cardIds.length
-  const shownCards = total > limit ? props.cardIds.slice(0, limit) : props.cardIds
-
-  // Дорисовка по прокрутке. Запас в четыреста пикселей: карточки
-  // должны появляться до того, как человек доскроллит до пустоты,
-  // иначе список выглядит обрывающимся.
-  useEffect(() => {
-    const element = tailRef.current
-    if (!element || total <= limit) return
-    const watcher = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) setLimit((l) => l + CHUNK)
-      },
-      { rootMargin: '400px' },
-    )
-    watcher.observe(element)
-    return () => watcher.disconnect()
-  }, [limit, total])
+  // Окно отрисовки — общее с таблицей: правило одно, разметка у каждого
+  // своя.
+  const window_ = useRenderWindow<HTMLDivElement>(total, CHUNK)
+  const shownCards = total > window_.limit ? props.cardIds.slice(0, window_.limit) : props.cardIds
 
   useEffect(() => {
     if (!added.current) return
@@ -260,7 +246,7 @@ export function ColumnView(props: ColumnProps) {
           const node = (e.target as HTMLElement).closest<HTMLElement>('[data-card]')
           if (!node) return
           const at = shownCards.indexOf(node.dataset.card ?? '')
-          if (at >= 0 && at >= shownCards.length - 5 && total > limit) setLimit((l) => l + CHUNK)
+          if (at >= 0 && at >= shownCards.length - 5 && window_.rest > 0) window_.more()
         }}
       >
         {shownCards.map((cardId) => (
@@ -303,17 +289,17 @@ export function ColumnView(props: ColumnProps) {
         ))}
         {/* Хвост: до него доходит либо прокрутка, либо клавиатура —
             и то и другое означает, что пора дорисовывать. */}
-        {total > limit && (
+        {window_.rest > 0 && (
           <div
-            ref={tailRef}
+            ref={window_.tail}
             className="cards-tail muted small"
             // Число не для красоты: без него список молча обрывается,
             // а «дальше ещё триста» объясняет и прокрутку, и то, что
             // поиск ищет по всем, а не по показанным.
-            onFocus={() => setLimit((l) => l + CHUNK)}
+            onFocus={window_.more}
             tabIndex={0}
           >
-            Ещё {total - limit}: прокрутите, чтобы показать
+            Ещё {window_.rest}: прокрутите, чтобы показать
           </div>
         )}
 

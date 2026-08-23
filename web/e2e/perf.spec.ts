@@ -167,6 +167,87 @@ test('доска в пятьсот карточек открывается и о
   expect(onEdit).toBeLessThan(200)
 })
 
+/**
+ * Таблица на тысяче строк.
+ *
+ * Тысяча, а не пятьсот: таблицу открывают ровно тогда, когда карточек
+ * стало столько, что доска перестала отвечать на вопросы «где самое
+ * старое» и «что мы обещали». То есть худший случай для неё — обычный.
+ *
+ * Замер 23.08.2026 до окна отрисовки: тысяча строк — двадцать тысяч
+ * узлов, 1117 мс до первой отрисовки при пороге в секунду и 96 мс
+ * на щелчок по заголовку. `content-visibility: auto` тут не помогает,
+ * и это проверено, а не предположено: контейнмент не применяется
+ * к внутренним элементам таблицы — раскладка 105.7 мс без него
+ * и 112.8 с ним, содержимое дальней строки отрисовано в обоих случаях.
+ * Помогло то же окно отрисовки, что в колонке.
+ */
+test('таблица на тысяче строк открывается и отвечает', async ({ page }) => {
+  test.slow()
+  await register(page)
+  const { boardId, columnId } = await boardWithColumn(page, 'Тысяча строк')
+  await fillBoard(page, boardId, columnId, 1000)
+
+  // Часами самой страницы, а не секундомером снаружи: `page.goto`
+  // меряет заодно переход и опрос драйвера, и на одной и той же
+  // странице это давало 950 мс снаружи против 560 внутри. Порог
+  // в секунду — про то, сколько ждёт человек, а не про то, сколько
+  // стоит запустить браузер из теста.
+  await page.addInitScript(`
+    const watcher = new MutationObserver(() => {
+      if (document.querySelector('.board-table')) {
+        window.__tableAt = performance.now()
+        watcher.disconnect()
+      }
+    })
+    // Наблюдаем document, а не documentElement: скрипт выполняется
+    // до разбора разметки, и корня в этот момент может ещё не быть —
+    // observe(null) роняет скрипт молча, и замер даёт NaN.
+    watcher.observe(document, { childList: true, subtree: true })
+  `)
+  await page.goto(`/board/${boardId}?view=table`)
+  await expect(page.locator('.board-table')).toBeVisible()
+  const firstPaint = await page.evaluate(
+    () => (window as unknown as { __tableAt: number }).__tableAt,
+  )
+  console.log(`первая отрисовка таблицы: ${Math.round(firstPaint)} мс`)
+  expect(firstPaint).toBeLessThan(1000)
+
+  // Окно отрисовки: в разметке сотня строк, а итог внизу считает все.
+  const строк = await page.locator('.board-table tbody tr').count()
+  console.log(`строк в разметке: ${строк} из 1000`)
+  expect(строк).toBeLessThan(200)
+  await expect(page.getByText('1000 карточек', { exact: false })).toBeVisible()
+  await expect(page.getByText('Ещё 900', { exact: false })).toBeVisible()
+
+  await page.evaluate(() => {
+    const w = window as unknown as { __slowest: number }
+    w.__slowest = 0
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) w.__slowest = Math.max(w.__slowest, entry.duration)
+    }).observe({ type: 'event', durationThreshold: 16, buffered: true })
+  })
+
+  // Щелчок по заголовку пересобирает всю таблицу — то самое действие,
+  // ради которого её и открыли.
+  await page.getByRole('button', { name: /Отсортировать по сроку/ }).click()
+  const сортировка = await page.evaluate(
+    () => (window as unknown as { __slowest: number }).__slowest,
+  )
+  console.log(`сортировка тысячи строк: ${Math.round(сортировка)} мс`)
+  expect(сортировка).toBeLessThan(200)
+
+  await page.evaluate(() => ((window as unknown as { __slowest: number }).__slowest = 0))
+  await page
+    .getByRole('searchbox', { name: 'Найти карточку' })
+    .pressSequentially('Задача номер 4', { delay: 30 })
+  const отбор = await page.evaluate(
+    () => (window as unknown as { __slowest: number }).__slowest,
+  )
+  console.log(`отбор в таблице: ${Math.round(отбор)} мс`)
+  expect(отбор).toBeLessThan(200)
+})
+
 test('длинная колонка дорисовывается по мере прокрутки', async ({ page }) => {
   test.slow()
   await register(page)

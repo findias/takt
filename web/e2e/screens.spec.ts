@@ -199,6 +199,19 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'Таблица' }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/12-таблица.png` })
+
+  // Таблица в узком окне: столбцов больше, чем влезает, и видно, что
+  // остаётся на месте при прокрутке вбок — ключ, которым названа
+  // строка. Вида в наборе не было, а ломается таблица именно здесь:
+  // на широком мониторе она влезает целиком и выглядит безупречно.
+  await page.setViewportSize({ width: 380, height: 760 })
+  await page.evaluate(() => {
+    const wrap = document.querySelector('.table-wrap') as HTMLElement
+    wrap.scrollLeft = 600
+  })
+  await page.screenshot({ path: `${SHOTS}/12б-таблица-узкая-прокручена.png` })
+  await page.setViewportSize({ width: 1440, height: 900 })
+
   await page.getByRole('button', { name: 'Изменения' }).click()
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${SHOTS}/13-изменения.png` })

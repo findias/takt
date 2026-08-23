@@ -11,10 +11,11 @@ import {
   dueIsBurning,
   priorityLabel,
 } from '../../entities/card/model.ts'
-import { SORT_NAMES, comparator } from './tableSort.ts'
+import { SORT_DIRECTION, SORT_NAMES, comparator } from './tableSort.ts'
 import type { Sort } from './tableSort.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
+import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 
 /**
  * Доска плоским списком.
@@ -82,6 +83,21 @@ export function TableView({
     return [...cards].sort(comparator(sort, position))
   }, [base.cards, columns, order, position, sort])
 
+  // Окно отрисовки — то же, что в колонке доски, и по той же причине,
+  // измеренной здесь заново: тысяча строк — это двадцать тысяч узлов
+  // и 1117 мс до первой отрисовки при пороге в секунду, притом что сам
+  // снимок с тысячей карточек приезжает и разбирается за 84 мс,
+  // а доска на тех же данных открывается за 284. Платили не за данные,
+  // а за строки.
+  //
+  // `content-visibility: auto` здесь не годится, и это проверено,
+  // а не предположено: на `tr` он не даёт ничего — контейнмент
+  // к внутренним элементам таблицы не применяется. Замер 23.08.2026:
+  // раскладка 105.7 мс без него и 112.8 с ним, содержимое дальней
+  // строки отрисовано в обоих случаях.
+  const window_ = useRenderWindow<HTMLTableRowElement>(rows.length)
+  const shown = rows.length > window_.limit ? rows.slice(0, window_.limit) : rows
+
   if (rows.length === 0) {
     return <p className="muted small table-empty">Ни одной карточки — показывать нечего.</p>
   }
@@ -120,7 +136,7 @@ export function TableView({
           </tr>
         </thead>
         <tbody>
-          {rows.map((card) => {
+          {shown.map((card) => {
             const assignees = base.cardAssignees[card.id] ?? []
             const own = base.cardLabels[card.id] ?? []
             const overdue = agingLabel(card, base.info.sleDays)
@@ -158,13 +174,20 @@ export function TableView({
                     от доски: таблицу открывают, чтобы сравнивать,
                     а сравнивать пустое место с пустым местом нельзя. */}
                 <td className="muted small">{priorityLabel(card.priority)}</td>
-                <td className="muted small">
+                {/* Числа стоят по правому краю: столбец чисел читают
+                    сверху вниз, сравнивая разряды, а при выравнивании
+                    влево «8» и «13» начинаются в одном месте
+                    и кончаются в разных — сравнивать приходится
+                    длину слова, а не величину. */}
+                <td className="muted small table-number">
                   {card.estimate === null ? '—' : `${card.estimate} ${UNIT_SHORT[unit]}`}
                 </td>
                 {/* Возраст показывается всем строкам, а не только
                     перешагнувшим обещание: на доске он подсказка,
                     а здесь — то, по чему сравнивают. */}
-                <td className={overdue ? 'table-overdue' : 'muted small'}>{ageText(card)}</td>
+                <td className={`table-number ${overdue ? 'table-overdue' : 'muted small'}`}>
+                  {ageText(card)}
+                </td>
                 {/* Срок — датой, а не отсчётом, в отличие от доски.
                     Доску спрашивают «успеваем ли» и отвечают ей
                     «через 4 дн.»; список открывают с вопросом «что мы
@@ -201,8 +224,24 @@ export function TableView({
               </tr>
             )
           })}
+          {window_.rest > 0 && (
+            /* Хвост — строка таблицы, а не абзац под ней: строка
+               в `tbody` стоит там, где кончился список, и прокрутка
+               доводит до неё. Число названо: без него список молча
+               обрывается, а «дальше ещё девятьсот» объясняет разом
+               и прокрутку, и то, что итог внизу считает все строки,
+               а не показанные. */
+            <tr ref={window_.tail} className="table-tail">
+              <td colSpan={11} tabIndex={0} onFocus={window_.more} className="muted small">
+                Ещё {window_.rest}: прокрутите, чтобы показать
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      {/* Итог — по всем строкам, а не по отрисованным: он отвечает
+          на вопрос «сколько всего», и окно отрисовки к этому вопросу
+          отношения не имеет. */}
       <p className="muted small">
         {cardsLabel(rows.length)}, {SORT_NAMES[sort]}.
       </p>
@@ -237,7 +276,11 @@ function SortableHead({
     return <th scope="col">{children}</th>
   }
   return (
-    <th scope="col" aria-sort={current ? 'ascending' : 'none'}>
+    // Направление берётся у порядка, а не пишется здесь словом:
+    // три сортировки из пяти идут по убыванию, и одно слово на все
+    // случаи означало, что диктору говорят обратное тому, что видит
+    // зрячий.
+    <th scope="col" aria-sort={current ? SORT_DIRECTION[by] : 'none'}>
       <button
         className="link table-sort"
         aria-label={current ? `${SORT_NAMES[by]} — так и отсортировано` : `Отсортировать ${SORT_NAMES[by]}`}
@@ -248,7 +291,7 @@ function SortableHead({
             `aria-hidden`, потому что «стрелка вверх» ответом не является. */}
         {current && (
           <span className="table-sort-mark" aria-hidden="true">
-            ↑
+            {SORT_DIRECTION[by] === 'ascending' ? '↑' : '↓'}
           </span>
         )}
       </button>

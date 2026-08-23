@@ -70,9 +70,19 @@ import { useBoard } from '../features/board/useBoard.ts'
 // по требованию. Класть их во входной кусок значит заставлять всех
 // платить временем открытия за то, чем пользуются иногда; порог
 // размера сборки на этом и упёрся.
-const TableView = lazy(() =>
-  import('../features/board/TableView.tsx').then((m) => ({ default: m.TableView })),
-)
+/**
+ * Кусок вида запрашивается сразу, а не после того, как приехали данные.
+ *
+ * Замер 23.08.2026 по адресу `?view=table`: приложение на экране к 73 мс,
+ * данные доски к 145, а таблица — только к 516. Между ними человек
+ * триста миллисекунд смотрел в пустой экран, потом на сто миллисекунд
+ * мелькал скелетон — ровно то мигание, ради которого у него и стоит
+ * задержка в двести. Причина: `lazy` начинает загрузку в тот момент,
+ * когда доходит до отрисовки, то есть после данных, — две ожидания
+ * выстраивались в очередь вместо того, чтобы идти рядом.
+ */
+const loadTableView = () => import('../features/board/TableView.tsx')
+const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView })))
 const Flow = lazy(() => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })))
 const Changes = lazy(() =>
   import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })),
@@ -191,6 +201,13 @@ export function Board({
   // список присылают ссылкой так же, как отфильтрованную доску.
   const view = query.get('view') === 'table' ? 'table' : query.get('view') === 'changes' ? 'changes' : 'board'
   const asTable = view === 'table'
+  // Кусок таблицы едет рядом с данными доски, а не за ними: см. довод
+  // у `loadTableView`. Эффект, а не вызов в теле, — загрузка не должна
+  // случаться при отрисовке, у которой могут быть свои причины
+  // повториться.
+  useEffect(() => {
+    if (asTable) void loadTableView()
+  }, [asTable])
   const sort = useMemo(() => parseSort(query), [query])
   const setFilters = useCallback(
     (next: Filters) => setQuery(filtersToQuery(next, query), { replace: true }),

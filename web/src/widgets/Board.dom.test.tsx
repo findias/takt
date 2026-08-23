@@ -530,9 +530,15 @@ describe('таблица', () => {
 
     await userEvent.click(within(head).getByRole('button'))
 
+    // Убывание, а не возрастание: сверху самая крупная оценка — это
+    // и проверяется двумя строками ниже. Прежде здесь стояло
+    // «ascending», и проверка своими же двумя половинами утверждала
+    // противоположное: заголовок объявляет одно направление, а строки
+    // идут в другом. Расхождение жило в разметке — одно слово стояло
+    // на все пять сортировок разом.
     expect(
       screen.getByRole('columnheader', { name: /Оценка/ }).getAttribute('aria-sort'),
-    ).toBe('ascending')
+    ).toBe('descending')
     const titles = screen.getAllByRole('row').slice(1).map((r) => r.textContent ?? '')
     expect(titles[0]).toMatch(/Дорогая/)
     expect(titles[1]).toMatch(/Дешёвая/)
