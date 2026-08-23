@@ -81,7 +81,12 @@ export function Workload({
           className={row.overdue ? 'workload-item workload-item--overdue' : 'workload-item'}
           title={title(row, unit)}
         >
-          <Avatar name={row.name} size={18} />
+          {/* Полный размер, а не второй план: в кружок восемнадцати
+              две заглавные не входят, и мелкий кружок берёт одну
+              букву — а здесь букв нужно две. Сводка отвечает
+              на вопрос «сколько на ком», и одна буква на доске
+              с двумя Борисами отвечает неверно. */}
+          <Avatar name={row.name} />
           <span className="small">
             {row.cards}
             {row.weight > 0 && ` · ${number(row.weight)}${row.unestimated > 0 ? '+' : ''}`}

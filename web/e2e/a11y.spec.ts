@@ -1077,3 +1077,76 @@ test('на бумагу уходит документ, а не снимок эк
     }),
   ).toEqual({ панельВидна: true, доскаСкрыта: true })
 })
+
+test('мельче шкалы на экране только монограмма аватара', async ({ page }) => {
+  // Шкала кегля начинается с 13 пикселей: ступень мельче не читалась
+  // и была убрана 23.08.2026. Одно место осталось ниже шкалы — буквы
+  // в кружке аватара, и это не текст, а монограмма: она спрятана
+  // от диктора (`aria-hidden`), имя целиком стоит рядом в `title`,
+  // и задача у неё не читаться, а узнаваться.
+  //
+  // Восемь пикселей там не выбраны, а выведены: самая широкая пара
+  // русских заглавных — «ШЩ» — занимает семнадцать пикселей из двадцати
+  // (замер 23.08.2026). Поднять кегль, не подняв кружок, значит
+  // обрезать буквы; поэтому проверка следит за обоими концами разом.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  const мелкие = await page.evaluate(() => {
+    const out: string[] = []
+    for (const el of document.querySelectorAll<HTMLElement>('body *')) {
+      const свой = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())
+      if (!свой) continue
+      const box = el.getBoundingClientRect()
+      if (!box.width || !box.height) continue
+      if (el.closest('.avatar')) continue
+      const кегль = parseFloat(getComputedStyle(el).fontSize)
+      if (кегль >= 13) continue
+      out.push(`${кегль}px ${el.className || el.tagName}: ${(el.textContent ?? '').trim().slice(0, 20)}`)
+    }
+    return out
+  })
+  expect(мелкие, 'текст мельче шкалы').toEqual([])
+
+  // Второй конец: буквы обязаны помещаться в кружок — и не те, что
+  // достались демонстрационным данным, а самые широкие, какие бывают.
+  const тесные = await page.evaluate(() => {
+    const out: string[] = []
+    const диапазон = document.createRange()
+    // Кружок «+2» в конце стопки — тот же круг и тот же расчёт;
+    // на нём проверяется «+99», потому что двузначное число там
+    // обычное дело.
+    for (const б of document.querySelectorAll<HTMLElement>('.avatar-more')) {
+      const круг = б.getBoundingClientRect().width
+      if (круг === 0) continue
+      const было = б.textContent
+      б.textContent = '+99'
+      диапазон.selectNodeContents(б)
+      const текст = диапазон.getBoundingClientRect().width
+      б.textContent = было
+      if (текст > круг - 1) out.push(`стопка ${Math.round(круг)}px, «+99» ${Math.round(текст)}px`)
+    }
+    for (const а of document.querySelectorAll<HTMLElement>('.avatar')) {
+      const круг0 = а.getBoundingClientRect().width
+      if (круг0 === 0) continue // спрятанный: мерить нечего
+      const было = а.textContent
+      // Мелкий кружок берёт одну букву — самой широкой считается
+      // соответственно «Ш» или «ШЩ».
+      а.textContent = (было ?? '').length > 1 ? 'ШЩ' : 'Ш'
+      диапазон.selectNodeContents(а)
+      const текст = диапазон.getBoundingClientRect().width
+      const круг = а.getBoundingClientRect().width
+      а.textContent = было
+      if (текст > круг - 1) {
+        out.push(`кружок ${Math.round(круг)}px, «ШЩ» ${Math.round(текст)}px`)
+      }
+    }
+    return [...new Set(out)]
+  })
+  expect(тесные, 'монограмма не помещается в кружок').toEqual([])
+})

@@ -45,7 +45,18 @@
      наборами; теперь он один. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
-  --text-xs: 0.75rem;
+  /* Ступеней четыре, а было пять. Пятая — 12 пикселей рядом
+     с тринадцатью — различием не была: замер 23.08.2026 нашёл эти два
+     кегля стоящими вплотную в шапке доски («ПОСТ» тринадцатью,
+     «v65» двенадцатью), а один и тот же класс `.link` рисовался
+     то так, то так — от наследования, а не по замыслу. Разница
+     в пиксель не читается ни на снимке при тройном увеличении,
+     ни тем более на экране; хуже того, «Заголовок раздела» был
+     мельче обычного мелкого текста.
+     Слияние стоило четырёх пикселей высоты у самой высокой карточки
+     и двенадцати на всю колонку из семи — при том, что ширина
+     страницы не изменилась вовсе. Различать уровни осталось
+     тем, что видно: цветом, насыщенностью, капителью. */
   --text-sm: 0.8125rem;
   --text: 0.9375rem;
   --text-lg: 1.125rem;
@@ -596,7 +607,7 @@ input[type='radio'] {
   background: var(--surface-2);
   color: var(--ink-2);
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;
@@ -907,7 +918,7 @@ input[type='radio'] {
   font-size: var(--text-sm);
 }
 .section-title {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -942,7 +953,7 @@ input[type='radio'] {
   max-width: 100%;
 }
 .role-chip {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   padding: var(--space-1) var(--space-2);
   border-radius: 999px;
@@ -1086,7 +1097,7 @@ select:disabled {
 }
 .note input {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 /* --- доска --- */
@@ -1169,7 +1180,7 @@ select:disabled {
 .version,
 .pending {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--ink-3);
 }
 .pending {
@@ -1271,7 +1282,7 @@ select:disabled {
    машинные обозначения. */
 .count {
   font-variant-numeric: tabular-nums;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   /* Счётчик — это кнопка: по ней ставят лимит колонки. Цифра шириной
      в пятнадцать пикселей цель нажатия по WCAG 2.5.8 не проходит. */
   min-width: var(--target);
@@ -1289,7 +1300,7 @@ select:disabled {
 }
 .count-edit {
   font-variant-numeric: tabular-nums;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   width: 3.5rem;
 }
 .inline-edit {
@@ -1508,7 +1519,7 @@ select:disabled {
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   color: var(--ink-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -1794,7 +1805,7 @@ textarea.description {
   flex-direction: row;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   min-width: 0;
 }
 .subtask .link {
@@ -1967,7 +1978,7 @@ textarea.description {
    сверять нельзя. */
 .card-number {
   flex: none;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
   white-space: nowrap;
@@ -1978,7 +1989,7 @@ textarea.description {
 
 .card-parent {
   margin: 0;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--ink-3);
   display: flex;
   align-items: center;
@@ -2036,7 +2047,7 @@ textarea.description {
   margin-top: var(--space-1);
 }
 .mark {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   padding: 0 var(--space-2);
   border-radius: 999px;
   background: var(--surface-2);
@@ -2250,7 +2261,7 @@ textarea.description {
 }
 
 .card-move {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   min-height: var(--target);
   /* Занимает всю строку: список колонок с длинными названиями в восьми
      ремах превращается в многоточие, и выбирать приходится наугад. */
@@ -2617,7 +2628,7 @@ textarea.description {
    стоит», потом «что делать». Имя переносится, а не обрезается:
    обрезанное имя не отвечает на вопрос, к кому идти. */
 .card-waits {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   min-width: 0;
 }
 .card-waits .link {
@@ -2635,7 +2646,7 @@ textarea.description {
 .priority-mark {
   border-radius: 999px;
   padding: 0 var(--space-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -2711,7 +2722,7 @@ textarea.description {
   border-style: dashed;
   border-color: var(--rule);
   color: var(--ink-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 /* На карточке пустое поле показывается только при наведении: иначе
    в каждой строке доски висит по два пунктирных плюса, и доска
@@ -2795,7 +2806,7 @@ textarea.description {
    при разговоре о загрузке, а не при поиске работы глазами. */
 .card-estimate {
   flex: none;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
   padding: 0 var(--space-1);
@@ -2809,7 +2820,7 @@ textarea.description {
    стоит выше и таблеткой — но уже тревожной. */
 .card-due {
   flex: none;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--ink-3);
 }
 
@@ -2820,7 +2831,7 @@ textarea.description {
 .card-age {
   flex: none;
   margin-left: auto;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
@@ -2853,7 +2864,7 @@ textarea.description {
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
@@ -3249,7 +3260,7 @@ textarea.description {
      все восемь разом, сменить тон — только один. */
   background: oklch(var(--chip-bg-l) var(--chip-c, var(--chip-bg-c)) var(--hue, 0));
   color: oklch(var(--chip-fg-l) var(--chip-fg-c-own, var(--chip-fg-c)) var(--hue, 0));
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.4;
   padding: 0 var(--space-2);
   border-radius: 999px;
@@ -3546,7 +3557,7 @@ textarea.description {
 }
 .board-table th {
   text-align: left;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--ink-3);
   padding: var(--space-1) var(--space-2);
