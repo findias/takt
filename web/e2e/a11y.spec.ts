@@ -521,6 +521,48 @@ test('меньше движения — не значит без движени�
   expect(тост.свойства).toContain('opacity')
 })
 
+/**
+ * Крупный текст отнимает место, а не содержимое.
+ *
+ * Проверка появилась из разбора чужого трекера (23.08.2026): там при
+ * увеличении шрифта до 200% названия задач обрезались многоточием,
+ * а служебные столбцы — идентификатор, дата, счётчик просмотров —
+ * сохраняли свою ширину целиком. То есть первым терялось то, ради чего
+ * таблицу и открывают.
+ *
+ * У нас в тот же замер название переносится на несколько строк
+ * и остаётся видимым полностью. Это не случайность, а следствие того,
+ * что ширину забирает столбец задачи, — и раз это следствие,
+ * его стоит закрепить: чужой пример показывает, как легко получить
+ * обратное.
+ */
+test('при двойном размере текста название задачи не обрезается', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Крупный текст')
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  const очередь = page.getByRole('region', { name: 'Очередь' })
+  await очередь.getByRole('button', { name: 'Завести карточку' }).click()
+  const длинное = 'Разобрать обращения службы поддержки за прошлую неделю и ответить всем'
+  await очередь.getByPlaceholder('Что нужно сделать?').fill(длинное)
+  await очередь.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await page.getByRole('button', { name: 'Таблица', exact: true }).click()
+  await expect(page.locator('.board-table')).toBeVisible()
+
+  await page.evaluate(() => (document.documentElement.style.fontSize = '32px'))
+  const что = await page.evaluate(() => {
+    const кнопка = document.querySelector('.table-title') as HTMLElement
+    return {
+      обрезано: кнопка.scrollWidth > кнопка.clientWidth + 1,
+      текст: (кнопка.textContent ?? '').trim(),
+    }
+  })
+  expect(что.обрезано, 'название обрезано: место отняли у того, ради чего открывают таблицу').toBe(
+    false,
+  )
+  expect(что.текст).toBe(длинное)
+})
+
 test('открытое меню отдаёт фокус первому пункту', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')

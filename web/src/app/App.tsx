@@ -1,5 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { ApiError, MIN_PASSWORD, ROLE_NAMES, api, onSessionLost } from '../shared/api/index.ts'
+import {
+  ApiError,
+  MIN_PASSWORD,
+  ROLE_NAMES,
+  api,
+  onConnectionChange,
+  onSessionLost,
+} from '../shared/api/index.ts'
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
@@ -37,9 +44,44 @@ export function App() {
     // оставлять на странице слова и кнопку, а не белое поле.
     <ErrorBoundary>
       <ToastHost>
+        <Offline />
         <Screens />
       </ToastHost>
     </ErrorBoundary>
+  )
+}
+
+/**
+ * «Связи с сервером нет» — полосой, пока её нет.
+ *
+ * Отказ связи до сих пор говорился тостом: «Нет связи с сервером.
+ * Карточка вернулась на место», с кнопкой «Повторить». Тост про
+ * действие — правильный, но он уезжает через пять секунд, а связь
+ * не появляется от того, что сообщение исчезло: между тостами
+ * отключённый интерфейс выглядит рабочим, и человек продолжает
+ * набирать в пустоту.
+ *
+ * Разница, которую видно только на чужом продукте (разбор Chromium
+ * Issue Tracker 23.08.2026, сеть выключена посреди работы): **разовое
+ * событие — тост, длящееся состояние — полоса в постоянном месте.**
+ * У них полоса стоит под шапкой во всю ширину и висит, пока связи нет.
+ *
+ * Живой регион, а не просто красная строка: появление узла диктор
+ * пропускает, а изменение существующей области объявляет.
+ */
+function Offline() {
+  const [connected, setConnected] = useState(true)
+  useEffect(() => onConnectionChange(setConnected), [])
+  // Узел стоит всегда, а меняется текст: скрытую область диктор
+  // не читает даже после того, как в ней появилось сообщение, — то же
+  // правило, что у отказа формы. Пустой абзац не занимает высоты,
+  // поэтому страница от него не прыгает.
+  return (
+    <p className="offline" role="status">
+      {connected
+        ? ''
+        : 'Связи с сервером нет. Сделанное не потеряется: как только связь вернётся, повторите действие.'}
+    </p>
   )
 }
 

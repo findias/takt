@@ -654,12 +654,20 @@ async function request<T>(
       keepalive,
     })
   } catch (e) {
+    // Связи нет — и это состояние, а не событие: оно длится, пока
+    // не починится. Разница видна по тому, чем о нём говорят: у разового
+    // отказа есть кнопка «Повторить» и время жизни, у состояния —
+    // постоянное место на экране, пока оно не кончится.
+    setConnected(false)
     throw new NetworkError(
       controller.signal.aborted ? 'Сервер не ответил за 10 секунд' : 'Нет связи с сервером',
     )
   } finally {
     clearTimeout(timer)
   }
+  // Ответ пришёл — связь есть, каким бы код ни был: отказ сервера
+  // означает, что сервер отвечает.
+  setConnected(true)
 
   const text = await response.text()
   const parsed = text ? JSON.parse(text) : null
@@ -670,6 +678,37 @@ async function request<T>(
   if (response.status === 401) sessionLost()
   if (!response.ok) throw new ApiError(response.status, parsed)
   return parsed as T
+}
+
+/**
+ * Есть ли связь с сервером.
+ *
+ * Считается по нашим же запросам, а не по `navigator.onLine`: тот
+ * отвечает «сеть есть» и когда сеть есть, а сервера нет, — то есть
+ * ровно в том случае, ради которого об этом и спрашивают.
+ *
+ * Разбор чужого трекера 23.08.2026 (Chromium Issue Tracker, сеть
+ * выключена посреди работы): отказ связи показан полосой во всю ширину
+ * под шапкой и висит, пока связи нет. У нас на то же место стоял тост
+ * с кнопкой «Повторить» — а тост уезжает через пять секунд, и между
+ * тостами отключённый интерфейс выглядит рабочим. Тост при этом
+ * остаётся: он про конкретное действие и его повтор, а полоса — про
+ * состояние.
+ */
+const connectionHandlers = new Set<(connected: boolean) => void>()
+let connected = true
+
+export function onConnectionChange(handler: (connected: boolean) => void): () => void {
+  connectionHandlers.add(handler)
+  return () => {
+    connectionHandlers.delete(handler)
+  }
+}
+
+function setConnected(next: boolean) {
+  if (connected === next) return
+  connected = next
+  for (const handler of connectionHandlers) handler(next)
 }
 
 const sessionLostHandlers = new Set<() => void>()
