@@ -1150,3 +1150,56 @@ test('мельче шкалы на экране только монограмм�
   })
   expect(тесные, 'монограмма не помещается в кружок').toEqual([])
 })
+
+test('одинаковые ряды действий стоят столбцом, а не лесенкой', async ({ page }) => {
+  // Ряд действий у подразделения одинаков во всех строках, и потому
+  // обязан стоять на одном месте. Ехал он от строки к строке, потому
+  // что `select` меряется по самому длинному своему варианту, а
+  // варианты у каждой строки свои: «В «Разработка»» против
+  // «В «Продажи»» — 151 пиксель против 134 (замер 23.08.2026).
+  //
+  // Заметить это глазом можно, только положив строки рядом: сдвиг
+  // в семнадцать пикселей читается как небрежность, а не как ошибка,
+  // и потому живёт годами.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Структура' }).click()
+  await expect(page.getByRole('heading', { name: 'Подразделения', exact: true })).toBeVisible()
+
+  const левые = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLSelectElement>('select')]
+      .filter((s) => (s.options[0]?.text ?? '').startsWith('Перенести'))
+      .map((s) => Math.round(s.getBoundingClientRect().left)),
+  )
+  expect(левые.length, 'подразделений с действиями').toBeGreaterThan(2)
+  expect(
+    Math.max(...левые) - Math.min(...левые),
+    `ряды действий разъехались: ${левые.join(', ')}`,
+  ).toBe(0)
+})
+
+test('в архиве название карточки не обрезается', async ({ page }) => {
+  // Архив — список, в котором строка и есть способ узнать карточку.
+  // Ключ там тоже стоит, но по ключу карточку не вспоминают.
+  // Замер 23.08.2026: обрезаны были оба названия из двух, потерянного
+  // 71 и 57 пикселей — то есть отрезано ровно то, ради чего строка
+  // показывается.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await page.getByRole('button', { name: 'Архив' }).click()
+  await expect(page.getByRole('searchbox', { name: /архиве/ })).toBeVisible()
+
+  const обрезанные = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('.wrap-title')]
+      .filter((el) => el.scrollWidth > el.clientWidth + 1)
+      .map((el) => `${(el.textContent ?? '').trim().slice(0, 30)} (−${el.scrollWidth - el.clientWidth}px)`),
+  )
+  expect(обрезанные, 'названия в архиве обрезаны').toEqual([])
+})
