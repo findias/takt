@@ -30,6 +30,7 @@ import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
+import { withViewTransition } from '../shared/lib/withViewTransition.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
 import { SORT_NAMES, parseSort, sortToQuery } from '../features/board/tableSort.ts'
@@ -1015,7 +1016,10 @@ export function Board({
                     const next = new URLSearchParams(query)
                     if (item.key === 'board') next.delete('view')
                     else next.set('view', item.key)
-                    setQuery(next)
+                    // Смена раскладки показывается движением: это те же
+                    // карточки, а не другой экран. Довод и замер —
+                    // в `withViewTransition`.
+                    withViewTransition(() => setQuery(next))
                   }}
                 >
                   {item.name}

@@ -469,6 +469,58 @@ test('короткий пароль отвергается словами, а н
   await expect(пароль).toBeFocused()
 })
 
+/**
+ * Просьба меньше движения заменяет его, а не выключает.
+ *
+ * Правило записано в стилях: тем, кто просил меньше движения, сдвиг
+ * меняется на проявление, потому что иначе теряется само объяснение
+ * перемещения. Нарушал это правило собственный глобальный сброс:
+ * замер 23.08.2026 показал у вспышки после переноса длительность
+ * 1e-05 с — то есть не «короче», а «нет», и карточка, уехавшая
+ * в другую колонку, исчезала без объяснений.
+ *
+ * В стилях это увидеть нельзя: правило для вспышки стояло на месте
+ * и выглядело работающим. Спор двух `!important` разрешается только
+ * вычисленным стилем, то есть в браузере.
+ */
+test('меньше движения — не значит без движения', async ({ page }) => {
+  await register(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+
+  const вспышка = await page.evaluate(() => {
+    const el = document.createElement('div')
+    el.className = 'card card--flash'
+    document.body.append(el)
+    const cs = getComputedStyle(el)
+    const из = { name: cs.animationName, duration: cs.animationDuration }
+    el.remove()
+    return из
+  })
+  // Вспышка объясняет перенос и состоит из цвета, а не из сдвига:
+  // её просьба «меньше движения» не отменяет.
+  expect(вспышка.name, 'вспышка после переноса исчезла вовсе').toBe('card-flash')
+  expect(
+    parseFloat(вспышка.duration),
+    `вспышка погашена сбросом: ${вспышка.duration}`,
+  ).toBeGreaterThan(0.05)
+
+  // А сдвиг у приезжающего сообщения — отменяет: остаётся проявление.
+  const тост = await page.evaluate(() => {
+    const host = document.createElement('div')
+    host.className = 'toasts'
+    const el = document.createElement('div')
+    el.className = 'toast'
+    host.append(el)
+    document.body.append(host)
+    const cs = getComputedStyle(el)
+    const из = { свойства: cs.transitionProperty }
+    host.remove()
+    return из
+  })
+  expect(тост.свойства).not.toContain('translate')
+  expect(тост.свойства).toContain('opacity')
+})
+
 test('открытое меню отдаёт фокус первому пункту', async ({ page }) => {
   await register(page)
   await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')
