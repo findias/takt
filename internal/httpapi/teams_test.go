@@ -179,8 +179,11 @@ func TestTreeLimitsAnswerWithConflict(t *testing.T) {
 	if code != http.StatusConflict {
 		t.Fatalf("шестой уровень: код %d, ожидался 409; тело: %s", code, raw)
 	}
-	if msg, _ := field(t, raw, "error").(string); !strings.Contains(msg, "глубина") {
-		t.Errorf("отказ не объясняет причину: %s", raw)
+	// Слово имеет значение: на этом экране всё зовётся подразделением,
+	// а «команда» называет соседний экран, где люди и роли, — прочитав
+	// про команды, человек пойдёт искать причину туда (миграция 0049).
+	if msg, _ := field(t, raw, "error").(string); !strings.Contains(msg, "глубина вложенности подразделений") {
+		t.Errorf("отказ не объясняет причину словами этого экрана: %s", raw)
 	}
 
 	// Цикл: корень под собственного потомка.
@@ -400,9 +403,28 @@ func TestAreaAdminRunsTheirAreaAndNothingElse(t *testing.T) {
 	admin.mustDo("POST", "/api/teams/"+dept+"/restore", nil, http.StatusNoContent)
 
 	// Корень — за владельцем: у нового корневого узла нет старшего,
-	// а значит нет и того, кто за него отвечает.
-	if code, body := admin.do("POST", "/api/teams", map[string]any{"name": "Свой корень"}); code != http.StatusForbidden {
+	// а значит нет и того, кто за него отвечает. Отказ говорит именно
+	// это: общий текст называет «администратора этого подразделения»,
+	// а в корне никакого «этого» нет — администратор области прочитал
+	// бы его как «я же администратор» и пошёл искать поломку.
+	code, body := admin.do("POST", "/api/teams", map[string]any{"name": "Свой корень"})
+	if code != http.StatusForbidden {
 		t.Errorf("корневой узел администратором: код %d, ожидался 403; тело: %s", code, body)
+	}
+	if msg, _ := field(t, body, "error").(string); !strings.Contains(msg, "корневое подразделение") {
+		t.Errorf("отказ в корне не про корень: %s", body)
+	}
+
+	// Старший, которого нет, — это про старшего, а не голое «не найдено»:
+	// в запросе две сущности, название и родитель, и по такому ответу
+	// не понять, о которой речь.
+	code, body = admin.do("POST", "/api/teams",
+		map[string]any{"name": "Под призраком", "parentId": uuid.NewString()})
+	if code != http.StatusNotFound {
+		t.Errorf("несуществующий старший: код %d, ожидался 404; тело: %s", code, body)
+	}
+	if msg, _ := field(t, body, "error").(string); !strings.Contains(msg, "внутрь которого") {
+		t.Errorf("отказ не называет, что именно не найдено: %s", body)
 	}
 
 	// Соседняя область — чужая целиком.
@@ -451,5 +473,55 @@ func TestAreaAdminRunsTheirAreaAndNothingElse(t *testing.T) {
 	}
 	if len(archive.Teams) != 1 || archive.Teams[0].ParentID == nil || *archive.Teams[0].ParentID != area {
 		t.Errorf("архив не называет старшего идентификатором: %s", raw)
+	}
+}
+
+// Явный null у родителя делает узел корневым — и делает, а не отвечает
+// «сделано». До 23 августа 2026 обработчик читал родителя в *string,
+// где неприсланное поле и присланный null неотличимы: запрос менял
+// ничего и отвечал 204. Комментарий над обработчиком при этом обещал
+// ровно обратное — обещание, жившее только в комментарии, и притом
+// ложное. Клиент ходит признаком root, поэтому экран работал, а через
+// API правда обнаруживалась только повторным чтением дерева.
+func TestExplicitNullParentActuallyMovesToRoot(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	company := owner.team("Компания", nil)
+	dev := owner.team("Разработка", company)
+
+	owner.mustDo("PATCH", "/api/teams/"+dev, map[string]any{"parentId": nil}, http.StatusNoContent)
+
+	raw := owner.mustDo("GET", "/api/teams", nil, http.StatusOK)
+	var list struct {
+		Teams []struct {
+			ID       string  `json:"id"`
+			ParentID *string `json:"parentId"`
+			Depth    int     `json:"depth"`
+		} `json:"teams"`
+	}
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range list.Teams {
+		if item.ID != dev {
+			continue
+		}
+		if item.ParentID != nil || item.Depth != 1 {
+			t.Fatalf("узел не стал корневым: %+v; тело: %s", item, raw)
+		}
+	}
+
+	// Неприсланный родитель по-прежнему не трогается: переименование
+	// одним полем не должно вырывать узел из дерева.
+	back := owner.team("Отдел", &dev)
+	owner.mustDo("PATCH", "/api/teams/"+back, map[string]any{"name": "Отдел связи"}, http.StatusNoContent)
+	raw = owner.mustDo("GET", "/api/teams", nil, http.StatusOK)
+	if err := json.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range list.Teams {
+		if item.ID == back && item.ParentID == nil {
+			t.Errorf("переименование вырвало узел из дерева: %+v", item)
+		}
 	}
 }

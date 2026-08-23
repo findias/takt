@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -75,20 +76,46 @@ func (s *Server) handleCreateTeam(w http.ResponseWriter, r *http.Request, p auth
 		return
 	}
 	t, err := s.teams.Create(r.Context(), p.OrgID, p.ID, req.Name, req.ParentID)
-	if s.failTeam(w, "создание команды", err) {
-		return
+	switch {
+	// Общий отказ называет двоих — владельца и администратора «этого
+	// подразделения», — но в корне никакого «этого» нет, и администратор
+	// области читает такой текст как «я же администратор» и идёт искать
+	// поломку. Здесь причина не в том, кто он, а в том, что у корневого
+	// узла нет старшего.
+	case errors.Is(err, team.ErrForbidden) && req.ParentID == nil:
+		writeError(w, http.StatusForbidden,
+			"корневое подразделение заводит владелец организации: у него нет старшего, "+
+				"а значит нет и того, кто за него отвечает. Заведите отдел внутри своего подразделения")
+	// «Не найдено» на запрос с двумя сущностями — названием и старшим —
+	// не говорит, о которой из них речь.
+	case errors.Is(err, team.ErrNotFound):
+		writeError(w, http.StatusNotFound,
+			"подразделение, внутрь которого вы заводите, не найдено: обновите структуру")
+	default:
+		if s.failTeam(w, "создание команды", err) {
+			return
+		}
+		writeJSON(w, http.StatusCreated, t)
 	}
-	writeJSON(w, http.StatusCreated, t)
 }
 
 // handleUpdateTeam меняет любое подмножество свойств: не присланное поле
-// не трогается. Для родителя это значит, что «оставить как есть» и
-// «сделать корневой» — разные намерения, и второе выражается явным null.
+// не трогается. Для родителя это значит, что «оставить как есть»
+// и «сделать корневым» — разные намерения, и различить их `*string`
+// не может: неприсланное поле и присланный null дают в нём одно и то же
+// nil. Поэтому родитель разбирается сырым куском: присутствие поля
+// видно по нему, а не по значению.
+//
+// До 23 августа 2026 здесь стоял `*string`, и комментарий обещал, что
+// корневым делает явный null. Обещание было ложным ровно наоборот:
+// `{"parentId": null}` не трогал ничего и отвечал 204 «сделано» —
+// молчаливая ложь тому, кто пришёл к API без нашего клиента.
+// Признак `root` остался: он старше и им ходит клиент.
 func (s *Server) handleUpdateTeam(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	var req struct {
-		Name     *string `json:"name"`
-		ParentID *string `json:"parentId"`
-		Root     bool    `json:"root"`
+		Name     *string         `json:"name"`
+		ParentID json.RawMessage `json:"parentId"`
+		Root     bool            `json:"root"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -101,11 +128,21 @@ func (s *Server) handleUpdateTeam(w http.ResponseWriter, r *http.Request, p auth
 			return
 		}
 	}
-	if req.ParentID != nil || req.Root {
-		parent := req.ParentID
-		if req.Root {
-			parent = nil
+
+	var parent *string
+	move := req.Root
+	if len(req.ParentID) > 0 {
+		move = true
+		if err := json.Unmarshal(req.ParentID, &parent); err != nil {
+			writeError(w, http.StatusBadRequest,
+				"parentId — это идентификатор старшего подразделения или null для корневого")
+			return
 		}
+	}
+	if req.Root {
+		parent = nil
+	}
+	if move {
 		if err := s.teams.Move(r.Context(), p.OrgID, p.ID, id, parent); err != nil {
 			s.failTeam(w, "перенос команды", err)
 			return
