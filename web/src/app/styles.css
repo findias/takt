@@ -99,17 +99,32 @@
 /* Тёмная тема системная, но с явным перекрытием: человек, у которого
    система светлая, а глаза устали, должен иметь выбор. */
 @media (prefers-color-scheme: dark) {
+  /* Тёмная шкала текста расставлена по APCA, а не по отношению WCAG.
+     Отношение WCAG около чёрного завышает контраст — авторы APCA
+     говорят прямо, что для проектирования тёмной темы оно не годится, —
+     и уровни уехали вниз незаметно: приглушённый текст давал WCAG 5.79,
+     выше, чем 5.43 той же роли в светлой теме, при APCA Lc 44 против 77.
+     То есть прибор показывал «лучше», а видно было хуже вдвое.
+     Запас у обеих тем одинаковый (белый на этой подложке — Lc 106),
+     так что дело было не в темноте фона, а в том, где стоят уровни.
+     Теперь стоят: ink 93, ink-2 78, ink-3 64 — по 15 Lc между
+     соседями, — и граница поля 50 вместо 26 при пороге 45.
+
+     Порог берётся по худшей подложке, а не по средней: один и тот же
+     токен ложится и на paper, и на surface, и на surface-2, и разница
+     между ними — полторы единицы Lc. Первая правка это упустила,
+     и граница поля прошла на surface и не прошла на surface-2. */
   :root:not([data-theme='light']) {
     --paper: #0d1312;
     --surface: #161e1c;
     --surface-2: #1e2826;
     --ink: #e6edea;
-    --ink-2: #aebcb7;
-    --ink-3: #8b9a95;
+    --ink-2: #ccd5d1;
+    --ink-3: #b3bdba;
     --rule: #27322f;
-    --rule-strong: #6b7370;
+    --rule-strong: #9ba3a0;
     --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
-    --accent: #52c1a4;
+    --accent: #6dcbb2;
     --accent-soft: #122c25;
     --warn: #e08264;
     --warn-soft: #2d1a15;
@@ -124,12 +139,12 @@
   --surface: #161e1c;
   --surface-2: #1e2826;
   --ink: #e6edea;
-  --ink-2: #aebcb7;
-  --ink-3: #8b9a95;
+  --ink-2: #ccd5d1;
+  --ink-3: #b3bdba;
   --rule: #27322f;
-  --rule-strong: #6b7370;
+  --rule-strong: #9ba3a0;
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
-  --accent: #52c1a4;
+  --accent: #6dcbb2;
   --accent-soft: #122c25;
   --warn: #e08264;
   --warn-soft: #2d1a15;
