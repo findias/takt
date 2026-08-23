@@ -50,9 +50,6 @@ services:
       # Кто заводит организации: first — первый пришедший, дальше
       # по приглашению; open — кто угодно; closed — никто.
       SIGNUP: ${SIGNUP:-first}
-      STORAGE: file:///data/attachments
-    volumes:
-      - attachments:/data/attachments
     ports:
       - "${PORT:-8080}:8080"
     depends_on:
@@ -69,4 +66,3 @@ services:
 
 volumes:
   pgdata:
-  attachments:

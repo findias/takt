@@ -117,6 +117,21 @@ DATABASE_URL
   value: ":8080"
 - name: SIGNUP
   value: {{ .Values.signup | quote }}
+{{- if .Values.oidc.enabled }}
+- name: OIDC_ISSUER
+  value: {{ required "нужен oidc.issuer: адрес провайдера входа" .Values.oidc.issuer | quote }}
+- name: OIDC_CLIENT_ID
+  value: {{ required "нужен oidc.clientId" .Values.oidc.clientId | quote }}
+- name: OIDC_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ required "нужен oidc.existingSecret: секрет клиента не место в values" .Values.oidc.existingSecret }}
+      key: OIDC_CLIENT_SECRET
+- name: OIDC_ORG
+  value: {{ .Values.oidc.org | quote }}
+- name: OIDC_LABEL
+  value: {{ .Values.oidc.label | quote }}
+{{- end }}
 {{- with .Values.extraEnv }}
 {{ toYaml . }}
 {{- end }}
