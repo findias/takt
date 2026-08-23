@@ -51,6 +51,13 @@ th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
 border-bottom:1px solid var(--rule)}
 th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
 color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
 color:var(--ink-3);font-size:.85rem}
 :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -59,10 +66,13 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <nav aria-label="Разделы документации">
-<a href="для-команды.html">Работа на доске</a>
-<a href="для-владельца.html">Организация</a>
-<a href="README.html" aria-current="page">Установка и обслуживание</a>
-<a href="REQUIREMENTS.html">Что продукт обязан делать</a>
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html">Справочник</a>
+<a href="устройство.html">Устройство</a>
+<a href="README.html" aria-current="page">Установка</a>
+<a href="REQUIREMENTS.html">Требования</a>
 <a href="CHANGELOG.html">Что менялось</a>
 </nav>
 <h1>Доска</h1>
@@ -82,7 +92,7 @@ make run       # приложение на http://localhost:8099</code></pre>
 <p>После установки — проверка, что поставлено правильно:</p>
 <pre><code>docker compose run --rm app doctor     # или: /app/board doctor в поде</code></pre>
 <p>Готовность отвечает «процесс жив и база отвечает»; <code>doctor</code> отвечает на другой вопрос: та ли схема, тот ли адрес (а значит, дойдёт ли защищённая cookie), достижим ли провайдер входа, доходят ли оповещения базы, без которых доска не обновляется сама.</p>
-<p>Как вести работу на доске — <a href="docs/для-команды.html"><code>docs/для-команды.md</code></a>; как настроить организацию, права и интеграции — <a href="docs/для-владельца.html"><code>docs/для-владельца.md</code></a>; этот файл — для того, кто ставит и держит.</p>
+<p>Документация для тех, кто пользуется: <a href="docs/индекс.html">обзор</a>, <a href="docs/старт.html">первые пятнадцать минут</a>, <a href="docs/как.html">как сделать</a>, <a href="docs/справочник.html">справочник</a>, <a href="docs/устройство.html">устройство</a>. Этот файл — для того, кто ставит и держит.</p>
 <p>Что продукт обязан делать, в каких пределах и чего он делать не будет — в <a href="REQUIREMENTS.html"><code>REQUIREMENTS.md</code></a>. Там же сказано, чем каждое обещание закреплено и что мы ждём от того, кто ставит.</p>
 <h2>Что уже работает</h2>
 <ul>
@@ -270,7 +280,7 @@ helm install board deploy/helm/board \
 <p>Пароль базы передаётся готовым секретом, а не значением чарта: из values он попадает и в историю выкладок, и в вывод <code>helm get values</code>, который читают шире, чем кажется.</p>
 <p>Миграции выполняет задача с хуком <code>pre-install,pre-upgrade</code> — один раз и до того, как поедут новые поды. Упавшая задача остаётся: по ней и смотрят, почему не поехала выкладка.</p>
 <p><strong>Две пробы, а не одна.</strong> <code>/healthz</code> отвечает на вопрос «процесс жив» и базы не касается: если проверять живость базой, моргнувшая база перезапустит все реплики разом и к своему возвращению застанет их занятыми рестартом. <code>/readyz</code> отвечает «можно давать запросы» и базу проверяет. Он же гаснет первым при остановке: получив сигнал, реплика сначала снимает готовность, ждёт пять секунд, пока балансировщик её вычеркнет, и только потом закрывает соединения. Поэтому <code>terminationGracePeriodSeconds</code> в чарте больше, чем пауза и таймаут остановки вместе.</p>
-<footer>Доска, версия v0.1.0-6-g1ae310f-dirty. Страница собрана из README.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.1.0-7-g2696eed-dirty. Страница собрана из README.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

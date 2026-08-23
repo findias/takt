@@ -32,6 +32,7 @@ var (
 	списокЧисло = regexp.MustCompile(`^\d+\.\s+(.*)$`)
 	разделитель = regexp.MustCompile(`^\|[\s:|-]+\|$`)
 	ссылка      = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	картинка    = regexp.MustCompile(`^!\[([^\]]*)\]\(([^)]+)\)\s*$`)
 	жирный      = regexp.MustCompile(`\*\*([^*]+)\*\*`)
 	код         = regexp.MustCompile("`([^`]+)`")
 )
@@ -102,6 +103,18 @@ func Отрисовать(источник string) (заголовокСтран
 		if strings.TrimSpace(строка) == "" {
 			закрытьСписок()
 			закрытьТаблицу()
+			continue
+		}
+
+		// Картинка — отдельный блок, а не часть абзаца: подпись
+		// в alt обязательна, иначе снимок для незрячего — пустое место
+		// посреди текста.
+		if m := картинка.FindStringSubmatch(строка); m != nil {
+			закрытьСписок()
+			закрытьТаблицу()
+			fmt.Fprintf(&out, `<figure><img src="%s" alt="%s" loading="lazy">`+"\n"+
+				`<figcaption>%s</figcaption></figure>`+"\n",
+				html.EscapeString(m[2]), html.EscapeString(m[1]), html.EscapeString(m[1]))
 			continue
 		}
 

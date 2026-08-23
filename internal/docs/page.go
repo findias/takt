@@ -63,6 +63,13 @@ th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
 border-bottom:1px solid var(--rule)}
 th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
 color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
 color:var(--ink-3);font-size:.85rem}
 :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
