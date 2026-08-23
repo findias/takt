@@ -116,6 +116,16 @@ screens: demo ## Снять все экраны стенда в web/screenshots
 e2e: db migrate ## Сквозные сценарии в настоящем браузере
 	cd web && npm run test:e2e
 
+# --- документация ---
+
+# HTML собирается из тех же `.md`, что читают в репозитории: второй
+# набор текстов, набранный руками, разошёлся бы с первым в тот же день
+# и разошёлся бы молча. Страницы самодостаточны — ни одной внешней
+# ссылки: их читают в закрытом контуре и из папки на диске.
+.PHONY: docs
+docs: ## Собрать документацию в HTML (docs/html)
+	go run ./cmd/docs
+
 # --- безопасность ---
 
 # Отдельной целью, а не частью `make check`, по той же причине, что
@@ -227,7 +237,9 @@ bundle: ## Собрать комплект для установки без до
 	# а описание сборки им быть не обязано. Комплект с чартом связывает
 	# тег образа, передаваемый при установке.
 	helm package deploy/helm/board --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
+	go run ./cmd/docs
 	cp README.md CHANGELOG.md "$(BUNDLE_DIR)/"
+	cp -r docs/html "$(BUNDLE_DIR)/docs"
 	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
 	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
 	@echo

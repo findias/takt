@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Требования к продукту</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="для-команды.html">Работа на доске</a>
+<a href="для-владельца.html">Организация</a>
+<a href="README.html">Установка и обслуживание</a>
+<a href="REQUIREMENTS.html" aria-current="page">Что продукт обязан делать</a>
+<a href="CHANGELOG.html">Что менялось</a>
+</nav>
+<h1>Требования к продукту</h1>
+<p>Что доска обязана делать, для кого, в каких пределах и чего она делать не будет.</p>
+<p>Написано это позже всего остального, и цена запоздания измерена: три сверки подряд — интеграционное API, стратегия проверок, вход и права — нашли двадцать шесть расхождений, и почти каждое одного рода. Обещание существовало только в комментарии или в чьей-то памяти. <strong>Требование, которое нигде не записано, нельзя ни выполнить, ни нарушить — с ним можно только разойтись.</strong></p>
+<h2>Как это читать</h2>
+<p>Требование здесь — <strong>то, что мы обязуемся не сломать</strong>, а не то, что кто-то обязуется принять. Отсюда и форма: у каждого есть номер и графа «чем закреплено» — файл проверки, которая упадёт, если требование перестанет выполняться.</p>
+<p>Незакреплённое помечено словом «не закреплено» и объяснением, почему. Пустой графы быть не должно: она означала бы, что требование держится на памяти, — то самое, ради чего документ и заведён. Проверяется это <code>internal/requirements</code>: файлы, названные в графе, обязаны существовать, номера — не повторяться, графа — не пустовать.</p>
+<p>Чего здесь нет: как это устроено (<code>ROADMAP.md</code>, <code>research/*.html</code>), как это править (<code>внутренняя-инструкция.md</code>), какой у API контракт (<code>internal/httpapi/openapi.json</code> и страница <code>/api/v1/docs</code>).</p>
+<h2>Для кого</h2>
+<p>Команда, ведущая работу канбаном: до 130 человек в одной установке, доски в сотни карточек, несколько организаций в одной базе. Роли — владелец организации, участник, наблюдатель, администратор подразделения.</p>
+<p>Не для: публичного облака с тысячами арендаторов, личных списков дел, управления проектами со сроками и диаграммами Ганта.</p>
+<h2>Что продукт обязан делать</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>Т1</td><td>Доска: колонки, карточки, перенос мышью и с клавиатуры; порядок карточек ручной</td><td><code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т2</td><td>Перенос применяется мгновенно и переживает обрыв связи и перезагрузку страницы</td><td><code>web/e2e/board.spec.ts</code>, <code>internal/board/regression_test.go</code></td></tr>
+<tr><td>Т3</td><td>Изменение доходит до всех, у кого доска открыта, без перезагрузки</td><td><code>internal/httpapi/stream_test.go</code>, <code>internal/httpapi/load_test.go</code></td></tr>
+<tr><td>Т4</td><td>Итерации: заведение, закрытие, отчёт по закрытой</td><td><code>internal/board/iterations_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т5</td><td>Метрики потока: время цикла, пропускная способность, накопление, прогноз с перцентилями</td><td><code>internal/metrics</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т6</td><td>Архив карточек и досок: убранное возвращается, удалённое насовсем — нет</td><td><code>internal/board/archive_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т7</td><td>Организации, приглашения по ссылке, четыре роли, подразделения деревом</td><td><code>internal/org</code>, <code>internal/team</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т8</td><td>Интеграционное API с версией в адресе, кодами вместо текста и безопасным повтором</td><td><code>internal/httpapi/contract_*_test.go</code></td></tr>
+<tr><td>Т9</td><td>Подписки на события с подписью, повторами и журналом доставок</td><td><code>internal/httpapi/webhooks_test.go</code></td></tr>
+<tr><td>Т10</td><td>Заведение людей из каталога по SCIM</td><td><code>internal/httpapi/scim_test.go</code></td></tr>
+<tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
+<tr><td>Т12</td><td>Выгрузка всех данных организации одним файлом</td><td><code>internal/httpapi/export_test.go</code></td></tr>
+</tbody>
+</table></div>
+<h2>Пределы</h2>
+<p>Числа взяты из замеров, а не назначены. За пределом продукт не обязан держать пороги отклика — но обязан работать.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>П1</td><td>130 человек в установке; 100 одновременно открытых досок получают изменение</td><td><code>internal/httpapi/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П2</td><td>Доска в 500 карточек открывается меньше чем за секунду и отвечает за 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П3</td><td>Снимок доски растёт линейно с числом карточек, а не быстрее</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П4</td><td>Таблица на 1000 строк открывается меньше чем за секунду, сортировка — 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П5</td><td>Тридцать человек на одной доске не медленнее очереди из тридцати</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П6</td><td>Соседняя доска не замедляется от занятой</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П7</td><td>Входной кусок клиента — не больше 400 КБ (120 КБ сжатым)</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+</tbody>
+</table></div>
+<h2>Как продукт себя ведёт</h2>
+<p>Правила, которые важнее отдельных возможностей: их нарушение — дефект, даже если возможность работает.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>П8</td><td>Организации изолированы политиками базы, а не проверками в коде</td><td><code>internal/store/isolation_test.go</code>, <code>internal/store/identity_boundary_test.go</code></td></tr>
+<tr><td>П9</td><td>Отказ объясняет, что делать, и различается кодом, а не текстом</td><td><code>internal/httpapi/contract_drift_test.go</code>, <code>web/src/app/forms.test.ts</code></td></tr>
+<tr><td>П10</td><td>Необратимое спрашивает, обратимое — нет; у обратимого есть отмена</td><td><code>web/e2e/board.spec.ts</code>, <code>web/src/app/layers.test.ts</code></td></tr>
+<tr><td>П11</td><td>Всё делается с клавиатуры: перенос карточки, формы, меню</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/shared/ui/Field.dom.test.tsx</code></td></tr>
+<tr><td>П12</td><td>Контраст держит WCAG 2.2 AA и порог проектирования APCA в обеих темах</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П13</td><td>Цель нажатия не мельче 24 пикселей (WCAG 2.5.8)</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П14</td><td>Страница не листается вбок на узком экране и не теряет содержимое при двойном размере текста</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П15</td><td>Просьба меньше движения заменяет движение, а не выключает объяснение перемещения</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/app/motion.test.ts</code></td></tr>
+<tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски</td><td>не закреплено: проверяется чтением, машинной проверки на «сказано по-русски и понятно» у нас нет</td></tr>
+</tbody>
+</table></div>
+<h2>Установка и обновление</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>У1</td><td>Один образ на все профили развёртывания</td><td><code>Dockerfile</code>, <code>deploy/helm/chart_test.go</code></td></tr>
+<tr><td>У2</td><td>Установка не требует доступа в интернет</td><td><code>deploy/helm/chart_test.go</code> (у чарта нет зависимостей)</td></tr>
+<tr><td>У3</td><td>Миграция совместима с предыдущей версией приложения</td><td><code>internal/store/migration_compat_test.go</code></td></tr>
+<tr><td>У4</td><td>Цепочка миграций применяется с нуля и даёт ту же схему</td><td><code>internal/store/migrations_test.go</code></td></tr>
+<tr><td>У5</td><td>Схема меняется только миграцией, вперёд; номера не повторяются</td><td><code>internal/store/migration_compat_test.go</code></td></tr>
+<tr><td>У6</td><td>Настройки приложения задаются чартом, а не знанием внутренних имён</td><td><code>deploy/helm/chart_test.go</code></td></tr>
+<tr><td>У7</td><td>После установки есть чем проверить, что она сделана правильно</td><td><code>internal/doctor</code></td></tr>
+<tr><td>У8</td><td>У сборки есть версия, у версии — список изменений</td><td><code>internal/version</code></td></tr>
+<tr><td>У9</td><td>Роль приложения в базе — не суперпользователь (иначе изоляция не действует)</td><td><code>internal/store/isolation_test.go</code>, <code>internal/doctor</code></td></tr>
+<tr><td>У10</td><td>Документация едет с комплектом и открывается без сети</td><td><code>internal/docs/render_test.go</code></td></tr>
+</tbody>
+</table></div>
+<h2>Безопасность</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>Б1</td><td>В зависимостях и стандартной библиотеке нет известных уязвимостей, которые мы вызываем</td><td><code>Makefile</code>, цель security (govulncheck)</td></tr>
+<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной</td><td><code>Makefile</code>, цель security (gosec)</td></tr>
+<tr><td>Б3</td><td>В зависимостях клиента нет уязвимостей уровня high и выше</td><td><code>Makefile</code>, цель security (npm audit)</td></tr>
+<tr><td>Б4</td><td>Запрос к базе собирается параметрами; склейка допускается только со своим текстом и объявляется вслух</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б5</td><td>Клиент никогда не вставляет сырую разметку</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б6</td><td>Секретов в репозитории нет</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б7</td><td>Пароли хранятся хешем; сессия — cookie с HttpOnly и SameSite, Secure на https</td><td><code>internal/auth</code>, <code>internal/httpapi/crosssite_test.go</code></td></tr>
+<tr><td>Б8</td><td>Межсайтовую запись останавливает хоть что-нибудь — браузер или код</td><td><code>internal/httpapi/crosssite_test.go</code></td></tr>
+<tr><td>Б9</td><td>Ключ интеграции даёт только выданные разрешения и не становится владельцем</td><td><code>internal/httpapi/clients_test.go</code></td></tr>
+<tr><td>Б10</td><td>Частота запросов ограничена: сбежавший ключ не мешает людям</td><td><code>internal/httpapi/load_test.go</code></td></tr>
+</tbody>
+</table></div>
+<h2>Совместимость</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>С1</td><td>PostgreSQL 16 и новее</td><td>не закреплено: проверки идут на одной версии, матрицы версий нет</td></tr>
+<tr><td>С2</td><td>Kubernetes 1.25 и новее</td><td><code>deploy/helm/board/Chart.yaml</code>, поле kubeVersion</td></tr>
+<tr><td>С3</td><td>Браузеры: те, где Baseline newly возрастом от года; клиент не берёт возможностей за этой границей без даты и замера</td><td><code>web/src/app/motion.test.ts</code>, правила в <code>внутренние-правила/skills/*</code></td></tr>
+</tbody>
+</table></div>
+<h2>Чего продукт не делает</h2>
+<p>Отложено осознанно, и у каждого записано, что снимет отсрочку. Подробности — в конце <code>ROADMAP.md</code>.</p>
+<ul>
+<li><strong>Вложения в карточках.</strong> Настройка <code>STORAGE</code> была и убрана: она ничего не делала, а обещала.</li>
+<li><strong>Архивация проекта целиком.</strong> Ждёт видимых проектов.</li>
+<li><strong>Гранулярные разрешения</strong> сверх четырёх ролей. Ждут реальных жалоб.</li>
+<li><strong>Диаграмма накопления по колонкам</strong> из журнала переходов. Считается из отметок карточки; ждёт спроса на разбивку.</li>
+<li>**Массовые запросы SCIM и настройки провайдера входа по организациям.** Ждут масштаба, которого у установки нет.</li>
+<li><strong>Сроки, зависимости как график, диаграмма Ганта.</strong> Другой продукт.</li>
+<li><strong>Публичное облако с самообслуживанием.</strong> Регистрация закрывается настройкой ровно потому, что установка предполагается частной.</li>
+</ul>
+<h2>Чего мы ждём от того, кто ставит</h2>
+<p>Обязательства делятся, и без этого предыдущий раздел не с чем сверять.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>В1</td><td>База — своя: резервные копии, восстановление на момент времени, место</td><td>не закреплено: чужая зона по определению; сказано в <code>README.md</code> и в выводе чарта</td></tr>
+<tr><td>В2</td><td>Перед приложением — прокси с TLS, пробрасывающий Upgrade и Connection</td><td>не закреплено: проверяется на чужой стороне; сказано в <code>README.md</code> и <code>docker-compose.yml</code></td></tr>
+<tr><td>В3</td><td><code>BASE_URL</code> совпадает с адресом в браузере</td><td><code>internal/doctor</code> (проверяет вид адреса; совпадение с браузером — на стороне ставящего)</td></tr>
+<tr><td>В4</td><td>Перед базой нет пула соединений в режиме транзакций</td><td><code>internal/doctor</code> (оповещения не доходят — скажет)</td></tr>
+<tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>README.md</code></td></tr>
+</tbody>
+</table></div>
+<footer>Доска, версия v0.1.0-6-g1ae310f-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>
