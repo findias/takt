@@ -12,14 +12,30 @@
 
   kubectl --namespace {{ .Release.Namespace }} rollout status deploy/{{ include "board.fullname" . }}
 
-{{- if not .Values.database.existingSecret }}
+{{- if and (not .Values.database.existingSecret) (not .Values.postgresql.enabled) }}
 
 ВНИМАНИЕ: строка подключения взята из values и лежит в релизе.
 Так можно на стенде. Для боя заведите секрет заранее и укажите
 database.existingSecret — иначе пароль базы попадёт и в историю
 выкладок, и в вывод `helm get values`.
 {{- end }}
+{{- if .Values.postgresql.enabled }}
+
+ВНИМАНИЕ: база поднята этим же чартом (postgresql.enabled = true).
+Это способ для стенда: одна реплика, один диск, ни архивирования,
+ни отработки отказа. Основное расположение базы — железо или
+отдельный оператор; пример — deploy/postgres/cloudnativepg-cluster.yaml.
+
+Первые полминуты после установки приложение перезапускается: оно
+отказывается стартовать, пока миграции не прошли, а миграции ждут,
+пока база примет подключения. Так и задумано — это лучше, чем
+отвечать ошибкой на каждый запрос.
+
+  kubectl --namespace {{ .Release.Namespace }} rollout status sts/{{ include "board.postgresName" . }}
+{{- end }}
 
 Первый вошедший заводит организацию и становится её владельцем.
+{{- if not .Values.postgresql.enabled }}
 Резервное копирование базы — на стороне заказчика: чарт базой
 не управляет намеренно.
+{{- end }}

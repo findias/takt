@@ -86,6 +86,56 @@ func (f *fixture) count(sql string, args ...any) int {
 
 // Ключ повтора нужен, чтобы пережить обрыв связи и повтор через минуту.
 // Недельной давности ключ повторять уже некому.
+// Реплик у сервера две по умолчанию, и уборщик живёт в каждой. Пока
+// проходы шли параллельно, они делали одну и ту же работу дважды
+// и блокировали друг друга на строках — на большой базе это стало бы
+// заметно не сразу и выглядело бы как «база иногда подтормаживает».
+//
+// Проверяется ровно это: пока один проход идёт, второй не работает,
+// а не то, что он падает или ждёт.
+func TestOnlyOneReplicaSweepsAtATime(t *testing.T) {
+	f := newFixture(t)
+	ключ := "старый-" + uuid.NewString()
+	f.exec(`
+		insert into api_idempotency (org_id, key, method, path, status, body, created_at)
+		values ($1, $2, 'POST', '/api/boards', 201, '{}', now() - interval '2 days')`,
+		f.orgID, ключ)
+	осталось := func() int {
+		return f.count(`select count(*) from api_idempotency where key = $1`, ключ)
+	}
+
+	// Держим замок так же, как его держит идущая уборка, — транзакцией.
+	held, err := f.db.Pool.Begin(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = held.Rollback(f.ctx) }()
+	var got bool
+	if err := held.QueryRow(f.ctx, `select pg_try_advisory_xact_lock($1)`, lockKey).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !got {
+		t.Fatal("замок занят до начала проверки — он не тот, что берёт уборщик")
+	}
+
+	// Второй проход обязан молча ничего не делать: это сосед, а не сбой.
+	if err := f.worker.Once(f.ctx); err != nil {
+		t.Fatalf("проход при занятом замке вернул ошибку: %v", err)
+	}
+	if осталось() == 0 {
+		t.Fatal("вторая реплика убралась параллельно с первой: замок не держит")
+	}
+
+	// Замок отпущен — уборка идёт.
+	_ = held.Rollback(f.ctx)
+	if err := f.worker.Once(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	if осталось() != 0 {
+		t.Fatal("после освобождения замка уборка так и не случилась")
+	}
+}
+
 func TestStaleIdempotencyKeysAreRemoved(t *testing.T) {
 	f := newFixture(t)
 	f.exec(`

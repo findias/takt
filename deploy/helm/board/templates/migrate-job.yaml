@@ -16,9 +16,20 @@ metadata:
   labels:
     {{- include "board.labels" . | nindent 4 }}
   annotations:
+    {{- if .Values.postgresql.enabled }}
+    # База поднимается этим же чартом, а хуки выполняются до основных
+    # ресурсов — то есть до того, как база вообще появится. Поэтому
+    # в стендовом режиме миграция идёт обычным ресурсом, следом
+    # за StatefulSet, и ждёт готовности базы своим initContainer'ом.
+    # Приложение в эти несколько секунд перезапускается: оно отказывается
+    # стартовать на непроинициализированной базе, и это лучше, чем
+    # отвечать ошибкой на каждый запрос.
+    helm.sh/hook-weight: "5"
+    {{- else }}
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
     helm.sh/hook-delete-policy: before-hook-creation
+    {{- end }}
 spec:
   backoffLimit: {{ .Values.migrations.backoffLimit }}
   activeDeadlineSeconds: {{ .Values.migrations.timeoutSeconds }}
@@ -30,6 +41,26 @@ spec:
     spec:
       restartPolicy: Never
       serviceAccountName: {{ include "board.serviceAccountName" . }}
+      {{- if .Values.postgresql.enabled }}
+      initContainers:
+        # Ждём, пока база примет подключения. Без этого задача падает
+        # на первой же секунде первой установки — и падает по причине,
+        # которая через двадцать секунд перестанет существовать.
+        - name: wait-for-db
+          image: {{ .Values.postgresql.image }}
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "board.postgresName" . }} -U {{ .Values.postgresql.username }} -d {{ .Values.postgresql.database }}; do
+                echo "жду базу"
+                sleep 2
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

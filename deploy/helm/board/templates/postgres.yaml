@@ -1,0 +1,169 @@
+{{- if .Values.postgresql.enabled }}
+{{- $pg := .Values.postgresql }}
+{{- if and (not $pg.existingSecret) (or (not $pg.password) (not $pg.superuserPassword)) }}
+{{- fail "нужны postgresql.password и postgresql.superuserPassword (или postgresql.existingSecret): чарт не придумывает пароли сам — придуманный меняется при каждой выкладке" }}
+{{- end }}
+# База в кластере — способ для стенда.
+#
+# Основное расположение базы — железо: за резервные копии, восстановление
+# на момент времени и разбор планов запросов отвечает тот, у кого база
+# стоит, и подменять эту зону нашим манифестом значит обещать то, чего
+# чарт не делает. Здесь — одна реплика, один диск, никакого архивирования;
+# ровно столько, сколько нужно, чтобы стенд поднялся одной командой.
+#
+# StatefulSet, а не Deployment: у базы есть имя, диск и порядок запуска,
+# и все три вещи Deployment не даёт. Имя нужно строке подключения, диск
+# переживает перезапуск пода, а порядок — единственный способ не поднять
+# вторую копию поверх того же тома.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "board.postgresName" . }}
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  # Служба без своего адреса: обращаются к поду по имени, а балансировать
+  # между репликами базы нечего — она одна.
+  clusterIP: None
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+  selector:
+    {{- include "board.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "board.postgresName" . }}-init
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+data:
+  # Тот же скрипт, что у профиля на одной машине, и по той же причине:
+  # приложение НЕ должно ходить в базу суперпользователем. Для него
+  # политики Row-Level Security не действуют вообще, и вся изоляция
+  # организаций молча превращается в ничто — запросы работают, просто
+  # отдают лишнее. Роль владеет базой (этого хватает миграциям),
+  # но суперпользователем не является.
+  #
+  # Скрипт выполняется один раз, при инициализации тома.
+  10-app-role.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+        create role {{ $pg.username }} login password '${APP_DB_PASSWORD}' nosuperuser nocreaterole nocreatedb;
+        create database {{ $pg.database }} owner {{ $pg.username }};
+    EOSQL
+    echo "роль {{ $pg.username }} создана без прав суперпользователя"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "board.postgresName" . }}
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ include "board.postgresName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "board.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "board.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      securityContext:
+        # Официальный образ ходит под своим пользователем postgres (999);
+        # fsGroup нужен, чтобы том оказался ему доступен.
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          {{- toYaml .Values.securityContext.seccompProfile | nindent 10 }}
+      containers:
+        - name: postgres
+          image: {{ $pg.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secret" (include "board.postgresName" .)) $pg.existingSecret }}
+                  key: POSTGRES_PASSWORD
+            - name: APP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secret" (include "board.postgresName" .)) $pg.existingSecret }}
+                  key: APP_DB_PASSWORD
+            # Данные лежат в подкаталоге тома: у смонтированного тома
+            # бывает lost+found, и initdb на непустом каталоге не работает.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            # Готовность спрашивается о базе приложения, а не о сервере
+            # вообще: пока роль и база не заведены, подключаться нечем.
+            exec:
+              command: ["pg_isready", "-U", {{ $pg.username | quote }}, "-d", {{ $pg.database | quote }}]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml $pg.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: init
+          configMap:
+            name: {{ include "board.postgresName" . }}-init
+            defaultMode: 0555
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with $pg.storageClassName }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $pg.storage }}
+{{- if not $pg.existingSecret }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "board.postgresName" . }}-secret
+  labels:
+    {{- include "board.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: {{ $pg.superuserPassword | quote }}
+  APP_DB_PASSWORD: {{ $pg.password | quote }}
+{{- end }}
+{{- end }}
