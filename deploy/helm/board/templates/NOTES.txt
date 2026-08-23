@@ -12,6 +12,12 @@
 
   kubectl --namespace {{ .Release.Namespace }} rollout status deploy/{{ include "board.fullname" . }}
 
+Проверить, что поставлено правильно, — это другой вопрос: готовность
+отвечает «процесс жив и база отвечает», а не «схема та, адрес тот,
+провайдер достижим, оповещения доходят»:
+
+  kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "board.fullname" . }} -- /app/board doctor
+
 {{- if and (not .Values.database.existingSecret) (not .Values.postgresql.enabled) }}
 
 ВНИМАНИЕ: строка подключения взята из values и лежит в релизе.

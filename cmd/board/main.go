@@ -1,10 +1,11 @@
 // Команда board — единственный исполняемый файл проекта.
 //
-// Один образ, две подкоманды:
+// Один образ, четыре подкоманды:
 //
 //	board serve     — HTTP API, WebSocket, фоновые задачи (по умолчанию)
 //	board migrate   — применить миграции и выйти
 //	board demo      — наполнить пустую базу данными для работы над видом
+//	board doctor    — проверить, что установка сделана правильно
 //
 // Миграции вынесены в отдельную подкоманду намеренно. Запуск их при старте
 // приложения работает на одной реплике и разносит базу на двух: обе стартуют
@@ -15,6 +16,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/konkov/agile/internal/config"
 	"github.com/konkov/agile/internal/demo"
+	"github.com/konkov/agile/internal/doctor"
 	"github.com/konkov/agile/internal/httpapi"
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/retention"
@@ -99,9 +102,34 @@ func main() {
 	case "serve":
 		serve(ctx, cfg, db, log)
 
+	case "doctor":
+		// Отдельной командой, а не проверкой при старте: спрашивают её
+		// после установки и после обновления, а ответ нужен списком —
+		// что смотрели, чем кончилось и что делать. Стартующее
+		// приложение вместо этого либо работает, либо не работает.
+		//
+		// Вывод человеку, а не журналу: читает его тот, кто ставил,
+		// и читает один раз.
+		итоги := doctor.Осмотр(ctx, cfg, db)
+		for _, и := range итоги {
+			знак := "✓"
+			if !и.Ладно {
+				знак = "✗"
+			}
+			fmt.Printf("%s %s: %s\n", знак, и.Что, и.Ответ)
+			if и.Совет != "" {
+				fmt.Printf("   что делать: %s\n", и.Совет)
+			}
+		}
+		if !doctor.Ладно(итоги) {
+			fmt.Println("\nустановка неполна — см. отметки ✗ выше")
+			os.Exit(1)
+		}
+		fmt.Println("\nустановка выглядит рабочей")
+
 	default:
 		log.Error("неизвестная команда", "команда", command,
-			"доступные", []string{"serve", "migrate", "demo"})
+			"доступные", []string{"serve", "migrate", "demo", "doctor"})
 		os.Exit(1)
 	}
 }
