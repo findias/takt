@@ -126,6 +126,14 @@ e2e: db migrate ## Сквозные сценарии в настоящем бр�
 docs: ## Собрать документацию в HTML (docs/html)
 	go run ./cmd/docs
 
+# PDF печатается из того же файла, что читают в браузере, — `всё.html`.
+# Браузер берётся системный, тот же, что у сквозных проверок: второй
+# инструмент ради одной кнопки «печать» стоил бы установки при каждом
+# `npm ci`. Здесь же проверяется обещание памятки быть одной страницей.
+.PHONY: docs-pdf
+docs-pdf: docs ## Напечатать документацию в PDF (docs/html/доска.pdf)
+	cd web && node print-docs.mjs
+
 # --- безопасность ---
 
 # Отдельной целью, а не частью `make check`, по той же причине, что
@@ -240,6 +248,8 @@ bundle: ## Собрать комплект для установки без до
 	go run ./cmd/docs
 	cp README.md CHANGELOG.md "$(BUNDLE_DIR)/"
 	cp -r docs/html "$(BUNDLE_DIR)/docs"
+	$(MAKE) docs-pdf
+	cp docs/html/доска.pdf "$(BUNDLE_DIR)/"
 	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
 	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
 	@echo

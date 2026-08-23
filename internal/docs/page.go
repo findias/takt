@@ -72,6 +72,41 @@ border-radius:var(--radius)}
 figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
 color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
 :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 `
 
@@ -112,4 +147,48 @@ func Собрать(с Страница, оглавление []Пункт, ве
 		html.EscapeString(версия), html.EscapeString(strings.TrimSuffix(с.Файл, ".html")+".md"))
 	b.WriteString("</main>\n</body>\n</html>\n")
 	return b.String()
+}
+
+// СобратьВсё — все разделы одним файлом.
+//
+// Нужен для двух случаев, и оба живые: отдать документацию одним
+// вложением и напечатать её — браузер печатает то, что открыто, а не
+// восемь страниц по ссылкам. Оглавление здесь настоящее, со ссылками
+// внутрь файла: печатное содержание без номеров страниц бесполезно,
+// зато на экране по нему ходят.
+func СобратьВсё(страницы []Страница, версия string) string {
+	var b strings.Builder
+	b.WriteString("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n")
+	b.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">` + "\n")
+	b.WriteString("<title>Доска — документация</title>\n")
+	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<main class=\"sheet\">\n", стиль)
+
+	b.WriteString("<h1>Доска — документация</h1>\n<p>Все разделы одним файлом. ")
+	fmt.Fprintf(&b, "Версия %s.</p>\n", html.EscapeString(версия))
+	b.WriteString("<h2>Содержание</h2>\n<ul>\n")
+	for _, с := range страницы {
+		// Имя раздела, а не заголовок файла: у обзора и у руководства
+		// по установке заголовок один и тот же — «Доска», — и в общем
+		// содержании они становились неразличимы.
+		имя := с.Имя
+		if имя == "" {
+			имя = с.Заголовок
+		}
+		fmt.Fprintf(&b, `<li><a href="#%s">%s</a></li>`+"\n", якорь(с.Файл), html.EscapeString(имя))
+	}
+	b.WriteString("</ul>\n")
+
+	for _, с := range страницы {
+		fmt.Fprintf(&b, `<section id="%s">`+"\n", якорь(с.Файл))
+		b.WriteString(с.HTML)
+		b.WriteString("</section>\n")
+	}
+	b.WriteString("</main>\n</body>\n</html>\n")
+	return b.String()
+}
+
+// якорь — имя раздела внутри общего файла. Из имени файла, чтобы
+// ссылки между разделами оставались предсказуемыми.
+func якорь(файл string) string {
+	return strings.TrimSuffix(файл, ".html")
 }

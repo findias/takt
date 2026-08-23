@@ -60,6 +60,41 @@ border-radius:var(--radius)}
 figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
 footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
 color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
 :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -70,6 +105,7 @@ color:var(--ink-3);font-size:.85rem}
 <a href="старт.html">Первые 15 минут</a>
 <a href="как.html" aria-current="page">Как сделать</a>
 <a href="справочник.html">Справочник</a>
+<a href="памятка.html">Памятка</a>
 <a href="устройство.html">Устройство</a>
 <a href="README.html">Установка</a>
 <a href="REQUIREMENTS.html">Требования</a>
@@ -178,7 +214,7 @@ kubectl exec deploy/board -- /app/board doctor</code></pre>
 <p><code>--reuse-values</code> обязателен: без него настройки вернутся к умолчаниям чарта.</p>
 <h3>Закрыть регистрацию</h3>
 <p>Задайте <code>signup=closed</code> при установке или обновлении. Тогда организации заводит только владелец, а кнопки «Завести новую организацию» на экране входа не будет.</p>
-<footer>Доска, версия v0.1.0-7-g2696eed-dirty. Страница собрана из как.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.1.0-8-gacc0df7-dirty. Страница собрана из как.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>
