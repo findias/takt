@@ -17,6 +17,7 @@
   --space-2: calc(8px * var(--scaling));
   --space-3: calc(12px * var(--scaling));
   --space-4: calc(16px * var(--scaling));
+  --space-5: calc(20px * var(--scaling));
   --space-6: calc(24px * var(--scaling));
   --space-8: calc(32px * var(--scaling));
 
@@ -1623,12 +1624,18 @@ select:disabled {
   white-space: nowrap;
 }
 .tab:hover {
-  color: var(--ink-1);
+  color: var(--ink);
 }
 /* Выбранная вкладка помечена и цветом, и чертой, и насыщенностью:
-   одним цветом её отличать нельзя — это критерий WCAG 1.4.1. */
+   одним цветом её отличать нельзя — это критерий WCAG 1.4.1.
+
+   Цвет тут долго не работал вовсе: в правиле стоял `--ink-1`, которого
+   в наборе нет, — и `var()` без объявления означает, что свойство
+   не применяется. Комментарий обещал три признака, код давал два,
+   и увидеть это можно было только сравнив активную вкладку
+   с неактивной на глаз. Нашла проверка на висячие переменные. */
 .tab--active {
-  color: var(--ink-1);
+  color: var(--ink);
   font-weight: 600;
   border-bottom-color: var(--accent);
 }
