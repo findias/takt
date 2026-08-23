@@ -3,6 +3,7 @@ import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
 import { UNIT_SHORT, rangeWords } from '../../entities/card/model.ts'
 import type { EstimateUnit, Iteration, IterationReport as Report } from '../../shared/api/index.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Отчёт по итерации.
@@ -54,7 +55,7 @@ export function IterationReport({
       label={`Отчёт по итерации «${iteration.name}»`}
       onClose={onClose}
     >
-      {failed && <p className="error">Не удалось прочитать отчёт.</p>}
+      <ScreenError>{failed ? 'Не удалось прочитать отчёт.' : undefined}</ScreenError>
       {!report && !failed && <p className="muted small">Считаем…</p>}
       {report && (
         <>

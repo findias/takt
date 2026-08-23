@@ -19,6 +19,7 @@ import {
 } from '../entities/team/model.ts'
 import type { TreeNode } from '../entities/team/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
+import { ScreenError } from '../shared/ui/Field'
 
 /**
  * Структура организации: дерево подразделений, их состав и наблюдение.
@@ -89,7 +90,7 @@ export function Structure({
 
   return (
     <div className="stack">
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
 
       <section className="stack">
         <div className="row row--between">

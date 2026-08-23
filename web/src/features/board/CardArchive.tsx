@@ -4,6 +4,7 @@ import { Button } from '../../shared/ui/Button.tsx'
 import { api } from '../../shared/api/index.ts'
 import type { ArchivedCard } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Архив карточек доски.
@@ -75,7 +76,7 @@ export function CardArchive({
 
   return (
     <Panel mode={mode} onMode={setMode} title="Архив" label="Архив карточек" onClose={onClose}>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {/* Поиск стоит всегда, а не появляется от числа карточек: строка
           поиска, возникающая на сто первой карточке, читается как сбой. */}
       <input

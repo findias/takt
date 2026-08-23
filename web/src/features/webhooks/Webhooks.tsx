@@ -5,6 +5,7 @@ import { Skeleton } from '../../shared/ui/states.tsx'
 import { CopyButton } from '../../shared/ui/CopyButton.tsx'
 import { Field, useFormErrors } from '../../shared/ui/Field.tsx'
 import { plural } from '../../shared/lib/plural.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Срок словами и с той точностью, какая тут есть.
@@ -70,7 +71,7 @@ export function Webhooks() {
   return (
     <section className="stack">
       <h2 className="section-title">Подписки на события</h2>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       <p className="muted small">
         Подписка уносит события наружу: мы отправляем их на ваш адрес и подписываем ключом,
         чтобы получатель мог убедиться, что письмо от нас. Доставка идёт не менее одного раза.
@@ -347,7 +348,7 @@ function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => vo
 
   return (
     <>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       <ul className="feed">
         {list.map((d) => (
           <li key={d.id}>

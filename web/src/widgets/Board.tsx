@@ -64,6 +64,7 @@ import {
 import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
 import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
+import { ScreenError } from '../shared/ui/Field'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
 // по которому вынесены экраны организации: доска открывается всегда,
@@ -1412,7 +1413,7 @@ function Iterations({
 
   return (
     <div className="iterations">
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
 
       <ConfirmDialog
         open={toClose !== null}

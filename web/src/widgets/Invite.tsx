@@ -3,6 +3,7 @@ import { MIN_PASSWORD, ROLE_NAMES, api } from '../shared/api/index.ts'
 import type { InviteInfo, Principal } from '../shared/api/index.ts'
 import { Button } from '../shared/ui/Button.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
+import { ScreenError } from '../shared/ui/Field'
 
 /**
  * Приём приглашения по ссылке.
@@ -48,7 +49,7 @@ export function InviteScreen({
       <div className="centered">
         <div className="panel">
           <h1>Приглашение не открылось</h1>
-          <p className="error">{error}</p>
+          <ScreenError>{error}</ScreenError>
           <p className="muted small">
             Попросите владельца организации прислать новую ссылку — приглашения
             действуют неделю и отзываются вручную.
@@ -169,7 +170,7 @@ export function InviteScreen({
         <FormError>{form.formError}</FormError>
         {/* Отказ выхода — про кнопку «Выйти и открыть заново», а не про
             форму: она в этом случае и не показана. */}
-        {error && <p className="error">{error}</p>}
+        <ScreenError>{error}</ScreenError>
 
         {!wrongAccount && (
           <>

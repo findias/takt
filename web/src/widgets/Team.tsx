@@ -27,6 +27,7 @@ import { Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { Field, useFormErrors } from '../shared/ui/Field.tsx'
 import { Webhooks } from '../features/webhooks/Webhooks.tsx'
+import { ScreenError } from '../shared/ui/Field'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -64,7 +65,7 @@ export function Team({ principal }: { principal: Principal }) {
 
   return (
     <div className="stack">
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
 
       {/* Требование об удалении персональных данных. Диалог называет
           и человека, и то, что останется: обещать полное стирание
@@ -277,7 +278,7 @@ function Clients() {
   return (
     <section className="stack">
       <h2 className="section-title">Ключи для интеграций</h2>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       <p className="muted small">
         Ключ принадлежит организации, а не человеку: интеграция живёт дольше того,
         кто её завёл. Действия ключа видны в журнале наравне с людскими.
@@ -472,7 +473,7 @@ function Labels({ canEdit }: { canEdit: boolean }) {
   return (
     <section className="stack">
       <h2 className="section-title">Метки</h2>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {labels.length === 0 ? (
         <p className="muted small">
           Меток нет. Метка отвечает на вопрос «да или нет» — срочно, снаружи,
@@ -554,7 +555,7 @@ function EstimateUnitChoice({ principal }: { principal: Principal }) {
   return (
     <section className="stack">
       <h2 className="section-title">Оценка</h2>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       <label className="row row--tight">
         <span className="muted small">Работу оцениваем в</span>
         <select
@@ -619,7 +620,7 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
   return (
     <section className="stack">
       <h2 className="section-title">Поля карточек</h2>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {fields.length === 0 ? (
         <p className="muted small">
           Полей нет. Поле заводится на всю организацию: одинаково названное поле

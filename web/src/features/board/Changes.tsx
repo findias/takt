@@ -3,6 +3,7 @@ import { Button } from '../../shared/ui/Button.tsx'
 import { api } from '../../shared/api/index.ts'
 import type { BoardEvent, CardField } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Что происходило на доске.
@@ -69,7 +70,7 @@ export function Changes({
         </p>
       </div>
 
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {events === null && !error && <p className="muted small">Читаем…</p>}
       {events?.length === 0 && (
         <p className="muted small">

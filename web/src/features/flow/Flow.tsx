@@ -5,6 +5,7 @@ import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
 import { dateWords } from '../../entities/card/model.ts'
 import { plural } from '../../shared/lib/plural.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Метрики потока.
@@ -69,7 +70,7 @@ export function Flow({
       onClose={onClose}
       actions={days_}
     >
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {!report && <p className="muted small">Считаем…</p>}
       {report && (
         <>
@@ -313,7 +314,7 @@ function Promise_({
   return (
     <section className="stack">
       <h3 className="section-title">Обещание доски</h3>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {days === null ? (
         <p className="muted small">
           Обещания нет. Доска без истории обещать и не может — но как только

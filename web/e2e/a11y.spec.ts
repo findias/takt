@@ -947,3 +947,57 @@ test('в режиме высокой контрастности состояни
 
   await context.close()
 })
+
+test('отказ уровня экрана стоит живым регионом до самого отказа', async ({ page }) => {
+  // Живой регион объявляется только тогда, когда меняется его
+  // содержимое. Появление узла вместе с текстом диктор пропускает —
+  // и человек, не видящий экрана, считает, что кнопка не сработала.
+  //
+  // Проверяется на экране команды и на настоящем отказе сервера.
+  // До правки 23.08.2026 узла до отказа не существовало вовсе —
+  // и так было написано двадцать мест из двадцати.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await register(page)
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
+
+  // Регион берётся именно на этом экране, а не первый попавшийся
+  // на странице: их несколько, и `first()` однажды уже показал
+  // зелёное на сломанном экране — просто потому, что первым оказался
+  // чужой, целый.
+  const экран = page.locator('section.stack', {
+    has: page.getByRole('heading', { name: 'Метки', exact: true }),
+  })
+  const регион = экран.locator('> p.error[role="alert"]')
+  await expect(регион).toBeAttached()
+  expect(await регион.textContent(), 'до отказа регион пуст').toBe('')
+
+  // Пустой регион не должен стоить места: в колонке с промежутками
+  // ноль высоты всё равно съедает промежуток — замер нашёл 8 и 16
+  // пикселей пустоты на двух экранах.
+  expect(
+    await регион.evaluate((el) => {
+      const родитель = el.parentElement as HTMLElement
+      const было = родитель.getBoundingClientRect().height
+      const метка = document.createComment('')
+      el.replaceWith(метка)
+      const стало = родитель.getBoundingClientRect().height
+      метка.replaceWith(el)
+      return Math.round(было - стало)
+    }),
+    'пустой регион занимает место',
+  ).toBe(0)
+
+  // Отказ действия, а не формы: отказ формы уезжает к своему полю,
+  // это проверено этапом форм. Сюда попадает то, что не относится
+  // ни к какому полю.
+  await page.route('**/api/labels', (route) =>
+    route.request().method() === 'POST'
+      ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"нарочно"}' })
+      : route.continue(),
+  )
+  await page.getByPlaceholder('Название метки').fill('Отказ')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+
+  await expect(регион).toHaveText(/./)
+})

@@ -7,6 +7,7 @@ import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
+import { ScreenError } from '../shared/ui/Field'
 
 /**
  * Вторая строка доски: ключ, кому видна и сколько работы.
@@ -85,7 +86,7 @@ export function BoardList({
 
   return (
     <div className="stack">
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
       {boards === null && <Skeleton lines={3} />}
       {boards?.length === 0 && (
         <EmptyState title="Досок пока нет">

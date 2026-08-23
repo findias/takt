@@ -3,6 +3,7 @@ import { api } from '../../shared/api/index.ts'
 import type { Comment } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
 import { Button } from '../../shared/ui/Button.tsx'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Обсуждение карточки.
@@ -49,7 +50,7 @@ export function Discussion({
   return (
     <section className="stack">
       <h3 className="section-title">Обсуждение</h3>
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
 
       {roots.length === 0 && <p className="muted small">Пока тихо.</p>}
 

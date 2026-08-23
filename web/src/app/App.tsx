@@ -19,6 +19,7 @@ import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import { ToastHost, useToast } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
+import { ScreenError } from '../shared/ui/Field'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
 // заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
@@ -401,7 +402,7 @@ function OrgHeader({
 
       {changing && <PasswordForm onDone={() => setChanging(false)} />}
 
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
     </header>
   )
 }

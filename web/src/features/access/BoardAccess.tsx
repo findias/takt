@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { VISIBILITY_NAMES, api } from '../../shared/api/index.ts'
 import type { BoardAccess as Access, Member, Team, Visibility } from '../../shared/api/index.ts'
+import { ScreenError } from '../../shared/ui/Field'
 
 /**
  * Кому видна доска.
@@ -60,7 +61,7 @@ export function BoardAccess({
 
   return (
     <div className="access stack">
-      {error && <p className="error">{error}</p>}
+      <ScreenError>{error}</ScreenError>
 
       <div className="row">
         <label className="muted small" htmlFor={`vis-${boardId}`}>
