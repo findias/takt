@@ -97,6 +97,66 @@
      доложит тост, — иначе доклад будет спрятан под тем, что его
      вызвало. Так сегодня и сделано во всех четырёх подтверждениях
      и в палитре. */
+  /* Оттенки меток и аватаров. Тон — единственное, чем они отличаются
+     друг от друга; светлота и насыщенность общие и живут рецептом,
+     а не подбираются на каждый оттенок.
+     
+     До 23.08.2026 подбирались: восемь оттенков по четыре значения
+     в двух темах — шестьдесят четыре числа, набранных руками, — и
+     разъезжались молча. Замер в OKLCH показал, насколько: светлота
+     текста гуляла на 11 единиц, насыщенность впятеро, а тон фона
+     и тон текста у одной метки расходились до 8°. Разброс
+     воспринимаемого контраста был 9.8 единицы Lc в светлой теме
+     и 13.0 в тёмной; по рецепту стало 1.1 и 3.3, и худшее значение
+     поднялось с Lc 62 до Lc 70.
+
+     Насыщенность у `slate` своя, и это не исключение из лени: тон
+     у него 172°, у `green` 170° — различает их только насыщенность.
+     Дай им общую — станут одним цветом. `slate` здесь и значит
+     «нейтральный». */
+  --hue-slate: 172;
+  --hue-green: 170;
+  --hue-blue: 246;
+  --hue-violet: 294;
+  --hue-rose: 2;
+  --hue-amber: 78;
+  --hue-teal: 190;
+  --hue-brown: 62;
+  --chip-bg-l: 92.5%;
+  --chip-bg-c: 0.024;
+  --chip-fg-l: 38.5%;
+  --chip-fg-c: 0.075;
+  /* У аватаров свой круг тонов, и это не дублирование набора меток.
+     Задачи разные: метка называется словом, которое человек выбрал
+     («зелёная»), поэтому её тон обязан соответствовать имени; аватар
+     не называется никак — он различает людей, и от него нужна
+     различимость, а не узнаваемость.
+
+     Первая редакция этой правки посадила аватары на набор меток
+     и тем сломала их: у меток `slate` — нейтральный, он отличается
+     от `green` не тоном (172° против 170°), а насыщенностью, — а
+     аватарам насыщенность выдаётся общая, и два тона слились бы
+     в один. Тот же случай был у `amber` и `brown`: шестнадцать
+     градусов.
+
+     Поэтому восемь тонов через сорок пять градусов: различимость
+     не подбирается и не проверяется глазом, она следует из шага. */
+  --avatar-l: 50%;
+  --avatar-c: 0.1;
+  --avatar-hue-0: 15;
+  --avatar-hue-1: 60;
+  --avatar-hue-2: 105;
+  --avatar-hue-3: 150;
+  --avatar-hue-4: 195;
+  --avatar-hue-5: 240;
+  --avatar-hue-6: 285;
+  --avatar-hue-7: 330;
+  /* Затемнение под тем, что перекрыло экран. Значение было набрано
+     трижды в трёх местах — не от небрежности, а оттого, что среди
+     токенов не было для него имени: набор говорил про поверхности
+     и чернила, а про «то, что гасит содержимое», не говорил ничего.
+     Каждое сырое значение в правилах — указатель на такой пробел. */
+  --scrim: rgb(0 0 0 / 0.35);
   --layer-raised: 2;
   --layer-notice: 10;
   --layer-panel: 20;
@@ -149,6 +209,12 @@
     --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
     --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
+    /* Оттенки те же, рецепт другой: в тёмной теме фон и текст меняются
+       ролями, а тон остаётся — метка узнаётся по нему. */
+    --chip-bg-l: 26.5%;
+    --chip-bg-c: 0.03;
+    --chip-fg-l: 84%;
+    --chip-fg-c: 0.075;
   }
 }
 :root[data-theme='dark'] {
@@ -169,6 +235,12 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
   --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
   --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
+  /* Оттенки те же, рецепт другой: в тёмной теме фон и текст меняются
+     ролями, а тон остаётся — метка узнаётся по нему. */
+  --chip-bg-l: 26.5%;
+  --chip-bg-c: 0.03;
+  --chip-fg-l: 84%;
+  --chip-fg-c: 0.075;
 }
 :root[data-theme='light'] {
   color-scheme: light;
@@ -1312,7 +1384,7 @@ select:disabled {
   place-items: center;
   padding: var(--space-4);
   /* Затемнение говорит то же, что и aria-modal: доска сейчас не ваша. */
-  background: rgb(0 0 0 / 0.35);
+  background: var(--scrim);
 }
 .panel-head {
   display: flex;
@@ -2260,34 +2332,39 @@ textarea.description {
      `var(--surface)` в тёмной делал буквы почти чёрными — 3.15
      к подложке вместо 4.5 (замерено). */
   color: #fff;
+  /* Заливка — тот же набор тонов, что у меток, и тот же приём:
+     тон различает, рецепт держит светлоту. Подобранные восемь
+     заливок расходились по светлоте на 8 единиц, и самая светлая
+     давала белым 4.65 при пороге 4.5 — то есть держалась на грани. */
+  background: oklch(var(--avatar-l) var(--avatar-c) var(--hue, 0));
   user-select: none;
 }
 /* Оттенки выводятся из имени и живут здесь, а не в поле «цвет
    человека»: такое поле кто-то однажды должен заполнить, а потом
    поддерживать. */
 .avatar--tone-0 {
-  background: #0e6f5c;
+  --hue: var(--avatar-hue-0);
 }
 .avatar--tone-1 {
-  background: #2f6f9f;
+  --hue: var(--avatar-hue-1);
 }
 .avatar--tone-2 {
-  background: #6b5ca5;
+  --hue: var(--avatar-hue-2);
 }
 .avatar--tone-3 {
-  background: #a3506b;
+  --hue: var(--avatar-hue-3);
 }
 .avatar--tone-4 {
-  background: #a3671e;
+  --hue: var(--avatar-hue-4);
 }
 .avatar--tone-5 {
-  background: #4a7a2a;
+  --hue: var(--avatar-hue-5);
 }
 .avatar--tone-6 {
-  background: #2b7f7a;
+  --hue: var(--avatar-hue-6);
 }
 .avatar--tone-7 {
-  background: #8a5a2b;
+  --hue: var(--avatar-hue-7);
 }
 
 /* --- 1. Точки меток --------------------------------------------------
@@ -2311,92 +2388,46 @@ textarea.description {
   gap: var(--space-1);
 }
 .label-dot {
+  color: oklch(var(--chip-fg-l) var(--chip-fg-c-own, var(--chip-fg-c)) var(--hue, 0));
   /* Шесть пикселей: меньше — грязь при масштабировании, больше —
      точка начинает спорить с номером карточки. */
   inline-size: 0.375rem;
   block-size: 0.375rem;
   border-radius: 999px;
   background: currentColor;
+  /* Тот же рецепт, что у фишки: точка и фишка одной метки обязаны
+     быть одного цвета, а два места для одного значения расходятся. */
 }
 /* Цвет берётся из тона метки — те же восемь пар, что у .chip--*,
    но здесь нужна «чернильная» половина пары. */
 .label-dot--slate {
-  color: #2b3733;
+  --hue: var(--hue-slate);
+  --chip-fg-c-own: 0.018;
 }
 .label-dot--green {
-  color: #12503f;
+  --hue: var(--hue-green);
 }
 .label-dot--blue {
-  color: #1d4a6e;
+  --hue: var(--hue-blue);
 }
 .label-dot--violet {
-  color: #3f2f6b;
+  --hue: var(--hue-violet);
 }
 .label-dot--rose {
-  color: #6b2f42;
+  --hue: var(--hue-rose);
 }
 .label-dot--amber {
-  color: #6b4a12;
+  --hue: var(--hue-amber);
 }
 .label-dot--teal {
-  color: #16514e;
+  --hue: var(--hue-teal);
 }
 .label-dot--brown {
-  color: #5c3d21;
+  --hue: var(--hue-brown);
 }
 /* В тёмной теме чернила по определению не читаются: берём светлую
    половину пары. Тон остаётся узнаваемым, потому что различает их
    оттенок, а не светлота. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .label-dot--slate {
-    color: #9fb0ab;
-  }
-  :root:not([data-theme='light']) .label-dot--green {
-    color: #52c1a4;
-  }
-  :root:not([data-theme='light']) .label-dot--blue {
-    color: #6aa6d8;
-  }
-  :root:not([data-theme='light']) .label-dot--violet {
-    color: #9c8bd8;
-  }
-  :root:not([data-theme='light']) .label-dot--rose {
-    color: #d88ba1;
-  }
-  :root:not([data-theme='light']) .label-dot--amber {
-    color: #d8a95a;
-  }
-  :root:not([data-theme='light']) .label-dot--teal {
-    color: #5cbdb8;
-  }
-  :root:not([data-theme='light']) .label-dot--brown {
-    color: #c09272;
-  }
-}
-:root[data-theme='dark'] .label-dot--slate {
-  color: #9fb0ab;
-}
-:root[data-theme='dark'] .label-dot--green {
-  color: #52c1a4;
-}
-:root[data-theme='dark'] .label-dot--blue {
-  color: #6aa6d8;
-}
-:root[data-theme='dark'] .label-dot--violet {
-  color: #9c8bd8;
-}
-:root[data-theme='dark'] .label-dot--rose {
-  color: #d88ba1;
-}
-:root[data-theme='dark'] .label-dot--amber {
-  color: #d8a95a;
-}
-:root[data-theme='dark'] .label-dot--teal {
-  color: #5cbdb8;
-}
-:root[data-theme='dark'] .label-dot--brown {
-  color: #c09272;
-}
 
 /* «Ждёт: …» и «Держит: …» — две стороны одной зависимости, и строки
    у них одинаковые: разными они читались бы как разные вещи. Стоят
@@ -2795,7 +2826,7 @@ textarea.description {
   box-shadow: var(--shadow-lg);
 }
 .palette::backdrop {
-  background: rgb(0 0 0 / 0.35);
+  background: var(--scrim);
 }
 .palette-input {
   width: 100%;
@@ -3016,6 +3047,10 @@ textarea.description {
   gap: var(--space-1);
 }
 .chip {
+  /* Значение собирается из рецепта и тона: сменить рецепт — сменить
+     все восемь разом, сменить тон — только один. */
+  background: oklch(var(--chip-bg-l) var(--chip-c, var(--chip-bg-c)) var(--hue, 0));
+  color: oklch(var(--chip-fg-l) var(--chip-fg-c-own, var(--chip-fg-c)) var(--hue, 0));
   font-size: var(--text-xs);
   line-height: 1.4;
   padding: 0 var(--space-2);
@@ -3031,106 +3066,36 @@ textarea.description {
   border-color: var(--rule);
 }
 .chip--slate {
-  background: #e3e8e6;
-  color: #2b3733;
+  --hue: var(--hue-slate);
+  /* Своя насыщенность: от `green` его отделяют два градуса тона,
+     и различает их только она. */
+  --chip-c: 0.006;
+  --chip-fg-c-own: 0.018;
 }
 .chip--green {
-  background: #d9ece4;
-  color: #12503f;
+  --hue: var(--hue-green);
 }
 .chip--blue {
-  background: #dbe7f2;
-  color: #1d4a6e;
+  --hue: var(--hue-blue);
 }
 .chip--violet {
-  background: #e3ddf2;
-  color: #3f2f6b;
+  --hue: var(--hue-violet);
 }
 .chip--rose {
-  background: #f2dde3;
-  color: #6b2f42;
+  --hue: var(--hue-rose);
 }
 .chip--amber {
-  background: #f2e7d2;
-  color: #6b4a12;
+  --hue: var(--hue-amber);
 }
 .chip--teal {
-  background: #d5eceb;
-  color: #16514e;
+  --hue: var(--hue-teal);
 }
 .chip--brown {
-  background: #ecdfd2;
-  color: #5c3d21;
+  --hue: var(--hue-brown);
 }
 
 /* В тёмной теме метки не осветляются, а затемняются: светлая плашка
    на тёмном фоне бьёт по глазам сильнее, чем тёмная на светлом. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .chip--slate {
-    background: #263230;
-    color: #cbd6d2;
-  }
-  :root:not([data-theme='light']) .chip--green {
-    background: #16352c;
-    color: #9fd8c4;
-  }
-  :root:not([data-theme='light']) .chip--blue {
-    background: #1a2f42;
-    color: #a6c8e4;
-  }
-  :root:not([data-theme='light']) .chip--violet {
-    background: #2a2440;
-    color: #c2b5e8;
-  }
-  :root:not([data-theme='light']) .chip--rose {
-    background: #3d222b;
-    color: #e3adbd;
-  }
-  :root:not([data-theme='light']) .chip--amber {
-    background: #3a2f18;
-    color: #dcc189;
-  }
-  :root:not([data-theme='light']) .chip--teal {
-    background: #163533;
-    color: #9ed3cf;
-  }
-  :root:not([data-theme='light']) .chip--brown {
-    background: #33261a;
-    color: #d6b795;
-  }
-}
-:root[data-theme='dark'] .chip--slate {
-  background: #263230;
-  color: #cbd6d2;
-}
-:root[data-theme='dark'] .chip--green {
-  background: #16352c;
-  color: #9fd8c4;
-}
-:root[data-theme='dark'] .chip--blue {
-  background: #1a2f42;
-  color: #a6c8e4;
-}
-:root[data-theme='dark'] .chip--violet {
-  background: #2a2440;
-  color: #c2b5e8;
-}
-:root[data-theme='dark'] .chip--rose {
-  background: #3d222b;
-  color: #e3adbd;
-}
-:root[data-theme='dark'] .chip--amber {
-  background: #3a2f18;
-  color: #dcc189;
-}
-:root[data-theme='dark'] .chip--teal {
-  background: #163533;
-  color: #9ed3cf;
-}
-:root[data-theme='dark'] .chip--brown {
-  background: #33261a;
-  color: #d6b795;
-}
 
 /* Меню. Список живёт в верхнем слое (`popover`): колонка карточек
    прокручивается сама, и вложенный в неё список у нижней карточки
@@ -3243,7 +3208,7 @@ textarea.description {
   box-shadow: var(--shadow-lg);
 }
 .dialog::backdrop {
-  background: rgb(0 0 0 / 0.35);
+  background: var(--scrim);
 }
 .dialog-title {
   font-size: var(--text-lg);
