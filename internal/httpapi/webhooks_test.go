@@ -445,7 +445,9 @@ func brokenHook(t *testing.T, owner *session, target *receiver) string {
 type subscriptionRow struct {
 	ID        string  `json:"id"`
 	Disabled  bool    `json:"disabled"`
+	Paused    bool    `json:"paused"`
 	LastError *string `json:"lastError"`
+	Pending   int     `json:"pending"`
 }
 
 func subscription(t *testing.T, owner *session, hookID string) subscriptionRow {
@@ -464,6 +466,100 @@ func subscription(t *testing.T, owner *session, hookID string) subscriptionRow {
 	}
 	t.Fatalf("подписки %s нет в списке: %s", hookID, raw)
 	return subscriptionRow{}
+}
+
+// Пауза: остановить, не удаляя.
+//
+// Вмешаться в идущую доставку можно было только удалением, а оно уносит
+// с собой ключ подписи — он показывается один раз — и весь журнал.
+// То есть единственное вмешательство было необратимым при прямо
+// обратном правиле продукта.
+//
+// Проверяется не кнопка, а два обещания, которые кнопка даёт: пока
+// стоит пауза, события не копятся (иначе возобновление обернулось бы
+// лавиной за всё время простоя, и получатель, ради которого паузу
+// и ставили, лёг бы вторично), а возобновление снимает и паузу,
+// и автоматическое отключение разом.
+func TestPauseStopsDeliveriesWithoutLosingTheSubscription(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	target := newReceiver(t)
+	target.answer(http.StatusOK)
+
+	raw := owner.mustDo("POST", "/api/webhooks", map[string]any{
+		"name": "Склад", "url": target.server.URL,
+		"events": []string{"card.created"},
+	}, http.StatusCreated)
+	hookID, _ := field(t, raw, "id").(string)
+	boardID := owner.board("Поставки")
+	snapshot := owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)
+	var snap struct {
+		Columns []struct{ ID string } `json:"columns"`
+	}
+	if err := json.Unmarshal(snapshot, &snap); err != nil {
+		t.Fatal(err)
+	}
+	card := func(title string) {
+		owner.mustDo("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+			"operationId": uuid.NewString(),
+			"type":        "CREATE_CARD",
+			"payload":     map[string]any{"columnId": snap.Columns[0].ID, "title": title},
+		}, http.StatusOK)
+	}
+
+	card("До паузы")
+	await(t, "первая доставка не доехала", func() bool {
+		list := deliveries(t, owner, hookID)
+		return len(list) == 1 && list[0].Delivered
+	})
+
+	owner.mustDo("PATCH", "/api/webhooks/"+hookID, map[string]any{"paused": true}, http.StatusNoContent)
+	if !subscription(t, owner, hookID).Paused {
+		t.Fatal("пауза не отметилась в списке: человек не увидит, что подписка стоит")
+	}
+
+	card("Во время паузы")
+	// Событие случилось, а доставки не завелось: очередь не копится.
+	if list := deliveries(t, owner, hookID); len(list) != 1 {
+		t.Fatalf("во время паузы завелось %d доставок вместо одной прежней: "+
+			"возобновление обернётся лавиной", len(list))
+	}
+
+	owner.mustDo("PATCH", "/api/webhooks/"+hookID, map[string]any{"paused": false}, http.StatusNoContent)
+	if subscription(t, owner, hookID).Paused {
+		t.Fatal("подписка осталась на паузе после возобновления")
+	}
+
+	card("После паузы")
+	await(t, "после возобновления доставки не пошли", func() bool {
+		list := deliveries(t, owner, hookID)
+		return len(list) == 2 && list[0].Delivered
+	})
+}
+
+// Возобновление снимает и то отключение, которое сделали мы сами:
+// человек, вернувшийся к подписке, уже разобрался с получателем.
+func TestResumeAlsoClearsTheAutomaticSwitchOff(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+	target := newReceiver(t)
+	target.answer(http.StatusInternalServerError)
+
+	hookID := brokenHook(t, owner, target)
+	await(t, "подписка не отключилась сама", func() bool {
+		dueNow(t, hookID)
+		return subscription(t, owner, hookID).Disabled
+	})
+
+	target.answer(http.StatusOK)
+	owner.mustDo("PATCH", "/api/webhooks/"+hookID, map[string]any{"paused": false}, http.StatusNoContent)
+	row := subscription(t, owner, hookID)
+	if row.Disabled {
+		t.Fatal("после «Возобновить» подписка осталась отключённой: кнопка обещала обратное")
+	}
+	if row.LastError != nil {
+		t.Fatalf("причина прошлого отказа осталась висеть: %q", *row.LastError)
+	}
 }
 
 // Подписка выносит данные наружу, поэтому заводит и видит её владелец.

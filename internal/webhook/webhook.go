@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/konkov/agile/internal/store"
 )
@@ -38,10 +39,21 @@ type Hook struct {
 	Events []string `json:"events"`
 	// Secret приходит только при создании: подписывать им будем мы,
 	// а получатель обязан сохранить его у себя.
-	Secret    string    `json:"secret,omitempty"`
-	Disabled  bool      `json:"disabled"`
+	Secret   string `json:"secret,omitempty"`
+	Disabled bool   `json:"disabled"`
+	// Paused — остановлено человеком, в отличие от Disabled: там сдались
+	// мы после восьми неудач. Слова человеку разные, и состояния разные.
+	Paused    bool      `json:"paused"`
 	LastError *string   `json:"lastError"`
 	CreatedAt time.Time `json:"createdAt"`
+	// Что происходит прямо сейчас: сколько доставок ждёт очереди
+	// и когда была последняя попытка с каким ответом. Показывается
+	// в строке подписки, не раскрывая журнала: человек приходит сюда
+	// с вопросом «доходит ли», и ответ на него не должен требовать
+	// ещё одного нажатия.
+	Pending    int        `json:"pending"`
+	LastTryAt  *time.Time `json:"lastTryAt"`
+	LastStatus *int       `json:"lastStatus"`
 }
 
 type Delivery struct {
@@ -77,8 +89,21 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Hook, error
 	out := []Hook{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select id, name, url, events, disabled_at is not null, last_error, created_at
-			  from webhooks order by created_at desc`)
+			select w.id, w.name, w.url, w.events, w.disabled_at is not null,
+			       w.paused_at is not null, w.last_error, w.created_at,
+			       (select count(*) from webhook_deliveries d
+			         where d.webhook_id = w.id
+			           and d.delivered_at is null and d.failed_at is null),
+			       last.at, last.status
+			  from webhooks w
+			  left join lateral (
+			       select coalesce(d.delivered_at, d.failed_at) as at, d.last_status as status
+			         from webhook_deliveries d
+			        where d.webhook_id = w.id and d.attempts > 0
+			        order by coalesce(d.delivered_at, d.failed_at) desc nulls last
+			        limit 1
+			  ) last on true
+			 order by w.created_at desc`)
 		if err != nil {
 			return err
 		}
@@ -86,7 +111,8 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Hook, error
 		for rows.Next() {
 			var h Hook
 			if err := rows.Scan(&h.ID, &h.Name, &h.URL, &h.Events,
-				&h.Disabled, &h.LastError, &h.CreatedAt); err != nil {
+				&h.Disabled, &h.Paused, &h.LastError, &h.CreatedAt,
+				&h.Pending, &h.LastTryAt, &h.LastStatus); err != nil {
 				return err
 			}
 			out = append(out, h)
@@ -138,6 +164,36 @@ func (s *Service) Create(ctx context.Context, orgID, actorID, name, target strin
 func (s *Service) Delete(ctx context.Context, orgID, actorID, hookID string) error {
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `delete from webhooks where id = $1`, hookID)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+}
+
+// SetPaused останавливает и возобновляет подписку рукой человека.
+//
+// Обратимое действие вместо необратимого: до сих пор вмешаться
+// в идущую доставку можно было только удалением, а оно уносит с собой
+// ключ подписи (показывается один раз) и весь журнал. Возобновление
+// заодно снимает автоматическое отключение: человек, который вернулся
+// к подписке, уже разобрался с получателем, и заставлять его после
+// этого искать кнопку «повторить доставку» значит просить дважды.
+func (s *Service) SetPaused(ctx context.Context, orgID, actorID, hookID string, paused bool) error {
+	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var tag pgconn.CommandTag
+		var err error
+		if paused {
+			tag, err = tx.Exec(ctx,
+				`update webhooks set paused_at = now() where id = $1`, hookID)
+		} else {
+			tag, err = tx.Exec(ctx,
+				`update webhooks set paused_at = null, disabled_at = null, last_error = null
+				  where id = $1`, hookID)
+		}
 		if err != nil {
 			return err
 		}
@@ -231,7 +287,8 @@ func Enqueue(ctx context.Context, tx pgx.Tx, orgID, event string, payload any) e
 		insert into webhook_deliveries (org_id, webhook_id, event, payload)
 		select $1, w.id, $2, $3::jsonb
 		  from webhooks w
-		 where w.org_id = $1 and w.disabled_at is null and $2 = any (w.events)`,
+		 where w.org_id = $1 and w.disabled_at is null and w.paused_at is null
+		   and $2 = any (w.events)`,
 		orgID, event, string(body))
 	return err
 }

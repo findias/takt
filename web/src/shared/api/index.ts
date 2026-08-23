@@ -213,8 +213,31 @@ export type Webhook = {
   secret?: string
   /** Отключена после того, как получатель долго не отвечал. */
   disabled: boolean
+  /** Остановлена человеком — в отличие от `disabled`, где сдались мы. */
+  paused: boolean
   lastError: string | null
   createdAt: string
+  /** Что происходит прямо сейчас: сколько ждёт очереди и чем кончилась
+   *  последняя попытка. Ответ на вопрос «доходит ли» без раскрытия
+   *  журнала — за журналом идут, когда уже не доходит. */
+  pending: number
+  lastTryAt: string | null
+  lastStatus: number | null
+}
+
+/**
+ * Границы того, что доставка делает сама.
+ *
+ * Приходит с сервера, где эти числа и действуют: свой набор в клиенте
+ * разошёлся бы с настоящим — так уже было со списком событий.
+ */
+export type WebhookPolicy = {
+  attempts: number
+  firstDelaySeconds: number
+  maxDelaySeconds: number
+  timeoutSeconds: number
+  giveUpAfterMinutes: number
+  keepDeliveredDays: number
 }
 
 /** Одна попытка доставить событие. Журнал нужен затем, чтобы видеть,
@@ -740,10 +763,16 @@ export const api = {
   revokeClient: (id: string) => request<void>('DELETE', `/api/clients/${id}`),
 
   listWebhooks: () =>
-    request<{ webhooks: Webhook[]; events: string[] }>('GET', '/api/webhooks'),
+    request<{ webhooks: Webhook[]; events: string[]; policy: WebhookPolicy }>(
+      'GET',
+      '/api/webhooks',
+    ),
   createWebhook: (name: string, url: string, events: string[]) =>
     request<Webhook>('POST', '/api/webhooks', { name, url, events }),
   deleteWebhook: (id: string) => request<void>('DELETE', `/api/webhooks/${id}`),
+  /** Остановить и возобновить: обратимое вмешательство вместо удаления. */
+  pauseWebhook: (id: string, paused: boolean) =>
+    request<void>('PATCH', `/api/webhooks/${id}`, { paused }),
   deliveries: (id: string) =>
     request<{ deliveries: Delivery[] }>('GET', `/api/webhooks/${id}/deliveries`),
   retryDelivery: (id: string) => request<void>('POST', `/api/deliveries/${id}/retry`),

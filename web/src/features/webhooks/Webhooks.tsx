@@ -1,9 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { WEBHOOK_EVENT_NAMES, api } from '../../shared/api/index.ts'
-import type { Delivery, Webhook } from '../../shared/api/index.ts'
+import type { Delivery, Webhook, WebhookPolicy } from '../../shared/api/index.ts'
 import { Skeleton } from '../../shared/ui/states.tsx'
 import { CopyButton } from '../../shared/ui/CopyButton.tsx'
 import { Field, useFormErrors } from '../../shared/ui/Field.tsx'
+import { plural } from '../../shared/lib/plural.ts'
+
+/**
+ * Срок словами и с той точностью, какая тут есть.
+ *
+ * «Примерно 123 мин» — машинная точность там, где нужен порядок
+ * величины: число складывается из восьми удвоений и меняется от любой
+ * правки пауз, а человек читает его, чтобы решить, ждать ему или чинить
+ * получателя. На этот же вопрос отвечает «около двух часов», и оно
+ * не врёт точностью, которой нет.
+ */
+function примерно(минут: number): string {
+  if (минут < 90) return `около ${Math.round(минут / 10) * 10} минут`
+  const часов = Math.round(минут / 60)
+  return `около ${часов} ${plural(часов, 'часа', 'часов', 'часов')}`
+}
 
 /**
  * Подписки на события.
@@ -23,6 +39,9 @@ export function Webhooks() {
   // Какие события бывают, знает сервер: свой список здесь уже был
   // и разошёлся с доставляемым вчетверо.
   const [known, setKnown] = useState<string[]>([])
+  // Границы автономии приходят с сервера — там, где эти числа
+  // и действуют.
+  const [policy, setPolicy] = useState<WebhookPolicy | null>(null)
   const [fresh, setFresh] = useState<Webhook | null>(null)
   const [error, setError] = useState<string | null>(null)
   const form = useFormErrors()
@@ -36,6 +55,7 @@ export function Webhooks() {
       .then((r) => {
         setHooks(r.webhooks)
         setKnown(r.events)
+        setPolicy(r.policy)
       })
       .catch(() => setHooks([]))
   }, [])
@@ -53,9 +73,25 @@ export function Webhooks() {
       {error && <p className="error">{error}</p>}
       <p className="muted small">
         Подписка уносит события наружу: мы отправляем их на ваш адрес и подписываем ключом,
-        чтобы получатель мог убедиться, что письмо от нас. Доставка идёт не менее одного раза
-        — при отказе получателя мы повторяем, удваивая паузу.
+        чтобы получатель мог убедиться, что письмо от нас. Доставка идёт не менее одного раза.
       </p>
+      {/* Что доставка делает сама — целиком и числами. Прежде здесь
+          стояло «повторяем, удваивая паузу», и из этого нельзя было
+          узнать ни сколько раз мы повторим, ни того, что после
+          последней неудачи подписка отключается совсем: человек узнавал
+          об этом от подписки, которая перестала слать. Автономная
+          работа обязана говорить, где она остановится. */}
+      {policy && (
+        <p className="muted small">
+          Что мы делаем сами: ждём ответа {policy.timeoutSeconds} с; если получатель
+          не ответил — повторяем до {policy.attempts} раз, удваивая паузу
+          от {policy.firstDelaySeconds} с до {Math.round(policy.maxDelaySeconds / 60)} мин.
+          Всего это {примерно(policy.giveUpAfterMinutes)}. Дальше не пробуем: подписка
+          отключается, и события по ней перестают копиться вовсе. Включит её обратно
+          любой повтор доставки вручную. Журнал доставленного храним{' '}
+          {policy.keepDeliveredDays} дней и потом убираем сами.
+        </p>
+      )}
 
       {hooks === null ? (
         <Skeleton lines={2} />
@@ -222,13 +258,53 @@ function HookRow({
                   отметке: причина отказа приходит от получателя, длины
                   и вида непредсказуемых, и совет, приписанный к ней
                   встык, читается её продолжением. */}
-              <span className="muted small">Повтор любой доставки включит подписку снова.</span>
+              <span className="muted small">
+                Повтор любой доставки включит подписку снова — как и «Возобновить».
+              </span>
             </>
+          )}
+          {/* Пауза — не отказ, и говорится о ней иначе: «мы сдались»
+              и «остановлено вами» человек должен различать, не вчитываясь. */}
+          {hook.paused && !hook.disabled && (
+            <>
+              <span className="mark">Приостановлена</span>
+              <span className="muted small">
+                Пока стоит пауза, события по этой подписке не копятся: возобновление
+                не обернётся лавиной за всё время простоя.
+              </span>
+            </>
+          )}
+          {/* Работа, а не ожидание: сколько сейчас в очереди и чем
+              кончилась последняя попытка. За журналом идут, когда уже
+              не доходит, — а вопрос «доходит ли» задают каждый раз, и
+              ответ на него не должен требовать ещё одного нажатия. */}
+          {!hook.disabled && !hook.paused && (hook.pending > 0 || hook.lastTryAt) && (
+            <span className="muted small">
+              {hook.pending > 0 && `В очереди: ${hook.pending}. `}
+              {hook.lastTryAt &&
+                `Последняя попытка ${new Date(hook.lastTryAt).toLocaleString('ru-RU')}` +
+                  (hook.lastStatus !== null ? `, ответ ${hook.lastStatus}.` : '.')}
+            </span>
           )}
         </div>
         <div className="row row--tight">
           <button className="link" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
             {open ? 'Скрыть доставки' : 'Доставки'}
+          </button>
+          {/* Обратимое стоит раньше необратимого и не спрашивает,
+              необратимое — спрашивает. До паузы вмешаться в идущую
+              доставку можно было только удалением, а оно уносит ключ
+              подписи (он показывается один раз) и весь журнал. */}
+          <button
+            className="link"
+            onClick={() => onAct(api.pauseWebhook(hook.id, !hook.paused))}
+            aria-label={
+              hook.paused
+                ? `Возобновить подписку «${hook.name}»`
+                : `Приостановить подписку «${hook.name}»`
+            }
+          >
+            {hook.paused ? 'Возобновить' : 'Приостановить'}
           </button>
           <button
             className="link link--danger"

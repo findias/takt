@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/konkov/agile/internal/auth"
+	"github.com/konkov/agile/internal/retention"
 	"github.com/konkov/agile/internal/webhook"
 )
 
@@ -15,6 +16,7 @@ func (s *Server) registerWebhookRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/webhooks", s.owner(s.handleListWebhooks))
 	mux.HandleFunc("POST /api/webhooks", s.owner(s.handleCreateWebhook))
 	mux.HandleFunc("DELETE /api/webhooks/{id}", s.owner(s.handleDeleteWebhook))
+	mux.HandleFunc("PATCH /api/webhooks/{id}", s.owner(s.handlePauseWebhook))
 	mux.HandleFunc("GET /api/webhooks/{id}/deliveries", s.owner(s.handleDeliveries))
 	mux.HandleFunc("POST /api/deliveries/{id}/retry", s.owner(s.handleRetryDelivery))
 }
@@ -29,9 +31,27 @@ func (s *Server) handleListWebhooks(w http.ResponseWriter, r *http.Request, p au
 	// спрашивают его ровно там же и ровно тогда же. И едет он с сервера
 	// потому, что у интерфейса был свой — вчетверо короче, без «работа
 	// сделана», ради которой подписку чаще всего и заводят.
+	//
+	// Тем же рейсом едут границы автономии: сколько раз доставка
+	// повторит, когда сдастся и сколько времени журнал вообще хранится.
+	// Всё это система делает сама, а человеку было сказано только
+	// «повторяем, удваивая паузу» — из чего нельзя узнать ни числа
+	// попыток, ни того, что после последней подписка отключается совсем.
+	// Числа считаются там, где действуют: второй их набор в клиенте
+	// разошёлся бы с первым.
+	policy := webhook.CurrentPolicy()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"webhooks": hooks,
 		"events":   s.hooks.Known(),
+		"policy": map[string]any{
+			"attempts":           policy.Attempts,
+			"firstDelaySeconds":  policy.FirstDelaySeconds,
+			"maxDelaySeconds":    policy.MaxDelaySeconds,
+			"timeoutSeconds":     policy.TimeoutSeconds,
+			"giveUpAfterMinutes": policy.GiveUpAfterMinutes,
+			// Срок хранения берётся у уборщика, который и стирает.
+			"keepDeliveredDays": int(retention.DeliveredTTL.Hours() / 24),
+		},
 	})
 }
 
@@ -52,6 +72,32 @@ func (s *Server) handleCreateWebhook(w http.ResponseWriter, r *http.Request, p a
 		return
 	}
 	writeJSON(w, http.StatusCreated, hook)
+}
+
+// Пауза — обратимое вмешательство в идущую работу. До неё вмешаться
+// можно было только удалением, то есть необратимо, — при том, что
+// правило продукта прямо обратное.
+func (s *Server) handlePauseWebhook(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Paused *bool `json:"paused"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if req.Paused == nil {
+		writeError(w, http.StatusBadRequest, "нужно сказать, приостановить или возобновить")
+		return
+	}
+	err := s.hooks.SetPaused(r.Context(), p.OrgID, p.ID, r.PathValue("id"), *req.Paused)
+	if errors.Is(err, webhook.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "подписка не найдена")
+		return
+	}
+	if err != nil {
+		s.fail(w, "пауза подписки", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleDeleteWebhook(w http.ResponseWriter, r *http.Request, p auth.Principal) {

@@ -667,6 +667,29 @@ test('подписка на события заводится и показыв�
   await page.getByRole('button', { name: 'Доставки' }).click()
   await expect(page.getByText('Карточка создана').first()).toBeVisible()
 
+  // Границы того, что доставка делает сама, названы числами и на месте:
+  // прежде было сказано «повторяем, удваивая паузу» — из чего нельзя
+  // узнать ни сколько раз мы повторим, ни того, что после последней
+  // неудачи подписка отключится совсем. Числа приходят с сервера,
+  // оттуда, где они и действуют.
+  await expect(page.getByText(/Что мы делаем сами/)).toBeVisible()
+  await expect(page.getByText(/повторяем до 8 раз/)).toBeVisible()
+  // Срок сказан порядком величины, а не машинной точностью: «примерно
+  // 123 мин» складывается из восьми удвоений и меняется от любой правки
+  // пауз, а читают его, чтобы решить — ждать или чинить получателя.
+  await expect(page.getByText(/около 2 часов/)).toBeVisible()
+  await expect(page.getByText(/подписка\s+отключается/)).toBeVisible()
+  await expect(page.getByText(/храним 30 дней/)).toBeVisible()
+
+  // Вмешаться в идущую работу можно обратимо. До паузы выбор был
+  // такой: терпеть два часа отказов либо удалить подписку вместе
+  // с ключом подписи и журналом.
+  await page.getByRole('button', { name: /Приостановить подписку/ }).click()
+  await expect(page.getByText('Приостановлена')).toBeVisible()
+  await expect(page.getByText(/события по этой подписке не копятся/)).toBeVisible()
+  await page.getByRole('button', { name: /Возобновить подписку/ }).click()
+  await expect(page.getByText('Приостановлена')).toHaveCount(0)
+
   // Подписка убирается тем же экраном.
   await page.getByRole('button', { name: /Удалить подписку/ }).click()
   await expect(page.getByText('https://example.test/hooks/board')).toHaveCount(0)

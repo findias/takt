@@ -35,7 +35,50 @@ const (
 	// около двух часов: если за два часа получатель не ожил, он не оживёт
 	// и на девятой.
 	maxAttempts = 8
+	// Первая пауза перед повтором; дальше удвоение до потолка.
+	firstDelay = 30 * time.Second
+	maxDelay   = time.Hour
 )
+
+// Policy — границы того, что доставка делает сама.
+//
+// Отдаётся интерфейсу и берётся отсюда, а не переписывается там числами:
+// «повторяем, удваивая паузу» — единственное, что было сказано человеку,
+// и из этого нельзя узнать ни сколько раз мы повторим, ни что после
+// последней неудачи подписку отключим совсем. Автономное поведение
+// обязано быть названо целиком: что система делает сама, где
+// останавливается и чего не сделает никогда.
+//
+// Второй набор этих же чисел в клиенте разошёлся бы с первым — так уже
+// было со списком событий, который в интерфейсе был вчетверо короче
+// доставляемого.
+type Policy struct {
+	// Сколько раз пытаемся, прежде чем сдаться.
+	Attempts int `json:"attempts"`
+	// Пауза перед первым повтором и потолок, до которого она удваивается.
+	FirstDelaySeconds int `json:"firstDelaySeconds"`
+	MaxDelaySeconds   int `json:"maxDelaySeconds"`
+	// Сколько ждём ответа получателя.
+	TimeoutSeconds int `json:"timeoutSeconds"`
+	// Через сколько попыток пройдёт примерно всё отведённое время.
+	GiveUpAfterMinutes int `json:"giveUpAfterMinutes"`
+}
+
+// CurrentPolicy собирает границы из тех же констант, по которым работает
+// доставка: пересчёт, а не второй список.
+func CurrentPolicy() Policy {
+	total := time.Duration(0)
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		total += backoff(attempt)
+	}
+	return Policy{
+		Attempts:           maxAttempts,
+		FirstDelaySeconds:  int(firstDelay.Seconds()),
+		MaxDelaySeconds:    int(maxDelay.Seconds()),
+		TimeoutSeconds:     int(sendTimeout.Seconds()),
+		GiveUpAfterMinutes: int(total.Minutes()),
+	}
+}
 
 type Worker struct {
 	db   *store.Store
@@ -90,7 +133,7 @@ func (w *Worker) Once(ctx context.Context) (int, error) {
 			  join webhooks w on w.id = d.webhook_id
 			 where d.delivered_at is null and d.failed_at is null
 			   and d.next_attempt_at <= now()
-			   and w.disabled_at is null
+			   and w.disabled_at is null and w.paused_at is null
 			 order by d.next_attempt_at
 			 limit $1
 			 for update of d skip locked`, batchSize)
@@ -203,11 +246,11 @@ func (w *Worker) record(ctx context.Context, deliveryID, hookID string, attempts
 // повторы в первые минуты полезны (получатель мог перезапускаться),
 // дальше они только шумят.
 func backoff(attempt int) time.Duration {
-	delay := 30 * time.Second
+	delay := firstDelay
 	for i := 1; i < attempt; i++ {
 		delay *= 2
-		if delay > time.Hour {
-			return time.Hour
+		if delay > maxDelay {
+			return maxDelay
 		}
 	}
 	return delay
