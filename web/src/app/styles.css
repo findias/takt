@@ -84,6 +84,24 @@
      1.28 в тёмной — замерено). Разделители остаются тонкими,
      а поля и кнопки обводятся заметнее. */
   --rule-strong: #7c8481;
+  /* Слои. Числа собраны здесь по той же причине, по которой собраны
+     отступы: набранное в правиле число — это будущее расхождение,
+     а у слоёв расхождение выглядит как «почему меню под панелью».
+     Шаг десятками, чтобы между соседями было куда вставить.
+
+     ВАЖНО: это не весь порядок наложения. Верхний слой браузера —
+     `<dialog>` с showModal, палитра, `popover` у меню — стоит НАД любым
+     z-index, сколько его ни назначь. Прогон 23.08.2026: при открытом
+     диалоге elementFromPoint над тостом с z-index 40 возвращает сам
+     диалог. Отсюда правило: диалог закрывается ДО действия, о котором
+     доложит тост, — иначе доклад будет спрятан под тем, что его
+     вызвало. Так сегодня и сделано во всех четырёх подтверждениях
+     и в палитре. */
+  --layer-raised: 2;
+  --layer-notice: 10;
+  --layer-panel: 20;
+  --layer-control: 30;
+  --layer-toast: 40;
   /* Галочка внутри флажка. Живёт в теме, потому что её цвет зависит
      от заливки: в светлой теме квадрат заливается тёмно-зелёным
      и галочка белая, в тёмной заливка светлая — и галочка тёмная.
@@ -917,7 +935,7 @@ select:disabled {
   position: fixed;
   right: 1rem;
   bottom: 1rem;
-  z-index: 10;
+  z-index: var(--layer-notice);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -1105,7 +1123,7 @@ select:disabled {
      открытое меню должно лежать поверх следующей карточки, а не под
      ней. Обрезать содержимое больше нечему — `contain: paint` ушёл
      вместе с `content-visibility`. */
-  z-index: 2;
+  z-index: var(--layer-raised);
 }
 .card:hover {
   border-color: var(--ink-3);
@@ -1284,12 +1302,12 @@ select:disabled {
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 20;
+  z-index: calc(var(--layer-panel) + 1);
 }
 .panel-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: var(--layer-panel);
   display: grid;
   place-items: center;
   padding: var(--space-4);
@@ -1364,7 +1382,7 @@ select:disabled {
 .panel-card .tabs {
   position: sticky;
   top: calc(var(--space-4) * -1);
-  z-index: 1;
+  z-index: var(--layer-raised);
   display: flex;
   gap: var(--space-1);
   margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
@@ -1674,7 +1692,7 @@ textarea.description {
   position: sticky;
   bottom: 0;
   flex: none;
-  z-index: 30;
+  z-index: var(--layer-control);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -3130,7 +3148,7 @@ textarea.description {
   inset: auto;
   margin: 0;
   translate: 0 var(--space-1);
-  z-index: 30;
+  z-index: var(--layer-control);
   min-width: 12rem;
   max-width: calc(100vw - 2 * var(--space-2));
   /* Длинный список — исполнители большой команды — не должен уходить
@@ -3186,7 +3204,7 @@ textarea.description {
   position: fixed;
   right: var(--space-4);
   bottom: var(--space-4);
-  z-index: 40;
+  z-index: var(--layer-toast);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
