@@ -90,7 +90,9 @@ export type Team = {
 export type ArchivedTeam = {
   id: string
   name: string
-  /** Пусто у корневого. */
+  /** Пусты у корневого. По идентификатору экран отвечает на вопрос
+   *  «моя ли это область», по имени человек — на «чьё это». */
+  parentId: string | null
   parentName: string
   /** Старший тоже в архиве — вернуть сейчас нельзя, сперва его. */
   parentArchived: boolean

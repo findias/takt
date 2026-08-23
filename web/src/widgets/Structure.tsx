@@ -10,7 +10,13 @@ import type {
   TeamBoard,
   TeamMember,
 } from '../shared/api/index.ts'
-import { allowedParents, buildTree, canNestInside, counters } from '../entities/team/model.ts'
+import {
+  allowedParents,
+  buildTree,
+  canNestInside,
+  counters,
+  managedIds,
+} from '../entities/team/model.ts'
 import type { TreeNode } from '../entities/team/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 
@@ -18,9 +24,14 @@ import { Skeleton } from '../shared/ui/states.tsx'
  * Структура организации: дерево подразделений, их состав и наблюдение.
  *
  * Читать дерево может любой участник — кто с кем работает, не тайна.
- * Менять его может владелец, поэтому у остальных экран остаётся, но
- * действия с него исчезают: показывать кнопку, которая ответит запретом,
- * хуже, чем не показывать её вовсе.
+ * Менять его могут двое: владелец организации — везде, администратор
+ * области — у себя и ниже. Действия показываются ровно тому, кому база
+ * их разрешает: показывать кнопку, которая ответит запретом, хуже, чем
+ * не показывать её вовсе, а прятать то, что человек вправе сделать, —
+ * значит обещать словами и отказывать экраном. До 23 августа 2026 здесь
+ * было второе: весь столбец действий стоял под «владелец ли ты», хотя
+ * политика базы, текст отказа и соседний раздел «Кто за что отвечает»
+ * все трое обещали администратору его область.
  */
 export function Structure({
   principal,
@@ -68,6 +79,13 @@ export function Structure({
 
   if (teams === null) return <Skeleton lines={3} />
   const tree = buildTree(teams)
+  // Владельцу принадлежит всё дерево, и вопрос ему не задаётся;
+  // остальным область считается по их записям администратора.
+  const managed = managedIds(
+    tree,
+    admins.filter((a) => a.userId === principal.id).map((a) => a.teamId),
+  )
+  const canManage = (teamId: string) => isOwner || managed.has(teamId)
 
   return (
     <div className="stack">
@@ -93,7 +111,7 @@ export function Structure({
               tree={tree}
               peopleAbove={false}
               people={people}
-              isOwner={isOwner}
+              canManage={canManage}
               onAct={act}
               onOpenBoard={onOpenBoard}
             />
@@ -114,10 +132,11 @@ export function Structure({
         teams={teams}
         people={people}
         isOwner={isOwner}
+        canManage={canManage}
         onAct={act}
       />
 
-      <ArchivedTeams teams={archived} onAct={act} />
+      <ArchivedTeams teams={archived} canManage={canManage} onAct={act} />
     </div>
   )
 }
@@ -132,12 +151,21 @@ export function Structure({
  * ответа на «чьё ядро» из архива не выбрать. Узел, старший которого
  * тоже убран, вернуть нельзя, и кнопки у него нет: держать кнопку,
  * которая заведомо ответит отказом, — это отказ, отложенный до нажатия.
+ *
+ * По той же причине кнопки нет у чужого узла. Список читают все — он
+ * отвечает на «куда делось подразделение», и это не тайна, — но
+ * вернуть можно только своё: владельцу любое, администратору области
+ * то, что лежало внутри неё. До 23 августа 2026 «Вернуть» стояло
+ * у каждой строки и у всякого смотрящего, а рядовой участник в ответ
+ * получал «не найдено» про узел, который тут же перед ним и назван.
  */
 function ArchivedTeams({
   teams,
+  canManage,
   onAct,
 }: {
   teams: ArchivedTeam[]
+  canManage: (teamId: string) => boolean
   onAct: (p: Promise<unknown>) => void
 }) {
   if (teams.length === 0) return null
@@ -155,7 +183,7 @@ function ArchivedTeams({
             </div>
             {t.parentArchived ? (
               <span className="muted small">сперва верните «{t.parentName}»</span>
-            ) : (
+            ) : t.parentId === null || !canManage(t.parentId) ? null : (
               <button
                 className="link"
                 aria-label={`Вернуть из архива: ${t.name}`}
@@ -179,7 +207,7 @@ function TeamNode({
   // и пустым, и тогда «их видят те, кто выше» — неправда.
   peopleAbove,
   people,
-  isOwner,
+  canManage,
   onAct,
   onOpenBoard,
 }: {
@@ -187,13 +215,14 @@ function TeamNode({
   tree: TreeNode[]
   peopleAbove: boolean
   people: Member[]
-  isOwner: boolean
+  canManage: (teamId: string) => boolean
   onAct: (p: Promise<unknown>) => void
   onOpenBoard: (boardId: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const counts = counters(node)
   const parents = allowedParents(tree, node)
+  const mine = canManage(node.id)
 
   return (
     <li className="tree-node">
@@ -211,13 +240,23 @@ function TeamNode({
             и счётчики у каждой строки своей длины, и действия, стоящие
             за ними встык, едут по горизонтали от строки к строке —
             глазом столбец не пройти. */}
-        {isOwner && (
+        {mine && (
           <div className="row row--tight tree-actions">
             {canNestInside(node) && (
-              <NewTeam parent={node.id} label="+ отдел" onCreate={onAct} />
+              <NewTeam
+                parent={node.id}
+                label="+ отдел"
+                // Кнопка у каждого узла своя, а зовутся все одинаково:
+                // «+ отдел» без объекта диктору говорит только о том,
+                // что кнопок много. Видно объект по строке, слышно —
+                // по имени.
+                title={`Завести отдел в «${node.name}»`}
+                onCreate={onAct}
+              />
             )}
             <button
               className="link"
+              aria-label={`Переименовать подразделение «${node.name}»`}
               onClick={() => {
                 // Узел из каталога переименовать можно, и это не ошибка:
                 // часть провайдеров имена групп не шлёт вовсе. Но там,
@@ -277,7 +316,7 @@ function TeamNode({
             boards={node.boards}
             peopleAbove={peopleAbove}
             people={people}
-            isOwner={isOwner}
+            canManage={mine}
             onAct={onAct}
           />
           {/* Чем занято подразделение — второй вопрос к узлу после
@@ -297,7 +336,7 @@ function TeamNode({
               tree={tree}
               peopleAbove={peopleAbove || node.members > 0}
               people={people}
-              isOwner={isOwner}
+              canManage={canManage}
               onAct={onAct}
               onOpenBoard={onOpenBoard}
             />
@@ -314,7 +353,7 @@ function TeamMembers({
   boards,
   peopleAbove,
   people,
-  isOwner,
+  canManage,
   onAct,
 }: {
   teamId: string
@@ -322,7 +361,7 @@ function TeamMembers({
   boards: number
   peopleAbove: boolean
   people: Member[]
-  isOwner: boolean
+  canManage: boolean
   onAct: (p: Promise<unknown>) => void
 }) {
   const [members, setMembers] = useState<TeamMember[] | null>(null)
@@ -383,7 +422,7 @@ function TeamMembers({
                 <span className="muted small">{m.email}</span>
               </div>
               {m.lead && <span className="role-chip">Ведущий</span>}
-              {isOwner && (
+              {canManage && (
                 <button
                   className="link"
                   aria-label={`Убрать из состава: ${m.name}`}
@@ -397,7 +436,7 @@ function TeamMembers({
         </ul>
       )}
 
-      {isOwner && outside.length > 0 && (
+      {canManage && outside.length > 0 && (
         <select
           value=""
           aria-label="Добавить в подразделение"
@@ -472,10 +511,13 @@ function TeamBoards({ teamId, onOpen }: { teamId: string; onOpen: (boardId: stri
 function NewTeam({
   parent,
   label,
+  title,
   onCreate,
 }: {
   parent: string | null
   label: string
+  /** Имя для диктора, когда подписи на кнопке для этого мало. */
+  title?: string
   onCreate: (p: Promise<unknown>) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -483,7 +525,7 @@ function NewTeam({
 
   if (!open) {
     return (
-      <button className="link" onClick={() => setOpen(true)}>
+      <button className="link" aria-label={title} onClick={() => setOpen(true)}>
         {label}
       </button>
     )
@@ -507,7 +549,7 @@ function NewTeam({
         onChange={(e) => setName(e.target.value)}
         onBlur={() => !name.trim() && setOpen(false)}
       />
-      <button type="submit" aria-label="Завести подразделение" disabled={!name.trim()}>
+      <button type="submit" aria-label={title ?? 'Завести подразделение'} disabled={!name.trim()}>
         Завести
       </button>
     </form>
@@ -523,16 +565,22 @@ function Observation({
   teams,
   people,
   isOwner,
+  canManage,
   onAct,
 }: {
   observers: Observer[]
   teams: Team[]
   people: Member[]
   isOwner: boolean
+  canManage: (teamId: string) => boolean
   onAct: (p: Promise<unknown>) => void
 }) {
   const [userId, setUserId] = useState('')
   const [teamId, setTeamId] = useState('')
+  // Надзор за поддеревом ставит и снимает тот, кто за это поддерево
+  // отвечает. За организацией целиком — только владелец: у такого
+  // надзора нет области, внутри которой полномочие кончалось бы.
+  const canObserve = teams.filter((t) => canManage(t.id))
 
   return (
     <section className="stack">
@@ -554,7 +602,7 @@ function Observation({
                   {o.teamName ? `Подразделение «${o.teamName}»` : 'Вся организация'}
                 </span>
               </div>
-              {isOwner && (
+              {(isOwner || (o.teamId !== null && canManage(o.teamId))) && (
                 <button
                   className="link"
                   aria-label={`Отозвать наблюдение: ${o.name}`}
@@ -568,12 +616,13 @@ function Observation({
         </ul>
       )}
 
-      {isOwner && people.length > 0 && (
+      {people.length > 0 && (isOwner || canObserve.length > 0) && (
         <form
           className="row"
           onSubmit={(e) => {
             e.preventDefault()
             if (!userId) return
+            if (!isOwner && !teamId) return
             onAct(api.grantObservation(userId, teamId || null))
             setUserId('')
             setTeamId('')
@@ -588,14 +637,14 @@ function Observation({
             ))}
           </select>
           <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label="За чем">
-            <option value="">За всей организацией</option>
-            {teams.map((t) => (
+            <option value="">{isOwner ? 'За всей организацией' : 'За чем…'}</option>
+            {canObserve.map((t) => (
               <option key={t.id} value={t.id}>
                 За «{t.name}»
               </option>
             ))}
           </select>
-          <button type="submit" disabled={!userId}>
+          <button type="submit" disabled={!userId || (!isOwner && !teamId)}>
             Выдать
           </button>
         </form>
@@ -608,9 +657,10 @@ function Observation({
  * Кто за что отвечает.
  *
  * Администратор подразделения заводит команды под собой, вписывает в них
- * людей и распоряжается досками своей области — и не трогает соседнюю.
- * Раздаёт это только владелец организации: полномочие, размножающее само
- * себя, перестаёт быть ограниченным.
+ * людей, ставит наблюдателей за своим поддеревом и распоряжается досками
+ * своей области — и не трогает соседнюю. Раздаёт это только владелец
+ * организации: полномочие, размножающее само себя, перестаёт быть
+ * ограниченным.
  */
 function Administration({
   admins,
@@ -632,9 +682,10 @@ function Administration({
     <section className="stack">
       <h2 className="section-title">Кто за что отвечает</h2>
       <p className="muted small">
-        Администратор подразделения заводит отделы под собой, вписывает людей
-        и распоряжается досками своей области. Корневые подразделения и раздачу
-        полномочий владелец организации оставляет за собой.
+        Администратор подразделения заводит отделы под собой, вписывает людей,
+        ставит наблюдателей и распоряжается досками своей области. Корневые
+        подразделения, наблюдение за всей организацией и раздачу полномочий
+        владелец организации оставляет за собой.
       </p>
 
       {admins.length === 0 ? (

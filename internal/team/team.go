@@ -232,8 +232,8 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Archive
 	out := []ArchivedTeam{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select t.id, t.name, coalesce(p.name, ''), p.archived_at is not null,
-			       t.archived_at
+			select t.id, t.name, t.parent_id, coalesce(p.name, ''),
+			       p.archived_at is not null, t.archived_at
 			  from teams t
 			  left join teams p on p.id = t.parent_id
 			 where t.archived_at is not null
@@ -244,7 +244,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Archive
 		defer rows.Close()
 		for rows.Next() {
 			var a ArchivedTeam
-			if err := rows.Scan(&a.ID, &a.Name, &a.ParentName,
+			if err := rows.Scan(&a.ID, &a.Name, &a.ParentID, &a.ParentName,
 				&a.ParentArchived, &a.ArchivedAt); err != nil {
 				return err
 			}
@@ -259,8 +259,14 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Archive
 type ArchivedTeam struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	// ParentName пуст у корневого подразделения.
-	ParentName string `json:"parentName"`
+	// ParentID и ParentName пусты у корневого подразделения. Имя нужно
+	// человеку — «Ядро» без ответа на «чьё ядро» из архива не выбрать,
+	// — а идентификатор клиенту: по нему он находит старшего в живом
+	// дереве и отвечает на вопрос «моя ли это область». Без него
+	// администратору области пришлось бы показывать «Вернуть» у всякого
+	// узла, включая соседский, где кнопка заведомо ответит отказом.
+	ParentID   *string `json:"parentId"`
+	ParentName string  `json:"parentName"`
 	// ParentArchived говорит, что вернуть этот узел сейчас нельзя:
 	// его старший тоже в архиве. Отвечать на это отказом после нажатия
 	// значило бы держать кнопку, которая заведомо не сработает.

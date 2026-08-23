@@ -362,3 +362,94 @@ func TestDeactivatingTheLastMemberLeavesTheTeamBoards(t *testing.T) {
 		t.Errorf("наблюдатель не видит доски пустого подразделения: %d %s", code, body)
 	}
 }
+
+// Область администратора: что он делает у себя и чего не делает нигде.
+//
+// Проверка сторожит не отказы сами по себе, а обещание, на которое
+// опирается экран структуры: он показывает администратору действия
+// над его областью и прячет над чужой. Пока это обещание держится
+// только политикой базы, сузить его можно молча — и экран начнёт
+// предлагать кнопки, отвечающие запретом. Обратное уже случалось:
+// до 23 августа 2026 экран прятал от администратора всё сразу, хотя
+// разрешено ему было всё перечисленное ниже.
+func TestAreaAdminRunsTheirAreaAndNothingElse(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Компания")
+
+	area := owner.team("Область", nil)
+	other := owner.team("Соседняя область", nil)
+	admin := owner.join("member")
+	owner.mustDo("POST", "/api/team-admins",
+		map[string]any{"userId": admin.userID, "teamId": area}, http.StatusCreated)
+
+	// Своё: завести отдел, переименовать, вписать человека, поставить
+	// надзор за своим поддеревом.
+	raw := admin.mustDo("POST", "/api/teams",
+		map[string]any{"name": "Отдел", "parentId": area}, http.StatusCreated)
+	dept, _ := field(t, raw, "id").(string)
+	admin.mustDo("PATCH", "/api/teams/"+dept, map[string]any{"name": "Отдел связи"}, http.StatusNoContent)
+
+	newbie := owner.join("member")
+	admin.mustDo("PUT", "/api/teams/"+dept+"/members/"+newbie.userID, nil, http.StatusNoContent)
+	admin.mustDo("POST", "/api/observers",
+		map[string]any{"userId": newbie.userID, "teamId": dept}, http.StatusCreated)
+
+	// Убрать и вернуть — тоже своё: иначе «Убрать» было бы дорогой
+	// в один конец, а правило проекта требует обратного.
+	admin.mustDo("DELETE", "/api/teams/"+dept, nil, http.StatusNoContent)
+	admin.mustDo("POST", "/api/teams/"+dept+"/restore", nil, http.StatusNoContent)
+
+	// Корень — за владельцем: у нового корневого узла нет старшего,
+	// а значит нет и того, кто за него отвечает.
+	if code, body := admin.do("POST", "/api/teams", map[string]any{"name": "Свой корень"}); code != http.StatusForbidden {
+		t.Errorf("корневой узел администратором: код %d, ожидался 403; тело: %s", code, body)
+	}
+
+	// Соседняя область — чужая целиком.
+	for _, probe := range []struct {
+		what   string
+		method string
+		path   string
+		body   map[string]any
+		want   int
+	}{
+		{"завести под соседом", "POST", "/api/teams", map[string]any{"name": "Чужой отдел", "parentId": other}, http.StatusForbidden},
+		{"переименовать соседа", "PATCH", "/api/teams/" + other, map[string]any{"name": "Моё теперь"}, http.StatusForbidden},
+		{"вписать в соседа", "PUT", "/api/teams/" + other + "/members/" + newbie.userID, nil, http.StatusForbidden},
+		{"надзор за соседом", "POST", "/api/observers", map[string]any{"userId": newbie.userID, "teamId": other}, http.StatusForbidden},
+		// Надзор за организацией целиком не имеет области, внутри
+		// которой полномочие кончалось бы, — и потому только владельцу.
+		{"надзор за организацией", "POST", "/api/observers", map[string]any{"userId": newbie.userID}, http.StatusForbidden},
+		// Полномочие, размножающее само себя, перестаёт быть ограниченным.
+		{"назначить администратора", "POST", "/api/team-admins", map[string]any{"userId": newbie.userID, "teamId": dept}, http.StatusForbidden},
+	} {
+		if code, body := admin.do(probe.method, probe.path, probe.body); code != probe.want {
+			t.Errorf("%s: код %d, ожидался %d; тело: %s", probe.what, code, probe.want, body)
+		}
+	}
+
+	// Рядовой участник не распоряжается ничем — и в архиве тоже: экран
+	// показывает ему убранное, но кнопку возврата прячет, потому что
+	// ответ на неё был бы «не найдено» про узел, названный строкой выше.
+	plain := owner.join("member")
+	owner.mustDo("DELETE", "/api/teams/"+dept, nil, http.StatusNoContent)
+	if code, body := plain.do("POST", "/api/teams/"+dept+"/restore", nil); code != http.StatusNotFound {
+		t.Errorf("возврат из архива рядовым: код %d, ожидался 404; тело: %s", code, body)
+	}
+	raw = plain.mustDo("GET", "/api/teams/archived", nil, http.StatusOK)
+	// Старший приходит идентификатором, а не только именем: по нему
+	// экран отвечает на «моя ли это область» и решает, показывать ли
+	// возврат. По именам этот вопрос не решается — тёзки законны.
+	var archive struct {
+		Teams []struct {
+			Name     string  `json:"name"`
+			ParentID *string `json:"parentId"`
+		} `json:"teams"`
+	}
+	if err := json.Unmarshal(raw, &archive); err != nil {
+		t.Fatal(err)
+	}
+	if len(archive.Teams) != 1 || archive.Teams[0].ParentID == nil || *archive.Teams[0].ParentID != area {
+		t.Errorf("архив не называет старшего идентификатором: %s", raw)
+	}
+}

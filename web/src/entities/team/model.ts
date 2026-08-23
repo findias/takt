@@ -47,6 +47,30 @@ export function buildTree(teams: Team[]): TreeNode[] {
   return roots
 }
 
+/**
+ * Узлы, которыми распоряжается администратор области: его корни и всё,
+ * что под ними.
+ *
+ * Полномочие наследуется вниз на всю глубину, поэтому считается спуском
+ * по дереву, а не сравнением с родителем: для отдела на пятом уровне
+ * «мой ли это узел» — вопрос обо всём его пути, а не о его старшем.
+ *
+ * Владельцу это не нужно: ему принадлежит всё дерево, и вопрос
+ * не задаётся.
+ */
+export function managedIds(tree: TreeNode[], adminRoots: string[]): Set<string> {
+  const out = new Set<string>()
+  const walk = (nodes: TreeNode[], inside: boolean) => {
+    for (const node of nodes) {
+      const mine = inside || adminRoots.includes(node.id)
+      if (mine) out.add(node.id)
+      walk(node.children, mine)
+    }
+  }
+  walk(tree, false)
+  return out
+}
+
 /** Все узлы поддерева, включая корень: перенос запрещён внутрь себя. */
 export function subtreeIds(node: TreeNode): string[] {
   return [node.id, ...node.children.flatMap(subtreeIds)]

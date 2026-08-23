@@ -13,6 +13,7 @@ import {
   canNestInside,
   counters,
   height,
+  managedIds,
   subtreeIds,
 } from './model.ts'
 import type { TreeNode } from './model.ts'
@@ -127,4 +128,25 @@ test('подписи склоняются по числу и опускают н
   // строками читается как «не загрузилось».
   const empty = buildTree([team('d', 'Г', null, 1)])
   assert.equal(counters(empty[0]), 'без людей и досок')
+})
+
+test('область администратора — его узел и всё под ним, на любую глубину', () => {
+  const tree = buildTree(FLAT)
+  const mine = managedIds(tree, ['dev'])
+
+  // Вниз полномочие наследуется целиком, а не на один уровень: «Ядро»
+  // лежит на два уровня ниже «Разработки», и оно тоже его.
+  assert.deepEqual([...mine].sort(), ['core', 'dev', 'platform'])
+
+  // Вверх и вбок — нет: старший над своей областью и сосед чужие.
+  assert.ok(!mine.has('company'), 'администратор распоряжается старшим над собой')
+  assert.ok(!mine.has('sales'), 'администратор распоряжается соседней областью')
+})
+
+test('без записи администратора область пуста, с несколькими — складывается', () => {
+  const tree = buildTree(FLAT)
+  assert.equal(managedIds(tree, []).size, 0)
+  // Один человек бывает администратором двух ветвей сразу: полномочие
+  // это запись об узле, а не роль, и записей бывает несколько.
+  assert.deepEqual([...managedIds(tree, ['sales', 'platform'])].sort(), ['core', 'platform', 'sales'])
 })

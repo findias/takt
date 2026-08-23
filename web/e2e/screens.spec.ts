@@ -229,6 +229,29 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/20в-узел-без-людей.png`, fullPage: true })
 
+  // Структура глазами администратора области. Вид, которого в наборе
+  // не было: все снимки организации снимались владельцем, а у него
+  // на этом экране можно всё, и разницы не видно. Борис отвечает
+  // за «Платформу» — у неё и у всего под ней действия есть, у соседних
+  // ветвей их нет, корневое подразделение не заводится вовсе.
+  const area = await browser.newContext({ locale: 'ru-RU' })
+  const areaPage = await area.newPage()
+  await areaPage.setViewportSize({ width: 1440, height: 900 })
+  await areaPage.goto('/')
+  await areaPage.getByLabel('Почта').fill('boris@example.test')
+  await areaPage.getByLabel('Пароль').fill(PASSWORD)
+  await areaPage.getByRole('button', { name: 'Войти' }).click()
+  // Организация выбирается явно: Борис состоит не в одной, а какая
+  // откроется по умолчанию — не наше дело угадывать.
+  await areaPage.getByLabel('Организация').selectOption({ label: 'Северный проект' })
+  await areaPage.getByRole('button', { name: 'Структура' }).click()
+  await expect(areaPage.getByRole('button', { name: '▸ Платформа' })).toBeVisible({
+    timeout: 10_000,
+  })
+  await areaPage.waitForTimeout(400)
+  await areaPage.screenshot({ path: `${SHOTS}/20г-структура-администратора.png`, fullPage: true })
+  await area.close()
+
   // Приглашение — единственный экран, который видит не хозяин стенда,
   // а тот, кого позвали. Ссылка живёт один показ, поэтому снимается
   // в чужом окне, а приглашение потом отзывается: стенд обязан остаться
