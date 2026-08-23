@@ -116,6 +116,33 @@ screens: demo ## Снять все экраны стенда в web/screenshots
 e2e: db migrate ## Сквозные сценарии в настоящем браузере
 	cd web && npm run test:e2e
 
+# --- безопасность ---
+
+# Отдельной целью, а не частью `make check`, по той же причине, что
+# сквозные и нагрузочные: этим проверкам нужна сеть. govulncheck
+# и npm audit сверяются с базами уязвимостей, а `make check` обязан
+# проходить и в закрытом контуре, где сети нет вовсе.
+#
+# Три инструмента отвечают на три разных вопроса, и подменять один
+# другим нельзя:
+#   govulncheck — есть ли в зависимостях и стандартной библиотеке
+#                 известные дыры, и вызываем ли мы их на самом деле;
+#   gosec       — обычные ошибки в коде на Go;
+#   npm audit   — то же про зависимости клиента.
+# Свои проверки — про этот продукт, и живут они в `make check`
+# (internal/security), потому что сети им не нужно.
+SECURITY_TOOLS = $(shell go env GOPATH)/bin
+
+.PHONY: security
+security: ## Проверки безопасности: уязвимости зависимостей и статический разбор
+	@command -v $(SECURITY_TOOLS)/govulncheck >/dev/null \
+	  || go install golang.org/x/vuln/cmd/govulncheck@latest
+	@command -v $(SECURITY_TOOLS)/gosec >/dev/null \
+	  || go install github.com/securego/gosec/v2/cmd/gosec@latest
+	$(SECURITY_TOOLS)/govulncheck ./...
+	$(SECURITY_TOOLS)/gosec -quiet -exclude-generated ./...
+	cd web && npm audit --audit-level=high
+
 .PHONY: load
 load: db migrate ## Поведение под нагрузкой (идёт минуты)
 	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \

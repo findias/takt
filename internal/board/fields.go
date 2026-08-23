@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -178,11 +179,18 @@ func setCardField(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string
 			nil, nil, map[string]any{"fieldId": p.FieldID})
 	}
 
-	columns := map[string]string{
-		FieldText: "value_text", FieldNumber: "value_number", FieldDate: "value_date",
-		FieldCheckbox: "value_bool", FieldSelect: "value_option",
-	}
 	value, err := decodeFieldValue(kind, p.Value)
+	if err != nil {
+		return Patch{}, err
+	}
+
+	// Имя колонки выбирается перечислением, а не картой: у карты
+	// неизвестный вид даёт пустую строку, и в запрос уезжает
+	// `insert into … ( , updated_by)` — то есть синтаксическая ошибка
+	// базы вместо отказа с объяснением. Нашлось проверкой на склейку
+	// запросов: инъекции здесь не было (значения свои), а вот отказ
+	// был не тот.
+	column, err := valueColumn(kind)
 	if err != nil {
 		return Patch{}, err
 	}
@@ -190,7 +198,10 @@ func setCardField(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string
 	// В excluded попадают все колонки: та, что перечислена во вставке,
 	// со значением, остальные — пустыми. Поэтому при конфликте достаточно
 	// переписать все пять, и смена вида поля не оставит хвоста от прежнего.
-	column := columns[kind]
+	//
+	// #sql-склейка: имя колонки, а не значение — параметром его передать
+	// нельзя. Приходит из valueColumn выше: перечисление из пяти наших
+	// литералов, неизвестный вид отвергается отказом.
 	_, err = tx.Exec(ctx, `
 		insert into card_field_values (org_id, card_id, field_id, `+column+`, updated_by)
 		select $1, $2, $3, $4, $5
@@ -216,6 +227,26 @@ func setCardField(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string
 // decodeFieldValue переводит присланное значение в то, что примет колонка
 // своего типа. Проверка вида здесь — ради внятного отказа; последнее слово
 // всё равно за триггером базы.
+// valueColumn — в какую колонку ложится значение поля этого вида.
+// Перечислением и с отказом: список видов закрыт, и новый вид обязан
+// добавиться сюда осознанно, а не подставиться пустой строкой.
+func valueColumn(kind string) (string, error) {
+	switch kind {
+	case FieldText:
+		return "value_text", nil
+	case FieldNumber:
+		return "value_number", nil
+	case FieldDate:
+		return "value_date", nil
+	case FieldCheckbox:
+		return "value_bool", nil
+	case FieldSelect:
+		return "value_option", nil
+	default:
+		return "", fmt.Errorf("поля вида %q не бывает", kind)
+	}
+}
+
 func decodeFieldValue(kind string, raw json.RawMessage) (any, error) {
 	switch kind {
 	case FieldText, FieldSelect:

@@ -104,5 +104,8 @@ func writeGzipped(w http.ResponseWriter, r *http.Request, contentType string, co
 		return
 	}
 	defer reader.Close()
+	// #nosec G110 -- «бомба сжатия» предполагает недоверенный источник,
+	// а здесь разжимается файл, вшитый в этот же бинарник при сборке:
+	// подменить его можно только подменив бинарник.
 	_, _ = io.Copy(w, reader)
 }

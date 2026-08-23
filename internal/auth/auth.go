@@ -312,6 +312,9 @@ func recoverSession(ctx context.Context, pool *pgxpool.Pool, sessionID string) (
 // TestCrossSiteWriteHasSomeDefence: она требует, чтобы межсайтовую
 // запись останавливало хоть что-нибудь — браузер или код.
 func SetCookie(w http.ResponseWriter, sessionID string, expires time.Time, secure bool) {
+	// #nosec G124 -- Secure приходит доводом, а не литералом: он выводится
+	// из схемы BASE_URL. Статический разбор этого не видит и считает
+	// признак отсутствующим; HttpOnly и SameSite стоят рядом.
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    sessionID,
@@ -324,6 +327,7 @@ func SetCookie(w http.ResponseWriter, sessionID string, expires time.Time, secur
 }
 
 func ClearCookie(w http.ResponseWriter, secure bool) {
+	// #nosec G124 -- то же, что и у SetCookie: Secure приходит доводом.
 	http.SetCookie(w, &http.Cookie{
 		Name:     CookieName,
 		Value:    "",

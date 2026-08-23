@@ -94,6 +94,8 @@ func (s *Server) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, "вход через провайдера", err)
 		return
 	}
+	// #nosec G124 -- Secure берётся из конфигурации; SameSite и HttpOnly
+	// стоят ниже, и оба выбраны с доводом.
 	http.SetCookie(w, &http.Cookie{
 		Name:  oidcStateCookie,
 		Value: url.QueryEscape(string(raw)),
@@ -182,6 +184,7 @@ func (s *Server) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) clearOIDCState(w http.ResponseWriter) {
+	// #nosec G124 -- то же: Secure из конфигурации.
 	http.SetCookie(w, &http.Cookie{
 		Name:     oidcStateCookie,
 		Value:    "",
