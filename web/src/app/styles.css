@@ -91,22 +91,32 @@
      в плотных рядах: именно они не проходят. */
   --target: 24px;
 
-  --paper: #f2f4f3;
-  --surface: #ffffff;
-  --surface-2: #e9edeb;
-  --ink: #16201e;
-  --ink-2: #4a5854;
+  /* Цвет объявляется один раз на обе темы: `light-dark()` (Baseline
+     newly с 13.05.2024, сверено 23.08.2026) выбирает по `color-scheme`.
+     До этого каждый цветной токен стоял трижды — в светлой, в системной
+     тёмной и в явной тёмной, — и правка одного места из трёх проходила
+     молча. Так уже случилось с `--warn`: тёмную шкалу расставили
+     по APCA, а его забыли, и он полгода стоял на Lc 47 при пороге 60.
+     Теперь забыть нельзя: место одно.
+
+     Тени, галочка флажка и рецепт меток остаются в блоках тем —
+     `light-dark()` возвращает цвет, а не тень и не картинку. */
+  --paper: light-dark(#f2f4f3, #0d1312);
+  --surface: light-dark(#ffffff, #161e1c);
+  --surface-2: light-dark(#e9edeb, #1e2826);
+  --ink: light-dark(#16201e, #e6edea);
+  --ink-2: light-dark(#4a5854, #ccd5d1);
   /* Проверено расчётом контраста: прежний #7a8783 давал 3.2 на фоне
      колонки — ниже AA (4.5) для обычного текста, а им набраны как раз
      подписи и пояснения, то есть самый мелкий текст на экране. */
-  --ink-3: #5e6d69;
-  --rule: #d4dad7;
+  --ink-3: light-dark(#5e6d69, #b3bdba);
+  --rule: light-dark(#d4dad7, #27322f);
   /* Граница элемента управления — не то же самое, что черта между
      строками: WCAG 1.4.11 требует от неё 3:1 к фону, и волосяная
      линия таблицы этому порогу не отвечает (1.42 в светлой теме,
      1.28 в тёмной — замерено). Разделители остаются тонкими,
      а поля и кнопки обводятся заметнее. */
-  --rule-strong: #7c8481;
+  --rule-strong: light-dark(#7c8481, #9ba3a0);
   /* Слои. Числа собраны здесь по той же причине, по которой собраны
      отступы: набранное в правиле число — это будущее расхождение,
      а у слоёв расхождение выглядит как «почему меню под панелью».
@@ -191,10 +201,10 @@
      Родной флажок выбирал этот цвет сам, и в нашей теме он оставался
      единственным местом, куда мы не могли заглянуть. */
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
-  --accent: #0e6f5c;
-  --accent-soft: #dcebe5;
-  --warn: #a33d1e;
-  --warn-soft: #f6e2da;
+  --accent: light-dark(#0e6f5c, #6dcbb2);
+  --accent-soft: light-dark(#dcebe5, #122c25);
+  --warn: light-dark(#a33d1e, #ffa88b);
+  --warn-soft: light-dark(#f6e2da, #2d1a15);
 }
 
 /* Тёмная тема системная, но с явным перекрытием: человек, у которого
@@ -216,17 +226,7 @@
      между ними — полторы единицы Lc. Первая правка это упустила,
      и граница поля прошла на surface и не прошла на surface-2. */
   :root:not([data-theme='light']) {
-    --paper: #0d1312;
-    --surface: #161e1c;
-    --surface-2: #1e2826;
-    --ink: #e6edea;
-    --ink-2: #ccd5d1;
-    --ink-3: #b3bdba;
-    --rule: #27322f;
-    --rule-strong: #9ba3a0;
     --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
-    --accent: #6dcbb2;
-    --accent-soft: #122c25;
     /* Отказ пересчитан тем же прибором, что и шкала текста, — и это
        нашлось только тогда, когда отказ вообще стало видно: прежний
        оранжевый давал Lc 47 на худшей подложке при пороге 60 для
@@ -235,8 +235,6 @@
        а этот токен тогда не тронули: на экранах, которые обходила
        проверка контраста, отказа формы не было ни одного.
        Теперь oklch(0.82 0.12 38) — Lc 64 на surface-2, 67 на paper. */
-    --warn: #ffa88b;
-    --warn-soft: #2d1a15;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
     --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
@@ -250,20 +248,8 @@
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --paper: #0d1312;
-  --surface: #161e1c;
-  --surface-2: #1e2826;
-  --ink: #e6edea;
-  --ink-2: #ccd5d1;
-  --ink-3: #b3bdba;
-  --rule: #27322f;
-  --rule-strong: #9ba3a0;
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23161e1c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 4.9'/%3E%3C/svg%3E");
-  --accent: #6dcbb2;
-  --accent-soft: #122c25;
   /* См. пояснение в системной тёмной теме выше. */
-  --warn: #ffa88b;
-  --warn-soft: #2d1a15;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
   --shadow-drag: 0 2px 8px rgb(0 0 0 / 0.6);
   --shadow-lg: -8px 0 24px rgb(0 0 0 / 0.4);
@@ -329,6 +315,23 @@ body {
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
 }
+h1,
+h2,
+.panel-title,
+.card-title,
+.empty {
+  /* Строки заголовка выравниваются по длине, а не рвутся по месту:
+     без этого последняя строка регулярно оказывается одним словом,
+     и заголовок читается как оборванный. Заметнее всего в узкой
+     колонке доски, где длинное название карточки — обычное дело.
+
+     `text-wrap: balance` — Baseline newly с 13.05.2024 (сверено
+     23.08.2026). Браузер балансирует только короткие блоки (порядка
+     шести строк), и это ровно наш случай — заголовки; там, где его
+     нет, текст переносится как раньше. */
+  text-wrap: balance;
+}
+
 h1 {
   font-size: var(--text-xl);
   margin: 0;

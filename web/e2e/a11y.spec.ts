@@ -813,3 +813,61 @@ test('кнопки, которых по нескольку, названы по 
   await expect(page.getByRole('button', { name: /^Отозвать приглашение/ })).toBeVisible()
   expect(await contextless(page), 'команда').toEqual([])
 })
+
+test('заголовок не кончается одиноким словом', async ({ page }) => {
+  // Мера сугубо зрительная, но не глазомерная: последняя строка
+  // заголовка не должна быть втрое короче остальных. До `text-wrap:
+  // balance` на демонстрационной доске так кончались три многострочных
+  // заголовка из пяти, а разброс длин строк был вдвое больше
+  // (68 знаков против 34, замер 23.08.2026).
+  //
+  // Проверка измеряет расстановку строк, а не наличие свойства в CSS:
+  // свойство можно переставить в другое правило, а обрыв — нельзя.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  // Доска демонстрационных данных, а не своя: заголовки там настоящей
+  // длины, а на выдуманных коротких мера ничего не показывает —
+  // они и без балансировки ложатся ровно.
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  const обрывы = await page.evaluate(() => {
+    const range = document.createRange()
+    const плохие: string[] = []
+    for (const заголовок of document.querySelectorAll<HTMLElement>('.card-title, .panel-title')) {
+      const узел = [...заголовок.childNodes].find((n) => n.nodeType === 3) as Text | undefined
+      if (!узел) continue
+      // Строки восстанавливаются по вертикали каждого знака: своего
+      // способа спросить у браузера, где он перенёс, нет.
+      const строки: string[] = []
+      let начало = 0
+      let верх: number | null = null
+      for (let i = 1; i <= узел.length; i++) {
+        range.setStart(узел, i - 1)
+        range.setEnd(узел, i)
+        const y = Math.round(range.getBoundingClientRect().top)
+        if (верх === null) верх = y
+        if (y !== верх) {
+          строки.push(узел.data.slice(начало, i - 1))
+          начало = i - 1
+          верх = y
+        }
+      }
+      строки.push(узел.data.slice(начало))
+      const длины = строки.map((s) => s.trim().length).filter((n) => n > 0)
+      if (длины.length < 2) continue
+      const последняя = длины[длины.length - 1]
+      const прочие = длины.slice(0, -1)
+      const средняя = прочие.reduce((a, c) => a + c, 0) / прочие.length
+      if (последняя <= средняя * 0.35) {
+        плохие.push(`${узел.data.slice(0, 40)}… последняя строка ${последняя} против ${Math.round(средняя)}`)
+      }
+    }
+    return плохие
+  })
+
+  expect(обрывы, 'заголовки, у которых последняя строка втрое короче остальных').toEqual([])
+})
