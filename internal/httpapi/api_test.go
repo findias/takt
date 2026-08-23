@@ -51,7 +51,14 @@ func newAPILogging(t *testing.T, out io.Writer) *api {
 	go hub.Run(hubCtx)
 	t.Cleanup(stopHub)
 
-	impl := New(config.Config{BaseURL: "http://example.test"}, db, log, hub)
+	// Регистрация открыта: почти всякая проверка начинается с заведения
+	// организации, и умолчание `first` закрыло бы её на второй же —
+	// база у проверок общая. Сами режимы проверяются отдельно,
+	// в `signup_test.go`.
+	impl := New(config.Config{
+		BaseURL: "http://example.test",
+		Signup:  config.SignupOpen,
+	}, db, log, hub)
 	srv := httptest.NewServer(impl.Handler())
 	t.Cleanup(srv.Close)
 

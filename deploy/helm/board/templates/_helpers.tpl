@@ -115,6 +115,8 @@ DATABASE_URL
   value: {{ required "нужен baseURL: из него собираются ссылки в приглашениях" .Values.baseURL | quote }}
 - name: LISTEN_ADDR
   value: ":8080"
+- name: SIGNUP
+  value: {{ .Values.signup | quote }}
 {{- with .Values.extraEnv }}
 {{ toYaml . }}
 {{- end }}

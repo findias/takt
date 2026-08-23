@@ -733,6 +733,9 @@ function sessionLost() {
 export type AuthMethods = {
   password: { enabled: boolean }
   oidc: { enabled: boolean; label?: string }
+  /** Можно ли завести организацию самостоятельно. На закрытой установке
+   *  нельзя — и тогда кнопки, ведущей к отказу, быть не должно. */
+  signup: { enabled: boolean }
 }
 
 export const api = {

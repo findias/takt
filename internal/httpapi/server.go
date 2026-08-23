@@ -327,7 +327,50 @@ type registerRequest struct {
 // Пока регистрация открыта, считать адреса секретом нельзя, и защита
 // по времени в auth.Authenticate прячет не список адресов, а только
 // разницу между «нет такого» и «пароль не тот» на самом входе.
+// signupAllowed — можно ли сейчас завести организацию самостоятельно.
+//
+// Три режима различаются только этим ответом, и решается он здесь,
+// а не в каждом обработчике: заводить организацию умеют двое —
+// регистрация незнакомца и «Новая организация» у вошедшего, — и правило
+// у них обязано быть одно. Иначе закрытая регистрация означала бы
+// «незнакомцу нельзя, а любому участнику можно», то есть ту же дыру
+// в профиль.
+//
+// Режим `first` спрашивает базу: пока организаций нет, установку ещё
+// никому не показывали, и пришедший первым — это тот, кто её ставил.
+// Таблица `orgs` не под политиками, поэтому счёт честный и не зависит
+// от того, кто спрашивает.
+func (s *Server) signupAllowed(ctx context.Context) (bool, error) {
+	switch s.cfg.Signup {
+	case config.SignupOpen:
+		return true, nil
+	case config.SignupClosed:
+		return false, nil
+	}
+	var есть bool
+	err := s.db.Pool.QueryRow(ctx, `select exists (select 1 from orgs)`).Scan(&есть)
+	return !есть, err
+}
+
+// refuseSignup — общий отказ. Своим кодом, а не общим «forbidden»:
+// экран входа по нему прячет кнопку, которой нет хода, а интеграция
+// отличает «нельзя здесь» от «нельзя вам».
+func (s *Server) refuseSignup(w http.ResponseWriter) {
+	writeCoded(w, http.StatusForbidden, "signup_closed",
+		"на этой установке организации заводит владелец: попросите у него ссылку-приглашение")
+}
+
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	// Проверка до разбора тела: отказ не должен зависеть от того,
+	// что прислали, — иначе по разнице ответов видно, занята ли почта.
+	switch allowed, err := s.signupAllowed(r.Context()); {
+	case err != nil:
+		s.fail(w, "проверка режима регистрации", err)
+		return
+	case !allowed:
+		s.refuseSignup(w)
+		return
+	}
 	var req registerRequest
 	if !decode(w, r, &req) {
 		return
@@ -548,6 +591,16 @@ func (s *Server) handleCreateOrg(w http.ResponseWriter, r *http.Request, p auth.
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		writeError(w, http.StatusBadRequest, "у организации должно быть название")
+		return
+	}
+	// То же правило, что и у регистрации: закрытая установка не должна
+	// позволять участнику завести себе организацию в обход владельца.
+	switch allowed, err := s.signupAllowed(r.Context()); {
+	case err != nil:
+		s.fail(w, "проверка режима регистрации", err)
+		return
+	case !allowed:
+		s.refuseSignup(w)
 		return
 	}
 	membership, err := s.orgs.Create(r.Context(), req.Name, p.ID)

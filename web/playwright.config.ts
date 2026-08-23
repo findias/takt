@@ -42,7 +42,10 @@ export default defineConfig({
   // Сервер поднимается тот же самый, что едет в образе: свой бинарник
   // и своя статика. Отдельная сборка «для тестов» проверяла бы себя.
   webServer: {
-    command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist go run ./cmd/board serve`,
+    // SIGNUP=open: сценарии начинаются с заведения организации, а
+    // умолчание `first` закрывает регистрацию после первой же — база
+    // у прогонов общая. Сами режимы проверяются в Go, против базы.
+    command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist SIGNUP=open go run ./cmd/board serve`,
     cwd: '..',
     url: `http://127.0.0.1:${PORT}/readyz`,
     reuseExistingServer: !process.env.CI,

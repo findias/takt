@@ -58,6 +58,7 @@
               "already_member",
               "password_wrong",
               "password_same",
+              "signup_closed",
               "internal"
             ]
           }

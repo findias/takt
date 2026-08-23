@@ -47,6 +47,9 @@ services:
       DATABASE_URL: postgres://board:${POSTGRES_PASSWORD:-board}@db:5432/board?sslmode=disable
       BASE_URL: ${BASE_URL:-http://localhost:8080}
       LISTEN_ADDR: ":8080"
+      # Кто заводит организации: first — первый пришедший, дальше
+      # по приглашению; open — кто угодно; closed — никто.
+      SIGNUP: ${SIGNUP:-first}
       STORAGE: file:///data/attachments
     volumes:
       - attachments:/data/attachments

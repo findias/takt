@@ -42,14 +42,28 @@ func (s *Server) registerOIDCRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/auth/oidc/callback", s.handleOIDCCallback)
 }
 
-func (s *Server) handleAuthMethods(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleAuthMethods(w http.ResponseWriter, r *http.Request) {
 	type method struct {
 		Enabled bool   `json:"enabled"`
 		Label   string `json:"label,omitempty"`
 	}
+	// Регистрация едет тем же ответом, что и способы входа, и по той же
+	// причине: экран входа спрашивает их разом, чтобы не предлагать
+	// дверь, которой нет. Кнопка «Завести новую организацию», ведущая
+	// к отказу, — это та же дверь, только про другое.
+	//
+	// Ошибку счёта здесь не показываем: способы входа важнее, и молчать
+	// о них из-за недоступной базы значит закрыть вход целиком.
+	// Недоступная база всё равно скажет о себе на первом же входе.
+	allowed, err := s.signupAllowed(r.Context())
+	if err != nil {
+		s.log.Error("проверка режима регистрации", "err", err)
+		allowed = false
+	}
 	writeJSON(w, http.StatusOK, map[string]method{
 		"password": {Enabled: true},
 		"oidc":     {Enabled: s.oidc != nil, Label: s.cfg.OIDC.Label},
+		"signup":   {Enabled: allowed},
 	})
 }
 

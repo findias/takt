@@ -68,6 +68,7 @@ stand: ## Собрать стенд с нуля вместе с данными (
 run: migrate web-dist ## Запустить сервер разработки (API + свежая статика)
 	DATABASE_URL="$(DEV_DB_URL)" LISTEN_ADDR=":$(DEV_PORT)" \
 	BASE_URL="http://localhost:$(DEV_PORT)" WEB_DIR=./web/dist \
+	SIGNUP=open \
 	go run ./cmd/board serve
 
 .PHONY: web

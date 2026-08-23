@@ -65,7 +65,14 @@ beforeEach(() => {
     vi.fn((input: RequestInfo | URL) => {
       const path = String(input)
       if (path === '/api/auth/methods')
-        return reply({ password: { enabled: true }, oidc: { enabled: false } })
+        return reply({
+          password: { enabled: true },
+          oidc: { enabled: false },
+          // На закрытой установке организации заводит владелец, и кнопки,
+          // ведущей к отказу, быть не должно. Здесь установка открытая:
+          // проверяется всё остальное, а закрытая — в `Auth.dom.test.tsx`.
+          signup: { enabled: true },
+        })
       if (!signedIn) return reply({ error: 'сессия истекла, войдите заново' }, 401)
       if (path === '/api/me' || path === '/api/auth/login') return reply(signedIn)
       if (path === '/api/orgs')

@@ -282,6 +282,18 @@ function OrgHeader({
 }) {
   const [orgs, setOrgs] = useState<{ orgId: string; orgName: string }[]>([])
   const [creating, setCreating] = useState(false)
+  // Можно ли заводить организации: спрашивается там же, где способы
+  // входа, — сервер отвечает и то и другое одним ответом.
+  const [signup, setSignup] = useState(false)
+  useEffect(() => {
+    api
+      .authMethods()
+      // `?.` не для красоты: при выкладке реплики двух версий живут
+      // рядом несколько секунд, и старый сервер этого поля не знает.
+      // Отсутствие ответа значит «нельзя» — умолчание безопасное.
+      .then((m) => setSignup(m.signup?.enabled ?? false))
+      .catch(() => setSignup(false))
+  }, [])
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [changing, setChanging] = useState(false)
@@ -327,9 +339,15 @@ function OrgHeader({
 
       <div className="org-row muted small">
         <span>{principal.name}</span>
-        <button className="link" onClick={() => setCreating((v) => !v)}>
-          {creating ? 'Отмена' : 'Новая организация'}
-        </button>
+        {/* На закрытой установке организации заводит владелец: правило
+            то же, что на экране входа, и место, где его можно обойти,
+            должно быть закрыто там же. Иначе «регистрация закрыта»
+            означало бы «незнакомцу нельзя, а любому участнику можно». */}
+        {signup && (
+          <button className="link" onClick={() => setCreating((v) => !v)}>
+            {creating ? 'Отмена' : 'Новая организация'}
+          </button>
+        )}
         <button
           className="link"
           onClick={() => {

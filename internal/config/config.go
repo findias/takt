@@ -24,6 +24,15 @@ type Config struct {
 	// но интерфейс заложен так, чтобы позже подставить s3://.
 	Storage string
 
+	// Signup — кому позволено заводить организации самостоятельно.
+	//
+	// До этой настройки регистрация была открыта всегда и выключить её
+	// было нечем. На своём стенде это удобство; на чужом, выставленном
+	// в корпоративную сеть, это значит, что любой сотрудник заводит себе
+	// организацию мимо каталога, мимо провайдера входа и мимо владельца
+	// — и обнаруживается это по счёту организаций, а не по отказу.
+	Signup SignupMode
+
 	// Вход через корпоративный провайдер. Настройки берутся из окружения,
 	// а не из базы, и это решение стоит объяснить.
 	//
@@ -56,6 +65,28 @@ func (c OIDCConfig) Enabled() bool {
 	return c.Issuer != "" && c.ClientID != ""
 }
 
+// SignupMode — три ответа на вопрос «кто заводит организации».
+type SignupMode string
+
+const (
+	// SignupFirst — пока в установке нет ни одной организации, её заводит
+	// тот, кто пришёл первым; дальше только по приглашению.
+	//
+	// Это умолчание, и оно же ответ на вопрос «кто заводит первого
+	// владельца»: он заводит себя сам, ровно один раз, до того как
+	// установка кому-то показана. Отдельная команда установщика или
+	// разовая ссылка решали бы тот же вопрос дороже — и обе требуют
+	// доступа к серверу в тот момент, когда ставящий обычно уже ушёл.
+	SignupFirst SignupMode = "first"
+	// SignupOpen — заводить организации может кто угодно. Так работает
+	// наш стенд и так работала бы облачная установка с сотней арендаторов.
+	SignupOpen SignupMode = "open"
+	// SignupClosed — не может никто, включая первого. Для установки,
+	// где организация заводится заранее — миграцией данных, каталогом
+	// или руками, — а вход идёт только через провайдера.
+	SignupClosed SignupMode = "closed"
+)
+
 func Load() (Config, error) {
 	c := Config{
 		BaseURL:     env("BASE_URL", "http://localhost:8080"),
@@ -63,6 +94,7 @@ func Load() (Config, error) {
 		ListenAddr:  env("LISTEN_ADDR", ":8080"),
 		WebDir:      env("WEB_DIR", "./web/dist"),
 		Storage:     env("STORAGE", "file://./data/attachments"),
+		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
 			ClientID:     env("OIDC_CLIENT_ID", ""),
@@ -74,6 +106,16 @@ func Load() (Config, error) {
 
 	if c.DatabaseURL == "" {
 		return c, fmt.Errorf("не задан DATABASE_URL")
+	}
+	switch c.Signup {
+	case SignupFirst, SignupOpen, SignupClosed:
+	default:
+		// Опечатка в SIGNUP не должна означать «как получится»: значение
+		// решает, кто заводит организации, и молчаливое умолчание здесь
+		// обнаружилось бы по счёту организаций.
+		return c, fmt.Errorf(
+			"SIGNUP=%q: бывает first (первый пришедший, дальше по приглашению), "+
+				"open (кто угодно) или closed (никто)", c.Signup)
 	}
 
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")
