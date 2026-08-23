@@ -21,6 +21,29 @@ export function useRenderWindow<E extends HTMLElement>(total: number, chunk = 10
   const [limit, setLimit] = useState(chunk)
   const tail = useRef<E>(null)
 
+  // Печать показывает ровно то, что есть в разметке, и не прокручивает
+  // ничего. Замер 23.08.2026: доска из ста двадцати карточек уходила
+  // на бумагу семью строками — сто одна была отрисована, остальные
+  // не дорисованы, а из отрисованных на лист попало то, что помещалось
+  // в область прокрутки. Молча: печать не жалуется.
+  //
+  // Поэтому перед печатью список раскрывается целиком. Обратно
+  // не сворачивается — свернуть значит выкинуть из разметки то,
+  // что человек уже видел.
+  useEffect(() => {
+    const раскрыть = () => setLimit((l) => Math.max(l, total))
+    window.addEventListener('beforeprint', раскрыть)
+    // Safari о печати событием не сообщает, но смену носителя
+    // показывает запросом.
+    const носитель = window.matchMedia('print')
+    const наСмену = (e: MediaQueryListEvent) => e.matches && раскрыть()
+    носитель.addEventListener('change', наСмену)
+    return () => {
+      window.removeEventListener('beforeprint', раскрыть)
+      носитель.removeEventListener('change', наСмену)
+    }
+  }, [total])
+
   useEffect(() => {
     const element = tail.current
     if (!element || total <= limit) return

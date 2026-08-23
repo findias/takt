@@ -40,7 +40,9 @@ export function Appearance() {
   }, [density])
 
   return (
-    <div className="row row--tight">
+    // Имя классу нужно не для оформления, а чтобы печать могла его
+    // убрать: тема и плотность на бумаге не значат ничего.
+    <div className="row row--tight appearance">
       <select
         value={theme}
         aria-label="Тема"

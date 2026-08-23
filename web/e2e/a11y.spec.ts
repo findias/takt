@@ -1001,3 +1001,79 @@ test('отказ уровня экрана стоит живым регионо�
 
   await expect(регион).toHaveText(/./)
 })
+
+test('на бумагу уходит документ, а не снимок экрана', async ({ page }) => {
+  // Печатают отсюда два вида: отчёт по закрытой итерации и доску
+  // списком. Замер 23.08.2026 до правки: доска из ста двадцати
+  // карточек ушла на один лист семью строками, а отчёт занял правую
+  // треть, потому что печатался вместе с доской за ним.
+  //
+  // Экран и лист различаются тремя вещами разом, и все три надо
+  // проверять на настоящем экране: прокрутки (принтер не листает),
+  // управление (кнопки на бумаге бессмысленны) и полнота списка.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  const скрыто = (селектор: string) =>
+    page.evaluate((s) => {
+      const el = document.querySelector<HTMLElement>(s)
+      return el ? getComputedStyle(el).display === 'none' : 'нет такого'
+    }, селектор)
+
+  await page.emulateMedia({ media: 'print' })
+  expect(await скрыто('.board-toolbar'), 'панель управления доской').toBe(true)
+  // Шапки организации на экране доски нет вовсе — доска занимает окно
+  // целиком. Проверяется там, где она есть.
+  expect(await скрыто('.appearance'), 'тема и плотность').toBe(true)
+  // «Разметка» — тоже кнопка, и она попалась дважды: сперва её вовсе
+  // не прятали, потом спрятали, а следующее правило вернуло её
+  // обратно вместе со всеми `.link` — названия карточек тоже `.link`.
+  expect(await скрыто('.column-settings-toggle'), 'разметка колонки').toBe(true)
+
+  // Название карточки — тоже кнопка. Первая редакция этих стилей
+  // прятала `button` целиком, и на листе не осталось ни одного
+  // названия: сто двадцать строк, четыре слова. На глаз таблица
+  // выглядела просто узковатой.
+  // Вид переключается до печати: на бумаге переключателя нет, и это
+  // как раз то, что проверяется абзацем выше.
+  await page.emulateMedia({ media: 'screen' })
+  await page.getByRole('button', { name: 'Таблица' }).click()
+  await expect(page.locator('.table-title').first()).toBeVisible()
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator('.table-title').first()).toBeVisible()
+  expect(
+    await page.evaluate(() => {
+      const шапка = document.querySelector('.board-table thead th')
+      const обёртка = document.querySelector('.table-wrap')
+      return {
+        шапка: шапка && getComputedStyle(шапка).position,
+        прокрутка: обёртка && getComputedStyle(обёртка).overflowX,
+        повтор: getComputedStyle(document.querySelector('thead') as Element).display,
+      }
+    }),
+  ).toEqual({ шапка: 'static', прокрутка: 'visible', повтор: 'table-header-group' })
+
+  // Открытая панель — то, ради чего печатают: доска за ней лишняя.
+  await page.emulateMedia({ media: 'screen' })
+  await page.getByRole('button', { name: 'Доска', exact: true }).click()
+  await page.getByRole('button', { name: /Неделя 32/ }).first().click()
+  await expect(page.locator('.panel-card')).toBeVisible()
+  await page.emulateMedia({ media: 'print' })
+  expect(
+    await page.evaluate(() => {
+      const панель = document.querySelector('.panel-card') as HTMLElement
+      const колонки = document.querySelector('.columns') as HTMLElement | null
+      return {
+        панельВидна: getComputedStyle(панель).display !== 'none',
+        // Спрятан может быть не сам узел, а его предок: считается
+        // не объявленный `display`, а то, отрисован ли он вообще.
+        доскаСкрыта: !колонки || колонки.getClientRects().length === 0,
+      }
+    }),
+  ).toEqual({ панельВидна: true, доскаСкрыта: true })
+})
