@@ -871,3 +871,79 @@ test('заголовок не кончается одиноким словом',
 
   expect(обрывы, 'заголовки, у которых последняя строка втрое короче остальных').toEqual([])
 })
+
+test('в режиме высокой контрастности состояния не сливаются', async ({ browser }) => {
+  // Режим включают те, кому обычной палитры не хватает: система
+  // подменяет все цвета своими, и всякое состояние, которое держалось
+  // подложкой, становится неотличимым. Замер 23.08.2026 показал три
+  // таких: выбранный вид, выбранная карточка, поле с отказом.
+  //
+  // Проверка сравнивает выбранное с невыбранным по всему, чем их
+  // вообще можно различить, — подложка, цвет, толщина рамки, обводка,
+  // жирность. Совпало всё — состояния нет.
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    forcedColors: 'active',
+  })
+  const page = await context.newPage()
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+  expect(
+    await page.evaluate(() => matchMedia('(forced-colors: active)').matches),
+    'сам режим должен быть включён, иначе проверка меряет обычный экран',
+  ).toBe(true)
+
+  // Жирность в признаки не входит нарочно. Полужирный — отличие,
+  // но слабое: на мелком кегле в списке из трёх слов его не замечают,
+  // а этот режим включают именно те, кому различий не хватает.
+  // Пока жирность считалась признаком, проверка была зелёной
+  // и на непочиненном сегменте.
+  const признаки = (селектор: string) =>
+    page.evaluate((s) => {
+      const el = document.querySelector<HTMLElement>(s)
+      if (!el) return null
+      const c = getComputedStyle(el)
+      // Прозрачная подложка и подложка того же цвета, что под ней, —
+      // на глаз одно и то же, а в вычисленных стилях это разные
+      // строки: `rgba(255,255,255,0)` против `rgb(255,255,255)`.
+      // Пока считалось заявленное, проверка была зелёной на сегменте,
+      // который в этом режиме ничем не отличался.
+      const видимыйФон = (узел: HTMLElement | null): string => {
+        for (let у = узел; у; у = у.parentElement) {
+          const фон = getComputedStyle(у).backgroundColor
+          if (!/,\s*0\)$/.test(фон)) return фон
+        }
+        return 'нет'
+      }
+      return [
+        видимыйФон(el),
+        c.color,
+        c.borderTopWidth,
+        c.borderLeftWidth,
+        c.borderTopColor,
+        c.outlineWidth,
+        c.outlineStyle,
+        c.textDecorationLine,
+      ].join(' | ')
+    }, селектор)
+
+  const выбранныйВид = await признаки('.segment-item--on')
+  const прочийВид = await признаки('.segment-item:not(.segment-item--on)')
+  expect(выбранныйВид, 'выбранный вид неотличим от невыбранного').not.toBe(прочийВид)
+
+  // Выбранная карточка: выбор ставится нажатием, а признак у неё
+  // в обычном режиме — подложка и цвет рамки, то есть только цвет.
+  const первая = page.getByRole('group', { name: /Карточка/ }).first()
+  await первая.hover()
+  await первая.getByRole('checkbox').first().check()
+  await expect(page.locator('.card--selected')).toBeVisible()
+  const выбранная = await признаки('.card--selected')
+  const обычная = await признаки('.card:not(.card--selected)')
+  expect(выбранная, 'выбранная карточка неотличима от прочих').not.toBe(обычная)
+
+  await context.close()
+})

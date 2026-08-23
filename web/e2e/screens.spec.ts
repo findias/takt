@@ -109,6 +109,14 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/04-доска-тёмная.png` })
   await page.emulateMedia({ colorScheme: 'light' })
 
+  // Режим высокой контрастности: третья палитра, которой в наборе
+  // не было вовсе. Система подменяет все цвета своими, и на снимке
+  // видно то, чего не видно ни в светлой теме, ни в тёмной, — какие
+  // состояния держались одной подложкой.
+  await page.emulateMedia({ forcedColors: 'active' })
+  await page.screenshot({ path: `${SHOTS}/04б-доска-высокий-контраст.png` })
+  await page.emulateMedia({ forcedColors: 'none' })
+
   // Плотный режим — тот самый множитель.
   const denser = page.getByRole('checkbox', { name: 'Плотнее' })
   await denser.check()
