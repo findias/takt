@@ -26,6 +26,7 @@ import (
 	"github.com/konkov/agile/internal/scim"
 	"github.com/konkov/agile/internal/store"
 	"github.com/konkov/agile/internal/team"
+	"github.com/konkov/agile/internal/version"
 	"github.com/konkov/agile/internal/webhook"
 )
 
@@ -503,15 +504,20 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 // разрешений у него не бывает, и пустой список читался бы как «ничего
 // не разрешено».
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request, p auth.Principal) {
-	granted, ok := scopesOf(r)
-	if !ok {
-		writeJSON(w, http.StatusOK, p)
-		return
-	}
-	writeJSON(w, http.StatusOK, struct {
+	// Версия едет вместе с «кто я», а не отдельным запросом: спрашивают
+	// её редко, но отвечать на «какая у вас стоит» должен экран,
+	// а не терминал того, кто ставил. Незалогиненным её не показываем:
+	// список версий с известными дырами — обычное начало разведки,
+	// а вошедший её и так узнает у себя в организации.
+	ответ := struct {
 		auth.Principal
-		Scopes []string `json:"scopes"`
-	}{Principal: p, Scopes: granted})
+		Scopes  []string `json:"scopes,omitempty"`
+		Version string   `json:"version"`
+	}{Principal: p, Version: version.Строка()}
+	if granted, ok := scopesOf(r); ok {
+		ответ.Scopes = granted
+	}
+	writeJSON(w, http.StatusOK, ответ)
 }
 
 // Смена пароля. Обрывает все прочие сессии — см. auth.ChangePassword.

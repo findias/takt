@@ -10,11 +10,17 @@ COPY web/ ./
 RUN npm run build
 
 FROM golang:1.26-alpine AS build
+# Версия приезжает снаружи и вшивается линковщиком. Сборка без неё
+# работает, но отвечает «версия не задана» — и это честнее, чем
+# показывать выдуманное число.
+ARG VERSION=""
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/board ./cmd/board
+RUN CGO_ENABLED=0 go build -trimpath \
+    -ldflags="-s -w -X github.com/konkov/agile/internal/version.Value=${VERSION}" \
+    -o /out/board ./cmd/board
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata \

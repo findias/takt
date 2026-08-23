@@ -236,6 +236,14 @@ export function Team({ principal }: { principal: Principal }) {
       {isOwner && <Export />}
 
       <AuditFeed people={members ?? []} />
+
+      {/* Версия установки — внизу, отдельной строкой и без заголовка:
+          её спрашивают редко, но спрашивают первой, когда что-то
+          сломалось, и спрашивают не у того, у кого есть терминал.
+          Экран «Команда» — то место, куда за этим и пойдут. */}
+      {principal.version && (
+        <p className="muted small version-line">Версия установки: {principal.version}</p>
+      )}
     </div>
   )
 }

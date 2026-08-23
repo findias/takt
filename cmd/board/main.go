@@ -1,11 +1,12 @@
 // Команда board — единственный исполняемый файл проекта.
 //
-// Один образ, четыре подкоманды:
+// Один образ, пять подкоманд:
 //
 //	board serve     — HTTP API, WebSocket, фоновые задачи (по умолчанию)
 //	board migrate   — применить миграции и выйти
 //	board demo      — наполнить пустую базу данными для работы над видом
 //	board doctor    — проверить, что установка сделана правильно
+//	board version   — какая это версия
 //
 // Миграции вынесены в отдельную подкоманду намеренно. Запуск их при старте
 // приложения работает на одной реплике и разносит базу на двух: обе стартуют
@@ -31,6 +32,7 @@ import (
 	"github.com/konkov/agile/internal/realtime"
 	"github.com/konkov/agile/internal/retention"
 	"github.com/konkov/agile/internal/store"
+	"github.com/konkov/agile/internal/version"
 	"github.com/konkov/agile/internal/webhook"
 )
 
@@ -40,6 +42,14 @@ func main() {
 	command := "serve"
 	if len(os.Args) > 1 {
 		command = os.Args[1]
+	}
+
+	// Версия отвечает до всего остального: её спрашивают в том числе
+	// тогда, когда база лежит и приложение не поднимается, — а «какая
+	// у вас версия» это первый вопрос при разборе любой поломки.
+	if command == "version" {
+		fmt.Println(version.Строка())
+		return
 	}
 
 	cfg, err := config.Load()
@@ -110,6 +120,7 @@ func main() {
 		//
 		// Вывод человеку, а не журналу: читает его тот, кто ставил,
 		// и читает один раз.
+		fmt.Printf("версия: %s\n\n", version.Строка())
 		итоги := doctor.Осмотр(ctx, cfg, db)
 		for _, и := range итоги {
 			знак := "✓"
@@ -129,7 +140,7 @@ func main() {
 
 	default:
 		log.Error("неизвестная команда", "команда", command,
-			"доступные", []string{"serve", "migrate", "demo", "doctor"})
+			"доступные", []string{"serve", "migrate", "demo", "doctor", "version"})
 		os.Exit(1)
 	}
 }

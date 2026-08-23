@@ -152,13 +152,20 @@ docs-bundle: ## Обновить встроенный отрисовщик ст�
 
 # --- сборка ---
 
+# Версия вшивается в бинарник, а не читается из файла: файл в образе
+# можно подменить, а версия обязана быть тем же артефактом, что и код.
+# `git describe` даёт тег, если он есть, и хеш, если тегов ещё нет, —
+# ответ на «какая у меня версия» в обоих случаях.
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo неизвестна)
+VERSION_LDFLAGS = -X github.com/konkov/agile/internal/version.Value=$(VERSION)
+
 .PHONY: build
 build: web ## Собрать бинарник в bin/board
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/board ./cmd/board
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/board ./cmd/board
 
 .PHONY: image
 image: ## Собрать docker-образ
-	docker build -t board:dev .
+	docker build --build-arg VERSION=$(VERSION) -t board:dev .
 
 .PHONY: up
 up: ## Поднять весь стек через docker compose
@@ -187,13 +194,13 @@ BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
 .PHONY: bundle
 bundle: ## Собрать комплект для установки без доступа в интернет
 	@mkdir -p "$(BUNDLE_DIR)"
-	docker build -t board:$(BUNDLE_VERSION) .
+	docker build --build-arg VERSION=$(BUNDLE_VERSION) -t board:$(BUNDLE_VERSION) .
 	docker save board:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/board-image.tar.gz"
 	# Версия чарта не переписывается версией сборки: helm требует semver,
 	# а описание сборки им быть не обязано. Комплект с чартом связывает
 	# тег образа, передаваемый при установке.
-	helm package deploy/helm/board -d "$(BUNDLE_DIR)" >/dev/null
-	cp README.md "$(BUNDLE_DIR)/"
+	helm package deploy/helm/board --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
+	cp README.md CHANGELOG.md "$(BUNDLE_DIR)/"
 	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
 	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
 	@echo
