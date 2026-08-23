@@ -33,23 +33,31 @@ func корень(t *testing.T) string {
 	return filepath.Join(filepath.Dir(файл), "..", "..")
 }
 
+// Все документы, включая переводы: подкаталоги обходятся тоже.
+// Первая редакция читала только `docs/*.md`, и английские страницы
+// не проверялись ничем — ни ссылки, ни подписи. Перевод без проверки
+// расходится с продуктом быстрее оригинала: его перечитывают реже.
 func документы(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	каталог := filepath.Join(корень(t), "docs")
-	записи, err := os.ReadDir(каталог)
+	база := filepath.Join(корень(t), "docs")
+	err := filepath.Walk(база, func(путь string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(путь, ".md") {
+			return nil
+		}
+		raw, err := os.ReadFile(путь)
+		if err != nil {
+			return err
+		}
+		относительный, _ := filepath.Rel(корень(t), путь)
+		out[filepath.ToSlash(относительный)] = string(raw)
+		return nil
+	})
 	if err != nil {
 		t.Fatalf("документации нет вовсе: %v", err)
-	}
-	for _, з := range записи {
-		if !strings.HasSuffix(з.Name(), ".md") {
-			continue
-		}
-		raw, err := os.ReadFile(filepath.Join(каталог, з.Name()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		out["docs/"+з.Name()] = string(raw)
 	}
 	if len(out) == 0 {
 		t.Fatal("в docs/ нет ни одного документа — проверка ничего не проверяет")
@@ -57,8 +65,15 @@ func документы(t *testing.T) map[string]string {
 	return out
 }
 
-// клиент — весь текст интерфейса разом: подписи ищутся по нему,
-// а не по одному файлу, потому что кнопка и вкладка живут в разных.
+// клиент — подписи интерфейса, а не весь исходный текст.
+//
+// Первая редакция сверяла со всем содержимым `.tsx`, и для русских
+// подписей этого хватало: по-русски в коде написаны только они
+// и комментарии. Для английских — нет: «Create» находится в любом
+// файле, где есть React, и переведённая кнопка проходила проверку.
+//
+// Поэтому берутся строковые литералы и текст между тегами — то, что
+// человек и правда видит.
 func клиент(t *testing.T) string {
 	t.Helper()
 	var b strings.Builder
@@ -74,8 +89,13 @@ func клиент(t *testing.T) string {
 		if err != nil {
 			return err
 		}
-		b.Write(raw)
-		b.WriteString("\n")
+		текст := string(raw)
+		for _, m := range литерал.FindAllStringSubmatch(текст, -1) {
+			b.WriteString(m[1] + m[2] + m[3] + "\n")
+		}
+		for _, m := range междуТегами.FindAllStringSubmatch(текст, -1) {
+			b.WriteString(strings.Join(strings.Fields(m[1]), " ") + "\n")
+		}
 		return nil
 	})
 	if err != nil {
@@ -87,6 +107,15 @@ func клиент(t *testing.T) string {
 // В ёлочках в документации стоят подписи интерфейса: «Сохранить вид»,
 // «Структура», «Доступ». Если такой подписи в клиенте нет — либо её
 // переименовали, либо документация выдумала.
+// Строковый литерал в трёх видах кавычек и текст между тегами JSX:
+// вместе это и есть то, что показывается человеку.
+var (
+	литерал = regexp.MustCompile("\"([^\"\\n]*)\"|'([^'\\n]*)'|`([^`]*)`")
+	// Перенос строки внутри разметки — вёрстка, а не часть подписи:
+	// «Сохранить вид» в JSX стоит на своей строке между тегами.
+	междуТегами = regexp.MustCompile(`>([^<>{}]{2,80})<`)
+)
+
 var вЁлочках = regexp.MustCompile(`«([^»]{2,40})»`)
 
 // Название соседней страницы в ссылке: «[«Справочник»](справочник.md)».
@@ -214,5 +243,29 @@ func TestDocsUseTheSameWordsAsTheProduct(t *testing.T) {
 		if !strings.Contains(весь, m[1]) {
 			t.Errorf("документация нигде не говорит про «%s», хотя продукт это показывает", m[1])
 		}
+	}
+}
+
+// Перевод и оригинал ссылаются друг на друга.
+//
+// Страница на другом языке, о которой не сказано на первой, — это
+// страница, которую не найдут: её адрес знает только тот, кто её
+// собирал. Проверка следит за обеими сторонами: русский обзор ведёт
+// на английский, английский — обратно.
+func TestTranslationsAreReachableFromBothSides(t *testing.T) {
+	документы := документы(t)
+	русский, ok := документы["docs/индекс.md"]
+	if !ok {
+		t.Fatal("обзора на русском нет")
+	}
+	английский, ok := документы["docs/en/overview.md"]
+	if !ok {
+		t.Fatal("обзора на английском нет")
+	}
+	if !strings.Contains(русский, "en/overview.md") && !strings.Contains(русский, "In English") {
+		t.Error("русский обзор не ведёт на английскую страницу: её не найдут")
+	}
+	if !strings.Contains(английский, "индекс.md") {
+		t.Error("английский обзор не ведёт обратно на русскую документацию")
 	}
 }

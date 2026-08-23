@@ -121,9 +121,17 @@ type Пункт struct {
 // Оглавление одно на все страницы и стоит вверху каждой: читать
 // документацию подряд не будут, а прыгать между тремя текстами —
 // будут.
+//
+// Язык объявляется в разметке, а не подразумевается: по нему диктор
+// выбирает произношение, а браузер — перенос слов. Английская страница
+// с `lang="ru"` читается вслух с русским акцентом — буквально.
 func Собрать(с Страница, оглавление []Пункт, версия string) string {
+	язык := с.Язык
+	if язык == "" {
+		язык = "ru"
+	}
 	var b strings.Builder
-	b.WriteString("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n")
+	fmt.Fprintf(&b, "<!doctype html>\n<html lang=%q>\n<head>\n<meta charset=\"utf-8\">\n", язык)
 	b.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">` + "\n")
 	fmt.Fprintf(&b, "<title>%s</title>\n", html.EscapeString(с.Заголовок))
 	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<main class=\"sheet\">\n", стиль)
@@ -142,9 +150,14 @@ func Собрать(с Страница, оглавление []Пункт, ве
 
 	// Версия в подписи: документация к продукту без версии отвечает
 	// на вопрос «а это про какую вашу?» молчанием.
-	fmt.Fprintf(&b, "<footer>Доска, версия %s. Страница собрана из %s — "+
-		"правьте исходник, а не её.</footer>\n",
-		html.EscapeString(версия), html.EscapeString(strings.TrimSuffix(с.Файл, ".html")+".md"))
+	исходник := html.EscapeString(strings.TrimSuffix(с.Файл, ".html") + ".md")
+	if язык == "en" {
+		fmt.Fprintf(&b, "<footer>Board, version %s. Built from %s — "+
+			"edit the source, not this page.</footer>\n", html.EscapeString(версия), исходник)
+	} else {
+		fmt.Fprintf(&b, "<footer>Доска, версия %s. Страница собрана из %s — "+
+			"правьте исходник, а не её.</footer>\n", html.EscapeString(версия), исходник)
+	}
 	b.WriteString("</main>\n</body>\n</html>\n")
 	return b.String()
 }

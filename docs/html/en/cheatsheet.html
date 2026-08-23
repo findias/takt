@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Что менялось</title>
+<title>Cheat sheet</title>
 <style>
 :root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
 --ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
@@ -101,41 +101,54 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <nav aria-label="Разделы документации">
-<a href="индекс.html">О продукте</a>
-<a href="старт.html">Первые 15 минут</a>
-<a href="как.html">Как сделать</a>
-<a href="справочник.html">Справочник</a>
-<a href="памятка.html">Памятка</a>
-<a href="устройство.html">Устройство</a>
-<a href="README.html">Установка</a>
-<a href="REQUIREMENTS.html">Требования</a>
-<a href="CHANGELOG.html" aria-current="page">Что менялось</a>
-<a href="en/overview.html">In English</a>
+<a href="overview.html">Overview</a>
+<a href="cheatsheet.html" aria-current="page">Cheat sheet</a>
+<a href="../индекс.html">По-русски</a>
 </nav>
-<h1>Что менялось</h1>
-<p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Подробности решений — в <code>ROADMAP.md</code>, он для нас; здесь — для заказчика.</p>
-<p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
-<h2>v0.1.0 — 23 августа 2026</h2>
-<p>Первый выпуск с номером. До него версии не было вовсе: тегов в репозитории не было, комплект собирался из хеша с суффиксом <code>-dirty</code>, а в самом бинарнике версия не хранилась — ответить на «какая у нас стоит» было нечем ни заказчику, ни нам.</p>
-<p><strong>Установка и обновление</strong></p>
-<ul>
-<li><code>board version</code> — какая это версия; отвечает и тогда, когда база недоступна.</li>
-<li><code>board doctor</code> — проверка того, что установка сделана правильно: применена ли схема целиком, действуют ли политики изоляции, тот ли <code>BASE_URL</code> (а значит, дойдёт ли защищённая cookie), достижим ли провайдер входа, доходят ли оповещения базы. Готовность и живость отвечают на другой вопрос — «процесс жив».</li>
-<li><code>SIGNUP</code> — кто заводит организации: <code>first</code> (по умолчанию: первый пришедший становится владельцем, дальше только по приглашению), <code>open</code>, <code>closed</code>. <strong>Смена поведения:</strong> до этого регистрация была открыта всегда и выключить её было нечем.</li>
-<li>База может подниматься чартом (<code>postgresql.enabled=true</code>) — для стенда. Основное расположение прежнее: снаружи, на железе или в отдельном операторе.</li>
-<li>Версия установки видна на экране «Команда».</li>
-</ul>
-<p><strong>При обновлении знать</strong></p>
-<ul>
-<li><code>helm rollback</code> вернёт поды, но не схему базы. Миграции пишутся совместимыми с предыдущей версией приложения — на этом откат и держится, — но резервная копия перед обновлением всё равно нужна.</li>
-<li>Миграции идут отдельной задачей до выкатки подов; приложение не стартует на непроинициализированной базе намеренно.</li>
-</ul>
-<p><strong>Чего этот выпуск не обещает</strong></p>
-<ul>
-<li>Установку никто ни разу не проводил: чарт проверяется отрисовкой и связностью, но не установкой в настоящий кластер.</li>
-<li>Вложений в карточках нет. Настройка <code>STORAGE</code> убрана: она читалась и не использовалась никем, а настройка без поведения обещает возможность и заставляет монтировать том, который никому не нужен.</li>
-</ul>
-<footer>Доска, версия v0.1.0-9-g003ba51-dirty. Страница собрана из CHANGELOG.md — правьте исходник, а не её.</footer>
+<h1>Cheat sheet</h1>
+<p>What you need on day one. Fits on one A4 sheet.</p>
+<p>The interface is in Russian: labels below are quoted the way they appear on screen, with a translation next to them.</p>
+<h2>Where things are</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Where</th><th>What is there</th></tr></thead>
+<tbody>
+<tr><td>«Доски» (Boards)</td><td>boards of the organisation and the archive</td></tr>
+<tr><td>«Команда» (Team)</td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
+<tr><td>«Структура» (Structure)</td><td>subdivisions as a tree</td></tr>
+<tr><td>Board header</td><td>«Доска», «Таблица», «Изменения» — three views of one data set; «Поток» — metrics; «Архив» — archived cards</td></tr>
+</tbody>
+</table></div>
+<h2>Keys</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Keys</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>Ctrl+K</code></td><td>find a card or a command</td></tr>
+<tr><td>Arrows</td><td>move between cards</td></tr>
+<tr><td><code>Ctrl</code> + arrows</td><td>move a card between columns</td></tr>
+<tr><td><code>Enter</code></td><td>open a card</td></tr>
+<tr><td><code>E</code></td><td>rename without opening</td></tr>
+<tr><td><code>Escape</code></td><td>close a panel, a menu or the palette</td></tr>
+</tbody>
+</table></div>
+<h2>Five actions</h2>
+<ol>
+<li><strong>Create a board</strong> — on the main screen: name, key, «Завести».</li>
+<li><strong>Create a card</strong> — at the bottom of a column, then <code>Enter</code>.</li>
+<li><strong>Move a card</strong> — drag it, or press <code>Ctrl</code> with an arrow.</li>
+<li><strong>Filter</strong> — the row above the board; the filter lives in the address bar, and «Сохранить вид» saves it as a named view.</li>
+<li><strong>Archive</strong> — the «…» menu on a card, then «В архив»; «Вернуть» appears next to the message.</li>
+</ol>
+<h2>When something looks wrong</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You see</th><th>It means</th></tr></thead>
+<tbody>
+<tr><td>A banner «Связи с сервером нет»</td><td>the server is unreachable; nothing you did is lost</td></tr>
+<tr><td>A card jumped back</td><td>the move never reached the server; press «Повторить»</td></tr>
+<tr><td>The board shows less than you expect</td><td>a filter is on; the column says how many are hidden</td></tr>
+</tbody>
+</table></div>
+<p>More detail: <a href="overview.html">overview</a>; the full documentation is in Russian — <a href="как.html">«Как сделать»</a> and <a href="справочник.html">«Справочник»</a>.</p>
+<footer>Board, version v0.1.0-9-g003ba51-dirty. Built from cheatsheet.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
