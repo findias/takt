@@ -50,6 +50,14 @@ services:
       # Кто заводит организации: first — первый пришедший, дальше
       # по приглашению; open — кто угодно; closed — никто.
       SIGNUP: ${SIGNUP:-first}
+      # Корпоративный вход. Пусто — вход только по паролю; настройки
+      # проходят насквозь, чтобы этот профиль не отличался от чарта
+      # ничем, кроме того, кто держит процесс.
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_ORG: ${OIDC_ORG:-}
+      OIDC_LABEL: ${OIDC_LABEL:-}
     ports:
       - "${PORT:-8080}:8080"
     depends_on:

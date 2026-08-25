@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Доска — документация</h1>
-<p>Все разделы одним файлом. Версия v0.1.0-23-ga4c5ad9-dirty.</p>
+<p>Все разделы одним файлом. Версия v0.1.0-24-g4b9bc40-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#индекс">О продукте</a></li>
@@ -783,7 +783,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
 <tbody>
 <tr><td>Б1</td><td>В зависимостях и стандартной библиотеке нет известных уязвимостей, которые мы вызываем</td><td><code>Makefile</code>, цель security (govulncheck)</td></tr>
-<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной</td><td><code>Makefile</code>, цель security (gosec)</td></tr>
+<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной, и причина проверяема</td><td><code>Makefile</code>, цель security (gosec); <code>internal/security/shipped_test.go</code></td></tr>
 <tr><td>Б3</td><td>В зависимостях клиента нет уязвимостей уровня high и выше</td><td><code>Makefile</code>, цель security (npm audit)</td></tr>
 <tr><td>Б4</td><td>Запрос к базе собирается параметрами; склейка допускается только со своим текстом и объявляется вслух</td><td><code>internal/security/sast_test.go</code></td></tr>
 <tr><td>Б5</td><td>Клиент никогда не вставляет сырую разметку</td><td><code>internal/security/sast_test.go</code></td></tr>

@@ -194,7 +194,7 @@ color:var(--ink-3);font-size:.85rem}
 <thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
 <tbody>
 <tr><td>Б1</td><td>В зависимостях и стандартной библиотеке нет известных уязвимостей, которые мы вызываем</td><td><code>Makefile</code>, цель security (govulncheck)</td></tr>
-<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной</td><td><code>Makefile</code>, цель security (gosec)</td></tr>
+<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной, и причина проверяема</td><td><code>Makefile</code>, цель security (gosec); <code>internal/security/shipped_test.go</code></td></tr>
 <tr><td>Б3</td><td>В зависимостях клиента нет уязвимостей уровня high и выше</td><td><code>Makefile</code>, цель security (npm audit)</td></tr>
 <tr><td>Б4</td><td>Запрос к базе собирается параметрами; склейка допускается только со своим текстом и объявляется вслух</td><td><code>internal/security/sast_test.go</code></td></tr>
 <tr><td>Б5</td><td>Клиент никогда не вставляет сырую разметку</td><td><code>internal/security/sast_test.go</code></td></tr>
@@ -237,7 +237,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Доска, версия v0.1.0-23-ga4c5ad9-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.1.0-24-g4b9bc40-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>
