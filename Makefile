@@ -131,7 +131,7 @@ docs: ## Собрать документацию в HTML (docs/html)
 # инструмент ради одной кнопки «печать» стоил бы установки при каждом
 # `npm ci`. Здесь же проверяется обещание памятки быть одной страницей.
 .PHONY: docs-pdf
-docs-pdf: docs ## Напечатать документацию в PDF (docs/html/доска.pdf)
+docs-pdf: docs ## Напечатать документацию в PDF (docs/html/takt.pdf)
 	cd web && node print-docs.mjs
 
 # --- безопасность ---
@@ -202,7 +202,7 @@ docs-bundle: ## Обновить встроенный отрисовщик ст�
 # `git describe` даёт тег, если он есть, и хеш, если тегов ещё нет, —
 # ответ на «какая у меня версия» в обоих случаях.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo неизвестна)
-VERSION_LDFLAGS = -X github.com/konkov/agile/internal/version.Value=$(VERSION)
+VERSION_LDFLAGS = -X github.com/findias/takt/internal/version.Value=$(VERSION)
 
 .PHONY: build
 build: web ## Собрать бинарник в bin/takt
@@ -234,6 +234,28 @@ logs: ## Логи приложения
 # Контрольные суммы обязательны: в закрытый контур файл едет через
 # посредников, и «тот ли это образ» — вопрос, который зададут.
 BUNDLE_VERSION ?= $(shell git describe --tags --always --dirty)
+
+# Комплект для установки из бинарника: то, что распаковывают в /opt/takt.
+# Отдельно от образа, потому что ставят и так тоже — там, где docker
+# не ставят принципиально, а systemd есть всегда.
+#
+# Внутрь кладётся и собранный клиент: без него приложение поднимется
+# и будет отвечать API, а экран останется белым — поломка, которую
+# ищут в браузере, а причина в поставке.
+.PHONY: tarball
+tarball: build ## Собрать архив для установки из бинарника (dist/)
+	@rm -rf "$(TARBALL_DIR)" && mkdir -p "$(TARBALL_DIR)/dist"
+	cp bin/takt "$(TARBALL_DIR)/"
+	cp -r web/dist/. "$(TARBALL_DIR)/dist/"
+	cp README.md README.en.md CHANGELOG.md LICENSE NOTICE THIRD-PARTY.md "$(TARBALL_DIR)/"
+	cd dist && tar czf "$(notdir $(TARBALL_DIR)).tar.gz" "$(notdir $(TARBALL_DIR))"
+	cd dist && sha256sum "$(notdir $(TARBALL_DIR)).tar.gz" > "$(notdir $(TARBALL_DIR)).tar.gz.sha256"
+	@rm -rf "$(TARBALL_DIR)"
+	@echo "архив: dist/$(notdir $(TARBALL_DIR)).tar.gz"
+
+TARBALL_OS   ?= linux
+TARBALL_ARCH ?= amd64
+TARBALL_DIR  ?= dist/takt-$(VERSION)-$(TARBALL_OS)-$(TARBALL_ARCH)
 BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
 
 .PHONY: bundle
@@ -246,10 +268,13 @@ bundle: ## Собрать комплект для установки без до
 	# тег образа, передаваемый при установке.
 	helm package deploy/helm/takt --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
 	go run ./cmd/docs
-	cp README.md CHANGELOG.md "$(BUNDLE_DIR)/"
+	# Лицензия и список чужого кода едут вместе с продуктом не для
+	# порядка: Apache-2.0 требует передавать NOTICE с каждой копией,
+	# а комплект для закрытого контура — это и есть копия.
+	cp README.md README.en.md CHANGELOG.md LICENSE NOTICE THIRD-PARTY.md "$(BUNDLE_DIR)/"
 	cp -r docs/html "$(BUNDLE_DIR)/docs"
 	$(MAKE) docs-pdf
-	cp docs/html/доска.pdf "$(BUNDLE_DIR)/"
+	cp docs/html/takt.pdf "$(BUNDLE_DIR)/"
 	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
 	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
 	@echo

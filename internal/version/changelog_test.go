@@ -65,3 +65,37 @@ func TestChangelogEntriesAreNamedTheSameWay(t *testing.T) {
 		t.Error("в списке изменений нет ни одной записи о версии")
 	}
 }
+
+// Путь, по которому линковщик кладёт версию, обязан совпадать с путём
+// модуля.
+//
+// Проверка заведена по следам поломки: модуль переименовали, а строку
+// `-X github.com/…/internal/version.Value=` в Makefile и Dockerfile
+// не тронули. Линковщик на несуществующий символ не ругается — он
+// молча ничего не кладёт. Сборка идёт, образ собирается, и только
+// `takt version` отвечает «версия не задана»: ровно там, где ответ
+// нужен заказчику, и ровно тогда, когда чинить поздно.
+func TestLdflagsPathMatchesModule(t *testing.T) {
+	mod, err := os.ReadFile("../../go.mod")
+	if err != nil {
+		t.Fatalf("go.mod: %v", err)
+	}
+	m := regexp.MustCompile(`(?m)^module (\S+)`).FindSubmatch(mod)
+	if m == nil {
+		t.Fatal("в go.mod нет строки module")
+	}
+	ждём := string(m[1]) + "/internal/version.Value"
+
+	for _, файл := range []string{"../../Makefile", "../../Dockerfile"} {
+		raw, err := os.ReadFile(файл)
+		if err != nil {
+			t.Fatalf("%s: %v", файл, err)
+		}
+		for _, найдено := range regexp.MustCompile(`-X (\S+?)=`).FindAllStringSubmatch(string(raw), -1) {
+			if найдено[1] != ждём {
+				t.Errorf("%s кладёт версию в %s, а модуль называется иначе — ждали %s",
+					файл, найдено[1], ждём)
+			}
+		}
+	}
+}

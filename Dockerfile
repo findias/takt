@@ -19,7 +19,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath \
-    -ldflags="-s -w -X github.com/konkov/agile/internal/version.Value=${VERSION}" \
+    -ldflags="-s -w -X github.com/findias/takt/internal/version.Value=${VERSION}" \
     -o /out/takt ./cmd/takt
 
 FROM alpine:3.21
