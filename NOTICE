@@ -1,0 +1,14 @@
+Takt
+Copyright 2026 The Takt Authors
+
+This product includes software developed by The Takt Authors,
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product bundles third-party software. Their licences and copyright
+notices are listed in THIRD-PARTY.md. Among them, the following are
+distributed under the Apache License, Version 2.0 and carry their own
+attribution notice:
+
+  Pragmatic drag and drop
+  Copyright 2023 Atlassian Pty Ltd
+  https://github.com/atlassian/pragmatic-drag-and-drop
