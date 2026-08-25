@@ -28,13 +28,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/board"
-	"github.com/konkov/agile/internal/org"
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/team"
-	"github.com/konkov/agile/internal/webhook"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/board"
+	"github.com/findias/takt/internal/org"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/team"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // Password — пароль всех демонстрационных людей. Один на всех: это стенд,

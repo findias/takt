@@ -18,7 +18,7 @@ const PORT = Number(process.env.E2E_PORT ?? 8098)
 const DATABASE_URL =
   process.env.E2E_DATABASE_URL ??
   process.env.TEST_DATABASE_URL ??
-  'postgres://board:board@localhost:55432/board?sslmode=disable'
+  'postgres://takt:takt@localhost:55432/takt?sslmode=disable'
 
 export default defineConfig({
   testDir: './e2e',
@@ -45,7 +45,7 @@ export default defineConfig({
     // SIGNUP=open: сценарии начинаются с заведения организации, а
     // умолчание `first` закрывает регистрацию после первой же — база
     // у прогонов общая. Сами режимы проверяются в Go, против базы.
-    command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist SIGNUP=open go run ./cmd/board serve`,
+    command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist SIGNUP=open go run ./cmd/takt serve`,
     cwd: '..',
     url: `http://127.0.0.1:${PORT}/readyz`,
     reuseExistingServer: !process.env.CI,

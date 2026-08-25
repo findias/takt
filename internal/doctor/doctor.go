@@ -22,10 +22,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/konkov/agile/internal/config"
-	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/migrations"
+	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/migrations"
 )
 
 // Итог одной проверки. Совет заполняется только у неудачи: «нельзя»
@@ -74,7 +74,7 @@ func схемаПрименена(ctx context.Context, db *store.Store) Итог
 	rows, err := db.Pool.Query(ctx, `select name from schema_migrations`)
 	if err != nil {
 		итог.Ответ = fmt.Sprintf("не прочитать schema_migrations: %v", err)
-		итог.Совет = "если таблицы нет вовсе — миграции не запускались: `board migrate`"
+		итог.Совет = "если таблицы нет вовсе — миграции не запускались: `takt migrate`"
 		return итог
 	}
 	defer rows.Close()
@@ -110,7 +110,7 @@ func схемаПрименена(ctx context.Context, db *store.Store) Итог
 	switch {
 	case len(не) > 0:
 		итог.Ответ = fmt.Sprintf("не применено %d из %d, первая — %s", len(не), len(вшито), не[0])
-		итог.Совет = "запустите `board migrate` (в Kubernetes это задача board-migrate)"
+		итог.Совет = "запустите `takt migrate` (в Kubernetes это задача takt-migrate)"
 	case лишние > 0:
 		итог.Ладно = true
 		итог.Ответ = fmt.Sprintf(

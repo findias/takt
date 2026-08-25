@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Демонстрационные данные проверяются потому, что на них стоит всё,

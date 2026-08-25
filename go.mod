@@ -1,4 +1,4 @@
-module github.com/konkov/agile
+module github.com/findias/takt
 
 go 1.26.6
 

@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Изоляция организаций держится политиками базы, а не проверками в коде.

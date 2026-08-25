@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/store"
 )
 
 var (

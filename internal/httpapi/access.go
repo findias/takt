@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/board"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/board"
 )
 
 // Доступ к доске: команда, видимость, поимённый состав.

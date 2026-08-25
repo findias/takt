@@ -20,16 +20,16 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath \
     -ldflags="-s -w -X github.com/konkov/agile/internal/version.Value=${VERSION}" \
-    -o /out/board ./cmd/board
+    -o /out/takt ./cmd/takt
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata \
- && adduser -D -u 10001 board
+ && adduser -D -u 10001 takt
 WORKDIR /app
-COPY --from=build /out/board /app/board
+COPY --from=build /out/takt /app/takt
 COPY --from=web /src/web/dist /app/web/dist
 ENV WEB_DIR=/app/web/dist
-USER board
+USER takt
 EXPOSE 8080
-ENTRYPOINT ["/app/board"]
+ENTRYPOINT ["/app/takt"]
 CMD ["serve"]

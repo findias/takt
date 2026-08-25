@@ -47,7 +47,7 @@ make up        # http://localhost:8080
 После установки — проверка, что поставлено правильно:
 
 ```bash
-docker compose run --rm app doctor     # или: /app/board doctor в поде
+docker compose run --rm app doctor     # или: /app/takt doctor в поде
 ```
 
 Готовность отвечает «процесс жив и база отвечает»; `doctor` отвечает
@@ -105,7 +105,7 @@ Realtime между пользователями (доска обновляет�
 ## Устройство
 
 ```
-cmd/board/          единственный исполняемый файл: serve и migrate
+cmd/takt/          единственный исполняемый файл: serve и migrate
 internal/rank/      дробная индексация — строковые ключи порядка карточек
 internal/board/     доменная модель доски и применение операций
 internal/org/       организации, состав команды, приглашения
@@ -317,7 +317,7 @@ SQL и транзакциях, и подменять их заглушками �
 | `OIDC_ORG`     | слаг организации, куда зачисляются пришедшие впервые    |
 | `OIDC_LABEL`   | надпись на кнопке входа                                 |
 
-Миграции — отдельная команда `board migrate`, а не часть старта приложения.
+Миграции — отдельная команда `takt migrate`, а не часть старта приложения.
 На одной реплике разницы нет, на двух одновременный старт разносит базу.
 
 Роль в `DATABASE_URL` должна владеть таблицами (иначе не пройдут миграции),
@@ -411,9 +411,9 @@ make bundle          # собирает dist/bundle-<версия>: образ, 
 
 ```sh
 sha256sum -c SHA256SUMS
-docker load < board-image.tar.gz        # либо skopeo copy в своё зеркало
-helm install board board-*.tgz --set image.tag=<версия> \
-  --set baseURL=https://board.example.ru --set database.existingSecret=board-db
+docker load < takt-image.tar.gz        # либо skopeo copy в своё зеркало
+helm install takt takt-*.tgz --set image.tag=<версия> \
+  --set baseURL=https://takt.example.ru --set database.existingSecret=takt-db
 ```
 
 Контрольные суммы здесь не формальность: в закрытый контур файл едет
@@ -433,9 +433,9 @@ helm install board board-*.tgz --set image.tag=<версия> \
 
 ```sh
 sha256sum -c SHA256SUMS
-docker load < board-image.tar.gz        # или skopeo copy в зеркало
-helm upgrade board board-*.tgz --reuse-values --set image.tag=<новая версия>
-kubectl exec deploy/board -- /app/board doctor
+docker load < takt-image.tar.gz        # или skopeo copy в зеркало
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=<новая версия>
+kubectl exec deploy/takt -- /app/takt doctor
 ```
 
 Что здесь важно и в каком порядке происходит:
@@ -444,7 +444,7 @@ kubectl exec deploy/board -- /app/board doctor
    с образом, которого нет в зеркале, оставляет поды в `ImagePullBackOff`
    — при `maxUnavailable: 0` старые продолжают работать, но выкладка
    висит.
-2. **Миграции идут до замены подов**, задачей `board-migrate` с хуком
+2. **Миграции идут до замены подов**, задачей `takt-migrate` с хуком
    `pre-upgrade`. Пока она не прошла, новые поды не поедут; упавшая
    задача остаётся в кластере — по ней и смотрят, почему не поехало.
 3. **`--reuse-values` обязателен**, если настройки задавались при
@@ -458,7 +458,7 @@ kubectl exec deploy/board -- /app/board doctor
 комплектом. Читать его до обновления, а не после: раздел «При обновлении
 знать» пишется ровно для этого.
 
-**Откат.** `helm rollback board` вернёт поды предыдущей версии, но **не
+**Откат.** `helm rollback takt` вернёт поды предыдущей версии, но **не
 вернёт схему базы**. Держится это на том, что миграции пишутся
 совместимыми с предыдущей версией приложения, и проверяется у нас
 (`migration_compat_test.go`). Резервная копия базы перед обновлением
@@ -494,20 +494,20 @@ kubectl exec deploy/board -- /app/board doctor
 
 ### Kubernetes
 
-Чарт лежит в `deploy/helm/board`. Зависимостей у него нет намеренно: база
+Чарт лежит в `deploy/helm/takt`. Зависимостей у него нет намеренно: база
 у заказчика своя, с резервным копированием и восстановлением на момент
 времени, и подсовывать ей замену внутри нашего чарта значит отвечать
 за чужую зону ответственности. Из этого же следует, что установка
 не требует доступа в интернет — нужен только образ в доступном реестре.
 
 ```sh
-kubectl create secret generic board-db \
-  --from-literal=DATABASE_URL='postgres://board:...@postgres:5432/board'
+kubectl create secret generic takt-db \
+  --from-literal=DATABASE_URL='postgres://takt:...@postgres:5432/takt'
 
-helm install board deploy/helm/board \
-  --set baseURL=https://board.example.ru \
-  --set database.existingSecret=board-db \
-  --set ingress.enabled=true --set ingress.host=board.example.ru
+helm install takt deploy/helm/takt \
+  --set baseURL=https://takt.example.ru \
+  --set database.existingSecret=takt-db \
+  --set ingress.enabled=true --set ingress.host=takt.example.ru
 ```
 
 Пароль базы передаётся готовым секретом, а не значением чарта: из values

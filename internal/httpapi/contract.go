@@ -15,7 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/auth"
+	"github.com/findias/takt/internal/auth"
 )
 
 // Контракт для тех, кто подключается снаружи.

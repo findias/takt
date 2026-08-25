@@ -1,6 +1,6 @@
 // Команда docs собирает документацию в HTML.
 //
-// Отдельной командой, а не подкомандой board: в образ она не едет
+// Отдельной командой, а не подкомандой takt: в образ она не едет
 // и базы не касается — это инструмент сборки, а не часть продукта.
 //
 // Запуск: make docs. Итог — docs/html/*.html, самодостаточные страницы
@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/konkov/agile/internal/docs"
-	"github.com/konkov/agile/internal/version"
+	"github.com/findias/takt/internal/docs"
+	"github.com/findias/takt/internal/version"
 )
 
 // Что собираем и как называем в оглавлении. Список явный: README

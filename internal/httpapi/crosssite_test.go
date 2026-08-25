@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/konkov/agile/internal/auth"
+	"github.com/findias/takt/internal/auth"
 )
 
 // Запрос с чужой страницы: чем он остановлен.

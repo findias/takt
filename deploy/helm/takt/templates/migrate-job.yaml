@@ -12,9 +12,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "board.fullname" . }}-migrate
+  name: {{ include "takt.fullname" . }}-migrate
   labels:
-    {{- include "board.labels" . | nindent 4 }}
+    {{- include "takt.labels" . | nindent 4 }}
   annotations:
     {{- if .Values.postgresql.enabled }}
     # База поднимается этим же чартом, а хуки выполняются до основных
@@ -36,11 +36,11 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "board.selectorLabels" . | nindent 8 }}
+        {{- include "takt.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "board.serviceAccountName" . }}
+      serviceAccountName: {{ include "takt.serviceAccountName" . }}
       {{- if .Values.postgresql.enabled }}
       initContainers:
         # Ждём, пока база примет подключения. Без этого задача падает
@@ -52,7 +52,7 @@ spec:
             - sh
             - -c
             - |
-              until pg_isready -h {{ include "board.postgresName" . }} -U {{ .Values.postgresql.username }} -d {{ .Values.postgresql.database }}; do
+              until pg_isready -h {{ include "takt.postgresName" . }} -U {{ .Values.postgresql.username }} -d {{ .Values.postgresql.database }}; do
                 echo "жду базу"
                 sleep 2
               done
@@ -73,11 +73,11 @@ spec:
           {{- toYaml .Values.securityContext.seccompProfile | nindent 10 }}
       containers:
         - name: migrate
-          image: {{ include "board.image" . }}
+          image: {{ include "takt.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["migrate"]
           env:
-            {{- include "board.env" . | nindent 12 }}
+            {{- include "takt.env" . | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:

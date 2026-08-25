@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/store"
 )
 
 const InviteTTL = 7 * 24 * time.Hour

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/konkov/agile/internal/config"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Проверка установки ценна ровно тем, что краснеет на сломанной
@@ -27,7 +27,7 @@ func итог(t *testing.T, итоги []Итог, что string) Итог {
 
 func TestHealthyInstallLooksHealthy(t *testing.T) {
 	db := testdb.Shared(t)
-	cfg := config.Config{BaseURL: "https://board.example.test"}
+	cfg := config.Config{BaseURL: "https://takt.example.test"}
 
 	итоги := Осмотр(context.Background(), cfg, db)
 	if !Ладно(итоги) {
@@ -85,7 +85,7 @@ func TestUnreachableProviderIsCalledOut(t *testing.T) {
 	}))
 	defer отказ.Close()
 
-	cfg := config.Config{BaseURL: "https://board.example.test"}
+	cfg := config.Config{BaseURL: "https://takt.example.test"}
 	cfg.OIDC.Issuer = отказ.URL
 	cfg.OIDC.ClientID = "board"
 

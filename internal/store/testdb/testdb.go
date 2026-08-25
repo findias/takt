@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/store"
 )
 
 // Объяснение печатается один раз: без базы падает каждая проверка,

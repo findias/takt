@@ -30,7 +30,7 @@ func чарт(t *testing.T) string {
 	if !ok {
 		t.Fatal("не найти собственный путь")
 	}
-	return filepath.Join(filepath.Dir(файл), "board")
+	return filepath.Join(filepath.Dir(файл), "takt")
 }
 
 // helm нужен для отрисовки. Пропуск объявляется вслух: молчаливо
@@ -44,7 +44,7 @@ func требуетHelm(t *testing.T) {
 
 func отрисовать(t *testing.T, значения ...string) (string, error) {
 	t.Helper()
-	args := append([]string{"template", "board", чарт(t)}, значения...)
+	args := append([]string{"template", "takt", чарт(t)}, значения...)
 	out, err := exec.Command("helm", args...).CombinedOutput()
 	return string(out), err
 }
@@ -57,33 +57,33 @@ var наборы = []struct {
 	неЖдём   []string
 	// Что приносит заказчик: такие ресурсы чарт не создаёт законно,
 	// и ссылки на них — не висячие. Перечисляются явно, потому что
-	// «имя начинается с board» отличить их не может.
+	// «имя начинается с takt» отличить их не может.
 	внешние []string
 }{
 	{
 		имя: "база снаружи, секрет принесён заказчиком",
 		значения: []string{
-			"--set", "baseURL=https://board.example.test",
-			"--set", "database.existingSecret=board-db",
+			"--set", "baseURL=https://takt.example.test",
+			"--set", "database.existingSecret=takt-db",
 		},
 		// Ни базы, ни секрета чарт не заводит: и то и другое — чужая зона.
 		неЖдём:  []string{"kind: StatefulSet", "kind: Secret"},
 		ждём:    []string{"kind: Deployment", "kind: Job", "kind: Service"},
-		внешние: []string{"board-db"},
+		внешние: []string{"takt-db"},
 	},
 	{
 		имя: "база снаружи, секрет от чарта",
 		значения: []string{
-			"--set", "baseURL=https://board.example.test",
-			"--set", "database.url=postgres://board:pass@db.example.test:5432/board",
+			"--set", "baseURL=https://takt.example.test",
+			"--set", "database.url=postgres://takt:pass@db.example.test:5432/takt",
 		},
-		ждём:   []string{"kind: Secret", "DATABASE_URL: \"postgres://board:pass@db.example.test:5432/board\""},
+		ждём:   []string{"kind: Secret", "DATABASE_URL: \"postgres://takt:pass@db.example.test:5432/takt\""},
 		неЖдём: []string{"kind: StatefulSet"},
 	},
 	{
 		имя: "база в кластере — способ для стенда",
 		значения: []string{
-			"--set", "baseURL=https://board.example.test",
+			"--set", "baseURL=https://takt.example.test",
 			"--set", "postgresql.enabled=true",
 			"--set", "postgresql.password=p1",
 			"--set", "postgresql.superuserPassword=p2",
@@ -92,7 +92,7 @@ var наборы = []struct {
 			"kind: StatefulSet",
 			// Строка подключения собрана чартом из адреса службы и роли:
 			// второе место, где их пишут руками, разошлось бы с первым.
-			`DATABASE_URL: "postgres://board:p1@board-postgres:5432/board?sslmode=disable"`,
+			`DATABASE_URL: "postgres://takt:p1@takt-postgres:5432/takt?sslmode=disable"`,
 			// Роль приложения заводится без прав суперпользователя:
 			// для суперпользователя RLS не действует вовсе.
 			"nosuperuser",
@@ -104,14 +104,14 @@ var наборы = []struct {
 	{
 		имя: "ingress, TLS и автомасштабирование",
 		значения: []string{
-			"--set", "baseURL=https://board.example.test",
-			"--set", "database.existingSecret=board-db",
-			"--set", "ingress.enabled=true", "--set", "ingress.host=board.example.test",
-			"--set", "ingress.tls.enabled=true", "--set", "ingress.tls.secretName=board-tls",
+			"--set", "baseURL=https://takt.example.test",
+			"--set", "database.existingSecret=takt-db",
+			"--set", "ingress.enabled=true", "--set", "ingress.host=takt.example.test",
+			"--set", "ingress.tls.enabled=true", "--set", "ingress.tls.secretName=takt-tls",
 			"--set", "autoscaling.enabled=true",
 		},
 		ждём:    []string{"kind: Ingress", "kind: HorizontalPodAutoscaler"},
-		внешние: []string{"board-db"},
+		внешние: []string{"takt-db"},
 		// При автомасштабировании число реплик задаёт HPA: указанное
 		// в Deployment сбрасывало бы его при каждой выкладке.
 		неЖдём: []string{"replicas: 2"},
@@ -119,15 +119,15 @@ var наборы = []struct {
 	{
 		имя: "одна реплика, без миграций и без PDB",
 		значения: []string{
-			"--set", "baseURL=https://board.example.test",
-			"--set", "database.existingSecret=board-db",
+			"--set", "baseURL=https://takt.example.test",
+			"--set", "database.existingSecret=takt-db",
 			"--set", "replicaCount=1",
 			"--set", "migrations.enabled=false",
 			"--set", "podDisruptionBudget.enabled=false",
 		},
 		ждём:    []string{"replicas: 1"},
 		неЖдём:  []string{"kind: Job", "kind: PodDisruptionBudget"},
-		внешние: []string{"board-db"},
+		внешние: []string{"takt-db"},
 	},
 }
 
@@ -164,18 +164,18 @@ func TestChartRefusesWhatItCannotDo(t *testing.T) {
 	}{
 		{
 			имя:      "без baseURL",
-			значения: []string{"--set", "database.existingSecret=board-db"},
+			значения: []string{"--set", "database.existingSecret=takt-db"},
 			причина:  "baseURL",
 		},
 		{
 			имя:      "без базы вовсе",
-			значения: []string{"--set", "baseURL=https://board.example.test"},
+			значения: []string{"--set", "baseURL=https://takt.example.test"},
 			причина:  "database.url",
 		},
 		{
 			имя: "база и снаружи, и в кластере",
 			значения: []string{
-				"--set", "baseURL=https://board.example.test",
+				"--set", "baseURL=https://takt.example.test",
 				"--set", "database.url=postgres://x",
 				"--set", "postgresql.enabled=true",
 				"--set", "postgresql.password=p", "--set", "postgresql.superuserPassword=p",
@@ -185,7 +185,7 @@ func TestChartRefusesWhatItCannotDo(t *testing.T) {
 		{
 			имя: "база в кластере без паролей",
 			значения: []string{
-				"--set", "baseURL=https://board.example.test",
+				"--set", "baseURL=https://takt.example.test",
 				"--set", "postgresql.enabled=true",
 			},
 			причина: "не придумывает пароли сам",
@@ -440,12 +440,12 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 	// Отрисовка со всем включённым: настройка, доступная только при
 	// включённом провайдере, всё равно должна быть достижима.
 	out, err := отрисовать(t,
-		"--set", "baseURL=https://board.example.test",
-		"--set", "database.existingSecret=board-db",
+		"--set", "baseURL=https://takt.example.test",
+		"--set", "database.existingSecret=takt-db",
 		"--set", "oidc.enabled=true",
 		"--set", "oidc.issuer=https://id.example.test",
-		"--set", "oidc.clientId=board",
-		"--set", "oidc.existingSecret=board-oidc",
+		"--set", "oidc.clientId=takt",
+		"--set", "oidc.existingSecret=takt-oidc",
 	)
 	if err != nil {
 		t.Fatalf("чарт не отрисовался:\n%s", out)

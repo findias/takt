@@ -4,22 +4,22 @@
 с метками пода, даёт службу без адресов и час поисков.
 */}}
 
-{{- define "board.name" -}}
+{{- define "takt.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "board.fullname" -}}
+{{- define "takt.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else if hasPrefix .Chart.Name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s" .Release.Name (include "board.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" .Release.Name (include "takt.name" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "board.labels" -}}
-app.kubernetes.io/name: {{ include "board.name" . }}
+{{- define "takt.labels" -}}
+app.kubernetes.io/name: {{ include "takt.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -31,14 +31,14 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 при обновлении appVersion селектор Deployment изменился бы, а он
 неизменяем — выкладка упала бы на ровном месте.
 */}}
-{{- define "board.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "board.name" . }}
+{{- define "takt.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "takt.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{- define "board.serviceAccountName" -}}
+{{- define "takt.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-{{- default (include "board.fullname" .) .Values.serviceAccount.name -}}
+{{- default (include "takt.fullname" .) .Values.serviceAccount.name -}}
 {{- else -}}
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
@@ -48,7 +48,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Ссылка на образ. Digest перевешивает тег: в закрытом контуре тег
 в зеркале переписывается, а digest — нет.
 */}}
-{{- define "board.image" -}}
+{{- define "takt.image" -}}
 {{- if .Values.image.digest -}}
 {{ .Values.image.repository }}@{{ .Values.image.digest }}
 {{- else -}}
@@ -61,11 +61,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 созданный чартом из значения. Второй способ оставлен для стенда;
 на бою пароль базы не должен попадать в values.
 */}}
-{{- define "board.secretName" -}}
+{{- define "takt.secretName" -}}
 {{- if .Values.postgresql.enabled -}}
-{{ printf "%s-db" (include "board.fullname" .) }}
+{{ printf "%s-db" (include "takt.fullname" .) }}
 {{- else -}}
-{{- default (printf "%s-db" (include "board.fullname" .)) .Values.database.existingSecret -}}
+{{- default (printf "%s-db" (include "takt.fullname" .)) .Values.database.existingSecret -}}
 {{- end -}}
 {{- end -}}
 
@@ -74,8 +74,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 в каждом шаблоне: селектор, разошедшийся с метками, даёт службу
 без адресов.
 */}}
-{{- define "board.postgresName" -}}
-{{ printf "%s-postgres" (include "board.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- define "takt.postgresName" -}}
+{{ printf "%s-postgres" (include "takt.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/*
@@ -87,12 +87,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 и шифруется тем, чем шифруется трафик в нём. Для базы на железе
 это значение задаёт тот, кто её ставил: там дорога длиннее.
 */}}
-{{- define "board.embeddedDatabaseURL" -}}
+{{- define "takt.embeddedDatabaseURL" -}}
 {{- $pg := .Values.postgresql -}}
-{{- printf "postgres://%s:%s@%s:5432/%s?sslmode=disable" $pg.username $pg.password (include "board.postgresName" .) $pg.database -}}
+{{- printf "postgres://%s:%s@%s:5432/%s?sslmode=disable" $pg.username $pg.password (include "takt.postgresName" .) $pg.database -}}
 {{- end -}}
 
-{{- define "board.secretKey" -}}
+{{- define "takt.secretKey" -}}
 {{- if and .Values.database.existingSecret (not .Values.postgresql.enabled) -}}
 {{ .Values.database.existingSecretKey }}
 {{- else -}}
@@ -105,12 +105,12 @@ DATABASE_URL
 одна конфигурация, разные подкоманды. Разойтись им нельзя — миграция,
 поехавшая не в ту базу, обнаруживается позже всего.
 */}}
-{{- define "board.env" -}}
+{{- define "takt.env" -}}
 - name: DATABASE_URL
   valueFrom:
     secretKeyRef:
-      name: {{ include "board.secretName" . }}
-      key: {{ include "board.secretKey" . }}
+      name: {{ include "takt.secretName" . }}
+      key: {{ include "takt.secretKey" . }}
 - name: BASE_URL
   value: {{ required "нужен baseURL: из него собираются ссылки в приглашениях" .Values.baseURL | quote }}
 - name: LISTEN_ADDR

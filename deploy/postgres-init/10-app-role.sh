@@ -7,14 +7,14 @@
 # которые ходят от одной организации, — только у клиента, увидевшего чужие
 # данные.
 #
-# Роль board владеет базой, поэтому ей хватает прав на миграции, но она не
+# Роль takt владеет базой, поэтому ей хватает прав на миграции, но она не
 # суперпользователь, а значит FORCE ROW LEVEL SECURITY распространяется и
 # на неё. Скрипт выполняется один раз при инициализации тома с данными.
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
-	create role board login password '${APP_DB_PASSWORD:-board}' nosuperuser nocreaterole nocreatedb;
-	create database board owner board;
+	create role takt login password '${APP_DB_PASSWORD:-takt}' nosuperuser nocreaterole nocreatedb;
+	create database takt owner takt;
 EOSQL
 
-echo "роль board создана без прав суперпользователя"
+echo "роль takt создана без прав суперпользователя"

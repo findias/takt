@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-DEV_DB_URL ?= postgres://board:board@localhost:55432/board?sslmode=disable
+DEV_DB_URL ?= postgres://takt:takt@localhost:55432/takt?sslmode=disable
 # Адрес для того, кто умеет заводить базы. Нужен одной проверке — той,
 # что применяет цепочку миграций с нуля в своей, только что заведённой
 # базе. Роль приложения этого не умеет намеренно (nocreatedb), и права
@@ -17,27 +17,27 @@ help: ## Показать список команд
 
 # --- разработка ---
 
-# Роль board намеренно создаётся без прав суперпользователя: для
+# Роль takt намеренно создаётся без прав суперпользователя: для
 # суперпользователя политики Row-Level Security не действуют, и локальная
 # разработка перестала бы отличаться от продакшена ровно в том месте,
 # где ошибка стоит дороже всего.
 .PHONY: db
 db: ## Поднять локальную базу в docker (порт 55432)
-	@docker start board-dev-db 2>/dev/null || \
-	 docker run -d --name board-dev-db \
-	   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e APP_DB_PASSWORD=board \
+	@docker start takt-dev-db 2>/dev/null || \
+	 docker run -d --name takt-dev-db \
+	   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e APP_DB_PASSWORD=takt \
 	   -v "$(CURDIR)/deploy/postgres-init:/docker-entrypoint-initdb.d:ro" \
 	   -p 55432:5432 postgres:16-alpine
-	@until docker exec board-dev-db pg_isready -U board -d board >/dev/null 2>&1; do sleep 0.5; done
+	@until docker exec takt-dev-db pg_isready -U takt -d takt >/dev/null 2>&1; do sleep 0.5; done
 	@echo "база готова: $(DEV_DB_URL)"
 
 .PHONY: db-stop
 db-stop: ## Остановить и удалить локальную базу вместе с данными
-	-docker rm -f board-dev-db
+	-docker rm -f takt-dev-db
 
 .PHONY: migrate
 migrate: db ## Применить миграции к локальной базе
-	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/board migrate
+	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/takt migrate
 
 # Смотреть на пустой интерфейс бесполезно: почти всякая ошибка вёрстки
 # видна только на настоящей длине текста и настоящем числе меток.
@@ -45,7 +45,7 @@ migrate: db ## Применить миграции к локальной баз�
 # свойствами, итерации, архив и историю на три недели назад.
 .PHONY: demo
 demo: migrate ## Наполнить базу данными для работы над видом
-	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/board demo
+	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/takt demo
 
 # Стенд с нуля одной командой: снести базу, поднять, мигрировать,
 # наполнить, собрать фронтенд. Дальше — make run.
@@ -69,7 +69,7 @@ run: migrate web-dist ## Запустить сервер разработки (A
 	DATABASE_URL="$(DEV_DB_URL)" LISTEN_ADDR=":$(DEV_PORT)" \
 	BASE_URL="http://localhost:$(DEV_PORT)" WEB_DIR=./web/dist \
 	SIGNUP=open \
-	go run ./cmd/board serve
+	go run ./cmd/takt serve
 
 .PHONY: web
 web: ## Собрать фронтенд (вместе с установкой зависимостей)
@@ -205,12 +205,12 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo не
 VERSION_LDFLAGS = -X github.com/konkov/agile/internal/version.Value=$(VERSION)
 
 .PHONY: build
-build: web ## Собрать бинарник в bin/board
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/board ./cmd/board
+build: web ## Собрать бинарник в bin/takt
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/takt ./cmd/takt
 
 .PHONY: image
 image: ## Собрать docker-образ
-	docker build --build-arg VERSION=$(VERSION) -t board:dev .
+	docker build --build-arg VERSION=$(VERSION) -t takt:dev .
 
 .PHONY: up
 up: ## Поднять весь стек через docker compose
@@ -239,12 +239,12 @@ BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
 .PHONY: bundle
 bundle: ## Собрать комплект для установки без доступа в интернет
 	@mkdir -p "$(BUNDLE_DIR)"
-	docker build --build-arg VERSION=$(BUNDLE_VERSION) -t board:$(BUNDLE_VERSION) .
-	docker save board:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/board-image.tar.gz"
+	docker build --build-arg VERSION=$(BUNDLE_VERSION) -t takt:$(BUNDLE_VERSION) .
+	docker save takt:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/takt-image.tar.gz"
 	# Версия чарта не переписывается версией сборки: helm требует semver,
 	# а описание сборки им быть не обязано. Комплект с чартом связывает
 	# тег образа, передаваемый при установке.
-	helm package deploy/helm/board --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
+	helm package deploy/helm/takt --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
 	go run ./cmd/docs
 	cp README.md CHANGELOG.md "$(BUNDLE_DIR)/"
 	cp -r docs/html "$(BUNDLE_DIR)/docs"
@@ -256,6 +256,6 @@ bundle: ## Собрать комплект для установки без до
 	@echo "комплект собран: $(BUNDLE_DIR)"
 	@echo "на месте:"
 	@echo "  sha256sum -c SHA256SUMS"
-	@echo "  docker load < board-image.tar.gz    # либо skopeo copy в своё зеркало"
-	@echo "  helm install board board-*.tgz --set image.tag=$(BUNDLE_VERSION) \\"
-	@echo "    --set baseURL=... --set database.existingSecret=board-db"
+	@echo "  docker load < takt-image.tar.gz    # либо skopeo copy в своё зеркало"
+	@echo "  helm install takt takt-*.tgz --set image.tag=$(BUNDLE_VERSION) \\"
+	@echo "    --set baseURL=... --set database.existingSecret=takt-db"

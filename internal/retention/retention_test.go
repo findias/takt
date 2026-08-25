@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Уборка. Проверяется не «удалилось», а что удалилось именно то и только

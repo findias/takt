@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/store"
 )
 
 // Verify сверяет наполненную базу с тем, что о демонстрационных данных

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/konkov/agile/internal/config"
+	"github.com/findias/takt/internal/config"
 )
 
 // Кэш собранного клиента.

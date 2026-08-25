@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/oidc"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/oidc"
 )
 
 // Вход через корпоративный провайдер: две ручки и одна временная cookie.

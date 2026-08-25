@@ -124,7 +124,7 @@ func Load() (Config, error) {
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")
 	u, err := url.Parse(c.BaseURL)
 	if err != nil || u.Scheme == "" || u.Host == "" {
-		return c, fmt.Errorf("BASE_URL = %q: ожидался абсолютный адрес вида https://board.example.ru", c.BaseURL)
+		return c, fmt.Errorf("BASE_URL = %q: ожидался абсолютный адрес вида https://takt.example.ru", c.BaseURL)
 	}
 
 	if c.OIDC.Enabled() {

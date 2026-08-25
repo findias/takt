@@ -12,16 +12,16 @@ services:
     image: postgres:16-alpine
     environment:
       # Суперпользователь нужен только для инициализации. Приложение ходит
-      # под ролью board без прав суперпользователя — иначе Row-Level
+      # под ролью takt без прав суперпользователя — иначе Row-Level
       # Security не действует и изоляция организаций исчезает.
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
-      APP_DB_PASSWORD: ${POSTGRES_PASSWORD:-board}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD:-takt}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U board -d board"]
+      test: ["CMD-SHELL", "pg_isready -U takt -d takt"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -34,7 +34,7 @@ services:
     build: .
     command: ["migrate"]
     environment:
-      DATABASE_URL: postgres://board:${POSTGRES_PASSWORD:-board}@db:5432/board?sslmode=disable
+      DATABASE_URL: postgres://takt:${POSTGRES_PASSWORD:-takt}@db:5432/takt?sslmode=disable
       BASE_URL: ${BASE_URL:-http://localhost:8080}
     depends_on:
       db:
@@ -44,7 +44,7 @@ services:
   app:
     build: .
     environment:
-      DATABASE_URL: postgres://board:${POSTGRES_PASSWORD:-board}@db:5432/board?sslmode=disable
+      DATABASE_URL: postgres://takt:${POSTGRES_PASSWORD:-takt}@db:5432/takt?sslmode=disable
       BASE_URL: ${BASE_URL:-http://localhost:8080}
       LISTEN_ADDR: ":8080"
       # Кто заводит организации: first — первый пришедший, дальше

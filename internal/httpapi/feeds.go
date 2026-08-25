@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
 )
 
 // Ленты: события доски и административный журнал.

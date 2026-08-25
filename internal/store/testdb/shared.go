@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/store"
 )
 
 var (

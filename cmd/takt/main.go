@@ -25,15 +25,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/konkov/agile/internal/config"
-	"github.com/konkov/agile/internal/demo"
-	"github.com/konkov/agile/internal/doctor"
-	"github.com/konkov/agile/internal/httpapi"
-	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/retention"
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/version"
-	"github.com/konkov/agile/internal/webhook"
+	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/demo"
+	"github.com/findias/takt/internal/doctor"
+	"github.com/findias/takt/internal/httpapi"
+	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/retention"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/version"
+	"github.com/findias/takt/internal/webhook"
 )
 
 func main() {

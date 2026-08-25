@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/konkov/agile/internal/auth"
+	"github.com/findias/takt/internal/auth"
 )
 
 // Выгрузка данных организации.

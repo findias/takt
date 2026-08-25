@@ -175,10 +175,10 @@ func TestDocsLinksLeadSomewhere(t *testing.T) {
 }
 
 // Названные пути API и подкоманды обязаны существовать: «запустите
-// board doctor» в документе к продукту без такой команды — это
+// takt doctor» в документе к продукту без такой команды — это
 // потерянный час того, кто читает.
 func TestDocsMentionRealCommandsAndPaths(t *testing.T) {
-	main, err := os.ReadFile(filepath.Join(корень(t), "cmd", "board", "main.go"))
+	main, err := os.ReadFile(filepath.Join(корень(t), "cmd", "takt", "main.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,13 +196,13 @@ func TestDocsMentionRealCommandsAndPaths(t *testing.T) {
 		маршруты += string(raw)
 	}
 
-	команда := regexp.MustCompile("`board ([a-z]+)`")
+	команда := regexp.MustCompile("`takt ([a-z]+)`")
 	адрес := regexp.MustCompile("`(/(?:api|scim)/[a-zA-Z0-9/_{}.-]*)`")
 	for файл, содержимое := range документы(t) {
 		for _, m := range команда.FindAllStringSubmatch(содержимое, -1) {
 			if !strings.Contains(string(main), `case "`+m[1]+`"`) &&
 				!strings.Contains(string(main), `command == "`+m[1]+`"`) {
-				t.Errorf("%s зовёт `board %s`, а такой подкоманды нет", файл, m[1])
+				t.Errorf("%s зовёт `takt %s`, а такой подкоманды нет", файл, m[1])
 			}
 		}
 		for _, m := range адрес.FindAllStringSubmatch(содержимое, -1) {

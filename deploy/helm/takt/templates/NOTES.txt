@@ -5,18 +5,18 @@
 
 Вход снаружи не настроен (ingress.enabled = false). Посмотреть локально:
 
-  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "board.fullname" . }} 8080:{{ .Values.service.port }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "takt.fullname" . }} 8080:{{ .Values.service.port }}
 {{- end }}
 
 Проверить, что реплики готовы:
 
-  kubectl --namespace {{ .Release.Namespace }} rollout status deploy/{{ include "board.fullname" . }}
+  kubectl --namespace {{ .Release.Namespace }} rollout status deploy/{{ include "takt.fullname" . }}
 
 Проверить, что поставлено правильно, — это другой вопрос: готовность
 отвечает «процесс жив и база отвечает», а не «схема та, адрес тот,
 провайдер достижим, оповещения доходят»:
 
-  kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "board.fullname" . }} -- /app/board doctor
+  kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "takt.fullname" . }} -- /app/takt doctor
 
 {{- if and (not .Values.database.existingSecret) (not .Values.postgresql.enabled) }}
 
@@ -37,7 +37,7 @@ database.existingSecret — иначе пароль базы попадёт и �
 пока база примет подключения. Так и задумано — это лучше, чем
 отвечать ошибкой на каждый запрос.
 
-  kubectl --namespace {{ .Release.Namespace }} rollout status sts/{{ include "board.postgresName" . }}
+  kubectl --namespace {{ .Release.Namespace }} rollout status sts/{{ include "takt.postgresName" . }}
 {{- end }}
 
 ОТКАТ: `helm rollback` вернёт поды, но не схему базы. Миграции пишутся

@@ -206,16 +206,16 @@ color:var(--ink-3);font-size:.85rem}
 <h2>Установка и обслуживание</h2>
 <p>Подробности — в <a href="README.html">руководстве по установке</a>.</p>
 <h3>Проверить, что установка сделана правильно</h3>
-<pre><code>kubectl exec deploy/board -- /app/board doctor</code></pre>
+<pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>Команда отвечает списком: та ли схема, тот ли адрес, достижим ли провайдер входа, доходят ли оповещения базы.</p>
 <h3>Обновить установку</h3>
-<pre><code>docker load &lt; board-image.tar.gz
-helm upgrade board board-*.tgz --reuse-values --set image.tag=&lt;версия&gt;
-kubectl exec deploy/board -- /app/board doctor</code></pre>
+<pre><code>docker load &lt; takt-image.tar.gz
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;версия&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> обязателен: без него настройки вернутся к умолчаниям чарта.</p>
 <h3>Закрыть регистрацию</h3>
 <p>Задайте <code>signup=closed</code> при установке или обновлении. Тогда организации заводит только владелец, а кнопки «Завести новую организацию» на экране входа не будет.</p>
-<footer>Доска, версия v0.1.0-10-g6ea0e7a-dirty. Страница собрана из как.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.1.0-17-g8c96857-dirty. Страница собрана из как.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

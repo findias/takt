@@ -17,10 +17,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/board"
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
-	"github.com/konkov/agile/internal/webhook"
+	"github.com/findias/takt/internal/board"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // Вебхуки: подписка, подпись, повтор и журнал доставок.

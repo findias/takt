@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/konkov/agile/internal/board"
+	"github.com/findias/takt/internal/board"
 )
 
 // Описание не должно расходиться с кодом молча.

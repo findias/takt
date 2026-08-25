@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/konkov/agile/internal/realtime"
+	"github.com/findias/takt/internal/realtime"
 )
 
 // Обсуждение карточки.

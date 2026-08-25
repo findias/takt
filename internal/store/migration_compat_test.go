@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/konkov/agile/migrations"
+	"github.com/findias/takt/migrations"
 )
 
 // Миграция обязана быть совместимой с предыдущей версией приложения.

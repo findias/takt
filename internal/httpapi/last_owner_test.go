@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/konkov/agile/internal/auth"
+	"github.com/findias/takt/internal/auth"
 )
 
 // Владельцем, которого считают, бывает только человек.

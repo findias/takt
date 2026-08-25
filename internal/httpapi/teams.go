@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/team"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/team"
 )
 
 // Структура организации: дерево подразделений, их состав и наблюдение.

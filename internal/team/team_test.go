@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Тесты идут против настоящей базы: почти всё здесь — перевод отказов

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/metrics"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/metrics"
 )
 
 // Метрики потока. Читаются тем же разрешением, что и доски: это та же

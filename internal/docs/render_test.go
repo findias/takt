@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/konkov/agile/internal/docs"
+	"github.com/findias/takt/internal/docs"
 )
 
 // Отрисовка в HTML: что именно она обязана делать.

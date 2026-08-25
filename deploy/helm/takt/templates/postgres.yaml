@@ -18,9 +18,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "board.postgresName" . }}
+  name: {{ include "takt.postgresName" . }}
   labels:
-    {{- include "board.labels" . | nindent 4 }}
+    {{- include "takt.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
 spec:
   # Служба без своего адреса: обращаются к поду по имени, а балансировать
@@ -31,15 +31,15 @@ spec:
       port: 5432
       targetPort: postgres
   selector:
-    {{- include "board.selectorLabels" . | nindent 4 }}
+    {{- include "takt.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "board.postgresName" . }}-init
+  name: {{ include "takt.postgresName" . }}-init
   labels:
-    {{- include "board.labels" . | nindent 4 }}
+    {{- include "takt.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
 data:
   # Тот же скрипт, что у профиля на одной машине, и по той же причине:
@@ -62,21 +62,21 @@ data:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "board.postgresName" . }}
+  name: {{ include "takt.postgresName" . }}
   labels:
-    {{- include "board.labels" . | nindent 4 }}
+    {{- include "takt.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
 spec:
-  serviceName: {{ include "board.postgresName" . }}
+  serviceName: {{ include "takt.postgresName" . }}
   replicas: 1
   selector:
     matchLabels:
-      {{- include "board.selectorLabels" . | nindent 6 }}
+      {{- include "takt.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: postgres
   template:
     metadata:
       labels:
-        {{- include "board.selectorLabels" . | nindent 8 }}
+        {{- include "takt.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgres
     spec:
       securityContext:
@@ -101,12 +101,12 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ default (printf "%s-secret" (include "board.postgresName" .)) $pg.existingSecret }}
+                  name: {{ default (printf "%s-secret" (include "takt.postgresName" .)) $pg.existingSecret }}
                   key: POSTGRES_PASSWORD
             - name: APP_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ default (printf "%s-secret" (include "board.postgresName" .)) $pg.existingSecret }}
+                  name: {{ default (printf "%s-secret" (include "takt.postgresName" .)) $pg.existingSecret }}
                   key: APP_DB_PASSWORD
             # Данные лежат в подкаталоге тома: у смонтированного тома
             # бывает lost+found, и initdb на непустом каталоге не работает.
@@ -139,7 +139,7 @@ spec:
       volumes:
         - name: init
           configMap:
-            name: {{ include "board.postgresName" . }}-init
+            name: {{ include "takt.postgresName" . }}-init
             defaultMode: 0555
   volumeClaimTemplates:
     - metadata:
@@ -157,9 +157,9 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "board.postgresName" . }}-secret
+  name: {{ include "takt.postgresName" . }}-secret
   labels:
-    {{- include "board.labels" . | nindent 4 }}
+    {{- include "takt.labels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
 type: Opaque
 stringData:

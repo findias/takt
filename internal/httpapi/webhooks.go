@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/retention"
-	"github.com/konkov/agile/internal/webhook"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/retention"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // Подписки на события. Заводит и видит владелец: подписка выносит данные

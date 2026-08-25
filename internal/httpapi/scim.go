@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/konkov/agile/internal/apiclient"
-	"github.com/konkov/agile/internal/auth"
-	"github.com/konkov/agile/internal/scim"
+	"github.com/findias/takt/internal/apiclient"
+	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/scim"
 )
 
 // SCIM 2.0: заведение и отключение людей и групп провайдером.

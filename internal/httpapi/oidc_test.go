@@ -17,10 +17,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/config"
-	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Вход через корпоративный провайдер проверяется против поддельного

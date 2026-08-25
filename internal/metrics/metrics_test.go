@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/store"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Метрики считаются на данных с известным ответом: отметки проставляются

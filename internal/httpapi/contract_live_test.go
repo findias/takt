@@ -11,7 +11,7 @@ import (
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
 
-	"github.com/konkov/agile/internal/apiclient"
+	"github.com/findias/takt/internal/apiclient"
 )
 
 // Описание до сих пор ни разу не исполнялось: его сверяли с кодом

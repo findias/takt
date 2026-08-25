@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/konkov/agile/internal/rank"
-	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/webhook"
+	"github.com/findias/takt/internal/rank"
+	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // Request — операция, присланная клиентом.

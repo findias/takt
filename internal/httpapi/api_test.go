@@ -14,9 +14,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/konkov/agile/internal/config"
-	"github.com/konkov/agile/internal/realtime"
-	"github.com/konkov/agile/internal/store/testdb"
+	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/store/testdb"
 )
 
 // Тесты HTTP-слоя идут против настоящей базы и настоящего маршрутизатора:

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/konkov/agile/internal/store"
+	"github.com/findias/takt/internal/store"
 )
 
 // Изоляция арендаторов — то место, где ошибка стоит дороже всего: она не
