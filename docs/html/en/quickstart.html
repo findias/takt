@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Takt</title>
+<title>First fifteen minutes</title>
 <style>
 :root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
 --ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
@@ -101,8 +101,8 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <nav aria-label="Разделы документации">
-<a href="overview.html" aria-current="page">Overview</a>
-<a href="quickstart.html">First 15 minutes</a>
+<a href="overview.html">Overview</a>
+<a href="quickstart.html" aria-current="page">First 15 minutes</a>
 <a href="howto.html">How to</a>
 <a href="reference.html">Reference</a>
 <a href="cheatsheet.html">Cheat sheet</a>
@@ -110,54 +110,53 @@ color:var(--ink-3);font-size:.85rem}
 <a href="install.html">Installation</a>
 <a href="../индекс.html">По-русски</a>
 </nav>
-<h1>Takt</h1>
-<p>A kanban board with flow metrics, for one team: work on the board, metrics computed from that work, an organisation with roles and subdivisions, integrations. It runs inside your own perimeter — no cloud and no external services required.</p>
-<p><strong>The product interface is in Russian.</strong> These English pages quote everything a user clicks the way it appears on screen, with a translation next to it. The Russian original of this page is <a href="индекс.html">here</a>.</p>
-<figure><img src="снимки/доска.png" alt="The board" loading="lazy">
-<figcaption>The board</figcaption></figure>
-<h2>Where to start</h2>
-<div class="tablewrap"><table>
-<thead><tr><th>You want to</th><th>Open</th></tr></thead>
-<tbody>
-<tr><td>Learn to run a board</td><td><a href="quickstart.html">First fifteen minutes</a></td></tr>
-<tr><td>Solve one specific problem</td><td><a href="howto.html">How to</a></td></tr>
-<tr><td>Look up a list or a setting</td><td><a href="reference.html">Reference</a></td></tr>
-<tr><td>Understand why it works this way</td><td><a href="architecture.html">Design decisions</a></td></tr>
-<tr><td>Keep it on one sheet</td><td><a href="cheatsheet.html">Cheat sheet</a></td></tr>
-<tr><td>Install and operate it</td><td><a href="install.html">Installation</a></td></tr>
-</tbody>
-</table></div>
-<p>The split is not accidental. Learning, instructions, lookup and explanation answer different questions, and mixed into one text they get in each other&#39;s way: you learn in order, solve a problem by jumping straight in, and look things up in a table.</p>
-<h2>What the product does</h2>
-<p><strong>Board.</strong> Columns are stages, cards are the work, and their order is manual. Move a card with the mouse or from the keyboard. Columns carry work-in-progress limits and entry rules. A blocked card carries the reason, not just the status. Cards split into subtasks and link to each other — including across boards owned by different teams.</p>
-<p><strong>Three views of the same data.</strong> The board answers &#34;how is the work going&#34;, the table answers &#34;what is the oldest and what did we promise&#34;, the change feed answers &#34;what happened&#34;.</p>
-<p><strong>Filtering and grouping.</strong> Eight filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
-<p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
-<p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
-<p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
-<p><strong>Integrations.</strong> A REST API with a published contract, keys with scopes, SCIM 2.0 directory provisioning, event subscriptions signed with a key and a delivery log, and a full data export in one file.</p>
-<p><strong>Sign-in.</strong> Password or a corporate identity provider (OIDC).</p>
-<h2>What the product does not do</h2>
-<p>No dates as a schedule and no Gantt charts, no public cloud with self-service sign-up, no file attachments on cards. These are not omissions: each refusal has a recorded reason, and some have a recorded condition under which they will be revisited. The full list is in the <a href="../REQUIREMENTS.html">requirements</a> (Russian).</p>
-<h2>How it is deployed</h2>
-<p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
-<p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="../REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="../CHANGELOG.html">changelog</a>.</p>
-<h2>Words you will see on screen</h2>
-<div class="tablewrap"><table>
-<thead><tr><th>On screen</th><th>Means</th></tr></thead>
-<tbody>
-<tr><td>«Доски»</td><td>Boards</td></tr>
-<tr><td>«Команда»</td><td>Team: people, invitations, keys, subscriptions, export</td></tr>
-<tr><td>«Структура»</td><td>Structure: subdivisions</td></tr>
-<tr><td>«Доска», «Таблица», «Изменения»</td><td>Board, Table, Changes — three views</td></tr>
-<tr><td>«Поток»</td><td>Flow: metrics</td></tr>
-<tr><td>«Архив»</td><td>Archive</td></tr>
-<tr><td>«Завести доску», «Завести карточку»</td><td>Create a board, create a card</td></tr>
-<tr><td>«В архив», «Вернуть»</td><td>Archive it, restore it</td></tr>
-<tr><td>«Владелец», «Участник», «Наблюдатель»</td><td>Owner, member, viewer</td></tr>
-</tbody>
-</table></div>
-<footer>Board, version v0.1.0-22-gbf7b7a9-dirty. Built from overview.md — edit the source, not this page.</footer>
+<h1>First fifteen minutes</h1>
+<p>Walk this path once and the board will stop needing explanations. We will create a board, put work on it, carry that work to the end, and invite a colleague.</p>
+<p>You need a board open in a browser and fifteen minutes.</p>
+<p><strong>The interface is in Russian.</strong> Buttons are quoted below exactly as they appear on screen, with a translation next to them.</p>
+<figure><img src="снимки/список-досок.png" alt="The list of boards" loading="lazy">
+<figcaption>The list of boards</figcaption></figure>
+<h2>1. Create a board</h2>
+<ol>
+<li>On the main screen, type a name into <strong>«Название новой доски»</strong> (name of the new board).</li>
+<li>Next to it, in <strong>«Ключ»</strong> (key), type a short word — <code>ПОСТ</code>, say. It becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty and we derive it from the name.</li>
+<li>Press <strong>«Завести»</strong> (create).</li>
+</ol>
+<p>The board opens straight away with three columns: «Очередь» (queue), «В работе» (in progress), «Готово» (done). Those are stages of work, and you can change them.</p>
+<h2>2. Put work on it</h2>
+<ol>
+<li>At the bottom of «Очередь», press <strong>«Завести карточку»</strong> (create a card).</li>
+<li>Write what needs doing and press <code>Enter</code>.</li>
+</ol>
+<p>Create three or four cards: with one, the board shows nothing.</p>
+<h2>3. Move a card</h2>
+<p>Drag a card into «В работе». Or, faster: focus it from the keyboard and press <code>Ctrl</code> with the right arrow.</p>
+<p>The card flashes in its new place — that is how the board shows where it went. Everyone with this board open sees the change immediately.</p>
+<h2>4. Describe the work</h2>
+<ol>
+<li>Click the card&#39;s title; a panel opens.</li>
+<li>Go to the <strong>«Работа»</strong> (work) tab.</li>
+<li>Assign an owner, set an estimate and a due date.</li>
+</ol>
+<figure><img src="снимки/карточка.png" alt="A card" loading="lazy">
+<figcaption>A card</figcaption></figure>
+<p>If work has stalled, press <strong>«Заблокировать»</strong> (block) and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all.</p>
+<h2>5. Carry it to the end</h2>
+<p>Move the card into «Готово». After a few such cards, open <strong>«Поток»</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
+<h2>6. Invite a colleague</h2>
+<ol>
+<li>Open the <strong>«Команда»</strong> (team) tab.</li>
+<li>Under <strong>«Пригласить»</strong> (invite), enter an e-mail and pick a role.</li>
+<li>Press <strong>«Пригласить»</strong> and send the link that appears.</li>
+</ol>
+<p>The link is addressed: someone with a different e-mail cannot accept it. It is shown once — only a fingerprint of it is stored.</p>
+<h2>What next</h2>
+<ul>
+<li>Solve a specific problem — <a href="howto.html">How to</a>.</li>
+<li>See everything as a list — <a href="reference.html">Reference</a>.</li>
+<li>Understand why the board works this way — [Design decisions](architecture.md).</li>
+</ul>
+<footer>Board, version v0.1.0-22-gbf7b7a9-dirty. Built from quickstart.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

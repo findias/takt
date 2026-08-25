@@ -43,5 +43,6 @@ appear on screen, with a translation next to them.
 | A card jumped back | the move never reached the server; press «Повторить» |
 | The board shows less than you expect | a filter is on; the column says how many are hidden |
 
-More detail: [overview](overview.md); the full documentation is in
-Russian — [«Как сделать»](../как.md) and [«Справочник»](../справочник.md).
+More detail: [how to](howto.md) and the [reference](reference.md).
+
+<!-- перевод: docs/памятка.md sha256:fb38e5275795 -->

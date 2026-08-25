@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Установка</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html">Справочник</a>
+<a href="памятка.html">Памятка</a>
+<a href="устройство.html">Устройство</a>
+<a href="установка.html" aria-current="page">Установка</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="en/overview.html">In English</a>
+</nav>
+<h1>Установка</h1>
+<p>Как поставить Takt, как его запустить и что для этого нужно. Написано для того, кто ставит и держит; тому, кто пользуется, — в <a href="индекс.html">обзор</a>.</p>
+<p>Три способа, и все три дают одно и то же приложение из одного образа: <code>docker compose</code> на одной машине, бинарник под systemd, чарт в Kubernetes. Разница — в том, кто держит процесс и кто запускает миграции.</p>
+<h2>Что нужно, чтобы это поставить</h2>
+<p>Пределы взяты из замеров, а не назначены: за ними продукт обязан работать, но не обязан держать пороги отклика. Числа и то, чем они закреплены, — в <a href="REQUIREMENTS.html"><code>REQUIREMENTS.md</code></a>.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Что</th><th>Сколько</th></tr></thead>
+<tbody>
+<tr><td>PostgreSQL</td><td>16 и новее</td></tr>
+<tr><td>Kubernetes (если ставите чартом)</td><td>1.25 и новее</td></tr>
+<tr><td>Процессор, память приложения</td><td>1 ядро, 256 МБ на реплику; состояния на диске нет</td></tr>
+<tr><td>Место под базу</td><td>от 1 ГБ; растёт журналом событий, а не карточками</td></tr>
+<tr><td>Браузер</td><td>те, где Baseline newly возрастом от года</td></tr>
+<tr><td>Сеть</td><td>наружу — ничего; внутрь — прокси с TLS</td></tr>
+<tr><td>Люди в установке</td><td>до 130</td></tr>
+</tbody>
+</table></div>
+<p>Чего установка <strong>не</strong> требует: доступа в интернет, объектного хранилища, очереди сообщений, отдельного кэша. Единственная внешняя зависимость — PostgreSQL. Если настроен корпоративный вход, добавляется вторая: провайдер OIDC.</p>
+<p>Что мы ждём от того, кто ставит, — разделение обязательств, без которого не с чем сверять наши:</p>
+<ol>
+<li><strong>База ваша.</strong> Резервные копии, восстановление на момент времени, место. Чарт базой не управляет намеренно — почему, сказано ниже, в разделе про восстановление на момент времени.</li>
+<li><strong>Перед приложением — прокси с TLS</strong>, пробрасывающий <code>Upgrade</code> и <code>Connection</code>: без них доска не обновляется сама.</li>
+<li><strong><code>BASE_URL</code> совпадает с адресом в браузере.</strong> Из него собираются ссылки в приглашениях и адрес потока изменений.</li>
+<li><strong>Перед базой нет пула соединений в режиме транзакций</strong> — оповещения базы через него не проходят.</li>
+<li><strong>Резервная копия снимается до обновления.</strong> Совместимость миграций с предыдущей версией — наша сторона; данные — ваша.</li>
+</ol>
+<p>Проверить, что всё это сошлось, есть чем: <code>takt doctor</code> отвечает по каждому пункту, который можно проверить машиной.</p>
+<h2>Один образ на все профили</h2>
+<p>Собирается <strong>один образ</strong>. Compose и Helm-чарт получают его без пересборки — вся разница в переменных окружения и в том, кто запускает миграции. Второй <code>Dockerfile</code> завёл бы расхождение между профилями в тот же день.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Переменная</th><th>Назначение</th></tr></thead>
+<tbody>
+<tr><td><code>BASE_URL</code></td><td>адрес в браузере, без слэша на конце</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>строка подключения к PostgreSQL</td></tr>
+<tr><td><code>LISTEN_ADDR</code></td><td>адрес прослушивания, по умолчанию <code>:8080</code></td></tr>
+<tr><td><code>WEB_DIR</code></td><td>каталог со статикой; пусто — не раздавать</td></tr>
+<tr><td><code>SIGNUP</code></td><td>кто заводит организации: <code>first</code>, <code>open</code>, <code>closed</code></td></tr>
+<tr><td><code>OIDC_ISSUER</code></td><td>адрес провайдера входа; пусто — вход только по паролю</td></tr>
+<tr><td><code>OIDC_CLIENT_ID</code> / <code>OIDC_CLIENT_SECRET</code></td><td>учётные данные приложения у провайдера</td></tr>
+<tr><td><code>OIDC_ORG</code></td><td>слаг организации, куда зачисляются пришедшие впервые</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа</td></tr>
+</tbody>
+</table></div>
+<p>Миграции — отдельная команда <code>takt migrate</code>, а не часть старта приложения. На одной реплике разницы нет, на двух одновременный старт разносит базу.</p>
+<p>Роль в <code>DATABASE_URL</code> должна владеть таблицами (иначе не пройдут миграции), но <strong>не</strong> быть суперпользователем и не иметь <code>BYPASSRLS</code> — иначе изоляция организаций перестаёт действовать. Управляемые кластеры (в том числе CloudNativePG) заводят такую роль по умолчанию. Приложение проверяет это условие при старте.</p>
+<p>За обратным прокси проверьте два условия — на них спотыкаются все:</p>
+<ol>
+<li><code>BASE_URL</code> совпадает с адресом в браузере. Из него клиент строит адрес WebSocket-соединения, и ошибка даёт не сообщение, а вечный спиннер.</li>
+<li>Прокси пробрасывает заголовки <code>Upgrade</code> и <code>Connection</code>.</li>
+</ol>
+<h2>На обычной машине</h2>
+<p>Два способа, и оба дают одно и то же приложение. Разница в том, кто держит процесс: docker или systemd.</p>
+<p><strong>Через docker compose</strong> — когда на машине есть docker и своей базы пока нет:</p>
+<pre><code>cp .env.example .env          # задать POSTGRES_PASSWORD и BASE_URL
+docker compose up -d
+docker compose run --rm app doctor</code></pre>
+<p>Compose поднимает базу рядом. Для стенда это правильно, для боя — нет: у базы в контейнере нет ни резервного копирования, ни восстановления на момент времени. Как только установка становится рабочей, базу выносят наружу и оставляют в <code>DATABASE_URL</code> её адрес.</p>
+<p><strong>Без docker, из бинарника</strong> — когда база уже есть, а лишний слой не нужен:</p>
+<pre><code># 1. Роль и база. Роль владеет своими таблицами, но не суперпользователь
+#    и без BYPASSRLS: для суперпользователя политики изоляции
+#    не действуют, и разделение организаций молча исчезает.
+sudo -u postgres psql &lt;&lt;&#39;SQL&#39;
+create role takt login password &#39;СВОЙ_ПАРОЛЬ&#39; nosuperuser nocreaterole nocreatedb;
+create database takt owner takt;
+SQL
+
+# 2. Комплект: бинарник и собранный клиент.
+sudo mkdir -p /opt/takt
+sudo tar xzf takt-&lt;версия&gt;-linux-amd64.tar.gz -C /opt/takt --strip-components=1
+#    либо собрать у себя: make build &amp;&amp; cp -r bin/takt web/dist /opt/takt/
+
+# 3. Настройки. Файл читает systemd, поэтому 0600 и владелец root.
+sudo install -m 0600 /dev/null /etc/takt.env
+sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+DATABASE_URL=postgres://takt:СВОЙ_ПАРОЛЬ@localhost:5432/takt?sslmode=disable
+BASE_URL=https://takt.example.ru
+LISTEN_ADDR=127.0.0.1:8080
+WEB_DIR=/opt/takt/dist
+SIGNUP=first
+ENV
+
+# 4. Схема. Отдельной командой, до запуска: на двух процессах
+#    одновременная миграция при старте разносит базу.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt migrate&#39;</code></pre>
+<p>Служба:</p>
+<pre><code># /etc/systemd/system/takt.service
+[Unit]
+Description=Takt
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=takt
+EnvironmentFile=/etc/takt.env
+ExecStart=/opt/takt/takt serve
+Restart=on-failure
+
+# Состояния на диске у приложения нет — всё в базе. Значит, ему можно
+# не давать ни записи, ни лишних прав, и это не аскеза, а следствие.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# Остановка снимает готовность, ждёт, пока прокси вычеркнет процесс,
+# и только потом закрывает соединения. Пауза короче — оборванные
+# запросы у тех, кто в этот момент работал.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl enable --now takt
+
+# doctor читает те же настройки, что и служба, — иначе он проверит
+# не ту установку и скажет, что всё хорошо.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt doctor&#39;</code></pre>
+<p>Версия отвечает и без настроек — <code>/opt/takt/takt version</code>: её спрашивают как раз тогда, когда ничего не поднимается.</p>
+<p>Дальше — прокси с TLS перед <code>127.0.0.1:8080</code>. Приложение слушает только петлю намеренно: TLS, сжатие и ограничение размера тела — работа прокси, и делать её дважды значит расходиться в настройках. Требования к прокси — два, оба выше: тот же <code>BASE_URL</code> и проброс <code>Upgrade</code> с <code>Connection</code>.</p>
+<p><strong>Обновление.</strong> Тем же порядком, что и в кластере, и в том же: резервная копия базы, затем <code>takt migrate</code>, затем новый бинарник, затем <code>systemctl restart takt</code>, затем <code>takt doctor</code>. Миграция идёт до замены бинарника, потому что она обязана работать со старой версией приложения, а не наоборот — на этом же держится и откат.</p>
+<h2>Kubernetes</h2>
+<p>Чарт лежит в <code>deploy/helm/takt</code>. Зависимостей у него нет намеренно: база у заказчика своя, с резервным копированием и восстановлением на момент времени, и подсовывать ей замену внутри нашего чарта значит отвечать за чужую зону ответственности. Из этого же следует, что установка не требует доступа в интернет — нужен только образ в доступном реестре.</p>
+<pre><code>kubectl create secret generic takt-db \
+  --from-literal=DATABASE_URL=&#39;postgres://takt:...@postgres:5432/takt&#39;
+
+helm install takt deploy/helm/takt \
+  --set baseURL=https://takt.example.ru \
+  --set database.existingSecret=takt-db \
+  --set ingress.enabled=true --set ingress.host=takt.example.ru</code></pre>
+<p>Пароль базы передаётся готовым секретом, а не значением чарта: из values он попадает и в историю выкладок, и в вывод <code>helm get values</code>, который читают шире, чем кажется.</p>
+<p>Миграции выполняет задача с хуком <code>pre-install,pre-upgrade</code> — один раз и до того, как поедут новые поды. Упавшая задача остаётся: по ней и смотрят, почему не поехала выкладка.</p>
+<p><strong>Две пробы, а не одна.</strong> <code>/healthz</code> отвечает на вопрос «процесс жив» и базы не касается: если проверять живость базой, моргнувшая база перезапустит все реплики разом и к своему возвращению застанет их занятыми рестартом. <code>/readyz</code> отвечает «можно давать запросы» и базу проверяет. Он же гаснет первым при остановке: получив сигнал, реплика сначала снимает готовность, ждёт пять секунд, пока балансировщик её вычеркнет, и только потом закрывает соединения. Поэтому <code>terminationGracePeriodSeconds</code> в чарте больше, чем пауза и таймаут остановки вместе.</p>
+<h2>Первый вход</h2>
+<p>Первый экран предложит создать команду: на пустой установке организацию заводит тот, кто пришёл первым, и он же становится её владельцем. Дальше регистрация закрыта, и людей приглашает он. Переключается <code>SIGNUP</code>: <code>open</code> — заводить может кто угодно (так работает стенд), <code>closed</code> — никто, для установок с корпоративным входом.</p>
+<p>После установки — проверка, что поставлено правильно:</p>
+<pre><code>docker compose run --rm app doctor     # или: /app/takt doctor в поде</code></pre>
+<p>Готовность отвечает «процесс жив и база отвечает»; <code>doctor</code> отвечает на другой вопрос: та ли схема, тот ли адрес (а значит, дойдёт ли защищённая cookie), достижим ли провайдер входа, доходят ли оповещения базы, без которых доска не обновляется сама.</p>
+<h2>Вход через корпоративный провайдер</h2>
+<p>Настраивается переменными окружения, а не в базе. Хранить настройки по организациям было бы правильно для облачной установки, но там же пришлось бы хранить секрет клиента — то есть завести шифрование, ключ, его ротацию и вопрос «кто расшифрует, если сервер потеряли». Корпоративный вход ставят в закрытом контуре, где организация одна, а секрет уже лежит в секретах кластера. Отсюда правило: одна установка — один провайдер, никаких секретов в базе.</p>
+<p>Обратный адрес, который нужно прописать у провайдера, собирается из <code>BASE_URL</code>: <code>&lt;BASE_URL&gt;/api/auth/oidc/callback</code>. Отдельной переменной для него нет намеренно — разойтись с <code>BASE_URL</code> он не должен.</p>
+<p>Что происходит при входе:</p>
+<ul>
+<li>вернувшегося узнают по паре «издатель + <code>sub</code>», а не по почте: почта меняется, и человек с новой почтой иначе потерял бы свои доски;</li>
+<li>пришедшего впервые связывают с уже заведённой учётной записью по <strong>подтверждённой</strong> почте — непроверенный адрес позволил бы забрать чужую запись;</li>
+<li>никого не нашлось — заводят новую и зачисляют в <code>OIDC_ORG</code>. Уже состоящий хоть в одной организации никуда не добавляется: вход не должен молча менять принадлежность.</li>
+</ul>
+<p>Подпись <code>id_token</code> не проверяется, и это осознанно: в код-потоке токен приходит нам напрямую с конечной точки провайдера по TLS, что спецификация прямо считает достаточным (OIDC Core, 3.1.3.7). Написанная руками проверка JWT — разбор base64, выбор ключа из JWKS, сверка <code>alg</code> — это ровно тот код, в котором ошибаются, и ошибка в нём стоит всей аутентификации. Сведения о человеке берутся с <code>userinfo</code> тем же доступом.</p>
+<h2>Заведение людей из каталога (SCIM)</h2>
+<p>Провайдер выгружает сотрудников и группы по адресу <code>/scim/v2/…</code>. Ключ берётся обычный, из раздела <strong>«Ключи для интеграций»</strong>, с единственным разрешением <code>scim:write</code>; организацию определяет сам ключ — отдельная настройка «куда заводить» была бы вторым источником правды.</p>
+<p>Что делает наша сторона:</p>
+<ul>
+<li><strong>отключение снимает участие, но не удаляет человека.</strong> Уволенный теряет доступ сразу, а его карточки, комментарии и подписи в журнале остаются подписанными им. Удалять запись значило бы переписать историю задним числом;</li>
+<li><strong><code>DELETE</code> делает то же, что <code>active = false</code>.</strong> Провайдеры расходятся: одни шлют отключение, другие удаление, третьи оба подряд;</li>
+<li><strong>группы становятся командами, а не ролями.</strong> Роль — свойство участия в организации, и каталог о ней ничего не знает: там сотрудник состоит в отделе, а не «является владельцем». Роль назначается здесь, и выгрузка её не трогает;</li>
+<li><strong>уволенный уходит и из команд</strong> — команда, в которой числится уволенный, вводит в заблуждение тех, кто по ней распределяет работу.</li>
+</ul>
+<p>Массовые запросы (<code>bulk</code>) не поддержаны, и <code>ServiceProviderConfig</code> об этом честно говорит: к ним прибегают на тысячах сотрудников, а установка рассчитана на сотню.</p>
+<h2>Восстановление на момент времени</h2>
+<p>Резервное копирование — работа базы, и чарт ею не управляет намеренно. Пример кластера с непрерывным архивированием, из которого видно, чего мы от базы ждём, — в <a href="../deploy/postgres/cloudnativepg-cluster.yaml"><code>deploy/postgres/cloudnativepg-cluster.yaml</code></a>.</p>
+<p>Копировать нужно только базу. Образ воспроизводится из исходников, статика лежит внутри образа, состояния на дисках приложения нет — оно поэтому и запускается с корнем, доступным только для чтения.</p>
+<p>Восстанавливать следует в <strong>новый</strong> кластер, а не поверх живого: иначе теряется возможность сравнить и вернуться, если восстановили не туда.</p>
+<p>Что важно знать про откат базы назад по времени — это наши особенности, а не общие слова:</p>
+<ul>
+<li><strong>Вебхуки отправятся повторно.</strong> Ключи повтора и отметки о доставке откатятся вместе со всем остальным, и работник разберёт исходящий ящик заново. Получатели обязаны быть готовы к повтору — в заголовке едет идентификатор доставки, по нему повтор и опознаётся.</li>
+<li><strong>Сессии откатятся тоже.</strong> Вошедшие после точки восстановления окажутся невошедшими; выданные до неё продолжат работать. Это правильно: сессия — такие же данные, как остальные.</li>
+<li><strong>Ключи доступа, отозванные после точки, снова станут действующими.</strong> Если откат делается из-за утечки ключа, отзывать его нужно ещё раз, уже после восстановления.</li>
+<li><strong>Открытые доски перечитаются сами.</strong> Клиенты держат поток изменений и при обрыве переподключаются, получая снимок заново; ничего делать не нужно.</li>
+</ul>
+<p>Проверять восстановление следует до аварии, а не во время: поднять копию в отдельном пространстве имён, применить чарт с <code>database.existingSecret</code>, указывающим на восстановленный кластер, и открыть доску. Проверка занимает четверть часа и отвечает на единственный вопрос, ради которого всё это делается, — «а из копии вообще поднимается?».</p>
+<h2>Установка без доступа в интернет</h2>
+<pre><code>make bundle          # собирает dist/bundle-&lt;версия&gt;: образ, чарт, README, суммы</code></pre>
+<p>Комплект увозится файлом. На месте:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz        # либо skopeo copy в своё зеркало
+helm install takt takt-*.tgz --set image.tag=&lt;версия&gt; \
+  --set baseURL=https://takt.example.ru --set database.existingSecret=takt-db</code></pre>
+<p>Контрольные суммы здесь не формальность: в закрытый контур файл едет через посредников, и «тот ли это образ» — вопрос, который зададут. По той же причине чарт позволяет ссылаться на образ по digest: тег в зеркале можно переписать, digest — нет.</p>
+<p>Ни чарт, ни приложение никуда не ходят сами: зависимостей у чарта нет, внешних служб приложение не вызывает. Единственное исключение — корпоративный вход, и он обращается только к тому провайдеру, адрес которого указан в настройках.</p>
+<h2>Обновление в закрытом контуре</h2>
+<p>Обновлений будет больше, чем установок, а описана была только установка. Порядок тот же комплект, но короче:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz        # или skopeo copy в зеркало
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;новая версия&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<p>Что здесь важно и в каком порядке происходит:</p>
+<ol>
+<li><strong>Сначала везут образ, потом обновляют выпуск.</strong> Обновление с образом, которого нет в зеркале, оставляет поды в <code>ImagePullBackOff</code> — при <code>maxUnavailable: 0</code> старые продолжают работать, но выкладка висит.</li>
+<li><strong>Миграции идут до замены подов</strong>, задачей <code>takt-migrate</code> с хуком <code>pre-upgrade</code>. Пока она не прошла, новые поды не поедут; упавшая задача остаётся в кластере — по ней и смотрят, почему не поехало.</li>
+<li><strong><code>--reuse-values</code> обязателен</strong>, если настройки задавались при установке: без него <code>helm upgrade</code> возьмёт умолчания чарта, и <code>signup</code>, <code>oidc</code> и всё прочее молча вернутся к исходным.</li>
+<li><strong><code>doctor</code> после обновления</strong> отвечает на то, на что не отвечает готовность: та ли схема, тот ли адрес, достижим ли провайдер, доходят ли оповещения.</li>
+</ol>
+<p>Что менялось между версиями — в <code>CHANGELOG.md</code>, он едет тем же комплектом. Читать его до обновления, а не после: раздел про то, что знать при обновлении, пишется ровно для этого.</p>
+<p><strong>Откат.</strong> <code>helm rollback takt</code> вернёт поды предыдущей версии, но <strong>не вернёт схему базы</strong>. Держится это на том, что миграции пишутся совместимыми с предыдущей версией приложения, и проверяется у нас (<code>migration_compat_test.go</code>). Резервная копия базы перед обновлением всё равно нужна: правило проверяем мы, а данные ваши. Если миграция была объявлена ломающей — в <code>CHANGELOG.md</code> это сказано отдельной строкой, — откат делается восстановлением базы, а не <code>helm rollback</code>.</p>
+<footer>Доска, версия v0.1.0-22-gbf7b7a9-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>

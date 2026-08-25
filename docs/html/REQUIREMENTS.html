@@ -107,7 +107,7 @@ color:var(--ink-3);font-size:.85rem}
 <a href="справочник.html">Справочник</a>
 <a href="памятка.html">Памятка</a>
 <a href="устройство.html">Устройство</a>
-<a href="README.html">Установка</a>
+<a href="установка.html">Установка</a>
 <a href="REQUIREMENTS.html" aria-current="page">Требования</a>
 <a href="CHANGELOG.html">Что менялось</a>
 <a href="en/overview.html">In English</a>
@@ -186,6 +186,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>У10</td><td>Документация едет с комплектом и открывается без сети</td><td><code>internal/docs/render_test.go</code></td></tr>
 <tr><td>У11</td><td>Памятка помещается на один лист A4</td><td><code>web/print-docs.mjs</code> (проверяет при печати)</td></tr>
 <tr><td>У12</td><td>Лицензия дословная, чужой код в поставке назван и не расходится со сборкой</td><td><code>internal/license</code></td></tr>
+<tr><td>У13</td><td>Документация на двух языках, и перевод не отстаёт от оригинала</td><td><code>internal/translation</code></td></tr>
 </tbody>
 </table></div>
 <h2>Безопасность</h2>
@@ -229,14 +230,14 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
 <tbody>
-<tr><td>В1</td><td>База — своя: резервные копии, восстановление на момент времени, место</td><td>не закреплено: чужая зона по определению; сказано в <code>README.md</code> и в выводе чарта</td></tr>
-<tr><td>В2</td><td>Перед приложением — прокси с TLS, пробрасывающий Upgrade и Connection</td><td>не закреплено: проверяется на чужой стороне; сказано в <code>README.md</code> и <code>docker-compose.yml</code></td></tr>
+<tr><td>В1</td><td>База — своя: резервные копии, восстановление на момент времени, место</td><td>не закреплено: чужая зона по определению; сказано в <code>docs/установка.md</code> и в выводе чарта</td></tr>
+<tr><td>В2</td><td>Перед приложением — прокси с TLS, пробрасывающий Upgrade и Connection</td><td>не закреплено: проверяется на чужой стороне; сказано в <code>docs/установка.md</code> и <code>docker-compose.yml</code></td></tr>
 <tr><td>В3</td><td><code>BASE_URL</code> совпадает с адресом в браузере</td><td><code>internal/doctor</code> (проверяет вид адреса; совпадение с браузером — на стороне ставящего)</td></tr>
 <tr><td>В4</td><td>Перед базой нет пула соединений в режиме транзакций</td><td><code>internal/doctor</code> (оповещения не доходят — скажет)</td></tr>
-<tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>README.md</code></td></tr>
+<tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Доска, версия v0.1.0-19-g6f3ff6c-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.1.0-22-gbf7b7a9-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

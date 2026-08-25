@@ -1,16 +1,32 @@
-# Board
+# Takt
 
-A Kanban tracker for a team: work on the board, flow metrics, an
-organisation with roles and subdivisions, integrations. It runs inside
-your own perimeter — no cloud and no external services required.
+A kanban board with flow metrics, for one team: work on the board,
+metrics computed from that work, an organisation with roles and
+subdivisions, integrations. It runs inside your own perimeter — no
+cloud and no external services required.
 
-The product interface is in Russian. This page and the
-[cheat sheet](cheatsheet.md) are in English; everything a user clicks
-is quoted in Russian, the way it appears on screen, with a translation
-next to it. The rest of the documentation is in Russian —
-[start here](../индекс.md).
+**The product interface is in Russian.** These English pages quote
+everything a user clicks the way it appears on screen, with a
+translation next to it. The Russian original of this page is
+[here](../индекс.md).
 
 ![The board](снимки/доска.png)
+
+## Where to start
+
+| You want to | Open |
+| --- | --- |
+| Learn to run a board | [First fifteen minutes](quickstart.md) |
+| Solve one specific problem | [How to](howto.md) |
+| Look up a list or a setting | [Reference](reference.md) |
+| Understand why it works this way | [Design decisions](architecture.md) |
+| Keep it on one sheet | [Cheat sheet](cheatsheet.md) |
+| Install and operate it | [Installation](install.md) |
+
+The split is not accidental. Learning, instructions, lookup and
+explanation answer different questions, and mixed into one text they
+get in each other's way: you learn in order, solve a problem by
+jumping straight in, and look things up in a table.
 
 ## What the product does
 
@@ -52,19 +68,21 @@ No dates as a schedule and no Gantt charts, no public cloud with
 self-service sign-up, no file attachments on cards. These are not
 omissions: each refusal has a recorded reason, and some have a recorded
 condition under which they will be revisited. The full list is in the
-[requirements](../../REQUIREMENTS.md).
+[requirements](../../REQUIREMENTS.md) (Russian).
 
 ## How it is deployed
 
 One image, one PostgreSQL database. Deploy it with `docker compose` on
-a single machine or with a Helm chart in Kubernetes; a package for an
-air-gapped network is built with one command and carried in as a file.
-No internet access is needed either to install or to run.
+a single machine, from a binary under systemd, or with a Helm chart in
+Kubernetes; a package for an air-gapped network is built with one
+command and carried in as a file. No internet access is needed either
+to install or to run.
 
-Deployment details are in the [installation guide](../../README.md);
-what the product commits not to break is in the
-[requirements](../../REQUIREMENTS.md); what changed between versions is
-in the [changelog](../../CHANGELOG.md).
+Deployment details, including what the installation requires of you,
+are in the [installation guide](install.md); what the product
+commits not to break is in the [requirements](../../REQUIREMENTS.md);
+what changed between versions is in the
+[changelog](../../CHANGELOG.md).
 
 ## Words you will see on screen
 
@@ -79,3 +97,5 @@ in the [changelog](../../CHANGELOG.md).
 | «Завести доску», «Завести карточку» | Create a board, create a card |
 | «В архив», «Вернуть» | Archive it, restore it |
 | «Владелец», «Участник», «Наблюдатель» | Owner, member, viewer |
+
+<!-- перевод: docs/индекс.md sha256:b46dde9ad130 -->

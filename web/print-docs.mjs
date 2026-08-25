@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
 const источник = resolve('..', 'docs', 'html', 'всё.html')
-const цель = resolve('..', 'docs', 'html', 'доска.pdf')
+const цель = resolve('..', 'docs', 'html', 'takt.pdf')
 
 // Системный Chrome, а не скачанный Chromium: так же делают сквозные
 // проверки — в закрытом контуре второй браузер взять неоткуда.
@@ -34,7 +34,7 @@ await страница.pdf({
   footerTemplate:
     '<div style="width:100%;font-size:8pt;color:#666;padding:0 16mm;' +
     'display:flex;justify-content:space-between">' +
-    '<span>Доска — документация</span>' +
+    '<span>Takt — документация</span>' +
     '<span class="pageNumber"></span></div>',
 })
 // Памятка обещает быть одной страницей — обещание проверяется здесь же.
