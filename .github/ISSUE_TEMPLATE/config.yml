@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Уязвимость
+    url: https://github.com/findias/takt/security/advisories/new
+    about: Приватное сообщение, а не публичная задача. Порядок — в SECURITY.md.
+  - name: Вопрос по установке
+    url: https://github.com/findias/takt/blob/master/README.md
+    about: Требования, docker compose, бинарник под systemd, Helm-чарт, закрытый контур.

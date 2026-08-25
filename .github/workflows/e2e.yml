@@ -1,0 +1,53 @@
+# Сквозные сценарии в настоящем браузере и пороги производительности.
+#
+# Отдельно от обязательной проверки: им нужен установленный Chrome,
+# и ломать общую проверку из-за браузера — верный способ приучить
+# не запускать её вовсе. Здесь браузер есть, поэтому здесь они и идут.
+name: Сквозные сценарии
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: сквозные-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Зависимости клиента
+        run: cd web && npm ci
+
+      - name: Браузер
+        run: cd web && npx playwright install --with-deps chromium
+
+      - run: make e2e
+
+      - name: Следы упавшего
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: следы-сквозных
+          path: web/test-results
+          retention-days: 7

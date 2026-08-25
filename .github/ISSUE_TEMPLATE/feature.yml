@@ -1,0 +1,36 @@
+name: Предложение
+description: Продукт мог бы делать что-то ещё
+labels: ["предложение"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Загляните сперва в раздел «Чего продукт не делает»
+        в [REQUIREMENTS.md](../blob/master/REQUIREMENTS.md): у части
+        отказов записан довод, и предложение уже может быть обдумано
+        и отклонено. Это не значит «не пишите» — значит, что спорить
+        стоит именно с доводом.
+
+  - type: textarea
+    id: задача
+    attributes:
+      label: Какую работу это упростит
+      description: |
+        Не «добавьте поле», а «мы не можем ответить на вопрос X».
+        Задача переживает решение: у неё может найтись другое.
+    validations:
+      required: true
+
+  - type: textarea
+    id: сейчас
+    attributes:
+      label: Как обходитесь сейчас
+      description: Обход, который терпим, — сильный довод против срочности; невозможность — за.
+    validations:
+      required: true
+
+  - type: textarea
+    id: решение
+    attributes:
+      label: Как это могло бы выглядеть
+      description: Не обязательно.

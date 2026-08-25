@@ -1,0 +1,42 @@
+# Проверки, которым нужна сеть, и поэтому их нет в `make check`:
+# он обязан проходить и в закрытом контуре.
+#
+# По расписанию, а не только на правках: дыру в зависимости находят
+# не тогда, когда мы её трогаем, а тогда, когда её опубликуют.
+name: Безопасность
+
+on:
+  push:
+    branches: [master]
+    paths: ["go.mod", "go.sum", "web/package-lock.json", "**.go", ".github/workflows/security.yml"]
+  pull_request:
+    paths: ["go.mod", "go.sum", "web/package-lock.json", "**.go"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Зависимости клиента
+        run: cd web && npm ci
+
+      - run: make security

@@ -1,0 +1,60 @@
+name: Поломка
+description: Что-то работает не так, как обещано
+labels: ["поломка"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Уязвимости сюда не пишут — они разбираются приватно,
+        см. [SECURITY.md](../blob/master/SECURITY.md).
+
+  - type: input
+    id: версия
+    attributes:
+      label: Версия
+      description: "`takt version` — она отвечает и при недоступной базе"
+      placeholder: v0.2.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: профиль
+    attributes:
+      label: Как поставлено
+      options:
+        - docker compose
+        - бинарник под systemd
+        - Helm-чарт в Kubernetes
+        - стенд разработки (make stand)
+    validations:
+      required: true
+
+  - type: textarea
+    id: что
+    attributes:
+      label: Что происходит и что должно происходить
+      description: |
+        Второе так же важно, как первое: «не работает» без «а должно
+        было» превращает разбор в угадывание.
+    validations:
+      required: true
+
+  - type: textarea
+    id: воспроизведение
+    attributes:
+      label: Как повторить
+      description: По шагам, с самого начала — с пустой установки или со стенда.
+      placeholder: |
+        1. Завести доску с ключом ПОСТ
+        2. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Вывод `takt doctor`
+      description: |
+        Не обязательно, но экономит переписку: половина поломок
+        установки видна оттуда.
+      render: text

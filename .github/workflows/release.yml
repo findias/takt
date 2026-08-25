@@ -1,0 +1,121 @@
+# Выпуск: собирается по тегу и ровно из того, что в теге.
+#
+# Версия приезжает в сборку линковщиком, а не читается из файла: файл
+# в образе можно подменить, а версия обязана быть тем же артефактом,
+# что и код. Отсюда --build-arg VERSION и -ldflags с тем же значением.
+#
+# Порядок намеренный: сперва проверка, потом артефакты. Тег, у которого
+# не сошлась проверка, не должен превратиться в выпуск — его увидят
+# раньше, чем мы успеем его снять.
+name: Выпуск
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      тег:
+        description: Тег, из которого собирать
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  проверка:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cd web && npm ci
+      - uses: azure/setup-helm@v4
+      - run: make check
+
+  артефакты:
+    needs: проверка
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Полная история — иначе git describe не найдёт тег,
+          # и в бинарник уедет хеш вместо версии.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: azure/setup-helm@v4
+
+      - run: cd web && npm ci
+
+      - name: Архивы для установки из бинарника
+        run: |
+          make tarball TARBALL_ARCH=amd64
+          GOARCH=arm64 make tarball TARBALL_ARCH=arm64
+
+      - name: Чарт
+        run: |
+          mkdir -p dist
+          helm package deploy/helm/takt \
+            --app-version "${GITHUB_REF_NAME}" -d dist
+
+      - name: Образ
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build --build-arg VERSION="${GITHUB_REF_NAME}" \
+            -t "ghcr.io/${{ github.repository }}:${GITHUB_REF_NAME}" \
+            -t "ghcr.io/${{ github.repository }}:latest" .
+          docker push "ghcr.io/${{ github.repository }}:${GITHUB_REF_NAME}"
+          docker push "ghcr.io/${{ github.repository }}:latest"
+
+      - name: Суммы
+        # В закрытый контур файл едет через посредников, и «тот ли это
+        # файл» — вопрос, который зададут.
+        run: cd dist && sha256sum *.tar.gz *.tgz > SHA256SUMS
+
+      - name: Что менялось в этой версии
+        # Список изменений — из CHANGELOG.md, а не из заголовков
+        # коммитов: он написан для того, кто ставит и обновляет,
+        # и написан заранее. Берётся ровно раздел этого тега: целый
+        # файл в описании выпуска читать никто не станет.
+        run: |
+          awk -v тег="${GITHUB_REF_NAME}" '
+            $0 ~ "^## " тег "( |$)" { брать = 1; next }
+            брать && /^## v/ { exit }
+            брать { print }
+          ' CHANGELOG.md > dist/ОПИСАНИЕ.md
+          if [ ! -s dist/ОПИСАНИЕ.md ]; then
+            echo "::error::в CHANGELOG.md нет раздела ${GITHUB_REF_NAME} — выпуск без списка изменений не делаем"
+            exit 1
+          fi
+
+      - name: Выпуск
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: dist/ОПИСАНИЕ.md
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.tgz
+            dist/SHA256SUMS

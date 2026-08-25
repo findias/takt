@@ -1,0 +1,57 @@
+# Обязательная проверка: то же, что `make check` на своей машине.
+#
+# База поднимается тем же способом, что и локально, — целью `make db`
+# в docker, а не службой Actions. Разойтись им нельзя: проверка цепочки
+# миграций заводит себе отдельную базу ролью postgres, и роль
+# приложения намеренно этого не умеет. Служба Actions такой пары ролей
+# не даёт, и проверка молча стала бы проверять не то.
+name: Проверка
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: проверка-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Зависимости клиента
+        run: cd web && npm ci
+
+      - name: Helm — для проверки чарта
+        uses: azure/setup-helm@v4
+
+      - run: make check
+
+      - name: Документация пересобрана
+        # HTML в docs/html руками не правится и обязан совпадать
+        # с исходниками. Проверка на это есть в make check, но упасть
+        # она должна вслух: «я забыл make docs» — самая частая причина
+        # красной сборки, и сообщение должно называть её прямо.
+        run: |
+          make docs
+          git diff --exit-code -- docs/html \
+            || { echo "::error::docs/html разошёлся с исходниками — выполните make docs и закоммитьте"; exit 1; }
