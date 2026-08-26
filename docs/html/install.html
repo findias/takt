@@ -304,7 +304,11 @@ helm install takt deploy/helm/takt \
 </ul>
 <p>Test the restore before the outage, not during it: bring a copy up in a separate namespace, apply the chart with <code>database.existingSecret</code> pointing at the restored cluster, and open a board. It takes a quarter of an hour and answers the only question the whole exercise exists for — &#34;does it actually come up from the copy?&#34;</p>
 <h2>Installing without internet access</h2>
-<pre><code>make bundle          # builds dist/bundle-&lt;version&gt;: image, chart, README, checksums</code></pre>
+<pre><code>make bundle                     # for the architecture you are building on
+make bundle BUNDLE_ARCH=arm64   # for another one; needs qemu on the build host</code></pre>
+<p>The bundle is built for one architecture, and the choice is not avoidable: <code>docker save</code> carries a single image, while a multi-arch set exists only inside a registry. The directory is named after the architecture — <code>dist/bundle-&lt;version&gt;-linux-&lt;arch&gt;</code> — because the failure otherwise arrives late and unhelpfully: an amd64 bundle on an arm64 server loads, installs and dies with <code>exec format error</code>, which sends people looking into the chart rather than into the delivery. The build refuses to finish unless the image it just made actually starts, and on site the same question is one command:</p>
+<pre><code>docker image inspect takt:&lt;version&gt; --format &#39;{{.Architecture}}&#39;</code></pre>
+<p>Building for a foreign architecture needs qemu on the build host: <code>docker run --privileged --rm tonistiigi/binfmt --install all</code>.</p>
 <p>The bundle travels as a file. On site:</p>
 <pre><code>sha256sum -c SHA256SUMS
 docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror
@@ -325,7 +329,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Takt, version v0.2.0-11-ge7a3da2-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.0-15-gdd7a9a7-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

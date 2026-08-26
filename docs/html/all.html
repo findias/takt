@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.0-11-ge7a3da2-dirty.</p>
+<p>Every section in one file. Version v0.2.0-15-gdd7a9a7-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -719,7 +719,11 @@ helm install takt deploy/helm/takt \
 </ul>
 <p>Test the restore before the outage, not during it: bring a copy up in a separate namespace, apply the chart with <code>database.existingSecret</code> pointing at the restored cluster, and open a board. It takes a quarter of an hour and answers the only question the whole exercise exists for — &#34;does it actually come up from the copy?&#34;</p>
 <h2>Installing without internet access</h2>
-<pre><code>make bundle          # builds dist/bundle-&lt;version&gt;: image, chart, README, checksums</code></pre>
+<pre><code>make bundle                     # for the architecture you are building on
+make bundle BUNDLE_ARCH=arm64   # for another one; needs qemu on the build host</code></pre>
+<p>The bundle is built for one architecture, and the choice is not avoidable: <code>docker save</code> carries a single image, while a multi-arch set exists only inside a registry. The directory is named after the architecture — <code>dist/bundle-&lt;version&gt;-linux-&lt;arch&gt;</code> — because the failure otherwise arrives late and unhelpfully: an amd64 bundle on an arm64 server loads, installs and dies with <code>exec format error</code>, which sends people looking into the chart rather than into the delivery. The build refuses to finish unless the image it just made actually starts, and on site the same question is one command:</p>
+<pre><code>docker image inspect takt:&lt;version&gt; --format &#39;{{.Architecture}}&#39;</code></pre>
+<p>Building for a foreign architecture needs qemu on the build host: <code>docker run --privileged --rm tonistiigi/binfmt --install all</code>.</p>
 <p>The bundle travels as a file. On site:</p>
 <pre><code>sha256sum -c SHA256SUMS
 docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror

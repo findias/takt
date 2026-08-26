@@ -345,12 +345,29 @@ tarball: build ## Собрать архив для установки из би�
 TARBALL_OS   ?= $(shell go env GOOS)
 TARBALL_ARCH ?= $(shell go env GOARCH)
 TARBALL_DIR  ?= dist/takt-$(VERSION)-$(TARBALL_OS)-$(TARBALL_ARCH)
-BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
+# Комплект собирается под названную архитектуру, а не под ту, на которой
+# оказался сборщик. Выбирать приходится: `docker save` увозит один
+# образ, а набор из нескольких архитектур существует только в реестре —
+# файлом его не увезти. Молчаливый выбор здесь хуже всего: комплект,
+# собранный на amd64 для arm64-сервера, загрузится, установится
+# и упадёт на «exec format error» — сообщение, по которому причину
+# ищут в чарте, а не в поставке. Поэтому архитектура стоит в имени
+# каталога и печатается в конце сборки.
+#
+# Чужая архитектура требует qemu на сборочной машине:
+# `docker run --privileged --rm tonistiigi/binfmt --install all`.
+BUNDLE_ARCH ?= $(shell go env GOARCH)
+BUNDLE_DIR  ?= dist/bundle-$(BUNDLE_VERSION)-linux-$(BUNDLE_ARCH)
 
 .PHONY: bundle
-bundle: ## Собрать комплект для установки без доступа в интернет
+bundle: ## Собрать комплект для установки без доступа в интернет (BUNDLE_ARCH=amd64|arm64)
 	@mkdir -p "$(BUNDLE_DIR)"
-	docker build --build-arg VERSION=$(BUNDLE_VERSION) -t takt:$(BUNDLE_VERSION) .
+	docker build --platform linux/$(BUNDLE_ARCH) \
+	  --build-arg VERSION=$(BUNDLE_VERSION) -t takt:$(BUNDLE_VERSION) .
+	# Собранное обязано запускаться, а не только собираться: под чужой
+	# архитектурой сборка идёт через qemu, и «собралось» о запуске
+	# не говорит ничего. `version` отвечает и при недоступной базе.
+	docker run --rm --platform linux/$(BUNDLE_ARCH) takt:$(BUNDLE_VERSION) version
 	docker save takt:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/takt-image.tar.gz"
 	# Версия чарта не переписывается версией сборки: helm требует semver,
 	# а описание сборки им быть не обязано. Комплект с чартом связывает
@@ -368,8 +385,10 @@ bundle: ## Собрать комплект для установки без до
 	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
 	@echo
 	@echo "комплект собран: $(BUNDLE_DIR)"
+	@echo "архитектура: linux/$(BUNDLE_ARCH) — на другой образ не запустится"
 	@echo "на месте:"
 	@echo "  sha256sum -c SHA256SUMS"
 	@echo "  docker load < takt-image.tar.gz    # либо skopeo copy в своё зеркало"
+	@echo "  docker image inspect takt:$(BUNDLE_VERSION) --format '{{.Architecture}}'"
 	@echo "  helm install takt takt-*.tgz --set image.tag=$(BUNDLE_VERSION) \\"
 	@echo "    --set baseURL=... --set database.existingSecret=takt-db"

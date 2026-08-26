@@ -423,8 +423,26 @@ of an hour and answers the only question the whole exercise exists for —
 ## Installing without internet access
 
 ```sh
-make bundle          # builds dist/bundle-<version>: image, chart, README, checksums
+make bundle                     # for the architecture you are building on
+make bundle BUNDLE_ARCH=arm64   # for another one; needs qemu on the build host
 ```
+
+The bundle is built for one architecture, and the choice is not
+avoidable: `docker save` carries a single image, while a multi-arch set
+exists only inside a registry. The directory is named after the
+architecture — `dist/bundle-<version>-linux-<arch>` — because the
+failure otherwise arrives late and unhelpfully: an amd64 bundle on an
+arm64 server loads, installs and dies with `exec format error`, which
+sends people looking into the chart rather than into the delivery. The
+build refuses to finish unless the image it just made actually starts,
+and on site the same question is one command:
+
+```sh
+docker image inspect takt:<version> --format '{{.Architecture}}'
+```
+
+Building for a foreign architecture needs qemu on the build host:
+`docker run --privileged --rm tonistiigi/binfmt --install all`.
 
 The bundle travels as a file. On site:
 
