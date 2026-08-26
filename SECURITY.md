@@ -74,6 +74,30 @@ compose, бинарник, чарт), что происходит и что до
 запись, разрешения ключей и ограничение частоты запросов —
 требования Б1–Б10 и П8 в [`REQUIREMENTS.md`](REQUIREMENTS.md).
 
+Разбор потоков данных — CodeQL, отдельным прогоном и по расписанию.
+Он не заменяет `gosec`, а отвечает на другой вопрос: `gosec` смотрит
+на строку и на вызов, CodeQL прослеживает, откуда значение пришло
+и куда попало, через границы функций и пакетов. Расписание тут
+не формальность: правила пополняются, и вчера безобидный код сегодня
+попадает под новое.
+
+Образ разбирается `trivy` — и на предложении правок, и **до**
+публикации в выпуске. Это не дублирование `govulncheck` и `npm audit`:
+те смотрят на то, что мы написали, а в образ едет ещё и основание
+со своим openssl, busybox или coreutils. Дыра там наша ровно в той же
+мере — ставит её заказчик. Уязвимости без выпущенной починки
+не считаются: у `debian:12-slim` их 30 при нуле чинимых (26 HIGH,
+4 CRITICAL, замер 26.08.2026), и прогон, который красен всегда,
+перестают читать вместе с настоящими находками.
+
+Обновления зависимостей предлагает Dependabot — `go.mod`,
+`package-lock.json` и версии самих действий GitHub. Предложение
+проходит те же проверки, что и всякое другое.
+
+Со стороны GitHub включены поиск секретов с защитой при отправке
+(секрет не уезжает в репозиторий, а не обнаруживается там потом)
+и оповещения об уязвимых зависимостях.
+
 Ложное срабатывание не замазывают, а объясняют: у gosec —
 `// #nosec G404 -- почему`, у своей проверки склейки —
 `// #sql-склейка: почему`. Маркер без объяснения не считается.
@@ -162,3 +186,23 @@ never inserts raw markup, no secrets in the repository. Isolation
 between organisations, identity boundaries, cross-site writes, key
 scopes and rate limiting are checked continuously — requirements Б1–Б10
 and П8 in [`REQUIREMENTS.md`](REQUIREMENTS.md).
+
+Data-flow analysis is CodeQL, in its own run and on a schedule. It does
+not replace `gosec`; it answers a different question. `gosec` looks at a
+statement and a call, CodeQL traces where a value came from and where it
+ended up, across function and package boundaries.
+
+The image is scanned with `trivy`, both on a pull request and **before**
+publishing in a release. That is not a duplicate of `govulncheck` and
+`npm audit`: those look at what we wrote, while the image also carries
+its base, with its own openssl, busybox or coreutils. Vulnerabilities
+with no released fix do not count: `debian:12-slim` carries 30 of them
+with none fixable (26 HIGH, 4 CRITICAL, measured 2026-08-26), and a run
+that is always red stops being read along with the real findings.
+
+Dependency updates are proposed by Dependabot — `go.mod`,
+`package-lock.json` and the versions of the GitHub actions themselves.
+
+On the GitHub side, secret scanning with push protection is on (a secret
+does not reach the repository rather than being discovered there
+afterwards), as are alerts for vulnerable dependencies.

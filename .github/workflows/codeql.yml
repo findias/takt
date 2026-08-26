@@ -1,0 +1,65 @@
+# Разбор потоков данных: то, чего gosec не делает.
+#
+# gosec смотрит на строку и на вызов; CodeQL прослеживает, откуда
+# значение пришло и куда попало, через границы функций и пакетов.
+# Это разные инструменты, и один другого не заменяет: свои проверки
+# в `internal/security` знают про этот продукт, gosec — про типовые
+# ошибки Go, CodeQL — про путь от источника до опасного места.
+#
+# По расписанию, а не только на правках: правила CodeQL пополняются,
+# и вчера безобидный код сегодня попадает под новое правило.
+name: Разбор кода
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "41 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: разбор-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # Находки едут во вкладку «Security», а не только в вывод прогона:
+      # красный прогон читают один раз, список находок — пока он не пуст.
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # Языка два, и разбираются они по-разному, поэтому и работы две.
+        # `javascript-typescript` покрывает и клиент, и сценарии сборки.
+        language: [go, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Помимо стандартного набора — правила про качество,
+          # среди них находки, до которых security-набор не достаёт.
+          queries: security-and-quality
+
+      # Клиент собирать незачем: бинарнику `web/dist` не нужен, статика
+      # раздаётся из каталога на диске, а не вкомпилирована.
+      - uses: github/codeql-action/autobuild@v3
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

@@ -1,0 +1,52 @@
+# Обновления зависимостей предложениями правок.
+#
+# Заведено потому, что govulncheck и npm audit отвечают на вопрос
+# «есть ли дыра», но не поднимают версию: это надо заметить и сделать
+# руками, а замечают такое последним. Здесь наоборот — предложение
+# приходит само и проходит те же проверки, что и всякое другое.
+#
+# Действия GitHub в списке не для полноты: версии `actions/checkout@v4`
+# иначе не двигаются годами, и узнаётся это в тот день, когда GitHub
+# перестаёт поддерживать старую.
+
+version: 2
+updates:
+  # Зависимости бинарника.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Одним предложением на всё мелкое: пять отдельных ПР с поднятием
+    # патч-версии читать никто не станет, а прочитать надо каждый.
+    groups:
+      мелкие:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "Зависимости Go:"
+
+  # Зависимости клиента. Каталог тот, где лежит package.json.
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      мелкие:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "Зависимости клиента:"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      действия:
+        patterns: ["*"]
+    commit-message:
+      prefix: "Действия GitHub:"
