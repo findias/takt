@@ -451,6 +451,20 @@ func TestInviteTokenOpensOnlyItsOwnRow(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Чужое приглашение состаривается намеренно. Без этого проверка
+	// говорила правду только на пустой базе: политика уборки открывала
+	// всё, чему больше тридцати дней, всякому, у кого есть любой токен,
+	// — и ловилось это лишь тогда, когда рядом случайно оказывалось
+	// старое приглашение из другого прогона.
+	if err := f.db.InTenant(f.ctx, second.OrgID, secondOwner, func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`update invites set expires_at = now() - interval '100 days' where org_id = $1`,
+			second.OrgID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	var visible int
 	err = f.db.InScope(f.ctx, store.Scope{InviteToken: hashToken(token(mine.Link))},
 		func(tx pgx.Tx) error {
@@ -461,6 +475,57 @@ func TestInviteTokenOpensOnlyItsOwnRow(t *testing.T) {
 	}
 	if visible != 1 {
 		t.Errorf("по токену видно %d приглашений, ожидалось ровно одно", visible)
+	}
+}
+
+// Токен приглашения — это право на одну строку приглашения и ни на что
+// больше.
+//
+// Политики фоновых задач узнавали работника по отсутствию арендатора,
+// а его нет и у приёма приглашения. Политики складываются по ИЛИ,
+// и потому обладателю любой ссылки-приглашения открывались таблицы
+// работника целиком, поверх всех организаций: замер 26.08.2026 дал
+// 145 строк `webhooks` и 151 строку `webhook_deliveries`. В `webhooks`
+// лежит `secret`, которым подписываются доставки, — то есть чужую
+// доставку можно было подделать.
+func TestInviteTokenOpensNothingBesidesItsInvite(t *testing.T) {
+	f := newFixture(t)
+	host, hostOwner := f.org("Хозяева")
+	guest, guestOwner := f.org("Гости")
+	_, guestEmail := f.user("Званый")
+
+	mine, err := f.svc.Invite(f.ctx, guest.OrgID, guestOwner, guestEmail, auth.RoleMember, "http://example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Подписка чужой организации со своим секретом.
+	if err := f.db.InTenant(f.ctx, host.OrgID, hostOwner, func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx,
+			`insert into webhooks (org_id, name, url, secret, events, created_by)
+			 values ($1, 'Чужая', 'https://example.test/hook', 'чужой-секрет', array['card.created'], $2)`,
+			host.OrgID, hostOwner)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.db.InScope(f.ctx, store.Scope{InviteToken: hashToken(token(mine.Link))},
+		func(tx pgx.Tx) error {
+			for _, таблица := range []string{"webhooks", "webhook_deliveries", "audit_events", "api_idempotency"} {
+				var видно int
+				if err := tx.QueryRow(f.ctx, `select count(*) from `+таблица).Scan(&видно); err != nil {
+					return err
+				}
+				if видно != 0 {
+					t.Errorf("по токену приглашения видно %d строк в %s, "+
+						"а не должно быть ни одной", видно, таблица)
+				}
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
