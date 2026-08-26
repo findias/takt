@@ -148,16 +148,71 @@ jobs:
           echo "$tags" > /tmp/tags
 
 
+      # Сборка до публикации, по одной архитектуре за раз и никуда
+      # не уезжая: buildx отдаёт образ демону только по одной платформе
+      # (`--load`), набор из нескольких умеет отдать лишь в реестр.
+      # Публикация ниже соберёт набор заново — из этого же кеша.
+      #
+      # Образ своей архитектуры получает вдобавок метку без суффикса:
+      # её ждёт разбор ниже, и написана она один раз здесь, а не двумя
+      # именами архитектур в разных шагах.
+      - name: Сборка под каждую архитектуру
+        env:
+          PLATFORMS: ${{ matrix.platforms }}
+          FROM: ${{ matrix.from }}
+          BASE: ${{ matrix.base }}
+        run: |
+          set -eu
+          case "$(uname -m)" in
+            x86_64) own=amd64 ;;
+            aarch64) own=arm64 ;;
+            *) own="$(uname -m)" ;;
+          esac
+          for platform in $(echo "$PLATFORMS" | tr ',' ' '); do
+            arch="${platform#*/}"
+            here=""
+            if [ "$arch" = "$own" ]; then here="-t takt:scan-${BASE}"; fi
+            # shellcheck disable=SC2086 -- метка своей архитектуры добавляется словом
+            docker buildx build --load \
+              --platform "$platform" \
+              --build-arg VERSION="${GITHUB_REF_NAME}" \
+              --build-arg RUNTIME_BASE="$FROM" \
+              -t "takt:scan-${BASE}-${arch}" $here \
+              .
+          done
+
+      # Собранное обязано запускаться, а не только собираться. Про arm64
+      # до этого шага было известно ровно одно: линковщик отработал —
+      # раннеры amd64, и ни одна проверка чужой архитектуры не касалась.
+      # Запуск идёт под qemu, поднятым выше.
+      #
+      # Спрашивается версия, а не что попало: `takt version` отвечает
+      # и при недоступной базе, а отвечает он тем, что вшито
+      # линковщиком. Значит, одним шагом проверяется и то, что образ
+      # вообще стартует на этой архитектуре, и то, что версия в нём
+      # своя, — а она однажды уже переставала вшиваться молча.
+      - name: Запуск собранного
+        env:
+          PLATFORMS: ${{ matrix.platforms }}
+          BASE: ${{ matrix.base }}
+        run: |
+          set -eu
+          for platform in $(echo "$PLATFORMS" | tr ',' ' '); do
+            arch="${platform#*/}"
+            said=$(docker run --rm --platform "$platform" \
+              "takt:scan-${BASE}-${arch}" version)
+            echo "${BASE}/${arch}: $said"
+            if [ "$said" != "${GITHUB_REF_NAME}" ]; then
+              echo "::error::${BASE}/${arch}: образ отвечает «${said}», а собран из ${GITHUB_REF_NAME}"
+              exit 1
+            fi
+          done
+
       # Разбор до публикации, а не после: образ с известной дырой,
       # уехавший в общий реестр, оттуда уже не вернуть — его успеют
-      # скачать. Собирается он под свою архитектуру и остаётся здесь;
-      # публикация ниже собирает набор заново из кеша.
-      - name: Образ для разбора
-        run: |
-          docker build \
-            --build-arg VERSION="${GITHUB_REF_NAME}" \
-            --build-arg RUNTIME_BASE="${{ matrix.from }}" \
-            -t "takt:scan-${{ matrix.base }}" .
+      # скачать. Разбирается образ своей архитектуры: смотрит разбор
+      # на пакеты основания, а они у одного и того же тега основания
+      # на обеих архитектурах одни и те же.
 
       - name: Разбор образа
         uses: aquasecurity/trivy-action@v0.36.0
