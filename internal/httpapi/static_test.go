@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/findias/takt/internal/config"
@@ -67,5 +68,61 @@ func write(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Путь наружу не отдаёт чужого файла и не выдаёт, что он есть.
+//
+// Отдачей занимается http.Dir, и она за свой каталог не выходит.
+// Спрашивать «есть ли такой файл» надо у неё же: пока это делал
+// os.Stat по склеенному пути, «что наше» знали двое порознь. Дыры
+// в этом не было — `filepath.Clean` отсчитывает от ведущей косой
+// черты, — но безопасность держалась на доводе, а не на устройстве,
+// и статический разбор был прав, называя это находкой.
+//
+// Проверяется именно обработчик статики, а не сервер целиком: и
+// клиент, и мультиплексор `..` из пути вычищают сами — через них
+// до обработчика доезжает уже безобидное, и проверка мерила бы их
+// осторожность вместо его.
+//
+// Свойство держалось и прежде, просто держалось на доводе. Проверка
+// закрепляет его, а не чинит: сломать её можно одной строкой —
+// склейкой пути руками, и тогда она называет утёкший файл.
+func TestPathOutsideTheWebDirTellsNothing(t *testing.T) {
+	корень := t.TempDir()
+	клиент := filepath.Join(корень, "web")
+	if err := os.Mkdir(клиент, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(клиент, "index.html"), "<!doctype html><title>Доска</title>")
+	write(t, filepath.Join(корень, "тайна.txt"), "пароль от базы")
+
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	impl := New(config.Config{BaseURL: "http://example.test", WebDir: клиент}, nil, log, nil)
+	обработчик := impl.staticHandler()
+
+	ответ := func(путь string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest("GET", "http://example.test/", nil)
+		req.URL.Path = путь
+		w := httptest.NewRecorder()
+		обработчик.ServeHTTP(w, req)
+		return w
+	}
+
+	наружу := ответ("/../тайна.txt")
+	if strings.Contains(наружу.Body.String(), "пароль от базы") {
+		t.Fatal("файл за пределами каталога клиента уехал в ответ")
+	}
+
+	// Существование чужого файла не должно быть заметно ничем: ответ
+	// на путь к нему обязан совпадать с ответом на путь в никуда.
+	// Иначе отдача статики превращается в способ спросить, что лежит
+	// на сервере рядом.
+	мимо := ответ("/../такого-нет.txt")
+	if наружу.Code != мимо.Code || наружу.Body.String() != мимо.Body.String() {
+		t.Errorf("по чужому файлу ответ %d/%d байт, по несуществующему — %d/%d: "+
+			"разница отвечает на вопрос, есть ли он",
+			наружу.Code, наружу.Body.Len(), мимо.Code, мимо.Body.Len())
 	}
 }

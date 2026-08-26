@@ -1019,15 +1019,26 @@ func (s *Server) staticHandler() http.Handler {
 			writeError(w, http.StatusNotFound, "неизвестный метод API")
 			return
 		}
-		path := filepath.Join(s.cfg.WebDir, filepath.Clean(r.URL.Path))
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
-			if strings.HasPrefix(r.URL.Path, "/assets/") {
-				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-			} else {
-				w.Header().Set("Cache-Control", "no-cache")
+		// Есть ли такой файл — спрашивается у того же http.Dir, который
+		// его и отдаст. Прежде спрашивалось у os.Stat по склеенному
+		// пути, и дыры в этом не было: `filepath.Clean` отсчитывает
+		// от ведущей косой черты, а её у пути запроса не отнять. Но
+		// доводом безопасность держалась на двух: «что наше» знали
+		// os.Stat и http.Dir по отдельности, и разойтись им ничего
+		// не мешало — довод перестал бы быть верным при первой правке
+		// WebDir, и заметить это было бы нечем. Теперь знающий один.
+		if f, err := root.Open(r.URL.Path); err == nil {
+			info, err := f.Stat()
+			_ = f.Close()
+			if err == nil && !info.IsDir() {
+				if strings.HasPrefix(r.URL.Path, "/assets/") {
+					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				} else {
+					w.Header().Set("Cache-Control", "no-cache")
+				}
+				fileServer.ServeHTTP(w, r)
+				return
 			}
-			fileServer.ServeHTTP(w, r)
-			return
 		}
 		if _, err := os.Stat(index); err != nil {
 			writeError(w, http.StatusNotFound, "фронтенд не собран: выполните make web")

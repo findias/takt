@@ -161,10 +161,13 @@ SECURITY_TOOLS = $(shell go env GOPATH)/bin
 
 .PHONY: security
 security: ## Проверки безопасности: уязвимости зависимостей и статический разбор
-	@command -v $(SECURITY_TOOLS)/govulncheck >/dev/null \
-	  || go install golang.org/x/vuln/cmd/govulncheck@latest
-	@command -v $(SECURITY_TOOLS)/gosec >/dev/null \
-	  || go install github.com/securego/gosec/v2/cmd/gosec@latest
+	# Инструменты ставятся каждый раз, а не «если их нет». Оба берутся
+	# @latest, и правила у них пополняются: у себя оставался тот, что
+	# поставлен когда-то, в CI ставился свежий, и вчерашний зелёный
+	# прогон дома означал красный там — при том же коде. На тёплом
+	# кеше это секунда, а сети проверка требует и без того.
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
 	$(SECURITY_TOOLS)/govulncheck ./...
 	# cmd/docs исключён, и это не поблажка. Все находки gosec в нём —
 	# одного рода: файл читается и пишется по пути из переменной,
