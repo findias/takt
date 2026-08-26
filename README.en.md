@@ -318,9 +318,8 @@ make web-dev            # Vite with hot reload on :5173
 
 `make check` must pass everywhere, including in a closed network, which
 is why the security targets are not part of it — they need the network.
-How to work on this codebase is described in
-[`внутренняя-инструкция.md`](внутренняя-инструкция.md) (Russian), and how to send a patch in
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+How to work on this codebase and how to send a patch are both
+described in [`CONTRIBUTING.md`](CONTRIBUTING.md) (Russian).
 
 ## Contributing and security
 
@@ -344,4 +343,4 @@ require them, and eight hundred identical banners do exactly one thing —
 push the comment explaining *why the code is like this* fifteen lines
 further down.
 
-<!-- перевод: README.md sha256:d89c2a3a9660 -->
+<!-- перевод: README.md sha256:bdde8baf947c -->
