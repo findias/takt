@@ -14,6 +14,32 @@ const TARGET = 24
 
 type Small = { name: string; width: number; height: number }
 
+// Вход в демонстрационную организацию.
+//
+// Данные наливает `make demo`, и цель `make e2e` от него зависит.
+// Проверка на видимость доски стоит до клика намеренно: без данных
+// клик отваливается тайм-аутом в тридцать секунд, и шесть сценариев
+// разом выглядят поломкой вёрстки, которой нет. Так и было — до тех
+// пор, пока `make e2e` доводил базу только до миграций.
+async function signInToDemo(page: Page) {
+  await page.goto('/')
+  await page.getByLabel('Почта').fill('anna@example.test')
+  await page.getByLabel('Пароль').fill('parol12345')
+  await page.getByRole('button', { name: 'Войти' }).click()
+}
+
+// Доска демонстрационных данных, а не своя: заголовки, метки и число
+// карточек там настоящей длины, а на выдуманных коротких зрительная
+// мера ничего не показывает.
+async function openDemoBoard(page: Page, имя = 'Поставки') {
+  const доска = page.getByRole('button', { name: имя, exact: true })
+  await expect(
+    доска,
+    `доски «${имя}» нет: в базе нет демонстрационных данных — make demo`,
+  ).toBeVisible({ timeout: 10_000 })
+  await доска.click()
+}
+
 async function tinyTargets(page: Page): Promise<Small[]> {
   return page.evaluate((min) => {
     const out: { name: string; width: number; height: number }[] = []
@@ -827,11 +853,8 @@ test('заголовок не кончается одиноким словом',
   // Доска демонстрационных данных, а не своя: заголовки там настоящей
   // длины, а на выдуманных коротких мера ничего не показывает —
   // они и без балансировки ложатся ровно.
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await signInToDemo(page)
+  await openDemoBoard(page)
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 
   const обрывы = await page.evaluate(() => {
@@ -886,11 +909,8 @@ test('в режиме высокой контрастности состояни
     forcedColors: 'active',
   })
   const page = await context.newPage()
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await signInToDemo(page)
+  await openDemoBoard(page)
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
   expect(
     await page.evaluate(() => matchMedia('(forced-colors: active)').matches),
@@ -1012,11 +1032,8 @@ test('на бумагу уходит документ, а не снимок эк
   // проверять на настоящем экране: прокрутки (принтер не листает),
   // управление (кнопки на бумаге бессмысленны) и полнота списка.
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await signInToDemo(page)
+  await openDemoBoard(page)
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 
   const скрыто = (селектор: string) =>
@@ -1090,11 +1107,8 @@ test('мельче шкалы на экране только монограмм�
   // (замер 23.08.2026). Поднять кегль, не подняв кружок, значит
   // обрезать буквы; поэтому проверка следит за обоими концами разом.
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await signInToDemo(page)
+  await openDemoBoard(page)
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 
   const мелкие = await page.evaluate(() => {
@@ -1162,10 +1176,7 @@ test('одинаковые ряды действий стоят столбцом
   // в семнадцать пикселей читается как небрежность, а не как ошибка,
   // и потому живёт годами.
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await signInToDemo(page)
   await page.getByRole('button', { name: 'Структура' }).click()
   await expect(page.getByRole('heading', { name: 'Подразделения', exact: true })).toBeVisible()
 
@@ -1188,11 +1199,8 @@ test('в архиве название карточки не обрезаетс�
   // 71 и 57 пикселей — то есть отрезано ровно то, ради чего строка
   // показывается.
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/')
-  await page.getByLabel('Почта').fill('anna@example.test')
-  await page.getByLabel('Пароль').fill('parol12345')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await page.getByRole('button', { name: 'Поставки', exact: true }).click()
+  await signInToDemo(page)
+  await openDemoBoard(page)
   await page.getByRole('button', { name: 'Архив' }).click()
   await expect(page.getByRole('searchbox', { name: /архиве/ })).toBeVisible()
 

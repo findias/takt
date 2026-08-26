@@ -7,6 +7,12 @@
 # Порядок намеренный: сперва проверка, потом артефакты. Тег, у которого
 # не сошлась проверка, не должен превратиться в выпуск — его увидят
 # раньше, чем мы успеем его снять.
+#
+# Имена работ и входов — латиницей. Не из вкуса: GitHub принимает в них
+# только латиницу, цифру, дефис и подчёркивание, а на кириллице объявляет
+# негодным весь файл и не запускает ничего — молча, одной строкой
+# «workflow file issue» и без единого шага. Названия, которые видит
+# человек, остаются русскими: они в `name`, и там кириллица законна.
 name: Выпуск
 
 on:
@@ -14,7 +20,7 @@ on:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      тег:
+      tag:
         description: Тег, из которого собирать
         required: true
 
@@ -23,7 +29,7 @@ permissions:
   packages: write
 
 jobs:
-  проверка:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,8 +49,8 @@ jobs:
       - uses: azure/setup-helm@v4
       - run: make check
 
-  артефакты:
-    needs: проверка
+  artifacts:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
