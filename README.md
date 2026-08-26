@@ -301,8 +301,8 @@ make load               # поведение под нагрузкой, идёт
 make security           # уязвимости зависимостей и статический разбор
 make web-dev            # Vite с горячей перезагрузкой на :5173
 make build              # бинарник в bin/takt
-make image              # docker-образ takt:dev (BASE=alpine|debian|astra)
-make images             # образы на всех трёх основаниях
+make image              # docker-образ takt:dev (BASE=alpine|debian)
+make images             # образы на обоих основаниях
 make bundle             # комплект для установки без доступа в интернет
 ```
 

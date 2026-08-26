@@ -70,11 +70,10 @@ To build your own, from the repository root:
 ```bash
 make image                    # takt:dev, alpine base, version from git describe
 make image BASE=debian        # takt:dev-debian
-make image BASE=astra         # takt:dev-astra
-make images                   # all three at once, with a size table
+make images                   # both at once, with a size table
 ```
 
-### Three bases
+### The base of the final layer
 
 There is one Dockerfile; the base of the final layer arrives as the
 `RUNTIME_BASE` build argument. The build stages do not depend on it at
@@ -85,23 +84,22 @@ files.
 | --- | --- | --- | --- |
 | `alpine` (default) | `alpine:3.21` | 22 MB | amd64, arm64 |
 | `debian` | `debian:12-slim` | 88 MB | amd64, arm64 |
-| `astra` | `astra/ubi18:1.8.6` | 126 MB | amd64 only |
 
-The choice is not about size. `debian` is taken where musl is viewed
-with suspicion: the same libc as on most servers. `astra` is for
-installations required to run a certified Russian OS.
+The choice is not about size: `debian` is taken where musl is viewed
+with suspicion, being the same libc as on most servers.
 
-**The Astra-based image is not published to any registry, and that is
-not an oversight.** The licensing policy of Astra Group states that
-licences are granted with no right of transfer to third parties, and an
-image in a public registry is exactly a handout to an unbounded set of
-people, none of whom hold one. So it is built on site by whoever does
-hold the licence: `make image BASE=astra`. The base image itself pulls
-anonymously from the Astra registry — no account is needed to build.
+**Any other base will do**, not just these two. What it has to provide
+is small: either `apt` or `apk`, either `useradd` or `adduser`, and
+that is all. The name in `BASE` becomes the image tag, so pass it
+alongside — otherwise someone else's base ships tagged `dev-alpine`
+and there is no way to tell it apart later:
 
-Astra publishes no arm64 image: there is no multi-architecture index
-and the label reads `ru.astralinux.architecture: amd64`. Hence
-`PLATFORMS_astra` is `linux/amd64` only.
+```bash
+make image BASE=mine RUNTIME_BASE=my.registry/image:tag
+```
+
+Such a base does not go into the release matrix: that one carries only
+what is published to public registries.
 
 By hand, the same thing:
 
@@ -460,4 +458,4 @@ application, and that is checked on our side
 still required: we verify the rule, you own the data. If a migration
 was declared breaking, `CHANGELOG.md` says so in its own line.
 
-<!-- перевод: docs/установка.md sha256:9aa0e198f868 -->
+<!-- перевод: docs/установка.md sha256:c2c3740732cc -->
