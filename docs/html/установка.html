@@ -145,9 +145,27 @@ color:var(--ink-3);font-size:.85rem}
 <p>Готовый лежит в реестре и публикуется выпуском по тегу:</p>
 <pre><code>docker pull ghcr.io/findias/takt:v0.2.0</code></pre>
 <p>Собрать у себя — из корня репозитория:</p>
-<pre><code>make image                                  # takt:dev, версия из git describe
-docker build --build-arg VERSION=v0.2.0 \
-  -t takt:v0.2.0 .                          # то же руками</code></pre>
+<pre><code>make image                    # takt:dev, основание alpine, версия из git describe
+make image BASE=debian        # takt:dev-debian
+make image BASE=astra         # takt:dev-astra
+make images                   # все три разом, с таблицей размеров</code></pre>
+<h3>Три основания</h3>
+<p>Dockerfile один, основание итогового слоя приходит аргументом <code>RUNTIME_BASE</code>. Сборочные слои от него не зависят вовсе: бинарник статический (<code>CGO_ENABLED=0</code>), клиент — просто файлы.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Основание</th><th>Образ</th><th>Размер</th><th>Архитектуры</th></tr></thead>
+<tbody>
+<tr><td><code>alpine</code> (по умолчанию)</td><td><code>alpine:3.21</code></td><td>22 МБ</td><td>amd64, arm64</td></tr>
+<tr><td><code>debian</code></td><td><code>debian:12-slim</code></td><td>88 МБ</td><td>amd64, arm64</td></tr>
+<tr><td><code>astra</code></td><td><code>astra/ubi18:1.8.6</code></td><td>126 МБ</td><td>только amd64</td></tr>
+</tbody>
+</table></div>
+<p>Выбор — не про размер. <code>debian</code> берут туда, где к musl относятся с подозрением: та же libc, что на большинстве серверов. <code>astra</code> — там, где предписана сертифицированная ОС.</p>
+<p><strong>Образ на Astra в реестрах не публикуется, и это не упущение.</strong> Политика лицензирования ПАО Группа Астра говорит: «Лицензии предоставляются без права передачи третьим лицам». Образ в публичном реестре — раздача неограниченному кругу лиц, ни у кого из которых лицензии нет. Поэтому его собирает у себя тот, у кого лицензия есть: <code>make image BASE=astra</code>. Базовый образ при этом тянется из реестра Astra анонимно, учётной записи для сборки не нужно.</p>
+<p>У Astra нет образа под arm64: мультиархитектурного индекса не собрано, <code>ru.astralinux.architecture: amd64</code>. Поэтому <code>PLATFORMS_astra</code> — только <code>linux/amd64</code>.</p>
+<p>Руками то же самое:</p>
+<pre><code>docker build --build-arg VERSION=v0.2.0 \
+  --build-arg RUNTIME_BASE=debian:12-slim \
+  -t takt:v0.2.0-debian .</code></pre>
 <p>Сборка идёт в три слоя одним <code>Dockerfile</code>: клиент собирается в <code>node:22-alpine</code>, бинарник — в <code>golang:1.26-alpine</code> статически (<code>CGO_ENABLED=0</code>), а в итоговый <code>alpine</code> едут только они двое. Ни Go, ни Node в поставке нет; работает всё от непривилегированного пользователя <code>takt</code> (uid 10001), слушает <code>:8080</code>, статика лежит в <code>/app/web/dist</code>.</p>
 <p><strong><code>VERSION</code> передаётся аргументом сборки — это не формальность.</strong> Версия вшивается линковщиком в бинарник, а не читается из файла: файл в образе можно подменить, а версия обязана быть тем же артефактом, что и код. Отсюда следствие, на которое натыкаются: <code>docker build .</code> без <code>--build-arg</code> соберётся и заработает, но <code>takt version</code> ответит «версия не задана». Это честнее выдуманного числа, но в реестр такой образ класть незачем — <code>make image</code> подставляет <code>git describe</code> сам.</p>
 <p>Отдельно тянуть образ для <code>docker compose</code> не нужно: он собирает его сам (<code>build: .</code> в <code>docker-compose.yml</code>). Для закрытого контура образ едет файлом — <code>make bundle</code>; про это ниже, в разделе об установке без доступа в интернет.</p>
@@ -314,7 +332,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </ol>
 <p>Что менялось между версиями — в <code>CHANGELOG.md</code>, он едет тем же комплектом. Читать его до обновления, а не после: раздел про то, что знать при обновлении, пишется ровно для этого.</p>
 <p><strong>Откат.</strong> <code>helm rollback takt</code> вернёт поды предыдущей версии, но <strong>не вернёт схему базы</strong>. Держится это на том, что миграции пишутся совместимыми с предыдущей версией приложения, и проверяется у нас (<code>migration_compat_test.go</code>). Резервная копия базы перед обновлением всё равно нужна: правило проверяем мы, а данные ваши. Если миграция была объявлена ломающей — в <code>CHANGELOG.md</code> это сказано отдельной строкой, — откат делается восстановлением базы, а не <code>helm rollback</code>.</p>
-<footer>Доска, версия v0.2.0-4-g526f737-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.2.0-5-g123609a-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

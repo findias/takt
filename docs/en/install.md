@@ -68,9 +68,47 @@ docker pull ghcr.io/findias/takt:v0.2.0
 To build your own, from the repository root:
 
 ```bash
-make image                                  # takt:dev, version from git describe
+make image                    # takt:dev, alpine base, version from git describe
+make image BASE=debian        # takt:dev-debian
+make image BASE=astra         # takt:dev-astra
+make images                   # all three at once, with a size table
+```
+
+### Three bases
+
+There is one Dockerfile; the base of the final layer arrives as the
+`RUNTIME_BASE` build argument. The build stages do not depend on it at
+all: the binary is static (`CGO_ENABLED=0`) and the client is just
+files.
+
+| Base | Image | Size | Architectures |
+| --- | --- | --- | --- |
+| `alpine` (default) | `alpine:3.21` | 22 MB | amd64, arm64 |
+| `debian` | `debian:12-slim` | 88 MB | amd64, arm64 |
+| `astra` | `astra/ubi18:1.8.6` | 126 MB | amd64 only |
+
+The choice is not about size. `debian` is taken where musl is viewed
+with suspicion: the same libc as on most servers. `astra` is for
+installations required to run a certified Russian OS.
+
+**The Astra-based image is not published to any registry, and that is
+not an oversight.** The licensing policy of Astra Group states that
+licences are granted with no right of transfer to third parties, and an
+image in a public registry is exactly a handout to an unbounded set of
+people, none of whom hold one. So it is built on site by whoever does
+hold the licence: `make image BASE=astra`. The base image itself pulls
+anonymously from the Astra registry — no account is needed to build.
+
+Astra publishes no arm64 image: there is no multi-architecture index
+and the label reads `ru.astralinux.architecture: amd64`. Hence
+`PLATFORMS_astra` is `linux/amd64` only.
+
+By hand, the same thing:
+
+```bash
 docker build --build-arg VERSION=v0.2.0 \
-  -t takt:v0.2.0 .                          # the same by hand
+  --build-arg RUNTIME_BASE=debian:12-slim \
+  -t takt:v0.2.0-debian .
 ```
 
 One `Dockerfile`, three stages: the client is built in
@@ -422,4 +460,4 @@ application, and that is checked on our side
 still required: we verify the rule, you own the data. If a migration
 was declared breaking, `CHANGELOG.md` says so in its own line.
 
-<!-- перевод: docs/установка.md sha256:f9c3034a71bb -->
+<!-- перевод: docs/установка.md sha256:9aa0e198f868 -->

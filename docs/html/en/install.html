@@ -143,9 +143,27 @@ color:var(--ink-3);font-size:.85rem}
 <p>The published image lives in the registry and is pushed by the release run for a tag:</p>
 <pre><code>docker pull ghcr.io/findias/takt:v0.2.0</code></pre>
 <p>To build your own, from the repository root:</p>
-<pre><code>make image                                  # takt:dev, version from git describe
-docker build --build-arg VERSION=v0.2.0 \
-  -t takt:v0.2.0 .                          # the same by hand</code></pre>
+<pre><code>make image                    # takt:dev, alpine base, version from git describe
+make image BASE=debian        # takt:dev-debian
+make image BASE=astra         # takt:dev-astra
+make images                   # all three at once, with a size table</code></pre>
+<h3>Three bases</h3>
+<p>There is one Dockerfile; the base of the final layer arrives as the <code>RUNTIME_BASE</code> build argument. The build stages do not depend on it at all: the binary is static (<code>CGO_ENABLED=0</code>) and the client is just files.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Base</th><th>Image</th><th>Size</th><th>Architectures</th></tr></thead>
+<tbody>
+<tr><td><code>alpine</code> (default)</td><td><code>alpine:3.21</code></td><td>22 MB</td><td>amd64, arm64</td></tr>
+<tr><td><code>debian</code></td><td><code>debian:12-slim</code></td><td>88 MB</td><td>amd64, arm64</td></tr>
+<tr><td><code>astra</code></td><td><code>astra/ubi18:1.8.6</code></td><td>126 MB</td><td>amd64 only</td></tr>
+</tbody>
+</table></div>
+<p>The choice is not about size. <code>debian</code> is taken where musl is viewed with suspicion: the same libc as on most servers. <code>astra</code> is for installations required to run a certified Russian OS.</p>
+<p><strong>The Astra-based image is not published to any registry, and that is not an oversight.</strong> The licensing policy of Astra Group states that licences are granted with no right of transfer to third parties, and an image in a public registry is exactly a handout to an unbounded set of people, none of whom hold one. So it is built on site by whoever does hold the licence: <code>make image BASE=astra</code>. The base image itself pulls anonymously from the Astra registry — no account is needed to build.</p>
+<p>Astra publishes no arm64 image: there is no multi-architecture index and the label reads <code>ru.astralinux.architecture: amd64</code>. Hence <code>PLATFORMS_astra</code> is <code>linux/amd64</code> only.</p>
+<p>By hand, the same thing:</p>
+<pre><code>docker build --build-arg VERSION=v0.2.0 \
+  --build-arg RUNTIME_BASE=debian:12-slim \
+  -t takt:v0.2.0-debian .</code></pre>
 <p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
 <p><strong><code>VERSION</code> is passed as a build argument, and that is not a formality.</strong> The version is linked into the binary rather than read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. Hence the trap: <code>docker build .</code> without <code>--build-arg</code> builds and runs fine, but <code>takt version</code> answers &#34;версия не задана&#34; — honest, unlike an invented number, but not worth pushing to a registry. <code>make image</code> fills <code>git describe</code> in for you.</p>
 <p>There is no need to pull the image for <code>docker compose</code>: it builds one itself (<code>build: .</code> in <code>docker-compose.yml</code>). For an air-gapped installation the image travels as a file — <code>make bundle</code>; the section on installing without internet access, below, covers it.</p>
@@ -301,7 +319,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Board, version v0.2.0-4-g526f737-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Board, version v0.2.0-5-g123609a-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

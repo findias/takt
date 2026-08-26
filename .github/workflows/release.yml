@@ -49,6 +49,94 @@ jobs:
       - uses: azure/setup-helm@v4
       - run: make check
 
+  # Образы собираются отдельной работой, а не вместе с архивами: у них
+  # своя матрица оснований и свои реестры, и падение одного основания
+  # не должно уносить выпуск целиком.
+  #
+  # Astra в матрице нет намеренно. Образ на ней собирается тем же
+  # Dockerfile — `make image BASE=astra`, — но публиковать его нельзя:
+  # политика лицензирования «Группы Астра» говорит «Лицензии
+  # предоставляются без права передачи третьим лицам», а образ
+  # в публичном реестре — это раздача неограниченному кругу лиц.
+  # Заказчик, у которого лицензия есть, собирает его у себя.
+  images:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - base: alpine
+            from: alpine:3.21
+            platforms: linux/amd64,linux/arm64
+          - base: debian
+            from: debian:12-slim
+            platforms: linux/amd64,linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Кросс-архитектурная сборка: клиент и бинарник собираются
+      # на amd64 и кладутся под целевую архитектуру, но базовый слой
+      # arm64 тянется как есть — для него нужен qemu.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Вход в ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" \
+          | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Docker Hub — только если задан. Форк и частная сборка не обязаны
+      # иметь этих секретов, и ронять из-за них выпуск незачем.
+      - name: Вход в Docker Hub
+        if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" \
+          | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      # Имена переменных и функций — латиницей, как и идентификаторы
+      # работ. Оболочка кириллицу в именах не принимает вовсе:
+      # `набор=""` это для неё команда, которой нет.
+      - name: Сборка и публикация
+        env:
+          BASE: ${{ matrix.base }}
+          HUB: ${{ vars.DOCKERHUB_REPO }}
+          GHCR: ghcr.io/${{ github.repository }}
+        run: |
+          set -eu
+          tags=""
+          add() { tags="$tags -t $1"; }
+
+          add "${GHCR}:${GITHUB_REF_NAME}-${BASE}"
+          # Основание по умолчанию получает и метку без суффикса,
+          # и latest: `docker pull takt` обязан что-то значить.
+          if [ "$BASE" = alpine ]; then
+            add "${GHCR}:${GITHUB_REF_NAME}"
+            add "${GHCR}:latest"
+          fi
+
+          if [ -n "$HUB" ]; then
+            add "docker.io/${HUB}:${GITHUB_REF_NAME}-${BASE}"
+            if [ "$BASE" = alpine ]; then
+              add "docker.io/${HUB}:${GITHUB_REF_NAME}"
+              add "docker.io/${HUB}:latest"
+            fi
+          else
+            echo "::warning::переменная DOCKERHUB_REPO не задана — в Docker Hub ничего не поедет"
+          fi
+
+          # shellcheck disable=SC2086 -- набор меток разворачивается словами намеренно
+          docker buildx build --push \
+            --platform "${{ matrix.platforms }}" \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg RUNTIME_BASE="${{ matrix.from }}" \
+            $tags \
+            .
+
   artifacts:
     needs: check
     runs-on: ubuntu-latest
@@ -84,16 +172,6 @@ jobs:
           helm package deploy/helm/takt \
             --app-version "${GITHUB_REF_NAME}" -d dist
 
-      - name: Образ
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker build --build-arg VERSION="${GITHUB_REF_NAME}" \
-            -t "ghcr.io/${{ github.repository }}:${GITHUB_REF_NAME}" \
-            -t "ghcr.io/${{ github.repository }}:latest" .
-          docker push "ghcr.io/${{ github.repository }}:${GITHUB_REF_NAME}"
-          docker push "ghcr.io/${{ github.repository }}:latest"
-
       - name: Суммы
         # В закрытый контур файл едет через посредников, и «тот ли это
         # файл» — вопрос, который зададут.
@@ -105,10 +183,14 @@ jobs:
         # и написан заранее. Берётся ровно раздел этого тега: целый
         # файл в описании выпуска читать никто не станет.
         run: |
-          awk -v тег="${GITHUB_REF_NAME}" '
-            $0 ~ "^## " тег "( |$)" { брать = 1; next }
-            брать && /^## v/ { exit }
-            брать { print }
+          # Имена переменных awk — латиницей: кириллические он не берёт
+          # вовсе, `awk: fatal: `тег' is not a legal variable name`.
+          # Прежний вариант убил бы каждый выпуск, но файл рабочего
+          # процесса был негоден целиком и до awk дело не доходило.
+          awk -v tag="${GITHUB_REF_NAME}" '
+            $0 ~ "^## " tag "( |$)" { take = 1; next }
+            take && /^## v/ { exit }
+            take { print }
           ' CHANGELOG.md > dist/ОПИСАНИЕ.md
           if [ ! -s dist/ОПИСАНИЕ.md ]; then
             echo "::error::в CHANGELOG.md нет раздела ${GITHUB_REF_NAME} — выпуск без списка изменений не делаем"

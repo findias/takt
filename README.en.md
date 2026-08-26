@@ -315,7 +315,8 @@ make load               # behaviour under load; takes minutes
 make security           # dependency vulnerabilities and static analysis
 make web-dev            # Vite with hot reload on :5173
 make build              # the binary, into bin/takt
-make image              # the docker image, takt:dev
+make image              # the docker image, takt:dev (BASE=alpine|debian|astra)
+make images             # images on all three bases
 make bundle             # the payload for an air-gapped installation
 ```
 
@@ -352,4 +353,4 @@ require them, and eight hundred identical banners do exactly one thing —
 push the comment explaining *why the code is like this* fifteen lines
 further down.
 
-<!-- перевод: README.md sha256:26c812bfb984 -->
+<!-- перевод: README.md sha256:3c5f1c2faf2a -->
