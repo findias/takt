@@ -225,9 +225,78 @@ VERSION_LDFLAGS = -X github.com/findias/takt/internal/version.Value=$(VERSION)
 build: web ## Собрать бинарник в bin/takt
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/takt ./cmd/takt
 
+# Основания итогового слоя. Их три, и это не про размер образа:
+# alpine — умолчание и самый маленький; debian — glibc, куда чаще
+# берут туда, где к musl относятся с подозрением; astra — заказчику,
+# которому предписана сертифицированная ОС.
+#
+# Версии закреплены, а не `latest`: основание, меняющееся само,
+# превращает пересборку старого тега в другой образ.
+BASE_alpine ?= alpine:3.21
+BASE_debian ?= debian:12-slim
+BASE_astra  ?= registry.astralinux.ru/library/astra/ubi18:1.8.6
+
+# Astra собирается только под amd64: мультиархитектурного образа
+# у неё нет, ни одного arm64-репозитория в реестре не заведено.
+PLATFORMS_alpine ?= linux/amd64,linux/arm64
+PLATFORMS_debian ?= linux/amd64,linux/arm64
+PLATFORMS_astra  ?= linux/amd64
+
+BASE ?= alpine
+BASES ?= alpine debian astra
+
+# Что публикуется. Astra в список не входит намеренно: политика
+# лицензирования «Группы Астра» говорит «Лицензии предоставляются без
+# права передачи третьим лицам», а публичный образ — это раздача
+# неограниченному кругу лиц. Свой образ на Astra собирает тот, у кого
+# лицензия есть: `make image BASE=astra`.
+PUBLISH_BASES ?= alpine debian
+
+# Куда публикуем. Без значения цель не запускается: молча уехать
+# не туда хуже, чем не уехать вовсе.
+IMAGE_REPO ?=
+
 .PHONY: image
-image: ## Собрать docker-образ
-	docker build --build-arg VERSION=$(VERSION) -t takt:dev .
+image: ## Собрать docker-образ (BASE=alpine|debian|astra)
+	@test -n "$(BASE_$(BASE))" \
+	  || { echo "неизвестное основание «$(BASE)»: бывают $(BASES)"; exit 1; }
+	docker build --build-arg VERSION=$(VERSION) \
+	  --build-arg RUNTIME_BASE=$(BASE_$(BASE)) \
+	  -t takt:dev-$(BASE) $(if $(filter alpine,$(BASE)),-t takt:dev,) .
+
+.PHONY: images
+images: ## Собрать образы на всех основаниях (локально, без публикации)
+	@for б in $(BASES); do $(MAKE) --no-print-directory image BASE=$$б || exit 1; done
+	@echo
+	@docker images --filter=reference='takt:dev*' \
+	  --format 'table {{.Repository}}:{{.Tag}}\t{{.Size}}'
+
+.PHONY: image-push
+image-push: ## Опубликовать образы в реестр (IMAGE_REPO=..., нужен docker login)
+	@test -n "$(IMAGE_REPO)" || { \
+	  echo "не задан IMAGE_REPO — куда публиковать."; \
+	  echo "пример: make image-push IMAGE_REPO=docker.io/имя/takt"; exit 1; }
+	@case "$(VERSION)" in *dirty*|неизвестна) \
+	  echo "версия «$(VERSION)»: в реестр едет только собранное из чистого дерева"; \
+	  exit 1;; esac
+	@docker buildx inspect takt >/dev/null 2>&1 || docker buildx create --name takt
+	@for б in $(PUBLISH_BASES); do \
+	  $(MAKE) --no-print-directory image-push-one BASE=$$б || exit 1; \
+	done
+
+# Отдельной целью, а не строкой в цикле: значения оснований и платформ —
+# переменные make, и в цикле оболочки их не достать.
+.PHONY: image-push-one
+image-push-one:
+	@test -n "$(BASE_$(BASE))" \
+	  || { echo "неизвестное основание «$(BASE)»: бывают $(BASES)"; exit 1; }
+	docker buildx build --push --builder takt \
+	  --platform $(PLATFORMS_$(BASE)) \
+	  --build-arg VERSION=$(VERSION) \
+	  --build-arg RUNTIME_BASE=$(BASE_$(BASE)) \
+	  -t $(IMAGE_REPO):$(VERSION)-$(BASE) \
+	  $(if $(filter alpine,$(BASE)),-t $(IMAGE_REPO):$(VERSION) -t $(IMAGE_REPO):latest,) \
+	  .
 
 .PHONY: up
 up: ## Поднять весь стек через docker compose
