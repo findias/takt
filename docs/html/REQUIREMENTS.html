@@ -203,6 +203,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Б8</td><td>Межсайтовую запись останавливает хоть что-нибудь — браузер или код</td><td><code>internal/httpapi/crosssite_test.go</code></td></tr>
 <tr><td>Б9</td><td>Ключ интеграции даёт только выданные разрешения и не становится владельцем</td><td><code>internal/httpapi/clients_test.go</code></td></tr>
 <tr><td>Б10</td><td>Частота запросов ограничена: сбежавший ключ не мешает людям</td><td><code>internal/httpapi/load_test.go</code></td></tr>
+<tr><td>Б11</td><td>Предъявленный секрет открывает только свою строку: токен приглашения и ключ интеграции не дают ничего сверх неё</td><td><code>internal/org/org_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2>Совместимость</h2>
@@ -237,7 +238,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Доска, версия v0.2.0-6-g7519849-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
+<footer>Доска, версия v0.2.0-9-g320f08b-dirty. Страница собрана из REQUIREMENTS.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>
