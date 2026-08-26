@@ -314,10 +314,19 @@ make e2e                # end-to-end scenarios in a real browser
 make load               # behaviour under load; takes minutes
 make security           # dependency vulnerabilities and static analysis
 make web-dev            # Vite with hot reload on :5173
+make build              # the binary, into bin/takt
+make image              # the docker image, takt:dev
+make bundle             # the payload for an air-gapped installation
 ```
 
 `make check` must pass everywhere, including in a closed network, which
 is why the security targets are not part of it — they need the network.
+
+All three builds take their version from `git describe`, not from a
+file: a file inside an image can be swapped, and the version has to be
+the same artefact as the code. How to build the image by hand, and what
+forgetting the version costs, is in
+[`docs/en/install.md`](docs/en/install.md).
 How to work on this codebase and how to send a patch are both
 described in [`CONTRIBUTING.md`](CONTRIBUTING.md) (Russian).
 
@@ -343,4 +352,4 @@ require them, and eight hundred identical banners do exactly one thing —
 push the comment explaining *why the code is like this* fifteen lines
 further down.
 
-<!-- перевод: README.md sha256:bdde8baf947c -->
+<!-- перевод: README.md sha256:26c812bfb984 -->

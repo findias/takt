@@ -139,6 +139,16 @@ color:var(--ink-3);font-size:.85rem}
 <p>There is something to check all of this with: <code>takt doctor</code> answers for every item a machine can answer for.</p>
 <h2>One image for every profile</h2>
 <p>One image is built. Compose and the Helm chart both take it without a rebuild — the whole difference is environment variables and who runs the migrations. A second <code>Dockerfile</code> would grow a divergence between &#34;on a server&#34; and &#34;in the cluster&#34; the same day.</p>
+<h3>Where to get it</h3>
+<p>The published image lives in the registry and is pushed by the release run for a tag:</p>
+<pre><code>docker pull ghcr.io/findias/takt:v0.2.0</code></pre>
+<p>To build your own, from the repository root:</p>
+<pre><code>make image                                  # takt:dev, version from git describe
+docker build --build-arg VERSION=v0.2.0 \
+  -t takt:v0.2.0 .                          # the same by hand</code></pre>
+<p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
+<p><strong><code>VERSION</code> is passed as a build argument, and that is not a formality.</strong> The version is linked into the binary rather than read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. Hence the trap: <code>docker build .</code> without <code>--build-arg</code> builds and runs fine, but <code>takt version</code> answers &#34;версия не задана&#34; — honest, unlike an invented number, but not worth pushing to a registry. <code>make image</code> fills <code>git describe</code> in for you.</p>
+<p>There is no need to pull the image for <code>docker compose</code>: it builds one itself (<code>build: .</code> in <code>docker-compose.yml</code>). For an air-gapped installation the image travels as a file — <code>make bundle</code>; the section on installing without internet access, below, covers it.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
 <tbody>
@@ -291,7 +301,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Board, version v0.2.0-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Board, version v0.2.0-4-g526f737-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

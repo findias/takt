@@ -56,6 +56,43 @@ rebuild — the whole difference is environment variables and who runs
 the migrations. A second `Dockerfile` would grow a divergence between
 "on a server" and "in the cluster" the same day.
 
+### Where to get it
+
+The published image lives in the registry and is pushed by the release
+run for a tag:
+
+```bash
+docker pull ghcr.io/findias/takt:v0.2.0
+```
+
+To build your own, from the repository root:
+
+```bash
+make image                                  # takt:dev, version from git describe
+docker build --build-arg VERSION=v0.2.0 \
+  -t takt:v0.2.0 .                          # the same by hand
+```
+
+One `Dockerfile`, three stages: the client is built in
+`node:22-alpine`, the binary in `golang:1.26-alpine` and statically
+(`CGO_ENABLED=0`), and only those two land in the final `alpine`.
+Neither Go nor Node ships. It runs as the unprivileged user `takt`
+(uid 10001), listens on `:8080`, and serves the client from
+`/app/web/dist`.
+
+**`VERSION` is passed as a build argument, and that is not a
+formality.** The version is linked into the binary rather than read
+from a file: a file inside an image can be swapped, and the version has
+to be the same artefact as the code. Hence the trap: `docker build .`
+without `--build-arg` builds and runs fine, but `takt version` answers
+"версия не задана" — honest, unlike an invented number, but not worth
+pushing to a registry. `make image` fills `git describe` in for you.
+
+There is no need to pull the image for `docker compose`: it builds one
+itself (`build: .` in `docker-compose.yml`). For an air-gapped
+installation the image travels as a file — `make bundle`; the section
+on installing without internet access, below, covers it.
+
 | Variable | What it sets |
 | --- | --- |
 | `BASE_URL` | the address in the browser, no trailing slash |
@@ -385,4 +422,4 @@ application, and that is checked on our side
 still required: we verify the rule, you own the data. If a migration
 was declared breaking, `CHANGELOG.md` says so in its own line.
 
-<!-- перевод: docs/установка.md sha256:48edc3319b62 -->
+<!-- перевод: docs/установка.md sha256:f9c3034a71bb -->
