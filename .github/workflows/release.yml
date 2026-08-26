@@ -114,7 +114,10 @@ jobs:
       # Имена переменных и функций — латиницей, как и идентификаторы
       # работ. Оболочка кириллицу в именах не принимает вовсе:
       # `набор=""` это для неё команда, которой нет.
-      - name: Сборка и публикация
+      # Метка образа — латиницей: docker принимает в ней только
+      # латиницу, цифру, точку, дефис и подчёркивание, а на кириллице
+      # отвечает «invalid reference format» и не собирает ничего.
+      - name: Метки
         env:
           BASE: ${{ matrix.base }}
           HUB: ${{ vars.DOCKERHUB_REPO }}
@@ -142,12 +145,39 @@ jobs:
             echo "::warning::переменная DOCKERHUB_REPO не задана — в Docker Hub ничего не поедет"
           fi
 
+          echo "$tags" > /tmp/tags
+
+
+      # Разбор до публикации, а не после: образ с известной дырой,
+      # уехавший в общий реестр, оттуда уже не вернуть — его успеют
+      # скачать. Собирается он под свою архитектуру и остаётся здесь;
+      # публикация ниже собирает набор заново из кеша.
+      - name: Образ для разбора
+        run: |
+          docker build \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg RUNTIME_BASE="${{ matrix.from }}" \
+            -t "takt:scan-${{ matrix.base }}" .
+
+      - name: Разбор образа
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: takt:scan-${{ matrix.base }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          # Почему нечинимое не считается — в security.yml, там же замер.
+          ignore-unfixed: true
+
+      - name: Публикация
+        run: |
+          set -eu
           # shellcheck disable=SC2086 -- набор меток разворачивается словами намеренно
           docker buildx build --push \
             --platform "${{ matrix.platforms }}" \
             --build-arg VERSION="${GITHUB_REF_NAME}" \
             --build-arg RUNTIME_BASE="${{ matrix.from }}" \
-            $tags \
+            $(cat /tmp/tags) \
             .
 
   artifacts:

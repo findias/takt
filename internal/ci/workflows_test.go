@@ -226,6 +226,10 @@ var (
 	присваивание    = regexp.MustCompile(`(?m)^\s*(?:export\s+)?([^\x00-\x7F][^\s=]*)=`)
 	переменнаяAwk   = regexp.MustCompile(`-v\s+([^\x00-\x7F][^\s=]*)=`)
 	переменнаяЦикла = regexp.MustCompile(`\bfor\s+([^\x00-\x7F][^\s]*)\s+in\b`)
+	// Метка образа: docker принимает в ней только латиницу, цифру,
+	// точку, дефис и подчёркивание, а на кириллице отвечает
+	// «invalid reference format» и не собирает ничего.
+	меткаОбраза = regexp.MustCompile(`-t\s+"?([^\s"]*[^\x00-\x7F][^\s"]*)`)
 )
 
 // проверитьКоманду — одно место на все три вида имён. Команды приходят
@@ -245,6 +249,11 @@ func проверитьКоманду(t *testing.T, откуда, команда
 	for _, m := range переменнаяAwk.FindAllStringSubmatch(команда, -1) {
 		t.Errorf("%s: `awk -v %s=` — awk откажется: "+
 			"«is not a legal variable name»", откуда, m[1])
+	}
+	for _, m := range меткаОбраза.FindAllStringSubmatch(команда, -1) {
+		t.Errorf("%s: метка образа `%s` — docker ответит "+
+			"«invalid reference format»: в ссылке допустимы только "+
+			"латиница, цифра, точка, дефис и подчёркивание", откуда, m[1])
 	}
 }
 
