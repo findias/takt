@@ -337,8 +337,13 @@ tarball: build ## Собрать архив для установки из би�
 	@rm -rf "$(TARBALL_DIR)"
 	@echo "архив: dist/$(notdir $(TARBALL_DIR)).tar.gz"
 
-TARBALL_OS   ?= linux
-TARBALL_ARCH ?= amd64
+# Имя архива берётся из того же окружения, что и сборка, а не задаётся
+# рядом с ней. Рычагов было два — GOARCH для компилятора и TARBALL_ARCH
+# для имени, — и разойтись им ничего не мешало: `GOARCH=arm64 make
+# tarball TARBALL_ARCH=amd64` собирается молча и даёт архив, который
+# распакуется у заказчика и не запустится. Теперь рычаг один: GOARCH.
+TARBALL_OS   ?= $(shell go env GOOS)
+TARBALL_ARCH ?= $(shell go env GOARCH)
 TARBALL_DIR  ?= dist/takt-$(VERSION)-$(TARBALL_OS)-$(TARBALL_ARCH)
 BUNDLE_DIR     ?= dist/bundle-$(BUNDLE_VERSION)
 
