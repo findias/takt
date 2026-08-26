@@ -1,3 +1,97 @@
+# Contributing
+
+Thank you for reading this before making a change rather than after.
+
+## Agree first
+
+**Open an issue before writing code** if the change is bigger than a
+typo. Not ceremony: this product records what it commits to do and what
+it will never do ([`REQUIREMENTS.md`](REQUIREMENTS.md), Russian), and
+several of those refusals are decisions with a written argument behind
+them, not gaps. A patch adding Gantt charts will be turned down not
+because it is bad but because the question was already considered and
+decided the other way. That is a miserable thing to learn after a
+weekend at the keyboard.
+
+Fixes to bugs, typos, translations and documentation: go straight ahead.
+
+## What has to pass
+
+```bash
+make check      # formatting, vet, every test except end-to-end and load
+```
+
+`make check` must pass in a closed network too, so anything needing the
+internet is not in it. Those run separately: `make security`,
+`make e2e` (needs Chrome), `make load`.
+
+`go test ./...` without a database fails on purpose: almost everything
+is verified against a real PostgreSQL, and a run without one once
+printed "ok" for every package while skipping 248 checks out of 259.
+Either the database is configured (`make check` sets it up itself) or
+the run declares itself short: `go test -short ./...`.
+
+## The rules patches most often trip over
+
+**A promise is backed by a test.** A new capability means a line in
+`REQUIREMENTS.md` and a test file in the "backed by" column. An empty
+column means the requirement rests on memory, which is the very thing
+the document exists to prevent, and `internal/requirements` enforces it.
+
+**The schema changes only by migration, forward.** A migration must
+work with the *previous* version of the application: it runs before
+pods are replaced, so between its end and the rollout the old code runs
+against the new schema. Dropping a column, renaming one, or adding a
+required column without a default breaks the customer, not us — and
+breaks them again on rollback. Remove things in two steps: version N
+stops using it, version N+1 drops it.
+
+**Isolation between organisations is held by the database.** A check in
+code is forgotten at the next edit; a policy applies to every query. A
+patch that fixes a leak by adding `where org_id = …` fixes the symptom.
+
+**A refusal explains what to do.** "Not found" instead of "not allowed"
+sends someone hunting for a breakage that does not exist. The client
+distinguishes cases by code, never by text.
+
+**The irreversible asks, the reversible does not.**
+
+**A false positive is explained, not papered over.** For gosec,
+`// #nosec G404 -- why`; for our own query-concatenation check,
+`// #sql-склейка: why`. A marker without an explanation does not count.
+
+## Language
+
+**Code, comments, error messages and the interface are in Russian.**
+Not a preference but a consequence: the product is Russian-language,
+and an error written in English will be read by someone who does not
+read English.
+
+A comment explains **why**, not what the line does.
+
+**Documentation is written in English first.** The Russian pages are the
+translation, and editing an English page obliges you to edit the Russian
+one: `internal/translation` keeps a fingerprint of the English source
+inside the Russian page and fails when the original has moved ahead.
+
+The two rules point in opposite directions on purpose, and neither is
+about taste. The interface is read by the people who use the product,
+and they are Russian-speaking; the repository is read by anyone who
+finds it. A refusal written in English would be read by someone who
+does not read English — and a README written only in Russian would not
+be read at all.
+
+## What happens to a patch
+
+Checks run in GitHub Actions. A submission with a red check is not
+reviewed: fixing the build is faster than explaining why it is red.
+
+By submitting a patch you agree that it is distributed under the Apache
+License 2.0, the same as the rest of the repository. There is no
+separate agreement to sign.
+
+---
+
 # Как участвовать
 
 *[In English below](#contributing)*
@@ -78,11 +172,16 @@ make load       # поведение под нагрузкой, идёт мин�
 Комментарий объясняет **почему** так, а не что делает строка: что
 делает, видно из неё самой.
 
-Документация — на двух языках. Правка русской страницы обязывает
-поправить английскую: `internal/translation` следит за этим отпечатком
-исходника и падает, когда оригинал ушёл вперёд. Отпечаток подписывает
-только то, что исходник видели в этом виде, — переставить его, не читая,
-значит соврать себе же.
+**Документация пишется по-английски.** Русские страницы — перевод,
+и правка английской страницы обязывает поправить русскую:
+`internal/translation` держит отпечаток английского исходника в самой
+русской странице и падает, когда оригинал ушёл вперёд.
+
+Два правила смотрят в разные стороны намеренно, и ни одно из них
+не про вкус. Интерфейс читают те, кто продуктом пользуется, а они
+говорят по-русски; репозиторий читает всякий, кто его нашёл. Отказ
+по-английски увидит тот, кто на нём не читает, — а README только
+по-русски не прочтут вовсе.
 
 ## Что происходит с патчем
 
@@ -94,89 +193,3 @@ make load       # поведение под нагрузкой, идёт мин�
 Отправляя патч, вы соглашаетесь, что он распространяется на условиях
 Apache License 2.0 — той же, что и остальной репозиторий. Отдельного
 соглашения подписывать не нужно.
-
----
-
-# Contributing
-
-Thank you for reading this before making a change rather than after.
-
-## Agree first
-
-**Open an issue before writing code** if the change is bigger than a
-typo. Not ceremony: this product records what it commits to do and what
-it will never do ([`REQUIREMENTS.md`](REQUIREMENTS.md), Russian), and
-several of those refusals are decisions with a written argument behind
-them, not gaps. A patch adding Gantt charts will be turned down not
-because it is bad but because the question was already considered and
-decided the other way. That is a miserable thing to learn after a
-weekend at the keyboard.
-
-Fixes to bugs, typos, translations and documentation: go straight ahead.
-
-## What has to pass
-
-```bash
-make check      # formatting, vet, every test except end-to-end and load
-```
-
-`make check` must pass in a closed network too, so anything needing the
-internet is not in it. Those run separately: `make security`,
-`make e2e` (needs Chrome), `make load`.
-
-`go test ./...` without a database fails on purpose: almost everything
-is verified against a real PostgreSQL, and a run without one once
-printed "ok" for every package while skipping 248 checks out of 259.
-Either the database is configured (`make check` sets it up itself) or
-the run declares itself short: `go test -short ./...`.
-
-## The rules patches most often trip over
-
-**A promise is backed by a test.** A new capability means a line in
-`REQUIREMENTS.md` and a test file in the "backed by" column. An empty
-column means the requirement rests on memory, which is the very thing
-the document exists to prevent, and `internal/requirements` enforces it.
-
-**The schema changes only by migration, forward.** A migration must
-work with the *previous* version of the application: it runs before
-pods are replaced, so between its end and the rollout the old code runs
-against the new schema. Dropping a column, renaming one, or adding a
-required column without a default breaks the customer, not us — and
-breaks them again on rollback. Remove things in two steps: version N
-stops using it, version N+1 drops it.
-
-**Isolation between organisations is held by the database.** A check in
-code is forgotten at the next edit; a policy applies to every query. A
-patch that fixes a leak by adding `where org_id = …` fixes the symptom.
-
-**A refusal explains what to do.** "Not found" instead of "not allowed"
-sends someone hunting for a breakage that does not exist. The client
-distinguishes cases by code, never by text.
-
-**The irreversible asks, the reversible does not.**
-
-**A false positive is explained, not papered over.** For gosec,
-`// #nosec G404 -- why`; for our own query-concatenation check,
-`// #sql-склейка: why`. A marker without an explanation does not count.
-
-## Language
-
-**Code, comments, error messages and the interface are in Russian.**
-Not a preference but a consequence: the product is Russian-language,
-and an error written in English will be read by someone who does not
-read English.
-
-A comment explains **why**, not what the line does.
-
-Documentation is bilingual. Editing a Russian page obliges you to edit
-the English one: `internal/translation` watches a fingerprint of the
-source and fails when the original has moved ahead.
-
-## What happens to a patch
-
-Checks run in GitHub Actions. A submission with a red check is not
-reviewed: fixing the build is faster than explaining why it is red.
-
-By submitting a patch you agree that it is distributed under the Apache
-License 2.0, the same as the rest of the repository. There is no
-separate agreement to sign.

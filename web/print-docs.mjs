@@ -1,6 +1,6 @@
 // Печать документации в PDF.
 //
-// Печатает тот же файл, что читают в браузере: `docs/html/всё.html`.
+// Печатает тот же файл, что читают в браузере: `docs/html/all.html`.
 // Отдельный набор текстов «для печати» разошёлся бы с экранным —
 // как разошлись бы и HTML с markdown, если бы их набирали порознь.
 //
@@ -11,7 +11,7 @@ import { chromium } from '@playwright/test'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
-const источник = resolve('..', 'docs', 'html', 'всё.html')
+const источник = resolve('..', 'docs', 'html', 'all.html')
 const цель = resolve('..', 'docs', 'html', 'takt.pdf')
 
 // Системный Chrome, а не скачанный Chromium: так же делают сквозные

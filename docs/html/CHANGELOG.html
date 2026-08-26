@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -100,17 +100,17 @@ color:var(--ink-3);font-size:.85rem}
 </head>
 <body>
 <main class="sheet">
-<nav aria-label="Разделы документации">
-<a href="индекс.html">О продукте</a>
-<a href="старт.html">Первые 15 минут</a>
-<a href="как.html">Как сделать</a>
-<a href="справочник.html">Справочник</a>
-<a href="памятка.html">Памятка</a>
-<a href="устройство.html">Устройство</a>
-<a href="установка.html">Установка</a>
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
 <a href="REQUIREMENTS.html">Требования</a>
 <a href="CHANGELOG.html" aria-current="page">Что менялось</a>
-<a href="en/overview.html">In English</a>
+<a href="ru/индекс.html">По-русски</a>
 </nav>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
@@ -122,7 +122,7 @@ color:var(--ink-3);font-size:.85rem}
 <p><strong>Что делать при обновлении:</strong></p>
 <ul>
 <li>обновиться. Схему правит миграция <code>0051</code>, руками делать нечего;</li>
-<li><strong>сменить секреты подписок</strong>, если ключами приглашений в вашей установке пользовались люди вне организации-владельца подписки. Прежние секреты считать раскрытыми: <code>docs/справочник.md</code>, раздел об интеграциях, объясняет, где их поменять;</li>
+<li><strong>сменить секреты подписок</strong>, если ключами приглашений в вашей установке пользовались люди вне организации-владельца подписки. Прежние секреты считать раскрытыми: <code>docs/ru/справочник.md</code>, раздел об интеграциях, объясняет, где их поменять;</li>
 <li>ключи интеграции менять не нужно: их хеши через эту границу не открывались.</li>
 </ul>
 <p>Проверяется <code>internal/org/org_test.go</code> — требование Б11 в <code>REQUIREMENTS.md</code>. Проверка падает на прежней схеме и проходит на новой.</p>
@@ -150,7 +150,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Чужой код, который едет вместе с продуктом, перечислен поимённо в <code>THIRD-PARTY.md</code> — восемь модулей Go и пять пакетов npm. Инструментов сборки там нет: их лицензии обязывают того, кто собирает, а не того, кто ставит. <code>NOTICE</code> едет с комплектом и с архивом.</p>
 <p><strong>Документация</strong></p>
 <p>Английских страниц было две, стало восемь: обзор, первые пятнадцать минут, как сделать, справочник, памятка, устройство, установка и титульная страница.</p>
-<p>Руководство по установке стало отдельным документом — <code>docs/установка.md</code> и <code>docs/en/install.md</code> — и в нём появилось то, чего не было: <strong>требования к установке одной таблицей</strong> (версии, память, место, браузеры, сеть) и <strong>запуск из бинарника под systemd</strong>, рядом с docker compose и чартом. README стал титульной страницей.</p>
+<p>Руководство по установке стало отдельным документом — <code>docs/ru/установка.md</code> и <code>docs/install.md</code> — и в нём появилось то, чего не было: <strong>требования к установке одной таблицей</strong> (версии, память, место, браузеры, сеть) и <strong>запуск из бинарника под systemd</strong>, рядом с docker compose и чартом. README стал титульной страницей.</p>
 <p><strong>Установка</strong></p>
 <ul>
 <li><code>make tarball</code> собирает архив для установки из бинарника: сам бинарник, собранный клиент, лицензия и список чужого кода. К выпуску прикладываются архивы под linux/amd64 и linux/arm64 с контрольными суммами;</li>
@@ -185,7 +185,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Установку никто ни разу не проводил: чарт проверяется отрисовкой и связностью, но не установкой в настоящий кластер.</li>
 <li>Вложений в карточках нет. Настройка <code>STORAGE</code> убрана: она читалась и не использовалась никем, а настройка без поведения обещает возможность и заставляет монтировать том, который никому не нужен.</li>
 </ul>
-<footer>Доска, версия v0.2.0-9-g320f08b-dirty. Страница собрана из CHANGELOG.md — правьте исходник, а не её.</footer>
+<footer>Takt, version v0.2.0-11-ge7a3da2-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

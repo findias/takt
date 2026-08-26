@@ -125,10 +125,13 @@ type Пункт struct {
 // Язык объявляется в разметке, а не подразумевается: по нему диктор
 // выбирает произношение, а браузер — перенос слов. Английская страница
 // с `lang="ru"` читается вслух с русским акцентом — буквально.
+//
+// Умолчание английское, потому что оригинал теперь английский: русские
+// страницы — перевод, и язык у них проставлен явно.
 func Собрать(с Страница, оглавление []Пункт, версия string) string {
 	язык := с.Язык
 	if язык == "" {
-		язык = "ru"
+		язык = "en"
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "<!doctype html>\n<html lang=%q>\n<head>\n<meta charset=\"utf-8\">\n", язык)
@@ -136,7 +139,11 @@ func Собрать(с Страница, оглавление []Пункт, ве
 	fmt.Fprintf(&b, "<title>%s</title>\n", html.EscapeString(с.Заголовок))
 	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<main class=\"sheet\">\n", стиль)
 
-	b.WriteString("<nav aria-label=\"Разделы документации\">\n")
+	подписьМеню := "Documentation sections"
+	if язык == "ru" {
+		подписьМеню = "Разделы документации"
+	}
+	fmt.Fprintf(&b, "<nav aria-label=%q>\n", подписьМеню)
 	for _, п := range оглавление {
 		текущая := ""
 		if п.Файл == с.Файл {
@@ -152,10 +159,10 @@ func Собрать(с Страница, оглавление []Пункт, ве
 	// на вопрос «а это про какую вашу?» молчанием.
 	исходник := html.EscapeString(strings.TrimSuffix(с.Файл, ".html") + ".md")
 	if язык == "en" {
-		fmt.Fprintf(&b, "<footer>Board, version %s. Built from %s — "+
+		fmt.Fprintf(&b, "<footer>Takt, version %s. Built from %s — "+
 			"edit the source, not this page.</footer>\n", html.EscapeString(версия), исходник)
 	} else {
-		fmt.Fprintf(&b, "<footer>Доска, версия %s. Страница собрана из %s — "+
+		fmt.Fprintf(&b, "<footer>Takt, версия %s. Страница собрана из %s — "+
 			"правьте исходник, а не её.</footer>\n", html.EscapeString(версия), исходник)
 	}
 	b.WriteString("</main>\n</body>\n</html>\n")
@@ -171,13 +178,13 @@ func Собрать(с Страница, оглавление []Пункт, ве
 // зато на экране по нему ходят.
 func СобратьВсё(страницы []Страница, версия string) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n")
+	b.WriteString("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
 	b.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">` + "\n")
-	b.WriteString("<title>Доска — документация</title>\n")
+	b.WriteString("<title>Takt — documentation</title>\n")
 	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<main class=\"sheet\">\n", стиль)
 
-	b.WriteString("<h1>Доска — документация</h1>\n<p>Все разделы одним файлом. ")
-	fmt.Fprintf(&b, "Версия %s.</p>\n", html.EscapeString(версия))
+	b.WriteString("<h1>Takt — documentation</h1>\n<p>Every section in one file. ")
+	fmt.Fprintf(&b, "Version %s.</p>\n", html.EscapeString(версия))
 	b.WriteString("<h2>Содержание</h2>\n<ul>\n")
 	for _, с := range страницы {
 		// Имя раздела, а не заголовок файла: у обзора и у руководства

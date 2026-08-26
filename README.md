@@ -1,256 +1,267 @@
 # Takt
 
-**Канбан-доска с метриками потока для одной команды.** Ставится
-в собственный контур: один процесс, одна база PostgreSQL, интернет
-не нужен ни при установке, ни в работе.
+**A kanban board with flow metrics, for one team.** It runs inside your
+own perimeter: one process, one PostgreSQL database, no internet access
+needed to install it or to run it.
 
-[![Проверка](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
-[![Безопасность](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
-[![Лицензия Apache-2.0](https://img.shields.io/badge/лицензия-Apache--2.0-blue.svg)](LICENSE)
+[![Check](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
+[![Security](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
+[![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 
-[English](README.en.md) · [Установка](docs/установка.md) ·
-[Документация](docs/индекс.md) · [Требования](REQUIREMENTS.md) ·
-[Что менялось](CHANGELOG.md) · [Как участвовать](CONTRIBUTING.md) ·
-[Безопасность](SECURITY.md)
+[По-русски](README.md) · [Installation](docs/install.md) ·
+[Documentation](docs/overview.md) · [What changed](CHANGELOG.md) ·
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Takt — takt time, ритм, с которым работа выходит из потока. Названо
-по тому, чем продукт отличается от списка задач: колонки размечены
-для потока, и время цикла, пропускная способность и прогноз считаются
-из этой разметки, а не из полей, заполненных вручную.
+Takt is named after *takt time* — the rhythm at which work leaves the
+flow. That is what separates this from a task list: columns are marked
+up for flow, and cycle time, throughput and the forecast are computed
+from that markup rather than from fields someone filled in by hand.
 
-![Доска](docs/снимки/доска.png)
+![The board](docs/screenshots/доска.png)
 
-**Поставить** — [`docs/установка.md`](docs/установка.md): что для этого
-нужно, docker compose, бинарник под systemd, чарт в Kubernetes,
-закрытый контур, обновление и откат. **Пользоваться** —
-[документация](docs/индекс.md). **Что продукт обязуется не сломать**
-и чем каждое обещание закреплено — [`REQUIREMENTS.md`](REQUIREMENTS.md).
+**The product interface is in Russian.** This file, and the English
+documentation under [`docs/en/`](docs/overview.md), are for the
+people who install and operate it. Everything a user clicks is quoted
+in Russian, the way it appears on screen, with a translation beside it.
 
-Ниже — то, что нужно знать, чтобы этот код править: что он умеет,
-как устроен и почему устроен так.
+**To install it** — [`docs/install.md`](docs/install.md): what it
+requires, docker compose, a binary under systemd, a chart in
+Kubernetes, air-gapped networks, upgrades and rollback. **To use it** —
+the [documentation](docs/overview.md). **What the product commits
+not to break**, with the test file backing each promise, is in
+[`REQUIREMENTS.md`](REQUIREMENTS.md) (Russian).
 
-Исследование рынка и обоснование архитектуры — в
-[`research/kanban-research.html`](research/kanban-research.html).
-Разбор устройства досок — в git-хостингах, в самом git и в чужих продуктах,
-с выводами для нашей схемы — в
-[`research/boards-research.html`](research/boards-research.html), выжимка
-решений на одну страницу — в
-[`research/schema-decisions.html`](research/schema-decisions.html).
+Below is what you need to know to work on this code: what it does, how
+it is built, and why it is built that way.
 
-## Быстрый старт
+## Quick look
 
 ```bash
-make stand     # база, миграции, демонстрационные данные, сборка фронтенда
-make run       # приложение на http://localhost:8099
+make stand     # database, migrations, demo data, client build
+make run       # the application on http://localhost:8099
 ```
 
-Вход в стенд: `anna@example.test` / `parol12345`. Данными наполняется
-организация целиком — дерево подразделений, три доски всех видимостей,
-карточки со всеми свойствами, итерации, архив и история на три недели
-назад: на пустом интерфейсе не видно ни вёрстки, ни метрик.
+This is a demo stand, not an installation: `make stand` wipes the
+database and fills it with invented data. For a real installation see
+[`docs/install.md`](docs/install.md).
 
-Без данных, начисто:
+Sign in as `anna@example.test` / `parol12345`. The demo fills a whole
+organisation — a three-level tree of subdivisions, three boards with
+all three visibilities, cards with every property, iterations, an
+archive and three weeks of history. An empty interface shows neither
+layout problems nor metrics, which is the point.
 
-```bash
-make db        # PostgreSQL в docker на порту 55432
-make web       # сборка фронтенда
-make run       # приложение на http://localhost:8099
-```
+## What it does
 
-Ставить всерьёз — не отсюда: `make stand` сносит базу и наливает
-выдуманные данные. Настоящая установка — в
-[`docs/установка.md`](docs/установка.md).
+The full list of what the product **commits not to break**, with the
+test file backing each promise, is in
+[`REQUIREMENTS.md`](REQUIREMENTS.md) (Russian). The same, briefly:
 
-## Что умеет
+- **Board.** Columns, cards, moving with the mouse and from the
+  keyboard (`Ctrl` with arrows), manual order. A move applies
+  instantly and survives a lost connection and a page reload.
+- **Flow.** Columns are marked up: kind (`queue`, `in_progress`,
+  `done`), start and finish points, entry policy. Cycle time,
+  throughput, cumulative flow and a percentile forecast come from that
+  markup rather than from an eyeball estimate.
+- **Work-in-progress limit per column.** Soft by default: the excess is
+  highlighted and does not stop you. A hard limit is switched on by a
+  flag and answers `409`.
+- **Iterations.** Create, close, report on a closed one.
+- **Live updates.** A change reaches everyone with the board open,
+  without a reload.
+- **Archive.** Of cards and of boards: what is put away comes back,
+  what is deleted for good does not.
+- **Organisation.** Four roles, invitations by link, subdivisions as a
+  tree, board visibility by subdivision, observation of a subtree.
+  Isolation between organisations is held by database policies, not by
+  checks in code.
+- **Sign-in.** By password and through a corporate provider (OIDC).
+  Directory provisioning over SCIM.
+- **Integrations.** An API with the version in the path, codes instead
+  of text and safe retries; event subscriptions with a signature and
+  retries; a full export of an organisation's data in one file.
+- **Accessibility.** Everything works from the keyboard; contrast holds
+  WCAG 2.2 AA in both themes; the page does not scroll sideways and
+  does not lose content at double text size.
 
-Полный список того, что продукт **обязуется не сломать**, вместе с файлом
-проверки на каждое обещание — в [`REQUIREMENTS.md`](REQUIREMENTS.md).
-Здесь — то же коротко.
+## What it does not do
 
-- **Доска.** Колонки, карточки, перенос мышью и с клавиатуры (`Ctrl`
-  со стрелками), ручной порядок. Перенос применяется мгновенно
-  и переживает обрыв связи и перезагрузку страницы.
-- **Поток.** Колонки размечены: вид (`queue`, `in_progress`, `done`),
-  точки старта и финиша, политика входа. Отсюда время цикла, пропускная
-  способность, накопление и прогноз с перцентилями — а не из глазомера.
-- **WIP-лимит на колонку.** По умолчанию мягкий: превышение подсвечено,
-  работать не мешает. Жёсткий включается флагом и отвечает `409`.
-- **Итерации.** Заведение, закрытие, отчёт по закрытой.
-- **Живое обновление.** Изменение доходит до всех, у кого доска открыта,
-  без перезагрузки.
-- **Архив.** Карточек и досок: убранное возвращается, удалённое
-  насовсем — нет.
-- **Организация.** Четыре роли, приглашения по ссылке, подразделения
-  деревом, видимость досок по подразделениям, наблюдение за поддеревом.
-  Изоляция организаций держится политиками базы, а не проверками в коде.
-- **Вход.** По паролю и через корпоративного провайдера (OIDC).
-  Заведение людей из каталога по SCIM.
-- **Интеграции.** API с версией в адресе, кодами вместо текста
-  и безопасным повтором; подписки на события с подписью и повторами;
-  выгрузка всех данных организации одним файлом.
-- **Доступность.** Всё делается с клавиатуры; контраст держит WCAG 2.2 AA
-  в обеих темах; страница не листается вбок и не теряет содержимое при
-  двойном размере текста.
+What has been deliberately left out is listed at the end of
+[`REQUIREMENTS.md`](REQUIREMENTS.md), each with what would lift the
+deferral. Briefly: no file attachments on cards, no dates as a schedule
+and no Gantt charts (that is a different product), and no public cloud
+with self-service — the installation is meant to be private, which is
+exactly why sign-up closes with a setting.
 
-## Чего продукт не делает
+Which schema decisions cannot be taken back after the fact is in
+[`research/schema-decisions.html`](research/schema-decisions.html)
+(Russian).
 
-Отложенное перечислено в конце [`REQUIREMENTS.md`](REQUIREMENTS.md),
-и у каждого пункта сказано, что снимет отсрочку. Коротко: вложений
-в карточках нет, сроков и диаграммы Ганта не будет (это другой продукт),
-публичного облака с самообслуживанием — тоже: установка предполагается
-частной, и регистрация закрывается настройкой ровно поэтому.
-
-Что из решений в схеме необратимо задним числом — в
-[`research/schema-decisions.html`](research/schema-decisions.html).
-
-## Устройство
+## How it is built
 
 ```
-cmd/takt/           единственный исполняемый файл: serve, migrate, doctor
-internal/rank/      дробная индексация — строковые ключи порядка карточек
-internal/board/     доменная модель доски и применение операций
-internal/org/       организации, состав команды, приглашения
-internal/auth/      личности, членство, сессии
-internal/httpapi/   маршруты, доступ, раздача фронтенда
-internal/store/     пул соединений, области видимости, миграции
-migrations/         SQL, встроенный в бинарник
-deploy/             инициализация базы
+cmd/takt/           the single executable: serve, migrate, doctor
+internal/rank/      fractional indexing — string keys for card order
+internal/board/     the board domain model and applying operations
+internal/org/       organisations, team membership, invitations
+internal/auth/      identities, membership, sessions
+internal/httpapi/   routes, access, serving the client
+internal/store/     connection pool, transaction scopes, migrations
+migrations/         SQL, embedded into the binary
+deploy/             database initialisation
 web/                React + TypeScript
 ```
 
-Четыре решения в схеме необратимы задним числом и заложены до того, как
-появились данные:
+Four decisions in the schema cannot be taken back after the fact, and
+were laid down before there was any data:
 
-1. **`cards.position` — строковый ключ дробной индексации.** Перемещение
-   карточки — один `UPDATE`, и два одновременных перетаскивания не ломают
-   порядок. Алгоритм и его свойства — в `internal/rank`, с тестами.
-2. **`card_events` — append-only журнал.** Cycle time, диаграмма потока и
-   лента активности считаются из истории переходов. Восстановить её позже
-   неоткуда.
-3. **`org_id` в каждой таблице.** Сейчас бесплатно, потом — миграция всего.
-4. **Точки старта и финиша на колонках.** Через них определены время цикла,
-   возраст карточки и пропускная способность: без разметки журнал переходов
-   копится, но не отвечает на вопрос «шла ли тогда работа». Разметить колонки
-   можно когда угодно, ответить за прошлое — нет.
+1. **`cards.position` — a string key of fractional indexing.** Moving a
+   card is a single `UPDATE`, and two simultaneous drags do not break
+   the order. The algorithm and its properties are in `internal/rank`,
+   with tests.
+2. **`card_events` — an append-only log.** Cycle time, the cumulative
+   flow diagram and the activity feed are computed from the history of
+   transitions. There is nowhere to recover that history from later.
+3. **`org_id` in every table.** Free now; a migration of everything
+   later.
+4. **Start and finish points on columns.** Cycle time, card age and
+   throughput are defined through them: without the markup the
+   transition log accumulates but cannot answer "was work running
+   then?". Columns can be marked up at any time; answering for the past
+   cannot.
 
-### Мультиарендность
+### Multi-tenancy
 
-Организация — это арендатор. Личность и участие разделены:
+An organisation is a tenant. Identity and membership are separate:
 
 ```
-users        почта и пароль, глобально уникальные — это человек
-memberships  кто в какой организации и с какой ролью — это участие
-sessions     помнят, в какой организации человек работает сейчас
+users        e-mail and password, globally unique — this is a person
+memberships  who is in which organisation and with which role
+sessions     remember which organisation the person is working in now
 ```
 
-Роль (`owner`, `member`, `viewer`) — свойство участия, а не человека: один
-и тот же сотрудник бывает владельцем своей команды и наблюдателем в чужой.
-Попасть в организацию можно только двумя способами — создать её или принять
-приглашение; вписать себя в чужую команду нельзя.
+A role (`owner`, `member`, `viewer`) is a property of membership, not
+of the person: the same employee is an owner of their own team and a
+viewer in somebody else's. There are exactly two ways into an
+organisation — create it or accept an invitation; you cannot write
+yourself into someone else's team.
 
-**Изоляция обеспечивается базой, а не кодом.** На всех таблицах с данными
-включён Row-Level Security с политикой `org_id = app_current_org()`, где
-`app_current_org()` читает настройку транзакции. Настройку выставляет
-`store.BeginTenant`, и она транзакционная — соединение возвращается в пул
-чистым.
+**Isolation is provided by the database, not by code.** Every table
+with data has row-level security with the policy
+`org_id = app_current_org()`, where `app_current_org()` reads a
+transaction setting. `store.BeginTenant` sets it, and it is
+transaction-scoped — the connection goes back to the pool clean.
 
-Ключевое свойство: **без выставленного арендатора не видно ничего.**
-`current_setting` возвращает NULL, сравнение даёт NULL, строка не проходит.
-Забыть область — значит получить пустой ответ, а не чужие данные. Одного
-забытого `where org_id = …` для утечки недостаточно.
+The key property: **with no tenant set, nothing is visible.**
+`current_setting` returns NULL, the comparison yields NULL, the row
+does not pass. Forgetting the scope gives you an empty answer, not
+somebody else's data. One forgotten `where org_id = …` is not enough
+for a leak.
 
-> **Приложение не должно подключаться суперпользователем.** Для суперпользователя
-> и для роли с `BYPASSRLS` политики не действуют вообще, и вся изоляция молча
-> исчезает: запросы работают, просто отдают лишнее. Приложение проверяет это
-> при старте и отказывается запускаться. Роль для подключения создаёт
+> **The application must not connect as a superuser.** Policies do not
+> apply at all to a superuser or to a role with `BYPASSRLS`, and the
+> whole of the isolation quietly disappears: queries work, they just
+> return too much. The application checks this at startup and refuses
+> to run. The connection role is created by
 > `deploy/postgres-init/10-app-role.sh`.
 
-Приглашение — исключение из схемы: его открывают по секретной ссылке, когда
-организация ещё неизвестна, а у человека может не быть аккаунта. Для него
-заведена вторая политика, открывающая строку по хешу токена. Знание секрета
-и есть право — ровно то, чем приглашение является. В базе хранится только
-хеш, поэтому ссылку невозможно показать повторно.
+An invitation is the exception to the scheme: it is opened by a secret
+link, when the organisation is not yet known and the person may not
+have an account. It has a second policy that opens the row by the hash
+of the token. Knowing the secret *is* the right — which is exactly what
+an invitation is. Only the hash is stored, so the link cannot be shown
+a second time.
 
-### Подразделения
+### Subdivisions
 
-Команда может лежать внутри команды, до пяти уровней. Предел не из
-осторожности: он превращает «сколько угодно предков» в массив известной
-длины, по которому работает индекс. Linear ограничивает пятью, GitLab
-допускает двадцать, но сам рекомендует не больше пяти и связывает глубину
-с деградацией.
+A team may sit inside a team, up to five levels. The limit is not
+caution: it turns "any number of ancestors" into an array of known
+length that an index can work with. Linear caps at five; GitLab allows
+twenty but recommends no more than five itself, and ties depth to
+degradation.
 
-Дерево хранится дважды: `teams.parent_id` — источник истины,
-`teams.ancestor_ids` — путь от корня до себя, пересчитываемый триггером.
-Так сделал GitLab, заменив рекурсивные запросы на массив с GIN-индексом,
-и по той же причине: рекурсивный запрос внутри политики планировщик не
-сплющивает, а массив ложится в индексное условие.
+The tree is stored twice: `teams.parent_id` is the source of truth,
+`teams.ancestor_ids` is the path from the root, recomputed by a
+trigger. GitLab did the same, replacing recursive queries with an array
+and a GIN index, and for the same reason: the planner does not flatten
+a recursive query inside a policy, while an array folds into an index
+condition.
 
-Роль наследуется вниз и не понижается: состоящий в направлении состоит и
-во всех отделах под ним. Правило «максимум из унаследованного»
-предсказуемо, а «где-то ниже урезали» превращает разбор доступа в
-раскопки. Так у всех, кто это реализовал.
+A role is inherited downwards and never reduced: someone in a division
+is also in every department under it. "The maximum of what was
+inherited" is predictable; "somewhere below it was trimmed" turns
+working out an access question into an excavation. Everyone who has
+implemented this settled on the same rule.
 
-### Видимость досок
+### Board visibility
 
-Внутри организации видимость перестаёт быть плоской: доска бывает открытой
-всем (`org`, значение по умолчанию), командной (`team`) или закрытой
-(`private` — только поимённо). Область транзакции поэтому шире, чем
-арендатор: `store.InTenant` выставляет и организацию, и человека, а
-`store.InOrg` — только организацию, для служебных задач, у которых нет
-действующего лица.
+Inside an organisation visibility stops being flat: a board is open to
+everyone (`org`, the default), to a team (`team`), or closed
+(`private` — by name only). The transaction scope is therefore wider
+than the tenant: `store.InTenant` sets both the organisation and the
+person, while `store.InOrg` sets only the organisation, for background
+jobs that have no actor.
 
-Наблюдение — строка в `observers`, а не признак у человека. Разница в том,
-что признак неизбежно означает «вся организация»: у GitLab наблюдатель
-сделан типом пользователя и поэтому видит весь инстанс, ограничить его
-подразделением нечем. Строка с указанием команды открывает ровно одно
-поддерево, без указания — всю организацию, а руководитель двух направлений
-выражается двумя строками. Наблюдение ортогонально роли: «видит всё» и
-«что меняет» — разные вопросы, иначе пришлось бы заводить
+Observation is a row in `observers`, not a flag on a person. The
+difference is that a flag inevitably means "the whole organisation":
+GitLab made the observer a user type, so such a user sees the entire
+instance and there is nothing to confine them to a subdivision. A row
+naming a team opens exactly one subtree; a row without one opens the
+whole organisation; and someone heading two divisions is expressed by
+two rows. Observation is orthogonal to the role: "sees everything" and
+"changes what" are different questions — otherwise we would need
 `owner-observer`, `member-observer`, `viewer-observer`.
 
-Закрытая доска — единственное исключение из «видит всё», и оно намеренное.
+A closed board is the single exception to "sees everything", and a
+deliberate one.
 
-### Журнал административных действий
+Two properties of this scheme are not obvious, and both are provided by
+the database:
 
-На доске журналируется всё — `card_events` пишет каждое перемещение.
-За её пределами до недавнего времени не журналировалось ничего: кто выдал
-приглашение, кто поменял роль, кто перенёс отдел, кто сделал человека
-наблюдателем. Эти вопросы задают при разборе инцидента, и задают их всегда
-постфактум, поэтому `audit_events` — решение того же класса, что и сам
-журнал переходов: либо пишется с начала, либо не существует.
+- **You can only close a board around yourself.** Postgres checks the
+  `select` policy against the new row too, so a board cannot be moved
+  into a state where you cannot see it. Otherwise the board would stay
+  visible only to those listed, and nobody could fix it: an invisible
+  board cannot be edited by anyone, the organisation owner included.
+- **The membership of a closed board is visible to the organisation
+  owner and to the member themselves.** The list of people on a hiring
+  board is itself information.
 
-Три свойства обеспечены базой, а не обещанием:
+### The audit log of administrative actions
 
-- **Пишет триггер, а не код.** Изменение, сделанное миграцией, скриптом
-  или руками в `psql`, попадает в журнал наравне с пришедшим через API.
-  Журнал, который ведёт приложение, молчит ровно в тех случаях, ради
-  которых заводился.
-- **Только дописывается.** Политик `update` и `delete` нет вовсе — значит,
-  они запрещены по умолчанию, в том числе владельцу организации.
-- **Подпись нельзя подделать.** Политика вставки требует, чтобы автор
-  записи совпадал с личностью в области транзакции.
+On a board everything is logged — `card_events` records every move.
+Outside the board, until recently, nothing was: who issued an
+invitation, who changed a role, who moved a department, who made
+someone an observer. Those questions are asked while working through an
+incident, and always after the fact, so `audit_events` is a decision of
+the same class as the transition log itself: either it is written from
+the start, or it does not exist.
 
-Секреты в журнал не попадают: хеш токена приглашения вырезается, потому
-что политика открывает приглашение именно по хешу — знание хеша
-равносильно знанию ссылки.
+Three properties are provided by the database rather than promised:
 
-Действие без установленной личности записывается с пустым автором, а не
-отвергается: журнал, роняющий обслуживание базы, снимут первым же
-коммитом. Читают журнал владелец и наблюдатель всей организации.
+- **A trigger writes it, not the code.** A change made by a migration,
+  by a script, or by hand in `psql` reaches the log alongside one that
+  came through the API. A log kept by the application stays silent in
+  exactly the cases it was created for.
+- **Append-only.** There are no `update` or `delete` policies at all,
+  which means both are denied by default — to the organisation owner
+  too.
+- **The signature cannot be forged.** The insert policy requires the
+  author of the record to match the identity in the transaction scope.
 
-Два свойства этой схемы неочевидны, и оба обеспечены базой:
+Secrets do not reach the log: the hash of an invitation token is cut
+out, because the policy opens the invitation by that very hash —
+knowing the hash is equivalent to knowing the link.
 
-- **Закрыть доску можно только вокруг себя.** Postgres проверяет политику
-  `select` и на новом ряде тоже, поэтому перевести доску в состояние,
-  в котором сам её не видишь, нельзя. Иначе доска осталась бы видна одним
-  лишь вписанным, а исправить это было бы некому: редактировать невидимую
-  доску не может никто, включая владельца организации.
-- **Состав закрытой доски виден владельцу организации и самому
-  участнику.** Список участников доски найма сам по себе сведения.
+An action with no identity set is recorded with an empty author rather
+than rejected: a log that breaks database maintenance would be removed
+by the very next commit. The log is read by the owner and by an
+observer of the whole organisation.
 
-### Контракт операций
+### The operations contract
 
-Клиент присылает намерение, а не вычисленное состояние:
+The client sends an intent, not a computed state:
 
 ```
 POST /api/boards/{id}/operations
@@ -258,23 +269,24 @@ POST /api/boards/{id}/operations
     "payload": { "cardId": "…", "toColumnId": "…",
                  "place": "after", "afterCardId": "…" } }
 
-→ 200 { version, patch }          применено
-→ 409 { error, columnId, currentOrder, version }   конфликт
+→ 200 { version, patch }                            applied
+→ 409 { error, columnId, currentOrder, version }    conflict
 ```
 
-`place` принимает `start`, `end` или `after` (последнее — вместе с
-`afterCardId`) и обязателен по смыслу: умолчания «по отсутствию поля»
-означали бы в разных операциях разное.
+`place` takes `start`, `end` or `after` (the last together with
+`afterCardId`) and is required by meaning: "default when the field is
+absent" would mean different things in different operations.
 
-`operationId` стабилен между повторами. Если ответ потерялся в сети,
-повтор с тем же идентификатором вернёт сохранённый результат, а не создаст
-вторую карточку.
+`operationId` is stable across retries. If the response is lost on the
+network, a retry with the same identifier returns the saved result
+rather than creating a second card.
 
-Ответ `409` несёт текущий порядок затронутой колонки — клиент пересобирает
-её точечно, без перезагрузки доски. Тем же `409` отвечает попытка положить
-карточку в колонку с исчерпанным жёстким лимитом.
+A `409` carries the current order of the affected column — the client
+rebuilds just that column, without reloading the board. The same `409`
+answers an attempt to put a card into a column whose hard limit is
+exhausted.
 
-`UPDATE_COLUMN` меняет любое подмножество свойств колонки:
+`UPDATE_COLUMN` changes any subset of a column's properties:
 
 ```
 { "type": "UPDATE_COLUMN",
@@ -283,72 +295,60 @@ POST /api/boards/{id}/operations
                "wipLimit": 3, "wipLimitHard": false } }
 ```
 
-Не присланное поле не меняется. Для лимита это значит, что «не трогать» и
-«снять» — разные намерения: снимает лимит только явный `null`.
+A field that is not sent does not change. For the limit that means
+"leave it alone" and "remove it" are different intents: only an
+explicit `null` removes the limit.
 
-## Интеграционное API
+## The integration API
 
-Описание контракта — на странице `/api/v1/docs` работающей установки;
-машиночитаемое — `/api/v1/openapi.json`. Версия стоит в адресе, причина
-отказа приходит кодом, повтор с тем же ключом идемпотентности безопасен.
+The contract is published at `/api/v1/docs` on a running installation,
+machine-readable at `/api/v1/openapi.json`. The version is in the path,
+the reason for a refusal arrives as a code rather than as text, and a
+repeat with the same idempotency key is safe.
 
-## Разработка
+## Development
 
 ```bash
-make check              # формат, vet, все тесты кроме сквозных и нагрузочных
-make e2e                # сквозные сценарии в настоящем браузере (нужен Chrome)
-make load               # поведение под нагрузкой, идёт минуты
-make security           # уязвимости зависимостей и статический разбор
-make web-dev            # Vite с горячей перезагрузкой на :5173
-make build              # бинарник в bin/takt
-make image              # docker-образ takt:dev (BASE=alpine|debian)
-make images             # образы на обоих основаниях
-make bundle             # комплект для установки без доступа в интернет
+make check              # gofmt, vet, every test except end-to-end and load
+make e2e                # end-to-end scenarios in a real browser
+make load               # behaviour under load; takes minutes
+make security           # dependency vulnerabilities and static analysis
+make web-dev            # Vite with hot reload on :5173
+make build              # the binary, into bin/takt
+make image              # the docker image, takt:dev (BASE=alpine|debian)
+make images             # images on both bases
+make bundle             # the payload for an air-gapped installation
 ```
 
-`make check` обязан проходить и в закрытом контуре — поэтому проверок,
-которым нужна сеть, в нём нет.
+`make check` must pass everywhere, including in a closed network, which
+is why the security targets are not part of it — they need the network.
 
-Версию во все три сборки передаёт `git describe`, а не файл: файл
-в образе можно подменить, а версия обязана быть тем же артефактом, что
-и код. Как собрать образ вручную и чем это грозит, если забыть версию, —
-в [`docs/установка.md`](docs/установка.md).
+All three builds take their version from `git describe`, not from a
+file: a file inside an image can be swapped, and the version has to be
+the same artefact as the code. How to build the image by hand, and what
+forgetting the version costs, is in
+[`docs/install.md`](docs/install.md).
+How to work on this codebase and how to send a patch are both
+described in [`CONTRIBUTING.md`](CONTRIBUTING.md) (Russian).
 
-Тесты операций работают против настоящей базы: почти вся их логика живёт в
-SQL и транзакциях, и подменять их заглушками — значит проверять заглушки.
-Поэтому `go test ./...` без базы падает нарочно: прогон без неё однажды
-напечатал «ok» у каждого пакета, пропустив 248 проверок из 259. Либо база
-задана (`make check` задаёт её сам), либо прогон объявлен коротким:
-`go test -short ./...`.
+## Contributing and security
 
-Как здесь принято править и как прислать патч —
-в [`CONTRIBUTING.md`](CONTRIBUTING.md).
+How to send a patch is in [`CONTRIBUTING.md`](CONTRIBUTING.md); in
+short, anything larger than a typo is worth discussing first, because
+several of the refusals here are decisions with a written argument
+rather than gaps. How people talk to each other is in
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
-## Как участвовать
+Report vulnerabilities privately, **not as a public issue** —
+[`SECURITY.md`](SECURITY.md) says how, and what you can expect back.
 
-Порядок — в [`CONTRIBUTING.md`](CONTRIBUTING.md); коротко: правку
-больше опечатки стоит сперва обсудить, потому что часть отказов —
-решения с записанным доводом, а не пробелы. Как здесь разговаривают —
-в [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+## Licence
 
-Об уязвимости — **не публичной задачей**, а приватно:
-[`SECURITY.md`](SECURITY.md) говорит куда и чего ждать в ответ.
+Apache License 2.0 — [`LICENSE`](LICENSE). Third-party code that ships
+with the product is listed in [`THIRD-PARTY.md`](THIRD-PARTY.md), and
+the list is enforced by a test rather than maintained by hand.
 
-## Лицензия
-
-Apache License 2.0 — [`LICENSE`](LICENSE). Кратко: пользоваться, менять
-и распространять, в том числе в закрытом продукте, можно; менять и
-распространять — сохраняя уведомление об авторстве и оставляя
-[`NOTICE`](NOTICE) с продуктом; патентная лицензия даётся и отзывается
-у того, кто пойдёт судиться о патентах. Гарантий нет.
-
-Заголовков с лицензией в файлах нет намеренно. Apache-2.0 их не требует,
-а восемьсот одинаковых шапок делают ровно одно: отодвигают комментарий,
-объясняющий, почему код такой, на пятнадцать строк ниже. Лицензия одна
-на весь репозиторий, и она в корне.
-
-Чужой код, который едет вместе с продуктом, перечислен
-в [`THIRD-PARTY.md`](THIRD-PARTY.md) — только тот, что попадает
-в бинарник и в собранный клиент, без инструментов сборки. Список
-не переписывается руками задним числом: проверка `internal/license`
-берёт то, что линкуется в `cmd/takt`, и требует строку на каждый модуль.
+There are deliberately no per-file licence headers: Apache-2.0 does not
+require them, and eight hundred identical banners do exactly one thing —
+push the comment explaining *why the code is like this* fifteen lines
+further down.
