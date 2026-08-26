@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Takt</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html" aria-current="page">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>Takt</h1>
+<p>A kanban board with flow metrics, for one team: work on the board, metrics computed from that work, an organisation with roles and subdivisions, integrations. It runs inside your own perimeter — no cloud and no external services required.</p>
+<p><strong>The product interface is in Russian.</strong> These English pages quote everything a user clicks the way it appears on screen, with a translation next to it. The Russian original of this page is <a href="ru/индекс.html">here</a>.</p>
+<figure><img src="screenshots/доска.png" alt="The board" loading="lazy">
+<figcaption>The board</figcaption></figure>
+<h2>Where to start</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You want to</th><th>Open</th></tr></thead>
+<tbody>
+<tr><td>Learn to run a board</td><td><a href="quickstart.html">First fifteen minutes</a></td></tr>
+<tr><td>Solve one specific problem</td><td><a href="howto.html">How to</a></td></tr>
+<tr><td>Look up a list or a setting</td><td><a href="reference.html">Reference</a></td></tr>
+<tr><td>Understand why it works this way</td><td><a href="architecture.html">Design decisions</a></td></tr>
+<tr><td>Keep it on one sheet</td><td><a href="cheatsheet.html">Cheat sheet</a></td></tr>
+<tr><td>Install and operate it</td><td><a href="install.html">Installation</a></td></tr>
+</tbody>
+</table></div>
+<p>The split is not accidental. Learning, instructions, lookup and explanation answer different questions, and mixed into one text they get in each other&#39;s way: you learn in order, solve a problem by jumping straight in, and look things up in a table.</p>
+<h2>What the product does</h2>
+<p><strong>Board.</strong> Columns are stages, cards are the work, and their order is manual. Move a card with the mouse or from the keyboard. Columns carry work-in-progress limits and entry rules. A blocked card carries the reason, not just the status. Cards split into subtasks and link to each other — including across boards owned by different teams.</p>
+<p><strong>Three views of the same data.</strong> The board answers &#34;how is the work going&#34;, the table answers &#34;what is the oldest and what did we promise&#34;, the change feed answers &#34;what happened&#34;.</p>
+<p><strong>Filtering and grouping.</strong> Eight filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
+<p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
+<p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
+<p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
+<p><strong>Integrations.</strong> A REST API with a published contract, keys with scopes, SCIM 2.0 directory provisioning, event subscriptions signed with a key and a delivery log, and a full data export in one file.</p>
+<p><strong>Sign-in.</strong> Password or a corporate identity provider (OIDC).</p>
+<h2>What the product does not do</h2>
+<p>No dates as a schedule and no Gantt charts, no public cloud with self-service sign-up, no file attachments on cards. These are not omissions: each refusal has a recorded reason, and some have a recorded condition under which they will be revisited. The full list is in the <a href="REQUIREMENTS.html">requirements</a> (Russian).</p>
+<h2>How it is deployed</h2>
+<p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
+<p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="CHANGELOG.html">changelog</a>.</p>
+<h2>Words you will see on screen</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>On screen</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td>«Доски»</td><td>Boards</td></tr>
+<tr><td>«Команда»</td><td>Team: people, invitations, keys, subscriptions, export</td></tr>
+<tr><td>«Структура»</td><td>Structure: subdivisions</td></tr>
+<tr><td>«Доска», «Таблица», «Изменения»</td><td>Board, Table, Changes — three views</td></tr>
+<tr><td>«Поток»</td><td>Flow: metrics</td></tr>
+<tr><td>«Архив»</td><td>Archive</td></tr>
+<tr><td>«Завести доску», «Завести карточку»</td><td>Create a board, create a card</td></tr>
+<tr><td>«В архив», «Вернуть»</td><td>Archive it, restore it</td></tr>
+<tr><td>«Владелец», «Участник», «Наблюдатель»</td><td>Owner, member, viewer</td></tr>
+</tbody>
+</table></div>
+<footer>Takt, version v0.2.0-11-ge7a3da2-dirty. Built from overview.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

@@ -254,18 +254,18 @@ func TestDocsUseTheSameWordsAsTheProduct(t *testing.T) {
 // на английский, английский — обратно.
 func TestTranslationsAreReachableFromBothSides(t *testing.T) {
 	документы := документы(t)
-	русский, ok := документы["docs/индекс.md"]
-	if !ok {
-		t.Fatal("обзора на русском нет")
-	}
-	английский, ok := документы["docs/en/overview.md"]
+	английский, ok := документы["docs/overview.md"]
 	if !ok {
 		t.Fatal("обзора на английском нет")
 	}
-	if !strings.Contains(русский, "en/overview.md") && !strings.Contains(русский, "In English") {
-		t.Error("русский обзор не ведёт на английскую страницу: её не найдут")
+	русский, ok := документы["docs/ru/индекс.md"]
+	if !ok {
+		t.Fatal("обзора на русском нет")
 	}
-	if !strings.Contains(английский, "индекс.md") {
-		t.Error("английский обзор не ведёт обратно на русскую документацию")
+	if !strings.Contains(английский, "ru/индекс.md") && !strings.Contains(английский, "По-русски") {
+		t.Error("английский обзор не ведёт на русскую страницу: её не найдут")
+	}
+	if !strings.Contains(русский, "overview.md") {
+		t.Error("русский обзор не ведёт обратно на английскую документацию")
 	}
 }

@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html" aria-current="page">Installation</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>Installation</h1>
+<p>How to install Takt, how to run it, and what it needs. Written for whoever installs and keeps it running; for the people who use it, see the <a href="overview.html">overview</a>.</p>
+<p>Three ways, all giving the same application from the same image: <code>docker compose</code> on one machine, a binary under systemd, a chart in Kubernetes. The difference is who holds the process and who runs the migrations.</p>
+<h2>What you need to install it</h2>
+<p>The limits below come from measurements, not from a wish list. Beyond them the product still has to work; it just is not obliged to hold its response thresholds.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>What</th><th>How much</th></tr></thead>
+<tbody>
+<tr><td>PostgreSQL</td><td>16 or newer</td></tr>
+<tr><td>Kubernetes (if you install the chart)</td><td>1.25 or newer</td></tr>
+<tr><td>CPU and memory per replica</td><td>1 core, 256 MB; no state on disk</td></tr>
+<tr><td>Database storage</td><td>from 1 GB; it grows with the event log, not with cards</td></tr>
+<tr><td>Browser</td><td>those where Baseline newly is at least a year old</td></tr>
+<tr><td>Network</td><td>nothing outbound; inbound through a TLS proxy</td></tr>
+<tr><td>People per installation</td><td>up to 130</td></tr>
+</tbody>
+</table></div>
+<p>What the installation does <strong>not</strong> need: internet access, object storage, a message queue, a separate cache. PostgreSQL is the only external dependency. Turn on corporate sign-in and there is a second one: the OIDC provider.</p>
+<p>What we expect from whoever installs it. Obligations divide, and without saying where the line falls there is nothing to check ours against:</p>
+<ol>
+<li><strong>The database is yours.</strong> Backups, point-in-time recovery, disk space. The chart deliberately does not manage it — why, is in the section on point-in-time recovery below.</li>
+<li><strong>A TLS proxy sits in front</strong>, forwarding <code>Upgrade</code> and <code>Connection</code>. Without them the board stops updating itself.</li>
+<li><strong><code>BASE_URL</code> matches the address in the browser.</strong> Invitation links and the change-stream address are built from it.</li>
+<li><strong>No transaction-mode connection pooler in front of the database</strong> — database notifications do not survive one.</li>
+<li><strong>A backup is taken before an upgrade.</strong> Migration compatibility with the previous version is our side; the data is yours.</li>
+</ol>
+<p>There is something to check all of this with: <code>takt doctor</code> answers for every item a machine can answer for.</p>
+<h2>One image for every profile</h2>
+<p>One image is built. Compose and the Helm chart both take it without a rebuild — the whole difference is environment variables and who runs the migrations. A second <code>Dockerfile</code> would grow a divergence between &#34;on a server&#34; and &#34;in the cluster&#34; the same day.</p>
+<h3>Where to get it</h3>
+<p>The published image lives in the registry and is pushed by the release run for a tag:</p>
+<pre><code>docker pull ghcr.io/findias/takt:v0.2.0</code></pre>
+<p>To build your own, from the repository root:</p>
+<pre><code>make image                    # takt:dev, alpine base, version from git describe
+make image BASE=debian        # takt:dev-debian
+make images                   # both at once, with a size table</code></pre>
+<h3>The base of the final layer</h3>
+<p>There is one Dockerfile; the base of the final layer arrives as the <code>RUNTIME_BASE</code> build argument. The build stages do not depend on it at all: the binary is static (<code>CGO_ENABLED=0</code>) and the client is just files.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Base</th><th>Image</th><th>Size</th><th>Architectures</th></tr></thead>
+<tbody>
+<tr><td><code>alpine</code> (default)</td><td><code>alpine:3.21</code></td><td>22 MB</td><td>amd64, arm64</td></tr>
+<tr><td><code>debian</code></td><td><code>debian:12-slim</code></td><td>88 MB</td><td>amd64, arm64</td></tr>
+</tbody>
+</table></div>
+<p>The choice is not about size: <code>debian</code> is taken where musl is viewed with suspicion, being the same libc as on most servers.</p>
+<p><strong>Any other base will do</strong>, not just these two. What it has to provide is small: either <code>apt</code> or <code>apk</code>, either <code>useradd</code> or <code>adduser</code>, and that is all. The name in <code>BASE</code> becomes the image tag, so pass it alongside — otherwise someone else&#39;s base ships tagged <code>dev-alpine</code> and there is no way to tell it apart later:</p>
+<pre><code>make image BASE=mine RUNTIME_BASE=my.registry/image:tag</code></pre>
+<p>Such a base does not go into the release matrix: that one carries only what is published to public registries.</p>
+<p>By hand, the same thing:</p>
+<pre><code>docker build --build-arg VERSION=v0.2.0 \
+  --build-arg RUNTIME_BASE=debian:12-slim \
+  -t takt:v0.2.0-debian .</code></pre>
+<p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
+<p><strong><code>VERSION</code> is passed as a build argument, and that is not a formality.</strong> The version is linked into the binary rather than read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. Hence the trap: <code>docker build .</code> without <code>--build-arg</code> builds and runs fine, but <code>takt version</code> answers &#34;версия не задана&#34; — honest, unlike an invented number, but not worth pushing to a registry. <code>make image</code> fills <code>git describe</code> in for you.</p>
+<p>There is no need to pull the image for <code>docker compose</code>: it builds one itself (<code>build: .</code> in <code>docker-compose.yml</code>). For an air-gapped installation the image travels as a file — <code>make bundle</code>; the section on installing without internet access, below, covers it.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
+<tbody>
+<tr><td><code>BASE_URL</code></td><td>the address in the browser, no trailing slash</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>LISTEN_ADDR</code></td><td>listen address, <code>:8080</code> by default</td></tr>
+<tr><td><code>WEB_DIR</code></td><td>directory with the built client; empty means do not serve it</td></tr>
+<tr><td><code>SIGNUP</code></td><td>who may create organisations: <code>first</code>, <code>open</code>, <code>closed</code></td></tr>
+<tr><td><code>OIDC_ISSUER</code></td><td>identity provider address; empty means password only</td></tr>
+<tr><td><code>OIDC_CLIENT_ID</code> / <code>OIDC_CLIENT_SECRET</code></td><td>the application&#39;s credentials at the provider</td></tr>
+<tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
+</tbody>
+</table></div>
+<p><strong>Migrations are a separate command,</strong> <code>takt migrate</code>, not part of startup. On one replica it makes no difference; on two, a simultaneous start tears the database apart.</p>
+<p>The role in <code>DATABASE_URL</code> must own its tables (or migrations will not apply) but must <strong>not</strong> be a superuser and must not have <code>BYPASSRLS</code> — row-level security does not apply to those, and tenant isolation silently disappears. Managed clusters, CloudNativePG among them, create such a role by default. The application checks this condition at startup and refuses to run otherwise.</p>
+<h2>On an ordinary machine</h2>
+<p>Two ways, both giving the same application. The difference is who holds the process: docker or systemd.</p>
+<p><strong>With docker compose</strong> — when the machine has docker and you do not have a database yet:</p>
+<pre><code>cp .env.example .env          # set POSTGRES_PASSWORD and BASE_URL
+docker compose up -d
+docker compose run --rm app doctor</code></pre>
+<p>Compose brings a database up alongside. For a demo stand that is right; for production it is not — a database in a container has neither backups nor point-in-time recovery. As soon as the installation becomes real, move the database out and leave its address in <code>DATABASE_URL</code>.</p>
+<p><strong>From the binary, without docker</strong> — when the database already exists and the extra layer buys nothing:</p>
+<pre><code># 1. Role and database. The role owns its tables but is not a superuser
+#    and has no BYPASSRLS: isolation policies do not apply to those,
+#    and the separation between organisations quietly disappears.
+sudo -u postgres psql &lt;&lt;&#39;SQL&#39;
+create role takt login password &#39;YOUR_PASSWORD&#39; nosuperuser nocreaterole nocreatedb;
+create database takt owner takt;
+SQL
+
+# 2. The payload: the binary and the built client.
+sudo mkdir -p /opt/takt
+sudo tar xzf takt-&lt;version&gt;-linux-amd64.tar.gz -C /opt/takt --strip-components=1
+#    or build it yourself: make build &amp;&amp; cp -r bin/takt web/dist /opt/takt/
+
+# 3. Settings. systemd reads this file, hence 0600 and root ownership.
+sudo install -m 0600 /dev/null /etc/takt.env
+sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+DATABASE_URL=postgres://takt:YOUR_PASSWORD@localhost:5432/takt?sslmode=disable
+BASE_URL=https://takt.example.com
+LISTEN_ADDR=127.0.0.1:8080
+WEB_DIR=/opt/takt/dist
+SIGNUP=first
+ENV
+
+# 4. Schema. A separate command, before the first start: two processes
+#    migrating at once tear the database apart.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt migrate&#39;</code></pre>
+<p>The unit:</p>
+<pre><code># /etc/systemd/system/takt.service
+[Unit]
+Description=Takt
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=takt
+EnvironmentFile=/etc/takt.env
+ExecStart=/opt/takt/takt serve
+Restart=on-failure
+
+# The application keeps no state on disk — everything is in the
+# database. So it can be given neither write access nor extra
+# privileges, and that is a consequence, not an austerity measure.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# On shutdown the replica drops readiness first, waits for the proxy to
+# strike it off, and only then closes connections. A shorter pause means
+# torn requests for whoever was working at that moment.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl enable --now takt
+
+# doctor reads the same settings as the service — otherwise it checks a
+# different installation and cheerfully reports that all is well.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt doctor&#39;</code></pre>
+<p>The version answers with no settings at all — <code>/opt/takt/takt version</code>. It is asked precisely when nothing comes up.</p>
+<p>Then put a TLS proxy in front of <code>127.0.0.1:8080</code>. The application listens on the loopback deliberately: TLS, compression and body-size limits are the proxy&#39;s job, and doing them twice means the two settings will disagree. There are exactly two requirements on the proxy, both listed above: the same <code>BASE_URL</code>, and <code>Upgrade</code> with <code>Connection</code> forwarded.</p>
+<p><strong>Upgrading</strong> goes the same way as in a cluster, and in the same order: back the database up, then <code>takt migrate</code>, then the new binary, then <code>systemctl restart takt</code>, then <code>takt doctor</code>. The migration runs before the binary is replaced, because a migration is required to work with the *previous* version of the application and not the other way round — that is also what makes rollback possible.</p>
+<h2>Kubernetes</h2>
+<p>The chart is in <code>deploy/helm/takt</code>. It deliberately has no dependencies: your database is your own, with backups and point-in-time recovery, and slipping a replacement for it inside our chart would mean taking responsibility for someone else&#39;s area. It follows that installing needs no internet access — only an image in a reachable registry.</p>
+<pre><code>kubectl create secret generic takt-db \
+  --from-literal=DATABASE_URL=&#39;postgres://takt:...@postgres:5432/takt&#39;
+
+helm install takt deploy/helm/takt \
+  --set baseURL=https://takt.example.com \
+  --set database.existingSecret=takt-db \
+  --set ingress.enabled=true --set ingress.host=takt.example.com</code></pre>
+<p>The database password is passed as a ready-made secret rather than a chart value: from values it reaches both the release history and the output of <code>helm get values</code>, which is read more widely than people expect.</p>
+<p>Migrations run as a job with a <code>pre-install,pre-upgrade</code> hook — once, and before any new pod starts. A failed job is left behind: that is what you look at to find out why the rollout did not move.</p>
+<p><strong>Two probes, not one.</strong> <code>/healthz</code> answers &#34;the process is alive&#34; and does not touch the database: check liveness with the database and a database that blinks restarts every replica at once, then comes back to find them all busy restarting. <code>/readyz</code> answers &#34;requests may be sent&#34; and does check the database. It is also the first thing to go dark on shutdown: on a signal the replica drops readiness, waits five seconds for the load balancer to strike it off, and only then closes connections. That is why <code>terminationGracePeriodSeconds</code> in the chart exceeds the pause and the shutdown timeout combined.</p>
+<p>For a database inside the cluster there is <a href="../deploy/postgres/cloudnativepg-cluster.yaml"><code>deploy/postgres/cloudnativepg-cluster.yaml</code></a> as an example of what we expect from one. The chart can also bring up a database of its own (<code>postgresql.enabled=true</code>), and that is for a demo stand only — it has no backups.</p>
+<h2>The first sign-in</h2>
+<p>The first screen offers to create a team: on an empty installation the first person to arrive creates the organisation and becomes its owner. After that, registration is closed and that owner invites everyone else. <code>SIGNUP</code> switches this: <code>open</code> lets anyone create an organisation (this is how the demo stand runs), <code>closed</code> lets no one, which is what installations with a corporate identity provider want.</p>
+<p>Once installed, check that it was installed correctly:</p>
+<pre><code>docker compose run --rm app doctor     # or /app/takt doctor inside the pod</code></pre>
+<p>Readiness answers &#34;the process is alive and the database responds&#34;; <code>doctor</code> answers a different question: is this the right schema, the right address — and therefore will a Secure cookie ever arrive — is the identity provider reachable, and do the database notifications arrive without which the board never refreshes itself.</p>
+<h2>Sign-in through a corporate provider</h2>
+<p>Configured with environment variables, not in the database. Per- organisation settings would be right for a cloud installation, but then the client secret would have to live in the database too — meaning encryption, a key, key rotation, and the question &#34;who decrypts this if the server is lost&#34;. Corporate sign-in is installed in a closed network, where there is one organisation and the secret already lives in the cluster&#39;s secrets. Hence the rule: one installation, one provider, no secrets in the database.</p>
+<p>The redirect URI to register with the provider is built from <code>BASE_URL</code>: <code>&lt;BASE_URL&gt;/api/auth/oidc/callback</code>. There is deliberately no separate variable for it — it must not be able to disagree with <code>BASE_URL</code>.</p>
+<p>What happens on sign-in:</p>
+<ul>
+<li>a returning person is recognised by the pair &#34;issuer + <code>sub</code>&#34;, not by e-mail: e-mail changes, and someone with a new address would otherwise lose their boards;</li>
+<li>a first-time arrival is linked to an existing account by a <strong>verified</strong> e-mail — an unverified address would let someone claim another person&#39;s account;</li>
+<li>if nobody matches, a new account is created and joined to <code>OIDC_ORG</code>. Anyone already in at least one organisation is added nowhere: signing in must not quietly change who you belong to.</li>
+</ul>
+<p>The <code>id_token</code> signature is not verified, and that is deliberate: in the code flow the token comes to us directly from the provider&#39;s endpoint over TLS, which the specification explicitly considers sufficient (OIDC Core, 3.1.3.7). A hand-written JWT check — base64 parsing, key selection from JWKS, <code>alg</code> comparison — is exactly the code people get wrong, and getting it wrong costs the whole of authentication. Claims about the person are read from <code>userinfo</code> over the same connection.</p>
+<h2>Directory provisioning (SCIM)</h2>
+<p>The provider pushes employees and groups to <code>/scim/v2/…</code>. The key is an ordinary one from <strong>«Ключи для интеграций»</strong> (integration keys) with the single <code>scim:write</code> scope; the key itself determines the organisation, because a separate &#34;where to provision&#34; setting would be a second source of truth.</p>
+<p>What our side does:</p>
+<ul>
+<li><strong>deactivation removes membership but not the person.</strong> Someone who left loses access immediately, while their cards, comments and audit entries stay signed by them. Deleting the record would mean rewriting history after the fact;</li>
+<li><strong><code>DELETE</code> does the same as <code>active = false</code>.</strong> Providers disagree: some send a deactivation, some a deletion, some both in a row;</li>
+<li><strong>groups become teams, not roles.</strong> A role is a property of membership in an organisation, and the directory knows nothing about it: there, an employee belongs to a department, not &#34;is an owner&#34;. Roles are assigned here, and provisioning does not touch them;</li>
+<li><strong>someone who left also leaves the teams</strong> — a team that still lists a departed employee misleads whoever distributes work by it.</li>
+</ul>
+<p>Bulk requests are not supported, and <code>ServiceProviderConfig</code> says so honestly: they are reached for at thousands of employees, and this installation is sized for a hundred.</p>
+<h2>Point-in-time recovery</h2>
+<p>Backups are the database&#39;s job, and the chart deliberately does not manage them. Only the database needs copying: the image is reproducible from source, the static files live inside the image, and the application keeps no state on disk — which is why it runs with a read-only root.</p>
+<p>Restore into a <strong>new</strong> cluster, not over the live one, or you lose the ability to compare and step back if you restored to the wrong point.</p>
+<p>What is specific to us about rolling the database back in time:</p>
+<ul>
+<li><strong>Webhooks will be sent again.</strong> Retry keys and delivery marks roll back with everything else, and the worker works through the outbox afresh. Receivers must be ready for a repeat — the delivery identifier travels in a header, and that is how a repeat is recognised.</li>
+<li><strong>Sessions roll back too.</strong> Anyone who signed in after the restore point is signed out; anyone issued a session before it keeps working. That is correct: a session is data like any other.</li>
+<li><strong>Access keys revoked after the point become valid again.</strong> If the rollback is because a key leaked, revoke it once more afterwards.</li>
+<li><strong>Open boards re-read themselves.</strong> Clients hold the change stream and reconnect, receiving a fresh snapshot. Nothing to do.</li>
+</ul>
+<p>Test the restore before the outage, not during it: bring a copy up in a separate namespace, apply the chart with <code>database.existingSecret</code> pointing at the restored cluster, and open a board. It takes a quarter of an hour and answers the only question the whole exercise exists for — &#34;does it actually come up from the copy?&#34;</p>
+<h2>Installing without internet access</h2>
+<pre><code>make bundle          # builds dist/bundle-&lt;version&gt;: image, chart, README, checksums</code></pre>
+<p>The bundle travels as a file. On site:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror
+helm install takt takt-*.tgz --set image.tag=&lt;version&gt; \
+  --set baseURL=https://takt.example.com --set database.existingSecret=takt-db</code></pre>
+<p>The checksums are not a formality: into a closed network the file travels through intermediaries, and &#34;is this the same image&#34; is a question that will be asked. For the same reason the chart lets you refer to the image by digest — a tag in a mirror can be rewritten, a digest cannot.</p>
+<p>Neither the chart nor the application reaches out on its own: the chart has no dependencies and the application calls no external service. The single exception is corporate sign-in, and it talks only to the provider whose address you configured.</p>
+<h2>Upgrading in a closed network</h2>
+<p>There will be more upgrades than installations. Same bundle, shorter sequence:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;new version&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<ol>
+<li><strong>The image travels first, the release is upgraded second.</strong> An upgrade to an image that is not in the mirror leaves pods in <code>ImagePullBackOff</code>; with <code>maxUnavailable: 0</code> the old ones keep serving, but the rollout hangs.</li>
+<li><strong>Migrations run before pods are replaced,</strong> as the <code>takt-migrate</code> job with a <code>pre-upgrade</code> hook. Until it passes, no new pod starts; a failed job stays in the cluster, and that is what you read.</li>
+<li><strong><code>--reuse-values</code> is mandatory</strong> if anything was set at install time. Without it <code>helm upgrade</code> takes the chart defaults, and <code>signup</code>, <code>oidc</code> and the rest quietly revert.</li>
+<li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
+</ol>
+<p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
+<footer>Takt, version v0.2.0-11-ge7a3da2-dirty. Built from install.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

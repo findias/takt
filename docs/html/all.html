@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Takt — documentation</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<h1>Takt — documentation</h1>
+<p>Every section in one file. Version v0.2.0-11-ge7a3da2-dirty.</p>
+<h2>Содержание</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#quickstart">First 15 minutes</a></li>
+<li><a href="#howto">How to</a></li>
+<li><a href="#reference">Reference</a></li>
+<li><a href="#cheatsheet">Cheat sheet</a></li>
+<li><a href="#architecture">Design decisions</a></li>
+<li><a href="#install">Installation</a></li>
+<li><a href="#REQUIREMENTS">Требования</a></li>
+<li><a href="#CHANGELOG">Что менялось</a></li>
+</ul>
+<section id="overview">
+<h1>Takt</h1>
+<p>A kanban board with flow metrics, for one team: work on the board, metrics computed from that work, an organisation with roles and subdivisions, integrations. It runs inside your own perimeter — no cloud and no external services required.</p>
+<p><strong>The product interface is in Russian.</strong> These English pages quote everything a user clicks the way it appears on screen, with a translation next to it. The Russian original of this page is <a href="ru/индекс.html">here</a>.</p>
+<figure><img src="screenshots/доска.png" alt="The board" loading="lazy">
+<figcaption>The board</figcaption></figure>
+<h2>Where to start</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You want to</th><th>Open</th></tr></thead>
+<tbody>
+<tr><td>Learn to run a board</td><td><a href="quickstart.html">First fifteen minutes</a></td></tr>
+<tr><td>Solve one specific problem</td><td><a href="howto.html">How to</a></td></tr>
+<tr><td>Look up a list or a setting</td><td><a href="reference.html">Reference</a></td></tr>
+<tr><td>Understand why it works this way</td><td><a href="architecture.html">Design decisions</a></td></tr>
+<tr><td>Keep it on one sheet</td><td><a href="cheatsheet.html">Cheat sheet</a></td></tr>
+<tr><td>Install and operate it</td><td><a href="install.html">Installation</a></td></tr>
+</tbody>
+</table></div>
+<p>The split is not accidental. Learning, instructions, lookup and explanation answer different questions, and mixed into one text they get in each other&#39;s way: you learn in order, solve a problem by jumping straight in, and look things up in a table.</p>
+<h2>What the product does</h2>
+<p><strong>Board.</strong> Columns are stages, cards are the work, and their order is manual. Move a card with the mouse or from the keyboard. Columns carry work-in-progress limits and entry rules. A blocked card carries the reason, not just the status. Cards split into subtasks and link to each other — including across boards owned by different teams.</p>
+<p><strong>Three views of the same data.</strong> The board answers &#34;how is the work going&#34;, the table answers &#34;what is the oldest and what did we promise&#34;, the change feed answers &#34;what happened&#34;.</p>
+<p><strong>Filtering and grouping.</strong> Eight filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
+<p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
+<p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
+<p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
+<p><strong>Integrations.</strong> A REST API with a published contract, keys with scopes, SCIM 2.0 directory provisioning, event subscriptions signed with a key and a delivery log, and a full data export in one file.</p>
+<p><strong>Sign-in.</strong> Password or a corporate identity provider (OIDC).</p>
+<h2>What the product does not do</h2>
+<p>No dates as a schedule and no Gantt charts, no public cloud with self-service sign-up, no file attachments on cards. These are not omissions: each refusal has a recorded reason, and some have a recorded condition under which they will be revisited. The full list is in the <a href="REQUIREMENTS.html">requirements</a> (Russian).</p>
+<h2>How it is deployed</h2>
+<p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
+<p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="CHANGELOG.html">changelog</a>.</p>
+<h2>Words you will see on screen</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>On screen</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td>«Доски»</td><td>Boards</td></tr>
+<tr><td>«Команда»</td><td>Team: people, invitations, keys, subscriptions, export</td></tr>
+<tr><td>«Структура»</td><td>Structure: subdivisions</td></tr>
+<tr><td>«Доска», «Таблица», «Изменения»</td><td>Board, Table, Changes — three views</td></tr>
+<tr><td>«Поток»</td><td>Flow: metrics</td></tr>
+<tr><td>«Архив»</td><td>Archive</td></tr>
+<tr><td>«Завести доску», «Завести карточку»</td><td>Create a board, create a card</td></tr>
+<tr><td>«В архив», «Вернуть»</td><td>Archive it, restore it</td></tr>
+<tr><td>«Владелец», «Участник», «Наблюдатель»</td><td>Owner, member, viewer</td></tr>
+</tbody>
+</table></div>
+</section>
+<section id="quickstart">
+<h1>First fifteen minutes</h1>
+<p>Walk this path once and the board will stop needing explanations. We will create a board, put work on it, carry that work to the end, and invite a colleague.</p>
+<p>You need a board open in a browser and fifteen minutes.</p>
+<p><strong>The interface is in Russian.</strong> Buttons are quoted below exactly as they appear on screen, with a translation next to them.</p>
+<figure><img src="screenshots/список-досок.png" alt="The list of boards" loading="lazy">
+<figcaption>The list of boards</figcaption></figure>
+<h2>1. Create a board</h2>
+<ol>
+<li>On the main screen, type a name into <strong>«Название новой доски»</strong> (name of the new board).</li>
+<li>Next to it, in <strong>«Ключ»</strong> (key), type a short word — <code>ПОСТ</code>, say. It becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty and we derive it from the name.</li>
+<li>Press <strong>«Завести»</strong> (create).</li>
+</ol>
+<p>The board opens straight away with three columns: «Очередь» (queue), «В работе» (in progress), «Готово» (done). Those are stages of work, and you can change them.</p>
+<h2>2. Put work on it</h2>
+<ol>
+<li>At the bottom of «Очередь», press <strong>«Завести карточку»</strong> (create a card).</li>
+<li>Write what needs doing and press <code>Enter</code>.</li>
+</ol>
+<p>Create three or four cards: with one, the board shows nothing.</p>
+<h2>3. Move a card</h2>
+<p>Drag a card into «В работе». Or, faster: focus it from the keyboard and press <code>Ctrl</code> with the right arrow.</p>
+<p>The card flashes in its new place — that is how the board shows where it went. Everyone with this board open sees the change immediately.</p>
+<h2>4. Describe the work</h2>
+<ol>
+<li>Click the card&#39;s title; a panel opens.</li>
+<li>Go to the <strong>«Работа»</strong> (work) tab.</li>
+<li>Assign an owner, set an estimate and a due date.</li>
+</ol>
+<figure><img src="screenshots/карточка.png" alt="A card" loading="lazy">
+<figcaption>A card</figcaption></figure>
+<p>If work has stalled, press <strong>«Заблокировать»</strong> (block) and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all.</p>
+<h2>5. Carry it to the end</h2>
+<p>Move the card into «Готово». After a few such cards, open <strong>«Поток»</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
+<h2>6. Invite a colleague</h2>
+<ol>
+<li>Open the <strong>«Команда»</strong> (team) tab.</li>
+<li>Under <strong>«Пригласить»</strong> (invite), enter an e-mail and pick a role.</li>
+<li>Press <strong>«Пригласить»</strong> and send the link that appears.</li>
+</ol>
+<p>The link is addressed: someone with a different e-mail cannot accept it. It is shown once — only a fingerprint of it is stored.</p>
+<h2>What next</h2>
+<ul>
+<li>Solve a specific problem — <a href="howto.html">How to</a>.</li>
+<li>See everything as a list — <a href="reference.html">Reference</a>.</li>
+<li>Understand why the board works this way — [Design decisions](architecture.md).</li>
+</ul>
+</section>
+<section id="howto">
+<h1>How to</h1>
+<p>Answers to specific questions. Each one is short and stands on its own — no need to read them in order.</p>
+<p>If this is your first time here, walk through the <a href="quickstart.html">first fifteen minutes</a> first; the rest will make more sense.</p>
+<p><strong>The interface is in Russian.</strong> Buttons are quoted the way they appear on screen, with a translation next to them.</p>
+<h2>Working on the board</h2>
+<h3>Find a card</h3>
+<p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
+<p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
+<h3>Filter down to what you need</h3>
+<ol>
+<li>In the row above the board pick your conditions: assignee, labels, «горит» (urgent), «срок подходит» (due soon), «заблокированные» (blocked), «дольше обещанного» (past the promise), iteration.</li>
+<li>To share the result, copy the page address — the filter lives in it.</li>
+<li>To come back to a filter later, press <strong>«Сохранить вид»</strong> (save view) and give it a name.</li>
+</ol>
+<p>Labels combine with AND: pick «срочно» and «снаружи» and you get cards carrying both.</p>
+<h3>Slice the board into swimlanes</h3>
+<p>In the <strong>«Без группировки»</strong> (no grouping) list, choose what to slice by: assignee, label, iteration or priority.</p>
+<p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
+<h3>Compare cards against each other</h3>
+<p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
+<p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
+<h3>Split work into parts</h3>
+<ol>
+<li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
+<li>In the subtasks section press <strong>«Добавить»</strong> (add).</li>
+<li>Type the name of the part.</li>
+</ol>
+<p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
+<h3>Take a card off the board</h3>
+<p>Hover the card, open the <strong>«…»</strong> menu and choose <strong>«В архив»</strong> (to the archive). A message appears with a <strong>«Вернуть»</strong> (restore) button, in case that was the wrong card.</p>
+<p>Archived cards sit in <strong>«Архив»</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
+<h3>Run a sprint or a release</h3>
+<ol>
+<li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
+<li>Set a name, a start and an end.</li>
+<li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
+<li>When the time is up press <strong>«закрыть»</strong> (close) — a report appears: what made it and what did not.</li>
+</ol>
+<h2>The organisation</h2>
+<h3>Invite someone</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Пригласить»</strong> section.</li>
+<li>Enter an e-mail, pick a role, press <strong>«Пригласить»</strong>.</li>
+<li>Send the link to the person.</li>
+</ol>
+<p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
+<h3>Close a board to outsiders</h3>
+<ol>
+<li>Open the board and press <strong>«Доступ»</strong> (access) in the header.</li>
+<li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
+<li>For the last one, add people to the list.</li>
+</ol>
+<p>Closing a board adds you to it: otherwise your very first action would lock you out.</p>
+<h3>Handle someone leaving</h3>
+<p>Pick one of two; they do different things:</p>
+<ul>
+<li><strong>«Исключить»</strong> (remove) — the person is no longer in the organisation. Their cards, comments and audit entries stay.</li>
+<li><strong>«Удалить данные»</strong> (erase data) — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
+</ul>
+<p>If someone left but the work must stay traceable, the first is enough.</p>
+<h3>Set up subdivisions</h3>
+<ol>
+<li>The <strong>«Структура»</strong> (structure) tab.</li>
+<li>Press <strong>«Завести подразделение»</strong> (create a subdivision), enter a name.</li>
+<li>To nest one inside another, create the child inside the node.</li>
+<li>Appoint a subdivision administrator — they will run their own subtree.</li>
+</ol>
+<h2>Integrations</h2>
+<h3>Issue a key for an integration</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Ключи для интеграций»</strong> (integration keys).</li>
+<li>State what the key is for and pick its scopes.</li>
+<li>Press <strong>«Завести»</strong> and copy the key — it is shown once.</li>
+</ol>
+<p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
+<h3>Receive events in your own system</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
+<li>Enter a name and the receiver&#39;s address, tick the events.</li>
+<li>Press <strong>«Завести»</strong> and keep the signing key — we sign every delivery with it.</li>
+</ol>
+<p>If the receiver goes down for maintenance, press <strong>«Приостановить»</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
+<h3>Work out why an event did not arrive</h3>
+<ol>
+<li>On the subscription press <strong>«Доставки»</strong> (deliveries).</li>
+<li>Look at the attempts and the receiver&#39;s response.</li>
+<li>Once the receiver is fixed, press <strong>«Повторить»</strong> (retry) on what did not arrive.</li>
+</ol>
+<p>A retry also re-enables the subscription if we disabled it after a long run of failures.</p>
+<h3>Take all the organisation&#39;s data</h3>
+<p><strong>«Команда»</strong> tab → <strong>«Выгрузка»</strong> (export) → <strong>«Скачать файл»</strong> (download).</p>
+<p>Tick <strong>«Добавить журнал действий»</strong> (include the audit log) if you need it too: the log is usually larger than everything else combined.</p>
+<h2>Installing and operating</h2>
+<p>Details are in the <a href="install.html">installation guide</a>.</p>
+<h3>Check that the installation was done right</h3>
+<pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<p>It answers as a list: right schema, right address, identity provider reachable, database notifications arriving.</p>
+<h3>Upgrade an installation</h3>
+<pre><code>docker load &lt; takt-image.tar.gz
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;version&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
+<h3>Close registration</h3>
+<p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
+</section>
+<section id="reference">
+<h1>Reference</h1>
+<p>Lists and tables: what lives where, what things are called, what equals what. Not read in order — read when needed.</p>
+<p><strong>The interface is in Russian.</strong> On-screen wording is quoted, with a translation next to it.</p>
+<h2>Roles in the organisation</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Role</th><th>Reads</th><th>Changes work</th><th>Runs the organisation</th></tr></thead>
+<tbody>
+<tr><td>«Владелец» (owner)</td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td>«Участник» (member)</td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td>«Наблюдатель» (viewer)</td><td>yes</td><td>no</td><td>no</td></tr>
+</tbody>
+</table></div>
+<p>Beyond roles, the owner appoints:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Appointment</th><th>What it grants</th></tr></thead>
+<tbody>
+<tr><td>Subdivision administrator</td><td>runs their own subtree: membership, nested nodes, boards</td></tr>
+<tr><td>Area observer</td><td>reads everything in their subtree</td></tr>
+</tbody>
+</table></div>
+<h2>Board visibility</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Visibility</th><th>Who sees it</th></tr></thead>
+<tbody>
+<tr><td>«Всей организации»</td><td>everyone in the organisation</td></tr>
+<tr><td>«Своей команде»</td><td>people in the subdivision that owns the board</td></tr>
+<tr><td>«Только вписанным»</td><td>those listed by name</td></tr>
+</tbody>
+</table></div>
+<h2>Keys</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Keys</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>Ctrl+K</code></td><td>palette: search cards and commands</td></tr>
+<tr><td>Arrows</td><td>move between cards</td></tr>
+<tr><td><code>Ctrl</code> + arrows</td><td>move a card</td></tr>
+<tr><td><code>Enter</code></td><td>open a card</td></tr>
+<tr><td><code>E</code></td><td>rename without opening</td></tr>
+<tr><td><code>Escape</code></td><td>close a panel, a menu or the palette</td></tr>
+</tbody>
+</table></div>
+<h2>Filters</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Filter</th><th>What it shows</th></tr></thead>
+<tbody>
+<tr><td>Text</td><td>cards whose title contains the substring</td></tr>
+<tr><td>Assignee</td><td>whose cards; separately, &#34;nobody&#39;s&#34;</td></tr>
+<tr><td>Labels</td><td>cards carrying <strong>all</strong> the selected labels</td></tr>
+<tr><td>«Горит»</td><td>highest and high priority</td></tr>
+<tr><td>«Срок подходит»</td><td>due today, tomorrow, the day after, or overdue</td></tr>
+<tr><td>«Заблокированные»</td><td>those where work has stalled</td></tr>
+<tr><td>«Дольше обещанного»</td><td>those running longer than the board&#39;s promise</td></tr>
+<tr><td>Iteration</td><td>attached to an iteration; separately, &#34;not in an iteration&#34;</td></tr>
+</tbody>
+</table></div>
+<h2>Groupings</h2>
+<p>None, by assignee, by label, by iteration, by priority.</p>
+<h2>Metrics in «Поток» (flow)</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
+<tbody>
+<tr><td>Cycle time</td><td>how many days work usually takes (percentiles)</td></tr>
+<tr><td>Throughput</td><td>how many cards were finished, by week</td></tr>
+<tr><td>In progress</td><td>how much work is running right now</td></tr>
+<tr><td>Ageing</td><td>what is running and how long it has been running</td></tr>
+<tr><td>Cumulative flow</td><td>three bands by day: queued, in progress, done</td></tr>
+<tr><td>Forecast</td><td>how many days to finish a given number of cards</td></tr>
+<tr><td>Discarded</td><td>how much was taken off the board unfinished</td></tr>
+</tbody>
+</table></div>
+<h2>Integration key scopes</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Scope</th><th>What it opens</th></tr></thead>
+<tbody>
+<tr><td><code>boards:read</code></td><td>reading boards and cards</td></tr>
+<tr><td><code>boards:write</code></td><td>changing boards and cards</td></tr>
+<tr><td><code>structure:read</code></td><td>reading the subdivision structure</td></tr>
+<tr><td><code>audit:read</code></td><td>reading the audit log</td></tr>
+<tr><td><code>scim:write</code></td><td>provisioning people and groups from a directory (separate key only)</td></tr>
+</tbody>
+</table></div>
+<h2>Subscription events</h2>
+<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, link added, link removed, commented on, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
+<h2>Installation settings</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
+<tbody>
+<tr><td><code>BASE_URL</code></td><td>the address in the browser, no trailing slash</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>LISTEN_ADDR</code></td><td>listen address, <code>:8080</code> by default</td></tr>
+<tr><td><code>SIGNUP</code></td><td>who creates organisations: <code>first</code>, <code>open</code>, <code>closed</code></td></tr>
+<tr><td><code>WEB_DIR</code></td><td>directory with the built client</td></tr>
+<tr><td><code>OIDC_ISSUER</code></td><td>identity provider address; empty means password only</td></tr>
+<tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td>credentials at the provider</td></tr>
+<tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
+</tbody>
+</table></div>
+<h2>Subcommands</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>takt serve</code></td><td>runs: API, change stream, background jobs</td></tr>
+<tr><td><code>takt migrate</code></td><td>applies migrations and exits</td></tr>
+<tr><td><code>takt doctor</code></td><td>checks that the installation was done right</td></tr>
+<tr><td><code>takt version</code></td><td>answers which version this is</td></tr>
+<tr><td><code>takt demo</code></td><td>fills an empty database with demo data</td></tr>
+</tbody>
+</table></div>
+<h2>Limits</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>What</th><th>How much</th></tr></thead>
+<tbody>
+<tr><td>People per installation</td><td>130</td></tr>
+<tr><td>Boards open at once</td><td>100 receive the change</td></tr>
+<tr><td>Cards on a board</td><td>500 without losing responsiveness</td></tr>
+<tr><td>Rows in the table</td><td>1000, sorting under 200 ms</td></tr>
+<tr><td>First paint of the board</td><td>under a second</td></tr>
+</tbody>
+</table></div>
+<h2>The integration API</h2>
+<p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
+</section>
+<section id="cheatsheet">
+<h1>Cheat sheet</h1>
+<p>What you need on day one. Fits on one A4 sheet.</p>
+<p>The interface is in Russian: labels below are quoted the way they appear on screen, with a translation next to them.</p>
+<h2>Where things are</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Where</th><th>What is there</th></tr></thead>
+<tbody>
+<tr><td>«Доски» (Boards)</td><td>boards of the organisation and the archive</td></tr>
+<tr><td>«Команда» (Team)</td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
+<tr><td>«Структура» (Structure)</td><td>subdivisions as a tree</td></tr>
+<tr><td>Board header</td><td>«Доска», «Таблица», «Изменения» — three views of one data set; «Поток» — metrics; «Архив» — archived cards</td></tr>
+</tbody>
+</table></div>
+<h2>Keys</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Keys</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>Ctrl+K</code></td><td>find a card or a command</td></tr>
+<tr><td>Arrows</td><td>move between cards</td></tr>
+<tr><td><code>Ctrl</code> + arrows</td><td>move a card between columns</td></tr>
+<tr><td><code>Enter</code></td><td>open a card</td></tr>
+<tr><td><code>E</code></td><td>rename without opening</td></tr>
+<tr><td><code>Escape</code></td><td>close a panel, a menu or the palette</td></tr>
+</tbody>
+</table></div>
+<h2>Five actions</h2>
+<ol>
+<li><strong>Create a board</strong> — on the main screen: name, key, «Завести».</li>
+<li><strong>Create a card</strong> — at the bottom of a column, then <code>Enter</code>.</li>
+<li><strong>Move a card</strong> — drag it, or press <code>Ctrl</code> with an arrow.</li>
+<li><strong>Filter</strong> — the row above the board; the filter lives in the address bar, and «Сохранить вид» saves it as a named view.</li>
+<li><strong>Archive</strong> — the «…» menu on a card, then «В архив»; «Вернуть» appears next to the message.</li>
+</ol>
+<h2>When something looks wrong</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You see</th><th>It means</th></tr></thead>
+<tbody>
+<tr><td>A banner «Связи с сервером нет»</td><td>the server is unreachable; nothing you did is lost</td></tr>
+<tr><td>A card jumped back</td><td>the move never reached the server; press «Повторить»</td></tr>
+<tr><td>The board shows less than you expect</td><td>a filter is on; the column says how many are hidden</td></tr>
+</tbody>
+</table></div>
+<p>More detail: <a href="howto.html">how to</a> and the <a href="reference.html">reference</a>.</p>
+</section>
+<section id="architecture">
+<h1>How it works, and why</h1>
+<p>This page does not say where to click; it says why things are the way they are. People read it when a product decision looks strange: there is almost always an argument behind it worth knowing.</p>
+<p>Instructions are in <a href="howto.html">How to</a>, lists in the <a href="reference.html">Reference</a>.</p>
+<h2>Card order is manual</h2>
+<p>Cards sit in a column in the order somebody put them there. Neither priority nor a due date changes it.</p>
+<p>The reason: order answers &#34;what do I take next&#34;, and a person answers that, not a sort. Priority says what matters more; a due date says what was promised outside. Those are three different questions, and substituting one for another loses two of the three.</p>
+<h2>A column limit is highlighted, not enforced</h2>
+<p>An exceeded limit is visible but does not stop you moving a card.</p>
+<p>A limit exists to make overload visible, not to argue with someone who has already decided. None of the products that have limits block the move: a hard stop breaks the single scenario the limit is there for.</p>
+<h2>Blocking is a reason, not a status</h2>
+<p>You cannot block a card without an explanation: the reason is required and shows on the board itself.</p>
+<p>&#34;Blocked&#34; on its own answers no question — neither &#34;who are we waiting for&#34; nor &#34;what now&#34;. A reason answers both.</p>
+<h2>The irreversible asks, the reversible does not</h2>
+<p>Archiving a card takes one press, with «Вернуть» (restore) right next to it. Deleting a board for good takes typing its name.</p>
+<p>People close &#34;are you sure?&#34; dialogues without reading, so the confirmation stands where you cannot come back, and stays out of the way where you can.</p>
+<h2>Changes spread on their own</h2>
+<p>An open board updates for everyone looking at it, without a reload.</p>
+<p>One database connection per process holds this up, not one per tab: a hundred open boards is the stated scale, and a subscription per tab would have run out of connections somewhere in the thirties.</p>
+<h2>Isolation between organisations is held by the database</h2>
+<p>One organisation&#39;s data is invisible to another not because the code says so, but because the database&#39;s policies are built that way.</p>
+<p>A check in code is forgotten at the next edit; a database policy applies to every query, including the one written in a hurry. For the same reason the application refuses to start if the role it connects with bypasses policies.</p>
+<h2>The forecast speaks of probability, not of a date</h2>
+<p>«Поток» gives three numbers instead of one: half the cases land within so many days, 85 % within so many, 95 % within so many.</p>
+<p>A single number where a probability is being computed reads as a promise. The forecast samples random past weeks and answers exactly one question: what happens if things continue as they have been. If there is not enough past, it says that too.</p>
+<h2>Metrics come from work, not from ticks</h2>
+<p>Cycle time, throughput and ageing are taken from when a card entered work and when it was carried to the end.</p>
+<p>Separate &#34;started&#34; and &#34;finished&#34; fields, filled in by hand, drift from reality in the first busy week — and drift silently.</p>
+<h2>A board&#39;s key never changes</h2>
+<p>The key — the prefix of card numbers — is set once.</p>
+<p>A card number ends up in correspondence, in neighbouring teams&#39; backlogs and in other systems. Changing it would invalidate every existing reference at once.</p>
+<h2>An invitation is addressed and single-use</h2>
+<p>The link is bound to an e-mail and shown once: only a fingerprint of it is stored.</p>
+<p>A link that works for any address is a door into your organisation, lying in somebody&#39;s inbox.</p>
+<h2>Removing and anonymising are different actions</h2>
+<p>Someone who left stops being in the organisation, but their cards, comments and audit entries stay: the work was done, and erasing it because they left is not on. Anonymising is a separate action, irreversible, and asked about separately.</p>
+<h2>Delivery gives up out loud</h2>
+<p>If a receiver does not answer, we retry eight times with a doubling pause — about two hours — and then disable the subscription.</p>
+<p>Quietly accumulating undelivered events for years is worse than stopping and saying so: all that time, the neighbouring system believes nothing is happening here.</p>
+</section>
+<section id="install">
+<h1>Installation</h1>
+<p>How to install Takt, how to run it, and what it needs. Written for whoever installs and keeps it running; for the people who use it, see the <a href="overview.html">overview</a>.</p>
+<p>Three ways, all giving the same application from the same image: <code>docker compose</code> on one machine, a binary under systemd, a chart in Kubernetes. The difference is who holds the process and who runs the migrations.</p>
+<h2>What you need to install it</h2>
+<p>The limits below come from measurements, not from a wish list. Beyond them the product still has to work; it just is not obliged to hold its response thresholds.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>What</th><th>How much</th></tr></thead>
+<tbody>
+<tr><td>PostgreSQL</td><td>16 or newer</td></tr>
+<tr><td>Kubernetes (if you install the chart)</td><td>1.25 or newer</td></tr>
+<tr><td>CPU and memory per replica</td><td>1 core, 256 MB; no state on disk</td></tr>
+<tr><td>Database storage</td><td>from 1 GB; it grows with the event log, not with cards</td></tr>
+<tr><td>Browser</td><td>those where Baseline newly is at least a year old</td></tr>
+<tr><td>Network</td><td>nothing outbound; inbound through a TLS proxy</td></tr>
+<tr><td>People per installation</td><td>up to 130</td></tr>
+</tbody>
+</table></div>
+<p>What the installation does <strong>not</strong> need: internet access, object storage, a message queue, a separate cache. PostgreSQL is the only external dependency. Turn on corporate sign-in and there is a second one: the OIDC provider.</p>
+<p>What we expect from whoever installs it. Obligations divide, and without saying where the line falls there is nothing to check ours against:</p>
+<ol>
+<li><strong>The database is yours.</strong> Backups, point-in-time recovery, disk space. The chart deliberately does not manage it — why, is in the section on point-in-time recovery below.</li>
+<li><strong>A TLS proxy sits in front</strong>, forwarding <code>Upgrade</code> and <code>Connection</code>. Without them the board stops updating itself.</li>
+<li><strong><code>BASE_URL</code> matches the address in the browser.</strong> Invitation links and the change-stream address are built from it.</li>
+<li><strong>No transaction-mode connection pooler in front of the database</strong> — database notifications do not survive one.</li>
+<li><strong>A backup is taken before an upgrade.</strong> Migration compatibility with the previous version is our side; the data is yours.</li>
+</ol>
+<p>There is something to check all of this with: <code>takt doctor</code> answers for every item a machine can answer for.</p>
+<h2>One image for every profile</h2>
+<p>One image is built. Compose and the Helm chart both take it without a rebuild — the whole difference is environment variables and who runs the migrations. A second <code>Dockerfile</code> would grow a divergence between &#34;on a server&#34; and &#34;in the cluster&#34; the same day.</p>
+<h3>Where to get it</h3>
+<p>The published image lives in the registry and is pushed by the release run for a tag:</p>
+<pre><code>docker pull ghcr.io/findias/takt:v0.2.0</code></pre>
+<p>To build your own, from the repository root:</p>
+<pre><code>make image                    # takt:dev, alpine base, version from git describe
+make image BASE=debian        # takt:dev-debian
+make images                   # both at once, with a size table</code></pre>
+<h3>The base of the final layer</h3>
+<p>There is one Dockerfile; the base of the final layer arrives as the <code>RUNTIME_BASE</code> build argument. The build stages do not depend on it at all: the binary is static (<code>CGO_ENABLED=0</code>) and the client is just files.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Base</th><th>Image</th><th>Size</th><th>Architectures</th></tr></thead>
+<tbody>
+<tr><td><code>alpine</code> (default)</td><td><code>alpine:3.21</code></td><td>22 MB</td><td>amd64, arm64</td></tr>
+<tr><td><code>debian</code></td><td><code>debian:12-slim</code></td><td>88 MB</td><td>amd64, arm64</td></tr>
+</tbody>
+</table></div>
+<p>The choice is not about size: <code>debian</code> is taken where musl is viewed with suspicion, being the same libc as on most servers.</p>
+<p><strong>Any other base will do</strong>, not just these two. What it has to provide is small: either <code>apt</code> or <code>apk</code>, either <code>useradd</code> or <code>adduser</code>, and that is all. The name in <code>BASE</code> becomes the image tag, so pass it alongside — otherwise someone else&#39;s base ships tagged <code>dev-alpine</code> and there is no way to tell it apart later:</p>
+<pre><code>make image BASE=mine RUNTIME_BASE=my.registry/image:tag</code></pre>
+<p>Such a base does not go into the release matrix: that one carries only what is published to public registries.</p>
+<p>By hand, the same thing:</p>
+<pre><code>docker build --build-arg VERSION=v0.2.0 \
+  --build-arg RUNTIME_BASE=debian:12-slim \
+  -t takt:v0.2.0-debian .</code></pre>
+<p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
+<p><strong><code>VERSION</code> is passed as a build argument, and that is not a formality.</strong> The version is linked into the binary rather than read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. Hence the trap: <code>docker build .</code> without <code>--build-arg</code> builds and runs fine, but <code>takt version</code> answers &#34;версия не задана&#34; — honest, unlike an invented number, but not worth pushing to a registry. <code>make image</code> fills <code>git describe</code> in for you.</p>
+<p>There is no need to pull the image for <code>docker compose</code>: it builds one itself (<code>build: .</code> in <code>docker-compose.yml</code>). For an air-gapped installation the image travels as a file — <code>make bundle</code>; the section on installing without internet access, below, covers it.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
+<tbody>
+<tr><td><code>BASE_URL</code></td><td>the address in the browser, no trailing slash</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>LISTEN_ADDR</code></td><td>listen address, <code>:8080</code> by default</td></tr>
+<tr><td><code>WEB_DIR</code></td><td>directory with the built client; empty means do not serve it</td></tr>
+<tr><td><code>SIGNUP</code></td><td>who may create organisations: <code>first</code>, <code>open</code>, <code>closed</code></td></tr>
+<tr><td><code>OIDC_ISSUER</code></td><td>identity provider address; empty means password only</td></tr>
+<tr><td><code>OIDC_CLIENT_ID</code> / <code>OIDC_CLIENT_SECRET</code></td><td>the application&#39;s credentials at the provider</td></tr>
+<tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
+</tbody>
+</table></div>
+<p><strong>Migrations are a separate command,</strong> <code>takt migrate</code>, not part of startup. On one replica it makes no difference; on two, a simultaneous start tears the database apart.</p>
+<p>The role in <code>DATABASE_URL</code> must own its tables (or migrations will not apply) but must <strong>not</strong> be a superuser and must not have <code>BYPASSRLS</code> — row-level security does not apply to those, and tenant isolation silently disappears. Managed clusters, CloudNativePG among them, create such a role by default. The application checks this condition at startup and refuses to run otherwise.</p>
+<h2>On an ordinary machine</h2>
+<p>Two ways, both giving the same application. The difference is who holds the process: docker or systemd.</p>
+<p><strong>With docker compose</strong> — when the machine has docker and you do not have a database yet:</p>
+<pre><code>cp .env.example .env          # set POSTGRES_PASSWORD and BASE_URL
+docker compose up -d
+docker compose run --rm app doctor</code></pre>
+<p>Compose brings a database up alongside. For a demo stand that is right; for production it is not — a database in a container has neither backups nor point-in-time recovery. As soon as the installation becomes real, move the database out and leave its address in <code>DATABASE_URL</code>.</p>
+<p><strong>From the binary, without docker</strong> — when the database already exists and the extra layer buys nothing:</p>
+<pre><code># 1. Role and database. The role owns its tables but is not a superuser
+#    and has no BYPASSRLS: isolation policies do not apply to those,
+#    and the separation between organisations quietly disappears.
+sudo -u postgres psql &lt;&lt;&#39;SQL&#39;
+create role takt login password &#39;YOUR_PASSWORD&#39; nosuperuser nocreaterole nocreatedb;
+create database takt owner takt;
+SQL
+
+# 2. The payload: the binary and the built client.
+sudo mkdir -p /opt/takt
+sudo tar xzf takt-&lt;version&gt;-linux-amd64.tar.gz -C /opt/takt --strip-components=1
+#    or build it yourself: make build &amp;&amp; cp -r bin/takt web/dist /opt/takt/
+
+# 3. Settings. systemd reads this file, hence 0600 and root ownership.
+sudo install -m 0600 /dev/null /etc/takt.env
+sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+DATABASE_URL=postgres://takt:YOUR_PASSWORD@localhost:5432/takt?sslmode=disable
+BASE_URL=https://takt.example.com
+LISTEN_ADDR=127.0.0.1:8080
+WEB_DIR=/opt/takt/dist
+SIGNUP=first
+ENV
+
+# 4. Schema. A separate command, before the first start: two processes
+#    migrating at once tear the database apart.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt migrate&#39;</code></pre>
+<p>The unit:</p>
+<pre><code># /etc/systemd/system/takt.service
+[Unit]
+Description=Takt
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=takt
+EnvironmentFile=/etc/takt.env
+ExecStart=/opt/takt/takt serve
+Restart=on-failure
+
+# The application keeps no state on disk — everything is in the
+# database. So it can be given neither write access nor extra
+# privileges, and that is a consequence, not an austerity measure.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# On shutdown the replica drops readiness first, waits for the proxy to
+# strike it off, and only then closes connections. A shorter pause means
+# torn requests for whoever was working at that moment.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code>sudo systemctl enable --now takt
+
+# doctor reads the same settings as the service — otherwise it checks a
+# different installation and cheerfully reports that all is well.
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt doctor&#39;</code></pre>
+<p>The version answers with no settings at all — <code>/opt/takt/takt version</code>. It is asked precisely when nothing comes up.</p>
+<p>Then put a TLS proxy in front of <code>127.0.0.1:8080</code>. The application listens on the loopback deliberately: TLS, compression and body-size limits are the proxy&#39;s job, and doing them twice means the two settings will disagree. There are exactly two requirements on the proxy, both listed above: the same <code>BASE_URL</code>, and <code>Upgrade</code> with <code>Connection</code> forwarded.</p>
+<p><strong>Upgrading</strong> goes the same way as in a cluster, and in the same order: back the database up, then <code>takt migrate</code>, then the new binary, then <code>systemctl restart takt</code>, then <code>takt doctor</code>. The migration runs before the binary is replaced, because a migration is required to work with the *previous* version of the application and not the other way round — that is also what makes rollback possible.</p>
+<h2>Kubernetes</h2>
+<p>The chart is in <code>deploy/helm/takt</code>. It deliberately has no dependencies: your database is your own, with backups and point-in-time recovery, and slipping a replacement for it inside our chart would mean taking responsibility for someone else&#39;s area. It follows that installing needs no internet access — only an image in a reachable registry.</p>
+<pre><code>kubectl create secret generic takt-db \
+  --from-literal=DATABASE_URL=&#39;postgres://takt:...@postgres:5432/takt&#39;
+
+helm install takt deploy/helm/takt \
+  --set baseURL=https://takt.example.com \
+  --set database.existingSecret=takt-db \
+  --set ingress.enabled=true --set ingress.host=takt.example.com</code></pre>
+<p>The database password is passed as a ready-made secret rather than a chart value: from values it reaches both the release history and the output of <code>helm get values</code>, which is read more widely than people expect.</p>
+<p>Migrations run as a job with a <code>pre-install,pre-upgrade</code> hook — once, and before any new pod starts. A failed job is left behind: that is what you look at to find out why the rollout did not move.</p>
+<p><strong>Two probes, not one.</strong> <code>/healthz</code> answers &#34;the process is alive&#34; and does not touch the database: check liveness with the database and a database that blinks restarts every replica at once, then comes back to find them all busy restarting. <code>/readyz</code> answers &#34;requests may be sent&#34; and does check the database. It is also the first thing to go dark on shutdown: on a signal the replica drops readiness, waits five seconds for the load balancer to strike it off, and only then closes connections. That is why <code>terminationGracePeriodSeconds</code> in the chart exceeds the pause and the shutdown timeout combined.</p>
+<p>For a database inside the cluster there is <a href="../deploy/postgres/cloudnativepg-cluster.yaml"><code>deploy/postgres/cloudnativepg-cluster.yaml</code></a> as an example of what we expect from one. The chart can also bring up a database of its own (<code>postgresql.enabled=true</code>), and that is for a demo stand only — it has no backups.</p>
+<h2>The first sign-in</h2>
+<p>The first screen offers to create a team: on an empty installation the first person to arrive creates the organisation and becomes its owner. After that, registration is closed and that owner invites everyone else. <code>SIGNUP</code> switches this: <code>open</code> lets anyone create an organisation (this is how the demo stand runs), <code>closed</code> lets no one, which is what installations with a corporate identity provider want.</p>
+<p>Once installed, check that it was installed correctly:</p>
+<pre><code>docker compose run --rm app doctor     # or /app/takt doctor inside the pod</code></pre>
+<p>Readiness answers &#34;the process is alive and the database responds&#34;; <code>doctor</code> answers a different question: is this the right schema, the right address — and therefore will a Secure cookie ever arrive — is the identity provider reachable, and do the database notifications arrive without which the board never refreshes itself.</p>
+<h2>Sign-in through a corporate provider</h2>
+<p>Configured with environment variables, not in the database. Per- organisation settings would be right for a cloud installation, but then the client secret would have to live in the database too — meaning encryption, a key, key rotation, and the question &#34;who decrypts this if the server is lost&#34;. Corporate sign-in is installed in a closed network, where there is one organisation and the secret already lives in the cluster&#39;s secrets. Hence the rule: one installation, one provider, no secrets in the database.</p>
+<p>The redirect URI to register with the provider is built from <code>BASE_URL</code>: <code>&lt;BASE_URL&gt;/api/auth/oidc/callback</code>. There is deliberately no separate variable for it — it must not be able to disagree with <code>BASE_URL</code>.</p>
+<p>What happens on sign-in:</p>
+<ul>
+<li>a returning person is recognised by the pair &#34;issuer + <code>sub</code>&#34;, not by e-mail: e-mail changes, and someone with a new address would otherwise lose their boards;</li>
+<li>a first-time arrival is linked to an existing account by a <strong>verified</strong> e-mail — an unverified address would let someone claim another person&#39;s account;</li>
+<li>if nobody matches, a new account is created and joined to <code>OIDC_ORG</code>. Anyone already in at least one organisation is added nowhere: signing in must not quietly change who you belong to.</li>
+</ul>
+<p>The <code>id_token</code> signature is not verified, and that is deliberate: in the code flow the token comes to us directly from the provider&#39;s endpoint over TLS, which the specification explicitly considers sufficient (OIDC Core, 3.1.3.7). A hand-written JWT check — base64 parsing, key selection from JWKS, <code>alg</code> comparison — is exactly the code people get wrong, and getting it wrong costs the whole of authentication. Claims about the person are read from <code>userinfo</code> over the same connection.</p>
+<h2>Directory provisioning (SCIM)</h2>
+<p>The provider pushes employees and groups to <code>/scim/v2/…</code>. The key is an ordinary one from <strong>«Ключи для интеграций»</strong> (integration keys) with the single <code>scim:write</code> scope; the key itself determines the organisation, because a separate &#34;where to provision&#34; setting would be a second source of truth.</p>
+<p>What our side does:</p>
+<ul>
+<li><strong>deactivation removes membership but not the person.</strong> Someone who left loses access immediately, while their cards, comments and audit entries stay signed by them. Deleting the record would mean rewriting history after the fact;</li>
+<li><strong><code>DELETE</code> does the same as <code>active = false</code>.</strong> Providers disagree: some send a deactivation, some a deletion, some both in a row;</li>
+<li><strong>groups become teams, not roles.</strong> A role is a property of membership in an organisation, and the directory knows nothing about it: there, an employee belongs to a department, not &#34;is an owner&#34;. Roles are assigned here, and provisioning does not touch them;</li>
+<li><strong>someone who left also leaves the teams</strong> — a team that still lists a departed employee misleads whoever distributes work by it.</li>
+</ul>
+<p>Bulk requests are not supported, and <code>ServiceProviderConfig</code> says so honestly: they are reached for at thousands of employees, and this installation is sized for a hundred.</p>
+<h2>Point-in-time recovery</h2>
+<p>Backups are the database&#39;s job, and the chart deliberately does not manage them. Only the database needs copying: the image is reproducible from source, the static files live inside the image, and the application keeps no state on disk — which is why it runs with a read-only root.</p>
+<p>Restore into a <strong>new</strong> cluster, not over the live one, or you lose the ability to compare and step back if you restored to the wrong point.</p>
+<p>What is specific to us about rolling the database back in time:</p>
+<ul>
+<li><strong>Webhooks will be sent again.</strong> Retry keys and delivery marks roll back with everything else, and the worker works through the outbox afresh. Receivers must be ready for a repeat — the delivery identifier travels in a header, and that is how a repeat is recognised.</li>
+<li><strong>Sessions roll back too.</strong> Anyone who signed in after the restore point is signed out; anyone issued a session before it keeps working. That is correct: a session is data like any other.</li>
+<li><strong>Access keys revoked after the point become valid again.</strong> If the rollback is because a key leaked, revoke it once more afterwards.</li>
+<li><strong>Open boards re-read themselves.</strong> Clients hold the change stream and reconnect, receiving a fresh snapshot. Nothing to do.</li>
+</ul>
+<p>Test the restore before the outage, not during it: bring a copy up in a separate namespace, apply the chart with <code>database.existingSecret</code> pointing at the restored cluster, and open a board. It takes a quarter of an hour and answers the only question the whole exercise exists for — &#34;does it actually come up from the copy?&#34;</p>
+<h2>Installing without internet access</h2>
+<pre><code>make bundle          # builds dist/bundle-&lt;version&gt;: image, chart, README, checksums</code></pre>
+<p>The bundle travels as a file. On site:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror
+helm install takt takt-*.tgz --set image.tag=&lt;version&gt; \
+  --set baseURL=https://takt.example.com --set database.existingSecret=takt-db</code></pre>
+<p>The checksums are not a formality: into a closed network the file travels through intermediaries, and &#34;is this the same image&#34; is a question that will be asked. For the same reason the chart lets you refer to the image by digest — a tag in a mirror can be rewritten, a digest cannot.</p>
+<p>Neither the chart nor the application reaches out on its own: the chart has no dependencies and the application calls no external service. The single exception is corporate sign-in, and it talks only to the provider whose address you configured.</p>
+<h2>Upgrading in a closed network</h2>
+<p>There will be more upgrades than installations. Same bundle, shorter sequence:</p>
+<pre><code>sha256sum -c SHA256SUMS
+docker load &lt; takt-image.tar.gz
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;new version&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<ol>
+<li><strong>The image travels first, the release is upgraded second.</strong> An upgrade to an image that is not in the mirror leaves pods in <code>ImagePullBackOff</code>; with <code>maxUnavailable: 0</code> the old ones keep serving, but the rollout hangs.</li>
+<li><strong>Migrations run before pods are replaced,</strong> as the <code>takt-migrate</code> job with a <code>pre-upgrade</code> hook. Until it passes, no new pod starts; a failed job stays in the cluster, and that is what you read.</li>
+<li><strong><code>--reuse-values</code> is mandatory</strong> if anything was set at install time. Without it <code>helm upgrade</code> takes the chart defaults, and <code>signup</code>, <code>oidc</code> and the rest quietly revert.</li>
+<li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
+</ol>
+<p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
+</section>
+<section id="REQUIREMENTS">
+<h1>Требования к продукту</h1>
+<p>Что доска обязана делать, для кого, в каких пределах и чего она делать не будет.</p>
+<p>Написано это позже всего остального, и цена запоздания измерена: три сверки подряд — интеграционное API, стратегия проверок, вход и права — нашли двадцать шесть расхождений, и почти каждое одного рода. Обещание существовало только в комментарии или в чьей-то памяти. <strong>Требование, которое нигде не записано, нельзя ни выполнить, ни нарушить — с ним можно только разойтись.</strong></p>
+<h2>Как это читать</h2>
+<p>Требование здесь — <strong>то, что мы обязуемся не сломать</strong>, а не то, что кто-то обязуется принять. Отсюда и форма: у каждого есть номер и графа «чем закреплено» — файл проверки, которая упадёт, если требование перестанет выполняться.</p>
+<p>Незакреплённое помечено словом «не закреплено» и объяснением, почему. Пустой графы быть не должно: она означала бы, что требование держится на памяти, — то самое, ради чего документ и заведён. Проверяется это <code>internal/requirements</code>: файлы, названные в графе, обязаны существовать, номера — не повторяться, графа — не пустовать.</p>
+<p>Чего здесь нет: как это устроено (<code>research/*.html</code>), как это править (<code>CONTRIBUTING.md</code>), какой у API контракт (<code>internal/httpapi/openapi.json</code> и страница <code>/api/v1/docs</code>).</p>
+<h2>Для кого</h2>
+<p>Команда, ведущая работу канбаном: до 130 человек в одной установке, доски в сотни карточек, несколько организаций в одной базе. Роли — владелец организации, участник, наблюдатель, администратор подразделения.</p>
+<p>Не для: публичного облака с тысячами арендаторов, личных списков дел, управления проектами со сроками и диаграммами Ганта.</p>
+<h2>Что продукт обязан делать</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>Т1</td><td>Доска: колонки, карточки, перенос мышью и с клавиатуры; порядок карточек ручной</td><td><code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т2</td><td>Перенос применяется мгновенно и переживает обрыв связи и перезагрузку страницы</td><td><code>web/e2e/board.spec.ts</code>, <code>internal/board/regression_test.go</code></td></tr>
+<tr><td>Т3</td><td>Изменение доходит до всех, у кого доска открыта, без перезагрузки</td><td><code>internal/httpapi/stream_test.go</code>, <code>internal/httpapi/load_test.go</code></td></tr>
+<tr><td>Т4</td><td>Итерации: заведение, закрытие, отчёт по закрытой</td><td><code>internal/board/iterations_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т5</td><td>Метрики потока: время цикла, пропускная способность, накопление, прогноз с перцентилями</td><td><code>internal/metrics</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т6</td><td>Архив карточек и досок: убранное возвращается, удалённое насовсем — нет</td><td><code>internal/board/archive_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т7</td><td>Организации, приглашения по ссылке, четыре роли, подразделения деревом</td><td><code>internal/org</code>, <code>internal/team</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т8</td><td>Интеграционное API с версией в адресе, кодами вместо текста и безопасным повтором</td><td><code>internal/httpapi/contract_*_test.go</code></td></tr>
+<tr><td>Т9</td><td>Подписки на события с подписью, повторами и журналом доставок</td><td><code>internal/httpapi/webhooks_test.go</code></td></tr>
+<tr><td>Т10</td><td>Заведение людей из каталога по SCIM</td><td><code>internal/httpapi/scim_test.go</code></td></tr>
+<tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
+<tr><td>Т12</td><td>Выгрузка всех данных организации одним файлом</td><td><code>internal/httpapi/export_test.go</code></td></tr>
+</tbody>
+</table></div>
+<h2>Пределы</h2>
+<p>Числа взяты из замеров, а не назначены. За пределом продукт не обязан держать пороги отклика — но обязан работать.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>П1</td><td>130 человек в установке; 100 одновременно открытых досок получают изменение</td><td><code>internal/httpapi/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П2</td><td>Доска в 500 карточек открывается меньше чем за секунду и отвечает за 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П3</td><td>Снимок доски растёт линейно с числом карточек, а не быстрее</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П4</td><td>Таблица на 1000 строк открывается меньше чем за секунду, сортировка — 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П5</td><td>Тридцать человек на одной доске не медленнее очереди из тридцати</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П6</td><td>Соседняя доска не замедляется от занятой</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
+<tr><td>П7</td><td>Входной кусок клиента — не больше 400 КБ (120 КБ сжатым)</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+</tbody>
+</table></div>
+<h2>Как продукт себя ведёт</h2>
+<p>Правила, которые важнее отдельных возможностей: их нарушение — дефект, даже если возможность работает.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>П8</td><td>Организации изолированы политиками базы, а не проверками в коде</td><td><code>internal/store/isolation_test.go</code>, <code>internal/store/identity_boundary_test.go</code></td></tr>
+<tr><td>П9</td><td>Отказ объясняет, что делать, и различается кодом, а не текстом</td><td><code>internal/httpapi/contract_drift_test.go</code>, <code>web/src/app/forms.test.ts</code></td></tr>
+<tr><td>П10</td><td>Необратимое спрашивает, обратимое — нет; у обратимого есть отмена</td><td><code>web/e2e/board.spec.ts</code>, <code>web/src/app/layers.test.ts</code></td></tr>
+<tr><td>П11</td><td>Всё делается с клавиатуры: перенос карточки, формы, меню</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/shared/ui/Field.dom.test.tsx</code></td></tr>
+<tr><td>П12</td><td>Контраст держит WCAG 2.2 AA и порог проектирования APCA в обеих темах</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П13</td><td>Цель нажатия не мельче 24 пикселей (WCAG 2.5.8)</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П14</td><td>Страница не листается вбок на узком экране и не теряет содержимое при двойном размере текста</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
+<tr><td>П15</td><td>Просьба меньше движения заменяет движение, а не выключает объяснение перемещения</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/app/motion.test.ts</code></td></tr>
+<tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски</td><td>не закреплено: проверяется чтением, машинной проверки на «сказано по-русски и понятно» у нас нет</td></tr>
+</tbody>
+</table></div>
+<h2>Установка и обновление</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>У1</td><td>Один образ на все профили развёртывания</td><td><code>Dockerfile</code>, <code>deploy/helm/chart_test.go</code></td></tr>
+<tr><td>У2</td><td>Установка не требует доступа в интернет</td><td><code>deploy/helm/chart_test.go</code> (у чарта нет зависимостей)</td></tr>
+<tr><td>У3</td><td>Миграция совместима с предыдущей версией приложения</td><td><code>internal/store/migration_compat_test.go</code></td></tr>
+<tr><td>У4</td><td>Цепочка миграций применяется с нуля и даёт ту же схему</td><td><code>internal/store/migrations_test.go</code></td></tr>
+<tr><td>У5</td><td>Схема меняется только миграцией, вперёд; номера не повторяются</td><td><code>internal/store/migration_compat_test.go</code></td></tr>
+<tr><td>У6</td><td>Настройки приложения задаются чартом, а не знанием внутренних имён</td><td><code>deploy/helm/chart_test.go</code></td></tr>
+<tr><td>У7</td><td>После установки есть чем проверить, что она сделана правильно</td><td><code>internal/doctor</code></td></tr>
+<tr><td>У8</td><td>У сборки есть версия, у версии — список изменений</td><td><code>internal/version</code></td></tr>
+<tr><td>У9</td><td>Роль приложения в базе — не суперпользователь (иначе изоляция не действует)</td><td><code>internal/store/isolation_test.go</code>, <code>internal/doctor</code></td></tr>
+<tr><td>У10</td><td>Документация едет с комплектом и открывается без сети</td><td><code>internal/docs/render_test.go</code></td></tr>
+<tr><td>У11</td><td>Памятка помещается на один лист A4</td><td><code>web/print-docs.mjs</code> (проверяет при печати)</td></tr>
+<tr><td>У12</td><td>Лицензия дословная, чужой код в поставке назван и не расходится со сборкой</td><td><code>internal/license</code></td></tr>
+<tr><td>У13</td><td>Документация на двух языках, и перевод не отстаёт от оригинала</td><td><code>internal/translation</code></td></tr>
+</tbody>
+</table></div>
+<h2>Безопасность</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>Б1</td><td>В зависимостях и стандартной библиотеке нет известных уязвимостей, которые мы вызываем</td><td><code>Makefile</code>, цель security (govulncheck)</td></tr>
+<tr><td>Б2</td><td>Код на Go не содержит находок статического разбора; исключения объявлены с причиной, и причина проверяема</td><td><code>Makefile</code>, цель security (gosec); <code>internal/security/shipped_test.go</code></td></tr>
+<tr><td>Б3</td><td>В зависимостях клиента нет уязвимостей уровня high и выше</td><td><code>Makefile</code>, цель security (npm audit)</td></tr>
+<tr><td>Б4</td><td>Запрос к базе собирается параметрами; склейка допускается только со своим текстом и объявляется вслух</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б5</td><td>Клиент никогда не вставляет сырую разметку</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б6</td><td>Секретов в репозитории нет</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>Б7</td><td>Пароли хранятся хешем; сессия — cookie с HttpOnly и SameSite, Secure на https</td><td><code>internal/auth</code>, <code>internal/httpapi/crosssite_test.go</code></td></tr>
+<tr><td>Б8</td><td>Межсайтовую запись останавливает хоть что-нибудь — браузер или код</td><td><code>internal/httpapi/crosssite_test.go</code></td></tr>
+<tr><td>Б9</td><td>Ключ интеграции даёт только выданные разрешения и не становится владельцем</td><td><code>internal/httpapi/clients_test.go</code></td></tr>
+<tr><td>Б10</td><td>Частота запросов ограничена: сбежавший ключ не мешает людям</td><td><code>internal/httpapi/load_test.go</code></td></tr>
+<tr><td>Б11</td><td>Предъявленный секрет открывает только свою строку: токен приглашения и ключ интеграции не дают ничего сверх неё</td><td><code>internal/org/org_test.go</code></td></tr>
+</tbody>
+</table></div>
+<h2>Совместимость</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>С1</td><td>PostgreSQL 16 и новее</td><td>не закреплено: проверки идут на одной версии, матрицы версий нет</td></tr>
+<tr><td>С2</td><td>Kubernetes 1.25 и новее</td><td><code>deploy/helm/takt/Chart.yaml</code>, поле kubeVersion</td></tr>
+<tr><td>С3</td><td>Браузеры: те, где Baseline newly возрастом от года; клиент не берёт возможностей за этой границей без даты и замера</td><td><code>web/src/app/motion.test.ts</code></td></tr>
+</tbody>
+</table></div>
+<h2>Чего продукт не делает</h2>
+<p>Отложено осознанно, и у каждого названо, что снимет отсрочку. Список этим и полезен: без него отложенное неотличимо от забытого, а спорить о сроках приходится с памятью.</p>
+<ul>
+<li><strong>Вложения в карточках.</strong> Настройка <code>STORAGE</code> была и убрана: она ничего не делала, а обещала.</li>
+<li><strong>Архивация проекта целиком.</strong> Ждёт видимых проектов.</li>
+<li><strong>Гранулярные разрешения</strong> сверх четырёх ролей. Ждут реальных жалоб.</li>
+<li><strong>Диаграмма накопления по колонкам</strong> из журнала переходов. Считается из отметок карточки; ждёт спроса на разбивку.</li>
+<li>**Массовые запросы SCIM и настройки провайдера входа по организациям.** Ждут масштаба, которого у установки нет.</li>
+<li><strong>Сроки, зависимости как график, диаграмма Ганта.</strong> Другой продукт.</li>
+<li><strong>Публичное облако с самообслуживанием.</strong> Регистрация закрывается настройкой ровно потому, что установка предполагается частной.</li>
+</ul>
+<h2>Чего мы ждём от того, кто ставит</h2>
+<p>Обязательства делятся, и без этого предыдущий раздел не с чем сверять.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
+<tbody>
+<tr><td>В1</td><td>База — своя: резервные копии, восстановление на момент времени, место</td><td>не закреплено: чужая зона по определению; сказано в <code>docs/ru/установка.md</code> и в выводе чарта</td></tr>
+<tr><td>В2</td><td>Перед приложением — прокси с TLS, пробрасывающий Upgrade и Connection</td><td>не закреплено: проверяется на чужой стороне; сказано в <code>docs/ru/установка.md</code> и <code>docker-compose.yml</code></td></tr>
+<tr><td>В3</td><td><code>BASE_URL</code> совпадает с адресом в браузере</td><td><code>internal/doctor</code> (проверяет вид адреса; совпадение с браузером — на стороне ставящего)</td></tr>
+<tr><td>В4</td><td>Перед базой нет пула соединений в режиме транзакций</td><td><code>internal/doctor</code> (оповещения не доходят — скажет)</td></tr>
+<tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
+</tbody>
+</table></div>
+</section>
+<section id="CHANGELOG">
+<h1>Что менялось</h1>
+<p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
+<p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2>v0.2.1 — 26 августа 2026</h2>
+<p><strong>Обновляться стоит не откладывая: закрыта утечка между организациями.</strong></p>
+<p>Политики фоновых задач узнавали работника по одному признаку — у него нет арендатора. Признак неверный: арендатора нет ещё и у приёма приглашения, и у обмена по ключу интеграции. Политики строк складываются по ИЛИ, поэтому обладателю любой ссылки-приглашения — то есть всякому, кого хоть раз позвали хоть куда, — открывались таблицы работника целиком, поверх всех организаций.</p>
+<p>Что было видно: подписки на события (<code>webhooks</code>) вместе с колонкой <code>secret</code>, которой подписываются доставки, журнал доставок, а также приглашения и записи журнала действий старше срока уборки. Секрет подписи позволяет подделать доставку в чужой обработчик.</p>
+<p><strong>Что делать при обновлении:</strong></p>
+<ul>
+<li>обновиться. Схему правит миграция <code>0051</code>, руками делать нечего;</li>
+<li><strong>сменить секреты подписок</strong>, если ключами приглашений в вашей установке пользовались люди вне организации-владельца подписки. Прежние секреты считать раскрытыми: <code>docs/ru/справочник.md</code>, раздел об интеграциях, объясняет, где их поменять;</li>
+<li>ключи интеграции менять не нужно: их хеши через эту границу не открывались.</li>
+</ul>
+<p>Проверяется <code>internal/org/org_test.go</code> — требование Б11 в <code>REQUIREMENTS.md</code>. Проверка падает на прежней схеме и проходит на новой.</p>
+<p><strong>Прочее</strong></p>
+<ul>
+<li>образы собираются на двух основаниях, <code>alpine</code> и <code>debian</code>, и на обеих архитектурах, amd64 и arm64; основание задаётся аргументом сборки;</li>
+<li>разбор кода CodeQL, разбор образа <code>trivy</code> до публикации, обновления зависимостей предложениями Dependabot;</li>
+<li>выпуск по тегу собирался бы с ошибкой: описание доставалось из <code>CHANGELOG.md</code> вызовом <code>awk</code> с недопустимым именем переменной.</li>
+</ul>
+<h2>v0.2.0 — 25 августа 2026</h2>
+<p>Первый выпуск, который можно кому-то показать: репозиторий открывается. Кода это почти не касается — касается всего вокруг него.</p>
+<p><strong>Смена имени</strong></p>
+<p>Продукт называется <strong>Takt</strong>. Прежнее «Доска» именем быть не могло: тем же словом в этом коде называется предметная сущность — таблица <code>boards</code>, пакет <code>internal/board</code>, маршрут <code>/board/{id}</code>, — и каждое упоминание приходилось читать дважды.</p>
+<p><strong>Что делать при обновлении с v0.1.0:</strong></p>
+<ul>
+<li>имя подкоманды изменилось: <code>board serve</code> → <code>takt serve</code>, и так же <code>migrate</code>, <code>doctor</code>, <code>version</code>, <code>demo</code>. В образе исполняемый файл теперь <code>/app/takt</code>;</li>
+<li>чарт называется <code>takt</code> и лежит в <code>deploy/helm/takt</code>. Обновление прежнего выпуска на месте не предусмотрено: <code>helm uninstall board</code> и <code>helm install takt</code>, база при этом остаётся — схема не менялась;</li>
+<li>образ переехал на <code>ghcr.io/findias/takt</code>;</li>
+<li>роль и база на стенде разработки называются <code>takt</code>, контейнер — <code>takt-dev-db</code>. Установку с внешней базой это не касается: её имена задаёте вы в <code>DATABASE_URL</code>.</li>
+</ul>
+<p>Схема базы не изменилась, миграций в этом выпуске нет.</p>
+<p><strong>Лицензия</strong></p>
+<p>Apache License 2.0. До этого лицензии не было вовсе, а это значит не «берите свободно», а «нельзя»: без явного разрешения права остаются у автора целиком.</p>
+<p>Выбрана из-за патентной оговорки: тот, кто раздал код и пошёл судиться о патентах на сделанное в нём, лицензию теряет. Для продукта, который ставят внутрь компании и правят под себя, это существеннее, чем краткость MIT.</p>
+<p>Чужой код, который едет вместе с продуктом, перечислен поимённо в <code>THIRD-PARTY.md</code> — восемь модулей Go и пять пакетов npm. Инструментов сборки там нет: их лицензии обязывают того, кто собирает, а не того, кто ставит. <code>NOTICE</code> едет с комплектом и с архивом.</p>
+<p><strong>Документация</strong></p>
+<p>Английских страниц было две, стало восемь: обзор, первые пятнадцать минут, как сделать, справочник, памятка, устройство, установка и титульная страница.</p>
+<p>Руководство по установке стало отдельным документом — <code>docs/ru/установка.md</code> и <code>docs/install.md</code> — и в нём появилось то, чего не было: <strong>требования к установке одной таблицей</strong> (версии, память, место, браузеры, сеть) и <strong>запуск из бинарника под systemd</strong>, рядом с docker compose и чартом. README стал титульной страницей.</p>
+<p><strong>Установка</strong></p>
+<ul>
+<li><code>make tarball</code> собирает архив для установки из бинарника: сам бинарник, собранный клиент, лицензия и список чужого кода. К выпуску прикладываются архивы под linux/amd64 и linux/arm64 с контрольными суммами;</li>
+<li>комплект для закрытого контура (<code>make bundle</code>) теперь везёт и <code>LICENSE</code> с <code>NOTICE</code>: Apache-2.0 требует передавать их с каждой копией, а комплект — это и есть копия.</li>
+</ul>
+<p><strong>Починено</strong></p>
+<ul>
+<li><strong>Версия перестала вшиваться в бинарник</strong> — путь в <code>-ldflags</code> разошёлся с путём модуля при переименовании. Линковщик на несуществующий символ не ругается: он молча ничего не кладёт, сборка идёт, образ собирается, и только <code>takt version</code> отвечает «версия не задана». Закреплено проверкой: путь сверяется с <code>go.mod</code>.</li>
+</ul>
+<p><strong>Чего этот выпуск по-прежнему не обещает</strong></p>
+<ul>
+<li>Установку никто ни разу не проводил в настоящем кластере: чарт проверяется отрисовкой и связностью. По той же причине выпуск не 1.0 — до неё контракт API можно менять.</li>
+<li>Вложений в карточках нет.</li>
+</ul>
+<h2>v0.1.0 — 23 августа 2026</h2>
+<p>Первый выпуск с номером. До него версии не было вовсе: тегов в репозитории не было, комплект собирался из хеша с суффиксом <code>-dirty</code>, а в самом бинарнике версия не хранилась — ответить на «какая у нас стоит» было нечем ни заказчику, ни нам.</p>
+<p><strong>Установка и обновление</strong></p>
+<ul>
+<li><code>takt version</code> — какая это версия; отвечает и тогда, когда база недоступна.</li>
+<li><code>takt doctor</code> — проверка того, что установка сделана правильно: применена ли схема целиком, действуют ли политики изоляции, тот ли <code>BASE_URL</code> (а значит, дойдёт ли защищённая cookie), достижим ли провайдер входа, доходят ли оповещения базы. Готовность и живость отвечают на другой вопрос — «процесс жив».</li>
+<li><code>SIGNUP</code> — кто заводит организации: <code>first</code> (по умолчанию: первый пришедший становится владельцем, дальше только по приглашению), <code>open</code>, <code>closed</code>. <strong>Смена поведения:</strong> до этого регистрация была открыта всегда и выключить её было нечем.</li>
+<li>База может подниматься чартом (<code>postgresql.enabled=true</code>) — для стенда. Основное расположение прежнее: снаружи, на железе или в отдельном операторе.</li>
+<li>Версия установки видна на экране «Команда».</li>
+</ul>
+<p><strong>При обновлении знать</strong></p>
+<ul>
+<li><code>helm rollback</code> вернёт поды, но не схему базы. Миграции пишутся совместимыми с предыдущей версией приложения — на этом откат и держится, — но резервная копия перед обновлением всё равно нужна.</li>
+<li>Миграции идут отдельной задачей до выкатки подов; приложение не стартует на непроинициализированной базе намеренно.</li>
+</ul>
+<p><strong>Чего этот выпуск не обещает</strong></p>
+<ul>
+<li>Установку никто ни разу не проводил: чарт проверяется отрисовкой и связностью, но не установкой в настоящий кластер.</li>
+<li>Вложений в карточках нет. Настройка <code>STORAGE</code> убрана: она читалась и не использовалась никем, а настройка без поведения обещает возможность и заставляет монтировать том, который никому не нужен.</li>
+</ul>
+</section>
+</main>
+</body>
+</html>

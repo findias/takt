@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html" aria-current="page">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>How to</h1>
+<p>Answers to specific questions. Each one is short and stands on its own — no need to read them in order.</p>
+<p>If this is your first time here, walk through the <a href="quickstart.html">first fifteen minutes</a> first; the rest will make more sense.</p>
+<p><strong>The interface is in Russian.</strong> Buttons are quoted the way they appear on screen, with a translation next to them.</p>
+<h2>Working on the board</h2>
+<h3>Find a card</h3>
+<p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
+<p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
+<h3>Filter down to what you need</h3>
+<ol>
+<li>In the row above the board pick your conditions: assignee, labels, «горит» (urgent), «срок подходит» (due soon), «заблокированные» (blocked), «дольше обещанного» (past the promise), iteration.</li>
+<li>To share the result, copy the page address — the filter lives in it.</li>
+<li>To come back to a filter later, press <strong>«Сохранить вид»</strong> (save view) and give it a name.</li>
+</ol>
+<p>Labels combine with AND: pick «срочно» and «снаружи» and you get cards carrying both.</p>
+<h3>Slice the board into swimlanes</h3>
+<p>In the <strong>«Без группировки»</strong> (no grouping) list, choose what to slice by: assignee, label, iteration or priority.</p>
+<p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
+<h3>Compare cards against each other</h3>
+<p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
+<p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
+<h3>Split work into parts</h3>
+<ol>
+<li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
+<li>In the subtasks section press <strong>«Добавить»</strong> (add).</li>
+<li>Type the name of the part.</li>
+</ol>
+<p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
+<h3>Take a card off the board</h3>
+<p>Hover the card, open the <strong>«…»</strong> menu and choose <strong>«В архив»</strong> (to the archive). A message appears with a <strong>«Вернуть»</strong> (restore) button, in case that was the wrong card.</p>
+<p>Archived cards sit in <strong>«Архив»</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
+<h3>Run a sprint or a release</h3>
+<ol>
+<li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
+<li>Set a name, a start and an end.</li>
+<li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
+<li>When the time is up press <strong>«закрыть»</strong> (close) — a report appears: what made it and what did not.</li>
+</ol>
+<h2>The organisation</h2>
+<h3>Invite someone</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Пригласить»</strong> section.</li>
+<li>Enter an e-mail, pick a role, press <strong>«Пригласить»</strong>.</li>
+<li>Send the link to the person.</li>
+</ol>
+<p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
+<h3>Close a board to outsiders</h3>
+<ol>
+<li>Open the board and press <strong>«Доступ»</strong> (access) in the header.</li>
+<li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
+<li>For the last one, add people to the list.</li>
+</ol>
+<p>Closing a board adds you to it: otherwise your very first action would lock you out.</p>
+<h3>Handle someone leaving</h3>
+<p>Pick one of two; they do different things:</p>
+<ul>
+<li><strong>«Исключить»</strong> (remove) — the person is no longer in the organisation. Their cards, comments and audit entries stay.</li>
+<li><strong>«Удалить данные»</strong> (erase data) — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
+</ul>
+<p>If someone left but the work must stay traceable, the first is enough.</p>
+<h3>Set up subdivisions</h3>
+<ol>
+<li>The <strong>«Структура»</strong> (structure) tab.</li>
+<li>Press <strong>«Завести подразделение»</strong> (create a subdivision), enter a name.</li>
+<li>To nest one inside another, create the child inside the node.</li>
+<li>Appoint a subdivision administrator — they will run their own subtree.</li>
+</ol>
+<h2>Integrations</h2>
+<h3>Issue a key for an integration</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Ключи для интеграций»</strong> (integration keys).</li>
+<li>State what the key is for and pick its scopes.</li>
+<li>Press <strong>«Завести»</strong> and copy the key — it is shown once.</li>
+</ol>
+<p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
+<h3>Receive events in your own system</h3>
+<ol>
+<li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
+<li>Enter a name and the receiver&#39;s address, tick the events.</li>
+<li>Press <strong>«Завести»</strong> and keep the signing key — we sign every delivery with it.</li>
+</ol>
+<p>If the receiver goes down for maintenance, press <strong>«Приостановить»</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
+<h3>Work out why an event did not arrive</h3>
+<ol>
+<li>On the subscription press <strong>«Доставки»</strong> (deliveries).</li>
+<li>Look at the attempts and the receiver&#39;s response.</li>
+<li>Once the receiver is fixed, press <strong>«Повторить»</strong> (retry) on what did not arrive.</li>
+</ol>
+<p>A retry also re-enables the subscription if we disabled it after a long run of failures.</p>
+<h3>Take all the organisation&#39;s data</h3>
+<p><strong>«Команда»</strong> tab → <strong>«Выгрузка»</strong> (export) → <strong>«Скачать файл»</strong> (download).</p>
+<p>Tick <strong>«Добавить журнал действий»</strong> (include the audit log) if you need it too: the log is usually larger than everything else combined.</p>
+<h2>Installing and operating</h2>
+<p>Details are in the <a href="install.html">installation guide</a>.</p>
+<h3>Check that the installation was done right</h3>
+<pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<p>It answers as a list: right schema, right address, identity provider reachable, database notifications arriving.</p>
+<h3>Upgrade an installation</h3>
+<pre><code>docker load &lt; takt-image.tar.gz
+helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;version&gt;
+kubectl exec deploy/takt -- /app/takt doctor</code></pre>
+<p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
+<h3>Close registration</h3>
+<p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
+<footer>Takt, version v0.2.0-11-ge7a3da2-dirty. Built from howto.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

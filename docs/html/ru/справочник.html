@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Справочник</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html" aria-current="page">Справочник</a>
+<a href="памятка.html">Памятка</a>
+<a href="устройство.html">Устройство</a>
+<a href="установка.html">Установка</a>
+<a href="../overview.html">In English</a>
+</nav>
+<h1>Справочник</h1>
+<p>Списки и таблицы: что где лежит, что как называется, что чему равно. Читается не подряд, а по нужде.</p>
+<h2>Роли в организации</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Роль</th><th>Читает</th><th>Меняет работу</th><th>Управляет организацией</th></tr></thead>
+<tbody>
+<tr><td>Владелец</td><td>да</td><td>да</td><td>да</td></tr>
+<tr><td>Участник</td><td>да</td><td>да</td><td>нет</td></tr>
+<tr><td>Наблюдатель</td><td>да</td><td>нет</td><td>нет</td></tr>
+</tbody>
+</table></div>
+<p>Сверх ролей владелец назначает:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Назначение</th><th>Что даёт</th></tr></thead>
+<tbody>
+<tr><td>Администратор подразделения</td><td>ведёт своё поддерево: состав, вложенные узлы, доски</td></tr>
+<tr><td>Наблюдатель области</td><td>читает всё в своём поддереве</td></tr>
+</tbody>
+</table></div>
+<h2>Видимость досок</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Видимость</th><th>Кто видит</th></tr></thead>
+<tbody>
+<tr><td>Всей организации</td><td>все люди организации</td></tr>
+<tr><td>Своей команде</td><td>люди подразделения, которому принадлежит доска</td></tr>
+<tr><td>Только вписанным</td><td>перечисленные поимённо</td></tr>
+</tbody>
+</table></div>
+<h2>Клавиши</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Клавиши</th><th>Что делает</th></tr></thead>
+<tbody>
+<tr><td><code>Ctrl+K</code></td><td>палитра: поиск карточек и команд</td></tr>
+<tr><td>Стрелки</td><td>переход между карточками</td></tr>
+<tr><td><code>Ctrl</code> + стрелки</td><td>перенос карточки</td></tr>
+<tr><td><code>Enter</code></td><td>открыть карточку</td></tr>
+<tr><td><code>E</code></td><td>переименовать, не открывая</td></tr>
+<tr><td><code>Escape</code></td><td>закрыть панель, меню или палитру</td></tr>
+</tbody>
+</table></div>
+<h2>Отборы</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Отбор</th><th>Что показывает</th></tr></thead>
+<tbody>
+<tr><td>Текст</td><td>карточки, в названии которых есть подстрока</td></tr>
+<tr><td>Исполнитель</td><td>чьи карточки; отдельно — «ни на ком»</td></tr>
+<tr><td>Метки</td><td>карточки со <strong>всеми</strong> выбранными метками</td></tr>
+<tr><td>Горит</td><td>наивысший и высокий приоритет</td></tr>
+<tr><td>Срок подходит</td><td>срок сегодня, завтра, послезавтра или прошёл</td></tr>
+<tr><td>Заблокированные</td><td>те, где работа встала</td></tr>
+<tr><td>Дольше обещанного</td><td>те, что идут дольше обещания доски</td></tr>
+<tr><td>Итерация</td><td>привязанные к итерации; отдельно — «не в итерации»</td></tr>
+</tbody>
+</table></div>
+<h2>Группировки</h2>
+<p>Без группировки, по исполнителю, по метке, по итерации, по важности.</p>
+<h2>Показатели раздела «Поток»</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Показатель</th><th>Что отвечает</th></tr></thead>
+<tbody>
+<tr><td>Время цикла</td><td>сколько дней обычно занимает работа (перцентили)</td></tr>
+<tr><td>Пропускная способность</td><td>сколько карточек доведено до конца по неделям</td></tr>
+<tr><td>В работе</td><td>сколько работы идёт прямо сейчас</td></tr>
+<tr><td>Возраст</td><td>что идёт сейчас и сколько уже идёт</td></tr>
+<tr><td>Накопление</td><td>три полосы по дням: в очереди, в работе, сделано</td></tr>
+<tr><td>Прогноз</td><td>сколько дней займёт довести столько-то карточек</td></tr>
+<tr><td>Выброшено</td><td>сколько убрано с доски незавершёнными</td></tr>
+</tbody>
+</table></div>
+<h2>Разрешения ключей интеграции</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Разрешение</th><th>Что открывает</th></tr></thead>
+<tbody>
+<tr><td><code>boards:read</code></td><td>чтение досок и карточек</td></tr>
+<tr><td><code>boards:write</code></td><td>изменение досок и карточек</td></tr>
+<tr><td><code>structure:read</code></td><td>чтение структуры подразделений</td></tr>
+<tr><td><code>audit:read</code></td><td>чтение журнала действий</td></tr>
+<tr><td><code>scim:write</code></td><td>заведение людей и групп из каталога (только отдельным ключом)</td></tr>
+</tbody>
+</table></div>
+<h2>События подписок</h2>
+<p>Карточка: создана, переименована, описание изменено, оценка изменена, приоритет изменён, срок поставлен или снят, перенесена, заблокирована, блокировка снята, связь заведена, связь снята, написано в обсуждении, своё поле заполнено, своё поле очищено, добавлена в итерацию, убрана из итерации, работа отмечена сделанной, отметка снята, убрана в архив, возвращена на доску.</p>
+<h2>Настройки установки</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Переменная</th><th>Что задаёт</th></tr></thead>
+<tbody>
+<tr><td><code>BASE_URL</code></td><td>адрес в браузере, без слэша на конце</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>строка подключения к PostgreSQL</td></tr>
+<tr><td><code>LISTEN_ADDR</code></td><td>адрес прослушивания, по умолчанию <code>:8080</code></td></tr>
+<tr><td><code>SIGNUP</code></td><td>кто заводит организации: <code>first</code>, <code>open</code>, <code>closed</code></td></tr>
+<tr><td><code>WEB_DIR</code></td><td>каталог со статикой</td></tr>
+<tr><td><code>OIDC_ISSUER</code></td><td>адрес провайдера входа; пусто — только пароль</td></tr>
+<tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td>учётные данные у провайдера</td></tr>
+<tr><td><code>OIDC_ORG</code></td><td>организация, куда попадает пришедший впервые</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа</td></tr>
+</tbody>
+</table></div>
+<h2>Подкоманды</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Команда</th><th>Что делает</th></tr></thead>
+<tbody>
+<tr><td><code>takt serve</code></td><td>работает: API, поток изменений, фоновые задачи</td></tr>
+<tr><td><code>takt migrate</code></td><td>применяет миграции и выходит</td></tr>
+<tr><td><code>takt doctor</code></td><td>проверяет, что установка сделана правильно</td></tr>
+<tr><td><code>takt version</code></td><td>отвечает, какая это версия</td></tr>
+<tr><td><code>takt demo</code></td><td>наполняет пустую базу демонстрационными данными</td></tr>
+</tbody>
+</table></div>
+<h2>Пределы</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Что</th><th>Сколько</th></tr></thead>
+<tbody>
+<tr><td>Людей в установке</td><td>130</td></tr>
+<tr><td>Одновременно открытых досок</td><td>100 получают изменение</td></tr>
+<tr><td>Карточек на доске</td><td>500 без потери отклика</td></tr>
+<tr><td>Строк в таблице</td><td>1000, сортировка меньше 200 мс</td></tr>
+<tr><td>Первая отрисовка доски</td><td>меньше секунды</td></tr>
+</tbody>
+</table></div>
+<h2>Интеграционное API</h2>
+<p>Описание контракта — на странице <code>/api/v1/docs</code> работающей установки; машиночитаемое — <code>/api/v1/openapi.json</code>. Версия стоит в адресе, причина отказа приходит кодом, повтор с тем же ключом идемпотентности безопасен.</p>
+<footer>Takt, версия v0.2.0-11-ge7a3da2-dirty. Страница собрана из справочник.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>

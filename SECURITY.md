@@ -1,3 +1,101 @@
+# Security policy
+
+## Where to report
+
+**Do not open a public issue.** Use GitHub's private reporting:
+**Security** tab → **Report a vulnerability**. If that is unavailable,
+write to the repository owner directly.
+
+Useful to include: the version (`takt version`), the deployment profile
+(docker compose, binary, chart), what happens and what should happen. A
+minimal reproduction is worth more than a long description.
+
+## What to expect back
+
+| When | What |
+| --- | --- |
+| 5 working days | acknowledgement that the report was read |
+| 10 working days | assessment: does it reproduce, how serious |
+| after the fix | a release, a `CHANGELOG.md` entry, credit if you want it |
+
+These are honest timelines rather than exemplary ones: a small team
+maintains this. If it goes quiet for longer than promised, send a
+reminder — that is not pestering.
+
+## Supported versions
+
+The latest release is supported. Upgrading to it is part of the fix:
+there is nobody to backport patches into older versions.
+
+## What counts as a vulnerability
+
+The product is installed inside your own perimeter, and that moves the
+boundary. A vulnerability is anything that breaks one of these
+promises:
+
+- **one organisation's data is visible to another.** Isolation is held
+  by database policies, and any way around them is the most serious
+  thing here;
+- **an action is performed without the right to it** — a member doing
+  what is reserved for an owner; an integration key working beyond its
+  scopes; a viewer changing work;
+- **someone else's session or key reaches an outsider** — cross-site
+  writes, cookie theft, an invitation usable from another address;
+- **execution of foreign code or queries** — SQL, markup or command
+  injection;
+- **sign-in lands on the wrong person** — identity spoofing through the
+  provider, linking to another account via an unverified e-mail.
+
+What is **not** a vulnerability:
+
+- **a scanner finding with no path to exploitation.** A vulnerability
+  in a dependency we never call is something `govulncheck` already
+  knows and deliberately stays quiet about; send it if you can show it
+  is reachable;
+- **denial of service by load from a signed-in user.** The installation
+  is private and sized for 130 people; defending against your own
+  colleagues is not the task;
+- **a missing restriction that is missing by decision.** The soft WIP
+  limit deliberately does not block a move, and that is written down;
+- **what an organisation owner does to their own organisation.** By
+  definition of the role, an owner may do everything.
+
+## How we check this ourselves
+
+The checks are split on purpose. Third-party tools live in
+`make security`: `govulncheck`, `gosec`, `npm audit`. They need the
+network, so they are not in `make check`, which has to pass in a closed
+network too.
+
+Our own checks are about this product and are in `make check`
+(`internal/security`): queries are built from parameters, the client
+never inserts raw markup, no secrets in the repository. Isolation
+between organisations, identity boundaries, cross-site writes, key
+scopes and rate limiting are checked continuously — requirements Б1–Б10
+and П8 in [`REQUIREMENTS.md`](REQUIREMENTS.md).
+
+Data-flow analysis is CodeQL, in its own run and on a schedule. It does
+not replace `gosec`; it answers a different question. `gosec` looks at a
+statement and a call, CodeQL traces where a value came from and where it
+ended up, across function and package boundaries.
+
+The image is scanned with `trivy`, both on a pull request and **before**
+publishing in a release. That is not a duplicate of `govulncheck` and
+`npm audit`: those look at what we wrote, while the image also carries
+its base, with its own openssl, busybox or coreutils. Vulnerabilities
+with no released fix do not count: `debian:12-slim` carries 30 of them
+with none fixable (26 HIGH, 4 CRITICAL, measured 2026-08-26), and a run
+that is always red stops being read along with the real findings.
+
+Dependency updates are proposed by Dependabot — `go.mod`,
+`package-lock.json` and the versions of the GitHub actions themselves.
+
+On the GitHub side, secret scanning with push protection is on (a secret
+does not reach the repository rather than being discovered there
+afterwards), as are alerts for vulnerable dependencies.
+
+---
+
 # Безопасность
 
 *[In English below](#security-policy)*
@@ -108,101 +206,3 @@ compose, бинарник, чарт), что происходит и что до
 поэтому за ним следит проверка `internal/security/shipped_test.go`:
 как только `cmd/docs` окажется вкомпилирован в `cmd/takt`, она упадёт,
 и исключение придётся снимать.
-
----
-
-# Security policy
-
-## Where to report
-
-**Do not open a public issue.** Use GitHub's private reporting:
-**Security** tab → **Report a vulnerability**. If that is unavailable,
-write to the repository owner directly.
-
-Useful to include: the version (`takt version`), the deployment profile
-(docker compose, binary, chart), what happens and what should happen. A
-minimal reproduction is worth more than a long description.
-
-## What to expect back
-
-| When | What |
-| --- | --- |
-| 5 working days | acknowledgement that the report was read |
-| 10 working days | assessment: does it reproduce, how serious |
-| after the fix | a release, a `CHANGELOG.md` entry, credit if you want it |
-
-These are honest timelines rather than exemplary ones: a small team
-maintains this. If it goes quiet for longer than promised, send a
-reminder — that is not pestering.
-
-## Supported versions
-
-The latest release is supported. Upgrading to it is part of the fix:
-there is nobody to backport patches into older versions.
-
-## What counts as a vulnerability
-
-The product is installed inside your own perimeter, and that moves the
-boundary. A vulnerability is anything that breaks one of these
-promises:
-
-- **one organisation's data is visible to another.** Isolation is held
-  by database policies, and any way around them is the most serious
-  thing here;
-- **an action is performed without the right to it** — a member doing
-  what is reserved for an owner; an integration key working beyond its
-  scopes; a viewer changing work;
-- **someone else's session or key reaches an outsider** — cross-site
-  writes, cookie theft, an invitation usable from another address;
-- **execution of foreign code or queries** — SQL, markup or command
-  injection;
-- **sign-in lands on the wrong person** — identity spoofing through the
-  provider, linking to another account via an unverified e-mail.
-
-What is **not** a vulnerability:
-
-- **a scanner finding with no path to exploitation.** A vulnerability
-  in a dependency we never call is something `govulncheck` already
-  knows and deliberately stays quiet about; send it if you can show it
-  is reachable;
-- **denial of service by load from a signed-in user.** The installation
-  is private and sized for 130 people; defending against your own
-  colleagues is not the task;
-- **a missing restriction that is missing by decision.** The soft WIP
-  limit deliberately does not block a move, and that is written down;
-- **what an organisation owner does to their own organisation.** By
-  definition of the role, an owner may do everything.
-
-## How we check this ourselves
-
-The checks are split on purpose. Third-party tools live in
-`make security`: `govulncheck`, `gosec`, `npm audit`. They need the
-network, so they are not in `make check`, which has to pass in a closed
-network too.
-
-Our own checks are about this product and are in `make check`
-(`internal/security`): queries are built from parameters, the client
-never inserts raw markup, no secrets in the repository. Isolation
-between organisations, identity boundaries, cross-site writes, key
-scopes and rate limiting are checked continuously — requirements Б1–Б10
-and П8 in [`REQUIREMENTS.md`](REQUIREMENTS.md).
-
-Data-flow analysis is CodeQL, in its own run and on a schedule. It does
-not replace `gosec`; it answers a different question. `gosec` looks at a
-statement and a call, CodeQL traces where a value came from and where it
-ended up, across function and package boundaries.
-
-The image is scanned with `trivy`, both on a pull request and **before**
-publishing in a release. That is not a duplicate of `govulncheck` and
-`npm audit`: those look at what we wrote, while the image also carries
-its base, with its own openssl, busybox or coreutils. Vulnerabilities
-with no released fix do not count: `debian:12-slim` carries 30 of them
-with none fixable (26 HIGH, 4 CRITICAL, measured 2026-08-26), and a run
-that is always red stops being read along with the real findings.
-
-Dependency updates are proposed by Dependabot — `go.mod`,
-`package-lock.json` and the versions of the GitHub actions themselves.
-
-On the GitHub side, secret scanning with push protection is on (a secret
-does not reach the repository rather than being discovered there
-afterwards), as are alerts for vulnerable dependencies.
