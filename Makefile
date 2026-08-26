@@ -359,6 +359,21 @@ TARBALL_DIR  ?= dist/takt-$(VERSION)-$(TARBALL_OS)-$(TARBALL_ARCH)
 #
 # Чужая архитектура требует qemu на сборочной машине:
 # `docker run --privileged --rm tonistiigi/binfmt --install all`.
+# Версия чарта — версия сборки без ведущей «v»: helm требует semver.
+# Прежде она не переписывалась вовсе, и довод — «описание сборки semver
+# быть не обязано» — верен ровно для описания сборки: у тега с этим
+# всё в порядке, и выпуск клал в релиз чарт с прошлым номером.
+# Описание, из которого semver не выходит (в дереве без тегов
+# `git describe` отдаёт голый хеш), даёт 0.0.0 — как в Chart.yaml:
+# это видно и версией не притворяется.
+#
+# Скобок в этой команде нет намеренно: `$(shell …)` make разбирает
+# по скобкам, и `case … in [0-9]*)` закрыл бы вызов на первой же —
+# в рецепт уехал бы кусок самой команды вместо её вывода.
+CHART_VERSION ?= $(shell v='$(BUNDLE_VERSION)'; v="$${v#v}"; \
+  printf '%s' "$$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' \
+  && printf '%s' "$$v" || printf 0.0.0)
+
 BUNDLE_ARCH ?= $(shell go env GOARCH)
 BUNDLE_DIR  ?= dist/bundle-$(BUNDLE_VERSION)-linux-$(BUNDLE_ARCH)
 
@@ -372,10 +387,8 @@ bundle: ## Собрать комплект для установки без до
 	# не говорит ничего. `version` отвечает и при недоступной базе.
 	docker run --rm --platform linux/$(BUNDLE_ARCH) takt:$(BUNDLE_VERSION) version
 	docker save takt:$(BUNDLE_VERSION) | gzip > "$(BUNDLE_DIR)/takt-image.tar.gz"
-	# Версия чарта не переписывается версией сборки: helm требует semver,
-	# а описание сборки им быть не обязано. Комплект с чартом связывает
-	# тег образа, передаваемый при установке.
-	helm package deploy/helm/takt --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
+	helm package deploy/helm/takt --version "$(CHART_VERSION)" \
+	  --app-version "$(BUNDLE_VERSION)" -d "$(BUNDLE_DIR)" >/dev/null
 	go run ./cmd/docs
 	# Лицензия и список чужого кода едут вместе с продуктом не для
 	# порядка: Apache-2.0 требует передавать NOTICE с каждой копией,

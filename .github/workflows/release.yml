@@ -272,10 +272,17 @@ jobs:
           GOARCH=amd64 make tarball
           GOARCH=arm64 make tarball
 
+      # Обе версии — из тега: у чарта своя нумерация не заведена,
+      # выпускается он вместе с образом и архивом. Пока проставлялась
+      # одна appVersion, `version` стояла в Chart.yaml и отставала —
+      # v0.2.1 положил в релиз `takt-0.2.0.tgz`.
+      #
+      # `#v` снимает букву: helm требует semver, а теги у нас с «v».
       - name: Чарт
         run: |
           mkdir -p dist
           helm package deploy/helm/takt \
+            --version "${GITHUB_REF_NAME#v}" \
             --app-version "${GITHUB_REF_NAME}" -d dist
 
       - name: Суммы
