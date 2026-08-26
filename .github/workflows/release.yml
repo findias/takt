@@ -86,15 +86,30 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Вход в ghcr
-        run: echo "${{ secrets.GITHUB_TOKEN }}" \
-          | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io \
+            -u "${{ github.actor }}" --password-stdin
 
       # Docker Hub — только если задан. Форк и частная сборка не обязаны
       # иметь этих секретов, и ронять из-за них выпуск незачем.
+      #
+      # Проверка стоит внутри команды, а не в `if`, и это не вкусовщина:
+      # контекст `secrets` в условиях недоступен вовсе — ни у шага,
+      # ни у работы, — и `if: ${{ secrets.X != '' }}` делает негодным
+      # весь файл. Ошибка при этом та же, что от кириллицы
+      # в идентификаторе: «workflow file issue» и ни одного шага.
       - name: Вход в Docker Hub
-        if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" \
-          | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+        env:
+          HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "${HUB_TOKEN:-}" ]; then
+            echo "::warning::секрет DOCKERHUB_TOKEN не задан — вход в Docker Hub пропущен"
+            exit 0
+          fi
+          echo "$HUB_TOKEN" | docker login -u "$HUB_USER" --password-stdin
 
       # Имена переменных и функций — латиницей, как и идентификаторы
       # работ. Оболочка кириллицу в именах не принимает вовсе:
