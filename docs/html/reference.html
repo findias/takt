@@ -218,7 +218,7 @@ color:var(--ink-3);font-size:.85rem}
 <tbody>
 <tr><td><code>takt serve</code></td><td>runs: API, change stream, background jobs</td></tr>
 <tr><td><code>takt migrate</code></td><td>applies migrations and exits</td></tr>
-<tr><td><code>takt doctor</code></td><td>checks that the installation was done right</td></tr>
+<tr><td><code>takt doctor</code></td><td>checks that the installation was done right: schema, isolation, address, the connection to the database, who may create organisations, the provider, the change stream</td></tr>
 <tr><td><code>takt version</code></td><td>answers which version this is</td></tr>
 <tr><td><code>takt demo</code></td><td>fills an empty database with demo data</td></tr>
 </tbody>
@@ -236,7 +236,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2>The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.1-5-g14c39fe-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

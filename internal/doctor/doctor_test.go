@@ -110,3 +110,69 @@ func TestMissingProviderIsNotAFailure(t *testing.T) {
 		t.Errorf("вход по паролю объявлен поломкой: %s", провайдер.Ответ)
 	}
 }
+
+// База по сети без TLS обязана быть названа. Не поломкой — сеть бывает
+// доверенной, — но названа: молчание здесь читается как «всё в порядке»,
+// и именно так строка из руководства, написанная для локального сокета,
+// доезжает до базы в соседней стойке.
+func TestDatabaseOverTheNetworkWithoutTLSIsNamed(t *testing.T) {
+	db := testdb.Shared(t)
+	cfg := config.Config{
+		BaseURL:     "https://takt.example.test",
+		DatabaseURL: "postgres://takt:s3cretpass@db.example.test:5432/takt?sslmode=disable",
+	}
+
+	связь := итог(t, Осмотр(context.Background(), cfg, db), "связь с базой")
+	if !связь.Ладно {
+		t.Error("незащищённая связь объявлена поломкой: решает это тот, кто ставил")
+	}
+	if !strings.Contains(связь.Ответ, "открыто") || связь.Совет == "" {
+		t.Errorf("про открытый трафик не сказано или не сказано, что делать: %+v", связь)
+	}
+	if strings.Contains(связь.Ответ, "s3cretpass") || strings.Contains(связь.Совет, "s3cretpass") {
+		t.Errorf("пароль базы попал в вывод осмотра: %+v", связь)
+	}
+}
+
+// verify-full — то, чего от установки в бою и ждут: ни жалобы, ни совета.
+func TestVerifiedDatabaseConnectionIsQuiet(t *testing.T) {
+	db := testdb.Shared(t)
+	cfg := config.Config{
+		BaseURL:     "https://takt.example.test",
+		DatabaseURL: "postgres://takt@db.example.test:5432/takt?sslmode=verify-full",
+	}
+
+	связь := итог(t, Осмотр(context.Background(), cfg, db), "связь с базой")
+	if !связь.Ладно || связь.Совет != "" {
+		t.Errorf("проверенная связь вызвала замечание: %+v", связь)
+	}
+}
+
+// База рядом — не повод для замечания: трафик не выходит за машину.
+func TestLocalDatabaseNeedsNoTLSAdvice(t *testing.T) {
+	db := testdb.Shared(t)
+	cfg := config.Config{
+		BaseURL:     "https://takt.example.test",
+		DatabaseURL: "postgres://takt:takt@localhost:5432/takt?sslmode=disable",
+	}
+
+	связь := итог(t, Осмотр(context.Background(), cfg, db), "связь с базой")
+	if связь.Совет != "" {
+		t.Errorf("локальной базе выдан совет про TLS: %+v", связь)
+	}
+}
+
+// Открытая регистрация — тоже не поломка, но её называют: на адресе,
+// доступном всей компании, она означает чужие организации рядом.
+func TestOpenSignupIsNamed(t *testing.T) {
+	db := testdb.Shared(t)
+	cfg := config.Config{BaseURL: "https://takt.example.test", Signup: config.SignupOpen}
+
+	кто := итог(t, Осмотр(context.Background(), cfg, db), "кто заводит организации")
+	if !кто.Ладно {
+		t.Error("открытая регистрация объявлена поломкой")
+	}
+	if !strings.Contains(кто.Ответ, "всякий") || кто.Совет == "" {
+		t.Errorf("про открытую регистрацию сказано невнятно: %+v", кто)
+	}
+}

@@ -210,6 +210,10 @@ sudo tar xzf takt-&lt;version&gt;-linux-amd64.tar.gz -C /opt/takt --strip-compon
 # 3. Settings. systemd reads this file, hence 0600 and root ownership.
 sudo install -m 0600 /dev/null /etc/takt.env
 sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+# sslmode=disable here because the database is on this same machine.
+#    Over a network it has to be sslmode=verify-full with sslrootcert:
+#    otherwise the password and the data cross it in the clear.
+#    `takt doctor` says which of the two you ended up with.
 DATABASE_URL=postgres://takt:YOUR_PASSWORD@localhost:5432/takt?sslmode=disable
 BASE_URL=https://takt.example.com
 LISTEN_ADDR=127.0.0.1:8080
@@ -331,7 +335,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.1-5-g14c39fe-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

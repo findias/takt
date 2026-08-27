@@ -212,6 +212,10 @@ sudo tar xzf takt-&lt;версия&gt;-linux-amd64.tar.gz -C /opt/takt --strip-c
 # 3. Настройки. Файл читает systemd, поэтому 0600 и владелец root.
 sudo install -m 0600 /dev/null /etc/takt.env
 sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+# sslmode=disable здесь потому, что база на этой же машине.
+#    По сети должно быть sslmode=verify-full и sslrootcert: иначе пароль
+#    и данные идут по ней открыто. Что получилось у вас, скажет
+#    `takt doctor`.
 DATABASE_URL=postgres://takt:СВОЙ_ПАРОЛЬ@localhost:5432/takt?sslmode=disable
 BASE_URL=https://takt.example.ru
 LISTEN_ADDR=127.0.0.1:8080
@@ -334,7 +338,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </ol>
 <p>Что менялось между версиями — в <code>CHANGELOG.md</code>, он едет тем же комплектом. Читать его до обновления, а не после: раздел про то, что знать при обновлении, пишется ровно для этого.</p>
 <p><strong>Откат.</strong> <code>helm rollback takt</code> вернёт поды предыдущей версии, но <strong>не вернёт схему базы</strong>. Держится это на том, что миграции пишутся совместимыми с предыдущей версией приложения, и проверяется у нас (<code>migration_compat_test.go</code>). Резервная копия базы перед обновлением всё равно нужна: правило проверяем мы, а данные ваши. Если миграция была объявлена ломающей — в <code>CHANGELOG.md</code> это сказано отдельной строкой, — откат делается восстановлением базы, а не <code>helm rollback</code>.</p>
-<footer>Takt, версия v0.2.1-4-g3e539b4-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
+<footer>Takt, версия v0.2.1-5-g14c39fe-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

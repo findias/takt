@@ -107,7 +107,7 @@ marked done, mark removed, archived, restored to the board.
 | --- | --- |
 | `takt serve` | runs: API, change stream, background jobs |
 | `takt migrate` | applies migrations and exits |
-| `takt doctor` | checks that the installation was done right |
+| `takt doctor` | checks that the installation was done right: schema, isolation, address, the connection to the database, who may create organisations, the provider, the change stream |
 | `takt version` | answers which version this is |
 | `takt demo` | fills an empty database with demo data |
 

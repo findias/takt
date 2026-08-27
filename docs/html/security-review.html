@@ -165,13 +165,14 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>Way in</th><th>How it is held</th></tr></thead>
 <tbody>
-<tr><td>password</td><td><code>bcrypt</code> with the library default cost; the hash is all that is stored</td></tr>
+<tr><td>password</td><td>at least eight characters, no composition rules; <code>bcrypt</code> with the library default cost, and the hash is all that is stored</td></tr>
 <tr><td>corporate provider</td><td>OIDC authorisation code; the issuer must be <code>https</code> outside loopback, the client secret is required, the organisation is fixed by configuration and not chosen by the token</td></tr>
 <tr><td>integration key</td><td>256 bits from <code>crypto/rand</code>, shown once, stored as SHA-256; an eight-character prefix identifies it in lists; expiry optional; scopes required</td></tr>
 <tr><td>directory (SCIM 2.0)</td><td>a separate key with the <code>scim:write</code> scope only</td></tr>
 </tbody>
 </table></div>
 <p><strong>Sessions.</strong> A row in the database, an identifier in a cookie with <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code> whenever <code>BASE_URL</code> is https. Thirty days. <code>DELETE /api/me/sessions</code> ends every other session — the answer to «my laptop was stolen». A password change is not silent either: the session that changed it survives, the rest do not.</p>
+<p>Eight characters and no rules about digits or capitals is a deliberate position rather than an oversight: composition rules push people towards <code>Parol123!</code> and towards writing it down, while the thing that actually stops guessing — a limit on attempts — is below. Where your policy demands more, put people behind the corporate provider: then the policy is the provider&#39;s, which is where you can enforce it anyway.</p>
 <p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
 <p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
 <h2>Access control and isolation between organisations</h2>
@@ -295,9 +296,10 @@ make security-report # the same, as SARIF, OpenVEX and JSON
 make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS</code></pre>
+<p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.1-5-g14c39fe-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

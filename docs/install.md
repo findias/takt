@@ -191,6 +191,10 @@ sudo tar xzf takt-<version>-linux-amd64.tar.gz -C /opt/takt --strip-components=1
 # 3. Settings. systemd reads this file, hence 0600 and root ownership.
 sudo install -m 0600 /dev/null /etc/takt.env
 sudo tee /etc/takt.env >/dev/null <<'ENV'
+# sslmode=disable here because the database is on this same machine.
+#    Over a network it has to be sslmode=verify-full with sslrootcert:
+#    otherwise the password and the data cross it in the clear.
+#    `takt doctor` says which of the two you ended up with.
 DATABASE_URL=postgres://takt:YOUR_PASSWORD@localhost:5432/takt?sslmode=disable
 BASE_URL=https://takt.example.com
 LISTEN_ADDR=127.0.0.1:8080

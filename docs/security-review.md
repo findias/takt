@@ -115,7 +115,7 @@ If your policy demands a limit, set it on your side of the database.
 
 | Way in | How it is held |
 | --- | --- |
-| password | `bcrypt` with the library default cost; the hash is all that is stored |
+| password | at least eight characters, no composition rules; `bcrypt` with the library default cost, and the hash is all that is stored |
 | corporate provider | OIDC authorisation code; the issuer must be `https` outside loopback, the client secret is required, the organisation is fixed by configuration and not chosen by the token |
 | integration key | 256 bits from `crypto/rand`, shown once, stored as SHA-256; an eight-character prefix identifies it in lists; expiry optional; scopes required |
 | directory (SCIM 2.0) | a separate key with the `scim:write` scope only |
@@ -125,6 +125,13 @@ If your policy demands a limit, set it on your side of the database.
 Thirty days. `DELETE /api/me/sessions` ends every other session — the
 answer to «my laptop was stolen». A password change is not silent
 either: the session that changed it survives, the rest do not.
+
+Eight characters and no rules about digits or capitals is a deliberate
+position rather than an oversight: composition rules push people towards
+`Parol123!` and towards writing it down, while the thing that actually
+stops guessing — a limit on attempts — is below. Where your policy
+demands more, put people behind the corporate provider: then the policy
+is the provider's, which is where you can enforce it anyway.
 
 **Password guessing.** Ten failed attempts, then one a minute. Counted
 per e-mail address rather than per source: the application lives behind
@@ -334,6 +341,14 @@ make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS
 ```
+
+`takt doctor` is the shortest of these and the one worth running on the
+installation itself rather than on a clone: besides the schema and the
+isolation it names the two settings a review always asks about — whether
+the connection to the database is over a network without TLS, and who is
+allowed to create organisations. Neither is called a failure, because
+either can be a deliberate decision; both are named, because silence
+about them reads as «all fine».
 
 To see the isolation for yourself, connect to the database as the
 application role and count boards: the answer is zero without a tenant

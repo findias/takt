@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.1-4-g3e539b4-dirty.</p>
+<p>Every section in one file. Version v0.2.1-5-g14c39fe-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -425,7 +425,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tbody>
 <tr><td><code>takt serve</code></td><td>runs: API, change stream, background jobs</td></tr>
 <tr><td><code>takt migrate</code></td><td>applies migrations and exits</td></tr>
-<tr><td><code>takt doctor</code></td><td>checks that the installation was done right</td></tr>
+<tr><td><code>takt doctor</code></td><td>checks that the installation was done right: schema, isolation, address, the connection to the database, who may create organisations, the provider, the change stream</td></tr>
 <tr><td><code>takt version</code></td><td>answers which version this is</td></tr>
 <tr><td><code>takt demo</code></td><td>fills an empty database with demo data</td></tr>
 </tbody>
@@ -623,6 +623,10 @@ sudo tar xzf takt-&lt;version&gt;-linux-amd64.tar.gz -C /opt/takt --strip-compon
 # 3. Settings. systemd reads this file, hence 0600 and root ownership.
 sudo install -m 0600 /dev/null /etc/takt.env
 sudo tee /etc/takt.env &gt;/dev/null &lt;&lt;&#39;ENV&#39;
+# sslmode=disable here because the database is on this same machine.
+#    Over a network it has to be sslmode=verify-full with sslrootcert:
+#    otherwise the password and the data cross it in the clear.
+#    `takt doctor` says which of the two you ended up with.
 DATABASE_URL=postgres://takt:YOUR_PASSWORD@localhost:5432/takt?sslmode=disable
 BASE_URL=https://takt.example.com
 LISTEN_ADDR=127.0.0.1:8080
@@ -797,13 +801,14 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <div class="tablewrap"><table>
 <thead><tr><th>Way in</th><th>How it is held</th></tr></thead>
 <tbody>
-<tr><td>password</td><td><code>bcrypt</code> with the library default cost; the hash is all that is stored</td></tr>
+<tr><td>password</td><td>at least eight characters, no composition rules; <code>bcrypt</code> with the library default cost, and the hash is all that is stored</td></tr>
 <tr><td>corporate provider</td><td>OIDC authorisation code; the issuer must be <code>https</code> outside loopback, the client secret is required, the organisation is fixed by configuration and not chosen by the token</td></tr>
 <tr><td>integration key</td><td>256 bits from <code>crypto/rand</code>, shown once, stored as SHA-256; an eight-character prefix identifies it in lists; expiry optional; scopes required</td></tr>
 <tr><td>directory (SCIM 2.0)</td><td>a separate key with the <code>scim:write</code> scope only</td></tr>
 </tbody>
 </table></div>
 <p><strong>Sessions.</strong> A row in the database, an identifier in a cookie with <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code> whenever <code>BASE_URL</code> is https. Thirty days. <code>DELETE /api/me/sessions</code> ends every other session — the answer to «my laptop was stolen». A password change is not silent either: the session that changed it survives, the rest do not.</p>
+<p>Eight characters and no rules about digits or capitals is a deliberate position rather than an oversight: composition rules push people towards <code>Parol123!</code> and towards writing it down, while the thing that actually stops guessing — a limit on attempts — is below. Where your policy demands more, put people behind the corporate provider: then the policy is the provider&#39;s, which is where you can enforce it anyway.</p>
 <p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
 <p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
 <h2>Access control and isolation between organisations</h2>
@@ -927,6 +932,7 @@ make security-report # the same, as SARIF, OpenVEX and JSON
 make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS</code></pre>
+<p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
 </section>
@@ -1154,6 +1160,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <h2>v0.2.2 — 26 августа 2026</h2>
 <p><strong>Ответы несут заголовки безопасности.</strong> Политику содержимого (<code>default-src &#39;self&#39;</code>, скрипты только свои, ни рамки, ни объектов), <code>nosniff</code>, <code>X-Frame-Options: DENY</code>, политику источника перехода в пределах своего сайта, а при <code>BASE_URL</code> по https — HSTS на год. Ставит их приложение, а не прокси: настройка прокси у каждого своя, и обещание, которое держится на чужой стороне, — не обещание.</p>
 <p><strong>Что делать при обновлении:</strong> если доска у вас встроена в другую страницу рамкой, встраивание перестанет работать — это и есть смысл запрета. Если ваш прокси уже ставит свои заголовки, браузер получит оба набора и применит оба, то есть более строгий из них; проверьте, что вместе они не строже, чем нужно клиенту.</p>
+<p><strong><code>takt doctor</code> называет то, о чём спрашивает проверка ИБ.</strong> Две новые строки в осмотре: связь с базой (идёт ли она по сети и с каким <code>sslmode</code> — с советом про <code>verify-full</code>, если открыто) и кто заводит организации (<code>SIGNUP</code>). Поломкой ни то ни другое не объявляется — доверенная сеть и открытая регистрация бывают решением, — но молчать о них осмотр больше не будет. Пароль базы в вывод не попадает.</p>
 <p><strong>Состав поставки и отчёты сканеров теперь отдаются файлами.</strong> В выпуске и в комплекте для закрытого контура появились <code>sbom/*.cdx.json</code> (CycloneDX: сервер вместе со стандартной библиотекой Go и клиент) и отчёты сканеров в SARIF, OpenVEX и JSON. Собираются целями <code>make sbom</code> и <code>make security-report</code>.</p>
 <p><strong>Что делать при обновлении:</strong> ничего. Но <code>SHA256SUMS</code> теперь длиннее: в выпуске он перечисляет и состав с отчётами, а в комплекте — каждый файл, включая вложенные каталоги документации. Прежде в комплекте он не собирался вовсе: команда спотыкалась о каталог и обрывала сборку на последнем шаге.</p>
 <p><strong>Страница для проверки ИБ</strong> — <code>docs/security-review.md</code> и русский перевод <code>docs/ru/проверка-иб.md</code>: что пересекает периметр, какие данные где лежат и сколько живут, чем держится изоляция организаций, чего продукт намеренно не делает, и куда это ложится в требованиях — российских и международных.</p>
