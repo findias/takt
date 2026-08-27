@@ -136,28 +136,66 @@ func безВерсии(страница string) string {
 	return подписьВерсии.ReplaceAllString(страница, "${1}…")
 }
 
+// Собранные страницы обоих языков. Подкаталог обходится тоже: пока
+// читался только корень, русские страницы не сверялись ни с чем —
+// и переключение языка на них было сломано в собранном виде, а всё
+// зелено. Имена в ключах — с путём от `docs/html`: сравнивать
+// «индекс.html» с «index.html» из корня было бы не с чем.
 func собранные(t *testing.T) map[string]string {
 	t.Helper()
 	каталог := filepath.Join(корень(t), "docs", "html")
-	записи, err := os.ReadDir(каталог)
+	out := map[string]string{}
+	err := filepath.Walk(каталог, func(путь string, инфо os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if инфо.IsDir() || !strings.HasSuffix(путь, ".html") {
+			return nil
+		}
+		raw, err := os.ReadFile(путь)
+		if err != nil {
+			return err
+		}
+		отн, _ := filepath.Rel(каталог, путь)
+		out[filepath.ToSlash(отн)] = string(raw)
+		return nil
+	})
 	if err != nil {
 		t.Fatalf("собранной документации нет: %v", err)
-	}
-	out := map[string]string{}
-	for _, з := range записи {
-		if !strings.HasSuffix(з.Name(), ".html") {
-			continue
-		}
-		raw, err := os.ReadFile(filepath.Join(каталог, з.Name()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		out[з.Name()] = string(raw)
 	}
 	if len(out) == 0 {
 		t.Fatal("в docs/html нет ни одной страницы")
 	}
 	return out
+}
+
+// Ссылка со страницы на страницу обязана вести на существующий файл.
+//
+// Проверка исходников этого не ловит: в `.md` путь верен, ломается он
+// при переводе в `.html` — каталогов в сборке меньше, чем в исходниках.
+// Так и потерялась ссылка с русской страницы на английскую: `../` при
+// сборке срезался, и «Read in English» вела в никуда.
+func TestBuiltPagesLinkToPagesThatExist(t *testing.T) {
+	адрес := regexp.MustCompile(`(?:href|src)="([^"#]+)"`)
+	каталог := filepath.Join(корень(t), "docs", "html")
+	for имя, страница := range собранные(t) {
+		for _, m := range адрес.FindAllStringSubmatch(страница, -1) {
+			цель := m[1]
+			// Наружные адреса и картинки в самой странице — не наше
+			// дело; проверяются страницы и снимки, то есть то, что
+			// сборка кладёт рядом сама.
+			if strings.HasPrefix(цель, "http") || strings.HasPrefix(цель, "data:") {
+				continue
+			}
+			if !strings.HasSuffix(цель, ".html") && !strings.HasSuffix(цель, ".png") {
+				continue
+			}
+			путь := filepath.Join(каталог, filepath.Dir(имя), цель)
+			if _, err := os.Stat(путь); err != nil {
+				t.Errorf("%s ведёт на %s, которого в сборке нет", имя, цель)
+			}
+		}
+	}
 }
 
 // Документация обязана собираться из одного репозитория.
@@ -229,4 +267,24 @@ func отКорня(t *testing.T, путь string) string {
 		return путь
 	}
 	return короткий
+}
+
+// Русские страницы собираются в `ru/`, и ссылка наружу у них своя.
+//
+// Здесь ломалось переключение языка: `../overview.md` в исходнике —
+// соседний каталог, `../../REQUIREMENTS.md` — корень репозитория,
+// а в сборке и то и другое лежит на уровень выше русской страницы.
+func TestRenderNestedPagesLinkUpOneLevel(t *testing.T) {
+	_, тело := docs.ОтрисоватьВложенную(
+		"Смотри [Overview](../overview.md), [требования](../../REQUIREMENTS.md) " +
+			"и [старт](старт.md).")
+	for _, ждём := range []string{
+		`href="../overview.html"`,
+		`href="../REQUIREMENTS.html"`,
+		`href="старт.html"`,
+	} {
+		if !strings.Contains(тело, ждём) {
+			t.Errorf("нет %s в отрисованном: %s", ждём, тело)
+		}
+	}
 }
