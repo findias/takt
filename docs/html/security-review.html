@@ -123,7 +123,7 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>Artefact</th><th>What it is</th><th>Integrity</th></tr></thead>
 <tbody>
-<tr><td><code>ghcr.io/findias/takt:vX.Y.Z</code></td><td>image, three bases (alpine, debian, Astra), amd64 and arm64</td><td>digest in the registry, scanned with <code>trivy</code> before publication</td></tr>
+<tr><td><code>ghcr.io/findias/takt:vX.Y.Z</code></td><td>image on two bases (alpine, debian), amd64 and arm64</td><td>digest in the registry, scanned with <code>trivy</code> before publication</td></tr>
 <tr><td><code>takt-vX.Y.Z-linux-amd64.tar.gz</code></td><td>binary and built client for systemd</td><td><code>SHA256SUMS</code> in the release</td></tr>
 <tr><td><code>takt-X.Y.Z.tgz</code></td><td>Helm chart</td><td><code>SHA256SUMS</code> in the release</td></tr>
 <tr><td><code>bundle-vX.Y.Z-linux-arch/</code></td><td>everything for a closed network: image, chart, documentation, SBOM</td><td><code>SHA256SUMS</code> inside the bundle, over every file</td></tr>
@@ -195,7 +195,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <p>Two things to decide on your side. Over a network, the database connection should be <code>sslmode=verify-full</code> — the example in the installation guide uses <code>disable</code> because it connects over a local socket, and copying that line to a remote database would be a downgrade. And there is <strong>no GOST cryptography</strong> in the product; if your regime requires it, terminate TLS with a proxy that speaks it — the application does not care what terminates it.</p>
 <h2>Supply chain</h2>
-<p>The build is a Go binary with <code>CGO_ENABLED=0</code> and <code>-trimpath</code>, plus a client bundle built by Vite; nothing is fetched at run time. Images are built for three bases and two architectures from the same Dockerfile, and the running image is exercised before publication — <code>takt version</code> inside it — because a build that succeeds under emulation still says nothing about starting.</p>
+<p>The build is a Go binary with <code>CGO_ENABLED=0</code> and <code>-trimpath</code>, plus a client bundle built by Vite; nothing is fetched at run time. Images are published on two bases and two architectures from the same Dockerfile, and the running image is exercised before publication — <code>takt version</code> inside it — because a build that succeeds under emulation still says nothing about starting. A base of your own — Astra Linux, RED OS, your own hardened image — is built from that same Dockerfile on your side: <code>make image RUNTIME_BASE=your-image:tag</code>. It is not added to the release matrix, because publishing an image nobody but its requester installs means scanning and answering for it forever.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Question</th><th>Answer</th><th>Artefact</th></tr></thead>
 <tbody>
@@ -299,7 +299,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.1-6-gd1d652d-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.2-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -22,7 +22,7 @@ object storage, no agents on other machines.
 
 | Artefact | What it is | Integrity |
 | --- | --- | --- |
-| `ghcr.io/findias/takt:vX.Y.Z` | image, three bases (alpine, debian, Astra), amd64 and arm64 | digest in the registry, scanned with `trivy` before publication |
+| `ghcr.io/findias/takt:vX.Y.Z` | image on two bases (alpine, debian), amd64 and arm64 | digest in the registry, scanned with `trivy` before publication |
 | `takt-vX.Y.Z-linux-amd64.tar.gz` | binary and built client for systemd | `SHA256SUMS` in the release |
 | `takt-X.Y.Z.tgz` | Helm chart | `SHA256SUMS` in the release |
 | `bundle-vX.Y.Z-linux-arch/` | everything for a closed network: image, chart, documentation, SBOM | `SHA256SUMS` inside the bundle, over every file |
@@ -208,10 +208,14 @@ does not care what terminates it.
 
 The build is a Go binary with `CGO_ENABLED=0` and `-trimpath`, plus a
 client bundle built by Vite; nothing is fetched at run time. Images are
-built for three bases and two architectures from the same Dockerfile,
+published on two bases and two architectures from the same Dockerfile,
 and the running image is exercised before publication — `takt version`
 inside it — because a build that succeeds under emulation still says
-nothing about starting.
+nothing about starting. A base of your own — Astra Linux, RED OS, your
+own hardened image — is built from that same Dockerfile on your side:
+`make image RUNTIME_BASE=your-image:tag`. It is not added to the release
+matrix, because publishing an image nobody but its requester installs
+means scanning and answering for it forever.
 
 | Question | Answer | Artefact |
 | --- | --- | --- |
