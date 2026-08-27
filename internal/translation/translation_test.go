@@ -48,6 +48,7 @@ var пары = map[string]string{
 	"docs/install.md":         "docs/ru/установка.md",
 	"docs/security-review.md": "docs/ru/проверка-иб.md",
 	"README.md":               "README.ru.md",
+	"CHANGELOG.md":            "CHANGELOG.ru.md",
 }
 
 var метка = regexp.MustCompile(`<!-- перевод: (\S+) sha256:([0-9a-f]{12}) -->`)

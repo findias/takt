@@ -1,262 +1,279 @@
-# Что менялось
+# What changed
 
-Список для тех, кто ставит и обновляет: что изменилось между двумя
-установками и на что смотреть после обновления. Почему решено именно
-так — в `research/*.html`; здесь — что делать при обновлении.
+For whoever installs and upgrades: what is different between two
+installations and what to look at afterwards. Why it was decided this
+way is in `research/*.html`; here is what to do on upgrade.
 
-Правило записи: сперва то, что меняет поведение или требует действий
-при обновлении, потом остальное. Версия появляется здесь раньше, чем
-тег, — иначе выпуск делается, а список пишется «потом».
+The rule for an entry: first whatever changes behaviour or needs action
+on upgrade, then the rest. A version appears here before its tag —
+otherwise the release gets made and the list gets written «later».
 
-## v0.2.3 — 27 августа 2026
+## v0.2.3 — 27 August 2026
 
-**Бинарник выпускается отдельным файлом, и его сумму можно получить
-самому.** Рядом с архивом теперь лежит `takt-vX.Y.Z-linux-amd64.bin`
-(и `-arm64`) со своей суммой: сверяют на месте именно его — у поставленного
-из архива на диске лежит `/opt/takt/takt`, а сумма архива на этот вопрос
-не отвечает. Сборка воспроизводима, и выпуск это проверяет: пересобирает
-бинарник тем же тегом и сверяет побайтово до публикации. Значит, сумму
-не обязательно брать у нас — `GOOS=linux GOARCH=amd64 make binary` даёт
-те же байты.
+**The binary is released as a file of its own, and you can obtain its
+sum yourself.** Next to the archive there is now
+`takt-vX.Y.Z-linux-amd64.bin` (and `-arm64`) with its own sum: that is
+what gets checked in place — an installation from the archive leaves
+`/opt/takt/takt` on disk, and the sum of the archive does not answer
+that question. The build is reproducible, and the release proves it:
+it rebuilds the binary from the same tag and compares byte for byte
+before publishing. So the sum need not be taken on our word —
+`GOOS=linux GOARCH=amd64 make binary` produces the same bytes.
 
-**Суммы выпуска сходятся у того, кто его скачал.** В выпуске файлы лежат
-плоско — каталогов у вложений GitHub не хранит, — а суммы считались
-с путями (`sbom/takt-server.cdx.json`). У всякого, кто скачал v0.2.2
-и выполнил `sha256sum -c SHA256SUMS`, не сходились семь строк
-из тринадцати. Теперь состав и отчёты складываются в один уровень
-до подсчёта.
+**The sums of a release verify for whoever downloaded it.** Assets in a
+release lie flat — GitHub keeps no directories for them — while the sums
+were computed with paths (`sbom/takt-server.cdx.json`). For anyone who
+downloaded v0.2.2 and ran `sha256sum -c SHA256SUMS`, seven lines out of
+thirteen did not check out. The SBOM and the reports are now flattened
+before the sums are computed.
 
-**Что делать с v0.2.2:** ничего. Файл сумм в том выпуске заменён
-на пересчитанный — сами файлы те же, значения совпали до знака,
-изменились только имена в списке.
+**What to do about v0.2.2:** nothing. The sums file in that release was
+replaced by a recomputed one — the files themselves are the same, the
+values matched to the digit, only the names in the list changed.
 
-**Ручной запуск выпуска собирает названный тег.** Вход `tag` был
-объявлен в окне запуска и не читался ни одной строкой: сборка брала
-ветку, на которой нажали кнопку.
+**A release started by hand builds the tag it was given.** The `tag`
+input was declared in the run dialog and read by not a single line: the
+build took the branch the button was pressed on.
 
-## v0.2.2 — 27 августа 2026
+## v0.2.2 — 27 August 2026
 
-**Ответы несут заголовки безопасности.** Политику содержимого
-(`default-src 'self'`, скрипты только свои, ни рамки, ни объектов),
-`nosniff`, `X-Frame-Options: DENY`, политику источника перехода
-в пределах своего сайта, а при `BASE_URL` по https — HSTS на год.
-Ставит их приложение, а не прокси: настройка прокси у каждого своя,
-и обещание, которое держится на чужой стороне, — не обещание.
+**Every answer carries security headers.** A content security policy
+(`default-src 'self'`, scripts from this origin only, no framing, no
+objects), `nosniff`, `X-Frame-Options: DENY`, a same-origin referrer
+policy, and — where `BASE_URL` is https — HSTS for a year. The
+application sets them itself rather than leaving them to a proxy: every
+installation configures its proxy differently, and a promise that holds
+only on somebody else's side is not a promise.
 
-**Что делать при обновлении:** если доска у вас встроена в другую
-страницу рамкой, встраивание перестанет работать — это и есть смысл
-запрета. Если ваш прокси уже ставит свои заголовки, браузер получит
-оба набора и применит оба, то есть более строгий из них; проверьте,
-что вместе они не строже, чем нужно клиенту.
+**What to do on upgrade:** if you embed the board into another page in a
+frame, the embedding stops working — that is what the prohibition is
+for. If your proxy already sets headers of its own, the browser receives
+both sets and applies both, meaning the stricter of the two; check that
+together they are not stricter than the client needs.
 
-**Чарт называет свою версию.** До сих пор её проставлял только выпуск,
-и только `appVersion`: `version` стояла в `Chart.yaml` и не двигалась,
-поэтому релиз v0.2.1 положил `takt-0.2.0.tgz` — файл с тем же именем
-и тем же номером чарта, что и у прошлого выпуска. Теперь обе версии
-берутся из тега, и чарт выпуска v0.2.2 будет называться
+**The chart names its own version.** Until now only the release set it,
+and only `appVersion`: `version` sat in `Chart.yaml` and never moved, so
+release v0.2.1 shipped `takt-0.2.0.tgz` — a file with the same name and
+the same chart number as the previous release. Both versions now come
+from the tag, and the chart of release v0.2.2 is called
 `takt-0.2.2.tgz`.
 
-**Что делать при обновлении:** ничего, если чарт ставится из файла
-(`helm install takt takt-*.tgz`) — имя разворачивается само. Если
-у вас заведено зеркало `helm repo`, куда чарт кладётся вручную,
-проверьте, что там лежит: `takt-0.2.0.tgz` от v0.2.0 и от v0.2.1 —
-разные файлы под одним именем.
+**What to do on upgrade:** nothing, if the chart is installed from a
+file (`helm install takt takt-*.tgz`) — the name resolves itself. If you
+keep a `helm repo` mirror the chart is copied into by hand, check what
+is in it: `takt-0.2.0.tgz` from v0.2.0 and from v0.2.1 are different
+files under one name.
 
-**Чарт из репозитория как есть** теперь просит образ
-`ghcr.io/findias/takt:0.0.0` и не находит его: в `Chart.yaml` стоит
-заглушка, а не число. Прежде он молча ставил прошлую версию. Тег
-образа при установке задаётся как и раньше — `--set image.tag=…`.
+**The chart straight from the repository** now asks for the image
+`ghcr.io/findias/takt:0.0.0` and does not find it: `Chart.yaml` holds a
+placeholder, not a number. Before, it quietly installed the previous
+version. The image tag is set at install time as before —
+`--set image.tag=…`.
 
-**Состав поставки и отчёты сканеров теперь отдаются файлами.** В выпуске
-и в комплекте для закрытого контура появились `sbom/*.cdx.json`
-(CycloneDX: сервер вместе со стандартной библиотекой Go и клиент)
-и отчёты сканеров в SARIF, OpenVEX и JSON. Собираются целями
-`make sbom` и `make security-report`.
+**The bill of materials and the scanner reports are now handed over as
+files.** The release and the bundle for a closed network now carry
+`sbom/*.cdx.json` (CycloneDX: the server together with the Go standard
+library, and the client) and scanner reports in SARIF, OpenVEX and JSON.
+They are produced by `make sbom` and `make security-report`.
 
-**Что делать при обновлении:** ничего. Но `SHA256SUMS` теперь длиннее:
-в выпуске он перечисляет и состав с отчётами, а в комплекте — каждый
-файл, включая вложенные каталоги документации. Прежде в комплекте
-он не собирался вовсе: команда спотыкалась о каталог и обрывала сборку
-на последнем шаге.
+**What to do on upgrade:** nothing. But `SHA256SUMS` is longer now: in
+the release it lists the SBOM and the reports as well, and in the bundle
+every file, including the nested directories of the documentation.
+Before, the bundle did not get a sums file at all: the command tripped
+over a directory and broke the build on its last step.
 
-**`takt doctor` называет то, о чём спрашивает проверка ИБ.** Две новые
-строки в осмотре: связь с базой (идёт ли она по сети и с каким
-`sslmode` — с советом про `verify-full`, если открыто) и кто заводит
-организации (`SIGNUP`). Поломкой ни то ни другое не объявляется —
-доверенная сеть и открытая регистрация бывают решением, — но молчать
-о них осмотр больше не будет. Пароль базы в вывод не попадает.
+**`takt doctor` names what a security review asks about.** Two new lines
+in the inspection: the connection to the database (whether it goes over
+a network and with which `sslmode` — with advice about `verify-full` if
+it is in the clear) and who may create organisations (`SIGNUP`). Neither
+is called a failure — a trusted network and open registration can both
+be decisions — but the inspection will no longer keep quiet about them.
+The database password does not reach the output.
 
-**Страница для проверки ИБ** — `docs/security-review.md` и русский
-перевод `docs/ru/проверка-иб.md`: что пересекает периметр, какие данные
-где лежат и сколько живут, чем держится изоляция организаций, чего
-продукт намеренно не делает, и куда это ложится в требованиях —
-российских и международных.
+**A page for a security review** — `docs/security-review.md` and its
+Russian translation `docs/ru/проверка-иб.md`: what crosses the
+perimeter, what data lies where and for how long, what holds the
+isolation between organisations, what the product deliberately does not
+do, and where all of that maps in the paperwork — Russian and
+international alike.
 
-## v0.2.1 — 26 августа 2026
+## v0.2.1 — 26 August 2026
 
-**Обновляться стоит не откладывая: закрыта утечка между организациями.**
+**Upgrade without putting it off: a leak between organisations is
+closed.**
 
-Политики фоновых задач узнавали работника по одному признаку —
-у него нет арендатора. Признак неверный: арендатора нет ещё и у приёма
-приглашения, и у обмена по ключу интеграции. Политики строк
-складываются по ИЛИ, поэтому обладателю любой ссылки-приглашения —
-то есть всякому, кого хоть раз позвали хоть куда, — открывались
-таблицы работника целиком, поверх всех организаций.
+The policies for background jobs recognised the worker by a single
+sign — it has no tenant. The sign is wrong: there is no tenant when an
+invitation is accepted either, nor in an exchange over an integration
+key. Row policies combine with OR, so the holder of any invitation
+link — that is, anyone who was ever invited anywhere — was shown the
+worker's tables in full, across every organisation.
 
-Что было видно: подписки на события (`webhooks`) вместе с колонкой
-`secret`, которой подписываются доставки, журнал доставок, а также
-приглашения и записи журнала действий старше срока уборки. Секрет
-подписи позволяет подделать доставку в чужой обработчик.
+What was visible: event subscriptions (`webhooks`) together with the
+`secret` column that deliveries are signed with, the delivery log, and
+also invitations and audit entries older than the cleanup period. The
+signing secret makes it possible to forge a delivery into someone else's
+handler.
 
-**Что делать при обновлении:**
+**What to do on upgrade:**
 
-- обновиться. Схему правит миграция `0051`, руками делать нечего;
-- **сменить секреты подписок**, если ключами приглашений в вашей
-  установке пользовались люди вне организации-владельца подписки.
-  Прежние секреты считать раскрытыми: `docs/ru/справочник.md`, раздел
-  об интеграциях, объясняет, где их поменять;
-- ключи интеграции менять не нужно: их хеши через эту границу
-  не открывались.
+- upgrade. Migration `0051` fixes the schema; there is nothing to do by
+  hand;
+- **change the subscription secrets** if invitation links in your
+  installation were used by people outside the organisation that owns
+  the subscription. Consider the previous secrets disclosed:
+  `docs/reference.md`, the section on integrations, explains where to
+  change them;
+- the integration keys need no rotation: their hashes were not exposed
+  across that boundary.
 
-Проверяется `internal/org/org_test.go` — требование Б11
-в `REQUIREMENTS.md`. Проверка падает на прежней схеме и проходит
-на новой.
+Checked by `internal/org/org_test.go` — requirement Б11 in
+`REQUIREMENTS.md`. The check fails on the old schema and passes on the
+new one.
 
-**Прочее**
+**Also**
 
-- образы собираются на двух основаниях, `alpine` и `debian`, и на обеих
-  архитектурах, amd64 и arm64; основание задаётся аргументом сборки.
-  Перед публикацией каждый образ запускается на своей архитектуре:
-  прежде про чужую было известно только то, что она собралась;
-- **комплект для закрытого контура собирается под названную
-  архитектуру**: `make bundle BUNDLE_ARCH=arm64`, по умолчанию — своя.
-  Каталог теперь называется `dist/bundle-<версия>-linux-<архитектура>`;
-  если у вас есть сценарии, ссылающиеся на прежнее имя
-  `dist/bundle-<версия>`, их надо поправить. Прежде комплект молча
-  собирался под архитектуру сборочной машины, и на сервере другой
-  архитектуры это кончалось «exec format error» после установки;
-- разбор кода CodeQL, разбор образа `trivy` до публикации, обновления
-  зависимостей предложениями Dependabot;
-- выпуск по тегу собирался бы с ошибкой: описание доставалось
-  из `CHANGELOG.md` вызовом `awk` с недопустимым именем переменной.
+- images are built on two bases, `alpine` and `debian`, and for both
+  architectures, amd64 and arm64; the base is set by a build argument.
+  Before publication every image is started on its own architecture:
+  previously all that was known about the other one was that it
+  compiled;
+- **the bundle for a closed network is built for the architecture you
+  name**: `make bundle BUNDLE_ARCH=arm64`, defaulting to your own. The
+  directory is now called `dist/bundle-<version>-linux-<architecture>`;
+  if you have scripts referring to the old name `dist/bundle-<version>`,
+  they need fixing. Before, the bundle was quietly built for the
+  architecture of the build machine, and on a server of another
+  architecture that ended in «exec format error» after installation;
+- CodeQL analysis of the code, `trivy` analysis of the image before
+  publication, dependency updates proposed by Dependabot;
+- a release by tag would have failed: the description was extracted from
+  `CHANGELOG.md` by an `awk` call with an illegal variable name.
 
-## v0.2.0 — 25 августа 2026
+## v0.2.0 — 25 August 2026
 
-Первый выпуск, который можно кому-то показать: репозиторий открывается.
-Кода это почти не касается — касается всего вокруг него.
+The first release that can be shown to anyone: the repository opens up.
+That barely touches the code — it touches everything around it.
 
-**Смена имени**
+**A change of name**
 
-Продукт называется **Takt**. Прежнее «Доска» именем быть не могло:
-тем же словом в этом коде называется предметная сущность — таблица
-`boards`, пакет `internal/board`, маршрут `/board/{id}`, — и каждое
-упоминание приходилось читать дважды.
+The product is called **Takt**. The former «Доска» (board) could not be
+a name: the same word denotes a domain entity in this code — the
+`boards` table, the `internal/board` package, the `/board/{id}` route —
+and every mention had to be read twice.
 
-**Что делать при обновлении с v0.1.0:**
+**What to do when upgrading from v0.1.0:**
 
-- имя подкоманды изменилось: `board serve` → `takt serve`, и так же
-  `migrate`, `doctor`, `version`, `demo`. В образе исполняемый файл
-  теперь `/app/takt`;
-- чарт называется `takt` и лежит в `deploy/helm/takt`. Обновление
-  прежнего выпуска на месте не предусмотрено: `helm uninstall board`
-  и `helm install takt`, база при этом остаётся — схема не менялась;
-- образ переехал на `ghcr.io/findias/takt`;
-- роль и база на стенде разработки называются `takt`, контейнер —
-  `takt-dev-db`. Установку с внешней базой это не касается: её имена
-  задаёте вы в `DATABASE_URL`.
+- the subcommand name changed: `board serve` → `takt serve`, and the
+  same for `migrate`, `doctor`, `version`, `demo`. In the image the
+  executable is now `/app/takt`;
+- the chart is called `takt` and lives in `deploy/helm/takt`. Upgrading
+  the previous release in place is not provided for: `helm uninstall
+  board` and `helm install takt`, with the database left alone — the
+  schema did not change;
+- the image moved to `ghcr.io/findias/takt`;
+- the role and the database of the development stand are called `takt`,
+  the container `takt-dev-db`. An installation with an external database
+  is unaffected: those names are yours, in `DATABASE_URL`.
 
-Схема базы не изменилась, миграций в этом выпуске нет.
+The database schema did not change; this release has no migrations.
 
-**Лицензия**
+**Licence**
 
-Apache License 2.0. До этого лицензии не было вовсе, а это значит
-не «берите свободно», а «нельзя»: без явного разрешения права
-остаются у автора целиком.
+Apache License 2.0. There was no licence at all before, and that means
+not «help yourself» but «you may not»: without explicit permission the
+rights stay entirely with the author.
 
-Выбрана из-за патентной оговорки: тот, кто раздал код и пошёл судиться
-о патентах на сделанное в нём, лицензию теряет. Для продукта, который
-ставят внутрь компании и правят под себя, это существеннее, чем
-краткость MIT.
+Chosen for its patent clause: whoever hands the code on and then goes to
+court over patents on what was made in it loses the licence. For a
+product installed inside a company and modified there, that matters more
+than the brevity of MIT.
 
-Чужой код, который едет вместе с продуктом, перечислен поимённо
-в `THIRD-PARTY.md` — восемь модулей Go и пять пакетов npm.
-Инструментов сборки там нет: их лицензии обязывают того, кто собирает,
-а не того, кто ставит. `NOTICE` едет с комплектом и с архивом.
+Third-party code that travels with the product is listed by name in
+`THIRD-PARTY.md` — eight Go modules and five npm packages. Build tools
+are not there: their licences bind whoever builds, not whoever installs.
+`NOTICE` ships with the bundle and with the archive.
 
-**Документация**
+**Documentation**
 
-Английских страниц было две, стало восемь: обзор, первые пятнадцать
-минут, как сделать, справочник, памятка, устройство, установка
-и титульная страница.
+There were two English pages; now there are eight: overview, the first
+fifteen minutes, how to, reference, cheat sheet, design decisions,
+installation, and the title page.
 
-Руководство по установке стало отдельным документом —
-`docs/ru/установка.md` и `docs/install.md` — и в нём появилось то,
-чего не было: **требования к установке одной таблицей** (версии,
-память, место, браузеры, сеть) и **запуск из бинарника под systemd**,
-рядом с docker compose и чартом. README стал титульной страницей.
+The installation guide became a document of its own — `docs/install.md`
+and `docs/ru/установка.md` — and gained what it had lacked:
+**requirements in one table** (versions, memory, disk, browsers,
+network) and **running from a binary under systemd**, next to docker
+compose and the chart. The README became a title page.
 
-**Установка**
+**Installation**
 
-- `make tarball` собирает архив для установки из бинарника: сам
-  бинарник, собранный клиент, лицензия и список чужого кода.
-  К выпуску прикладываются архивы под linux/amd64 и linux/arm64
-  с контрольными суммами;
-- комплект для закрытого контура (`make bundle`) теперь везёт
-  и `LICENSE` с `NOTICE`: Apache-2.0 требует передавать их с каждой
-  копией, а комплект — это и есть копия.
+- `make tarball` builds an archive for installing from a binary: the
+  binary itself, the built client, the licence and the list of
+  third-party code. Archives for linux/amd64 and linux/arm64 with
+  checksums are attached to the release;
+- the bundle for a closed network (`make bundle`) now carries `LICENSE`
+  and `NOTICE` too: Apache-2.0 requires passing them on with every copy,
+  and the bundle is a copy.
 
-**Починено**
+**Fixed**
 
-- **Версия перестала вшиваться в бинарник** — путь в `-ldflags`
-  разошёлся с путём модуля при переименовании. Линковщик на
-  несуществующий символ не ругается: он молча ничего не кладёт, сборка
-  идёт, образ собирается, и только `takt version` отвечает «версия
-  не задана». Закреплено проверкой: путь сверяется с `go.mod`.
+- **the version stopped being compiled into the binary** — the path in
+  `-ldflags` drifted away from the module path during the rename. The
+  linker does not complain about a symbol that does not exist: it
+  quietly writes nothing, the build proceeds, the image is assembled,
+  and only `takt version` answers «version not set». Pinned by a check:
+  the path is compared with `go.mod`.
 
-**Чего этот выпуск по-прежнему не обещает**
+**What this release still does not promise**
 
-- Установку никто ни разу не проводил в настоящем кластере: чарт
-  проверяется отрисовкой и связностью. По той же причине выпуск
-  не 1.0 — до неё контракт API можно менять.
-- Вложений в карточках нет.
+- Nobody has ever performed the installation in a real cluster: the
+  chart is checked by rendering and by consistency. For the same reason
+  this is not 1.0 — until then the API contract may change.
+- There are no attachments on cards.
 
-## v0.1.0 — 23 августа 2026
+## v0.1.0 — 23 August 2026
 
-Первый выпуск с номером. До него версии не было вовсе: тегов
-в репозитории не было, комплект собирался из хеша с суффиксом `-dirty`,
-а в самом бинарнике версия не хранилась — ответить на «какая у нас
-стоит» было нечем ни заказчику, ни нам.
+The first release with a number. Before it there was no version at all:
+the repository had no tags, the bundle was built from a hash with a
+`-dirty` suffix, and the binary itself stored no version — there was
+nothing to answer «which one do we have» with, neither for the customer
+nor for us.
 
-**Установка и обновление**
+**Installation and upgrade**
 
-- `takt version` — какая это версия; отвечает и тогда, когда база
-  недоступна.
-- `takt doctor` — проверка того, что установка сделана правильно:
-  применена ли схема целиком, действуют ли политики изоляции, тот ли
-  `BASE_URL` (а значит, дойдёт ли защищённая cookie), достижим ли
-  провайдер входа, доходят ли оповещения базы. Готовность и живость
-  отвечают на другой вопрос — «процесс жив».
-- `SIGNUP` — кто заводит организации: `first` (по умолчанию: первый
-  пришедший становится владельцем, дальше только по приглашению),
-  `open`, `closed`. **Смена поведения:** до этого регистрация была
-  открыта всегда и выключить её было нечем.
-- База может подниматься чартом (`postgresql.enabled=true`) — для
-  стенда. Основное расположение прежнее: снаружи, на железе или
-  в отдельном операторе.
-- Версия установки видна на экране «Команда».
+- `takt version` — which version this is; it answers even when the
+  database is unreachable.
+- `takt doctor` — a check that the installation was done right: is the
+  schema applied in full, do the isolation policies hold, is `BASE_URL`
+  the right one (and therefore will a secure cookie arrive), is the
+  sign-in provider reachable, do database notifications get through.
+  Readiness and liveness answer a different question — «the process is
+  alive».
+- `SIGNUP` — who creates organisations: `first` (the default: the first
+  to arrive becomes the owner, after that by invitation only), `open`,
+  `closed`. **A change of behaviour:** until now registration was always
+  open and there was no way to turn it off.
+- The database can be brought up by the chart
+  (`postgresql.enabled=true`) — for a stand. The main arrangement is
+  unchanged: outside, on hardware or in a separate operator.
+- The version of the installation is visible on the «Команда» (Team)
+  screen.
 
-**При обновлении знать**
+**To know when upgrading**
 
-- `helm rollback` вернёт поды, но не схему базы. Миграции пишутся
-  совместимыми с предыдущей версией приложения — на этом откат
-  и держится, — но резервная копия перед обновлением всё равно нужна.
-- Миграции идут отдельной задачей до выкатки подов; приложение
-  не стартует на непроинициализированной базе намеренно.
+- `helm rollback` brings back the pods but not the database schema.
+  Migrations are written to be compatible with the previous version of
+  the application — that is what a rollback rests on — but a backup
+  before the upgrade is still required.
+- Migrations run as a separate job before the pods are rolled out; the
+  application deliberately does not start on an uninitialised database.
 
-**Чего этот выпуск не обещает**
+**What this release does not promise**
 
-- Установку никто ни разу не проводил: чарт проверяется отрисовкой
-  и связностью, но не установкой в настоящий кластер.
-- Вложений в карточках нет. Настройка `STORAGE` убрана: она читалась
-  и не использовалась никем, а настройка без поведения обещает
-  возможность и заставляет монтировать том, который никому не нужен.
+- Nobody has ever performed the installation: the chart is checked by
+  rendering and by consistency, but not by installing into a real
+  cluster.
+- There are no attachments on cards. The `STORAGE` setting is gone: it
+  was read and used by nobody, and a setting without behaviour promises
+  a capability and forces you to mount a volume nobody needs.

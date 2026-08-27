@@ -111,7 +111,8 @@ color:var(--ink-3);font-size:.85rem}
 <a href="security-review.html">Security review</a>
 <a href="SECURITY.html" aria-current="page">Security policy</a>
 <a href="REQUIREMENTS.html">Требования</a>
-<a href="CHANGELOG.html">Что менялось</a>
+<a href="CHANGELOG.html">What changed</a>
+<a href="CHANGELOG.ru.html">Что менялось</a>
 <a href="ru/индекс.html">По-русски</a>
 </nav>
 <h1>Security policy</h1>
@@ -198,7 +199,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Со стороны GitHub включены поиск секретов с защитой при отправке (секрет не уезжает в репозиторий, а не обнаруживается там потом) и оповещения об уязвимых зависимостях.</p>
 <p>Ложное срабатывание не замазывают, а объясняют: у gosec — <code>// #nosec G404 -- почему</code>, у своей проверки склейки — <code>// #sql-склейка: почему</code>. Маркер без объяснения не считается.</p>
 <p>Одно исключение сделано целым каталогом: <code>cmd/docs</code> — сборщик документации — выведен из-под gosec. Довод в нём один: он не едет заказчику. Довод в комментарии живёт до первой правки импортов, поэтому за ним следит проверка <code>internal/security/shipped_test.go</code>: как только <code>cmd/docs</code> окажется вкомпилирован в <code>cmd/takt</code>, она упадёт, и исключение придётся снимать.</p>
-<footer>Takt, version v0.2.2-2-gb9e03fc-dirty. Built from SECURITY.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-dirty. Built from SECURITY.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

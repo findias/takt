@@ -408,7 +408,7 @@ tarball: build ## Собрать архив для установки из би�
 	@rm -rf "$(TARBALL_DIR)" && mkdir -p "$(TARBALL_DIR)/dist"
 	cp bin/takt "$(TARBALL_DIR)/"
 	cp -r web/dist/. "$(TARBALL_DIR)/dist/"
-	cp README.md README.ru.md CHANGELOG.md LICENSE NOTICE THIRD-PARTY.md "$(TARBALL_DIR)/"
+	cp README.md README.ru.md CHANGELOG.md CHANGELOG.ru.md LICENSE NOTICE THIRD-PARTY.md "$(TARBALL_DIR)/"
 	cd dist && tar czf "$(notdir $(TARBALL_DIR)).tar.gz" "$(notdir $(TARBALL_DIR))"
 	cd dist && sha256sum "$(notdir $(TARBALL_DIR)).tar.gz" > "$(notdir $(TARBALL_DIR)).tar.gz.sha256"
 	# Бинарник ещё и отдельно, рядом с архивом.
@@ -484,7 +484,7 @@ bundle: ## Собрать комплект для установки без до
 	# Лицензия и список чужого кода едут вместе с продуктом не для
 	# порядка: Apache-2.0 требует передавать NOTICE с каждой копией,
 	# а комплект для закрытого контура — это и есть копия.
-	cp README.md README.ru.md CHANGELOG.md LICENSE NOTICE THIRD-PARTY.md "$(BUNDLE_DIR)/"
+	cp README.md README.ru.md CHANGELOG.md CHANGELOG.ru.md LICENSE NOTICE THIRD-PARTY.md "$(BUNDLE_DIR)/"
 	cp -r docs/html "$(BUNDLE_DIR)/docs"
 	$(MAKE) docs-pdf
 	cp docs/html/takt.pdf "$(BUNDLE_DIR)/"

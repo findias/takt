@@ -10,7 +10,7 @@
 
 [English](README.md) · [Установка](docs/ru/установка.md) ·
 [Документация](docs/ru/индекс.md) · [Требования](REQUIREMENTS.md) ·
-[Что менялось](CHANGELOG.md) · [Как участвовать](CONTRIBUTING.md) ·
+[Что менялось](CHANGELOG.ru.md) · [Как участвовать](CONTRIBUTING.md) ·
 [Безопасность](SECURITY.md) · [Проверка ИБ](docs/ru/проверка-иб.md)
 
 Takt — takt time, ритм, с которым работа выходит из потока. Названо

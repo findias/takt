@@ -40,7 +40,8 @@ var исходники = []источник{
 	{"docs/security-review.md", "Security review"},
 	{"SECURITY.md", "Security policy"},
 	{"REQUIREMENTS.md", "Требования"},
-	{"CHANGELOG.md", "Что менялось"},
+	{"CHANGELOG.md", "What changed"},
+	{"CHANGELOG.ru.md", "Что менялось"},
 }
 
 type источник struct {
