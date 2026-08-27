@@ -164,7 +164,13 @@ func (s *Server) Handler() http.Handler {
 	// Порядок обёрток: сперва версия — она переписывает путь, — потом
 	// предел частоты, потом запись в лог. Иначе в логе оказался бы путь,
 	// которого в маршрутах нет.
-	return logRequests(s.log, versioned(s.limited(mux)))
+	//
+	// Заголовки безопасности — снаружи предела частоты и версии: отказ
+	// «слишком часто» и ответ на неизвестный путь такие же ответы
+	// браузеру, как и всякий другой, и без заголовков они остаются
+	// щелью ровно там, где её ищут.
+	return logRequests(s.log,
+		secureHeaders(s.cfg.SecureCookies(), versioned(s.limited(mux))))
 }
 
 func (s *Server) handleLive(w http.ResponseWriter, _ *http.Request) {

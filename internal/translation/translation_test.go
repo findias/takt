@@ -39,14 +39,15 @@ import (
 // что имена страниц не переводятся механически (`howto.md` — `как.md`),
 // а угадывание здесь дало бы проверку, которая молчит на опечатке.
 var пары = map[string]string{
-	"docs/overview.md":     "docs/ru/индекс.md",
-	"docs/quickstart.md":   "docs/ru/старт.md",
-	"docs/howto.md":        "docs/ru/как.md",
-	"docs/reference.md":    "docs/ru/справочник.md",
-	"docs/cheatsheet.md":   "docs/ru/памятка.md",
-	"docs/architecture.md": "docs/ru/устройство.md",
-	"docs/install.md":      "docs/ru/установка.md",
-	"README.md":            "README.ru.md",
+	"docs/overview.md":        "docs/ru/индекс.md",
+	"docs/quickstart.md":      "docs/ru/старт.md",
+	"docs/howto.md":           "docs/ru/как.md",
+	"docs/reference.md":       "docs/ru/справочник.md",
+	"docs/cheatsheet.md":      "docs/ru/памятка.md",
+	"docs/architecture.md":    "docs/ru/устройство.md",
+	"docs/install.md":         "docs/ru/установка.md",
+	"docs/security-review.md": "docs/ru/проверка-иб.md",
+	"README.md":               "README.ru.md",
 }
 
 var метка = regexp.MustCompile(`<!-- перевод: (\S+) sha256:([0-9a-f]{12}) -->`)

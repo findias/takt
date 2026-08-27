@@ -62,6 +62,13 @@ What is **not** a vulnerability:
 
 ## How we check this ourselves
 
+A corporate security review asks a wider set of questions than this
+policy answers — what crosses the perimeter, what personal data is
+stored and for how long, what holds the isolation between organisations,
+what the product deliberately does not do. Those are answered in one
+place: `docs/security-review.md`, with its Russian translation in
+`docs/ru/проверка-иб.md`.
+
 The checks are split on purpose. Third-party tools live in
 `make security`: `govulncheck`, `gosec`, `npm audit`. They need the
 network, so they are not in `make check`, which has to pass in a closed
@@ -157,6 +164,12 @@ compose, бинарник, чарт), что происходит и что до
   Владелец может всё по определению роли.
 
 ## Чем это проверяется у нас
+
+У проверки ИБ в компании вопросов больше, чем отвечает эта политика:
+что пересекает периметр, какие персональные данные хранятся и сколько,
+чем держится изоляция организаций, чего продукт намеренно не делает.
+Всё это собрано в одном месте — `docs/ru/проверка-иб.md`, английская
+страница рядом: `docs/security-review.md`.
 
 Проверки разделены нарочно. Чужие инструменты — в `make security`:
 `govulncheck` (есть ли известные дыры и вызываем ли мы их), `gosec`

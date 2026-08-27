@@ -108,6 +108,8 @@ color:var(--ink-3);font-size:.85rem}
 <a href="cheatsheet.html">Cheat sheet</a>
 <a href="architecture.html">Design decisions</a>
 <a href="install.html" aria-current="page">Installation</a>
+<a href="security-review.html">Security review</a>
+<a href="SECURITY.html">Security policy</a>
 <a href="REQUIREMENTS.html">Требования</a>
 <a href="CHANGELOG.html">Что менялось</a>
 <a href="ru/индекс.html">По-русски</a>
@@ -329,7 +331,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Takt, version v0.2.1-3-g7828040-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

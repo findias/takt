@@ -34,6 +34,11 @@ var исходники = []источник{
 	{"docs/cheatsheet.md", "Cheat sheet"},
 	{"docs/architecture.md", "Design decisions"},
 	{"docs/install.md", "Installation"},
+	// Страница для проверки ИБ и политика раскрытия — рядом: их читает
+	// один и тот же человек, и читает он их не по порядку Diátaxis,
+	// а потому, что его прислали проверить.
+	{"docs/security-review.md", "Security review"},
+	{"SECURITY.md", "Security policy"},
 	{"REQUIREMENTS.md", "Требования"},
 	{"CHANGELOG.md", "Что менялось"},
 }
@@ -60,6 +65,7 @@ var русские = []источник{
 	{"docs/ru/памятка.md", "Памятка"},
 	{"docs/ru/устройство.md", "Устройство"},
 	{"docs/ru/установка.md", "Установка"},
+	{"docs/ru/проверка-иб.md", "Проверка ИБ"},
 }
 
 // Снимки, на которые ссылается документация. Копируются в сборку:

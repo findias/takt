@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security policy</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="security-review.html">Security review</a>
+<a href="SECURITY.html" aria-current="page">Security policy</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>Security policy</h1>
+<h2>Where to report</h2>
+<p><strong>Do not open a public issue.</strong> Use GitHub&#39;s private reporting: <strong>Security</strong> tab → <strong>Report a vulnerability</strong>. If that is unavailable, write to the repository owner directly.</p>
+<p>Useful to include: the version (<code>takt version</code>), the deployment profile (docker compose, binary, chart), what happens and what should happen. A minimal reproduction is worth more than a long description.</p>
+<h2>What to expect back</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>When</th><th>What</th></tr></thead>
+<tbody>
+<tr><td>5 working days</td><td>acknowledgement that the report was read</td></tr>
+<tr><td>10 working days</td><td>assessment: does it reproduce, how serious</td></tr>
+<tr><td>after the fix</td><td>a release, a <code>CHANGELOG.md</code> entry, credit if you want it</td></tr>
+</tbody>
+</table></div>
+<p>These are honest timelines rather than exemplary ones: a small team maintains this. If it goes quiet for longer than promised, send a reminder — that is not pestering.</p>
+<h2>Supported versions</h2>
+<p>The latest release is supported. Upgrading to it is part of the fix: there is nobody to backport patches into older versions.</p>
+<h2>What counts as a vulnerability</h2>
+<p>The product is installed inside your own perimeter, and that moves the boundary. A vulnerability is anything that breaks one of these promises:</p>
+<ul>
+<li><strong>one organisation&#39;s data is visible to another.</strong> Isolation is held by database policies, and any way around them is the most serious thing here;</li>
+<li><strong>an action is performed without the right to it</strong> — a member doing what is reserved for an owner; an integration key working beyond its scopes; a viewer changing work;</li>
+<li><strong>someone else&#39;s session or key reaches an outsider</strong> — cross-site writes, cookie theft, an invitation usable from another address;</li>
+<li><strong>execution of foreign code or queries</strong> — SQL, markup or command injection;</li>
+<li><strong>sign-in lands on the wrong person</strong> — identity spoofing through the provider, linking to another account via an unverified e-mail.</li>
+</ul>
+<p>What is <strong>not</strong> a vulnerability:</p>
+<ul>
+<li><strong>a scanner finding with no path to exploitation.</strong> A vulnerability in a dependency we never call is something <code>govulncheck</code> already knows and deliberately stays quiet about; send it if you can show it is reachable;</li>
+<li><strong>denial of service by load from a signed-in user.</strong> The installation is private and sized for 130 people; defending against your own colleagues is not the task;</li>
+<li><strong>a missing restriction that is missing by decision.</strong> The soft WIP limit deliberately does not block a move, and that is written down;</li>
+<li><strong>what an organisation owner does to their own organisation.</strong> By definition of the role, an owner may do everything.</li>
+</ul>
+<h2>How we check this ourselves</h2>
+<p>A corporate security review asks a wider set of questions than this policy answers — what crosses the perimeter, what personal data is stored and for how long, what holds the isolation between organisations, what the product deliberately does not do. Those are answered in one place: <code>docs/security-review.md</code>, with its Russian translation in <code>docs/ru/проверка-иб.md</code>.</p>
+<p>The checks are split on purpose. Third-party tools live in <code>make security</code>: <code>govulncheck</code>, <code>gosec</code>, <code>npm audit</code>. They need the network, so they are not in <code>make check</code>, which has to pass in a closed network too.</p>
+<p>Our own checks are about this product and are in <code>make check</code> (<code>internal/security</code>): queries are built from parameters, the client never inserts raw markup, no secrets in the repository. Isolation between organisations, identity boundaries, cross-site writes, key scopes and rate limiting are checked continuously — requirements Б1–Б10 and П8 in <a href="REQUIREMENTS.html"><code>REQUIREMENTS.md</code></a>.</p>
+<p>Data-flow analysis is CodeQL, in its own run and on a schedule. It does not replace <code>gosec</code>; it answers a different question. <code>gosec</code> looks at a statement and a call, CodeQL traces where a value came from and where it ended up, across function and package boundaries.</p>
+<p>The image is scanned with <code>trivy</code>, both on a pull request and <strong>before</strong> publishing in a release. That is not a duplicate of <code>govulncheck</code> and <code>npm audit</code>: those look at what we wrote, while the image also carries its base, with its own openssl, busybox or coreutils. Vulnerabilities with no released fix do not count: <code>debian:12-slim</code> carries 30 of them with none fixable (26 HIGH, 4 CRITICAL, measured 2026-08-26), and a run that is always red stops being read along with the real findings.</p>
+<p>Dependency updates are proposed by Dependabot — <code>go.mod</code>, <code>package-lock.json</code> and the versions of the GitHub actions themselves.</p>
+<p>On the GitHub side, secret scanning with push protection is on (a secret does not reach the repository rather than being discovered there afterwards), as are alerts for vulnerable dependencies.</p>
+<p>---</p>
+<h1>Безопасность</h1>
+<p>*<a href="#security-policy">In English below</a>*</p>
+<h2>Куда сообщать</h2>
+<p><strong>Не заводите публичную задачу.</strong> Откройте приватное сообщение через GitHub: вкладка <strong>Security</strong> → <strong>Report a vulnerability</strong>. Если она недоступна, напишите владельцу репозитория напрямую.</p>
+<p>Полезно приложить: версию (<code>takt version</code>), профиль установки (docker compose, бинарник, чарт), что происходит и что должно происходить. Минимальное воспроизведение ценнее подробного описания.</p>
+<h2>Чего ждать в ответ</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Когда</th><th>Что</th></tr></thead>
+<tbody>
+<tr><td>5 рабочих дней</td><td>подтверждение, что сообщение прочитано</td></tr>
+<tr><td>10 рабочих дней</td><td>оценка: воспроизводится ли, насколько серьёзно</td></tr>
+<tr><td>после исправления</td><td>выпуск, запись в <code>CHANGELOG.md</code>, упоминание вас, если захотите</td></tr>
+</tbody>
+</table></div>
+<p>Сроки честные, а не образцовые: продукт ведёт небольшая команда. Если ответа нет дольше обещанного — напомните, это не назойливость.</p>
+<h2>Какие версии поддерживаются</h2>
+<p>Поддерживается последний выпуск. Обновление до него — часть исправления: возвращать заплату в старые версии некому.</p>
+<h2>Что мы считаем уязвимостью</h2>
+<p>Продукт ставится в собственный контур, и это меняет границу. Уязвимость — то, что нарушает одно из обещаний:</p>
+<ul>
+<li><strong>данные одной организации видны другой.</strong> Изоляция держится политиками базы, и любой способ их обойти — самое серьёзное, что здесь бывает;</li>
+<li><strong>действие выполняется без права на него</strong> — участник делает то, что положено владельцу; ключ интеграции работает за пределами выданных разрешений; наблюдатель меняет работу;</li>
+<li><strong>чужая сессия или чужой ключ достаются постороннему</strong> — межсайтовая запись, кража cookie, приглашение, применимое к другому адресу;</li>
+<li><strong>выполнение чужого кода или запроса</strong> — внедрение SQL, разметки, команд;</li>
+<li><strong>вход достаётся не тому</strong> — подмена личности через провайдера, связывание с чужой учётной записью по неподтверждённой почте.</li>
+</ul>
+<p>Что уязвимостью <strong>не</strong> является:</p>
+<ul>
+<li><strong>находка сканера без пути к использованию.</strong> Уязвимость в зависимости, которую мы не вызываем, — это <code>govulncheck</code> уже знает и молчит намеренно; присылайте, если покажете, что вызывается;</li>
+<li><strong>отказ в обслуживании нагрузкой от вошедшего.</strong> Установка частная, людей до 130, и защита от своих же — не та задача;</li>
+<li><strong>отсутствие ограничений там, где их нет по решению.</strong> Мягкий WIP-лимит не запрещает перенос осознанно, и это записано;</li>
+<li><strong>то, что делает владелец организации со своей организацией.</strong> Владелец может всё по определению роли.</li>
+</ul>
+<h2>Чем это проверяется у нас</h2>
+<p>У проверки ИБ в компании вопросов больше, чем отвечает эта политика: что пересекает периметр, какие персональные данные хранятся и сколько, чем держится изоляция организаций, чего продукт намеренно не делает. Всё это собрано в одном месте — <code>docs/ru/проверка-иб.md</code>, английская страница рядом: <code>docs/security-review.md</code>.</p>
+<p>Проверки разделены нарочно. Чужие инструменты — в <code>make security</code>: <code>govulncheck</code> (есть ли известные дыры и вызываем ли мы их), <code>gosec</code> (обычные ошибки в Go), <code>npm audit</code> (зависимости клиента). Им нужна сеть, поэтому в <code>make check</code> их нет: он обязан проходить и в закрытом контуре.</p>
+<p>Свои — про этот продукт, и они как раз в <code>make check</code> (<code>internal/security</code>): запрос к базе собирается параметрами, клиент не вставляет сырую разметку, секретов в репозитории нет. Отдельно и постоянно проверяются изоляция организаций (<code>internal/store/isolation_test.go</code>), границы личности, межсайтовая запись, разрешения ключей и ограничение частоты запросов — требования Б1–Б10 и П8 в <a href="REQUIREMENTS.html"><code>REQUIREMENTS.md</code></a>.</p>
+<p>Разбор потоков данных — CodeQL, отдельным прогоном и по расписанию. Он не заменяет <code>gosec</code>, а отвечает на другой вопрос: <code>gosec</code> смотрит на строку и на вызов, CodeQL прослеживает, откуда значение пришло и куда попало, через границы функций и пакетов. Расписание тут не формальность: правила пополняются, и вчера безобидный код сегодня попадает под новое.</p>
+<p>Образ разбирается <code>trivy</code> — и на предложении правок, и <strong>до</strong> публикации в выпуске. Это не дублирование <code>govulncheck</code> и <code>npm audit</code>: те смотрят на то, что мы написали, а в образ едет ещё и основание со своим openssl, busybox или coreutils. Дыра там наша ровно в той же мере — ставит её заказчик. Уязвимости без выпущенной починки не считаются: у <code>debian:12-slim</code> их 30 при нуле чинимых (26 HIGH, 4 CRITICAL, замер 26.08.2026), и прогон, который красен всегда, перестают читать вместе с настоящими находками.</p>
+<p>Обновления зависимостей предлагает Dependabot — <code>go.mod</code>, <code>package-lock.json</code> и версии самих действий GitHub. Предложение проходит те же проверки, что и всякое другое.</p>
+<p>Со стороны GitHub включены поиск секретов с защитой при отправке (секрет не уезжает в репозиторий, а не обнаруживается там потом) и оповещения об уязвимых зависимостях.</p>
+<p>Ложное срабатывание не замазывают, а объясняют: у gosec — <code>// #nosec G404 -- почему</code>, у своей проверки склейки — <code>// #sql-склейка: почему</code>. Маркер без объяснения не считается.</p>
+<p>Одно исключение сделано целым каталогом: <code>cmd/docs</code> — сборщик документации — выведен из-под gosec. Довод в нём один: он не едет заказчику. Довод в комментарии живёт до первой правки импортов, поэтому за ним следит проверка <code>internal/security/shipped_test.go</code>: как только <code>cmd/docs</code> окажется вкомпилирован в <code>cmd/takt</code>, она упадёт, и исключение придётся снимать.</p>
+<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from SECURITY.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

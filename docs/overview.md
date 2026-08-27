@@ -22,6 +22,7 @@ translation next to it. The Russian original of this page is
 | Understand why it works this way | [Design decisions](architecture.md) |
 | Keep it on one sheet | [Cheat sheet](cheatsheet.md) |
 | Install and operate it | [Installation](install.md) |
+| Put it through a security review | [Security review](security-review.md) |
 
 The split is not accidental. Learning, instructions, lookup and
 explanation answer different questions, and mixed into one text they

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security review</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="security-review.html" aria-current="page">Security review</a>
+<a href="SECURITY.html">Security policy</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>Security review</h1>
+<p>What a corporate security review asks for, in one place: what gets installed, what crosses the perimeter, what holds the boundaries, and what is checked automatically. Next to every claim stands the thing that enforces it — a file, a test, a command — so it can be verified instead of believed.</p>
+<p>Two things this page is not. It is <strong>not a certificate</strong>: the product is not a certified information-security tool and does not pretend to be one. And it is <strong>not a review of your installation</strong>: half of what a reviewer cares about — TLS, network segmentation, backups, who can reach the database — is decided by whoever installs it. That half is marked «yours» below rather than quietly claimed.</p>
+<p>Everything here describes the version named in the footer of this page.</p>
+<h2>What gets installed</h2>
+<p>One process and one PostgreSQL database. No message broker, no cache, no object storage, no agents on other machines.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Artefact</th><th>What it is</th><th>Integrity</th></tr></thead>
+<tbody>
+<tr><td><code>ghcr.io/findias/takt:vX.Y.Z</code></td><td>image, three bases (alpine, debian, Astra), amd64 and arm64</td><td>digest in the registry, scanned with <code>trivy</code> before publication</td></tr>
+<tr><td><code>takt-vX.Y.Z-linux-amd64.tar.gz</code></td><td>binary and built client for systemd</td><td><code>SHA256SUMS</code> in the release</td></tr>
+<tr><td><code>takt-X.Y.Z.tgz</code></td><td>Helm chart</td><td><code>SHA256SUMS</code> in the release</td></tr>
+<tr><td><code>bundle-vX.Y.Z-linux-arch/</code></td><td>everything for a closed network: image, chart, documentation, SBOM</td><td><code>SHA256SUMS</code> inside the bundle, over every file</td></tr>
+<tr><td><code>sbom/takt-server.cdx.json</code>, <code>sbom/takt-web.cdx.json</code></td><td>what it is built from, CycloneDX 1.6</td><td>summed together with the rest</td></tr>
+</tbody>
+</table></div>
+<p>The version is compiled into the binary from <code>git describe</code>, not read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. <code>takt version</code> answers even when the database is unreachable; <code>takt doctor</code> prints it first.</p>
+<h2>What crosses the perimeter</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Direction</th><th>What</th><th>When</th></tr></thead>
+<tbody>
+<tr><td>in</td><td>HTTP on <code>LISTEN_ADDR</code> (<code>:8080</code> by default) — the client, the API, SCIM</td><td>always</td></tr>
+<tr><td>out</td><td>PostgreSQL on <code>DATABASE_URL</code></td><td>always</td></tr>
+<tr><td>out</td><td>the OIDC provider you configured</td><td>only with <code>OIDC_ISSUER</code> set</td></tr>
+<tr><td>out</td><td>the addresses of subscriptions an owner created</td><td>only when subscriptions exist</td></tr>
+</tbody>
+</table></div>
+<p>That is the whole list. The product opens <strong>no other outbound connection</strong>: no telemetry, no update check, no licence server, no crash reporting, no CDN. The client bundle and the documentation are served by the same process from its own files — which is why the installation works in a network with no route to the internet at all, and why the documentation pages carry no external reference either.</p>
+<p>What answers without authentication: <code>GET /healthz</code> and <code>GET /readyz</code> (a status word and nothing else), the static client, and the contract — <code>/api/v1/openapi.json</code> with its page at <code>/api/v1/docs</code>, which describes the server rather than anyone&#39;s data; requiring a key to read how to obtain a key would be a closed circle. Sign-in, invitation lookup and the OIDC callback accept anonymous requests by necessity. Everything else requires a session cookie or a bearer key.</p>
+<p><strong>In the browser.</strong> Every answer — a successful one, a refusal and an unknown address alike — carries a content security policy (<code>default-src &#39;self&#39;</code>, <code>frame-ancestors &#39;none&#39;</code>, <code>object-src &#39;none&#39;</code>, <code>base-uri &#39;none&#39;</code>), <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code>, a same-origin referrer policy, and, where <code>BASE_URL</code> is https, HSTS for a year. The application sets them itself instead of leaving them to your proxy: a promise that holds only where somebody else configured it is not a promise. There is one relaxation and it is written down rather than hidden — <code>style-src</code> allows inline, because four places in the client set a style attribute; the page at <code>/api/v1/docs</code> keeps its own stricter policy.</p>
+<h2>Data</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Data</th><th>Where</th><th>How long</th></tr></thead>
+<tbody>
+<tr><td>e-mail, display name, password hash, OIDC issuer and subject</td><td><code>users</code></td><td>until the person is erased</td></tr>
+<tr><td>boards, cards, comments, labels, estimates, subdivisions</td><td>work tables</td><td>until deleted by a person</td></tr>
+<tr><td>sessions (identifier, expiry)</td><td><code>sessions</code></td><td>30 days, or until sign-out</td></tr>
+<tr><td>audit log</td><td><code>audit_events</code></td><td>indefinitely — see below</td></tr>
+<tr><td>webhook deliveries</td><td><code>webhook_deliveries</code></td><td>30 days</td></tr>
+<tr><td>invitations</td><td><code>invites</code></td><td>30 days after they stop working</td></tr>
+<tr><td>idempotency keys</td><td>service table</td><td>24 hours</td></tr>
+</tbody>
+</table></div>
+<p>There are no file uploads anywhere in the product, so no user-supplied binary is ever stored, served or executed — which also means there is nothing here for a malware scanner to scan.</p>
+<p><strong>Personal data.</strong> Only what your own people type: a name, a work e-mail, and whatever they write on cards. The installation is yours, the database is yours, and the vendor receives nothing — there is no telemetry channel to receive it through. Under 152-ФЗ that makes you the operator and leaves no processor on our side; under GDPR the same shape means there is no transfer to a third party to legitimise.</p>
+<p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> («Удалить данные» for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
+<p><strong>Retention of the log.</strong> The audit log is never cleaned up automatically. A log kept for a month answers «who granted this access in March?» with silence, and that question is the reason the log exists. If your policy demands a limit, set it on your side of the database.</p>
+<h2>Identity</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Way in</th><th>How it is held</th></tr></thead>
+<tbody>
+<tr><td>password</td><td><code>bcrypt</code> with the library default cost; the hash is all that is stored</td></tr>
+<tr><td>corporate provider</td><td>OIDC authorisation code; the issuer must be <code>https</code> outside loopback, the client secret is required, the organisation is fixed by configuration and not chosen by the token</td></tr>
+<tr><td>integration key</td><td>256 bits from <code>crypto/rand</code>, shown once, stored as SHA-256; an eight-character prefix identifies it in lists; expiry optional; scopes required</td></tr>
+<tr><td>directory (SCIM 2.0)</td><td>a separate key with the <code>scim:write</code> scope only</td></tr>
+</tbody>
+</table></div>
+<p><strong>Sessions.</strong> A row in the database, an identifier in a cookie with <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code> whenever <code>BASE_URL</code> is https. Thirty days. <code>DELETE /api/me/sessions</code> ends every other session — the answer to «my laptop was stolen». A password change is not silent either: the session that changed it survives, the rest do not.</p>
+<p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
+<p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
+<h2>Access control and isolation between organisations</h2>
+<p>Three roles — «Владелец» (owner), «Участник» (member), «Наблюдатель» (viewer) — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
+<p>Isolation between organisations is held by <strong>database policies, not by checks in the code</strong>. Every tenant table has row-level security forced on; the application connects with a role that has no <code>SUPERUSER</code>, no <code>BYPASSRLS</code> and no <code>CREATEDB</code>, and every transaction carries the tenant context. The consequence worth spelling out to a reviewer: even a mistake in the application cannot return another organisation&#39;s row, because the row never leaves the database. The consequence worth spelling out to an administrator: if the application is pointed at a superuser role, policies stop applying and the separation quietly disappears — which is why the installation guide creates the role explicitly and <code>takt doctor</code> checks that the policies really do apply to the role the application connects with, naming the fix when they do not.</p>
+<h2>Audit and logs</h2>
+<p>The audit log is written by <strong>database triggers</strong>, not by application code: membership, invitations, subdivisions, board membership, observers, and the creation, deletion and visibility changes of boards. A code path cannot forget to write it, and a policy prevents an actor from signing someone else&#39;s name. It is read by an owner and by an observer of the whole organisation; to anyone else the log looks empty rather than forbidden.</p>
+<p>The application log goes to standard output as JSON, one line per request: method, path, status, milliseconds. No bodies, no headers, no tokens, no names — collect it with whatever your platform already collects stdout with. Health checks are not logged, or the log would be mostly probes.</p>
+<h2>Cryptography</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Where</th><th>What</th></tr></thead>
+<tbody>
+<tr><td>passwords</td><td>bcrypt</td></tr>
+<tr><td>session identifiers, invitation and key tokens</td><td><code>crypto/rand</code>, 256 bits</td></tr>
+<tr><td>stored tokens</td><td>SHA-256; the original exists only in the answer that issued it</td></tr>
+<tr><td>webhook deliveries</td><td>HMAC-SHA256 over timestamp and body, in <code>X-Signature</code></td></tr>
+<tr><td>transport</td><td>TLS terminated by your proxy or ingress; the application speaks plain HTTP inside the perimeter</td></tr>
+<tr><td>database connection</td><td>whatever <code>sslmode</code> you put in <code>DATABASE_URL</code></td></tr>
+</tbody>
+</table></div>
+<p>Two things to decide on your side. Over a network, the database connection should be <code>sslmode=verify-full</code> — the example in the installation guide uses <code>disable</code> because it connects over a local socket, and copying that line to a remote database would be a downgrade. And there is <strong>no GOST cryptography</strong> in the product; if your regime requires it, terminate TLS with a proxy that speaks it — the application does not care what terminates it.</p>
+<h2>Supply chain</h2>
+<p>The build is a Go binary with <code>CGO_ENABLED=0</code> and <code>-trimpath</code>, plus a client bundle built by Vite; nothing is fetched at run time. Images are built for three bases and two architectures from the same Dockerfile, and the running image is exercised before publication — <code>takt version</code> inside it — because a build that succeeds under emulation still says nothing about starting.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Question</th><th>Answer</th><th>Artefact</th></tr></thead>
+<tbody>
+<tr><td>what is it built from</td><td>CycloneDX 1.6 for the server (with the Go standard library) and for the client</td><td><code>make sbom</code>, attached to every release and included in the bundle</td></tr>
+<tr><td>known vulnerabilities in what we call</td><td><code>govulncheck</code> on every push</td><td><code>make security-report</code> → <code>govulncheck.sarif</code></td></tr>
+<tr><td>and in what we merely require</td><td>an OpenVEX statement saying whether the code is reachable</td><td><code>govulncheck.openvex.json</code></td></tr>
+<tr><td>static analysis</td><td><code>gosec</code>, and CodeQL separately for data flow across functions</td><td><code>gosec.sarif</code></td></tr>
+<tr><td>client dependencies</td><td><code>npm audit</code> at high and above</td><td><code>npm-audit.json</code></td></tr>
+<tr><td>the image with its base</td><td><code>trivy</code> on pull requests and before publishing</td><td>the run of <code>.github/workflows/security.yml</code></td></tr>
+<tr><td>is this the file you published</td><td>SHA-256 over every artefact, SBOM and report included</td><td><code>SHA256SUMS</code></td></tr>
+<tr><td>are updates proposed</td><td>Dependabot for Go modules, npm packages and the actions themselves</td><td><code>.github/dependabot.yml</code></td></tr>
+</tbody>
+</table></div>
+<p>Suppressions are explained rather than silent: a <code>gosec</code> exception reads <code>// #nosec G404 -- why</code>, a deliberate SQL concatenation reads <code>// #sql-склейка: why</code>, and a marker without an explanation is not accepted by our own check.</p>
+<h2>Vulnerability handling</h2>
+<p>Reports go through GitHub&#39;s private reporting — <strong>Security</strong> → <strong>Report a vulnerability</strong> — and never through a public issue. The timelines are the honest ones rather than the impressive ones: five working days to acknowledge, ten to assess, then a release with an entry in <code>CHANGELOG.md</code>. The supported version is the latest one; there is nobody to backport into older ones. What counts as a vulnerability, and what deliberately does not, is written out in <a href="SECURITY.html"><code>SECURITY.md</code></a> — including the case a scanner report usually rests on: a vulnerability in a dependency we never call.</p>
+<h2>Hardening — the part that is yours</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Do this</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>terminate TLS at the proxy or ingress, with HSTS</td><td>the application speaks plain HTTP by design; <code>Secure</code> cookies switch on from <code>BASE_URL</code> starting with <code>https</code></td></tr>
+<tr><td>give the application a role without <code>SUPERUSER</code>, <code>BYPASSRLS</code>, <code>CREATEDB</code></td><td>policies do not apply to a superuser, and isolation between organisations disappears without a single error message</td></tr>
+<tr><td>use <code>sslmode=verify-full</code> for a database over a network</td><td>otherwise credentials and data cross it in the clear</td></tr>
+<tr><td>keep the container as the chart ships it: non-root uid 10001, read-only root filesystem, no capabilities, <code>seccomp: RuntimeDefault</code></td><td>the application keeps no state on disk — everything is in the database — so it needs neither write access nor privileges</td></tr>
+<tr><td>put secrets in a Secret or an <code>EnvironmentFile</code> with mode 0600</td><td>they arrive as environment variables; a world-readable unit file undoes that</td></tr>
+<tr><td>restrict egress to the database, and to the provider and subscription addresses if you use them</td><td>the product cannot restrict its own outbound traffic, and an owner chooses subscription addresses</td></tr>
+<tr><td>back the database up and test recovery</td><td>there is no state anywhere else, and the migration runs before the pods are replaced — <code>helm rollback</code> returns the pods, not the schema</td></tr>
+<tr><td>set <code>SIGNUP=closed</code> where accounts come from the directory</td><td>otherwise the first anonymous visitor can create an organisation</td></tr>
+</tbody>
+</table></div>
+<h2>Threat model</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Threat</th><th>What stops it</th><th>What keeps it stopped</th></tr></thead>
+<tbody>
+<tr><td>one organisation reads another&#39;s data</td><td>forced RLS, a role without <code>BYPASSRLS</code>, tenant context per transaction</td><td>requirements Б1–Б11, isolation tests, the migration chain replayed from scratch on every <code>make check</code></td></tr>
+<tr><td>a stolen session cookie</td><td><code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> on https, revoke-all-sessions</td><td><code>crosssite_test.go</code></td></tr>
+<tr><td>cross-site writes</td><td><code>SameSite=Lax</code> and no state change on <code>GET</code></td><td><code>crosssite_test.go</code></td></tr>
+<tr><td>SQL injection</td><td>parameters only; concatenation is allowed for our own text and must say so out loud</td><td><code>internal/security/sast_test.go</code></td></tr>
+<tr><td>markup injection</td><td>the client never inserts raw HTML, and the content security policy allows scripts from this origin only</td><td><code>internal/security/sast_test.go</code>, <code>headers_test.go</code></td></tr>
+<tr><td>the page put in someone else&#39;s frame</td><td><code>frame-ancestors &#39;none&#39;</code> and <code>X-Frame-Options: DENY</code> on every answer</td><td><code>headers_test.go</code></td></tr>
+<tr><td>password guessing</td><td>ten failures, then one attempt a minute, per address</td><td><code>login_test.go</code></td></tr>
+<tr><td>a leaked integration key</td><td>scopes, optional expiry, its own rate limit; a key can never be an owner</td><td><code>clients_test.go</code></td></tr>
+<tr><td>a leaked invitation token</td><td>single use, expires, opens exactly one row and nothing beyond it</td><td><code>org_test.go</code></td></tr>
+<tr><td>a tampered artefact</td><td>SHA-256 over every file, SBOM alongside</td><td><code>SHA256SUMS</code></td></tr>
+<tr><td>a vulnerable dependency</td><td>four scanners, a VEX statement, Dependabot</td><td>the runs of <code>security.yml</code> and <code>codeql.yml</code></td></tr>
+<tr><td>the server made to call an internal address</td><td>only an owner can create a subscription</td><td><strong>not held by the product</strong> — restrict egress on your side</td></tr>
+<tr><td>an owner acting against their own organisation</td><td>nothing, by definition of the role</td><td>the audit log records it</td></tr>
+</tbody>
+</table></div>
+<h2>What the product does not do</h2>
+<p>Said plainly, because a review that discovers it later reads it as concealment.</p>
+<ul>
+<li><strong>No multi-factor authentication of its own.</strong> With a corporate provider it is the provider&#39;s job, and that is the recommended configuration; with local passwords there is no second factor.</li>
+<li><strong>No encryption at rest.</strong> Use the database&#39;s or the disk&#39;s.</li>
+<li><strong>No GOST cryptography</strong> anywhere, including the TLS the proxy terminates.</li>
+<li><strong>No built-in WAF, IPS or DLP</strong>, and no anti-virus surface, since nothing can be uploaded.</li>
+<li><strong>No LDAP or Active Directory bind.</strong> People arrive through OIDC and SCIM.</li>
+<li><strong>No SIEM connector.</strong> Logs are JSON on stdout, the audit log is a table and an API with the <code>audit:read</code> scope.</li>
+<li><strong>No certification.</strong> The product is not a certified means of protecting information, and the artefacts above are evidence, not a certificate.</li>
+</ul>
+<h2>Where this maps in your paperwork</h2>
+<p>The mapping names what the product provides. Everything an organisational measure requires — orders, roles, models of threats to *your* system — stays with you; a product cannot supply those, and a table claiming otherwise would be worse than no table.</p>
+<p><strong>Russian regime</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Requirement</th><th>What the product gives</th></tr></thead>
+<tbody>
+<tr><td>152-ФЗ, roles</td><td>the installation is yours end to end: you are the operator, and there is no processor on the vendor&#39;s side because there is no channel to one</td></tr>
+<tr><td>152-ФЗ art. 21, ceasing processing</td><td>anonymisation of a person in one call, with the fact in the audit log</td></tr>
+<tr><td>ФСТЭК order 21/17, ИАФ (identification and authentication)</td><td>unique accounts, bcrypt hashes, OIDC with a corporate provider, keys with scopes</td></tr>
+<tr><td>УПД (access control)</td><td>three roles, two appointments, three board visibilities, isolation by database policies</td></tr>
+<tr><td>РСБ (logging of security events)</td><td>the audit log written by triggers, kept indefinitely, readable through the API</td></tr>
+<tr><td>АНЗ (vulnerability analysis)</td><td>four scanners, SBOM, VEX, published timelines for reports</td></tr>
+<tr><td>ОЦЛ (integrity)</td><td>checksums over every artefact, version compiled into the binary, migrations forward only</td></tr>
+<tr><td>ЗИС (protection of the system and communications)</td><td>no outbound connections beyond the three named; TLS at your boundary</td></tr>
+</tbody>
+</table></div>
+<p><strong>International</strong></p>
+<div class="tablewrap"><table>
+<thead><tr><th>Framework</th><th>What the product gives</th></tr></thead>
+<tbody>
+<tr><td>OWASP ASVS V2, V3 (authentication, sessions)</td><td>bcrypt, server-side sessions, attempt limits, revoke-all</td></tr>
+<tr><td>ASVS V4 (access control)</td><td>roles and appointments enforced in the database, not in the client</td></tr>
+<tr><td>ASVS V5 (validation)</td><td>parameterised queries and a client that never inserts raw markup, both checked automatically</td></tr>
+<tr><td>ASVS V7 (logging)</td><td>an audit log a code path cannot skip; request logs without personal data</td></tr>
+<tr><td>ASVS V10, V14 (configuration, build)</td><td>SBOM, checksums, scanners in CI, a non-root read-only container</td></tr>
+<tr><td>ISO/IEC 27001 A.5.15, A.8.2, A.8.3 (access)</td><td>roles, appointments, isolation policies</td></tr>
+<tr><td>ISO/IEC 27001 A.8.8 (technical vulnerabilities)</td><td>scanners, VEX, Dependabot, disclosure timelines</td></tr>
+<tr><td>ISO/IEC 27001 A.8.16, A.8.15 (monitoring, logging)</td><td>audit log and JSON request logs</td></tr>
+<tr><td>SOC 2 CC6 (logical access)</td><td>everything in the two rows above, plus keys with scopes and expiry</td></tr>
+<tr><td>SOC 2 CC7 (operations)</td><td>health probes, drain on shutdown, migration as a pre-upgrade step, <code>takt doctor</code></td></tr>
+</tbody>
+</table></div>
+<h2>Verify it yourself</h2>
+<p>Nothing here needs to be taken on trust. Everything below runs on a clone of the repository.</p>
+<pre><code>make check           # our own checks, including isolation and the migration chain
+make security        # govulncheck, gosec, npm audit
+make security-report # the same, as SARIF, OpenVEX and JSON
+make sbom            # what it is built from, CycloneDX
+takt doctor          # what a running installation actually has
+sha256sum -c SHA256SUMS</code></pre>
+<p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
+<p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
+<footer>Takt, version v0.2.1-4-g3e539b4-dirty. Built from security-review.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

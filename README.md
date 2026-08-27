@@ -10,7 +10,8 @@ needed to install it or to run it.
 
 [По-русски](README.ru.md) · [Installation](docs/install.md) ·
 [Documentation](docs/overview.md) · [What changed](CHANGELOG.md) ·
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
+[Security review](docs/security-review.md)
 
 Takt is named after *takt time* — the rhythm at which work leaves the
 flow. That is what separates this from a task list: columns are marked
