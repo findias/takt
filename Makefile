@@ -181,6 +181,73 @@ security: ## Проверки безопасности: уязвимости з�
 	$(SECURITY_TOOLS)/gosec -quiet -exclude-generated -exclude-dir=cmd/docs ./...
 	cd web && npm audit --audit-level=high
 
+# --- состав поставки и машинные отчёты ---
+#
+# Проверка ИБ у заказчика просит не пересказ, а файлы: из чего собрано
+# и что показали сканеры. Пересказ ей не годится — его не загрузить
+# в свою систему и не сверить через год. Поэтому состав отдаётся
+# в CycloneDX, а отчёты — в SARIF и OpenVEX: три формата, которые
+# читает чужой инструмент, а не только человек.
+#
+# Сети эти цели требуют так же, как `security`, — оттого и стоят рядом,
+# а не в `check`.
+SBOM_DIR   ?= dist/sbom
+REPORT_DIR ?= dist/security
+
+.PHONY: sbom
+sbom: ## Состав поставки в CycloneDX (dist/sbom)
+	@mkdir -p $(SBOM_DIR)
+	go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+	# -std: версия Go — такая же часть поставки, как и модули, и дыры
+	# стандартной библиотеки сверяют именно по ней.
+	$(SECURITY_TOOLS)/cyclonedx-gomod app -json -licenses -std \
+	  -main cmd/takt -output $(SBOM_DIR)/takt-server.cdx.json .
+	# Версия клиента ставится на время сборки состава и снимается сразу:
+	# в package.json её нет намеренно — версия в этом проекте вшивается
+	# из git, а не читается из файла, — а инструменту она нужна, иначе
+	# он не соберёт purl и остановится.
+	#
+	# Свой `npm sbom` тут не годится: с `--omit dev` он выбрасывает react
+	# и react-dom — они достижимы ещё и через сборочные зависимости,
+	# и он считает их сборочными. Состав без react описывал бы не тот
+	# клиент, который едет заказчику.
+	cd web && trap 'npm pkg delete version >/dev/null 2>&1' EXIT && \
+	  npm pkg set version="$(patsubst v%,%,$(VERSION))" >/dev/null && \
+	  npx --yes @cyclonedx/cyclonedx-npm@latest --omit dev \
+	    --output-format JSON --output-file "../$(SBOM_DIR)/takt-web.cdx.json"
+	@echo "состав поставки: $(SBOM_DIR)"
+
+.PHONY: security-report
+security-report: ## Отчёты сканеров машинным форматом (dist/security)
+	@mkdir -p $(REPORT_DIR)
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+	# Отчёт пишется и тогда, когда находки есть, — он затем и нужен.
+	# Но код возврата сохраняется до конца: цель, отдающая ноль при
+	# находках, врёт тому, кто её запустил в своём конвейере.
+	#
+	# Имена переменных латиницей: bash кириллических не берёт вовсе.
+	#
+	# У gosec здесь нет `-quiet`, который стоит в `security`: с ним он
+	# не пишет и файла тоже, а отчёт пустым файлом — худший вид отчёта.
+	# Болтовню он уводит в свой лог, рядом с отчётом.
+	#
+	# OpenVEX рядом с SARIF не для полноты: это машинный ответ на вопрос
+	# «уязвимость в списке есть, а вы её вызываете?». Иначе на него
+	# отвечают перепиской, и каждый заказчик заново.
+	@status=0; \
+	  $(SECURITY_TOOLS)/govulncheck -format sarif ./... \
+	    > "$(REPORT_DIR)/govulncheck.sarif" || status=1; \
+	  $(SECURITY_TOOLS)/govulncheck -format openvex ./... \
+	    > "$(REPORT_DIR)/govulncheck.openvex.json" || status=1; \
+	  $(SECURITY_TOOLS)/gosec -exclude-generated -exclude-dir=cmd/docs \
+	    -log "$(REPORT_DIR)/gosec.log" -fmt sarif -out "$(REPORT_DIR)/gosec.sarif" \
+	    ./... || status=1; \
+	  (cd web && npm audit --audit-level=high --json) \
+	    > "$(REPORT_DIR)/npm-audit.json" || status=1; \
+	  echo "отчёты сканеров: $(REPORT_DIR)"; \
+	  exit $$status
+
 .PHONY: load
 load: db migrate ## Поведение под нагрузкой (идёт минуты)
 	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \
@@ -398,7 +465,21 @@ bundle: ## Собрать комплект для установки без до
 	$(MAKE) docs-pdf
 	cp docs/html/takt.pdf "$(BUNDLE_DIR)/"
 	echo "$(BUNDLE_VERSION)" > "$(BUNDLE_DIR)/VERSION"
-	cd "$(BUNDLE_DIR)" && sha256sum * > SHA256SUMS
+	# Состав поставки едет с поставкой. У заказчика комплект попадает
+	# на проверку ИБ, и первый её вопрос — «из чего это собрано»;
+	# отвечать на него перепиской через месяц после установки дороже
+	# для обеих сторон, чем положить файл в комплект сразу.
+	$(MAKE) sbom
+	@mkdir -p "$(BUNDLE_DIR)/sbom"
+	cp $(SBOM_DIR)/*.json "$(BUNDLE_DIR)/sbom/"
+	# По каждому файлу, а не по каждой записи в каталоге: с тех пор как
+	# в комплект легли документация и состав, `sha256sum *` спотыкался
+	# о каталог — «Это каталог», код 1, и сборка комплекта обрывалась
+	# на последнем шаге, сделав всю тяжёлую работу. Заодно суммы теперь
+	# покрывают и вложенное: страницу документации подменить так же
+	# просто, как образ.
+	cd "$(BUNDLE_DIR)" && find . -type f ! -name SHA256SUMS -printf '%P\n' \
+	  | sort | xargs -r sha256sum > SHA256SUMS
 	@echo
 	@echo "комплект собран: $(BUNDLE_DIR)"
 	@echo "архитектура: linux/$(BUNDLE_ARCH) — на другой образ не запустится"
