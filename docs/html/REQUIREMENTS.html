@@ -209,6 +209,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Б12</td><td>Состав поставки отдаётся машинным форматом — своим для сервера и для клиента</td><td><code>Makefile</code>, цель sbom; прикладывается к выпуску и входит в комплект</td></tr>
 <tr><td>Б13</td><td>Отчёты сканеров отдаются машинным форматом, включая заявление о недостижимости уязвимого кода</td><td><code>Makefile</code>, цель security-report (SARIF, OpenVEX, JSON)</td></tr>
 <tr><td>Б14</td><td>Всякий ответ несёт заголовки безопасности: политику содержимого, запрет рамки и угадывания типа; HSTS — там, где https</td><td><code>internal/httpapi/headers_test.go</code></td></tr>
+<tr><td>Б15</td><td>Бинарник выпускается отдельным файлом с суммой, и пересборка того же тега даёт те же байты</td><td><code>Makefile</code>, цели tarball и binary; шаг сверки в выпуске</td></tr>
 </tbody>
 </table></div>
 <h2>Совместимость</h2>
@@ -243,7 +244,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.2-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.2-2-gb9e03fc-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -285,6 +285,30 @@ jobs:
           GOARCH=amd64 make tarball
           GOARCH=arm64 make tarball
 
+      # Сумма выпуска стоит ровно столько, сколько стоит возможность
+      # получить её самому. Поэтому бинарник тут же пересобирается
+      # тем же тегом и сверяется побайтово: сборка воспроизводима
+      # (CGO выключен, пути срезаны, версия приходит линковщиком),
+      # и если однажды перестанет — узнать об этом должны мы, а не
+      # проверяющий у заказчика, которому пересборка дала другое.
+      - name: Пересборка даёт те же байты
+        run: |
+          set -eu
+          # Имена переменных латиницей: оболочка кириллических не берёт
+          # вовсе — `было=` для неё команда, которой нет.
+          for arch in amd64 arm64; do
+            released=$(sha256sum "dist/takt-${TAG}-linux-${arch}.bin" | cut -d" " -f1)
+            GOOS=linux GOARCH="$arch" make binary >/dev/null
+            again=$(sha256sum bin/takt | cut -d" " -f1)
+            if [ "$released" != "$again" ]; then
+              echo "::error::${arch}: пересборка того же тега дала другие байты"
+              echo "выпущено:    $released"
+              echo "пересобрано: $again"
+              exit 1
+            fi
+            echo "${arch}: $again — пересборка совпала"
+          done
+
       # Обе версии — из тега: у чарта своя нумерация не заведена,
       # выпускается он вместе с образом и архивом. Пока проставлялась
       # одна appVersion, `version` стояла в Chart.yaml и отставала —
@@ -365,6 +389,8 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.tar.gz.sha256
+            dist/*.bin
+            dist/*.bin.sha256
             dist/*.tgz
             dist/SHA256SUMS
             dist/*.cdx.json

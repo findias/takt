@@ -292,7 +292,14 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo не
 VERSION_LDFLAGS = -X github.com/findias/takt/internal/version.Value=$(VERSION)
 
 .PHONY: build
-build: web ## Собрать бинарник в bin/takt
+build: web binary ## Собрать бинарник в bin/takt (вместе с клиентом)
+
+# Отдельно от клиента: клиент в бинарник не вшивается — он лежит рядом
+# и отдаётся по WEB_DIR, — а пересборке ради сверки байтов npm ни к чему.
+# Рычаг при этом один: флаги сборки написаны здесь, и сверяющая себя
+# сборка берёт их отсюда же, а не переписывает у себя.
+.PHONY: binary
+binary: ## Собрать только бинарник, без клиента
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/takt ./cmd/takt
 
 # Основания итогового слоя. Их два, и это не про размер образа:
@@ -404,6 +411,23 @@ tarball: build ## Собрать архив для установки из би�
 	cp README.md README.ru.md CHANGELOG.md LICENSE NOTICE THIRD-PARTY.md "$(TARBALL_DIR)/"
 	cd dist && tar czf "$(notdir $(TARBALL_DIR)).tar.gz" "$(notdir $(TARBALL_DIR))"
 	cd dist && sha256sum "$(notdir $(TARBALL_DIR)).tar.gz" > "$(notdir $(TARBALL_DIR)).tar.gz.sha256"
+	# Бинарник ещё и отдельно, рядом с архивом.
+	#
+	# Сверяют на месте именно его: у поставленного из архива на диске
+	# лежит `/opt/takt/takt`, и вопрос проверки звучит «этот ли файл вы
+	# выпускали». Ответить на него суммой архива нельзя — архив
+	# распаковали и стёрли, а сумма распакованного зависит ещё и от того,
+	# чем распаковывали.
+	#
+	# Сборка воспроизводима: CGO выключен, пути срезаны `-trimpath`,
+	# версия приходит линковщиком. Тот же тег тем же тулчейном (он назван
+	# в go.mod) даёт те же байты — значит проверяющий может не верить
+	# нашей сумме, а получить её сам.
+	#
+	# Расширение `.bin` не украшение: без него имя совпало бы с каталогом
+	# внутри архива, и распаковка рядом затёрла бы файл, который сверяют.
+	cp bin/takt "dist/$(notdir $(TARBALL_DIR)).bin"
+	cd dist && sha256sum "$(notdir $(TARBALL_DIR)).bin" > "$(notdir $(TARBALL_DIR)).bin.sha256"
 	@rm -rf "$(TARBALL_DIR)"
 	@echo "архив: dist/$(notdir $(TARBALL_DIR)).tar.gz"
 

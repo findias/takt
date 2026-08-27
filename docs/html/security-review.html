@@ -206,6 +206,8 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>client dependencies</td><td><code>npm audit</code> at high and above</td><td><code>npm-audit.json</code></td></tr>
 <tr><td>the image with its base</td><td><code>trivy</code> on pull requests and before publishing</td><td>the run of <code>.github/workflows/security.yml</code></td></tr>
 <tr><td>is this the file you published</td><td>SHA-256 over every artefact, SBOM and report included</td><td><code>SHA256SUMS</code></td></tr>
+<tr><td>is this the file we are running</td><td>the bare binary for each architecture, next to the archive and with its own sum</td><td><code>takt-vX.Y.Z-linux-amd64.bin</code> in the release</td></tr>
+<tr><td>does your source really produce that binary</td><td>the build is reproducible — <code>CGO_ENABLED=0</code>, <code>-trimpath</code>, the version arriving from the linker — and the release rebuilds it and compares byte for byte before publishing</td><td>the rebuild-and-compare step of the release run</td></tr>
 <tr><td>are updates proposed</td><td>Dependabot for Go modules, npm packages and the actions themselves</td><td><code>.github/dependabot.yml</code></td></tr>
 </tbody>
 </table></div>
@@ -290,16 +292,19 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2>Verify it yourself</h2>
 <p>Nothing here needs to be taken on trust. Everything below runs on a clone of the repository.</p>
-<pre><code>make check           # our own checks, including isolation and the migration chain
+<pre><code>GOOS=linux GOARCH=amd64 make binary   # rebuild the binary of a tag…
+sha256sum bin/takt                    # …and compare with SHA256SUMS
+make check           # our own checks, including isolation and the migration chain
 make security        # govulncheck, gosec, npm audit
 make security-report # the same, as SARIF, OpenVEX and JSON
 make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS</code></pre>
+<p>The first two lines are the ones worth doing before anything else: check out the tag, rebuild, and you get the same bytes we published. A sum you can only compare against ours proves that we did not change our mind about the file; a sum you can reproduce proves that the binary is the source you just read.</p>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.2-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.2-2-gb9e03fc-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

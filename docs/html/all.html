@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.2-dirty.</p>
+<p>Every section in one file. Version v0.2.2-2-gb9e03fc-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -842,6 +842,8 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td>client dependencies</td><td><code>npm audit</code> at high and above</td><td><code>npm-audit.json</code></td></tr>
 <tr><td>the image with its base</td><td><code>trivy</code> on pull requests and before publishing</td><td>the run of <code>.github/workflows/security.yml</code></td></tr>
 <tr><td>is this the file you published</td><td>SHA-256 over every artefact, SBOM and report included</td><td><code>SHA256SUMS</code></td></tr>
+<tr><td>is this the file we are running</td><td>the bare binary for each architecture, next to the archive and with its own sum</td><td><code>takt-vX.Y.Z-linux-amd64.bin</code> in the release</td></tr>
+<tr><td>does your source really produce that binary</td><td>the build is reproducible — <code>CGO_ENABLED=0</code>, <code>-trimpath</code>, the version arriving from the linker — and the release rebuilds it and compares byte for byte before publishing</td><td>the rebuild-and-compare step of the release run</td></tr>
 <tr><td>are updates proposed</td><td>Dependabot for Go modules, npm packages and the actions themselves</td><td><code>.github/dependabot.yml</code></td></tr>
 </tbody>
 </table></div>
@@ -926,12 +928,15 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <h2>Verify it yourself</h2>
 <p>Nothing here needs to be taken on trust. Everything below runs on a clone of the repository.</p>
-<pre><code>make check           # our own checks, including isolation and the migration chain
+<pre><code>GOOS=linux GOARCH=amd64 make binary   # rebuild the binary of a tag…
+sha256sum bin/takt                    # …and compare with SHA256SUMS
+make check           # our own checks, including isolation and the migration chain
 make security        # govulncheck, gosec, npm audit
 make security-report # the same, as SARIF, OpenVEX and JSON
 make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS</code></pre>
+<p>The first two lines are the ones worth doing before anything else: check out the tag, rebuild, and you get the same bytes we published. A sum you can only compare against ours proves that we did not change our mind about the file; a sum you can reproduce proves that the binary is the source you just read.</p>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
@@ -1118,6 +1123,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <tr><td>Б12</td><td>Состав поставки отдаётся машинным форматом — своим для сервера и для клиента</td><td><code>Makefile</code>, цель sbom; прикладывается к выпуску и входит в комплект</td></tr>
 <tr><td>Б13</td><td>Отчёты сканеров отдаются машинным форматом, включая заявление о недостижимости уязвимого кода</td><td><code>Makefile</code>, цель security-report (SARIF, OpenVEX, JSON)</td></tr>
 <tr><td>Б14</td><td>Всякий ответ несёт заголовки безопасности: политику содержимого, запрет рамки и угадывания типа; HSTS — там, где https</td><td><code>internal/httpapi/headers_test.go</code></td></tr>
+<tr><td>Б15</td><td>Бинарник выпускается отдельным файлом с суммой, и пересборка того же тега даёт те же байты</td><td><code>Makefile</code>, цели tarball и binary; шаг сверки в выпуске</td></tr>
 </tbody>
 </table></div>
 <h2>Совместимость</h2>
@@ -1157,6 +1163,11 @@ sha256sum -c SHA256SUMS</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2>v0.2.3 — 27 августа 2026</h2>
+<p><strong>Бинарник выпускается отдельным файлом, и его сумму можно получить самому.</strong> Рядом с архивом теперь лежит <code>takt-vX.Y.Z-linux-amd64.bin</code> (и <code>-arm64</code>) со своей суммой: сверяют на месте именно его — у поставленного из архива на диске лежит <code>/opt/takt/takt</code>, а сумма архива на этот вопрос не отвечает. Сборка воспроизводима, и выпуск это проверяет: пересобирает бинарник тем же тегом и сверяет побайтово до публикации. Значит, сумму не обязательно брать у нас — <code>GOOS=linux GOARCH=amd64 make binary</code> даёт те же байты.</p>
+<p><strong>Суммы выпуска сходятся у того, кто его скачал.</strong> В выпуске файлы лежат плоско — каталогов у вложений GitHub не хранит, — а суммы считались с путями (<code>sbom/takt-server.cdx.json</code>). У всякого, кто скачал v0.2.2 и выполнил <code>sha256sum -c SHA256SUMS</code>, не сходились семь строк из тринадцати. Теперь состав и отчёты складываются в один уровень до подсчёта.</p>
+<p><strong>Что делать с v0.2.2:</strong> ничего. Файл сумм в том выпуске заменён на пересчитанный — сами файлы те же, значения совпали до знака, изменились только имена в списке.</p>
+<p><strong>Ручной запуск выпуска собирает названный тег.</strong> Вход <code>tag</code> был объявлен в окне запуска и не читался ни одной строкой: сборка брала ветку, на которой нажали кнопку.</p>
 <h2>v0.2.2 — 27 августа 2026</h2>
 <p><strong>Ответы несут заголовки безопасности.</strong> Политику содержимого (<code>default-src &#39;self&#39;</code>, скрипты только свои, ни рамки, ни объектов), <code>nosniff</code>, <code>X-Frame-Options: DENY</code>, политику источника перехода в пределах своего сайта, а при <code>BASE_URL</code> по https — HSTS на год. Ставит их приложение, а не прокси: настройка прокси у каждого своя, и обещание, которое держится на чужой стороне, — не обещание.</p>
 <p><strong>Что делать при обновлении:</strong> если доска у вас встроена в другую страницу рамкой, встраивание перестанет работать — это и есть смысл запрета. Если ваш прокси уже ставит свои заголовки, браузер получит оба набора и применит оба, то есть более строгий из них; проверьте, что вместе они не строже, чем нужно клиенту.</p>

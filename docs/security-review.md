@@ -226,6 +226,8 @@ means scanning and answering for it forever.
 | client dependencies | `npm audit` at high and above | `npm-audit.json` |
 | the image with its base | `trivy` on pull requests and before publishing | the run of `.github/workflows/security.yml` |
 | is this the file you published | SHA-256 over every artefact, SBOM and report included | `SHA256SUMS` |
+| is this the file we are running | the bare binary for each architecture, next to the archive and with its own sum | `takt-vX.Y.Z-linux-amd64.bin` in the release |
+| does your source really produce that binary | the build is reproducible — `CGO_ENABLED=0`, `-trimpath`, the version arriving from the linker — and the release rebuilds it and compares byte for byte before publishing | the rebuild-and-compare step of the release run |
 | are updates proposed | Dependabot for Go modules, npm packages and the actions themselves | `.github/dependabot.yml` |
 
 Suppressions are explained rather than silent: a `gosec` exception reads
@@ -338,6 +340,8 @@ Nothing here needs to be taken on trust. Everything below runs on a
 clone of the repository.
 
 ```bash
+GOOS=linux GOARCH=amd64 make binary   # rebuild the binary of a tag…
+sha256sum bin/takt                    # …and compare with SHA256SUMS
 make check           # our own checks, including isolation and the migration chain
 make security        # govulncheck, gosec, npm audit
 make security-report # the same, as SARIF, OpenVEX and JSON
@@ -345,6 +349,12 @@ make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS
 ```
+
+The first two lines are the ones worth doing before anything else: check
+out the tag, rebuild, and you get the same bytes we published. A sum you
+can only compare against ours proves that we did not change our mind
+about the file; a sum you can reproduce proves that the binary is the
+source you just read.
 
 `takt doctor` is the shortest of these and the one worth running on the
 installation itself rather than on a clone: besides the schema and the
