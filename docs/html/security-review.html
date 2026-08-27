@@ -299,7 +299,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.1-5-g14c39fe-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.1-6-gd1d652d-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
