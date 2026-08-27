@@ -8,7 +8,7 @@ needed to install it or to run it.
 [![Security](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 
-[По-русски](README.md) · [Installation](docs/install.md) ·
+[По-русски](README.ru.md) · [Installation](docs/install.md) ·
 [Documentation](docs/overview.md) · [What changed](CHANGELOG.md) ·
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
