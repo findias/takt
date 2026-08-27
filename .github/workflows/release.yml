@@ -28,6 +28,16 @@ permissions:
   contents: write
   packages: write
 
+# Тег, из которого собираем: при запуске по тегу — он сам, при запуске
+# рукой — названный во входе.
+#
+# Вход `tag` был объявлен и не использовался ни одной строкой: запуск
+# рукой брал ветку, собирал её и назвал бы выпуск её именем. Обнаружилось
+# это ровно тогда, когда пересобрать выпуск понадобилось, — то есть в тот
+# единственный раз, ради которого вход и заводили.
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -36,6 +46,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -78,6 +89,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
 
       # Кросс-архитектурная сборка: клиент и бинарник собираются
       # на amd64 и кладутся под целевую архитектуру, но базовый слой
@@ -127,18 +139,18 @@ jobs:
           tags=""
           add() { tags="$tags -t $1"; }
 
-          add "${GHCR}:${GITHUB_REF_NAME}-${BASE}"
+          add "${GHCR}:${TAG}-${BASE}"
           # Основание по умолчанию получает и метку без суффикса,
           # и latest: `docker pull takt` обязан что-то значить.
           if [ "$BASE" = alpine ]; then
-            add "${GHCR}:${GITHUB_REF_NAME}"
+            add "${GHCR}:${TAG}"
             add "${GHCR}:latest"
           fi
 
           if [ -n "$HUB" ]; then
-            add "docker.io/${HUB}:${GITHUB_REF_NAME}-${BASE}"
+            add "docker.io/${HUB}:${TAG}-${BASE}"
             if [ "$BASE" = alpine ]; then
-              add "docker.io/${HUB}:${GITHUB_REF_NAME}"
+              add "docker.io/${HUB}:${TAG}"
               add "docker.io/${HUB}:latest"
             fi
           else
@@ -175,7 +187,7 @@ jobs:
             # shellcheck disable=SC2086 -- метка своей архитектуры добавляется словом
             docker buildx build --load \
               --platform "$platform" \
-              --build-arg VERSION="${GITHUB_REF_NAME}" \
+              --build-arg VERSION="${TAG}" \
               --build-arg RUNTIME_BASE="$FROM" \
               -t "takt:scan-${BASE}-${arch}" $here \
               .
@@ -202,8 +214,8 @@ jobs:
             said=$(docker run --rm --platform "$platform" \
               "takt:scan-${BASE}-${arch}" version)
             echo "${BASE}/${arch}: $said"
-            if [ "$said" != "${GITHUB_REF_NAME}" ]; then
-              echo "::error::${BASE}/${arch}: образ отвечает «${said}», а собран из ${GITHUB_REF_NAME}"
+            if [ "$said" != "${TAG}" ]; then
+              echo "::error::${BASE}/${arch}: образ отвечает «${said}», а собран из ${TAG}"
               exit 1
             fi
           done
@@ -230,7 +242,7 @@ jobs:
           # shellcheck disable=SC2086 -- набор меток разворачивается словами намеренно
           docker buildx build --push \
             --platform "${{ matrix.platforms }}" \
-            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg VERSION="${TAG}" \
             --build-arg RUNTIME_BASE="${{ matrix.from }}" \
             $(cat /tmp/tags) \
             .
@@ -245,6 +257,7 @@ jobs:
           # Полная история — иначе git describe не найдёт тег,
           # и в бинарник уедет хеш вместо версии.
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
 
       - uses: actions/setup-go@v5
         with:
@@ -282,8 +295,8 @@ jobs:
         run: |
           mkdir -p dist
           helm package deploy/helm/takt \
-            --version "${GITHUB_REF_NAME#v}" \
-            --app-version "${GITHUB_REF_NAME}" -d dist
+            --version "${TAG#v}" \
+            --app-version "${TAG}" -d dist
 
       # Состав поставки в CycloneDX. Проверка ИБ у заказчика начинается
       # с вопроса «из чего это собрано», и ответом должен быть файл,
@@ -331,20 +344,23 @@ jobs:
           # вовсе, `awk: fatal: `тег' is not a legal variable name`.
           # Прежний вариант убил бы каждый выпуск, но файл рабочего
           # процесса был негоден целиком и до awk дело не доходило.
-          awk -v tag="${GITHUB_REF_NAME}" '
+          awk -v tag="${TAG}" '
             $0 ~ "^## " tag "( |$)" { take = 1; next }
             take && /^## v/ { exit }
             take { print }
           ' CHANGELOG.md > dist/ОПИСАНИЕ.md
           if [ ! -s dist/ОПИСАНИЕ.md ]; then
-            echo "::error::в CHANGELOG.md нет раздела ${GITHUB_REF_NAME} — выпуск без списка изменений не делаем"
+            echo "::error::в CHANGELOG.md нет раздела ${TAG} — выпуск без списка изменений не делаем"
             exit 1
           fi
 
       - name: Выпуск
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          # tag_name обязателен: при запуске рукой ссылка запуска —
+          # ветка, и без него выпуск завёлся бы с именем ветки.
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          name: ${{ inputs.tag || github.ref_name }}
           body_path: dist/ОПИСАНИЕ.md
           files: |
             dist/*.tar.gz
