@@ -1,12 +1,13 @@
 # Takt
 
-**A kanban board with flow metrics, for one team.** It runs inside your
-own perimeter: one process, one PostgreSQL database, no internet access
-needed to install it or to run it.
+**A self-hosted kanban board with flow metrics, for one team.** It runs
+inside your own perimeter: one process, one PostgreSQL database, no
+internet access needed to install it or to run it.
 
 [![Check](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
 [![Security](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/findias/takt?label=release)](https://github.com/findias/takt/releases)
 
 [По-русски](README.ru.md) · [Installation](docs/install.md) ·
 [Documentation](docs/overview.md) · [What changed](CHANGELOG.md) ·
@@ -18,10 +19,10 @@ flow. That is what separates this from a task list: columns are marked
 up for flow, and cycle time, throughput and the forecast are computed
 from that markup rather than from fields someone filled in by hand.
 
-![The board](docs/screenshots/доска.png)
+![The kanban board: columns marked up for flow](docs/screenshots/доска.png)
 
 **The product interface is in Russian.** This file, and the English
-documentation under [`docs/en/`](docs/overview.md), are for the
+documentation under [`docs/`](docs/overview.md), are for the
 people who install and operate it. Everything a user clicks is quoted
 in Russian, the way it appears on screen, with a translation beside it.
 

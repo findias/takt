@@ -7,6 +7,7 @@
 [![Проверка](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
 [![Безопасность](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Лицензия Apache-2.0](https://img.shields.io/badge/лицензия-Apache--2.0-blue.svg)](LICENSE)
+[![Выпуск](https://img.shields.io/github/v/release/findias/takt?label=выпуск)](https://github.com/findias/takt/releases)
 
 [English](README.md) · [Установка](docs/ru/установка.md) ·
 [Документация](docs/ru/индекс.md) · [Требования](REQUIREMENTS.md) ·
@@ -18,7 +19,7 @@ Takt — takt time, ритм, с которым работа выходит из
 для потока, и время цикла, пропускная способность и прогноз считаются
 из этой разметки, а не из полей, заполненных вручную.
 
-![Доска](docs/screenshots/доска.png)
+![Канбан-доска: колонки размечены для потока](docs/screenshots/доска.png)
 
 **Поставить** — [`docs/ru/установка.md`](docs/ru/установка.md): что для этого
 нужно, docker compose, бинарник под systemd, чарт в Kubernetes,
@@ -353,4 +354,4 @@ Apache License 2.0 — [`LICENSE`](LICENSE). Кратко: пользовать�
 не переписывается руками задним числом: проверка `internal/license`
 берёт то, что линкуется в `cmd/takt`, и требует строку на каждый модуль.
 
-<!-- перевод: README.md sha256:8fe03de7547f -->
+<!-- перевод: README.md sha256:c87d17227335 -->

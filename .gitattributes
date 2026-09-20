@@ -1,0 +1,8 @@
+# Полоса языков на титульной странице должна называть то, что пишут
+# руками: Go, TypeScript, SQL. Собранные страницы документации
+# и разборы — это HTML в сотни килобайт, он перевешивает код и
+# отвечает на `language:` чужим языком.
+
+docs/html/** linguist-documentation
+research/*.html linguist-documentation
+web/package-lock.json linguist-generated

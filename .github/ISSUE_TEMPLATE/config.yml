@@ -6,3 +6,6 @@ contact_links:
   - name: Вопрос по установке
     url: https://github.com/findias/takt/blob/master/README.md
     about: Требования, docker compose, бинарник под systemd, Helm-чарт, закрытый контур.
+  - name: Вопрос или обсуждение
+    url: https://github.com/findias/takt/discussions
+    about: Не поломка, а вопрос «как это делается» — там ответ остаётся на виду у следующего.
