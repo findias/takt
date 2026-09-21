@@ -647,7 +647,10 @@ function CardViewInner({
                   на вопрос «почему эта работа не идёт», а он важнее
                   остальных. */}
               {alarm && (
-                <span className="mark mark--alarm" title={alarm.title}>
+                <span
+                  className={`mark mark--alarm${alarm.kind === 'aging' ? ' mark--aging' : ''}`}
+                  title={alarm.title}
+                >
                   {alarm.text}
                 </span>
               )}

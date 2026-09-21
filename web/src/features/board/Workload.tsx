@@ -78,7 +78,7 @@ export function Workload({
       {rows.map((row) => (
         <span
           key={row.userId}
-          className={row.overdue ? 'workload-item workload-item--overdue' : 'workload-item'}
+          className={row.overdue ? 'workload-item workload-item--aging' : 'workload-item'}
           title={title(row, unit)}
         >
           {/* Полный размер, а не второй план: в кружок восемнадцати

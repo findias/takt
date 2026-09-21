@@ -234,6 +234,16 @@
   --accent-soft: light-dark(#dcebe5, #122c25);
   --warn: light-dark(#a33d1e, #ffa88b);
   --warn-soft: light-dark(#f6e2da, #2d1a15);
+  /* Второй тон предупреждения: «обратите внимание, но работа идёт» —
+     дольше обещанного, превышен лимит колонки. Красный остаётся за
+     «работа стоит или обещание нарушено»: блокировка, просроченное
+     обязательство, ошибка. Прежде красным было всё это вместе — шесть
+     смыслов, пять карточек из семи на демо-доске, — и красное
+     переставало значить что-либо (разбор 21.09.2026). Подобран расчётом:
+     4.5:1 к поверхности и к своей подложке в обеих темах
+     (5.46/4.80 светлая, 7.55/6.94 тёмная). */
+  --caution: light-dark(#915f08, #ec9c13);
+  --caution-soft: light-dark(#faefdb, #2c2211);
 }
 
 /* Тёмная тема системная, но с явным перекрытием: человек, у которого
@@ -1371,7 +1381,7 @@ select:disabled {
 }
 /* Превышение лимита — сигнал команде, а не запрет: работать он не мешает. */
 .count--over {
-  color: var(--warn);
+  color: var(--caution);
   font-weight: 650;
 }
 .count-edit {
@@ -2174,7 +2184,7 @@ textarea.description {
 .card-block-until {
   flex-basis: 100%;
   font-size: var(--text-sm);
-  color: var(--warn);
+  color: var(--ink-2);
 }
 .card-block-until--ending {
   font-weight: 600;
@@ -2207,6 +2217,12 @@ textarea.description {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+}
+/* Дольше обещанного — та же пометка, другой тон: работа идёт,
+   но пора спросить почему. */
+.mark--aging {
+  background: var(--caution-soft);
+  color: var(--caution);
 }
 /* Тихая пометка: срок, который ещё не жмёт, и итерация. Они отвечают
    на «к чему это привязано», а не «почему это горит». */
@@ -3843,6 +3859,10 @@ textarea.description {
   color: var(--warn);
   font-weight: 600;
 }
+.table-aging {
+  color: var(--caution);
+  font-weight: 600;
+}
 .table-empty {
   padding: var(--space-4);
 }
@@ -3906,8 +3926,10 @@ textarea.description {
   color: var(--ink-2);
   white-space: nowrap;
 }
-.workload-item--overdue {
-  color: var(--warn);
+/* У человека есть работа дольше обещанного — янтарём, а не красным:
+   загрузка — повод спросить, а не тревога. */
+.workload-item--aging {
+  color: var(--caution);
   font-weight: 600;
 }
 

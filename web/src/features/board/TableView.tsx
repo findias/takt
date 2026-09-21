@@ -186,7 +186,7 @@ export function TableView({
                 {/* Возраст показывается всем строкам, а не только
                     перешагнувшим обещание: на доске он подсказка,
                     а здесь — то, по чему сравнивают. */}
-                <td className={`table-number ${overdue ? 'table-overdue' : 'muted small'}`}>
+                <td className={`table-number ${overdue ? 'table-aging' : 'muted small'}`}>
                   {ageText(card)}
                 </td>
                 {/* Срок — датой, а не отсчётом, в отличие от доски.
