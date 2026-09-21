@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { api } from '../../shared/api/index.ts'
 import type { Comment } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
@@ -37,6 +38,7 @@ export function Discussion({
 
   useEffect(load, [load])
 
+  const [toDelete, setToDelete] = useState<string | null>(null)
   const act = (p: Promise<unknown>) => {
     setError(null)
     p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
@@ -50,6 +52,22 @@ export function Discussion({
   return (
     <section className="stack">
       <h3 className="section-title">Обсуждение</h3>
+      {/* Удалённую реплику не вернуть — значит, спрашивает. Прежде
+          удалял с первого нажатия (разбор 21.09.2026). */}
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Удалить реплику?"
+        confirmLabel="Удалить реплику"
+        danger
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          const id = toDelete
+          setToDelete(null)
+          if (id) act(api.deleteComment(id))
+        }}
+      >
+        <p>Текст пропадёт; в ветке останется «Реплика удалена».</p>
+      </ConfirmDialog>
       <ScreenError>{error}</ScreenError>
 
       {roots.length === 0 && <p className="muted small">Пока тихо.</p>}
@@ -61,7 +79,7 @@ export function Discussion({
             meId={meId}
             canEdit={canEdit}
             onEdit={(body) => act(api.editComment(c.id, body))}
-            onDelete={() => act(api.deleteComment(c.id))}
+            onDelete={() => setToDelete(c.id)}
             onReply={() => setReplyTo(replyTo === c.id ? null : c.id)}
           />
           <div className="replies">
@@ -72,7 +90,7 @@ export function Discussion({
                 meId={meId}
                 canEdit={canEdit}
                 onEdit={(body) => act(api.editComment(r.id, body))}
-                onDelete={() => act(api.deleteComment(r.id))}
+                onDelete={() => setToDelete(r.id)}
               />
             ))}
             {replyTo === c.id && canEdit && (
@@ -140,7 +158,7 @@ function CommentRow({
               <button className="link" onClick={() => setEditing(true)}>
                 Править
               </button>
-              <button className="link" onClick={onDelete}>
+              <button className="link link--danger" onClick={onDelete}>
                 Удалить
               </button>
             </>

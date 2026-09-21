@@ -157,7 +157,7 @@ export function BoardAccess({
                 <span className="muted small">{m.email}</span>
               </div>
               {canEdit && (
-                <button className="link" onClick={() => act(api.removeBoardMember(boardId, m.userId))}>
+                <button className="link link--remove" onClick={() => act(api.removeBoardMember(boardId, m.userId))}>
                   Убрать
                 </button>
               )}

@@ -128,7 +128,7 @@ export function BoardList({
                 </button>
                 {canEdit && (
                   <button
-                    className="link"
+                    className="link link--remove"
                     aria-label={`Убрать доску «${b.name}» в архив`}
                     title="Карточки и история сохранятся"
                     onClick={() => {

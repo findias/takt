@@ -306,7 +306,7 @@ function TeamNode({
                 и стояли они рядом в одной раскрытой ветке. Имя
                 называет объект. */}
             <button
-              className="link"
+              className="link link--remove"
               aria-label={`Убрать подразделение «${node.name}»`}
               onClick={() => onAct(api.archiveTeam(node.id))}
             >
@@ -432,7 +432,7 @@ function TeamMembers({
               {m.lead && <span className="role-chip">Ведущий</span>}
               {canManage && (
                 <button
-                  className="link"
+                  className="link link--remove"
                   aria-label={`Убрать из состава: ${m.name}`}
                   onClick={() => act(api.removeTeamMember(teamId, m.userId))}
                 >
@@ -613,7 +613,7 @@ function Observation({
               </div>
               {(isOwner || (o.teamId !== null && canManage(o.teamId))) && (
                 <button
-                  className="link"
+                  className="link link--remove"
                   aria-label={`Отозвать наблюдение: ${o.name}`}
                   onClick={() => onAct(api.revokeObservation(o.id))}
                 >
@@ -709,7 +709,7 @@ function Administration({
               </div>
               {isOwner && (
                 <button
-                  className="link"
+                  className="link link--remove"
                   aria-label={`Снять полномочия: ${a.name}`}
                   onClick={() => onAct(api.revokeAdmin(a.id))}
                 >

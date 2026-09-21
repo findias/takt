@@ -130,7 +130,7 @@ export function Team({ principal }: { principal: Principal }) {
                     ))}
                   </select>
                   <button
-                    className="link"
+                    className="link link--remove"
                     onClick={() => act(api.removeMember(m.userId))}
                     aria-label={`Исключить ${m.name}`}
                   >
@@ -201,7 +201,7 @@ export function Team({ principal }: { principal: Principal }) {
                       </span>
                     </div>
                     <button
-                      className="link"
+                      className="link link--remove"
                       aria-label={`Отозвать приглашение: ${i.email}`}
                       onClick={() =>
                         act(
@@ -256,6 +256,7 @@ export function Team({ principal }: { principal: Principal }) {
  */
 function Clients() {
   const [clients, setClients] = useState<ApiClient[]>([])
+  const [toRevoke, setToRevoke] = useState<ApiClient | null>(null)
   const [fresh, setFresh] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const form = useFormErrors()
@@ -275,6 +276,31 @@ function Clients() {
 
   return (
     <section className="stack">
+      <ConfirmDialog
+        open={toRevoke !== null}
+        title="Отозвать ключ?"
+        confirmLabel="Отозвать ключ"
+        danger
+        onCancel={() => setToRevoke(null)}
+        onConfirm={() => {
+          const key = toRevoke
+          setToRevoke(null)
+          if (!key) return
+          setError(null)
+          api
+            .revokeClient(key.id)
+            .then(load)
+            .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+        }}
+      >
+        <p>
+          Ключ «{toRevoke?.name}» перестанет работать сразу: всё, что ходит с ним в API, получит
+          отказ.
+        </p>
+        <p className="muted small">
+          Вернуть его нельзя — только выпустить новый и прописать в той системе заново.
+        </p>
+      </ConfirmDialog>
       <h2 className="section-title">Ключи для интеграций</h2>
       <ScreenError>{error}</ScreenError>
       <p className="muted small">
@@ -298,16 +324,14 @@ function Clients() {
               {/* «Отозвать» стояло и здесь, и у приглашения — на одном
                   экране, у разных объектов. Глазами их различали
                   по месту, с диктора они звучали одинаково. */}
+              {/* Отзыв необратим: интеграция с этим ключом перестанет
+                  работать сразу, а вернуть ключ нельзя — только выпустить
+                  новый и прописать его заново. Поэтому спрашивает; прежде
+                  отзывал с первого нажатия (разбор 21.09.2026). */}
               <button
-                className="link"
+                className="link link--danger"
                 aria-label={`Отозвать ключ «${c.name}»`}
-                onClick={() => {
-                  setError(null)
-                  api
-                    .revokeClient(c.id)
-                    .then(load)
-                    .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
-                }}
+                onClick={() => setToRevoke(c)}
               >
                 Отозвать ключ
               </button>
@@ -541,7 +565,7 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
               </div>
               {canEdit && (
                 <button
-                  className="link"
+                  className="link link--remove"
                   title="Значения карточек останутся: поле заводили ради них"
                   onClick={() => act(api.archiveField(f.id))}
                 >

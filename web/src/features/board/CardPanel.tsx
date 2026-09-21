@@ -546,7 +546,7 @@ function RelatedRow({
         </button>
       )}
       {canEdit && related.reachable && (
-        <button className="link" onClick={onRemove}>
+        <button className="link link--remove" onClick={onRemove}>
           Убрать
         </button>
       )}

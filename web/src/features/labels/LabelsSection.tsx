@@ -78,7 +78,7 @@ export function LabelsSection() {
                   <span className={`chip chip--${label.tone}`}>{label.name}</span>
                   {label.canManage && (
                     <button
-                      className="link"
+                      className="link link--remove"
                       aria-label={`Убрать в архив метку «${label.name}»`}
                       onClick={() => archive(label)}
                     >

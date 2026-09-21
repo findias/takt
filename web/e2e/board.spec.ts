@@ -2332,3 +2332,45 @@ test('шапка доски не съедает экран', async ({ page }) =>
   // порог в 60% высоты, который прежний код не проходил.
   expect(top, 'первая карточка на телефоне').toBeLessThanOrEqual(760 * 0.6)
 })
+
+// Необратимое спрашивает (правило проекта). Отзыв ключа и удаление
+// реплики срабатывали с первого нажатия, хотя вернуть не дают ни то,
+// ни другое (разбор интерфейса 21.09.2026). Отмена не трогает ничего,
+// подтверждение делает дело.
+test('отзыв ключа и удаление реплики спрашивают', async ({ page }) => {
+  await register(page)
+
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByLabel('Для чего ключ').fill('Обмен со складом')
+  await page.getByRole('button', { name: 'Завести ключ', exact: true }).click()
+  const revoke = page.getByRole('button', { name: 'Отозвать ключ «Обмен со складом»' })
+  await expect(revoke).toBeVisible()
+
+  await revoke.click()
+  const dialog = page.getByRole('dialog', { name: 'Отозвать ключ?' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  await expect(revoke).toBeVisible()
+
+  await revoke.click()
+  await dialog.getByRole('button', { name: 'Отозвать ключ' }).click()
+  await expect(revoke).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await createBoard(page, 'Доска с репликой')
+  await addCard(page, 'Очередь', 'Обсуждаемая')
+  await cardIn(page, 'Очередь', 'Обсуждаемая').click()
+  const panel = page.getByLabel(/Карточка .* «Обсуждаемая»/)
+  await panel.getByPlaceholder('Написать в обсуждение').fill('Лишнее')
+  await panel.getByRole('button', { name: 'Отправить' }).click()
+  await expect(panel.getByText('Лишнее', { exact: true })).toBeVisible()
+
+  await panel.getByRole('button', { name: 'Удалить', exact: true }).click()
+  const ask = page.getByRole('dialog', { name: 'Удалить реплику?' })
+  await ask.getByRole('button', { name: 'Отмена' }).click()
+  await expect(panel.getByText('Лишнее', { exact: true })).toBeVisible()
+
+  await panel.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await ask.getByRole('button', { name: 'Удалить реплику' }).click()
+  await expect(panel.getByText('Реплика удалена', { exact: true })).toBeVisible()
+})
