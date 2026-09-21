@@ -966,7 +966,53 @@ export function Board({
         </div>
       </header>
 
-      <div className="board-toolbar filters-line">
+      {/* Одна строка инструментов, а не четыре-пять рядов (разбор
+          21.09.2026). Слева — как смотреть: вид, поиск и отбор,
+          группировка, сохранённые виды; справа — куда уйти с доски:
+          палитра, «Поток», «Архив». Переключатель видов стоит первым:
+          он меняет всё, что ниже, и искать его у правого края,
+          далеко от того, что он переключает, было неудобно. */}
+      <div className="board-toolbar board-tools-line">
+        {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
+            а не выпадающий список, — вариантов три, и выбранный должен
+            быть виден без нажатия. */}
+        <div className="segment" role="group" aria-label="Вид доски">
+          {[
+            { key: 'board', name: 'Доска' },
+            { key: 'table', name: 'Таблица' },
+            { key: 'changes', name: 'Изменения' },
+          ].map((item) => (
+            <button
+              key={item.key}
+              className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
+              aria-pressed={item.key === view}
+              onClick={() => {
+                const next = new URLSearchParams(query)
+                if (item.key === 'board') next.delete('view')
+                else next.set('view', item.key)
+                // Смена раскладки показывается движением: это те же
+                // карточки, а не другой экран. Довод и замер —
+                // в `withViewTransition`.
+                withViewTransition(() => setQuery(next))
+              }}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+        {asTable && (
+          <select
+            value={sort}
+            aria-label="Сортировка"
+            onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
+          >
+            {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
+              <option key={key} value={key}>
+                {SORT_NAMES[key]}
+              </option>
+            ))}
+          </select>
+        )}
         <FilterBar
           filters={filters}
           people={peopleList}
@@ -975,14 +1021,6 @@ export function Board({
           hidden={hidden}
           hasBlockDeadlines={hasBlockDeadlines}
           onChange={setFilters}
-        />
-        {/* Загрузка считается по показанному: рядом стоит «скрыто N»
-            от фильтра, и числа по всей доске спорили бы с экраном. */}
-        <Workload base={base} order={order} unit={unit} />
-        <Views
-          boardId={boardId}
-          query={query.toString()}
-          onOpen={(saved) => navigate(`${boardPath(boardId)}${saved ? `?${saved}` : ''}`)}
         />
         <select
           className="grouping"
@@ -996,99 +1034,60 @@ export function Board({
             </option>
           ))}
         </select>
+        <Views
+          boardId={boardId}
+          query={query.toString()}
+          onOpen={(saved) => navigate(`${boardPath(boardId)}${saved ? `?${saved}` : ''}`)}
+        />
+        <div className="row board-tools">
+          <button className="btn btn--quiet palette-open" onClick={() => setPalette(true)}>
+            <SearchIcon />
+            Найти
+            <span className="muted small">{paletteHint()}</span>
+          </button>
+          <button
+            className="btn btn--quiet"
+            aria-expanded={showFlow}
+            onClick={() => {
+              // Две панели разом перекрывают друг друга, а в модальном
+              // режиме ещё и спорят за фокус. Открываем по одной.
+              setOpenCard(null)
+              setShowFlow((v) => !v)
+            }}
+          >
+            <FlowIcon />
+            <span className="tool-label">Поток</span>
+          </button>
+          <button
+            className="btn btn--quiet"
+            aria-expanded={showArchive}
+            onClick={() => {
+              setOpenCard(null)
+              setShowFlow(false)
+              setShowArchive((v) => !v)
+            }}
+          >
+            <ArchiveIcon />
+            <span className="tool-label">Архив</span>
+          </button>
+        </div>
       </div>
 
-      {/* Одна полоса, а не три: подсказка о потоке, итерации и переход
-          к потоку — это всё «про доску целиком», и разносить их
-          по отдельным строкам значит съедать высоту у самих колонок. */}
-      <div className="board-toolbar">
-        <div className="row row--between">
-          <div className="row">
-            <FlowHint columns={columnList} />
-            <Iterations
-              boardId={boardId}
-              canEdit={canEdit}
-              iterations={base.iterations}
-              onChanged={board.reload}
-              onReport={setReportOf}
-            />
-          </div>
-          {/* Всё, что переключает взгляд на доску, — одной группой:
-              когда строка не помещается, она переносится целиком,
-              а не рассыпается на «Поток» слева и «Архив» справа. */}
-          <div className="row board-tools">
-            <button className="btn btn--quiet" onClick={() => setPalette(true)}>
-              <SearchIcon />
-              Найти
-              <span className="muted small">{paletteHint()}</span>
-            </button>
-            {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
-                а не выпадающий список, — вариантов три, и выбранный должен
-                быть виден без нажатия. */}
-            <div className="segment" role="group" aria-label="Вид доски">
-              {[
-                { key: 'board', name: 'Доска' },
-                { key: 'table', name: 'Таблица' },
-                { key: 'changes', name: 'Изменения' },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
-                  aria-pressed={item.key === view}
-                  onClick={() => {
-                    const next = new URLSearchParams(query)
-                    if (item.key === 'board') next.delete('view')
-                    else next.set('view', item.key)
-                    // Смена раскладки показывается движением: это те же
-                    // карточки, а не другой экран. Довод и замер —
-                    // в `withViewTransition`.
-                    withViewTransition(() => setQuery(next))
-                  }}
-                >
-                  {item.name}
-                </button>
-              ))}
-            </div>
-            {asTable && (
-              <select
-                value={sort}
-                aria-label="Сортировка"
-                onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
-              >
-                {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
-                  <option key={key} value={key}>
-                    {SORT_NAMES[key]}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              className="btn btn--quiet"
-              aria-expanded={showFlow}
-              onClick={() => {
-                // Две панели разом перекрывают друг друга, а в модальном
-                // режиме ещё и спорят за фокус. Открываем по одной.
-                setOpenCard(null)
-                setShowFlow((v) => !v)
-              }}
-            >
-              <FlowIcon />
-              Поток
-            </button>
-            <button
-              className="btn btn--quiet"
-              aria-expanded={showArchive}
-              onClick={() => {
-                setOpenCard(null)
-                setShowFlow(false)
-                setShowArchive((v) => !v)
-              }}
-            >
-              <ArchiveIcon />
-              Архив
-            </button>
-          </div>
-        </div>
+      {/* Про доску целиком — тихой полосой: кто сколько несёт, итерации,
+          подсказка о разметке потока. Это читают, а не нажимают, и стоять
+          в одном ряду с инструментами оно не должно. Загрузка считается
+          по показанному: рядом «скрыто N» от отбора, и числа по всей
+          доске спорили бы с экраном. */}
+      <div className="board-toolbar board-context">
+        <Workload base={base} order={order} unit={unit} />
+        <FlowHint columns={columnList} />
+        <Iterations
+          boardId={boardId}
+          canEdit={canEdit}
+          iterations={base.iterations}
+          onChanged={board.reload}
+          onReport={setReportOf}
+        />
       </div>
 
       {Object.keys(base.cards).length === 0 && (
@@ -1478,7 +1477,11 @@ function Iterations({
                 aria-label={`Закрыть итерацию «${i.name}»`}
                 onClick={() => setToClose(i)}
               >
-                закрыть
+                {/* Полностью: одинокое «закрыть» у плашки читалось как
+                    «убрать плашку», а действие необратимое — состав
+                    итерации застывает. На том же экране «Закрыть» есть
+                    у каждой панели (разбор 21.09.2026). */}
+                Закрыть итерацию
               </button>
             )}
           </span>

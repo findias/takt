@@ -106,6 +106,13 @@ async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
   await page.getByRole('menuitemcheckbox').first().click()
 }
 
+/** Раскрыть отборы, если свёрнуты. Они за кнопкой «Отбор» на любой
+ *  ширине (разбор 21.09.2026); повторный вызов ничего не делает. */
+async function openFilters(page: Page) {
+  const toggle = page.getByRole('button', { name: /^Отбор/ })
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+}
+
 /** То же для метки: нажатие по ряду меток, пункт по названию. Имя
  *  пункта — название и откуда метка, поэтому ищется по началу. */
 async function toggleLabel(page: Page, card: ReturnType<typeof cardIn>, name: string) {
@@ -514,7 +521,7 @@ test('метка заводится в организации и вешаетс�
   await expect(row).toHaveCount(1)
   await row.getByRole('button', { name: 'Снять' }).click()
   await expect(row).toHaveCount(0)
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // И снимается тем же меню, что вешалась.
   await toggleLabel(page, cardIn(page, 'Очередь', 'Пометить меня'), 'Срочно')
@@ -602,7 +609,7 @@ test('оценка ставится шагами в панели, блокиро
   const panel = page.getByLabel(/Карточка .* «Оценить меня»/)
   for (let i = 0; i < 3; i++) await panel.getByRole('button', { name: 'Увеличить оценку' }).click()
   await expect(panel.getByLabel('Оценка')).toHaveValue('3')
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // На карточке оценка — тихая цифра: единица одна на всю доску
   // и живёт в подсказке.
@@ -834,6 +841,7 @@ test('приоритет виден, отбирается и не трогает
   expect(titles).toEqual(['Первая по порядку', 'Вторая по порядку'])
 
   // «Горит» — это верх шкалы, и отбор живёт в адресе, как остальные.
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Горит' }).check()
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
   await expect(second).toBeVisible()
@@ -841,6 +849,7 @@ test('приоритет виден, отбирается и не трогает
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Горит' }).uncheck()
 
   // Поставленный уровень правится нажатием по нему самому — как
@@ -861,10 +870,11 @@ test('приоритет виден, отбирается и не трогает
   await page.getByRole('tab', { name: 'Работа' }).click()
   const panel = page.getByLabel(/Карточка .* «Вторая по порядку»/)
   await panel.getByLabel('Приоритет').selectOption({ label: 'Низкий' })
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку').getByText('фоном')).toBeVisible()
 
   // Низкий из «горит» выпадает.
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Горит' }).check()
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toHaveCount(0)
 })
@@ -940,7 +950,7 @@ test('итерация видна на карточке и отбирается 
   await page.getByRole('tab', { name: 'Работа' }).click()
   const panel = page.getByLabel(/Карточка .* «В спринте»/)
   await panel.getByLabel('Итерация карточки').selectOption({ label: 'Неделя 34' })
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // На карточке итерация названа: без этого на доске не видно,
   // что в спринт входит.
@@ -948,6 +958,7 @@ test('итерация видна на карточке и отбирается 
   await expect(cardIn(page, 'Очередь', 'Мимо спринта').getByText('Неделя 34')).toHaveCount(0)
 
   // Отбор живёт в адресе, как остальные.
+  await openFilters(page)
   await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Неделя 34' })
   await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toHaveCount(0)
   expect(page.url()).toContain('iteration=')
@@ -957,6 +968,7 @@ test('итерация видна на карточке и отбирается 
 
   // «Не в итерации» — тоже ответ: незапланированная работа и есть та,
   // что съедает спринт незаметно.
+  await openFilters(page)
   await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Не в итерации' })
   await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'В спринте')).toHaveCount(0)
@@ -987,7 +999,7 @@ test('дата обязательства ставится, видна и отб
     String(tomorrow.getDate()).padStart(2, '0'),
   ].join('-')
   await panel.getByLabel('Дата обязательства').fill(iso)
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // На карточке срок назван словами: «завтра» читается с одного
   // взгляда, а дата — разбирается.
@@ -995,12 +1007,14 @@ test('дата обязательства ставится, видна и отб
   await expect(card.getByTitle('Дата обязательства')).toContainText('завтра')
 
   // Отбор «Срок подходит» — про обещанное наружу.
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Срок подходит' }).check()
   await expect(cardIn(page, 'Очередь', 'Без обязательств')).toHaveCount(0)
   await expect(card).toBeVisible()
   expect(page.url()).toContain('due=1')
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'К релизу')).toBeVisible()
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Срок подходит' }).uncheck()
 
   // Обязательство снимается: «обязательства нет» и «дата неизвестна» —
@@ -1008,7 +1022,7 @@ test('дата обязательства ставится, видна и отб
   await cardIn(page, 'Очередь', 'К релизу').click()
   await page.getByRole('tab', { name: 'Работа' }).click()
   await page.getByLabel(/Карточка .* «К релизу»/).getByRole('button', { name: 'Снять' }).click()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await expect(cardIn(page, 'Очередь', 'К релизу').getByTitle('Дата обязательства')).toHaveCount(0)
 })
 
@@ -1028,7 +1042,7 @@ test('зависимость видна с обеих сторон и прохо
   await panel.getByText('Связать с существующей карточкой').click()
   await panel.getByLabel('Вид связи').selectOption('blocks')
   await panel.getByLabel('Карточка для связи').selectOption({ label: 'Ждёт очереди' })
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Держащая называет, какую именно работу она держит, и переход
   // работает: число без имени отвечало бы «стоит кто-то», а вопрос —
@@ -1037,7 +1051,7 @@ test('зависимость видна с обеих сторон и прохо
   await expect(holder.getByText('Держит:')).toBeVisible()
   await holder.getByRole('button', { name: 'Ждёт очереди' }).click()
   await expect(page.getByRole('heading', { name: 'Ждёт очереди' })).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Ждущая называет того, кто её держит, и переход туда работает:
   // связь должна проходиться, а не только показываться.
@@ -1118,6 +1132,7 @@ test('фильтр по исполнителю показывает и то, ч�
 
   // Работа без исполнителя и есть то, что теряется: её надо уметь
   // спросить отдельно.
+  await openFilters(page)
   await page.getByLabel('Исполнитель').selectOption('none')
   await expect(cardIn(page, 'Очередь', 'Ничья работа')).toBeVisible()
   await expect(page.getByRole('group', { name: /Моя работа/ })).toHaveCount(0)
@@ -1254,7 +1269,7 @@ test('палитра находит карточку и выполняет ко�
   await expect(page.getByRole('heading', { name: 'Договор аренды' })).toBeVisible()
   expect(page.url()).toMatch(/\/card\//)
 
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // По номеру — тоже. Номер обещан именем, которое вводят в поиск,
   // а палитра смотрела только название и приписку: «ДОСК-2» не находил
@@ -1264,7 +1279,7 @@ test('палитра находит карточку и выполняет ко�
   await expect(page.getByRole('option', { name: /Договор аренды/ })).toHaveCount(1)
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Договор аренды' })).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Команда: в том же списке, потому что человек не разделяет
   // «найти» и «сделать», пока не начал набирать.
@@ -1337,11 +1352,11 @@ test('на узком экране показывается одна колон�
 
   await toggle.click()
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
-  await expect(toggle).toHaveText(/Отбор · 1/)
+  await expect(toggle).toHaveAccessibleName('Отбор: включено 1')
 
   await toggle.click()
   await expect(page.getByRole('checkbox', { name: 'Заблокированные' })).toBeHidden()
-  await expect(toggle).toHaveText(/Отбор · 1/)
+  await expect(toggle).toHaveAccessibleName('Отбор: включено 1')
   await phone.close()
 })
 
@@ -1356,7 +1371,7 @@ test('подзадачи раскрываются прямо с доски', asy
   await page.getByLabel('Название подзадачи').fill('Свести цифры')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Свести цифры' }).first()).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Свёрнуто по умолчанию: разбиение видно мерой, а не списком, —
   // иначе колонка из десяти разбитых задач превращается в простыню.
@@ -1382,7 +1397,7 @@ test('подзадачи раскрываются прямо с доски', asy
   await page.getByRole('tab', { name: 'Обсуждение' }).click()
   await panel.getByPlaceholder('Написать в обсуждение').fill('Взял на себя')
   await panel.getByRole('button', { name: 'Отправить' }).click()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   const row = parent.locator('.subtask').filter({ hasText: 'Свести цифры' })
   await expect(row.locator('.avatar')).toHaveCount(1)
@@ -1409,7 +1424,7 @@ test('заблокированная часть останавливает и р
   await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Прогнать нагрузочные' }).first()).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Часть открывается из родителя — отдельной карточкой в колонке
   // она не стоит, — и блокируется в своей панели.
@@ -1420,21 +1435,23 @@ test('заблокированная часть останавливает и р
   await partPanel.getByRole('button', { name: 'Заблокировать…' }).click()
   await partPanel.getByLabel('Причина блокировки').fill('стенд лежит')
   await partPanel.getByLabel('Причина блокировки').press('Enter')
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // На родителе видно и то, что он стоит, и почему.
   await expect(parent.getByText('Часть заблокирована: стенд лежит')).toBeVisible()
 
   // И отбор «что не идёт» его показывает.
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
   await expect(cardIn(page, 'Очередь', 'Выпустить релиз')).toBeVisible()
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Заблокированные' }).uncheck()
 
   // Часть отпустили — родитель пошёл дальше.
   await parent.getByRole('button', { name: 'Прогнать нагрузочные' }).click()
   await page.getByRole('tab', { name: 'Работа' }).click()
   await partPanel.getByRole('button', { name: 'Снять блокировку' }).click()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await expect(parent.getByText(/Часть заблокирована/)).toHaveCount(0)
 })
 
@@ -1531,7 +1548,7 @@ test('история спрятана за вкладкой, карточка о
 
   // Вкладка не запоминается между карточками: заглянувший в историю
   // одной задачи открывает следующую не затем, чтобы читать историю.
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await cardIn(page, 'Очередь', 'Вторая задача').getByRole('button', { name: 'Вторая задача' }).click()
   await expect(page.getByRole('tab', { name: 'Обсуждение' })).toHaveAttribute(
     'aria-selected',
@@ -1549,7 +1566,7 @@ test('нажатие открывает карточку, а нажатие на
   // а не в её заголовок.
   await card.click({ position: { x: 5, y: 5 } })
   await expect(page.getByRole('heading', { name: 'Открыться по нажатию' })).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // У кнопки внутри карточки своё действие, и оно не должно тонуть
   // в открытии: до этой проверки меню открывалось вместе с панелью.
@@ -1578,7 +1595,7 @@ test('подзадача заводится из карточки одним п�
   await expect(page.getByRole('complementary').getByText('Прогнать тесты')).toBeVisible()
   await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   // Отдельной карточкой в колонке она при этом не стоит: часть —
   // это часть, а колонка из трёх задач не должна выглядеть колонкой
   // из десяти. Внутри родителя она видна и оттуда же открывается.
@@ -1602,7 +1619,7 @@ test('подзадача заводится из карточки одним п�
   await page.getByRole('tab', { name: 'Работа' }).click()
   await page.getByRole('complementary').getByRole('button', { name: 'Выпустить релиз' }).click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Родитель показывает разбиение полосой, и она же раскрывает
   // подзадачи: мера и путь внутрь неё — одно управление, поэтому мера
@@ -1661,7 +1678,7 @@ test('исполнителей у карточки может быть неск�
   await expect(panel.getByText('Проверяющий').first()).toBeVisible()
   await expect(panel.getByText('Иван Петров').first()).toBeVisible()
   await expect(page.getByLabel('Добавить исполнителя')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // На доске видны оба — и назначение пережило перезагрузку.
   // Точное совпадение подписи: имя стоит и на самом аватаре,
@@ -1673,9 +1690,11 @@ test('исполнителей у карточки может быть неск�
 
   // Фильтр «на мне» показывает работу, о которой договорились вдвоём:
   // иначе один из двоих не найдёт её у себя.
+  await openFilters(page)
   await page.getByLabel('Исполнитель').selectOption({ label: 'Иван Петров' })
   await expect(card).toBeVisible()
 
+  await openFilters(page)
   await page.getByLabel('Исполнитель').selectOption({ label: 'Ни на ком' })
   await expect(card).toHaveCount(0)
   expect(who.email).toBeTruthy()
@@ -1732,7 +1751,7 @@ test('работу можно поставить на доску соседей,
   await expect(page.getByText(/Ещё не начали · Очередь/)).toBeVisible()
 
   // На своей доске её нет — работа принадлежит исполнителю.
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await expect(cardIn(page, 'Очередь', 'Поднять квоту на хранилище')).toHaveCount(0)
 
   // У соседей она есть, с их номером — и с указанием, чья это часть.
@@ -1809,7 +1828,7 @@ test('закрытая итерация остаётся на экране и о
     await page.getByRole('tab', { name: 'Работа' }).click()
     await page.getByLabel('Итерация карточки').selectOption({ label: 'Неделя 34' })
     // Именно кнопка панели: у итерации рядом своя, «закрыть».
-    await page.getByRole('complementary').getByRole('button', { name: 'Закрыть' }).click()
+    await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
   }
 
   // Одна доведена до конца.
@@ -2181,7 +2200,7 @@ test('блокировка со сроком: видна заранее, пра�
 
   const day = inThreeDays.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
   await expect(panel.getByText(`до ${day}, 18:00`)).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   await expect(card.getByText(new RegExp(`до ${day}, 18:00`))).toBeVisible()
 
   // Меньше суток до срока — отбор «истекает» его находит.
@@ -2190,9 +2209,11 @@ test('блокировка со сроком: видна заранее, пра�
   await page.getByRole('tab', { name: 'Работа' }).click()
   await panel.getByLabel('Срок блокировки').fill(local(soon))
   await panel.getByLabel('Срок блокировки').press('Enter')
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Блокировка истекает' }).check()
   await expect(cardIn(page, 'Очередь', 'Ждём поставку')).toBeVisible()
+  await openFilters(page)
   await page.getByRole('checkbox', { name: 'Блокировка истекает' }).uncheck()
 
   // Бессрочная — кнопкой, а не стиранием поля: стёртое поле читается
@@ -2263,7 +2284,51 @@ test('боковая панель не перекрывает управлени
     await toast.getByRole('button', { name: 'Вернуть' }).click()
     await expect(cardIn(page, 'Очередь', 'Соседняя')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Закрыть' }).first().click()
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
     await expect(panel).toHaveCount(0)
   }
+})
+
+// Шапка доски — не стена органов управления (разбор 21.09.2026).
+// Над первой карточкой стояло около двадцати органов в четыре-пять
+// рядов: отборы, тема, плотность, загрузка, виды, итерации. Доска
+// начиналась с середины экрана, а на телефоне первая карточка
+// оказывалась у его нижнего края. Меряется то, ради чего переделка:
+// где начинается доска и сколько органов стоит над ней.
+test('шапка доски не съедает экран', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со строгой шапкой')
+  await addCard(page, 'Очередь', 'Первая')
+
+  const above = () =>
+    page.evaluate(() => {
+      const columns = document.querySelector('.columns')!.getBoundingClientRect().top
+      const controls = [
+        ...document.querySelectorAll<HTMLElement>(
+          '.board-screen button, .board-screen select, .board-screen input',
+        ),
+      ].filter((el) => {
+        const box = el.getBoundingClientRect()
+        return box.width > 1 && box.bottom <= columns && !el.closest('.columns')
+      })
+      return { columns: Math.round(columns), controls: controls.length }
+    })
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const wide = await above()
+  expect(wide.columns, 'доска на 1440 начинается ниже, чем надо').toBeLessThanOrEqual(200)
+  // До переделки — 18: отборы, тема и плотность стояли каждый своим
+  // органом. После — 13: назад, видимость, оформление, три вида, поиск,
+  // «Отбор», группировка, палитра, «Поток», «Архив», «+ итерация».
+  expect(wide.controls, 'органов над доской на 1440').toBeLessThanOrEqual(13)
+
+  await page.setViewportSize({ width: 360, height: 760 })
+  const first = cardIn(page, 'Очередь', 'Первая')
+  await expect(first).toBeVisible()
+  const top = (await first.boundingBox())!.y
+  // Замер 21.09.2026 на свежей доске с коротким названием: первая
+  // карточка на 515 пикселях из 760 до переделки и на 371 после.
+  // Здесь название длинное и переносится на вторую строку — отсюда
+  // порог в 60% высоты, который прежний код не проходил.
+  expect(top, 'первая карточка на телефоне').toBeLessThanOrEqual(760 * 0.6)
 })

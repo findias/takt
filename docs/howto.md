@@ -21,9 +21,12 @@ shows less than everything, and says so in the column.
 
 ### Filter down to what you need
 
-1. In the row above the board pick your conditions: assignee, labels,
-   «горит» (urgent), «срок подходит» (due soon), «заблокированные»
-   (blocked), «дольше обещанного» (past the promise), iteration.
+1. Above the board press «Отбор» (filter) and pick your conditions:
+   assignee, labels, «горит» (urgent), «срок подходит» (due soon),
+   «заблокированные» (blocked), «дольше обещанного» (past the
+   promise), iteration. The button shows how many are on, and next
+   to it you see how many cards are hidden and «Показать все» (show
+   all).
 2. To share the result, copy the page address — the filter lives in it.
 3. To come back to a filter later, press **«Сохранить вид»** (save
    view) and give it a name.

@@ -103,10 +103,12 @@ test('снимки экранов', async ({ page, browser }) => {
 
   // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
   // сказать об этом, а не притворяться пустыми.
+  await page.getByRole('button', { name: /^Отбор/ }).click()
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
   await expect(page.getByText(/Под отбор ничего не подошло/).first()).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/03б-колонка-под-отбором.png` })
   await page.getByRole('button', { name: 'Показать все' }).click()
+  await page.getByRole('button', { name: /^Отбор/ }).click()
 
   // Тёмная тема — системная.
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -130,11 +132,15 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.emulateMedia({ forcedColors: 'none' })
 
   // Плотный режим — тот самый множитель.
-  const denser = page.getByRole('checkbox', { name: 'Плотнее' })
-  await denser.check()
+  // Плотность — в меню «Оформление».
+  const density = async () => {
+    await page.getByRole('button', { name: /^Оформление/ }).click()
+    await page.getByRole('menuitemcheckbox', { name: 'Плотнее' }).click()
+  }
+  await density()
   await page.waitForTimeout(200)
   await page.screenshot({ path: `${SHOTS}/05-доска-плотная.png` })
-  await denser.uncheck()
+  await density()
 
   // Дорожки: та же доска, разложенная не по колонкам, а по исполнителю,
   // метке, итерации и важности. В снимках не было ни одной, а раскладка

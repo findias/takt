@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
 import { groupByOrigin, labelTitle } from '../../entities/label/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
-import { NARROW, useMedia } from '../../shared/lib/useMedia.ts'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
 import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
 import type { Filters } from './filters.ts'
@@ -49,8 +48,8 @@ export function FilterBar({
   onChange: (next: Filters) => void
 }) {
   const [text, setText] = useState(filters.text)
-  const narrow = useMedia(NARROW)
   const [open, setOpen] = useState(false)
+  const restId = useId()
   const active = activeCount(filters)
 
   // Строка поиска — своё состояние: она печатается, а адрес меняется
@@ -77,14 +76,34 @@ export function FilterBar({
         />
       </label>
 
-      {narrow && (
-        <Button kind="quiet" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          <FilterIcon />
-          Отбор{active > 0 ? ` · ${active}` : ''}
-        </Button>
+      {/* Отборы свёрнуты на любой ширине, не только на узкой. Развёрнутые,
+          они занимали над доской два ряда из пяти флажков и трёх списков
+          (разбор 21.09.2026) — а спрашивают их реже, чем смотрят на доску.
+          Число включённых стоит на кнопке, а «скрыто N» — рядом с ней:
+          свёрнутый отбор не должен прятать, что доска отфильтрована. */}
+      <Button
+        kind="quiet"
+        aria-expanded={open}
+        aria-controls={restId}
+        aria-label={active > 0 ? `Отбор: включено ${active}` : 'Отбор'}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <FilterIcon />
+        <span className="tool-label">Отбор</span>
+        {active > 0 && <span className="filter-count">{active}</span>}
+      </Button>
+      {!isEmpty(filters) && (
+        <>
+          <span className="muted small">
+            {hidden > 0 ? `скрыто ${hidden}` : 'ничего не скрыто'}
+          </span>
+          <Button kind="quiet" onClick={() => onChange(EMPTY)}>
+            Показать все
+          </Button>
+        </>
       )}
 
-      <div className="filters-rest row" hidden={narrow && !open}>
+      <div className="filters-rest row" id={restId} hidden={!open}>
         <select
           value={filters.assignee ?? ''}
           aria-label="Исполнитель"
@@ -226,16 +245,6 @@ export function FilterBar({
           <span>Дольше обещанного</span>
         </label>
 
-        {!isEmpty(filters) && (
-          <>
-            <span className="muted small">
-              {hidden > 0 ? `скрыто ${hidden}` : 'ничего не скрыто'}
-            </span>
-            <Button kind="quiet" onClick={() => onChange(EMPTY)}>
-              Показать все
-            </Button>
-          </>
-        )}
       </div>
     </div>
   )

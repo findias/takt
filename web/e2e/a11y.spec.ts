@@ -158,7 +158,7 @@ test('на всех экранах цели нажатия не мельче 24 
   // внутри списка выбора, а не по всей странице.
   await page.getByRole('combobox', { name: 'Повесить или завести метку' }).fill('Горит')
   await page.getByRole('listbox', { name: 'Метки' }).getByRole('option', { name: /^Горит/ }).click()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()
   expect(await tinyTargets(page), 'доска с меткой').toEqual([])
@@ -231,7 +231,10 @@ test('размеры текста ложатся в целые пиксели', 
  * в тёмной вместо трёх.
  */
 async function lowContrast(page: Page, тема: 'Светлая' | 'Тёмная') {
-  await page.getByLabel('Тема').selectOption({ label: тема })
+  // Тема — в меню «Оформление» (разбор 21.09.2026): одна кнопка вместо
+  // списка и флажка в каждой шапке.
+  await page.getByRole('button', { name: /^Оформление/ }).click()
+  await page.getByRole('menuitemradio', { name: тема }).click()
   return await page.evaluate(() => {
     const числа = (s: string) => (s.match(/[\d.]+/g) ?? []).map(Number)
     const яркость = (c: number[]) => {
@@ -702,7 +705,7 @@ test('флажок не мельче цели нажатия, подпись н�
   await page.getByLabel('Название подзадачи').fill('Свести цифры за весь квартал')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Свести цифры за весь квартал' }).first()).toBeVisible()
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
   // Ссылка на родителя появляется на карточке из следующего снимка
   // доски: без перезагрузки замеряли бы карточку без неё, а тесно
   // строке становится именно от ссылки.
@@ -758,7 +761,7 @@ const CONTEXTLESS = [
   'Разметка',
   'Завести карточку',
   'Доступ',
-  'закрыть',
+  'Закрыть итерацию',
   'Убрать',
   'Отозвать',
   'Скопировать',
@@ -804,7 +807,7 @@ test('кнопки, которых по нескольку, названы по 
   await panel.getByLabel('Дата обязательства').fill('2026-09-01')
   await expect(panel.getByRole('button', { name: 'Снять обязательство' })).toBeVisible()
   expect(await contextless(page), 'панель карточки').toEqual([])
-  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 34')

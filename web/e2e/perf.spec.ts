@@ -141,7 +141,9 @@ test('доска в пятьсот карточек открывается и о
   await search.fill('')
   await page.evaluate(() => ((window as unknown as { __slowest: number }).__slowest = 0))
 
-  await page.getByRole('checkbox', { name: 'Плотнее' }).check()
+  // Плотность — в меню «Оформление»; меряется само переключение.
+  await page.getByRole('button', { name: /^Оформление/ }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Плотнее' }).click()
   const onDensity = await page.evaluate(
     () => (window as unknown as { __slowest: number }).__slowest,
   )

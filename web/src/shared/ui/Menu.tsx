@@ -41,6 +41,9 @@ export type MenuItem = {
    *  `menuitemcheckbox` читается вслух вместе с «включено», а галочка
    *  без роли осталась бы значком, о котором скринридер молчит. */
   checked?: boolean
+  /** Выбор одного из нескольких (тема): диктор читает «переключатель,
+   *  выбран», а не «флажок» — флажок обещает, что можно включить два. */
+  radio?: boolean
   /** Тихое уточнение после подписи: откуда метка. Подпись остаётся
    *  короткой — по её первой букве ходит клавиатура. */
   hint?: string
@@ -176,7 +179,9 @@ export function Menu({
             <button
               key={item.id ?? item.label}
               type="button"
-              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+              role={
+                item.checked === undefined ? 'menuitem' : item.radio ? 'menuitemradio' : 'menuitemcheckbox'
+              }
               aria-checked={item.checked}
               tabIndex={i === active ? 0 : -1}
               className={item.danger ? 'menu-item menu-item--danger' : 'menu-item'}

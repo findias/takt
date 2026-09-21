@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Menu } from './Menu.tsx'
+import { ContrastIcon } from './icons.tsx'
 
 type Theme = 'system' | 'light' | 'dark'
 type Density = 'normal' | 'compact'
@@ -39,30 +41,36 @@ export function Appearance() {
     localStorage.setItem('density', density)
   }, [density])
 
+  // Одна кнопка с меню, а не список и флажок в каждой шапке. Тема
+  // и плотность — личные настройки смотрящего, их меняют раз в месяц,
+  // а занимали они два места в шапке каждой доски — рядом с тем,
+  // что меняют каждую минуту (разбор 21.09.2026).
+  const label = `Оформление: ${THEMES[theme].toLowerCase()}${density === 'compact' ? ', плотнее' : ''}`
   return (
     // Имя классу нужно не для оформления, а чтобы печать могла его
     // убрать: тема и плотность на бумаге не значат ничего.
-    <div className="row row--tight appearance">
-      <select
-        value={theme}
-        aria-label="Тема"
-        className="small"
-        onChange={(e) => setTheme(e.target.value as Theme)}
+    <div className="appearance">
+      <Menu
+        label={label}
+        align="right"
+        items={[
+          ...(Object.keys(THEMES) as Theme[]).map((t) => ({
+            id: t,
+            label: THEMES[t],
+            checked: theme === t,
+            radio: true,
+            onSelect: () => setTheme(t),
+          })),
+          {
+            id: 'density',
+            label: 'Плотнее',
+            checked: density === 'compact',
+            onSelect: () => setDensity(density === 'compact' ? 'normal' : 'compact'),
+          },
+        ]}
       >
-        {(Object.keys(THEMES) as Theme[]).map((t) => (
-          <option key={t} value={t}>
-            {THEMES[t]}
-          </option>
-        ))}
-      </select>
-      <label className="row row--tight">
-        <input
-          type="checkbox"
-          checked={density === 'compact'}
-          onChange={(e) => setDensity(e.target.checked ? 'compact' : 'normal')}
-        />
-        <span className="small">Плотнее</span>
-      </label>
+        <ContrastIcon />
+      </Menu>
     </div>
   )
 }

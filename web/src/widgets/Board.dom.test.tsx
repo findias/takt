@@ -234,6 +234,8 @@ describe('состояния доски', () => {
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
     // Обе карточки среднего уровня: отбор «Горит» не оставит ни одной.
+    // Отборы — за кнопкой «Отбор» на любой ширине.
+    await user.click(screen.getByRole('button', { name: /^Отбор/ }))
     await user.click(screen.getByRole('checkbox', { name: 'Горит' }))
 
     const queue = await screen.findByRole('region', { name: 'Очередь' })
