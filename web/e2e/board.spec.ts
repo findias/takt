@@ -2204,3 +2204,66 @@ test('блокировка со сроком: видна заранее, пра�
   await expect(panel.getByText(/Снимется сама/)).toHaveCount(0)
   await expect(panel.getByText('Заблокирована', { exact: true })).toBeVisible()
 })
+
+// Боковая панель оставляет доску рабочей — так обещано в стилях
+// и в Panel.tsx, а код обещания не держал: панель ложилась поверх
+// доски, и при открытой карточке не нажимались «Таблица», «Изменения»,
+// «Поток», «Архив», тема, группировка (проход глазами 20.09.2026,
+// 7–10 перекрытых органов на ширинах 1280–2560). «Не не видно,
+// а не нажимается» — ровно тот облик, что у меню нижней карточки,
+// и проверка устроена так же: каждый орган управления доской при
+// открытой панели отвечает на elementFromPoint собой.
+test('боковая панель не перекрывает управление доской', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с панелью')
+  await addCard(page, 'Очередь', 'Открытая')
+  await addCard(page, 'Очередь', 'Соседняя')
+
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 800 })
+    await cardIn(page, 'Очередь', 'Открытая').click()
+    const panel = page.locator('.panel-side')
+    await expect(panel).toBeVisible()
+    await expect(page.getByLabel('Как показывать панель')).toHaveValue('side')
+
+    const covered = await page.evaluate(() => {
+      const side = document.querySelector('.panel-side')!
+      const controls = [
+        ...document.querySelectorAll<HTMLElement>(
+          '.board-screen button, .board-screen select, .board-screen input, .board-screen a[href], .board-screen [role="separator"]',
+        ),
+      ].filter(
+        (el) =>
+          !side.contains(el) &&
+          // Колонки листаются вбок сами: ушедшее за край колонок
+          // достают прокруткой, а не перекрытием.
+          !el.closest('.columns') &&
+          el.getBoundingClientRect().width > 1,
+      )
+      return controls
+        .filter((el) => {
+          const box = el.getBoundingClientRect()
+          const under = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+          return !(under === el || el.contains(under))
+        })
+        .map((el) => el.getAttribute('aria-label') || el.textContent?.trim() || el.tagName)
+    })
+    expect(covered, `перекрыто при ширине ${width}`).toEqual([])
+
+    // Сообщение о действии на доске не ложится поверх панели: у него
+    // свой слой, и он выше панели, — значит, место ему нужно рядом.
+    const neighbour = cardIn(page, 'Очередь', 'Соседняя')
+    await neighbour.hover()
+    await neighbour.getByRole('button', { name: /Действия карточки/ }).click()
+    await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+    const toast = page.locator('.toast').last()
+    await expect(toast).toBeVisible()
+    const [t, p] = [(await toast.boundingBox())!, (await panel.boundingBox())!]
+    expect(t.x + t.width, `сообщение на панели при ширине ${width}`).toBeLessThanOrEqual(p.x)
+    await toast.getByRole('button', { name: 'Вернуть' }).click()
+    await expect(cardIn(page, 'Очередь', 'Соседняя')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Закрыть' }).first().click()
+    await expect(panel).toHaveCount(0)
+  }
+})
