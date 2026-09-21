@@ -2333,6 +2333,25 @@ test('шапка доски не съедает экран', async ({ page }) =>
   expect(top, 'первая карточка на телефоне').toBeLessThanOrEqual(760 * 0.6)
 })
 
+// Раскрытый «Отбор» сдвигает доску на ряд вниз, и свернуть его можно
+// было только той же кнопкой: Escape из флажка не делал ничего
+// (найдено на подготовке показа 21.09.2026). Флажок берётся фокусом,
+// а не щелчком — щелчок включил бы отбор и поменял доску.
+test('Escape сворачивает «Отбор» и возвращает фокус на кнопку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с отбором')
+
+  const toggle = page.getByRole('button', { name: /^Отбор/ })
+  await openFilters(page)
+  const urgent = page.getByRole('checkbox', { name: 'Горит' })
+  await urgent.focus()
+  await page.keyboard.press('Escape')
+
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(urgent).toBeHidden()
+  await expect(toggle).toBeFocused()
+})
+
 // Необратимое спрашивает (правило проекта). Отзыв ключа и удаление
 // реплики срабатывали с первого нажатия, хотя вернуть не дают ни то,
 // ни другое (разбор интерфейса 21.09.2026). Отмена не трогает ничего,

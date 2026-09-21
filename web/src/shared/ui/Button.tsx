@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 
 /**
  * Кнопка.
@@ -18,6 +18,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   /** Действие идёт: кнопка не нажимается, но объясняет почему. */
   busy?: boolean
   icon?: ReactNode
+  /** В React 19 `ref` — обычное свойство и уходит в `button` вместе
+   *  с остальными; объявлен, чтобы фокус можно было вернуть на кнопку. */
+  ref?: Ref<HTMLButtonElement>
 }
 
 export function Button({

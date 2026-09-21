@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
 import { groupByOrigin, labelTitle } from '../../entities/label/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
@@ -50,6 +50,19 @@ export function FilterBar({
   const [text, setText] = useState(filters.text)
   const [open, setOpen] = useState(false)
   const restId = useId()
+  const toggleRef = useRef<HTMLButtonElement>(null)
+
+  // Раскрытое закрывается Escape — как меню, выбор метки и панель
+  // карточки на этом же экране. Слушают кнопка и сама панель, а не
+  // вся полоса: в поиске Escape стирает набранное, и отнимать это у
+  // поля нельзя. Нажим истрачен здесь — иначе он закрыл бы заодно
+  // и панель карточки, открытую рядом.
+  const closeOnEscape = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Escape' || !open) return
+    e.stopPropagation()
+    setOpen(false)
+    toggleRef.current?.focus()
+  }
   const active = activeCount(filters)
 
   // Строка поиска — своё состояние: она печатается, а адрес меняется
@@ -82,7 +95,9 @@ export function FilterBar({
           Число включённых стоит на кнопке, а «скрыто N» — рядом с ней:
           свёрнутый отбор не должен прятать, что доска отфильтрована. */}
       <Button
+        ref={toggleRef}
         kind="quiet"
+        onKeyDown={closeOnEscape}
         aria-expanded={open}
         aria-controls={restId}
         aria-label={active > 0 ? `Отбор: включено ${active}` : 'Отбор'}
@@ -103,7 +118,7 @@ export function FilterBar({
         </>
       )}
 
-      <div className="filters-rest row" id={restId} hidden={!open}>
+      <div className="filters-rest row" id={restId} hidden={!open} onKeyDown={closeOnEscape}>
         <select
           value={filters.assignee ?? ''}
           aria-label="Исполнитель"
