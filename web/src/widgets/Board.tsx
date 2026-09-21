@@ -65,6 +65,7 @@ import {
 import { visibilityLabel } from '../features/access/visibility.ts'
 import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
+import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
@@ -110,6 +111,7 @@ export function Board({
   meId,
   isOwner,
   canEdit,
+  sandboxExpiresAt,
   onBack,
 }: {
   boardId: string
@@ -129,6 +131,8 @@ export function Board({
   /** Удалять насовсем может только владелец организации: действие
    *  необратимо, и одного «администратора» для него мало. */
   isOwner: boolean
+  /** Песочница публичного демо: когда исчезнет. */
+  sandboxExpiresAt?: string
   onBack: () => void
 }) {
   const notify = useToast()
@@ -941,6 +945,7 @@ export function Board({
         <span className="version" title="Версия доски растёт с каждой операцией">
           v{base.info.version}
         </span>
+        <SandboxNote expiresAt={sandboxExpiresAt} />
         {board.pending > 0 && (
           <span className="pending" title="Изменения ещё не подтверждены сервером">
             сохраняем… {board.pending}

@@ -47,7 +47,12 @@ func Verify(ctx context.Context, db *store.Store) error {
 	if err != nil {
 		return err
 	}
+	return VerifyOrg(ctx, db, orgID, ownerID)
+}
 
+// VerifyOrg — те же обещания для любой демонстрационной организации:
+// песочница посетителя обязана показывать то же, что стенд.
+func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error {
 	var missing []string
 	checks := []struct {
 		promise string
@@ -172,7 +177,7 @@ func Verify(ctx context.Context, db *store.Store) error {
 	// где всё на месте. Эта проверка на том и споткнулась первой же
 	// своей версией — тем самым способом, о котором предупреждает
 	// CONTRIBUTING.md.
-	err = db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+	err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
 		for _, c := range checks {
 			var ok bool
 			if err := tx.QueryRow(ctx, c.query, orgID).Scan(&ok); err != nil {

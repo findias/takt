@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,8 +68,18 @@ type filler struct {
 	teams   *team.Service
 	boards  *board.Service
 	orgID   string
-	people  map[string]string // почта → идентификатор
+	people  map[string]string // почта из People → идентификатор
 	teamIDs map[string]string // название подразделения → идентификатор
+
+	// Песочница публичного демо: почты свои у каждой, пароль не знает
+	// никто, люди привязаны к организации и уходят вместе с ней.
+	// Пусто — стенд разработки с почтами и паролем из People.
+	sandbox *sandboxOpts
+}
+
+type sandboxOpts struct {
+	tag       string
+	expiresAt time.Time
 }
 
 // ErrAlreadyFilled — демонстрационные данные уже заведены. Не ошибка
@@ -81,14 +92,7 @@ var ErrAlreadyFilled = errors.New("демонстрационные данные
 // демонстрационных данных хуже, чем их отсутствие, — по ней нельзя понять,
 // что показывает интерфейс, а что не доехало.
 func Fill(ctx context.Context, db *store.Store) error {
-	f := &filler{
-		ctx:    ctx,
-		db:     db,
-		orgs:   org.New(db),
-		teams:  team.New(db),
-		boards: board.New(db),
-		people: map[string]string{},
-	}
+	f := newFiller(ctx, db)
 
 	var taken bool
 	if err := db.Pool.QueryRow(ctx,
@@ -99,7 +103,85 @@ func Fill(ctx context.Context, db *store.Store) error {
 	if taken {
 		return ErrAlreadyFilled
 	}
+	return f.fill()
+}
 
+func newFiller(ctx context.Context, db *store.Store) *filler {
+	return &filler{
+		ctx:    ctx,
+		db:     db,
+		orgs:   org.New(db),
+		teams:  team.New(db),
+		boards: board.New(db),
+		people: map[string]string{},
+	}
+}
+
+// Sandbox — организация, заведённая посетителю публичного демо.
+type Sandbox struct {
+	OrgID     string
+	OwnerID   string
+	ExpiresAt time.Time
+}
+
+// FillSandbox заводит посетителю демо свою организацию с теми же
+// данными, что у стенда. Данные те же намеренно: стенд — это то,
+// на что смотрят при каждой правке интерфейса, и песочница, наполненная
+// иначе, показывала бы клиенту то, чего никто не видел.
+//
+// Неудача посередине убирает заведённое: половина демо хуже, чем
+// никакого, а незаконченная песочница без срока не досталась бы
+// и уборщику.
+func FillSandbox(ctx context.Context, db *store.Store, ttl time.Duration) (Sandbox, error) {
+	f := newFiller(ctx, db)
+	tag := strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
+	f.sandbox = &sandboxOpts{tag: tag, expiresAt: time.Now().Add(ttl)}
+	if err := f.fill(); err != nil {
+		f.discard()
+		return Sandbox{}, err
+	}
+	return Sandbox{OrgID: f.orgID, OwnerID: f.owner(), ExpiresAt: f.sandbox.expiresAt}, nil
+}
+
+// discard убирает недозаведённую песочницу. Контекст отдельный:
+// неудача часто и есть отменённый запрос, а убрать за ним надо всё
+// равно.
+func (f *filler) discard() {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if f.orgID != "" {
+		_ = RemoveSandbox(ctx, f.db, f.orgID)
+	}
+	// Владелец заводится раньше организации: если до неё не дошло,
+	// его привязать было не к чему.
+	if id := f.owner(); id != "" {
+		_, _ = f.db.Pool.Exec(ctx, `delete from users where id = $1 and sandbox_org_id is null
+		   and email like '%@demo.invalid'`, id)
+	}
+}
+
+// email — почта человека: у стенда та, что в People, у песочницы —
+// своя, чтобы сотня песочниц не спорила за одну. Домен `.invalid`
+// зарезервирован (RFC 2606): письмо на него не уйдёт никуда.
+func (f *filler) email(p Person) string {
+	if f.sandbox == nil {
+		return p.Email
+	}
+	local, _, _ := strings.Cut(p.Email, "@")
+	return local + "+" + f.sandbox.tag + "@demo.invalid"
+}
+
+// password — пароль людей: у стенда общий и известный, у песочницы —
+// случайный и не сохраняемый нигде. Входят в песочницу сессией,
+// заведённой вместе с ней, и никак иначе.
+func (f *filler) password() string {
+	if f.sandbox == nil {
+		return Password
+	}
+	return uuid.NewString()
+}
+
+func (f *filler) fill() error {
 	if err := f.organization(); err != nil {
 		return fmt.Errorf("организация: %w", err)
 	}
@@ -156,16 +238,20 @@ func (f *filler) owner() string { return f.people[People[0].Email] }
 
 func (f *filler) organization() error {
 	for i, p := range People {
-		hash, err := auth.HashPassword(Password)
+		hash, err := auth.HashPassword(f.password())
 		if err != nil {
 			return err
 		}
+		var sandboxOrg *string
+		if f.sandbox != nil && f.orgID != "" {
+			sandboxOrg = &f.orgID
+		}
 		var id string
 		err = f.db.Pool.QueryRow(f.ctx, `
-			insert into users (email, name, password_hash)
-			values ($1, $2, $3) returning id`, p.Email, p.Name, hash).Scan(&id)
+			insert into users (email, name, password_hash, sandbox_org_id)
+			values ($1, $2, $3, $4) returning id`, f.email(p), p.Name, hash, sandboxOrg).Scan(&id)
 		if err != nil {
-			return fmt.Errorf("личность %s: %w", p.Email, err)
+			return fmt.Errorf("личность %s: %w", f.email(p), err)
 		}
 		f.people[p.Email] = id
 
@@ -175,6 +261,20 @@ func (f *filler) organization() error {
 				return err
 			}
 			f.orgID = m.OrgID
+			if f.sandbox != nil {
+				// Срок и привязка владельца — сразу, до остального
+				// наполнения: упади оно дальше, у уборщика уже есть
+				// за что взяться.
+				if _, err := f.db.Pool.Exec(f.ctx, `
+					update orgs set sandbox_expires_at = $2 where id = $1`,
+					f.orgID, f.sandbox.expiresAt); err != nil {
+					return err
+				}
+				if _, err := f.db.Pool.Exec(f.ctx, `
+					update users set sandbox_org_id = $2 where id = $1`, id, f.orgID); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		// Остальные вписываются участием напрямую: приглашение по ссылке

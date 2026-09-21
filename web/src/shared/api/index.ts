@@ -35,6 +35,9 @@ export type Principal = {
    *  задают при разборе любой поломки, и задают не тому, у кого есть
    *  терминал. */
   version?: string
+  /** Песочница публичного демо: когда она исчезнет. У настоящей
+   *  организации поля нет. */
+  sandboxExpiresAt?: string
 }
 
 export type EstimateUnit = 'points' | 'hours' | 'days'
@@ -774,11 +777,15 @@ export type AuthMethods = {
   /** Можно ли завести организацию самостоятельно. На закрытой установке
    *  нельзя — и тогда кнопки, ведущей к отказу, быть не должно. */
   signup: { enabled: boolean }
+  /** Публичное демо: вход предлагает «Попробовать» — свою песочницу
+   *  на сутки без регистрации. Старый сервер поля не присылает. */
+  demo?: { enabled: boolean }
 }
 
 export const api = {
   me: () => request<Principal>('GET', '/api/me'),
   authMethods: () => request<AuthMethods>('GET', '/api/auth/methods'),
+  sandbox: () => request<Principal>('POST', '/api/demo/sandbox'),
   login: (email: string, password: string) =>
     request<Principal>('POST', '/api/auth/login', { email, password }),
   register: (org: string, name: string, email: string, password: string) =>

@@ -140,6 +140,7 @@ on installing without internet access, below, covers it.
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | the application's credentials at the provider |
 | `OIDC_ORG` | the organisation a first-time arrival joins |
 | `OIDC_LABEL` | the caption on the sign-in button |
+| `DEMO` | leave unset: `on` turns the installation into a public demo where anyone creates a sandbox |
 
 **Migrations are a separate command,** `takt migrate`, not part of
 startup. On one replica it makes no difference; on two, a simultaneous

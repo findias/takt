@@ -49,6 +49,12 @@ type Config struct {
 	// уже лежит в секретах кластера. Отсюда: одна установка — один
 	// провайдер, и никаких секретов в базе.
 	OIDC OIDCConfig
+
+	// Demo — публичное демо: на входе «Попробовать», посетитель получает
+	// свою песочницу на сутки. Выключено по умолчанию и включается только
+	// явным DEMO=on: установка заказчика, где песочницы заводит любой
+	// прохожий, — это не настройка, а дыра.
+	Demo bool
 }
 
 type OIDCConfig struct {
@@ -98,6 +104,7 @@ func Load() (Config, error) {
 		ListenAddr:  env("LISTEN_ADDR", ":8080"),
 		WebDir:      env("WEB_DIR", "./web/dist"),
 		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
+		Demo:        env("DEMO", "") == "on",
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
 			ClientID:     env("OIDC_CLIENT_ID", ""),
@@ -119,6 +126,18 @@ func Load() (Config, error) {
 		return c, fmt.Errorf(
 			"SIGNUP=%q: бывает first (первый пришедший, дальше по приглашению), "+
 				"open (кто угодно) или closed (никто)", c.Signup)
+	}
+
+	switch env("DEMO", "") {
+	case "", "off", "on":
+	default:
+		return c, fmt.Errorf("DEMO=%q: бывает on (публичное демо с песочницами) или off", env("DEMO", ""))
+	}
+	// Демо заводит организации только песочницами. Открытая регистрация
+	// рядом означала бы вторую дверь — организации без срока, которые
+	// уборщик не тронет и которые копятся в бесплатной базе.
+	if c.Demo && c.Signup != SignupClosed {
+		return c, fmt.Errorf("DEMO=on требует SIGNUP=closed: в демо организации заводятся только песочницами")
 	}
 
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")

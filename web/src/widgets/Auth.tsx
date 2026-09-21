@@ -61,6 +61,23 @@ export function Auth({
     return () => clearTimeout(timer)
   }, [notice])
 
+  // Песочница заводится секунду-другую: демо-данные — это три доски
+  // с историей за три недели. Кнопка всё это время говорит, что идёт
+  // работа, а не молчит.
+  const trySandbox = async () => {
+    setBusy(true)
+    form.clear()
+    try {
+      onSignedIn(await api.sandbox())
+    } catch (e) {
+      // «Демо заполнено» и «слишком много подряд» — отказы без поля,
+      // и оба говорят, когда повторить.
+      form.reportForm(e instanceof Error ? e.message : 'Не получилось')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // Проверка на отправке, а не на вводе: до первой отправки форма
@@ -119,6 +136,27 @@ export function Auth({
           <div className="note">
             <p className="small">{notice}</p>
           </div>
+        )}
+
+        {/* В демо главный путь — попробовать, а не войти: пароля
+            у посетителя нет и не будет. Поэтому кнопка сверху и главная,
+            а вход по паролю — для тех, кому его выдали. */}
+        {mode === 'login' && methods?.demo?.enabled && (
+          <>
+            <button
+              type="button"
+              className="primary button--wide"
+              aria-busy={busy}
+              disabled={busy}
+              onClick={trySandbox}
+            >
+              {busy ? 'Готовим демо…' : 'Попробовать без регистрации'}
+            </button>
+            <p className="small muted">
+              Своя организация с примерами досок на сутки. Никто, кроме вас, её не видит.
+            </p>
+            <p className="divider small muted">или войти</p>
+          </>
         )}
 
         {mode === 'login' && methods?.oidc.enabled && (
@@ -198,7 +236,9 @@ export function Auth({
 
         <FormError>{form.formError}</FormError>
 
-        <button className="primary" type="submit" disabled={busy}>
+        {/* Главное действие на экране одно: в демо это «Попробовать»,
+            и вход по паролю становится обычной кнопкой. */}
+        <button className={methods?.demo?.enabled ? 'secondary' : 'primary'} type="submit" disabled={busy}>
           {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Завести организацию'}
         </button>
         {/* На закрытой установке организации заводит владелец, и кнопки,
@@ -222,11 +262,15 @@ export function Auth({
             {mode === 'login' ? 'Завести новую организацию' : 'У меня уже есть аккаунт'}
           </button>
         )}
-        <p className="muted small">
-          {methods && !methods.signup?.enabled
-            ? 'Организации на этой установке заводит владелец. Чтобы присоединиться, нужна ссылка-приглашение от него.'
-            : 'Чтобы присоединиться к существующей команде, нужна ссылка-приглашение от её владельца.'}
-        </p>
+        {/* В демо это объяснение ни о чём: посетитель заводит песочницу,
+            а не присоединяется к команде, и приглашение ему не нужно. */}
+        {!methods?.demo?.enabled && (
+          <p className="muted small">
+            {methods && !methods.signup?.enabled
+              ? 'Организации на этой установке заводит владелец. Чтобы присоединиться, нужна ссылка-приглашение от него.'
+              : 'Чтобы присоединиться к существующей команде, нужна ссылка-приглашение от её владельца.'}
+          </p>
+        )}
       </form>
     </div>
   )

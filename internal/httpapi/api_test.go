@@ -37,9 +37,18 @@ type api struct {
 
 func newAPI(t *testing.T) *api { return newAPILogging(t, io.Discard) }
 
+// newAPIWith — сервер с другими настройками поверх обычных проверочных.
+func newAPIWith(t *testing.T, tune func(*config.Config)) *api {
+	return newAPIConfigured(t, io.Discard, tune)
+}
+
 // newAPILogging — тот же сервер, но с видимым логом. Нужен там, где
 // проверяется не ответ, а то, что в лог попало (и что не попало).
 func newAPILogging(t *testing.T, out io.Writer) *api {
+	return newAPIConfigured(t, out, nil)
+}
+
+func newAPIConfigured(t *testing.T, out io.Writer, tune func(*config.Config)) *api {
 	t.Helper()
 	db := testdb.Shared(t)
 
@@ -55,10 +64,14 @@ func newAPILogging(t *testing.T, out io.Writer) *api {
 	// организации, и умолчание `first` закрыло бы её на второй же —
 	// база у проверок общая. Сами режимы проверяются отдельно,
 	// в `signup_test.go`.
-	impl := New(config.Config{
+	cfg := config.Config{
 		BaseURL: "http://example.test",
 		Signup:  config.SignupOpen,
-	}, db, log, hub)
+	}
+	if tune != nil {
+		tune(&cfg)
+	}
+	impl := New(cfg, db, log, hub)
 	srv := httptest.NewServer(impl.Handler())
 	t.Cleanup(srv.Close)
 

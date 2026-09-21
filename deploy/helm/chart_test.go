@@ -446,6 +446,9 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 		"--set", "oidc.issuer=https://id.example.test",
 		"--set", "oidc.clientId=takt",
 		"--set", "oidc.existingSecret=takt-oidc",
+		// Демо тоже включено: DEMO передаётся только при нём.
+		"--set", "demo=true",
+		"--set", "signup=closed",
 	)
 	if err != nil {
 		t.Fatalf("чарт не отрисовался:\n%s", out)

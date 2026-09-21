@@ -117,6 +117,10 @@ DATABASE_URL
   value: ":8080"
 - name: SIGNUP
   value: {{ .Values.signup | quote }}
+{{- if .Values.demo }}
+- name: DEMO
+  value: "on"
+{{- end }}
 {{- if .Values.oidc.enabled }}
 - name: OIDC_ISSUER
   value: {{ required "нужен oidc.issuer: адрес провайдера входа" .Values.oidc.issuer | quote }}

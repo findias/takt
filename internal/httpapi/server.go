@@ -150,6 +150,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerStreamRoutes(mux)
 	s.registerExportRoutes(mux)
 	s.registerOIDCRoutes(mux)
+	s.registerDemoRoutes(mux)
 	s.registerSCIMRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))

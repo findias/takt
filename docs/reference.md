@@ -173,6 +173,7 @@ mark removed, archived, restored to the board.
 | `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | credentials at the provider |
 | `OIDC_ORG` | the organisation a first-time arrival joins |
 | `OIDC_LABEL` | the caption on the sign-in button |
+| `DEMO` | `on` only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours; requires `SIGNUP=closed`, event subscriptions are switched off. Off by default |
 
 ## Subcommands
 

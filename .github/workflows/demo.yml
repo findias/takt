@@ -1,0 +1,143 @@
+# Публичное демо (ROADMAP 30.1): выкладывается после каждой зелёной
+# «Проверки» на master — то, что прошло проверки, клиент и видит.
+#
+# Площадка — Render (приложение из образа) и Neon (база), обе
+# бесплатные; почему они — в ROADMAP, разбор 21.09.2026. Порядок
+# тот же, что у установки заказчика: сперва миграции, потом новый
+# код. Миграции обязаны работать со старой версией
+# (migration_compat_test.go), поэтому окно между шагами безопасно.
+#
+# Секреты (Settings → Secrets and variables → Actions):
+#   DEMO_DATABASE_URL       — прямая строка Neon (без -pooler), роль takt
+#   RENDER_DEPLOY_HOOK_URL  — Deploy Hook сервиса Render
+#   DEMO_URL                — адрес демо, https://….onrender.com
+# Нет хотя бы одного — миграции и выкладка пропускаются с пояснением,
+# а не падают: форку и частной копии демо не нужно. Образ собирается
+# всегда: без него не из чего завести сервис Render в первый раз.
+#
+# Идентификаторы работ — латиницей: кириллица в них делает весь файл
+# негодным без единого шага (найдено на этапе 21).
+name: Демо
+
+on:
+  workflow_run:
+    workflows: [Проверка]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Две выкладки подряд не спорят: новая отменяет недоехавшую старую.
+concurrency:
+  group: demo
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Только зелёная проверка пуша в master, а не запроса на слияние:
+    # демо показывает то, что уже принято.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      IMAGE: ghcr.io/${{ github.repository }}-demo
+    steps:
+      - name: Секреты на месте
+        id: configured
+        env:
+          DB: ${{ secrets.DEMO_DATABASE_URL }}
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          URL: ${{ secrets.DEMO_URL }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$HOOK" ] || [ -z "$URL" ]; then
+            echo "::notice::Демо не настроено (нет DEMO_DATABASE_URL, RENDER_DEPLOY_HOOK_URL или DEMO_URL) — образ соберётся, миграции и выкладка пропущены"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+          # Теги нужны `git describe`: версия вшивается в бинарник,
+          # и по ней проверка ниже узнаёт, что доехал именно этот код.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        if: steps.configured.outputs.ready == 'true'
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Версия
+        run: echo "VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_ENV"
+
+      - name: Миграции
+        if: steps.configured.outputs.ready == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+        run: go run ./cmd/takt migrate
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Вход в ghcr
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Отдельный пакет, а не метки в пакете выпусков: образ на каждый
+      # пуш в master засорил бы список версий, из которого ставят
+      # заказчики.
+      - name: Образ
+        run: |
+          docker buildx build --platform linux/amd64 \
+            --build-arg VERSION="$VERSION" \
+            --tag "$IMAGE:$SHA" --tag "$IMAGE:latest" \
+            --push .
+
+      # Render выкладывает ровно тот образ, что назван в imgURL, — а не
+      # «последний», который мог успеть смениться следующим пушем.
+      - name: Выкладка
+        if: steps.configured.outputs.ready == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          img=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMAGE:$SHA")
+          curl -fsS -X POST "$HOOK&imgURL=$img" > /dev/null
+
+      # Живой адрес отвечает новой версией — только тогда выкладка
+      # считается сделанной. Проверка заходит так же, как посетитель:
+      # заводит песочницу (этим проверено, что база доступна, демо
+      # включено и наполнение работает) и дальше спрашивает версию той
+      # же сессией — сессия живёт в базе и переживает смену кода.
+      # Песочница одна на выкладку: заводить её на каждой попытке
+      # значило бы упереться в общий предел песочниц. Уйдёт через сутки
+      # вместе с остальными.
+      - name: Живой адрес отвечает новой версией
+        if: steps.configured.outputs.ready == 'true'
+        env:
+          URL: ${{ secrets.DEMO_URL }}
+        run: |
+          jar=$(mktemp)
+          for i in $(seq 1 60); do
+            if [ ! -s "$jar" ] || ! grep -q board_session "$jar"; then
+              curl -fsS -c "$jar" -X POST "$URL/api/demo/sandbox" > /dev/null 2>&1 || true
+            fi
+            got=$(curl -fsS -b "$jar" "$URL/api/me" 2>/dev/null \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("version", ""))' 2>/dev/null || true)
+            if [ "$got" = "$VERSION" ]; then
+              echo "демо отвечает версией $got"
+              exit 0
+            fi
+            echo "пока отвечает «$got», ждём $VERSION"
+            sleep 20
+          done
+          echo "::error::за 20 минут демо так и не ответило версией $VERSION"
+          exit 1

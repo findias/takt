@@ -67,3 +67,44 @@ it('на открытой — есть, и она ведёт к форме', asy
   // И назад: человек, передумавший заводить организацию, не заперт.
   expect(screen.getByRole('button', { name: 'У меня уже есть аккаунт' })).toBeTruthy()
 })
+
+// Публичное демо (ROADMAP 30.1): главный путь посетителя — попробовать,
+// а не войти, пароля у него нет. Кнопка одна главная на экран, и это она.
+it('в демо вход предлагает попробовать без регистрации, и это главное действие', async () => {
+  const signedIn = vi.fn()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/auth/methods')
+        return reply({
+          password: { enabled: true },
+          oidc: { enabled: false },
+          signup: { enabled: false },
+          demo: { enabled: true },
+        })
+      if (path === '/api/demo/sandbox' && init?.method === 'POST')
+        return reply({ id: 'u1', orgId: 'o1', role: 'owner', sandboxExpiresAt: '2026-09-22T18:40:00Z' })
+      return reply({ error: 'не то' }, 404)
+    }),
+  )
+  const user = userEvent.setup()
+  render(<Auth onSignedIn={signedIn} />)
+
+  const tryIt = await screen.findByRole('button', { name: 'Попробовать без регистрации' })
+  expect(tryIt.className).toContain('primary')
+  // Отправка формы главная без класса (правило стилей), поэтому
+  // уступить она может только явным `secondary`.
+  expect(screen.getByRole('button', { name: 'Войти' }).className).toBe('secondary')
+
+  await user.click(tryIt)
+  await waitFor(() => expect(signedIn).toHaveBeenCalledOnce())
+  expect(signedIn.mock.calls[0][0].sandboxExpiresAt).toBe('2026-09-22T18:40:00Z')
+})
+
+it('без демо кнопки «Попробовать» нет', async () => {
+  установка(true)
+  render(<Auth onSignedIn={() => {}} />)
+  await screen.findByRole('button', { name: 'Завести новую организацию' })
+  expect(screen.queryByRole('button', { name: /Попробовать/ })).toBeNull()
+})

@@ -186,7 +186,15 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	// Работник разбирает исходящий ящик вебхуков. Живёт в том же процессе:
 	// у нас один образ на установку, и отдельный демон ради одной очереди
 	// стоил бы дороже, чем стоит.
-	go webhook.NewWorker(db, log).Run(ctx)
+	//
+	// В публичном демо не запускается: доставка ходила бы по адресам,
+	// которые вписал прохожий (подписки там и не заводятся — см.
+	// handleCreateWebhook, но у демо-данных одна своя есть).
+	if !cfg.Demo {
+		go webhook.NewWorker(db, log).Run(ctx)
+	} else {
+		go sweepSandboxes(ctx, db, log)
+	}
 
 	// Уборщик: служебные таблицы растут без предела, и ключи повтора
 	// недельной давности повторять уже некому.
@@ -281,6 +289,25 @@ func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) 
 		case <-ctx.Done():
 			return
 		case <-tick.C:
+		}
+	}
+}
+
+// sweepSandboxes убирает песочницы демо с вышедшим сроком. Чаще уборщика
+// служебных таблиц: срок песочницы обещан на экране, и держать её
+// лишний час значит держать место в маленькой бесплатной базе.
+// Засыпание площадки уборке не мешает: первый проход — при старте.
+func sweepSandboxes(ctx context.Context, db *store.Store, log *slog.Logger) {
+	for {
+		if n, err := demo.SweepSandboxes(ctx, db); err != nil && ctx.Err() == nil {
+			log.Error("уборка песочниц", "err", err)
+		} else if n > 0 {
+			log.Info("песочницы убраны", "сколько", n)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(10 * time.Minute):
 		}
 	}
 }

@@ -407,22 +407,25 @@ button:disabled {
    В форме блокировки это было видно лучше всего: пока причина
    не набрана, «Отметить» ещё и приглушена как недоступная, и первым
    на экране читалось «Отмена». Правило одно на все формы: помнить
-   про класс на каждой — значит однажды не вспомнить. */
+   про класс на каждой — значит однажды не вспомнить.
+
+   Исключение называется явно — `secondary`: в публичном демо главное
+   действие входа — «Попробовать», и отправка формы пароля уступает. */
 button.primary,
 a.button--primary,
-form button[type='submit']:not(.link):not(.btn--quiet) {
+form button[type='submit']:not(.link):not(.btn--quiet):not(.secondary) {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--surface);
   font-weight: 600;
 }
 button.primary:hover:not(:disabled),
-form button[type='submit']:hover:not(:disabled):not(.link):not(.btn--quiet),
+form button[type='submit']:hover:not(:disabled):not(.link):not(.btn--quiet):not(.secondary),
 a.button--primary:hover {
   filter: brightness(1.08);
 }
 button.primary:disabled,
-form button[type='submit']:disabled:not(.link):not(.btn--quiet) {
+form button[type='submit']:disabled:not(.link):not(.btn--quiet):not(.secondary) {
   opacity: 0.45;
 }
 
@@ -482,7 +485,7 @@ a.button:hover {
 a.button:active {
   background: var(--surface-2);
 }
-a.button--wide {
+.button--wide {
   justify-content: center;
   width: 100%;
 }
@@ -4196,3 +4199,14 @@ textarea.description {
   }
 }
 
+
+/* Пометка песочницы демо: тихо, но на виду — не тревога, а условие
+   показа. Рамка, а не заливка тревожного цвета: ничего не сломалось. */
+.sandbox-note {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

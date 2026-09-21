@@ -66,6 +66,15 @@ func (s *Server) handleCreateWebhook(w http.ResponseWriter, r *http.Request, p a
 	if !decode(w, r, &req) {
 		return
 	}
+	// В публичном демо подписка — это сервер, который по просьбе
+	// прохожего стучится по любому адресу, в том числе во внутреннюю
+	// сеть площадки. Работник доставки там не запущен вовсе, а завести
+	// подписку нельзя — чтобы не обещать доставку, которой не будет.
+	if s.cfg.Demo {
+		writeCoded(w, http.StatusForbidden, "demo_disabled",
+			"в демо подписки на события выключены: доставка ходила бы по любому адресу от имени демо")
+		return
+	}
 	hook, err := s.hooks.Create(r.Context(), p.OrgID, p.ID, req.Name, req.URL, req.Events)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

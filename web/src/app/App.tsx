@@ -18,6 +18,8 @@ import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import { ToastHost, useToast } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
+import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
+import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
@@ -216,6 +218,7 @@ function Screens() {
         meId={principal.id}
         isOwner={principal.role === 'owner'}
         canEdit={principal.role !== 'viewer'}
+        sandboxExpiresAt={principal.sandboxExpiresAt}
         onBack={() => navigate('/')}
       />
     )
@@ -304,6 +307,8 @@ function OrgHeader({
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [changing, setChanging] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const sandbox = Boolean(principal.sandboxExpiresAt)
 
   const load = useCallback(() => {
     api
@@ -342,6 +347,7 @@ function OrgHeader({
           <h1>{principal.orgName}</h1>
         )}
         <span className="role-chip">{ROLE_NAMES[principal.role]}</span>
+        <SandboxNote expiresAt={principal.sandboxExpiresAt} />
       </div>
 
       <div className="org-row muted small">
@@ -355,18 +361,39 @@ function OrgHeader({
             {creating ? 'Отмена' : 'Новая организация'}
           </button>
         )}
-        <button
-          className="link"
-          onClick={() => {
-            setChanging((v) => !v)
-            setError(null)
-          }}
-        >
-          {changing ? 'Отмена' : 'Пароль'}
-        </button>
-        <button className="link" onClick={onSignOut}>
+        {/* В песочнице пароля не знает никто, в том числе посетитель:
+            менять нечего. */}
+        {!sandbox && (
+          <button
+            className="link"
+            onClick={() => {
+              setChanging((v) => !v)
+              setError(null)
+            }}
+          >
+            {changing ? 'Отмена' : 'Пароль'}
+          </button>
+        )}
+        {/* Из песочницы выходят насовсем: пароля нет, и вернуться в неё
+            нечем. Необратимое спрашивает. */}
+        <button className="link" onClick={sandbox ? () => setLeaving(true) : onSignOut}>
           Выйти
         </button>
+        <ConfirmDialog
+          open={leaving}
+          title="Выйти из демо?"
+          confirmLabel="Выйти из демо"
+          onCancel={() => setLeaving(false)}
+          onConfirm={() => {
+            setLeaving(false)
+            onSignOut()
+          }}
+        >
+          <p>
+            Вернуться в эту песочницу будет нельзя: у неё нет пароля. Новую можно завести на
+            экране входа.
+          </p>
+        </ConfirmDialog>
         <Appearance />
       </div>
 
