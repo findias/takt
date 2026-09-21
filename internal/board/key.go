@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/findias/takt/internal/i18n"
 )
 
 // Ключ доски — префикс номеров её карточек: ПРО в ПРО-142.
@@ -50,6 +52,9 @@ func insertBoard(
 		}
 	}
 	base := deriveKey(name)
+	if base == fallbackKey {
+		base = i18n.Name(ctx, fallbackKey)
+	}
 
 	for attempt := 1; attempt <= keyAttempts; attempt++ {
 		key := want
@@ -108,6 +113,11 @@ func isKeyCollision(err error) bool {
 // не нравится, он задаёт руками при создании.
 const keyDeriveLen = 4
 
+// fallbackKey — основа для названия, из которого ключ не вывести.
+// Английскому пишущему достаётся BOARD: ключ он видит на каждой
+// карточке.
+const fallbackKey = "ДОСКА"
+
 func deriveKey(name string) string {
 	var compact []rune
 	for _, r := range name {
@@ -121,7 +131,7 @@ func deriveKey(name string) string {
 	if len(compact) < keyMinLen {
 		// Название без букв и цифр или в один знак: своей основы у такого
 		// ключа нет, и подпирать её нечем.
-		return "ДОСКА"
+		return fallbackKey
 	}
 	return string(compact)
 }

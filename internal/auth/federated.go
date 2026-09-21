@@ -10,6 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/findias/takt/internal/i18n"
 )
 
 // Вход через корпоративный провайдер: как узнать вернувшегося и что
@@ -51,7 +53,7 @@ func FederatedLogin(ctx context.Context, pool *pgxpool.Pool,
 		name = email
 	}
 	if name == "" {
-		name = "Без имени"
+		name = i18n.Name(ctx, "Без имени")
 	}
 
 	tx, err := pool.Begin(ctx)

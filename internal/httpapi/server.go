@@ -170,8 +170,10 @@ func (s *Server) Handler() http.Handler {
 	// «слишком часто» и ответ на неизвестный путь такие же ответы
 	// браузеру, как и всякий другой, и без заголовков они остаются
 	// щелью ровно там, где её ищут.
-	return logRequests(s.log,
-		secureHeaders(s.cfg.SecureCookies(), versioned(s.limited(mux))))
+	//
+	// Язык — снаружи всех: отказ может родиться в любом слое.
+	return speaking(logRequests(s.log,
+		secureHeaders(s.cfg.SecureCookies(), versioned(s.limited(mux)))))
 }
 
 func (s *Server) handleLive(w http.ResponseWriter, _ *http.Request) {
@@ -387,7 +389,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Org = strings.TrimSpace(req.Org)
 	if req.Org == "" {
-		req.Org = "Моя команда"
+		req.Org = say(w, "Моя команда")
 	}
 	if msg := validateSignup(req.Email, req.Name, req.Password); msg != "" {
 		writeError(w, http.StatusBadRequest, msg)
@@ -993,7 +995,9 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		if errors.As(err, &conflict) {
 			// 409 несёт текущий порядок колонки: клиент пересобирается
 			// точечно, без перезагрузки доски
-			writeJSON(w, http.StatusConflict, conflict)
+			translated := *conflict
+			translated.Message = say(w, conflict.Message)
+			writeJSON(w, http.StatusConflict, &translated)
 			return
 		}
 		s.fail(w, "применение операции", err)
@@ -1095,7 +1099,7 @@ func writeError(w http.ResponseWriter, status int, message string) {
 }
 
 func writeCoded(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, map[string]string{"error": message, "code": code})
+	writeJSON(w, status, map[string]string{"error": say(w, message), "code": code})
 }
 
 // codeFor — код по умолчанию для кода состояния. Отдельные случаи

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/rank"
 	"github.com/findias/takt/internal/store"
 )
@@ -444,9 +445,9 @@ func (s *Service) Create(ctx context.Context, orgID, userID, name, key string) (
 		// Колонки по умолчанию сразу размечены: без точек старта и финиша
 		// журнал переходов копится, а метрики потока по нему не считаются.
 		defaults := []Column{
-			{Name: "Очередь", Kind: KindQueue},
-			{Name: "В работе", Kind: KindInProgress, IsStartedPoint: true},
-			{Name: "Готово", Kind: KindDone, IsFinishedPoint: true},
+			{Name: i18n.Name(ctx, "Очередь"), Kind: KindQueue},
+			{Name: i18n.Name(ctx, "В работе"), Kind: KindInProgress, IsStartedPoint: true},
+			{Name: i18n.Name(ctx, "Готово"), Kind: KindDone, IsFinishedPoint: true},
 		}
 		positions, err := rank.NBetween("", "", len(defaults))
 		if err != nil {

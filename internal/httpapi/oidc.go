@@ -203,5 +203,5 @@ func (s *Server) clearOIDCState(w http.ResponseWriter) {
 // и показать ему голый JSON значит показать тупик. Причина едет параметром,
 // клиент её показывает.
 func (s *Server) backToLogin(w http.ResponseWriter, r *http.Request, reason string) {
-	http.Redirect(w, r, "/?error="+url.QueryEscape(reason), http.StatusFound)
+	http.Redirect(w, r, "/?error="+url.QueryEscape(say(w, reason)), http.StatusFound)
 }

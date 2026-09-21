@@ -110,7 +110,13 @@ export async function loadLang(next: Lang): Promise<void> {
   // по мере загрузки.
   t = { ...catalog } as Catalog
   lang = next
-  if (typeof document !== 'undefined') document.documentElement.lang = next
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = next
+    // Сервер отвечает на том же языке. Заголовок ставит сам клиент,
+    // но переход браузера — возврат от провайдера входа с причиной
+    // отказа — идёт без наших заголовков, и язык ему несёт cookie.
+    document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`
+  }
 }
 
 /** Сменить язык: запомнить и перезагрузить — см. выше, почему так. */

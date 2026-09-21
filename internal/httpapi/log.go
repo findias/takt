@@ -44,3 +44,5 @@ func (r *statusRecorder) Flush() {
 		flusher.Flush()
 	}
 }
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
