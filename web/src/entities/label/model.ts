@@ -2,7 +2,7 @@
 // происхождению. Отдельно от экранов по той же причине, что и модель
 // доски: проверяется без браузера и без сети.
 
-import type { Label } from '../../shared/api/index.ts'
+import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
 
 /**
  * Откуда метка — словами, для подписи рядом с чипом.
@@ -57,4 +57,92 @@ export function groupByOrigin<L extends Label>(labels: L[]): LabelGroup<L>[] {
     group.labels.push(label)
   }
   return groups
+}
+
+/** Пункт выбора метки: повесить или снять существующую, вернуть убранную
+ *  из архива, завести новую в названном месте. */
+export type PickerItem =
+  | { kind: 'toggle'; key: string; label: BoardLabel; checked: boolean }
+  | { kind: 'restore'; key: string; label: BoardLabel }
+  | { kind: 'create'; key: string; name: string; place: LabelPlace }
+
+/** Название так, как его сравнивает сервер: без краёв и без регистра. */
+export function sameName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
+/**
+ * Что предложить по набранному.
+ *
+ * Порядок и есть защита от свалки: сперва существующие, заведение —
+ * последним. Совпадение по имени без учёта регистра заведения
+ * не предлагает вовсе: человек, набравший «срочно», получает «Срочно»,
+ * а не отказ «уже есть» и не вторую метку. Совпадение с убранной —
+ * «вернуть из архива», а не «завести»: иначе в истории окажутся два
+ * идентификатора с одним именем.
+ *
+ * Мест для заведения бывает несколько — эта доска, её подразделение
+ * и старшие, организация, — и каждое предлагается отдельным пунктом,
+ * от узкого к широкому: метка, заведённая на бегу, чаще нужна здесь,
+ * а где она появится, должно быть видно до нажатия, а не после.
+ *
+ * `hung` — метки карточки; у массового действия их нет, и там пункты
+ * не переключают, а только вешают.
+ */
+export function pickerItems(
+  query: string,
+  labels: BoardLabel[],
+  hung: string[] | null,
+  places: LabelPlace[],
+): PickerItem[] {
+  const needle = query.trim().toLowerCase()
+  const shown = labels.filter(
+    (l) => (l.offered || (hung?.includes(l.id) ?? false)) && l.name.toLowerCase().includes(needle),
+  )
+  const items: PickerItem[] = shown.map((label) => ({
+    kind: 'toggle',
+    key: `toggle:${label.id}`,
+    label,
+    checked: hung?.includes(label.id) ?? false,
+  }))
+  if (!needle) return items
+  if (shown.some((l) => sameName(l.name, needle))) return items
+
+  const archived = labels.filter((l) => l.archived && l.applies && sameName(l.name, needle))
+  if (archived.length > 0) {
+    return [
+      ...items,
+      ...archived.map((label): PickerItem => ({ kind: 'restore', key: `restore:${label.id}`, label })),
+    ]
+  }
+
+  const name = query.trim()
+  const narrowFirst = [
+    ...places.filter((p) => p.scope === 'board'),
+    ...places.filter((p) => p.scope === 'team').reverse(),
+    ...places.filter((p) => p.scope === 'org'),
+  ]
+  return [
+    ...items,
+    ...narrowFirst.map(
+      (place): PickerItem => ({
+        kind: 'create',
+        key: `create:${place.scope}:${place.id ?? ''}`,
+        name,
+        place,
+      }),
+    ),
+  ]
+}
+
+/** Где появится заводимая метка — словами, для пункта «Завести». */
+export function placeWords(place: LabelPlace): string {
+  switch (place.scope) {
+    case 'board':
+      return 'на этой доске'
+    case 'team':
+      return `в подразделении «${place.name}»`
+    default:
+      return 'на всю организацию'
+  }
 }

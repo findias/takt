@@ -4,8 +4,8 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { groupByOrigin, labelOrigin, labelTitle } from './model.ts'
-import type { Label } from '../../shared/api/index.ts'
+import { groupByOrigin, labelOrigin, labelTitle, pickerItems } from './model.ts'
+import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
 
 function label(name: string, scope: Label['scope'], scopeId?: string, scopeName?: string): Label {
   return { id: name, name, tone: 'slate', scope, scopeId, scopeName, archived: false }
@@ -41,4 +41,64 @@ test('группы идут в порядке сервера, одноимённ
       ['Доска «Склад»', ['Своя']],
     ],
   )
+})
+
+function onBoard(name: string, extra: Partial<BoardLabel> = {}): BoardLabel {
+  return { ...label(name, 'org'), offered: true, applies: true, ...extra }
+}
+
+const PLACES: LabelPlace[] = [
+  { scope: 'org', name: '' },
+  { scope: 'team', id: 't1', name: 'Разработка' },
+  { scope: 'team', id: 't2', name: 'Платформа' },
+  { scope: 'board', id: 'b1', name: 'Платформа' },
+]
+
+const kinds = (items: ReturnType<typeof pickerItems>) =>
+  items.map((i) =>
+    i.kind === 'create' ? `create:${i.place.scope}:${i.place.name}` : `${i.kind}:${i.label.name}`,
+  )
+
+test('без набранного — существующие, висящие отмечены, заводить нечего', () => {
+  const items = pickerItems('', [onBoard('Срочно'), onBoard('Риск')], ['Срочно'], PLACES)
+  assert.deepEqual(kinds(items), ['toggle:Срочно', 'toggle:Риск'])
+  assert.equal(items[0].kind === 'toggle' && items[0].checked, true)
+})
+
+test('совпадение в другом регистре предлагает существующую, а не вторую', () => {
+  assert.deepEqual(kinds(pickerItems('  срочно ', [onBoard('Срочно')], [], PLACES)), ['toggle:Срочно'])
+})
+
+test('новое название — заведение последним, от узкого места к широкому', () => {
+  assert.deepEqual(kinds(pickerItems('Сроч дело', [onBoard('Срочно')], [], PLACES)), [
+    'create:board:Платформа',
+    'create:team:Платформа',
+    'create:team:Разработка',
+    'create:org:',
+  ])
+  // Подстрока находит существующую, и заведение стоит после неё.
+  assert.deepEqual(kinds(pickerItems('сроч', [onBoard('Срочно')], [], PLACES)).slice(0, 2), [
+    'toggle:Срочно',
+    'create:board:Платформа',
+  ])
+})
+
+test('название убранной — вернуть из архива, завести не предлагается', () => {
+  const old = onBoard('Ждём', { archived: true, offered: false })
+  assert.deepEqual(kinds(pickerItems('ждём', [old], [], PLACES)), ['restore:Ждём'])
+})
+
+test('убранная, которая здесь не действует, не возвращается отсюда', () => {
+  const foreign = onBoard('Ждём', { archived: true, offered: false, applies: false })
+  assert.deepEqual(kinds(pickerItems('ждём', [foreign], [], PLACES)).at(-1), 'create:org:')
+})
+
+test('висящую чужую можно снять, а не повесить заново — у массового её нет', () => {
+  const foreign = onBoard('Чужая', { offered: false, applies: false })
+  assert.deepEqual(kinds(pickerItems('', [foreign], ['Чужая'], PLACES)), ['toggle:Чужая'])
+  assert.deepEqual(kinds(pickerItems('', [foreign], null, PLACES)), [])
+})
+
+test('без прав заводить — только существующие', () => {
+  assert.deepEqual(kinds(pickerItems('Новая', [onBoard('Срочно')], [], [])), [])
 })

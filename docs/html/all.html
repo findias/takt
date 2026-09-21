@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-6-ga856d12-dirty.</p>
+<p>Every section in one file. Version v0.2.3-7-gd853293-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -390,6 +390,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <ul>
+<li>A label that does not exist yet can be created right from the card: type its name into the label picker (on the card, in the card panel, or in the bulk bar) and pick where it should apply — this board, its subdivision or a wider one, or the whole organisation. It is created and hung in one go, with a colour picked for you; change the colour on «Команда». Typing the name of an existing label offers that label, in any letter case, and typing the name of an archived one offers to bring it back instead of creating a second one.</li>
 <li>The same name cannot be used twice where the places overlap: an organisation label «Срочно» rules out «Срочно» on any subdivision or board. The refusal names where the label already is.</li>
 <li>A board label is visible only to those who can see the board.</li>
 <li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on «Команда» (Team).</li>
@@ -1072,6 +1073,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
 <tr><td>Т12</td><td>Выгрузка всех данных организации одним файлом</td><td><code>internal/httpapi/export_test.go</code></td></tr>
 <tr><td>Т13</td><td>Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации</td><td><code>internal/board/labels_scope_test.go</code>, <code>internal/board/labels_test.go</code>, <code>internal/httpapi/labels_test.go</code></td></tr>
+<tr><td>Т14</td><td>Метку заводят прямо с карточки, не плодя двойников: одноимённая предлагается существующей, убранная — возвратом</td><td><code>web/src/features/board/LabelPicker.dom.test.tsx</code>, <code>web/src/entities/label/model.test.ts</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 </tbody>
 </table></div>
 <h2>Пределы</h2>

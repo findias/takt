@@ -42,6 +42,9 @@ type Patch struct {
 	CardLabels map[string][]string `json:"cardLabels,omitempty"`
 	// Исполнители карточки — тоже списком целиком и по той же причине.
 	CardAssignees map[string][]string `json:"cardAssignees,omitempty"`
+	// Описания меток, упомянутых в CardLabels: метку заводят с карточки,
+	// и у соседа её в словаре ещё нет.
+	Labels []BoardLabel `json:"labels,omitempty"`
 }
 
 type Result struct {

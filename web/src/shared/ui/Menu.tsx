@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { CheckIcon } from './icons.tsx'
+import { topLayer, useAnchored } from './anchored.ts'
 
 /**
  * Меню действий.
@@ -27,14 +28,6 @@ import { CheckIcon } from './icons.tsx'
  * своё закрытие мимо состояния, и кнопка осталась бы с `aria-expanded`
  * «открыто» при закрытом списке.
  */
-
-/** Верхний слой есть не везде — в разборе разметки для проверок его нет.
- *  Там признак не ставится вовсе: иначе стилевое правило «закрытое
- *  всплывающее не показывать» спрячет список, а показать его нечем.
- *  Без верхнего слоя остаётся `position: fixed` — оно тоже уходит
- *  из прокрутки, только его обрезает содержимое с `contain`. */
-const topLayer =
-  typeof HTMLElement !== 'undefined' && typeof HTMLElement.prototype.showPopover === 'function'
 
 export type MenuItem = {
   label: string
@@ -85,69 +78,19 @@ export function Menu({
 }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
-  // Пока координаты не сосчитаны, показывать нечего: список стоял бы
-  // не на месте ровно один кадр, и это видно глазом. Прячется он
-  // прозрачностью, а не `visibility`: невидимое по `visibility` нельзя
-  // сфокусировать, и первый пункт молча оставался бы без фокуса —
-  // меню открывалось бы, а клавиатура в него не попадала.
-  const [box, setBox] = useState<{ top: number; left: number; up: boolean } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
+  const box = useAnchored(open, buttonRef, listRef, align, drop)
 
   const close = useCallback(
     (returnFocus = true) => {
       setOpen(false)
-      setBox(null)
       if (returnFocus) buttonRef.current?.focus()
     },
     [],
   )
-
-  /** Координаты списка от кнопки. Отступ между ними задан в разметке
-   *  (`margin`), чтобы слушаться плотности; здесь — только край окна,
-   *  от которого нельзя уехать: за ним список не достать ничем. */
-  const place = useCallback(() => {
-    const button = buttonRef.current
-    const list = listRef.current
-    if (!button || !list) return
-    const anchor = button.getBoundingClientRect()
-    const { width, height } = list.getBoundingClientRect()
-    const edge = 8
-
-    const below = window.innerHeight - anchor.bottom
-    const above = anchor.top
-    // Пожелание слушается, пока с той стороны есть место; когда места
-    // нет ни с той, ни с другой — выбирается сторона побольше.
-    const up = drop === 'up' ? above >= height || above > below : below < height && above > below
-    const top = up
-      ? Math.max(edge, anchor.top - height)
-      : Math.min(anchor.bottom, window.innerHeight - height - edge)
-
-    const wanted = align === 'left' ? anchor.left : anchor.right - width
-    const left = Math.max(edge, Math.min(wanted, window.innerWidth - width - edge))
-
-    setBox({ top, left, up })
-  }, [align, drop])
-
-  // Верхний слой и координаты — до отрисовки: `useLayoutEffect`
-  // успевает пересчитать состояние прежде, чем кадр покажут.
-  useLayoutEffect(() => {
-    if (!open) return
-    const list = listRef.current
-    if (!list) return
-    if (topLayer && !list.matches(':popover-open')) list.showPopover()
-    place()
-    const again = () => place()
-    // `capture` — прокрутка колонки карточек не всплывает до окна.
-    window.addEventListener('scroll', again, true)
-    window.addEventListener('resize', again)
-    return () => {
-      window.removeEventListener('scroll', again, true)
-      window.removeEventListener('resize', again)
-    }
-  }, [open, place])
 
   // Щелчок вне и потеря фокуса закрывают меню. Фокус проверяется
   // отдельно от щелчка: уход по Tab — это тоже уход.
@@ -156,10 +99,7 @@ export function Menu({
     const onPointer = (e: PointerEvent) => {
       // Список остаётся потомком обёртки и в верхнем слое — рисуется
       // он поверх всего, а в дереве стоит там же, где стоял.
-      if (!rootRef.current?.contains(e.target as Node)) {
-        setOpen(false)
-        setBox(null)
-      }
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('pointerdown', onPointer)
     return () => document.removeEventListener('pointerdown', onPointer)

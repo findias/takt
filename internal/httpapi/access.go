@@ -415,7 +415,9 @@ func (s *Server) handleListLabels(w http.ResponseWriter, r *http.Request, p auth
 		s.fail(w, "список меток", err)
 		return
 	}
-	places, err := s.boards.LabelPlaces(r.Context(), p.OrgID, p.ID)
+	// С доской в запросе — только места, чьи метки на ней действуют:
+	// так спрашивает выбор метки на карточке.
+	places, err := s.boards.LabelPlaces(r.Context(), p.OrgID, p.ID, r.URL.Query().Get("board"))
 	if err != nil {
 		s.fail(w, "список меток", err)
 		return

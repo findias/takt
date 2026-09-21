@@ -87,6 +87,11 @@ type BoardLabel struct {
 	// подразделению или подразделение перенесли в дереве.
 	// Такие метки в снимке есть ради карточек, на которых висят.
 	Offered bool `json:"offered"`
+	// Действует ли на доске, независимо от архива. Убранная, но
+	// действующая здесь метка приезжает в снимке ради выбора метки:
+	// набрали её название — предлагается вернуть её из архива, а не
+	// завести вторую с тем же именем.
+	Applies bool `json:"applies"`
 }
 
 // ManagedLabel — метка в списке управления.
@@ -185,7 +190,11 @@ const canManageLabel = `
 // подразделения и доски. Считается сервером, потому что права
 // на подразделение наследуются вниз по дереву, а дерево у клиента
 // неполное.
-func (s *Service) LabelPlaces(ctx context.Context, orgID, userID string) ([]LabelPlace, error) {
+//
+// С доской — только места, чьи метки на этой доске действуют: заводя
+// метку с карточки, предлагать подразделение соседей бессмысленно —
+// повесить её сюда всё равно будет нельзя.
+func (s *Service) LabelPlaces(ctx context.Context, orgID, userID, boardID string) ([]LabelPlace, error) {
 	out := []LabelPlace{}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -199,13 +208,15 @@ func (s *Service) LabelPlaces(ctx context.Context, orgID, userID string) ([]Labe
 			    and ((select app_is_owner())
 			         or t.id = any (array(select unnest(app_member_teams())))
 			         or t.id = any (array(select unnest(app_admin_teams()))))
+			    and ($1 = '' or label_path_prefix(t.ancestor_ids, label_path(null, $1::uuid)))
 			  order by t.ancestor_ids, t.name)
 			union all
 			(select 'board', b.id, b.name
 			   from boards b
 			  where b.archived_at is null
 			    and b.id = any (array(select unnest(app_writable_boards())))
-			  order by lower(b.name))`)
+			    and ($1 = '' or b.id::text = $1)
+			  order by lower(b.name))`, boardID)
 		if err != nil {
 			return err
 		}
@@ -231,11 +242,14 @@ func (s *Service) CreateLabel(ctx context.Context, orgID, actorID string, d Labe
 		return Label{}, badRequestf("метка принадлежит либо подразделению, либо доске")
 	}
 	tone := d.Tone
-	if tone == "" {
-		tone = Tones[0]
-	}
 	var l Label
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		if tone == "" {
+			var err error
+			if tone, err = freeTone(ctx, tx); err != nil {
+				return err
+			}
+		}
 		// Область обязана существовать и быть видна: внешний ключ
 		// пропустил бы подразделение чужой организации, а политика —
 		// доску, которой уже нет.
@@ -285,6 +299,26 @@ func (s *Service) CreateLabel(ctx context.Context, orgID, actorID string, d Labe
 		}
 	}
 	return l, err
+}
+
+// freeTone — наименее занятый оттенок среди живых меток, при равенстве —
+// первый по порядку набора.
+//
+// Метку, заведённую на бегу с карточки, об оттенке не спрашивают:
+// разговор идёт о работе, а не о цвете. Хэш от названия был бы проще,
+// но он даёт два одинаковых оттенка уже на четвёртой метке, и это
+// выглядит как ошибка. Считается по видимым меткам — чужой закрытой
+// доски человек не видит, и её оттенки ему не мешают.
+func freeTone(ctx context.Context, tx pgx.Tx) (string, error) {
+	var tone string
+	err := tx.QueryRow(ctx, `
+		select t.tone
+		  from unnest($1::text[]) with ordinality as t(tone, n)
+		  left join labels l on l.tone = t.tone and l.archived_at is null
+		 group by t.tone, t.n
+		 order by count(l.id), t.n
+		 limit 1`, Tones).Scan(&tone)
+	return tone, err
 }
 
 // labelNameFree проверяет, что метка с тем же названием не действует
@@ -470,7 +504,7 @@ func labelCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 			}
 		}
 	}
-	return labelPatch(ctx, tx, p.CardID)
+	return labelPatch(ctx, tx, boardID, p.CardID)
 }
 
 func unlabelCard(ctx context.Context, tx pgx.Tx, orgID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -486,34 +520,43 @@ func unlabelCard(ctx context.Context, tx pgx.Tx, orgID, boardID string, raw json
 		orgID, p.CardID, p.LabelID, boardID); err != nil {
 		return Patch{}, err
 	}
-	return labelPatch(ctx, tx, p.CardID)
+	return labelPatch(ctx, tx, boardID, p.CardID)
 }
 
-// labelPatch отдаёт метки карточки целиком.
+// labelPatch отдаёт метки карточки целиком — и их описания.
 //
 // Именно целиком, а не «добавили такую-то»: иначе догоняющий клиент,
 // применивший патч дважды, получил бы задвоение, а пропустивший один —
 // расхождение. Список меток на карточке короткий, и передать его
 // полностью дешевле, чем рассуждать о порядке применения.
-func labelPatch(ctx context.Context, tx pgx.Tx, cardID string) (Patch, error) {
-	rows, err := tx.Query(ctx,
-		`select label_id from card_labels where card_id = $1`, cardID)
+//
+// Описания едут с ним потому, что метку теперь заводят прямо
+// с карточки: у соседа, у которого доска открыта, новой метки нет
+// в словаре, и без описания она пришла бы идентификатором, который
+// показать нечем.
+func labelPatch(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Patch, error) {
+	rows, err := tx.Query(ctx, `
+		select `+labelColumns+`, `+labelApplies+labelJoins+`
+		  join card_labels cl on cl.label_id = l.id
+		 where cl.card_id = $2`+labelOrder, boardID, cardID)
 	if err != nil {
 		return Patch{}, err
 	}
 	defer rows.Close()
 	ids := []string{}
+	labels := []BoardLabel{}
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		l, err := scanBoardLabel(rows)
+		if err != nil {
 			return Patch{}, err
 		}
-		ids = append(ids, id)
+		ids = append(ids, l.ID)
+		labels = append(labels, l)
 	}
 	if err := rows.Err(); err != nil {
 		return Patch{}, err
 	}
-	return Patch{CardLabels: map[string][]string{cardID: ids}}, nil
+	return Patch{CardLabels: map[string][]string{cardID: ids}, Labels: labels}, nil
 }
 
 func parseLabelCard(raw json.RawMessage, op string) (labelCardPayload, error) {
@@ -541,8 +584,8 @@ func loadLabels(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) 
 	snap.CardLabels = map[string][]string{}
 
 	rows, err := tx.Query(ctx, `
-		select `+labelColumns+`, l.archived_at is null and `+labelApplies+labelJoins+`
-		 where (l.archived_at is null and `+labelApplies+`)
+		select `+labelColumns+`, `+labelApplies+labelJoins+`
+		 where `+labelApplies+`
 		    or l.id in (select cl.label_id
 		                  from card_labels cl join cards c on c.id = cl.card_id
 		                 where c.board_id = $1 and c.archived_at is null)`+labelOrder, boardID)
@@ -551,8 +594,8 @@ func loadLabels(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) 
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var l BoardLabel
-		if l.Label, err = scanLabel(rows, &l.Offered); err != nil {
+		l, err := scanBoardLabel(rows)
+		if err != nil {
 			return err
 		}
 		snap.Labels = append(snap.Labels, l)
@@ -578,6 +621,14 @@ func loadLabels(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) 
 		snap.CardLabels[cardID] = append(snap.CardLabels[cardID], labelID)
 	}
 	return pairs.Err()
+}
+
+func scanBoardLabel(row rowScanner) (BoardLabel, error) {
+	var l BoardLabel
+	var err error
+	l.Label, err = scanLabel(row, &l.Applies)
+	l.Offered = l.Applies && !l.Archived
+	return l, err
 }
 
 // labelApplies — действует ли метка l на доске $1.

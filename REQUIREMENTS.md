@@ -54,6 +54,7 @@
 | Т11 | Вход по паролю и через корпоративного провайдера (OIDC) | `internal/httpapi/login_test.go`, `internal/httpapi/oidc_test.go` |
 | Т12 | Выгрузка всех данных организации одним файлом | `internal/httpapi/export_test.go` |
 | Т13 | Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации | `internal/board/labels_scope_test.go`, `internal/board/labels_test.go`, `internal/httpapi/labels_test.go` |
+| Т14 | Метку заводят прямо с карточки, не плодя двойников: одноимённая предлагается существующей, убранная — возвратом | `web/src/features/board/LabelPicker.dom.test.tsx`, `web/src/entities/label/model.test.ts`, `web/e2e/board.spec.ts` |
 
 ## Пределы
 

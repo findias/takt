@@ -106,11 +106,18 @@ async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
   await page.getByRole('menuitemcheckbox').first().click()
 }
 
-/** То же для метки: нажатие по ряду меток, пункт по названию. */
+/** То же для метки: нажатие по ряду меток, пункт по названию. Имя
+ *  пункта — название и откуда метка, поэтому ищется по началу. */
 async function toggleLabel(page: Page, card: ReturnType<typeof cardIn>, name: string) {
   await card.hover()
   await card.getByRole('button', { name: /^Метки/ }).click()
-  await page.getByRole('menuitemcheckbox', { name }).click()
+  await labelChoice(page).getByRole('option', { name: new RegExp(`^${name}`) }).click()
+}
+
+/** Окно выбора метки. Искать пункты по всей странице нельзя: `<option>`
+ *  есть и в отборах над доской, и в выборе темы. */
+function labelChoice(page: Page) {
+  return page.getByRole('dialog', { name: 'Метки' })
 }
 
 /**
@@ -501,7 +508,8 @@ test('метка заводится в организации и вешаетс�
   await cardIn(page, 'Очередь', 'Пометить меня').click()
   await page.getByRole('tab', { name: 'Работа' }).click()
   const panel = page.getByLabel(/Карточка .* «Пометить меня»/)
-  await panel.getByLabel('Повесить метку').selectOption({ label: 'Важное' })
+  await panel.getByRole('combobox', { name: 'Повесить или завести метку' }).fill('Важн')
+  await panel.getByRole('option', { name: /^Важное/ }).click()
   const row = panel.locator('.related').filter({ hasText: 'Важное' })
   await expect(row).toHaveCount(1)
   await row.getByRole('button', { name: 'Снять' }).click()
@@ -513,6 +521,67 @@ test('метка заводится в организации и вешаетс�
   await expect(
     cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Метки: ни одной' }),
   ).toBeVisible()
+})
+
+// Метку заводят там, где она понадобилась: набрали на карточке название,
+// которого нет, — метка заведена и повешена, и видна в «Команде».
+// Прежде за этим уходили на «Команду» и возвращались — пять шагов
+// и потерянное место. Всё — с клавиатуры: выбор проходят без мыши.
+test('метка заводится прямо с карточки', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска на бегу')
+  await addCard(page, 'Очередь', 'Договор с поставщиком')
+  const card = cardIn(page, 'Очередь', 'Договор с поставщиком')
+
+  // Меток в организации нет вовсе — а выбор на карточке всё равно
+  // стоит: в нём и заводят.
+  await card.hover()
+  await card.getByRole('button', { name: 'Метки: ни одной' }).click()
+  const search = page.getByRole('combobox', { name: 'Найти или завести метку' })
+  await expect(search).toBeFocused()
+  await page.keyboard.type('Ждём юристов')
+  // Первым — узкое место: метка на бегу чаще нужна здесь.
+  await expect(labelChoice(page).getByRole('option').first()).toHaveText(/Завести «Ждём юристов».*на этой доске/)
+  await page.keyboard.press('ArrowDown')
+  await expect(labelChoice(page).getByRole('option', { selected: true })).toHaveText(/на всю организацию/)
+  await page.keyboard.press('Enter')
+
+  await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeVisible()
+  // Фокус вернулся туда, откуда открывали.
+  await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeFocused()
+
+  // Набрали то же в другом регистре — предложена существующая, второй
+  // не заводится.
+  await addCard(page, 'Очередь', 'Счёт за июль')
+  const second = cardIn(page, 'Очередь', 'Счёт за июль')
+  await second.hover()
+  await second.getByRole('button', { name: 'Метки: ни одной' }).click()
+  await page.keyboard.type('ЖДЁМ ЮРИСТОВ')
+  await expect(labelChoice(page).getByRole('option')).toHaveCount(1)
+  await expect(labelChoice(page).getByRole('option')).toHaveText(/^Ждём юристов/)
+  await page.keyboard.press('Enter')
+  await expect(second.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeVisible()
+
+  // Метка видна в «Команде» — одна, в организации, куда её и завели.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await expect(page.getByText('Ждём юристов', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Вся организация' })).toBeVisible()
+
+  // Убрали в архив — набранное название предлагает вернуть, а не
+  // завести вторую.
+  await page.getByRole('button', { name: 'Убрать в архив метку «Ждём юристов»' }).click()
+  await expect(page.getByRole('heading', { name: 'Убранные в архив' })).toBeVisible()
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await openBoard(page, 'Доска на бегу')
+  await addCard(page, 'Очередь', 'Третья')
+  const third = cardIn(page, 'Очередь', 'Третья')
+  await third.hover()
+  await third.getByRole('button', { name: 'Метки: ни одной' }).click()
+  await page.keyboard.type('ждём юристов')
+  await expect(labelChoice(page).getByRole('option')).toHaveText([/^Вернуть из архива «Ждём юристов»/])
+  await page.keyboard.press('Enter')
+  await expect(third.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeVisible()
 })
 
 // Оценку ставят пачкой на планировании, а причина блокировки меняется
@@ -843,7 +912,7 @@ test('shift берёт диапазон, а полоса делает всё с�
   await third.getByRole('checkbox', { name: /Выделить/ }).click({ modifiers: ['Shift'] })
   await expect(bar).toContainText('Выделено: 3 карточки')
   await bar.getByRole('button', { name: 'Пометить выделенные' }).click()
-  await page.getByRole('menuitem', { name: 'Разобрать' }).click()
+  await labelChoice(page).getByRole('option', { name: /^Разобрать/ }).click()
   await expect(cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: /Метки: Разобрать/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Снять', exact: true }).last().click()

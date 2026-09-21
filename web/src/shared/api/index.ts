@@ -589,9 +589,11 @@ export type Label = {
 }
 export type LabelScope = 'org' | 'team' | 'board'
 
-/** Метка в снимке доски. `offered` — можно ли повесить её здесь: нельзя
- *  у убранной и у оставшейся на карточке из чужой области. */
-export type BoardLabel = Label & { offered: boolean }
+/** Метка в снимке доски. `applies` — действует ли на этой доске;
+ *  `offered` — можно ли повесить её здесь: действует и не в архиве.
+ *  Убранная, но действующая метка приезжает ради выбора метки: набрали
+ *  её название — предлагается вернуть, а не завести вторую. */
+export type BoardLabel = Label & { offered: boolean; applies: boolean }
 
 /** Метка в списке управления: может ли спрашивающий её убрать и вернуть. */
 export type ManagedLabel = Label & { canManage: boolean }
@@ -617,6 +619,9 @@ export type Patch = {
    *  Такой патч можно применить дважды без вреда. */
   cardLabels?: Record<string, string[]>
   cardAssignees?: Record<string, string[]>
+  /** Описания меток из `cardLabels`: метку заводят с карточки, и у соседа
+   *  её в словаре ещё нет. */
+  labels?: BoardLabel[]
   cards?: Card[]
   columns?: Column[]
   removedCardIds?: string[]
@@ -873,7 +878,11 @@ export const api = {
       'GET',
       '/api/labels',
     ),
-  createLabel: (name: string, tone: LabelTone, place: LabelPlace) =>
+  /** Где можно завести метку, чтобы она действовала на этой доске. */
+  labelPlaces: (boardId: string) =>
+    request<{ places: LabelPlace[] }>('GET', `/api/labels?board=${encodeURIComponent(boardId)}`),
+  /** Оттенок не назван — сервер возьмёт наименее занятый. */
+  createLabel: (name: string, tone: LabelTone | undefined, place: LabelPlace) =>
     request<Label>('POST', '/api/labels', {
       name,
       tone,

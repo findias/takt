@@ -23,7 +23,8 @@ import {
   unitLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import { labelOrigin, labelTitle } from '../../entities/label/model.ts'
+import { labelTitle } from '../../entities/label/model.ts'
+import { LabelPickerButton } from './LabelPicker.tsx'
 import type { BoardLabel, Card, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
@@ -74,6 +75,7 @@ type CardProps = {
    *  никому» больше не имеет смысла. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
   labels: BoardLabel[]
+  boardId: string
   cardLabels: string[]
   /** Родительская задача, если карточка — чья-то подзадача. */
   parent?: { id: string; title: string; onThisBoard: boolean }
@@ -134,6 +136,7 @@ function CardViewInner({
   assignees,
   onAssign,
   labels,
+  boardId,
   cardLabels,
   parent,
   iteration,
@@ -435,8 +438,11 @@ function CardViewInner({
                 занимали строку целиком в каждой карточке.
                 Правятся нажатием по самим точкам: путь к метке должен
                 быть короче, чем поход в меню мимо людей и колонок. */}
-            {canEdit && labels.length > 0 && (
-              <Menu
+            {/* Выбор с поиском, а не список: в нём же заводят новую
+                метку, если нужной нет, — не уходя с доски. Поэтому
+                он стоит и тогда, когда меток на доске ещё нет. */}
+            {canEdit && (
+              <LabelPickerButton
                 label={
                   own.length > 0
                     ? `Метки: ${own.map((l) => l.name).join(', ')}`
@@ -444,17 +450,11 @@ function CardViewInner({
                 }
                 className={`field label-field${own.length === 0 ? ' field--empty' : ''}`}
                 align="right"
-                // Предлагаются действующие здесь; висящие — всегда,
-                // даже убранные и чужие: снять их больше негде.
-                items={labels
-                  .filter((label) => label.offered || cardLabels.includes(label.id))
-                  .map((label) => ({
-                    id: label.id,
-                    label: label.name,
-                    hint: labelOrigin(label),
-                    checked: cardLabels.includes(label.id),
-                    onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
-                  }))}
+                boardId={boardId}
+                labels={labels}
+                hung={cardLabels}
+                canEdit={canEdit}
+                onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
               >
                 {own.length === 0 ? (
                   '+ метка'
@@ -472,7 +472,7 @@ function CardViewInner({
                     ))}
                   </span>
                 )}
-              </Menu>
+              </LabelPickerButton>
             )}
             {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
                 не помещались и обрезались до «Откры», «Переиме», «Удалит».

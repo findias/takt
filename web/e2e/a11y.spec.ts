@@ -154,7 +154,10 @@ test('на всех экранах цели нажатия не мельче 24 
   const карточка = queue.getByRole('group', { name: /Карточка «Карточка»/ })
   await карточка.getByRole('button', { name: 'Карточка', exact: true }).click()
   await page.getByRole('tab', { name: 'Работа' }).click()
-  await page.getByLabel('Повесить метку').selectOption({ label: 'Горит' })
+  // Поле отбора над доской — тоже `<option>`, поэтому пункт ищется
+  // внутри списка выбора, а не по всей странице.
+  await page.getByRole('combobox', { name: 'Повесить или завести метку' }).fill('Горит')
+  await page.getByRole('listbox', { name: 'Метки' }).getByRole('option', { name: /^Горит/ }).click()
   await page.getByRole('button', { name: 'Закрыть' }).first().click()
 
   await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()

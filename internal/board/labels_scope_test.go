@@ -269,7 +269,7 @@ func TestTeamLabelIsManagedByItsPeople(t *testing.T) {
 			t.Error("постороннему обещано управление чужой меткой")
 		}
 	}
-	places, err := f.svc.LabelPlaces(f.ctx, f.orgID, insider)
+	places, err := f.svc.LabelPlaces(f.ctx, f.orgID, insider, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,6 +281,84 @@ func TestTeamLabelIsManagedByItsPeople(t *testing.T) {
 	}
 	if strings.Join(teams, ",") != "Разработка,Платформа" {
 		t.Errorf("места участника «Разработки»: %v", teams)
+	}
+}
+
+// Места для заведения с карточки — только те, чьи метки на этой доске
+// действуют: метку соседнего подразделения сюда не повесить.
+func TestLabelPlacesForABoardAreOnlyThoseThatApply(t *testing.T) {
+	f := newFixture(t)
+	dev := f.team("Разработка", nil)
+	platform := f.team("Платформа", &dev)
+	f.team("Продажи", nil)
+	platformBoard := f.boardOfTeam("Платформа", &platform)
+	f.boardOfTeam("Соседняя", &dev)
+
+	places, err := f.svc.LabelPlaces(f.ctx, f.orgID, f.actorID, platformBoard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range places {
+		got = append(got, p.Scope+":"+p.Name)
+	}
+	want := "org:,team:Разработка,team:Платформа,board:Платформа"
+	if strings.Join(got, ",") != want {
+		t.Errorf("места для доски «Платформа»: %v, ждали %s", got, want)
+	}
+}
+
+// Оттенок, если его не назвали, — наименее занятый: метку с карточки
+// заводят на бегу, и пять одинаково серых меток выглядели бы ошибкой.
+func TestLabelWithoutToneGetsTheLeastUsedOne(t *testing.T) {
+	f := newFixture(t)
+	seen := map[string]bool{}
+	for i := range len(Tones) {
+		l, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID,
+			LabelDraft{Name: "Метка " + string(rune('А'+i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if seen[l.Tone] {
+			t.Errorf("оттенок %s выдан второй раз, пока были свободные: %v", l.Tone, seen)
+		}
+		seen[l.Tone] = true
+	}
+	// Названный оттенок остаётся названным.
+	if l, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID,
+		LabelDraft{Name: "Своя", Tone: "rose"}); err != nil || l.Tone != "rose" {
+		t.Errorf("названный оттенок заменён: %v, %v", l.Tone, err)
+	}
+}
+
+// Патч навешивания несёт описания меток: у соседа, у которого доска
+// открыта, метки, заведённой только что, в словаре нет.
+func TestLabelPatchCarriesTheDictionary(t *testing.T) {
+	f := newFixture(t)
+	cardID := f.createCard("Помечу", f.columnA)
+	fresh := f.scopedLabel("Свежая", "", f.boardID)
+
+	res := f.mustApply("LABEL_CARD", map[string]any{"cardId": cardID, "labelId": fresh.ID})
+	if len(res.Patch.Labels) != 1 || res.Patch.Labels[0].ID != fresh.ID ||
+		res.Patch.Labels[0].Name != "Свежая" || !res.Patch.Labels[0].Offered {
+		t.Errorf("патч без описания метки: %+v", res.Patch.Labels)
+	}
+}
+
+// Убранная, но действующая здесь метка есть в снимке: выбор метки
+// предложит вернуть её, а не заводить вторую с тем же названием.
+func TestArchivedLabelThatAppliesIsInTheSnapshot(t *testing.T) {
+	f := newFixture(t)
+	old := f.label("Ждём")
+	if err := f.svc.ArchiveLabel(f.ctx, f.orgID, f.actorID, old.ID); err != nil {
+		t.Fatal(err)
+	}
+	l := f.boardLabel(old.ID)
+	if l == nil {
+		t.Fatal("убранной метки нет в снимке — предложить вернуть её нечем")
+	}
+	if !l.Applies || l.Offered || !l.Archived {
+		t.Errorf("убранная метка: applies=%v offered=%v archived=%v", l.Applies, l.Offered, l.Archived)
 	}
 }
 

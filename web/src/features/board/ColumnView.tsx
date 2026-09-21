@@ -61,6 +61,9 @@ type ColumnProps = {
   /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
   justMoved: string | null
   labels: BoardLabel[]
+  /** Доска — ради выбора метки: он спрашивает, где на ней можно
+   *  завести новую. */
+  boardId: string
   /** Может ли смотрящий менять доску: у наблюдателя действий нет
    *  вовсе, а не «есть, но откажут». */
   canEdit: boolean
@@ -263,6 +266,7 @@ export function ColumnView(props: ColumnProps) {
             onAssign={props.onAssign}
             flash={props.justMoved === cardId}
             labels={props.labels}
+            boardId={props.boardId}
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
             parent={props.parents[cardId]}
             iteration={props.iterations[cardId]}

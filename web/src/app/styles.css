@@ -3388,6 +3388,37 @@ textarea.description {
 .menu-item--danger {
   color: var(--warn);
 }
+/* Выбор метки во всплывающем окне: поле сверху, список под ним.
+   Шире меню действий — рядом с названием стоит, откуда метка,
+   и «подразделение «Разработка»» не должно рвать строку. */
+.label-picker {
+  width: 22rem;
+  padding: var(--space-2);
+}
+.label-picker .palette-list,
+.label-combobox .palette-list {
+  padding: 0;
+  max-height: 16rem;
+}
+.label-combobox input {
+  width: 100%;
+}
+/* Название метки важнее того, откуда она: не хватает строки — откуда
+   уходит на вторую, а название не режется многоточием. «Ключевой…»
+   и «Завести «…» на снимке читались как поломка. */
+.label-options .palette-item {
+  flex-wrap: wrap;
+  column-gap: var(--space-2);
+  row-gap: 0;
+}
+.label-options .palette-title {
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow: visible;
+}
+.label-combobox .form-error:empty {
+  display: none;
+}
 /* Откуда метка — тише подписи и прижато вправо: список читается
    колонкой названий, а происхождение смотрят, когда названия совпали
    или метка незнакома. */

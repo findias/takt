@@ -68,6 +68,14 @@ hung. Every list that offers a label also says where it comes from.
 | A subdivision | on the boards of the subdivision and of all subdivisions inside it | its members, its administrators, the owner |
 | A board | on that board only | whoever can edit the board |
 
+- A label that does not exist yet can be created right from the card:
+  type its name into the label picker (on the card, in the card panel,
+  or in the bulk bar) and pick where it should apply — this board, its
+  subdivision or a wider one, or the whole organisation. It is created
+  and hung in one go, with a colour picked for you; change the colour on
+  «Команда». Typing the name of an existing label offers that label,
+  in any letter case, and typing the name of an archived one offers to
+  bring it back instead of creating a second one.
 - The same name cannot be used twice where the places overlap:
   an organisation label «Срочно» rules out «Срочно» on any subdivision
   or board. The refusal names where the label already is.

@@ -170,6 +170,17 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     cardLabels = { ...cardLabels, ...result.patch.cardLabels }
   }
 
+  // Словарь меток дополняется описаниями из патча: метку заводят
+  // с карточки, и без описания у соседа она осталась бы идентификатором.
+  let labels = base.labels
+  if (result.patch.labels?.length) {
+    const fresh = new Map(result.patch.labels.map((l) => [l.id, l]))
+    labels = [
+      ...base.labels.map((l) => fresh.get(l.id) ?? l),
+      ...result.patch.labels.filter((l) => !base.labels.some((b) => b.id === l.id)),
+    ]
+  }
+
   let cardAssignees = base.cardAssignees
   if (result.patch.cardAssignees) {
     cardAssignees = { ...cardAssignees, ...result.patch.cardAssignees }
@@ -182,6 +193,7 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     columns,
     cards,
     order: touched.size > 0 ? order : base.order,
+    labels,
     cardLabels,
     cardAssignees,
   }

@@ -866,6 +866,7 @@ export function Board({
         onAssign={assignCard}
         justMoved={justMoved}
         labels={base.labels}
+        boardId={boardId}
         cardLabels={base.cardLabels}
         cardAssignees={base.cardAssignees}
         parents={parents}
@@ -1182,6 +1183,7 @@ export function Board({
         <BulkBar
           count={chosen.length}
           columns={columnList}
+          boardId={boardId}
           labels={base.labels}
           people={base.people}
           onMove={(columnId) => {

@@ -1,6 +1,6 @@
 import { PRIORITIES, PRIORITY_NAMES, cardsLabel } from '../../entities/card/model.ts'
 import type { Column, BoardLabel, Priority } from '../../shared/api/index.ts'
-import { labelOrigin } from '../../entities/label/model.ts'
+import { LabelPickerButton } from './LabelPicker.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { ArchiveIcon, ClockIcon, MoveIcon, PeopleIcon, TagIcon } from '../../shared/ui/icons.tsx'
@@ -30,6 +30,7 @@ import { ArchiveIcon, ClockIcon, MoveIcon, PeopleIcon, TagIcon } from '../../sha
 export function BulkBar({
   count,
   columns,
+  boardId,
   labels,
   people,
   onMove,
@@ -41,6 +42,7 @@ export function BulkBar({
 }: {
   count: number
   columns: Column[]
+  boardId: string
   labels: BoardLabel[]
   /** userId → имя. */
   people: Record<string, string>
@@ -51,9 +53,6 @@ export function BulkBar({
   onArchive: () => void
   onClear: () => void
 }) {
-  // Убранные и чужие метки в снимке есть ради карточек, где висят;
-  // вешать их нельзя, и предлагать незачем.
-  const offered = labels.filter((label) => label.offered)
   return (
     // Живая область: полоса появляется внизу экрана, далеко от флажка,
     // по которому её вызвали, и тот, кто не видит экрана, иначе
@@ -98,24 +97,24 @@ export function BulkBar({
           — одно решение, а переключение дало бы половину помеченных
           и половину снятых, то есть результат, зависящий от того,
           что было раньше. */}
-      {offered.length > 0 && (
-        <Menu
-          label="Пометить выделенные"
-          className="btn"
-          align="left"
-          drop="up"
-          items={offered.map((label) => ({
-            id: label.id,
-            label: label.name,
-            hint: labelOrigin(label),
-            icon: <TagIcon />,
-            onSelect: () => onLabel(label.id),
-          }))}
-        >
-          <TagIcon />
-          Метка
-        </Menu>
-      )}
+      {/* Выбор с поиском, как на карточке: нужной метки нет — её
+          заводят здесь же и вешают на все выделенные разом. Полоса
+          есть только у тех, кто правит доску, поэтому заводить здесь
+          можно всегда, где позволяет место. */}
+      <LabelPickerButton
+        label="Пометить выделенные"
+        className="btn"
+        align="left"
+        drop="up"
+        boardId={boardId}
+        labels={labels}
+        hung={null}
+        canEdit
+        onToggle={(labelId) => onLabel(labelId)}
+      >
+        <TagIcon />
+        Метка
+      </LabelPickerButton>
 
       <Menu
         label="Назначить на выделенные"

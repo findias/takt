@@ -33,7 +33,8 @@ import {
   progressRatio,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import { groupByOrigin, labelOrigin } from '../../entities/label/model.ts'
+import { labelOrigin } from '../../entities/label/model.ts'
+import { LabelCombobox } from './LabelPicker.tsx'
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -304,6 +305,7 @@ export function CardPanel({
             />
 
             <Labels
+              boardId={boardId}
               labels={base.labels}
               own={base.cardLabels[card.id] ?? []}
               canEdit={canEdit}
@@ -1113,47 +1115,32 @@ function PriorityPicker({
  * не различить, а «почему этой нет на соседней доске» не на что
  * ответить. Висящие показываются все, даже убранные и чужие, — снять
  * их больше негде; предлагаются только действующие на доске.
+ *
+ * Нужной метки нет — её заводят тут же, в поле выбора: уход на «Команду»
+ * посреди разговора о карточке стоил пяти шагов и потерянного места.
  */
 function Labels({
+  boardId,
   labels,
   own,
   canEdit,
   onLabel,
 }: {
+  boardId: string
   labels: BoardLabel[]
   own: string[]
   canEdit: boolean
   onLabel: (labelId: string, on: boolean) => void
 }) {
   const hung = labels.filter((l) => own.includes(l.id))
-  const free = labels.filter((l) => l.offered && !own.includes(l.id))
-
-  if (hung.length === 0 && free.length === 0) {
-    return (
-      <section className="stack">
-        <h3 className="section-title">Метки</h3>
-        <p className="muted small">
-          Меток для этой доски ещё нет. Заводят их на вкладке «Команда» — на всю
-          организацию, на подразделение или на одну доску.
-        </p>
-      </section>
-    )
-  }
 
   return (
     <section className="stack">
       <h3 className="section-title">Метки</h3>
 
-      {/* «Ни одной.» не говорило ни что это, ни что с этим делать.
-          Список меток стоит ниже — на него и указываем; наблюдателю
-          указывать не на что, он метки не вешает. */}
-      {hung.length === 0 && (
-        <p className="muted small">
-          {canEdit
-            ? 'Меток на этой карточке нет — повесить можно списком ниже.'
-            : 'Меток на этой карточке нет.'}
-        </p>
-      )}
+      {/* Наблюдателю указывать не на что: он метки не вешает. Тому, кто
+          правит, пустое место не нужно — поле ниже и есть действие. */}
+      {hung.length === 0 && !canEdit && <p className="muted small">Меток на этой карточке нет.</p>}
 
       {/* Строкой на метку, как у исполнителей рядом: крестик внутри
           чипа пришлось бы растить до цели нажатия в 24 пикселя,
@@ -1164,7 +1151,7 @@ function Labels({
           <span className="muted small related-grow">
             {labelOrigin(label)}
             {label.archived && ', в архиве'}
-            {!label.archived && !label.offered && ', на этой доске не действует'}
+            {!label.archived && !label.applies && ', на этой доске не действует'}
           </span>
           {canEdit && (
             <button
@@ -1178,23 +1165,18 @@ function Labels({
         </div>
       ))}
 
-      {canEdit && free.length > 0 && (
-        <select
-          value=""
-          aria-label="Повесить метку"
-          onChange={(e) => e.target.value && onLabel(e.target.value, true)}
-        >
-          <option value="">Повесить метку…</option>
-          {groupByOrigin(free).map((group) => (
-            <optgroup key={group.key} label={group.title}>
-              {group.labels.map((label) => (
-                <option key={label.id} value={label.id}>
-                  {label.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+      {/* Пустое состояние больше не отправляет на «Команду»: метку,
+          которой нет, заводят здесь же — набрав название. */}
+      {canEdit && (
+        <LabelCombobox
+          boardId={boardId}
+          labels={labels}
+          hung={own}
+          canEdit={canEdit}
+          inputLabel="Повесить или завести метку"
+          quietWhenIdle
+          onToggle={onLabel}
+        />
       )}
     </section>
   )

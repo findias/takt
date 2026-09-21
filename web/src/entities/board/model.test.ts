@@ -355,3 +355,37 @@ test('часть не стоит в колонке отдельной карто
     partIds: {},
   })
 })
+
+test('патч дополняет словарь меток: метку, заведённую у соседа, есть чем показать', () => {
+  const base = fromSnapshot(snapshot([card('1', COL_A, 'a0')]))
+  const fresh = {
+    id: 'l1',
+    name: 'Свежая',
+    tone: 'green' as const,
+    scope: 'board' as const,
+    scopeId: 'board',
+    scopeName: 'Доска',
+    archived: false,
+    offered: true,
+    applies: true,
+  }
+  const next = applyPatch(base, {
+    version: 2,
+    patch: { cardLabels: { '1': ['l1'] }, labels: [fresh] },
+  })
+  assert.deepEqual(next.cardLabels['1'], ['l1'])
+  assert.deepEqual(
+    next.labels.map((l) => l.name),
+    ['Свежая'],
+  )
+  // Второй раз тот же патч не задваивает: описание заменяется, а не
+  // дописывается.
+  const again = applyPatch(next, {
+    version: 2,
+    patch: { cardLabels: { '1': ['l1'] }, labels: [{ ...fresh, name: 'Переименованная' }] },
+  })
+  assert.deepEqual(
+    again.labels.map((l) => l.name),
+    ['Переименованная'],
+  )
+})
