@@ -458,6 +458,45 @@ export function rangeWords(from: string, to: string, now: Date = new Date()): st
  * из подписи — а разбор собственной подписи строкой ломается о первую
  * же правку формулировки.
  */
+/**
+ * Срок блокировки словами — абсолютно: «24 сентября, 18:00».
+ *
+ * Для журнала и ленты: запись о прошлом не должна менять смысл со
+ * временем, а «завтра» через неделю стало бы неправдой.
+ */
+export function blockUntilWords(iso: string): string {
+  const at = new Date(iso)
+  const day = at.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  const time = at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  return `${day}, ${time}`
+}
+
+/**
+ * Срок блокировки на карточке — относительно «сейчас» смотрящего.
+ *
+ * Момент, а не дата, и в зоне смотрящего. Меньше суток до срока —
+ * `soon`, метка меняет вид, как у «Срок подходит»: это и есть
+ * уведомление продукта, который никуда не пишет, — человек видит
+ * срок на своей доске до того, как он вышел. Срок вышел, а патч
+ * ещё не приехал — «срок блокировки истёк», а не «до вчера»: минута
+ * отставания прохода так становится честной, а не похожей на поломку.
+ */
+export function blockUntilLabel(
+  iso: string,
+  now: Date = new Date(),
+): { text: string; soon: boolean; expired: boolean } {
+  const at = new Date(iso)
+  const left = at.getTime() - now.getTime()
+  if (left <= 0) return { text: 'срок блокировки истёк', soon: true, expired: true }
+  const soon = left < 86_400_000
+  const time = at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const dayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((dayOf(at) - dayOf(now)) / 86_400_000)
+  if (days === 0) return { text: `до ${time} сегодня`, soon, expired: false }
+  if (days === 1) return { text: `до завтра, ${time}`, soon, expired: false }
+  return { text: `до ${blockUntilWords(iso)}`, soon, expired: false }
+}
+
 export function dueLabel(dueOn: string, now: Date = new Date()): { text: string; days: number } {
   const due = new Date(`${dueOn}T00:00:00`)
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

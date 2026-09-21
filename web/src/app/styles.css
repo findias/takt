@@ -2141,6 +2141,22 @@ textarea.description {
    Одна и одним цветом — потому что четыре предупреждения одного цвета
    на карточке не предупреждают ни о чём: когда красное всё, красное
    не значит ничего. */
+/* Когда блокировка снимется сама. Тихо, цветом тревоги: это часть
+   той же блокировки, а не новая. Меньше суток до срока — жирнее
+   и с пунктиром: «это скоро кончится», как у срока, который подходит. */
+.card-block-until {
+  flex-basis: 100%;
+  font-size: var(--text-sm);
+  color: var(--warn);
+}
+.card-block-until--ending {
+  font-weight: 600;
+  text-decoration: underline dashed;
+  text-underline-offset: 3px;
+}
+.block-ending {
+  font-weight: 600;
+}
 .mark--alarm {
   background: var(--warn-soft);
   color: var(--warn);

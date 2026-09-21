@@ -224,6 +224,12 @@ export function Board({
   )
 
   const { base, order: fullOrder, moveCard } = board
+  // Есть ли вообще блокировки со сроком — от этого зависит, стоит ли
+  // в строке отборов «Блокировка истекает».
+  const hasBlockDeadlines = useMemo(
+    () => Object.values(base?.cards ?? {}).some((c) => c.blocked?.until),
+    [base?.cards],
+  )
 
   // Заголовок вкладки: сначала то, что вкладку отличает. Открытая
   // карточка важнее доски — на неё и смотрят, когда её держат открытой.
@@ -587,6 +593,7 @@ export function Board({
     prioritiseCard: prioritise,
     commitCard: commit,
     unblockCard: unblock,
+    setBlockUntil: blockUntil,
     setCardDone: markDoneAction,
     createSubtask: subtaskAction,
   } = board
@@ -611,9 +618,13 @@ export function Board({
     [commit],
   )
   const blockCard = useCallback(
-    (cardId: string, reason: string, blockingCard?: string) =>
-      void block(cardId, reason, blockingCard),
+    (cardId: string, reason: string, blockingCard?: string, until?: string) =>
+      void block(cardId, reason, blockingCard, until),
     [block],
+  )
+  const setBlockUntil = useCallback(
+    (cardId: string, until: string | null) => void blockUntil(cardId, until),
+    [blockUntil],
   )
   const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])
   const markDone = useCallback(
@@ -962,6 +973,7 @@ export function Board({
           labels={base.labels}
           iterations={openIterations}
           hidden={hidden}
+          hasBlockDeadlines={hasBlockDeadlines}
           onChange={setFilters}
         />
         {/* Загрузка считается по показанному: рядом стоит «скрыто N»
@@ -1311,6 +1323,7 @@ export function Board({
           onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
           onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
           onBlock={blockCard}
+          onSetBlockUntil={setBlockUntil}
           onUnblock={unblockCard}
           onMarkDone={markDone}
           onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}

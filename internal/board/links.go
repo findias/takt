@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -396,9 +397,9 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 
 	var b Block
 	err = tx.QueryRow(ctx, `
-		select id, reason, blocked_at, blocking_card from card_blocks
+		select id, reason, blocked_at, blocking_card, blocked_until from card_blocks
 		 where card_id = $1 and unblocked_at is null`, cardID).
-		Scan(&b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard)
+		Scan(&b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 	case err != nil:
@@ -407,6 +408,47 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 		c.Blocked = &b
 	}
 	return c, nil
+}
+
+// setBlockUntil меняет срок открытой блокировки.
+//
+// Отдельная операция, а не повторный BLOCK_CARD: повторная блокировка
+// отказывает конфликтом, и правильно — вторая причина дополняет первую,
+// а не открывает новый интервал. Срок же во время блокировки меняют:
+// поставку перенесли. Причину операция не трогает, пустой срок делает
+// блокировку бессрочной.
+func setBlockUntil(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
+	var p blockPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор SET_BLOCK_UNTIL: %v", err)
+	}
+	until, err := parseUntil(p.Until)
+	if err != nil {
+		return Patch{}, err
+	}
+	tag, err := tx.Exec(ctx, `
+		update card_blocks set blocked_until = $3
+		 where card_id = $1 and unblocked_at is null
+		   and exists (select 1 from cards where id = $1 and board_id = $2)`,
+		p.CardID, boardID, until)
+	if err != nil {
+		return Patch{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return Patch{}, conflictf("", "карточка не заблокирована — срок ставят вместе с блокировкой")
+	}
+	payload := map[string]any{"until": nil}
+	if until != nil {
+		payload["until"] = until.UTC()
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "block_until", nil, nil, payload); err != nil {
+		return Patch{}, err
+	}
+	c, err := readCard(ctx, tx, boardID, p.CardID)
+	if err != nil {
+		return Patch{}, err
+	}
+	return Patch{Cards: []Card{c}}, nil
 }
 
 // --- отметка «сделано» ---
@@ -520,6 +562,25 @@ type blockPayload struct {
 	// Причина остаётся обязательной и при ссылке: ссылка говорит, кого
 	// ждём, а чего именно от него ждут — только слова.
 	BlockingCard string `json:"blockingCard"`
+	// Когда снимется сама, ISO 8601 с зоной. Пусто — пока не снимут.
+	Until *string `json:"until"`
+}
+
+// parseUntil разбирает срок блокировки. Срок в прошлом — отказ,
+// а не молчаливое снятие: он объясняет, что делать, и заодно ловит
+// опечатку в годе.
+func parseUntil(raw *string) (*time.Time, error) {
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return nil, nil
+	}
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(*raw))
+	if err != nil {
+		return nil, badRequestf("срок блокировки не разобран: нужен момент со временем и зоной, например 2026-09-24T18:00:00+03:00")
+	}
+	if !t.After(time.Now()) {
+		return nil, badRequestf("срок блокировки должен быть позже текущего времени; чтобы снять блокировку сейчас, есть «Снять блокировку»")
+	}
+	return &t, nil
 }
 
 func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -530,6 +591,10 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	p.Reason = strings.TrimSpace(p.Reason)
 	if p.Reason == "" {
 		return Patch{}, badRequestf("у блокировки должна быть причина")
+	}
+	until, err := parseUntil(p.Until)
+	if err != nil {
+		return Patch{}, err
 	}
 	if p.BlockingCard != "" {
 		if p.BlockingCard == p.CardID {
@@ -549,13 +614,13 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		blocking = p.BlockingCard
 	}
 	tag, err := tx.Exec(ctx, `
-		insert into card_blocks (org_id, card_id, reason, blocked_by, blocking_card)
-		select $1, $2, $3, $4, $6
+		insert into card_blocks (org_id, card_id, reason, blocked_by, blocking_card, blocked_until)
+		select $1, $2, $3, $4, $6, $7
 		 where exists (select 1 from cards
 		                where id = $2 and board_id = $5 and archived_at is null)
 		   and not exists (select 1 from card_blocks
 		                    where card_id = $2 and unblocked_at is null)`,
-		orgID, p.CardID, p.Reason, actorID, boardID, blocking)
+		orgID, p.CardID, p.Reason, actorID, boardID, blocking, until)
 	if err != nil {
 		return Patch{}, err
 	}
@@ -580,6 +645,9 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	payload := map[string]any{"reason": p.Reason}
 	if p.BlockingCard != "" {
 		payload["blockingCard"] = p.BlockingCard
+	}
+	if until != nil {
+		payload["until"] = until.UTC()
 	}
 	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "blocked", nil, nil,
 		payload); err != nil {

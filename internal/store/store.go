@@ -70,6 +70,10 @@ type Scope struct {
 	// Приглашение открывают по секретной ссылке, когда организация ещё
 	// неизвестна, а у человека может не быть аккаунта.
 	InviteToken string
+	// Task — служебная задача, от имени которой идёт транзакция, когда
+	// человека нет вовсе: снятие блокировок по сроку. Политики базы
+	// открывают задаче ровно то, что она делает (0053), и ничего сверх.
+	Task string
 }
 
 // BeginScope открывает транзакцию с заданной областью видимости.
@@ -86,8 +90,9 @@ func (s *Store) BeginScope(ctx context.Context, scope Scope) (pgx.Tx, error) {
 		select set_config('app.current_org', $1, true),
 		       set_config('app.current_user', $2, true),
 		       set_config('app.invite_token', $3, true),
-		       set_config('app.api_token', $4, true)`,
-		scope.OrgID, scope.UserID, scope.InviteToken, scope.APIToken)
+		       set_config('app.api_token', $4, true),
+		       set_config('app.task', $5, true)`,
+		scope.OrgID, scope.UserID, scope.InviteToken, scope.APIToken, scope.Task)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("установка области видимости: %w", err)

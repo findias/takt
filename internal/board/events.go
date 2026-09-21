@@ -54,7 +54,12 @@ var EventKinds = []string{
 	"committed",
 	"moved",
 	"blocked",
+	"block_until",
 	"unblocked",
+	// Снятие по сроку — своим видом, а не «unblocked» с пометкой: лента
+	// и подписчик разбирают события по виду, и «вышел срок» — другое
+	// событие, чем «Борис снял блокировку». Автора у него нет.
+	"block_expired",
 	"linked",
 	"unlinked",
 	"commented",

@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/config"
 	"github.com/findias/takt/internal/demo"
 	"github.com/findias/takt/internal/doctor"
@@ -191,6 +192,11 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	// недельной давности повторять уже некому.
 	go retention.NewWorker(db, log).Run(ctx)
 
+	// Блокировки со сроком снимаются сами. Первый проход — сразу:
+	// перезапуск не должен проглотить сроки, вышедшие, пока сервер
+	// стоял.
+	go expireBlocks(ctx, board.New(db), log)
+
 	go func() {
 		log.Info("сервер запущен", "адрес", cfg.ListenAddr, "baseURL", cfg.BaseURL)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -255,4 +261,26 @@ func checkMigrated(ctx context.Context, db *store.Store, log *slog.Logger) error
 	}
 	log.Info("схема базы на месте")
 	return nil
+}
+
+// expireBlocks снимает блокировки с вышедшим сроком — сразу и дальше
+// раз в минуту. Сбой прохода не останавливает сервер: следующий проход
+// подберёт то же самое, сроки от этого не денутся.
+func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) {
+	tick := time.NewTicker(board.ExpireEvery)
+	defer tick.Stop()
+	for {
+		n, err := boards.ExpireBlocks(ctx)
+		if err != nil && ctx.Err() == nil {
+			log.Error("снятие блокировок по сроку", "err", err)
+		}
+		if n > 0 {
+			log.Info("блокировки сняты по сроку", "сколько", n)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
 }

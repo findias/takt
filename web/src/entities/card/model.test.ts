@@ -7,6 +7,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { blockUntilLabel } from './model.ts'
 import {
   candidatesForSubtask,
   cardDetails,
@@ -363,4 +364,36 @@ test('уровень назван дважды: коротко на доске, 
   const странный = 'выдуманный' as never
   assert.equal(priorityShort(странный), 'выдуманный')
   assert.equal(priorityLabel(странный), 'выдуманный')
+})
+
+// Срок блокировки на карточке (ROADMAP 28.1). Момент, а не дата:
+// «до пятницы, 18:00» — конкретное время, и показывается оно в зоне
+// смотрящего. Меньше суток до срока — метка меняет вид, как у «Срок
+// подходит». Срок вышел, а патч ещё не приехал — карточка говорит
+// «срок истёк», а не «заблокирована до вчера»: минута отставания
+// прохода так становится честной, а не похожей на поломку.
+test('срок блокировки читается словами и предупреждает за сутки', () => {
+  const now = new Date(2026, 8, 21, 10, 0)
+  const at = (d: number, h: number, m = 0) => new Date(2026, 8, d, h, m).toISOString()
+
+  assert.deepEqual(blockUntilLabel(at(24, 18), now), {
+    text: 'до 24 сентября, 18:00',
+    soon: false,
+    expired: false,
+  })
+  assert.deepEqual(blockUntilLabel(at(22, 9, 30), now), {
+    text: 'до завтра, 09:30',
+    soon: true,
+    expired: false,
+  })
+  assert.deepEqual(blockUntilLabel(at(21, 18), now), {
+    text: 'до 18:00 сегодня',
+    soon: true,
+    expired: false,
+  })
+  assert.deepEqual(blockUntilLabel(at(21, 9, 59), now), {
+    text: 'срок блокировки истёк',
+    soon: true,
+    expired: true,
+  })
 })

@@ -51,8 +51,27 @@ Beyond roles, the owner appoints:
 | «Горит» | highest and high priority |
 | «Срок подходит» | due today, tomorrow, the day after, or overdue |
 | «Заблокированные» | those where work has stalled |
+| «Блокировка истекает» | blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks |
 | «Дольше обещанного» | those running longer than the board's promise |
 | Iteration | attached to an iteration; separately, "not in an iteration" |
+
+## Blocks with a deadline
+
+A block may be given a moment when it lifts itself — «Снимется само»
+when blocking, «Срок блокировки» on a blocked card. Leave it empty and
+the block stays until someone lifts it; that is the normal case.
+
+- The deadline is a moment, not a day, shown in your own time zone.
+  A moment in the past is refused: to lift a block now, use
+  «Снять блокировку».
+- The server checks every minute, and once at start-up. The block is
+  closed at its deadline, not at the moment of the check, so time spent
+  blocked does not depend on when the check ran.
+- It appears in the card's history and in «Изменения» as «блокировка
+  снята сама: вышел срок», without an author, and subscribers receive
+  `card.block_expired`.
+- Less than a day before the deadline, the line under the card becomes
+  bold and dashed. Nothing is mailed: the board is where you see it.
 
 ## Groupings
 

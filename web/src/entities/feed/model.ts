@@ -4,7 +4,7 @@
 // и снимок затронутого. Читают его люди, и разбирать jsonb глазами
 // им незачем.
 
-import { dateWords, priorityLabel } from '../card/model.ts'
+import { blockUntilWords, dateWords, priorityLabel } from '../card/model.ts'
 import { ROLE_NAMES, VISIBILITY_NAMES } from '../../shared/api/names.ts'
 import type { AuditEntry, BoardEvent, CardField, Priority } from '../../shared/api/index.ts'
 
@@ -76,6 +76,14 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
     case 'unblocked':
       return 'блокировка снята'
+    // Автора у снятия по сроку нет, и строка читается как строка без
+    // автора: «сама» говорит, почему подписи нет.
+    case 'block_expired':
+      return 'блокировка снята сама: вышел срок'
+    case 'block_until':
+      return typeof p.until === 'string'
+        ? `срок блокировки: до ${blockUntilWords(p.until)}`
+        : 'блокировка стала бессрочной'
     case 'field_set': {
       const field = fields.find((f) => f.id === p.fieldId)
       if (!field) return 'заполнено своё поле'

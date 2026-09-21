@@ -2153,3 +2153,54 @@ test('ширина колонки тянется мышью и пережива�
   await page.getByRole('region', { name: 'Готово' }).getByRole('button', { name: 'Свернуть «Готово»' }).click()
   await expect(page.getByRole('separator', { name: 'Ширина колонки «Готово»' })).toHaveCount(0)
 })
+
+// У блокировки есть срок, и он сам её снимает (ROADMAP 28.1). Снятие
+// проходом сервера здесь не ждётся — его проверяет сервер; здесь то,
+// что видит человек: срок ставится вместе с причиной, виден на карточке
+// до того, как вышел, правится во время блокировки и убирается.
+test('блокировка со сроком: видна заранее, правится и становится бессрочной', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска со сроками')
+  await addCard(page, 'Очередь', 'Ждём поставку')
+  const card = cardIn(page, 'Очередь', 'Ждём поставку')
+
+  const local = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const inThreeDays = new Date()
+  inThreeDays.setDate(inThreeDays.getDate() + 3)
+  inThreeDays.setHours(18, 0, 0, 0)
+
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByLabel(/Карточка .* «Ждём поставку»/)
+  await panel.getByRole('button', { name: 'Заблокировать…' }).click()
+  await panel.getByLabel('Причина блокировки').fill('ждём поставку')
+  // Срок необязателен и так и назван: пустое поле — «пока не снимут».
+  await panel.getByLabel('Снимется само (необязательно)').fill(local(inThreeDays))
+  await panel.getByLabel('Причина блокировки').press('Enter')
+
+  const day = inThreeDays.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  await expect(panel.getByText(`до ${day}, 18:00`)).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await expect(card.getByText(new RegExp(`до ${day}, 18:00`))).toBeVisible()
+
+  // Меньше суток до срока — отбор «истекает» его находит.
+  const soon = new Date(Date.now() + 5 * 3_600_000)
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await panel.getByLabel('Срок блокировки').fill(local(soon))
+  await panel.getByLabel('Срок блокировки').press('Enter')
+  await page.getByRole('button', { name: 'Закрыть' }).first().click()
+  await page.getByRole('checkbox', { name: 'Блокировка истекает' }).check()
+  await expect(cardIn(page, 'Очередь', 'Ждём поставку')).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Блокировка истекает' }).uncheck()
+
+  // Бессрочная — кнопкой, а не стиранием поля: стёртое поле читается
+  // как «не дописал», а не как решение.
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await panel.getByRole('button', { name: 'Сделать бессрочной' }).click()
+  await expect(panel.getByText('Бессрочная — пока не снимут.')).toBeVisible()
+  await expect(panel.getByText(/Снимется сама/)).toHaveCount(0)
+  await expect(panel.getByText('Заблокирована', { exact: true })).toBeVisible()
+})

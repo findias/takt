@@ -34,6 +34,7 @@ import {
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { labelOrigin } from '../../entities/label/model.ts'
+import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
 
 /**
@@ -90,6 +91,7 @@ export function CardPanel({
   onLink,
   onUnlink,
   onBlock,
+  onSetBlockUntil,
   onUnblock,
   onMarkDone,
   onIteration,
@@ -124,7 +126,8 @@ export function CardPanel({
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   /** Держащая карточка необязательна: «нет доступа к стенду» карточки
    *  не имеет, а «ждём согласования сметы» имеет — и по ней ходят. */
-  onBlock: (cardId: string, reason: string, blockingCard?: string) => void
+  onBlock: (cardId: string, reason: string, blockingCard?: string, until?: string) => void
+  onSetBlockUntil: (cardId: string, until: string | null) => void
   onUnblock: (cardId: string) => void
   /** Отметить работу сделанной, не двигая её по доске. */
   onMarkDone: (cardId: string, done: boolean) => void
@@ -221,6 +224,11 @@ export function CardPanel({
                   <span className="muted small">
                     с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
                   </span>
+                  <BlockUntilEditor
+                    until={card.blocked.until}
+                    canEdit={canEdit}
+                    onChange={(until) => onSetBlockUntil(card.id, until)}
+                  />
                 </div>
                 {/* «Снять» в панели стоит у блокировки, обязательства,
                     исполнителя и метки — четыре разных объекта, одно
@@ -238,14 +246,16 @@ export function CardPanel({
               // почему стоял бы ещё один экран.
               <BlockForm
                 holder={holder.title}
-                onBlock={(reason) => {
-                  onBlock(card.id, reason, holder.id)
+                onBlock={(reason, until) => {
+                  onBlock(card.id, reason, holder.id, until)
                   setHolder(null)
                 }}
                 onCancel={() => setHolder(null)}
               />
             ) : (
-              canEdit && <BlockForm onBlock={(reason) => onBlock(card.id, reason)} />
+              canEdit && (
+                <BlockForm onBlock={(reason, until) => onBlock(card.id, reason, undefined, until)} />
+              )
             )}
 
             {holdingUp.length > 0 && (
@@ -820,7 +830,7 @@ function BlockForm({
   holder,
   onCancel,
 }: {
-  onBlock: (reason: string) => void
+  onBlock: (reason: string, until?: string) => void
   /** Название части, которая держит: форма открыта не «вообще», а про
    *  неё, и спрашивать надо про неё же. */
   holder?: string
@@ -828,6 +838,7 @@ function BlockForm({
 }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const [until, setUntil] = useState('')
 
   // Форма про часть открыта всегда: её открыло нажатие «Держит»,
   // и вторая кнопка «Заблокировать…» была бы вопросом, на который
@@ -850,8 +861,9 @@ function BlockForm({
       onSubmit={(e) => {
         e.preventDefault()
         if (!reason.trim()) return
-        onBlock(reason.trim())
+        onBlock(reason.trim(), fromLocalInput(until) ?? undefined)
         setReason('')
+        setUntil('')
         setOpen(false)
       }}
     >
@@ -864,6 +876,12 @@ function BlockForm({
         aria-label="Причина блокировки"
         onChange={(e) => setReason(e.target.value)}
       />
+      {/* Срок необязателен, и подпись это говорит: пустое поле —
+          «пока не снимут», а не недоделка. */}
+      <label className="row row--tight small">
+        <span>Снимется само (необязательно)</span>
+        <input type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)} />
+      </label>
       {/* Глагол называет то, что произойдёт. «Отметить» не отвечает
           на вопрос «что отметить» и в ряду с «Отмена» читается как её
           пара — два похожих слова, из которых первое ещё и приглушено,

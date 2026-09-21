@@ -13,6 +13,7 @@ import {
   PRIORITIES,
   PRIORITY_NAMES,
   dueIsBurning,
+  blockUntilLabel,
   dueLabel,
   priorityLabel,
   priorityShort,
@@ -258,6 +259,10 @@ function CardViewInner({
   // часть упёрлась — задача не идёт. Раньше об этом знала только сама
   // часть, а с доски работа выглядела идущей.
   const stuckParts = blockedParts(subtasks)
+  // Срок блокировки — часть той же тревоги, а не новое поле: бюджет
+  // полей карточки жёсткий. Меньше суток до срока — пометка меняет вид:
+  // это и есть уведомление продукта, который никуда не пишет.
+  const until = card?.blocked?.until ? blockUntilLabel(card.blocked.until) : null
   const alarm = card?.blocked
     ? {
         kind: 'blocked',
@@ -644,6 +649,14 @@ function CardViewInner({
               {alarm && (
                 <span className="mark mark--alarm" title={alarm.title}>
                   {alarm.text}
+                </span>
+              )}
+              {/* Срок — своей строкой под тревогой, а не её хвостом:
+                  пометка держит две строки, и хвост уходил в многоточие
+                  ровно там, где он нужен. */}
+              {until && (
+                <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
+                  {until.expired ? until.text : `снимется ${until.text}`}
                 </span>
               )}
 

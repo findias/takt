@@ -572,6 +572,10 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		return err
 	}
 
+	if err := f.blockDeadlines(b, ids); err != nil {
+		return err
+	}
+
 	// Обсуждение с веткой: одна реплика в панели не показывает ничего.
 	root, err := f.boards.AddComment(f.ctx, f.orgID, f.owner(), b.ID,
 		ids["Выпустить релиз склада"],
@@ -680,6 +684,44 @@ func (f *filler) fillPlatforma(b board.Info) error {
 }
 
 // --- отметки времени ---
+
+// blockDeadlines заводит блокировки со сроком: одну через два дня,
+// одну, истекающую сегодня, и одну, уже снятую сроком в прошлом. Без
+// них ни подпись срока на карточке, ни отбор «истекает», ни строка
+// ленты «снята сама» не проверяются глазом (ROADMAP 28.1).
+func (f *filler) blockDeadlines(b board.Info, ids map[string]string) error {
+	soon := time.Now().Add(48 * time.Hour).Truncate(time.Hour)
+	today := time.Now().Add(5 * time.Hour).Truncate(time.Hour)
+	for _, c := range []struct {
+		title, reason string
+		until         time.Time
+	}{
+		{"Обновить регламент приёмки", "ждём подписанный акт от склада", soon},
+		{"Разобрать обращения за неделю", "выгрузка обращений будет после обеда", today},
+		{"Перевезти стенд в новый офис", "ждали ключи от серверной", time.Now().Add(time.Hour)},
+	} {
+		if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
+			"cardId": ids[c.title], "reason": c.reason, "until": c.until.Format(time.RFC3339),
+		}); err != nil {
+			return fmt.Errorf("блокировка со сроком %q: %w", c.title, err)
+		}
+	}
+	// Третья — в прошлом: срок вышел неделю назад, и снимает её тот же
+	// проход, что и на живом сервере. Прошлое здесь сочиняется в обход
+	// операций, как и в backdate: сервер срок в прошлом не примет.
+	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(f.ctx, `
+			update card_blocks
+			   set blocked_at = now() - interval '9 days',
+			       blocked_until = now() - interval '7 days'
+			 where card_id = $1 and unblocked_at is null`, ids["Перевезти стенд в новый офис"])
+		return err
+	}); err != nil {
+		return err
+	}
+	_, err := f.boards.ExpireBlocks(f.ctx)
+	return err
+}
 
 // backdate разносит отметки потока по прошлым неделям.
 //

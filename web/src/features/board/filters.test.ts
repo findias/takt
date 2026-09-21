@@ -63,6 +63,7 @@ test('адрес переживает круг: разобрали, собрал
     aging: true,
     urgent: true,
     due: true,
+    expiring: true,
     iteration: 'it-1',
   }
   const query = filtersToQuery(filters)
@@ -224,4 +225,29 @@ test('число действующих отборов не считает по�
   // Каждая метка считается отдельно: убирают их тоже по одной.
   assert.equal(activeCount({ ...EMPTY, labels: ['a', 'b'] }), 2)
   assert.equal(activeCount({ ...EMPTY, blocked: true, aging: true }), 2)
+})
+
+// Срок блокировки (ROADMAP 28.1): отбор «блокировка истекает» стоит
+// рядом с «Заблокированные» и спрашивает, что снимется само в ближайшие
+// сутки, — это и есть уведомление продукта, который никуда не пишет.
+test('блокировка истекает — срок в ближайшие сутки или уже вышел', () => {
+  const now = Date.parse('2026-09-21T10:00:00Z')
+  const filters: Filters = { ...EMPTY, expiring: true }
+  const at = { ...ctx, now }
+  const blocked = (until?: string) => ({
+    ...card(),
+    blocked: { id: 'b', reason: 'ждём поставку', blockedAt: '2026-09-20T10:00:00Z', until },
+  })
+
+  assert.equal(matches(blocked('2026-09-21T18:00:00Z'), filters, at), true)
+  assert.equal(matches(blocked('2026-09-22T09:59:00Z'), filters, at), true)
+  // Срок вышел, а проход сервера ещё не добежал: такая карточка
+  // тоже «истекает» — снимется в ближайшую минуту.
+  assert.equal(matches(blocked('2026-09-21T09:59:00Z'), filters, at), true)
+  assert.equal(matches(blocked('2026-09-25T10:00:00Z'), filters, at), false)
+  // Бессрочная не истекает никогда.
+  assert.equal(matches(blocked(), filters, at), false)
+  assert.equal(matches(card(), filters, at), false)
+  assert.equal(activeCount(filters), 1)
+  assert.equal(parseFilters(filtersToQuery(filters)).expiring, true)
 })

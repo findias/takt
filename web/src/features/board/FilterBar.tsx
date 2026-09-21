@@ -31,6 +31,7 @@ export function FilterBar({
   labels,
   iterations,
   hidden,
+  hasBlockDeadlines,
   onChange,
 }: {
   filters: Filters
@@ -41,6 +42,10 @@ export function FilterBar({
   iterations: Iteration[]
   /** Сколько карточек скрыто фильтром — иначе доска выглядит опустевшей. */
   hidden: number
+  /** Есть ли на доске блокировки со сроком. Нет — отбор «истекает»
+   *  не показывается: вопрос, который здесь не задать, только
+   *  растягивает строку. */
+  hasBlockDeadlines: boolean
   onChange: (next: Filters) => void
 }) {
   const [text, setText] = useState(filters.text)
@@ -197,6 +202,20 @@ export function FilterBar({
           />
           <span>Заблокированные</span>
         </label>
+
+        {/* Рядом с «Заблокированными»: это те из них, что снимутся сами
+            в ближайшие сутки. Уведомлений продукт не шлёт — этот отбор
+            и отвечает на «что вот-вот пойдёт». */}
+        {(hasBlockDeadlines || filters.expiring) && (
+        <label className="row row--tight small">
+          <input
+            type="checkbox"
+            checked={filters.expiring}
+            onChange={(e) => onChange({ ...filters, expiring: e.target.checked })}
+          />
+          <span>Блокировка истекает</span>
+        </label>
+        )}
 
         <label className="row row--tight small">
           <input

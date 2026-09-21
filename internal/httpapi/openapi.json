@@ -109,7 +109,9 @@
           "card.committed",
           "card.moved",
           "card.blocked",
+          "card.block_until",
           "card.unblocked",
+          "card.block_expired",
           "card.linked",
           "card.unlinked",
           "card.commented",
@@ -147,7 +149,7 @@
       "Operation": {
         "type": "object",
         "required": ["operationId", "type", "payload"],
-        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз.",
+        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз. У блокировки может быть срок: BLOCK_CARD принимает необязательный `until` — момент ISO 8601 с зоной, позже текущего; SET_BLOCK_UNTIL меняет его у открытой блокировки, `until: null` делает её бессрочной. Вышедший срок снимает сам сервер — событием card.block_expired без автора.",
         "properties": {
           "operationId": { "type": "string", "format": "uuid" },
           "type": {
@@ -172,6 +174,7 @@
               "SET_CARD_DONE",
               "BLOCK_CARD",
               "UNBLOCK_CARD",
+              "SET_BLOCK_UNTIL",
               "SET_CARD_FIELD",
               "ADD_TO_ITERATION",
               "REMOVE_FROM_ITERATION"
@@ -316,7 +319,7 @@
     "/boards/{id}/cards/{cardId}": {
       "get": {
         "summary": "Одна карточка",
-        "description": "Разрешение boards:read. Отвечает на «что там случилось» тому, кто пришёл от вебхука с парой идентификаторов: раньше ради одной карточки приходилось читать снимок доски целиком. Метки и исполнители названы полностью, а не идентификаторами, — иначе за именами пришлось бы идти за тем же снимком. Прогресс по подзадачам и открытая блокировка считаются тем же кодом, что и в снимке доски.",
+        "description": "Разрешение boards:read. Отвечает на «что там случилось» тому, кто пришёл от вебхука с парой идентификаторов: раньше ради одной карточки приходилось читать снимок доски целиком. Метки и исполнители названы полностью, а не идентификаторами, — иначе за именами пришлось бы идти за тем же снимком. Прогресс по подзадачам и открытая блокировка считаются тем же кодом, что и в снимке доски; у блокировки со сроком есть `blocked.until`.",
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
           { "name": "cardId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }

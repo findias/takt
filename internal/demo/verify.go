@@ -98,6 +98,15 @@ func Verify(ctx context.Context, db *store.Store) error {
 			   from labels where org_id = $1 and archived_at is null`,
 		},
 		{
+			"блокировка со сроком",
+			`select exists (select 1 from card_blocks
+			                 where org_id = $1 and unblocked_at is null and blocked_until is not null)`,
+		},
+		{
+			"блокировка, снятая сроком",
+			`select exists (select 1 from card_events where org_id = $1 and type = 'block_expired')`,
+		},
+		{
 			"убранная в архив метка на карточке",
 			`select exists (select 1 from card_labels cl join labels l on l.id = cl.label_id
 			                 where cl.org_id = $1 and l.archived_at is not null)`,

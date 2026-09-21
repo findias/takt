@@ -167,10 +167,19 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>«Горит»</td><td>highest and high priority</td></tr>
 <tr><td>«Срок подходит»</td><td>due today, tomorrow, the day after, or overdue</td></tr>
 <tr><td>«Заблокированные»</td><td>those where work has stalled</td></tr>
+<tr><td>«Блокировка истекает»</td><td>blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks</td></tr>
 <tr><td>«Дольше обещанного»</td><td>those running longer than the board&#39;s promise</td></tr>
 <tr><td>Iteration</td><td>attached to an iteration; separately, &#34;not in an iteration&#34;</td></tr>
 </tbody>
 </table></div>
+<h2>Blocks with a deadline</h2>
+<p>A block may be given a moment when it lifts itself — «Снимется само» when blocking, «Срок блокировки» on a blocked card. Leave it empty and the block stays until someone lifts it; that is the normal case.</p>
+<ul>
+<li>The deadline is a moment, not a day, shown in your own time zone. A moment in the past is refused: to lift a block now, use «Снять блокировку».</li>
+<li>The server checks every minute, and once at start-up. The block is closed at its deadline, not at the moment of the check, so time spent blocked does not depend on when the check ran.</li>
+<li>It appears in the card&#39;s history and in «Изменения» as «блокировка снята сама: вышел срок», without an author, and subscribers receive <code>card.block_expired</code>.</li>
+<li>Less than a day before the deadline, the line under the card becomes bold and dashed. Nothing is mailed: the board is where you see it.</li>
+</ul>
 <h2>Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority.</p>
 <h2>Labels</h2>
@@ -255,7 +264,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2>The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-9-g4d29d8a-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-10-gf6035a7-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

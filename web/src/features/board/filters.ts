@@ -1,6 +1,6 @@
 import type { Card } from '../../shared/api/index.ts'
 import { agingLabel } from '../../entities/board/model.ts'
-import { dueIsHot } from '../../entities/card/model.ts'
+import { blockUntilLabel, dueIsHot } from '../../entities/card/model.ts'
 
 /**
  * Что показывать на доске.
@@ -30,6 +30,10 @@ export type Filters = {
   labels: string[]
   /** Только заблокированные. */
   blocked: boolean
+  /** Блокировки, которые снимутся сами в ближайшие сутки или срок
+   *  которых уже вышел: что вот-вот пойдёт без участия человека.
+   *  Уведомлений продукт не шлёт — этот отбор их и заменяет. */
+  expiring: boolean
   /** Только те, что идут дольше обещанного. */
   aging: boolean
   /** Только высокий и наивысший. Отбор один, а не выбор уровня:
@@ -50,6 +54,7 @@ export const EMPTY: Filters = {
   assignee: null,
   labels: [],
   blocked: false,
+  expiring: false,
   aging: false,
   urgent: false,
   due: false,
@@ -70,6 +75,7 @@ export function isEmpty(f: Filters): boolean {
     f.assignee === null &&
     f.labels.length === 0 &&
     !f.blocked &&
+    !f.expiring &&
     !f.aging &&
     !f.urgent &&
     !f.due &&
@@ -91,6 +97,7 @@ export function activeCount(f: Filters): number {
     (f.assignee === null ? 0 : 1) +
     f.labels.length +
     (f.blocked ? 1 : 0) +
+    (f.expiring ? 1 : 0) +
     (f.aging ? 1 : 0) +
     (f.urgent ? 1 : 0) +
     (f.due ? 1 : 0) +
@@ -105,6 +112,7 @@ export function parseFilters(query: URLSearchParams): Filters {
     assignee: query.get('assignee'),
     labels: labels ? labels.split(',').filter(Boolean) : [],
     blocked: query.get('blocked') === '1',
+    expiring: query.get('expiring') === '1',
     aging: query.get('aging') === '1',
     urgent: query.get('urgent') === '1',
     due: query.get('due') === '1',
@@ -127,6 +135,7 @@ export function filtersToQuery(f: Filters, base?: URLSearchParams): URLSearchPar
   set('assignee', f.assignee)
   set('labels', f.labels.join(','))
   set('blocked', f.blocked ? '1' : null)
+  set('expiring', f.expiring ? '1' : null)
   set('aging', f.aging ? '1' : null)
   set('urgent', f.urgent ? '1' : null)
   set('due', f.due ? '1' : null)
@@ -175,6 +184,11 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
   // Заблокирована сама или стоит её часть: и то и другое — ответ
   // на «что не идёт».
   if (f.blocked && !card.blocked && !ctx.partsBlocked(card.id)) return false
+
+  if (f.expiring) {
+    const until = card.blocked?.until
+    if (!until || !blockUntilLabel(until, new Date(ctx.now ?? Date.now())).soon) return false
+  }
 
   if (f.aging && !agingLabel(card, ctx.sleDays, ctx.now)) return false
 

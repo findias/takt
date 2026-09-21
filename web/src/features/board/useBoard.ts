@@ -932,13 +932,23 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // Держащая карточка — необязательная часть блокировки: «нет доступа
   // к стенду» карточки не имеет, а «ждём согласования сметы» имеет,
   // и по ней ходят.
+  //
+  // Срок тоже необязателен: пусто — «пока не снимут». Уходит моментом
+  // ISO с зоной — «до пятницы, 18:00» у смотрящего, а не у сервера.
   const blockCard = useCallback(
-    (cardId: string, reason: string, blockingCard?: string) =>
+    (cardId: string, reason: string, blockingCard?: string, until?: string) =>
       runAndReload(
         'BLOCK_CARD',
-        { cardId, reason, blockingCard },
+        { cardId, reason, blockingCard, until },
         'Не удалось отметить блокировку',
       ),
+    [runAndReload],
+  )
+  // Срок меняют во время блокировки: поставку перенесли. `null` —
+  // бессрочная. Причина не трогается.
+  const setBlockUntil = useCallback(
+    (cardId: string, until: string | null) =>
+      runAndReload('SET_BLOCK_UNTIL', { cardId, until }, 'Не удалось изменить срок блокировки'),
     [runAndReload],
   )
   const unblockCard = useCallback(
@@ -993,6 +1003,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     unlinkCards,
     setCardDone,
     blockCard,
+    setBlockUntil,
     unblockCard,
     setCardField,
     addToIteration,

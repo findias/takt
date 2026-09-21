@@ -55,6 +55,7 @@
 | Т12 | Выгрузка всех данных организации одним файлом | `internal/httpapi/export_test.go` |
 | Т13 | Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации | `internal/board/labels_scope_test.go`, `internal/board/labels_test.go`, `internal/httpapi/labels_test.go` |
 | Т14 | Метку заводят прямо с карточки, не плодя двойников: одноимённая предлагается существующей, убранная — возвратом | `web/src/features/board/LabelPicker.dom.test.tsx`, `web/src/entities/label/model.test.ts`, `web/e2e/board.spec.ts` |
+| Т15 | У блокировки может быть срок: она снимается сама моментом срока, без автора, в любой организации, и видна заранее | `internal/board/block_until_test.go`, `web/src/entities/card/model.test.ts`, `web/e2e/board.spec.ts` |
 
 ## Пределы
 

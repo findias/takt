@@ -263,7 +263,7 @@ func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) 
 	// за лишний запрос и лишний замок незачем.
 	switch req.Type {
 	case "MOVE_CARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
-		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD":
+		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD", "SET_BLOCK_UNTIL":
 	default:
 		return "", nil
 	}
@@ -494,6 +494,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return blockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNBLOCK_CARD":
 		return unblockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_BLOCK_UNTIL":
+		return setBlockUntil(ctx, tx, orgID, actorID, boardID, req.Payload)
 	default:
 		return Patch{}, badRequestf("неизвестный тип операции %q", req.Type)
 	}
@@ -1177,10 +1179,17 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 			return err
 		}
 	}
+	// Без автора — служебная задача: снятие по сроку. Пустая строка
+	// в колонку-uuid не ляжет, а «без автора» и должно читаться как
+	// отсутствие, а не как запись с потерянным именем.
+	var actor any = actorID
+	if actorID == "" {
+		actor = nil
+	}
 	if _, err := tx.Exec(ctx, `
 		insert into card_events (org_id, board_id, card_id, actor_id, type, from_column, to_column, payload)
 		values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-		orgID, boardID, cardID, actorID, kind, from, to, string(body)); err != nil {
+		orgID, boardID, cardID, actor, kind, from, to, string(body)); err != nil {
 		return err
 	}
 
@@ -1192,7 +1201,7 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 		"event":   EventPrefix + kind,
 		"boardId": boardID,
 		"cardId":  cardID,
-		"actorId": actorID,
+		"actorId": actor,
 		"payload": json.RawMessage(body),
 		"at":      time.Now().UTC(),
 	})

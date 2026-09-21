@@ -219,6 +219,10 @@ type Block struct {
 	// карточку переименуют, а журнал блокировок обязан остаться
 	// правдой о прошлом — и заодно по ссылке видно, что с ней стало.
 	BlockingCard *string `json:"blockingCard,omitempty"`
+	// Когда снимется сама. Пусто — «пока не снимут», и это норма, а не
+	// недоделка. Момент, а не дата: «до пятницы, 18:00» — конкретное
+	// время, и клиент показывает его в зоне смотрящего.
+	Until *time.Time `json:"until,omitempty"`
 }
 
 // Link — связь между карточками.
@@ -635,7 +639,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	commentRows.Close()
 
 	blockRows, err := tx.Query(ctx, `
-		select b.card_id, b.id, b.reason, b.blocked_at, b.blocking_card
+		select b.card_id, b.id, b.reason, b.blocked_at, b.blocking_card, b.blocked_until
 		  from card_blocks b
 		  join cards c on c.id = b.card_id
 		 where c.board_id = $1 and b.unblocked_at is null`, boardID)
@@ -646,7 +650,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for blockRows.Next() {
 		var cardID string
 		var b Block
-		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard); err != nil {
+		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until); err != nil {
 			return err
 		}
 		if card := byID[cardID]; card != nil {
