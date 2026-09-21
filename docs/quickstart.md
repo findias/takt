@@ -50,7 +50,13 @@ it went. Everyone with this board open sees the change immediately.
 
 If work has stalled, press **«Заблокировать»** (block) and write the
 reason. The reason shows on the board itself: "blocked" with no
-explanation answers no question at all.
+explanation answers no question at all. If you know when the wait
+ends, fill in **«Снимется само (необязательно)»** — the block lifts
+itself at that moment.
+
+To mark what kind of work it is, add a label: press «+ метка» on the
+card and type. A label that does not exist yet is created right there —
+for this board, a subdivision, or the whole organisation.
 
 ## 5. Carry it to the end
 

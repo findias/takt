@@ -62,6 +62,12 @@ test file backing each promise, is in
 - **Board.** Columns, cards, moving with the mouse and from the
   keyboard (`Ctrl` with arrows), manual order. A move applies
   instantly and survives a lost connection and a page reload.
+- **Labels in three scopes.** Organisation, subdivision or a single
+  board; every list says where a label comes from, and a missing one
+  is created right from the card.
+- **Blocks with a reason and a deadline.** The block says what the work
+  is waiting for; given a deadline, it lifts itself, and the time spent
+  blocked stays honest in the metrics.
 - **Flow.** Columns are marked up: kind (`queue`, `in_progress`,
   `done`), start and finish points, entry policy. Cycle time,
   throughput, cumulative flow and a percentile forecast come from that

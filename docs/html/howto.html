@@ -136,6 +136,34 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Compare cards against each other</h3>
 <p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
+<h3>Put a label on a card</h3>
+<ol>
+<li>On the card press «+ метка» (or the coloured dots, if it already carries labels), or open the card and find <strong>«Метки»</strong> (labels) on the <strong>«Работа»</strong> tab.</li>
+<li>Start typing. The list offers the labels that apply on this board; next to each one it says where it comes from — this board, a subdivision, or the whole organisation.</li>
+<li>Pick one, or press <code>Enter</code>.</li>
+</ol>
+<p>To label several cards at once, select them and use the bar that appears at the bottom of the screen.</p>
+<h3>Create a label that does not exist yet</h3>
+<p>Right from the card: type the new name into the label picker. Under the list the picker offers where the label should apply:</p>
+<ul>
+<li><strong>this board only</strong> — nobody else will see it offered;</li>
+<li><strong>a subdivision</strong> — on its boards and on those of everything inside it;</li>
+<li><strong>the whole organisation</strong> — on every board.</li>
+</ul>
+<p>Pick one and the label is created and hung in one go, with a colour chosen for you. You are only offered the places you are allowed to create labels in: a board you can edit, a subdivision you belong to or run, and the organisation.</p>
+<p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>«Команда»</strong>, in the <strong>«Метки»</strong> section.</p>
+<h3>Block work until a date</h3>
+<ol>
+<li>Open the card&#39;s <strong>«…»</strong> menu and choose <strong>«Заблокировать…»</strong> (block), or press <strong>«Заблокировать…»</strong> in the card panel.</li>
+<li>Write what you are waiting for.</li>
+<li>If you know when it ends, fill in <strong>«Снимется само (необязательно)»</strong> (lifts itself, optional): a date and a time.</li>
+</ol>
+<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>«Блокировка истекает»</strong> gathers such cards. To move the deadline, open the card and press <strong>«Перенести срок»</strong>; to lift the block now, press <strong>«Снять блокировку»</strong>.</p>
+<h3>Make a column wider</h3>
+<p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
+<p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
+<h3>Switch to the dark theme or a denser board</h3>
+<p>The <strong>«Оформление»</strong> (appearance) button with the half-circle icon, in the header, opens a menu: <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark), <strong>«Как в системе»</strong> (as the system), and <strong>«Плотнее»</strong> (denser). The choice is remembered in this browser.</p>
 <h3>Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
@@ -149,9 +177,9 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Run a sprint or a release</h3>
 <ol>
 <li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
-<li>Set a name, a start and an end.</li>
+<li>Set a name, a start and an end, press <strong>«Завести итерацию»</strong>.</li>
 <li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
-<li>When the time is up press <strong>«закрыть»</strong> (close) — a report appears: what made it and what did not.</li>
+<li>When the time is up press <strong>«Закрыть итерацию»</strong> (close the iteration). It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
 </ol>
 <h2>The organisation</h2>
 <h3>Invite someone</h3>
@@ -163,7 +191,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
 <h3>Close a board to outsiders</h3>
 <ol>
-<li>Open the board and press <strong>«Доступ»</strong> (access) in the header.</li>
+<li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
 <li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
 <li>For the last one, add people to the list.</li>
 </ol>
@@ -178,10 +206,11 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Set up subdivisions</h3>
 <ol>
 <li>The <strong>«Структура»</strong> (structure) tab.</li>
-<li>Press <strong>«Завести подразделение»</strong> (create a subdivision), enter a name.</li>
-<li>To nest one inside another, create the child inside the node.</li>
-<li>Appoint a subdivision administrator — they will run their own subtree.</li>
+<li>Press <strong>«Новое подразделение»</strong> (new subdivision), enter a name.</li>
+<li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>«Завести отдел…»</strong> (create a department inside it), <strong>«Переименовать…»</strong> (rename), <strong>«Перенести…»</strong> (move elsewhere in the tree), <strong>«Убрать подразделение»</strong> (remove). A question opens a field right under the row.</li>
+<li>Appoint a subdivision administrator in <strong>«Кто за что отвечает»</strong> (who runs what) — they will run their own subtree.</li>
 </ol>
+<p>A removed subdivision is not gone: it waits under <strong>«Убранные подразделения»</strong> (removed subdivisions) and comes back with <strong>«Вернуть»</strong> (restore).</p>
 <h2>Integrations</h2>
 <h3>Issue a key for an integration</h3>
 <ol>
@@ -190,6 +219,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Press <strong>«Завести»</strong> and copy the key — it is shown once.</li>
 </ol>
 <p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
+<p><strong>«Отозвать ключ»</strong> (revoke) asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
 <h3>Receive events in your own system</h3>
 <ol>
 <li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
@@ -219,7 +249,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3>Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-14-g2b10718-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-18-gf74b94b-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

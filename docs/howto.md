@@ -51,6 +51,68 @@ flat list: age, due date and estimate side by side.
 Click a column heading to sort. The order lives in the address, so a
 sorted list can be sent to someone.
 
+### Put a label on a card
+
+1. On the card press «+ метка» (or the coloured dots, if it already
+   carries labels), or open the card and find **«Метки»** (labels) on
+   the **«Работа»** tab.
+2. Start typing. The list offers the labels that apply on this board;
+   next to each one it says where it comes from — this board, a
+   subdivision, or the whole organisation.
+3. Pick one, or press `Enter`.
+
+To label several cards at once, select them and use the bar that
+appears at the bottom of the screen.
+
+### Create a label that does not exist yet
+
+Right from the card: type the new name into the label picker. Under
+the list the picker offers where the label should apply:
+
+- **this board only** — nobody else will see it offered;
+- **a subdivision** — on its boards and on those of everything inside it;
+- **the whole organisation** — on every board.
+
+Pick one and the label is created and hung in one go, with a colour
+chosen for you. You are only offered the places you are allowed to
+create labels in: a board you can edit, a subdivision you belong to or
+run, and the organisation.
+
+If a label with that name already exists where the places overlap, the
+picker offers that label instead of a second one, and an archived one
+is offered back from the archive. Colours, archiving and the full list
+live on **«Команда»**, in the **«Метки»** section.
+
+### Block work until a date
+
+1. Open the card's **«…»** menu and choose **«Заблокировать…»** (block),
+   or press **«Заблокировать…»** in the card panel.
+2. Write what you are waiting for.
+3. If you know when it ends, fill in **«Снимется само (необязательно)»**
+   (lifts itself, optional): a date and a time.
+
+At that moment the block lifts itself: nobody has to come back to the
+card. The day before, the line under the card becomes bold, and the
+filter **«Блокировка истекает»** gathers such cards. To move the
+deadline, open the card and press **«Перенести срок»**; to lift the
+block now, press **«Снять блокировку»**.
+
+### Make a column wider
+
+Drag the right edge of the column header. From the keyboard: focus
+the edge with `Tab` and use the arrows. Double-click the edge to return
+to the usual width.
+
+The width is remembered in this browser, for you only: a colleague's
+board stays as it was.
+
+### Switch to the dark theme or a denser board
+
+The **«Оформление»** (appearance) button with the half-circle icon, in
+the header, opens a menu: **«Светлая»** (light), **«Тёмная»** (dark),
+**«Как в системе»** (as the system), and **«Плотнее»** (denser). The
+choice is remembered in this browser.
+
 ### Split work into parts
 
 1. Open the card, **«Работа»** (work) tab.
@@ -73,10 +135,12 @@ Deleting for good asks for confirmation and cannot be undone.
 ### Run a sprint or a release
 
 1. In the strip above the board press **«+ итерация»** (+ iteration).
-2. Set a name, a start and an end.
+2. Set a name, a start and an end, press **«Завести итерацию»**.
 3. On cards, pick the iteration (**«Работа»** tab).
-4. When the time is up press **«закрыть»** (close) — a report appears:
-   what made it and what did not.
+4. When the time is up press **«Закрыть итерацию»** (close the
+   iteration). It asks first, because closing freezes what the
+   iteration contains for good. A report appears: what made it and
+   what did not.
 
 ## The organisation
 
@@ -91,7 +155,8 @@ it gets lost, revoke the invitation and create a new one.
 
 ### Close a board to outsiders
 
-1. Open the board and press **«Доступ»** (access) in the header.
+1. Open the board and press the visibility button in the header — it
+   starts with `Видна:` (visible to).
 2. Choose the visibility:
    - **«Всей организации»** — everyone in the organisation;
    - **«Своей команде»** — people in the subdivision that owns it;
@@ -116,11 +181,18 @@ If someone left but the work must stay traceable, the first is enough.
 ### Set up subdivisions
 
 1. The **«Структура»** (structure) tab.
-2. Press **«Завести подразделение»** (create a subdivision), enter a
-   name.
-3. To nest one inside another, create the child inside the node.
-4. Appoint a subdivision administrator — they will run their own
-   subtree.
+2. Press **«Новое подразделение»** (new subdivision), enter a name.
+3. Everything else about a subdivision is in the **⋮** menu at the end
+   of its row: **«Завести отдел…»** (create a department inside it),
+   **«Переименовать…»** (rename), **«Перенести…»** (move elsewhere in
+   the tree), **«Убрать подразделение»** (remove). A question opens a
+   field right under the row.
+4. Appoint a subdivision administrator in **«Кто за что отвечает»**
+   (who runs what) — they will run their own subtree.
+
+A removed subdivision is not gone: it waits under **«Убранные
+подразделения»** (removed subdivisions) and comes back with
+**«Вернуть»** (restore).
 
 ## Integrations
 
@@ -132,6 +204,9 @@ If someone left but the work must stay traceable, the first is enough.
 
 For the directory (SCIM), issue a **separate** key: such a key works
 only against `/scim/v2` and gives no access to boards.
+
+**«Отозвать ключ»** (revoke) asks first: the key stops working at once,
+and nothing brings it back — you issue a new one.
 
 ### Receive events in your own system
 

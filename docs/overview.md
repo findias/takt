@@ -33,15 +33,18 @@ jumping straight in, and look things up in a table.
 
 **Board.** Columns are stages, cards are the work, and their order is
 manual. Move a card with the mouse or from the keyboard. Columns carry
-work-in-progress limits and entry rules. A blocked card carries the
-reason, not just the status. Cards split into subtasks and link to each
+work-in-progress limits and entry rules; their width is dragged with
+the mouse. A blocked card carries the reason, not just the status, and
+a block may be given a deadline at which it lifts itself. Labels belong
+to the organisation, a subdivision or a single board, say where they
+come from, and are created right from the card. Cards split into subtasks and link to each
 other — including across boards owned by different teams.
 
 **Three views of the same data.** The board answers "how is the work
 going", the table answers "what is the oldest and what did we promise",
 the change feed answers "what happened".
 
-**Filtering and grouping.** Eight filter conditions, four ways to slice
+**Filtering and grouping.** Nine filter conditions, four ways to slice
 the board into swimlanes, saved views. All of it lives in the address
 bar: you send a configured view as a link.
 

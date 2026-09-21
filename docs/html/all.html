@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-14-g2b10718-dirty.</p>
+<p>Every section in one file. Version v0.2.3-18-gf74b94b-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -138,9 +138,9 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <p>The split is not accidental. Learning, instructions, lookup and explanation answer different questions, and mixed into one text they get in each other&#39;s way: you learn in order, solve a problem by jumping straight in, and look things up in a table.</p>
 <h2>What the product does</h2>
-<p><strong>Board.</strong> Columns are stages, cards are the work, and their order is manual. Move a card with the mouse or from the keyboard. Columns carry work-in-progress limits and entry rules. A blocked card carries the reason, not just the status. Cards split into subtasks and link to each other — including across boards owned by different teams.</p>
+<p><strong>Board.</strong> Columns are stages, cards are the work, and their order is manual. Move a card with the mouse or from the keyboard. Columns carry work-in-progress limits and entry rules; their width is dragged with the mouse. A blocked card carries the reason, not just the status, and a block may be given a deadline at which it lifts itself. Labels belong to the organisation, a subdivision or a single board, say where they come from, and are created right from the card. Cards split into subtasks and link to each other — including across boards owned by different teams.</p>
 <p><strong>Three views of the same data.</strong> The board answers &#34;how is the work going&#34;, the table answers &#34;what is the oldest and what did we promise&#34;, the change feed answers &#34;what happened&#34;.</p>
-<p><strong>Filtering and grouping.</strong> Eight filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
+<p><strong>Filtering and grouping.</strong> Nine filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
 <p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
 <p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
 <p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
@@ -198,7 +198,8 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <figure><img src="screenshots/карточка.png" alt="A card" loading="lazy">
 <figcaption>A card</figcaption></figure>
-<p>If work has stalled, press <strong>«Заблокировать»</strong> (block) and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all.</p>
+<p>If work has stalled, press <strong>«Заблокировать»</strong> (block) and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all. If you know when the wait ends, fill in <strong>«Снимется само (необязательно)»</strong> — the block lifts itself at that moment.</p>
+<p>To mark what kind of work it is, add a label: press «+ метка» on the card and type. A label that does not exist yet is created right there — for this board, a subdivision, or the whole organisation.</p>
 <h2>5. Carry it to the end</h2>
 <p>Move the card into «Готово». After a few such cards, open <strong>«Поток»</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
 <h2>6. Invite a colleague</h2>
@@ -237,6 +238,34 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Compare cards against each other</h3>
 <p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
+<h3>Put a label on a card</h3>
+<ol>
+<li>On the card press «+ метка» (or the coloured dots, if it already carries labels), or open the card and find <strong>«Метки»</strong> (labels) on the <strong>«Работа»</strong> tab.</li>
+<li>Start typing. The list offers the labels that apply on this board; next to each one it says where it comes from — this board, a subdivision, or the whole organisation.</li>
+<li>Pick one, or press <code>Enter</code>.</li>
+</ol>
+<p>To label several cards at once, select them and use the bar that appears at the bottom of the screen.</p>
+<h3>Create a label that does not exist yet</h3>
+<p>Right from the card: type the new name into the label picker. Under the list the picker offers where the label should apply:</p>
+<ul>
+<li><strong>this board only</strong> — nobody else will see it offered;</li>
+<li><strong>a subdivision</strong> — on its boards and on those of everything inside it;</li>
+<li><strong>the whole organisation</strong> — on every board.</li>
+</ul>
+<p>Pick one and the label is created and hung in one go, with a colour chosen for you. You are only offered the places you are allowed to create labels in: a board you can edit, a subdivision you belong to or run, and the organisation.</p>
+<p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>«Команда»</strong>, in the <strong>«Метки»</strong> section.</p>
+<h3>Block work until a date</h3>
+<ol>
+<li>Open the card&#39;s <strong>«…»</strong> menu and choose <strong>«Заблокировать…»</strong> (block), or press <strong>«Заблокировать…»</strong> in the card panel.</li>
+<li>Write what you are waiting for.</li>
+<li>If you know when it ends, fill in <strong>«Снимется само (необязательно)»</strong> (lifts itself, optional): a date and a time.</li>
+</ol>
+<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>«Блокировка истекает»</strong> gathers such cards. To move the deadline, open the card and press <strong>«Перенести срок»</strong>; to lift the block now, press <strong>«Снять блокировку»</strong>.</p>
+<h3>Make a column wider</h3>
+<p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
+<p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
+<h3>Switch to the dark theme or a denser board</h3>
+<p>The <strong>«Оформление»</strong> (appearance) button with the half-circle icon, in the header, opens a menu: <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark), <strong>«Как в системе»</strong> (as the system), and <strong>«Плотнее»</strong> (denser). The choice is remembered in this browser.</p>
 <h3>Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
@@ -250,9 +279,9 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Run a sprint or a release</h3>
 <ol>
 <li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
-<li>Set a name, a start and an end.</li>
+<li>Set a name, a start and an end, press <strong>«Завести итерацию»</strong>.</li>
 <li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
-<li>When the time is up press <strong>«закрыть»</strong> (close) — a report appears: what made it and what did not.</li>
+<li>When the time is up press <strong>«Закрыть итерацию»</strong> (close the iteration). It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
 </ol>
 <h2>The organisation</h2>
 <h3>Invite someone</h3>
@@ -264,7 +293,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
 <h3>Close a board to outsiders</h3>
 <ol>
-<li>Open the board and press <strong>«Доступ»</strong> (access) in the header.</li>
+<li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
 <li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
 <li>For the last one, add people to the list.</li>
 </ol>
@@ -279,10 +308,11 @@ color:var(--ink-3);font-size:.85rem}
 <h3>Set up subdivisions</h3>
 <ol>
 <li>The <strong>«Структура»</strong> (structure) tab.</li>
-<li>Press <strong>«Завести подразделение»</strong> (create a subdivision), enter a name.</li>
-<li>To nest one inside another, create the child inside the node.</li>
-<li>Appoint a subdivision administrator — they will run their own subtree.</li>
+<li>Press <strong>«Новое подразделение»</strong> (new subdivision), enter a name.</li>
+<li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>«Завести отдел…»</strong> (create a department inside it), <strong>«Переименовать…»</strong> (rename), <strong>«Перенести…»</strong> (move elsewhere in the tree), <strong>«Убрать подразделение»</strong> (remove). A question opens a field right under the row.</li>
+<li>Appoint a subdivision administrator in <strong>«Кто за что отвечает»</strong> (who runs what) — they will run their own subtree.</li>
 </ol>
+<p>A removed subdivision is not gone: it waits under <strong>«Убранные подразделения»</strong> (removed subdivisions) and comes back with <strong>«Вернуть»</strong> (restore).</p>
 <h2>Integrations</h2>
 <h3>Issue a key for an integration</h3>
 <ol>
@@ -291,6 +321,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Press <strong>«Завести»</strong> and copy the key — it is shown once.</li>
 </ol>
 <p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
+<p><strong>«Отозвать ключ»</strong> (revoke) asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
 <h3>Receive events in your own system</h3>
 <ol>
 <li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
@@ -387,6 +418,19 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li>It appears in the card&#39;s history and in «Изменения» as «блокировка снята сама: вышел срок», without an author, and subscribers receive <code>card.block_expired</code>.</li>
 <li>Less than a day before the deadline, the line under the card becomes bold and dashed. Nothing is mailed: the board is where you see it.</li>
 </ul>
+<h2>Colours</h2>
+<p>One colour, one meaning — so that red still means something on a busy board.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Colour</th><th>Where</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td>Red</td><td>a block, an overdue commitment, an error, an irreversible action</td><td>work has stopped, or a promise is broken</td></tr>
+<tr><td>Amber</td><td>past the board&#39;s promise, in the table and in the workload strip; a column over its WIP limit</td><td>worth a look; the work is still moving</td></tr>
+<tr><td>Neutral</td><td>a block deadline</td><td>the block will lift itself — rather good news</td></tr>
+</tbody>
+</table></div>
+<p>Actions follow the same rule: green adds something, grey removes something that can be brought back, red cannot be undone and always asks first.</p>
+<h2>What is remembered in the browser</h2>
+<p>Theme, density and column widths are personal and stay in the browser where they were set: the board of a colleague does not change, and on another computer you start with the defaults.</p>
 <h2>Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority.</p>
 <h2>Labels</h2>
@@ -431,7 +475,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <h2>Subscription events</h2>
-<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, link added, link removed, commented on, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
+<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
 <h2>Installation settings</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
@@ -501,7 +545,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong>Create a board</strong> — on the main screen: name, key, «Завести».</li>
 <li><strong>Create a card</strong> — at the bottom of a column, then <code>Enter</code>.</li>
 <li><strong>Move a card</strong> — drag it, or press <code>Ctrl</code> with an arrow.</li>
-<li><strong>Filter</strong> — the row above the board; it lives in the address bar, and «Сохранить вид» saves it as a named view.</li>
+<li><strong>Filter</strong> — «Отбор» above the board; it lives in the address bar, and «Сохранить вид» saves it as a named view.</li>
 <li><strong>Archive</strong> — the «…» menu on a card, «В архив»; «Вернуть» is offered next to the message.</li>
 </ol>
 <h2>When something looks wrong</h2>
@@ -1194,6 +1238,26 @@ sha256sum -c SHA256SUMS</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2>v0.3.0 — 21 September 2026</h2>
+<p><strong>Three migrations, all safe for the running version.</strong> <code>0052</code> gives labels a scope, <code>0053</code> gives blocks a deadline, <code>0054</code> rewrites the helper functions behind the access policies. They run in the <code>pre-upgrade</code> hook as usual; pods of v0.2.3 keep working on the new schema, and <code>helm rollback</code> of the pods needs nothing else.</p>
+<p><strong>The server now does one job on its own: it lifts blocks whose deadline has passed.</strong> It runs inside <code>takt serve</code> once at start-up and then every minute; nothing to configure. With several replicas each one runs it, and that is safe: a block is closed once, at its deadline, not at the moment of the check.</p>
+<p><strong>Subscriptions: two new events, not switched on by themselves.</strong> <code>card.block_until</code> (a block&#39;s deadline was set or changed) and <code>card.block_expired</code> (a block lifted itself, without an author). A subscription receives only the events ticked on it, so existing ones stay as they were; tick the new events to receive them. A receiver that rejects event types it does not know should learn these two.</p>
+<p><strong>The integration contract grows, nothing is taken away.</strong> <code>BLOCK_CARD</code> accepts an optional <code>until</code> (ISO 8601 with a zone, in the future); <code>SET_BLOCK_UNTIL</code> moves or clears it. A label created without a scope is an organisation label, exactly as before.</p>
+<p><strong>Operations and the board snapshot are about five times faster.</strong> The access-policy helpers were planned anew on every call; now the plan is kept. On the demo board an operation went from 71 to 18 ms and the snapshot from 71 to 13 ms. Nothing to do: it comes with <code>0054</code>.</p>
+<h3>For people using the board</h3>
+<ul>
+<li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
+<li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
+<li><strong>Blocks with a deadline.</strong> «Снимется само» when blocking; a day before, the card says so, and the filter «Блокировка истекает» gathers such cards. The time blocked stays honest in the flow metrics.</li>
+<li><strong>Column width is dragged with the mouse</strong> or set from the keyboard, and remembered in the browser. Neighbouring columns no longer merge into one surface.</li>
+<li><strong>The side panel makes room</strong> instead of covering the board&#39;s controls.</li>
+<li><strong>The board header is one line</strong>: views, search, «Отбор» with the number of active conditions, grouping, saved views; theme and density moved to the «Оформление» menu.</li>
+<li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
+<li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
+<li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
+</ul>
+<h3>Dependencies</h3>
+<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, <code>vitest</code> updated.</p>
 <h2>v0.2.3 — 27 August 2026</h2>
 <p><strong>The binary is released as a file of its own, and you can obtain its sum yourself.</strong> Next to the archive there is now <code>takt-vX.Y.Z-linux-amd64.bin</code> (and <code>-arm64</code>) with its own sum: that is what gets checked in place — an installation from the archive leaves <code>/opt/takt/takt</code> on disk, and the sum of the archive does not answer that question. The build is reproducible, and the release proves it: it rebuilds the binary from the same tag and compares byte for byte before publishing. So the sum need not be taken on our word — <code>GOOS=linux GOARCH=amd64 make binary</code> produces the same bytes.</p>
 <p><strong>The sums of a release verify for whoever downloaded it.</strong> Assets in a release lie flat — GitHub keeps no directories for them — while the sums were computed with paths (<code>sbom/takt-server.cdx.json</code>). For anyone who downloaded v0.2.2 and ran <code>sha256sum -c SHA256SUMS</code>, seven lines out of thirteen did not check out. The SBOM and the reports are now flattened before the sums are computed.</p>
@@ -1285,6 +1349,26 @@ sha256sum -c SHA256SUMS</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2>v0.3.0 — 21 сентября 2026</h2>
+<p><strong>Три миграции, все безопасны для работающей версии.</strong> <code>0052</code> даёт меткам область, <code>0053</code> — срок блокировке, <code>0054</code> переписывает служебные функции, на которых стоят политики доступа. Идут хуком <code>pre-upgrade</code>, как обычно; поды v0.2.3 продолжают работать на новой схеме, и откат подов через <code>helm rollback</code> ничего сверх этого не требует.</p>
+<p><strong>Сервер теперь делает одну работу сам: снимает блокировки с вышедшим сроком.</strong> Работает внутри <code>takt serve</code> — при запуске и дальше раз в минуту; настраивать нечего. При нескольких репликах её делает каждая, и это безопасно: блокировка закрывается один раз и моментом срока, а не моментом проверки.</p>
+<p><strong>Подписки: два новых события, сами не включаются.</strong> <code>card.block_until</code> (срок блокировки поставлен или изменён) и <code>card.block_expired</code> (блокировка снялась сама, без автора). Подписка получает только отмеченные на ней события, поэтому существующие остаются как были; чтобы получать новые, отметьте их. Приёмник, который отвергает незнакомые виды событий, должен узнать об этих двух.</p>
+<p><strong>Контракт для интеграций растёт, ничего не отнято.</strong> <code>BLOCK_CARD</code> принимает необязательный <code>until</code> (ISO 8601 с зоной, в будущем); <code>SET_BLOCK_UNTIL</code> сдвигает или убирает его. Метка, заведённая без области, — метка организации, как и прежде.</p>
+<p><strong>Операции и снимок доски примерно впятеро быстрее.</strong> Служебные функции политик доступа планировались заново на каждом вызове; теперь план сохраняется. На демонстрационной доске операция — с 71 до 18 мс, снимок — с 71 до 13 мс. Делать ничего не нужно: приходит с <code>0054</code>.</p>
+<h3>Для тех, кто работает на доске</h3>
+<ul>
+<li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
+<li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>
+<li><strong>Блокировка со сроком.</strong> «Снимется само» при блокировке; за сутки карточка об этом говорит, а отбор «Блокировка истекает» собирает такие карточки. Время в блоке честно попадает в метрики потока.</li>
+<li><strong>Ширину колонки тянут мышью</strong> или задают с клавиатуры, и браузер её запоминает. Соседние колонки больше не сливаются в одну поверхность.</li>
+<li><strong>Боковая панель уступает место</strong>, а не закрывает управление доской.</li>
+<li><strong>Шапка доски — одна строка</strong>: виды, поиск, «Отбор» с числом включённых условий, группировка, сохранённые виды; тема и плотность переехали в меню «Оформление».</li>
+<li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
+<li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
+<li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>
+</ul>
+<h3>Зависимости</h3>
+<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, обновлён <code>vitest</code>.</p>
 <h2>v0.2.3 — 27 августа 2026</h2>
 <p><strong>Бинарник выпускается отдельным файлом, и его сумму можно получить самому.</strong> Рядом с архивом теперь лежит <code>takt-vX.Y.Z-linux-amd64.bin</code> (и <code>-arm64</code>) со своей суммой: сверяют на месте именно его — у поставленного из архива на диске лежит <code>/opt/takt/takt</code>, а сумма архива на этот вопрос не отвечает. Сборка воспроизводима, и выпуск это проверяет: пересобирает бинарник тем же тегом и сверяет побайтово до публикации. Значит, сумму не обязательно брать у нас — <code>GOOS=linux GOARCH=amd64 make binary</code> даёт те же байты.</p>
 <p><strong>Суммы выпуска сходятся у того, кто его скачал.</strong> В выпуске файлы лежат плоско — каталогов у вложений GitHub не хранит, — а суммы считались с путями (<code>sbom/takt-server.cdx.json</code>). У всякого, кто скачал v0.2.2 и выполнил <code>sha256sum -c SHA256SUMS</code>, не сходились семь строк из тринадцати. Теперь состав и отчёты складываются в один уровень до подсчёта.</p>

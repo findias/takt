@@ -8,6 +8,69 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.3.0 — 21 September 2026
+
+**Three migrations, all safe for the running version.** `0052` gives
+labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
+helper functions behind the access policies. They run in the
+`pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
+schema, and `helm rollback` of the pods needs nothing else.
+
+**The server now does one job on its own: it lifts blocks whose
+deadline has passed.** It runs inside `takt serve` once at start-up and
+then every minute; nothing to configure. With several replicas each one
+runs it, and that is safe: a block is closed once, at its deadline, not
+at the moment of the check.
+
+**Subscriptions: two new events, not switched on by themselves.**
+`card.block_until` (a block's deadline was set or changed) and
+`card.block_expired` (a block lifted itself, without an author). A
+subscription receives only the events ticked on it, so existing ones
+stay as they were; tick the new events to receive them. A receiver
+that rejects event types it does not know should learn these two.
+
+**The integration contract grows, nothing is taken away.** `BLOCK_CARD`
+accepts an optional `until` (ISO 8601 with a zone, in the future);
+`SET_BLOCK_UNTIL` moves or clears it. A label created without a scope
+is an organisation label, exactly as before.
+
+**Operations and the board snapshot are about five times faster.** The
+access-policy helpers were planned anew on every call; now the plan is
+kept. On the demo board an operation went from 71 to 18 ms and the
+snapshot from 71 to 13 ms. Nothing to do: it comes with `0054`.
+
+### For people using the board
+
+- **Labels in three scopes.** A label belongs to the organisation, a
+  subdivision (and everything inside it) or a single board, and every
+  list says where it comes from. The same name cannot be used twice
+  where scopes overlap; a board label is seen only by those who see the
+  board.
+- **A label is created right from the card.** Type a name that does not
+  exist, pick where it applies, and it is created and hung in one go.
+- **Blocks with a deadline.** «Снимется само» when blocking; a day
+  before, the card says so, and the filter «Блокировка истекает» gathers
+  such cards. The time blocked stays honest in the flow metrics.
+- **Column width is dragged with the mouse** or set from the keyboard,
+  and remembered in the browser. Neighbouring columns no longer merge
+  into one surface.
+- **The side panel makes room** instead of covering the board's
+  controls.
+- **The board header is one line**: views, search, «Отбор» with the
+  number of active conditions, grouping, saved views; theme and density
+  moved to the «Оформление» menu.
+- **Red means "stopped".** Blocks, overdue commitments, errors and
+  irreversible actions only; "worth a look" is now amber. Actions that
+  remove something reversible are grey, not green.
+- **Two actions now ask first**, because neither can be undone:
+  revoking an integration key and deleting your own reply.
+- **«Структура»: one ⋮ menu per row** instead of four visible actions;
+  «Закрыть итерацию» is named in full.
+
+### Dependencies
+
+`golang.org/x/crypto` 0.57.0, `pgx` 5.11.0, `vitest` updated.
+
 ## v0.2.3 — 27 August 2026
 
 **The binary is released as a file of its own, and you can obtain its

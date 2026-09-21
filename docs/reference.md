@@ -73,6 +73,27 @@ the block stays until someone lifts it; that is the normal case.
 - Less than a day before the deadline, the line under the card becomes
   bold and dashed. Nothing is mailed: the board is where you see it.
 
+## Colours
+
+One colour, one meaning — so that red still means something on a busy
+board.
+
+| Colour | Where | Means |
+| --- | --- | --- |
+| Red | a block, an overdue commitment, an error, an irreversible action | work has stopped, or a promise is broken |
+| Amber | past the board's promise, in the table and in the workload strip; a column over its WIP limit | worth a look; the work is still moving |
+| Neutral | a block deadline | the block will lift itself — rather good news |
+
+Actions follow the same rule: green adds something, grey removes
+something that can be brought back, red cannot be undone and always
+asks first.
+
+## What is remembered in the browser
+
+Theme, density and column widths are personal and stay in the browser
+where they were set: the board of a colleague does not change, and on
+another computer you start with the defaults.
+
 ## Groupings
 
 None, by assignee, by label, by iteration, by priority.
@@ -134,9 +155,10 @@ hung. Every list that offers a label also says where it comes from.
 
 Card: created, renamed, description changed, estimate changed,
 priority changed, due date set or cleared, moved, blocked, unblocked,
-link added, link removed, commented on, custom field filled, custom
-field cleared, added to an iteration, removed from an iteration, work
-marked done, mark removed, archived, restored to the board.
+block deadline changed, block lifted by its deadline, link added,
+link removed, commented on, custom field filled, custom field cleared,
+added to an iteration, removed from an iteration, work marked done,
+mark removed, archived, restored to the board.
 
 ## Installation settings
 
