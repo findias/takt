@@ -11,7 +11,8 @@
 // и у всякого смотрящего, а рядовой участник получал в ответ
 // «не найдено» про узел, названный строкой выше.
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import type { ArchivedTeam, Principal, Team, TeamAdmin } from '../shared/api/index.ts'
 
@@ -85,19 +86,34 @@ const ADMIN_OF_AREA: TeamAdmin[] = [
   { id: 'adm-1', userId: 'u-boris', name: 'Борис Ветров', email: 'boris@example.test', teamId: AREA, teamName: 'Область' },
 ]
 
+/** Действия узла живут в меню строки — пункты читаются, только когда
+ *  меню открыто. */
+async function actionsOf(name: string) {
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: `Действия подразделения «${name}»` }))
+  const menu = await screen.findByRole('menu')
+  const items = within(menu)
+    .getAllByRole('menuitem')
+    .map((i) => i.textContent)
+  await user.keyboard('{Escape}')
+  return items
+}
+
 it('администратор области распоряжается ею и всем под ней, но не соседней и не корнем', async () => {
   show(ADMIN_OF_AREA)
 
   // Своя область и отдел под ней — действия на месте.
-  await waitFor(() => screen.getByLabelText('Завести отдел в «Область»'))
-  screen.getByLabelText('Переименовать подразделение «Область»')
-  screen.getByLabelText('Убрать подразделение «Область»')
-  screen.getByLabelText('Завести отдел в «Отдел»')
-  screen.getByLabelText('Убрать подразделение «Отдел»')
+  await waitFor(() => screen.getByRole('button', { name: 'Действия подразделения «Область»' }))
+  expect(await actionsOf('Область')).toEqual([
+    'Завести отдел…',
+    'Переименовать…',
+    'Перенести…',
+    'Убрать подразделение',
+  ])
+  expect(await actionsOf('Отдел')).toContain('Убрать подразделение')
 
   // Соседняя область — ни одного.
-  expect(screen.queryByLabelText('Завести отдел в «Соседняя область»')).toBeNull()
-  expect(screen.queryByLabelText('Убрать подразделение «Соседняя область»')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Действия подразделения «Соседняя область»' })).toBeNull()
 
   // Корень остаётся за владельцем: у нового корневого узла нет старшего,
   // а значит нет и того, кто за него отвечает.
@@ -108,13 +124,35 @@ it('администратор области распоряжается ею и
   expect(screen.queryByLabelText('Вернуть из архива: Убранный чужой')).toBeNull()
 })
 
+it('у строки одно видимое действие — меню, а не ряд из четырёх', async () => {
+  // Ряд «+ отдел · Переименовать · Перенести… · Убрать подразделение»
+  // стоял у каждой строки и делал из дерева таблицу действий: названия
+  // терялись среди глаголов, а убирающее стояло вплотную к безобидному.
+  show(ADMIN_OF_AREA)
+  await waitFor(() => screen.getByRole('button', { name: 'Действия подразделения «Область»' }))
+  expect(screen.queryByRole('button', { name: /^Переименовать/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Убрать подразделение/ })).toBeNull()
+  expect(screen.queryByRole('combobox', { name: /^Перенести/ })).toBeNull()
+})
+
+it('пункт с вопросом открывает поле у строки и ставит в него фокус', async () => {
+  const user = userEvent.setup()
+  show(ADMIN_OF_AREA)
+  await user.click(await screen.findByRole('button', { name: 'Действия подразделения «Область»' }))
+  await user.click(await screen.findByRole('menuitem', { name: 'Завести отдел…' }))
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Завести отдел в «Область»' }))
+
+  await user.click(screen.getByRole('button', { name: 'Действия подразделения «Область»' }))
+  await user.click(await screen.findByRole('menuitem', { name: 'Перенести…' }))
+  expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Перенести: Область' }))
+})
+
 it('рядовому участнику экран остаётся, действия — нет', async () => {
   show([])
 
   // Дерево читается: узел на месте, свёрнутый.
   await waitFor(() => screen.getByRole('button', { name: '▸ Область' }))
-  expect(screen.queryByLabelText('Завести отдел в «Область»')).toBeNull()
-  expect(screen.queryByLabelText('Убрать подразделение «Область»')).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Действия подразделения/ })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Новое подразделение' })).toBeNull()
   // Список убранного читают все — он отвечает на «куда делось
   // подразделение», — но кнопки, которая заведомо ответит отказом, нет.

@@ -1194,10 +1194,12 @@ test('одинаковые ряды действий стоят столбцом
   await page.getByRole('button', { name: 'Структура' }).click()
   await expect(page.getByRole('heading', { name: 'Подразделения', exact: true })).toBeVisible()
 
+  // С 21.09.2026 действия узла — одно меню, и столбцом должны стоять
+  // его кнопки: ряд из четырёх действий сменился одной кнопкой, но
+  // правило «столбец действий — столбец» от этого не отменилось.
   const левые = await page.evaluate(() =>
-    [...document.querySelectorAll<HTMLSelectElement>('select')]
-      .filter((s) => (s.options[0]?.text ?? '').startsWith('Перенести'))
-      .map((s) => Math.round(s.getBoundingClientRect().left)),
+    [...document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Действия подразделения"]')]
+      .map((b) => Math.round(b.getBoundingClientRect().left)),
   )
   expect(левые.length, 'подразделений с действиями').toBeGreaterThan(2)
   expect(

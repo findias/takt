@@ -20,6 +20,8 @@ import {
 import type { TreeNode } from '../entities/team/model.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { Menu } from '../shared/ui/Menu.tsx'
+import { ArchiveIcon, EditIcon, MoreIcon, MoveIcon, PlusIcon } from '../shared/ui/icons.tsx'
 
 /**
  * Структура организации: дерево подразделений, их состав и наблюдение.
@@ -221,6 +223,9 @@ function TeamNode({
   onOpenBoard: (boardId: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  // Вопрос, заданный пунктом меню, — поле у самой строки: ответ
+  // относится к ней, и искать его где-то ещё незачем.
+  const [asking, setAsking] = useState<'child' | 'move' | null>(null)
   const counts = counters(node)
   const parents = allowedParents(tree, node)
   const mine = canManage(node.id)
@@ -237,84 +242,74 @@ function TeamNode({
         </button>
         {counts && <span className="muted small">{counts}</span>}
 
-        {/* Действия узла прижаты к правому краю: имя подразделения
-            и счётчики у каждой строки своей длины, и действия, стоящие
-            за ними встык, едут по горизонтали от строки к строке —
-            глазом столбец не пройти. */}
+        {/* Действия узла — одним меню у правого края. Раньше это был
+            ряд «+ отдел · Переименовать · Перенести… · Убрать
+            подразделение» у каждой строки: дерево читалось таблицей
+            глаголов, названия терялись между ними, а убирающее стояло
+            вплотную к безобидному. Меню кнопкой одного размера ещё
+            и держит столбец: ряд действий разной длины от строки
+            к строке ехал по горизонтали. */}
         {mine && (
-          <div className="row row--tight tree-actions">
-            {canNestInside(node) && (
-              <NewTeam
-                parent={node.id}
-                label="+ отдел"
-                // Кнопка у каждого узла своя, а зовутся все одинаково:
-                // «+ отдел» без объекта диктору говорит только о том,
-                // что кнопок много. Видно объект по строке, слышно —
-                // по имени.
-                title={`Завести отдел в «${node.name}»`}
-                onCreate={onAct}
-              />
-            )}
-            <button
-              className="link"
-              aria-label={`Переименовать подразделение «${node.name}»`}
-              onClick={() => {
-                // Узел из каталога переименовать можно, и это не ошибка:
-                // часть провайдеров имена групп не шлёт вовсе. Но там,
-                // где шлёт, введённое здесь вернётся к тому, что
-                // в каталоге, — и сказано это до ввода, а не после.
-                const name = window.prompt(
-                  node.fromDirectory
-                    ? 'Новое название. Имя этому подразделению даёт каталог: ' +
-                        'при следующей синхронизации оно вернётся'
-                    : 'Новое название',
-                  node.name,
-                )
-                if (name && name.trim() && name !== node.name) {
-                  onAct(api.renameTeam(node.id, name.trim()))
-                }
-              }}
+          <div className="tree-actions">
+            <Menu
+              label={`Действия подразделения «${node.name}»`}
+              items={[
+                ...(canNestInside(node)
+                  ? [{ label: 'Завести отдел…', icon: <PlusIcon />, onSelect: () => setAsking('child') }]
+                  : []),
+                {
+                  label: 'Переименовать…',
+                  icon: <EditIcon />,
+                  onSelect: () => {
+                    // Узел из каталога переименовать можно, и это не ошибка:
+                    // часть провайдеров имена групп не шлёт вовсе. Но там,
+                    // где шлёт, введённое здесь вернётся к тому, что
+                    // в каталоге, — и сказано это до ввода, а не после.
+                    const name = window.prompt(
+                      node.fromDirectory
+                        ? 'Новое название. Имя этому подразделению даёт каталог: ' +
+                            'при следующей синхронизации оно вернётся'
+                        : 'Новое название',
+                      node.name,
+                    )
+                    if (name && name.trim() && name !== node.name) {
+                      onAct(api.renameTeam(node.id, name.trim()))
+                    }
+                  },
+                },
+                // Куда переносить — вопрос со своим списком, и списку
+                // место у строки, а не пунктами меню: подразделений
+                // десятки, и меню длиной в дерево не читается.
+                ...(node.parentId || parents.length > 0
+                  ? [{ label: 'Перенести…', icon: <MoveIcon />, onSelect: () => setAsking('move') }]
+                  : []),
+                // Убирается в архив и возвращается оттуда, поэтому
+                // без вопроса и не цветом тревоги: тревога — для того,
+                // что не вернуть.
+                {
+                  label: 'Убрать подразделение',
+                  icon: <ArchiveIcon />,
+                  onSelect: () => onAct(api.archiveTeam(node.id)),
+                },
+              ]}
             >
-              Переименовать
-            </button>
-            {/* Ширина задана, а не выведена: `select` меряется
-                по самому длинному своему варианту, а варианты у каждой
-                строки свои — «В «Разработка»» против «В «Продажи»».
-                От этого весь ряд действий ехал по горизонтали
-                от строки к строке (замер: 134 против 151 пикселя,
-                сдвиг 17). Столбец действий обязан быть столбцом. */}
-            <select
-              className="move-select"
-              value=""
-              aria-label={`Перенести: ${node.name}`}
-              onChange={(e) => {
-                if (!e.target.value) return
-                const to = e.target.value === 'root' ? null : e.target.value
-                onAct(api.moveTeam(node.id, to))
-              }}
-            >
-              <option value="">Перенести…</option>
-              {node.parentId && <option value="root">В корень</option>}
-              {parents.map((p) => (
-                <option key={p.id} value={p.id}>
-                  В «{p.name}»
-                </option>
-              ))}
-            </select>
-            {/* «Убрать» на этом экране значило два разных действия:
-                убрать подразделение и вывести человека из его состава,
-                и стояли они рядом в одной раскрытой ветке. Имя
-                называет объект. */}
-            <button
-              className="link link--remove"
-              aria-label={`Убрать подразделение «${node.name}»`}
-              onClick={() => onAct(api.archiveTeam(node.id))}
-            >
-              Убрать подразделение
-            </button>
+              <MoreIcon />
+            </Menu>
           </div>
         )}
       </div>
+
+      {asking === 'child' && (
+        <NewTeam
+          parent={node.id}
+          title={`Завести отдел в «${node.name}»`}
+          onCreate={onAct}
+          onDone={() => setAsking(null)}
+        />
+      )}
+      {asking === 'move' && (
+        <MoveTeam node={node} parents={parents} onAct={onAct} onDone={() => setAsking(null)} />
+      )}
 
       {open && (
         <div className="tree-body stack">
@@ -521,15 +516,24 @@ function NewTeam({
   label,
   title,
   onCreate,
+  onDone,
 }: {
   parent: string | null
-  label: string
+  /** Подпись кнопки, которая раскрывает форму. Без неё форма раскрыта
+   *  сразу: её уже попросили пунктом меню. */
+  label?: string
   /** Имя для диктора, когда подписи на кнопке для этого мало. */
   title?: string
   onCreate: (p: Promise<unknown>) => void
+  /** Форму убрали — отправкой или уходом с пустого поля. */
+  onDone?: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(label === undefined)
   const [name, setName] = useState('')
+  const close = () => {
+    setOpen(false)
+    onDone?.()
+  }
 
   if (!open) {
     return (
@@ -547,8 +551,9 @@ function NewTeam({
         if (!name.trim()) return
         onCreate(api.createTeam(name.trim(), parent))
         setName('')
-        setOpen(false)
+        close()
       }}
+      onKeyDown={(e) => e.key === 'Escape' && close()}
     >
       <input
         autoFocus
@@ -556,12 +561,55 @@ function NewTeam({
         aria-label={title ?? 'Название подразделения'}
         placeholder="Название"
         onChange={(e) => setName(e.target.value)}
-        onBlur={() => !name.trim() && setOpen(false)}
+        onBlur={() => !name.trim() && close()}
       />
       <button type="submit" aria-label={title ?? 'Завести подразделение'} disabled={!name.trim()}>
         Завести
       </button>
     </form>
+  )
+}
+
+/**
+ * Куда перенести подразделение. Родной `select` здесь честен: это выбор
+ * одного из списка, и открытым его держит браузер со своей клавиатурой.
+ * Уход без выбора — отказ от вопроса, а не ошибка.
+ */
+function MoveTeam({
+  node,
+  parents,
+  onAct,
+  onDone,
+}: {
+  node: TreeNode
+  parents: TreeNode[]
+  onAct: (p: Promise<unknown>) => void
+  onDone: () => void
+}) {
+  return (
+    <div className="row row--tight">
+      <select
+        autoFocus
+        value=""
+        aria-label={`Перенести: ${node.name}`}
+        onChange={(e) => {
+          if (!e.target.value) return
+          const to = e.target.value === 'root' ? null : e.target.value
+          onAct(api.moveTeam(node.id, to))
+          onDone()
+        }}
+        onKeyDown={(e) => e.key === 'Escape' && onDone()}
+        onBlur={onDone}
+      >
+        <option value="">Куда перенести…</option>
+        {node.parentId && <option value="root">В корень</option>}
+        {parents.map((p) => (
+          <option key={p.id} value={p.id}>
+            В «{p.name}»
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
