@@ -1134,9 +1134,12 @@ select:disabled {
   opacity: 1;
 }
 
+/* Полос сбоку нет ни у заметки, ни у сообщения, ни у тоста: цветная
+   полоса в три пикселя — самый узнаваемый признак шаблонного
+   интерфейса, и значит она здесь ничего сверх подложки (разбор
+   21.09.2026). Тон несут подложка и рамка целиком. */
 .note {
   border: 1px solid var(--rule);
-  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   background: var(--accent-soft);
   padding: var(--space-3) var(--space-3);
@@ -1185,6 +1188,12 @@ select:disabled {
    строка в полтора метра читается хуже, чем короткая. */
 .board-toolbar.empty-board {
   max-width: 46rem;
+  /* Заметка — рамка, а не полоса инструментов: поля ей нужны свои.
+     Отступы полосы (`0 var(--space-4)`) обнуляли вертикальные поля
+     заметки, и текст прилипал к верхней рамке, а сама она — к колонкам
+     (снимок 21.09.2026). Отступ от края окна — снаружи рамки. */
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-3);
 }
 .board-toolbar:first-of-type {
   padding-top: var(--space-3);
@@ -1258,14 +1267,13 @@ select:disabled {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--rule);
-  border-left: 3px solid var(--ink-3);
   border-radius: var(--radius);
   background: var(--surface);
   font-size: var(--text-sm);
   box-shadow: var(--shadow-drag);
 }
 .notice--warning {
-  border-left-color: var(--warn);
+  border-color: var(--warn);
   background: var(--warn-soft);
 }
 .notice .close {
@@ -1834,11 +1842,16 @@ textarea.description {
 .progress-fill {
   display: block;
   height: 100%;
+  width: 100%;
   background: var(--accent);
+  /* Доля — растяжением от левого края, а не шириной: анимация `width`
+     пересчитывает раскладку на каждом кадре, а `transform` — нет
+     (разбор 21.09.2026). Движение то же. */
+  transform-origin: left center;
   /* Полоса дорастает, а не перескакивает: подзадачу отметили сделанной
      — движение и есть ответ «засчитано». Число здесь было набрано
      на глаз (0.2s) мимо обеих длительностей. */
-  transition: width var(--motion-grew) ease;
+  transition: transform var(--motion-grew) ease;
 }
 
 /* Разбитая работа видна с доски. Полоса узкая и без подписи «подзадачи»:
@@ -3654,7 +3667,6 @@ textarea.description {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   border: 1px solid var(--rule);
-  border-left: 3px solid var(--ink-3);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-drag);
@@ -3674,7 +3686,7 @@ textarea.description {
   }
 }
 .toast--warning {
-  border-left-color: var(--warn);
+  border-color: var(--warn);
   background: var(--warn-soft);
 }
 .toast-text {

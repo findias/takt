@@ -368,7 +368,7 @@ export function CardPanel({
                 >
                   <div
                     className="progress-fill"
-                    style={{ width: `${progressRatio(card) * 100}%` }}
+                    style={{ transform: `scaleX(${progressRatio(card)})` }}
                   />
                 </div>
               )}

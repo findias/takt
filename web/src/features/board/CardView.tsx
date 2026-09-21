@@ -786,7 +786,7 @@ function CardViewInner({
                   <span className="progress" aria-hidden="true">
                     <span
                       className="progress-fill"
-                      style={{ width: `${progressRatio(card) * 100}%` }}
+                      style={{ transform: `scaleX(${progressRatio(card)})` }}
                     />
                   </span>
                   <span className="muted small" aria-hidden="true">
@@ -805,7 +805,7 @@ function CardViewInner({
                   >
                     <div
                       className="progress-fill"
-                      style={{ width: `${progressRatio(card) * 100}%` }}
+                      style={{ transform: `scaleX(${progressRatio(card)})` }}
                     />
                   </div>
                   <span className="muted small">{progressLabel(card, unit)}</span>
