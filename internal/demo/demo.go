@@ -32,6 +32,7 @@ import (
 	"github.com/findias/takt/internal/apiclient"
 	"github.com/findias/takt/internal/auth"
 	"github.com/findias/takt/internal/board"
+	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/org"
 	"github.com/findias/takt/internal/store"
 	"github.com/findias/takt/internal/team"
@@ -75,6 +76,12 @@ type filler struct {
 	// никто, люди привязаны к организации и уходят вместе с ней.
 	// Пусто — стенд разработки с почтами и паролем из People.
 	sandbox *sandboxOpts
+
+	// lang — язык посетителя: песочница заводится на нём целиком,
+	// от имён людей до реплик в обсуждении. Английскому посетителю
+	// русская доска показывала бы продукт, которым он пользоваться
+	// не сможет, и снимок для GitHub вышел бы русским.
+	lang i18n.Lang
 }
 
 type sandboxOpts struct {
@@ -114,7 +121,21 @@ func newFiller(ctx context.Context, db *store.Store) *filler {
 		teams:  team.New(db),
 		boards: board.New(db),
 		people: map[string]string{},
+		lang:   i18n.Of(ctx),
 	}
+}
+
+// w — текст на языке посетителя. Ключи внутри наполнения остаются
+// русскими: по ним карточки находят друг друга, и переводить их
+// значило бы держать два набора имён в одном месте.
+func (f *filler) w(ru string) string {
+	if f.lang != i18n.EN {
+		return ru
+	}
+	if en, ok := english[ru]; ok {
+		return en
+	}
+	return ru
 }
 
 // Sandbox — организация, заведённая посетителю публичного демо.
@@ -249,14 +270,14 @@ func (f *filler) organization() error {
 		var id string
 		err = f.db.Pool.QueryRow(f.ctx, `
 			insert into users (email, name, password_hash, sandbox_org_id)
-			values ($1, $2, $3, $4) returning id`, f.email(p), p.Name, hash, sandboxOrg).Scan(&id)
+			values ($1, $2, $3, $4) returning id`, f.email(p), f.w(p.Name), hash, sandboxOrg).Scan(&id)
 		if err != nil {
 			return fmt.Errorf("личность %s: %w", f.email(p), err)
 		}
 		f.people[p.Email] = id
 
 		if i == 0 {
-			m, err := f.orgs.Create(f.ctx, OrgName, id)
+			m, err := f.orgs.Create(f.ctx, f.w(OrgName), id)
 			if err != nil {
 				return err
 			}
@@ -290,7 +311,7 @@ func (f *filler) organization() error {
 	// того, что его служебная личность стоит в списке людей: пока такой
 	// личности нет, экран «Команда» показывает только людей, и ошибку
 	// «ключу предлагают роль и удаление данных» на нём не увидеть.
-	if _, err := apiclient.New(f.db).Create(f.ctx, f.orgID, f.owner(), "Обмен со складом",
+	if _, err := apiclient.New(f.db).Create(f.ctx, f.orgID, f.owner(), f.w("Обмен со складом"),
 		[]string{apiclient.ScopeBoardsRead, apiclient.ScopeBoardsWrite}, nil); err != nil {
 		return fmt.Errorf("ключ интеграции: %w", err)
 	}
@@ -302,7 +323,7 @@ func (f *filler) organization() error {
 	// ни отключения, ни кнопки «повторить». До конца эти доставки
 	// доводит не работник, а сам стенд — см. settleDeliveries.
 	hooks := webhook.New(f.db, board.EventNames())
-	if _, err := hooks.Create(f.ctx, f.orgID, f.owner(), "Оповещение дежурного",
+	if _, err := hooks.Create(f.ctx, f.orgID, f.owner(), f.w("Оповещение дежурного"),
 		"https://example.test/hooks/board",
 		[]string{"card.created", "card.moved", "card.blocked"}); err != nil {
 		return fmt.Errorf("подписка на события: %w", err)
@@ -313,19 +334,19 @@ func (f *filler) organization() error {
 // --- дерево подразделений ---
 
 func (f *filler) structure() error {
-	razrabotka, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Разработка", nil)
+	razrabotka, err := f.teams.Create(f.ctx, f.orgID, f.owner(), f.w("Разработка"), nil)
 	if err != nil {
 		return err
 	}
-	platforma, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Платформа", &razrabotka.ID)
+	platforma, err := f.teams.Create(f.ctx, f.orgID, f.owner(), f.w("Платформа"), &razrabotka.ID)
 	if err != nil {
 		return err
 	}
-	yadro, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Ядро", &platforma.ID)
+	yadro, err := f.teams.Create(f.ctx, f.orgID, f.owner(), f.w("Ядро"), &platforma.ID)
 	if err != nil {
 		return err
 	}
-	prodazhi, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Продажи", nil)
+	prodazhi, err := f.teams.Create(f.ctx, f.orgID, f.owner(), f.w("Продажи"), nil)
 	if err != nil {
 		return err
 	}
@@ -374,7 +395,7 @@ func (f *filler) structure() error {
 	// в архиве что-то есть, и без этого узла его не видел бы никто:
 	// в наборе снимков он просто не появлялся бы. Вид, которого нет
 	// в снимках, — это вид, который никто ни разу не смотрел.
-	kurs, err := f.teams.Create(f.ctx, f.orgID, f.owner(), "Курсы", &razrabotka.ID)
+	kurs, err := f.teams.Create(f.ctx, f.orgID, f.owner(), f.w("Курсы"), &razrabotka.ID)
 	if err != nil {
 		return err
 	}
@@ -384,15 +405,15 @@ func (f *filler) structure() error {
 // --- доски, карточки и всё, что на них висит ---
 
 func (f *filler) workspace() error {
-	postavki, err := f.boards.Create(f.ctx, f.orgID, f.owner(), "Поставки", "ПОСТ")
+	postavki, err := f.boards.Create(f.ctx, f.orgID, f.owner(), f.w("Поставки"), f.w("ПОСТ"))
 	if err != nil {
 		return err
 	}
-	platforma, err := f.boards.Create(f.ctx, f.orgID, f.owner(), "Платформа", "ПЛАТ")
+	platforma, err := f.boards.Create(f.ctx, f.orgID, f.owner(), f.w("Платформа"), f.w("ПЛАТ"))
 	if err != nil {
 		return err
 	}
-	naym, err := f.boards.Create(f.ctx, f.orgID, f.owner(), "Найм", "НАЙМ")
+	naym, err := f.boards.Create(f.ctx, f.orgID, f.owner(), f.w("Найм"), f.w("НАЙМ"))
 	if err != nil {
 		return err
 	}
@@ -433,13 +454,15 @@ func (f *filler) workspace() error {
 		{Name: "Техдолг", Tone: "brown", TeamID: f.teamIDs["Разработка"]},
 		{Name: "Ждём склад", Tone: "blue", BoardID: postavki.ID},
 	} {
+		key := d.Name
+		d.Name = f.w(d.Name)
 		l, err := f.boards.CreateLabel(f.ctx, f.orgID, f.owner(), d)
 		if err != nil {
 			return err
 		}
-		labels[d.Name] = l.ID
+		labels[key] = l.ID
 	}
-	customer, err := f.boards.CreateField(f.ctx, f.orgID, f.owner(), "Заказчик", "text", nil)
+	customer, err := f.boards.CreateField(f.ctx, f.orgID, f.owner(), f.w("Заказчик"), "text", nil)
 	if err != nil {
 		return err
 	}
@@ -461,7 +484,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	// шапка колонки на экране пуста, а она — половина её высоты.
 	if _, err := f.apply(b.ID, "UPDATE_COLUMN", map[string]any{
 		"columnId": doing.ID, "wipLimit": 4, "wipLimitHard": true,
-		"policy": "Есть постановка, известен исполнитель и срок",
+		"policy": f.w("Есть постановка, известен исполнитель и срок"),
 	}); err != nil {
 		return err
 	}
@@ -508,7 +531,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		// переходов, без которой лента доски пуста, а полосы потока
 		// показывают один день.
 		res, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
-			"columnId": queue.ID, "title": c.title, "place": "end"})
+			"columnId": queue.ID, "title": f.w(c.title), "place": "end"})
 		if err != nil {
 			return fmt.Errorf("карточка %q: %w", c.title, err)
 		}
@@ -523,7 +546,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		}
 
 		if _, err := f.apply(b.ID, "UPDATE_CARD", map[string]any{
-			"cardId": id, "estimate": c.estimate, "description": c.note}); err != nil {
+			"cardId": id, "estimate": c.estimate, "description": f.w(c.note)}); err != nil {
 			return err
 		}
 		for _, name := range c.labels {
@@ -544,7 +567,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	// числе на доску соседей, ради строки «Доска «Платформа»».
 	if _, err := f.apply(b.ID, "SET_CARD_FIELD", map[string]any{
 		"cardId": ids["Согласовать смету с подрядчиком"], "fieldId": field,
-		"value": "Северстрой"}); err != nil {
+		"value": f.w("Северстрой")}); err != nil {
 		return err
 	}
 	// Уровни приоритета видно только на тех карточках, где он не
@@ -576,7 +599,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	partIDs := map[string]string{}
 	for _, title := range []string{"Собрать сборку", "Прогнать нагрузочные"} {
 		res, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
-			"parentCardId": ids["Выпустить релиз склада"], "title": title})
+			"parentCardId": ids["Выпустить релиз склада"], "title": f.w(title)})
 		if err != nil {
 			return err
 		}
@@ -604,7 +627,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 			"Поправил, пересобираю.",
 		} {
 			if _, err := f.boards.AddComment(f.ctx, f.orgID,
-				f.people[parts[title]], b.ID, part, text, nil, nil); err != nil {
+				f.people[parts[title]], b.ID, part, f.w(text), nil, nil); err != nil {
 				return err
 			}
 		}
@@ -616,7 +639,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	// наравне с колонкой финиша.
 	res, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
 		"parentCardId": ids["Выпустить релиз склада"],
-		"title":        "Согласовать текст письма клиентам"})
+		"title":        f.w("Согласовать текст письма клиентам")})
 	if err != nil {
 		return err
 	}
@@ -641,7 +664,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 
 	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
 		"parentCardId": ids["Выпустить релиз склада"],
-		"title":        "Поднять квоту на хранилище", "boardId": neighbour.ID}); err != nil {
+		"title":        f.w("Поднять квоту на хранилище"), "boardId": neighbour.ID}); err != nil {
 		return err
 	}
 
@@ -658,7 +681,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	}
 	holder := ""
 	for _, c := range withParts.Linked {
-		if c.Title == "Поднять квоту на хранилище" {
+		if c.Title == f.w("Поднять квоту на хранилище") {
 			holder = c.ID
 		}
 	}
@@ -667,7 +690,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	}
 	if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
 		"cardId":       ids["Выпустить релиз склада"],
-		"reason":       "смежники не подтвердили формат выгрузки",
+		"reason":       f.w("смежники не подтвердили формат выгрузки"),
 		"blockingCard": holder}); err != nil {
 		return err
 	}
@@ -679,14 +702,14 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	// Обсуждение с веткой: одна реплика в панели не показывает ничего.
 	root, err := f.boards.AddComment(f.ctx, f.orgID, f.owner(), b.ID,
 		ids["Выпустить релиз склада"],
-		"Смежники обещали ответить до среды. Если не ответят — режем интеграцию из этого релиза.",
+		f.w("Смежники обещали ответить до среды. Если не ответят — режем интеграцию из этого релиза."),
 		nil, []string{f.people["boris@example.test"]})
 	if err != nil {
 		return err
 	}
 	if _, err := f.boards.AddComment(f.ctx, f.orgID, f.people["boris@example.test"], b.ID,
 		ids["Выпустить релиз склада"],
-		"Написал им ещё раз, приложил пример выгрузки.", &root.ID, nil); err != nil {
+		f.w("Написал им ещё раз, приложил пример выгрузки."), &root.ID, nil); err != nil {
 		return err
 	}
 
@@ -695,7 +718,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	// читает фильтр. Прежде здесь стояло `label=Срочно`, и вид отбирал
 	// только по исполнителю — метку фильтр молча не узнавал.
 	if _, err := f.boards.SaveView(f.ctx, f.orgID, f.owner(), b.ID,
-		"Мои срочные", "assignee=me&labels="+labels["Срочно"]); err != nil {
+		f.w("Мои срочные"), "assignee=me&labels="+labels["Срочно"]); err != nil {
 		return err
 	}
 	// Убрана после того, как повешена: с карточки она не снимается.
@@ -705,14 +728,14 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	if err := f.iterations(b, ids); err != nil {
 		return err
 	}
-	return f.archive(b, columns[queue.Name])
+	return f.archive(b, queue.ID)
 }
 
 // iterations заводит закрытую итерацию с составом и идущую следом —
 // на закрытой видно отчёт, на открытой то, как она выглядит в работе.
 func (f *filler) iterations(b board.Info, ids map[string]string) error {
 	past, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), b.ID,
-		"Неделя 32", "Закрыть июльские хвосты",
+		f.w("Неделя 32"), f.w("Закрыть июльские хвосты"),
 		date(-21), date(-15))
 	if err != nil {
 		return err
@@ -734,7 +757,7 @@ func (f *filler) iterations(b board.Info, ids map[string]string) error {
 	}
 
 	now, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), b.ID,
-		"Неделя 33", "Довести релиз склада до стенда", date(-4), date(2))
+		f.w("Неделя 33"), f.w("Довести релиз склада до стенда"), date(-4), date(2))
 	if err != nil {
 		return err
 	}
@@ -750,7 +773,7 @@ func (f *filler) iterations(b board.Info, ids map[string]string) error {
 func (f *filler) archive(b board.Info, queueID string) error {
 	for _, title := range []string{"Старый регламент приёмки", "Отменённая закупка бытовки"} {
 		res, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
-			"columnId": queueID, "title": title, "place": "end"})
+			"columnId": queueID, "title": f.w(title), "place": "end"})
 		if err != nil {
 			return err
 		}
@@ -776,7 +799,7 @@ func (f *filler) fillPlatforma(b board.Info) error {
 		{"Разобраться с ростом времени ответа", 0},
 	} {
 		if _, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
-			"columnId": snap.Columns[c.column].ID, "title": c.title, "place": "end"}); err != nil {
+			"columnId": snap.Columns[c.column].ID, "title": f.w(c.title), "place": "end"}); err != nil {
 			return err
 		}
 	}
@@ -801,7 +824,7 @@ func (f *filler) blockDeadlines(b board.Info, ids map[string]string) error {
 		{"Перевезти стенд в новый офис", "ждали ключи от серверной", time.Now().Add(time.Hour)},
 	} {
 		if _, err := f.apply(b.ID, "BLOCK_CARD", map[string]any{
-			"cardId": ids[c.title], "reason": c.reason, "until": c.until.Format(time.RFC3339),
+			"cardId": ids[c.title], "reason": f.w(c.reason), "until": c.until.Format(time.RFC3339),
 		}); err != nil {
 			return fmt.Errorf("блокировка со сроком %q: %w", c.title, err)
 		}

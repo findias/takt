@@ -429,9 +429,10 @@ func (s *Service) Create(ctx context.Context, orgID, userID, name, key string) (
 			 where archived_at is null
 			 order by created_at limit 1`).Scan(&projectID)
 		if errors.Is(err, pgx.ErrNoRows) {
+			projects := i18n.Name(ctx, "Проекты")
 			err = tx.QueryRow(ctx,
 				`insert into projects (org_id, name) values ($1, $2) returning id`,
-				orgID, "Проекты").Scan(&projectID)
+				orgID, projects).Scan(&projectID)
 		}
 		if err != nil {
 			return err

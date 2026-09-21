@@ -99,6 +99,7 @@ var en = map[string]string{
 	"ключ доски — от двух до шести букв или цифр, начиная с буквы": "a board key is two to six letters or digits, starting with a letter",
 	"такой ключ уже занят другой доской":                           "another board already uses this key",
 	"у доски должно быть название":                                 "the board needs a name",
+	"Проекты":  "Projects",
 	"Очередь":  "Queue",
 	"В работе": "In progress",
 	"Готово":   "Done",

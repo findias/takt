@@ -2,9 +2,13 @@ package demo
 
 import (
 	"context"
+	"regexp"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/org"
 	"github.com/findias/takt/internal/store/testdb"
 )
@@ -132,4 +136,66 @@ func TestSweepRemovesExpiredSandboxesOnly(t *testing.T) {
 	if left != 1 {
 		t.Error("уборка удалила настоящую организацию")
 	}
+}
+
+// Английскому посетителю — английская песочница целиком. Проверяется
+// результат, а не словарь: всякая строка организации, где осталась
+// кириллица, — это место, где наполнение забыло перевести текст,
+// или сервер завёл название сам и не спросил языка.
+func TestEnglishSandboxHasNoRussian(t *testing.T) {
+	ctx := i18n.WithLang(context.Background(), i18n.EN)
+	db := testdb.Open(t)
+
+	box, err := FillSandbox(ctx, db, time.Hour)
+	if err != nil {
+		t.Fatalf("песочница: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = RemoveSandbox(context.Background(), db, box.OrgID)
+	})
+	if err := VerifyOrg(ctx, db, box.OrgID, box.OwnerID); err != nil {
+		t.Errorf("английская песочница показывает не то, что стенд: %v", err)
+	}
+
+	var tables []string
+	if err := db.Pool.QueryRow(ctx, `
+		select array_agg(table_name::text order by table_name)
+		  from information_schema.columns
+		 where table_schema = 'public' and column_name = 'org_id'
+		   and table_name not in ('audit_events')`).Scan(&tables); err != nil {
+		t.Fatal(err)
+	}
+	// Журнал действий — запись о том, что делали, с полными снимками
+	// строк: переводится сам вместе с ними, а отдельно его не читают.
+	cyrillic := regexp.MustCompile(`[А-Яа-яЁё]+`)
+	check := func(what, query string, args ...any) {
+		t.Helper()
+		err := db.InTenant(ctx, box.OrgID, box.OwnerID, func(tx pgx.Tx) error {
+			rows, err := tx.Query(ctx, query, args...)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var row string
+				if err := rows.Scan(&row); err != nil {
+					return err
+				}
+				if w := cyrillic.FindString(row); w != "" {
+					t.Errorf("%s: осталось «%s» в %s", what, w, row)
+				}
+			}
+			return rows.Err()
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+	}
+	for _, table := range tables {
+		// #sql-склейка: имя таблицы — из information_schema, ввода нет.
+		check(table, `select to_jsonb(t)::text from `+pgx.Identifier{table}.Sanitize()+` t where org_id = $1`, box.OrgID)
+	}
+	check("orgs", `select to_jsonb(o)::text from orgs o where id = $1`, box.OrgID)
+	check("users", `select u.name || ' ' || u.email from users u
+		join memberships m on m.user_id = u.id where m.org_id = $1`, box.OrgID)
 }

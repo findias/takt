@@ -1,0 +1,88 @@
+package demo
+
+// english — песочница для англоязычного посетителя.
+//
+// Не дословный перевод, а та же история по-английски: склад, релиз,
+// смежники, которые не отвечают. Длина фраз держится близко к русской —
+// демо заводилось ради вёрстки на настоящей длине текста, и английская
+// песочница, где всё вдвое короче, показывала бы другой экран.
+//
+// Полнота проверяется не перечнем, а результатом: в английской
+// песочнице не остаётся ни одной кириллической буквы
+// (TestEnglishSandboxHasNoRussian).
+var english = map[string]string{
+	// Люди, организация, служебное.
+	"Анна Королёва":        "Anna Clarke",
+	"Борис Дятлов":         "Boris Dale",
+	"Вера Соколова":        "Vera Scott",
+	"Глеб Тишин":           "Gleb Turner",
+	"Северный проект":      "Northern Project",
+	"Обмен со складом":     "Warehouse sync",
+	"Оповещение дежурного": "On-call alert",
+
+	// Подразделения.
+	"Разработка": "Engineering",
+	"Платформа":  "Platform",
+	"Ядро":       "Core",
+	"Продажи":    "Sales",
+	"Курсы":      "Training",
+
+	// Доски и их ключи.
+	"Поставки": "Supplies",
+	"ПОСТ":     "SUP",
+	"ПЛАТ":     "PLAT",
+	"Найм":     "Hiring",
+	"НАЙМ":     "HIRE",
+
+	// Метки, поле, разметка колонки, сохранённый вид.
+	"Срочно":          "Urgent",
+	"Смежники":        "Partners",
+	"Риск":            "Risk",
+	"Старый формат":   "Old format",
+	"Ключевой клиент": "Key account",
+	"Техдолг":         "Tech debt",
+	"Ждём склад":      "Waiting on warehouse",
+	"Заказчик":        "Customer",
+	"Северстрой":      "Northbuild",
+	"Есть постановка, известен исполнитель и срок": "Has a brief, a known assignee and a due date",
+	"Мои срочные": "My urgent",
+
+	// Карточки «Поставок».
+	"Согласовать смету с подрядчиком":                              "Agree the estimate with the contractor",
+	"Смета на второй этап. Спорные позиции — леса и вывоз грунта.": "Estimate for phase two. Disputed items: scaffolding and soil removal.",
+	"Обновить регламент приёмки":                                   "Update the acceptance procedure",
+	"Разобрать обращения за неделю":                                "Go through this week's requests",
+	"Восемнадцать обращений, половина — про сроки поставки.":       "Eighteen requests, half of them about delivery dates.",
+	"Выпустить релиз склада":                                       "Ship the warehouse release",
+	"Ждём подтверждения от смежников по интеграции.":               "Waiting for the partners to confirm the integration.",
+	"Перевезти стенд в новый офис":                                 "Move the test rig to the new office",
+	"Закрыть акт за июль":                                          "Close the July statement",
+	"Проверить остатки на складе":                                  "Check warehouse stock",
+
+	// Подзадачи, обсуждение, блокировки.
+	"Собрать сборку":                          "Put the build together",
+	"Прогнать нагрузочные":                    "Run the load tests",
+	"Сборка встала на шаге с миграциями.":     "The build got stuck at the migrations step.",
+	"Поправил, пересобираю.":                  "Fixed it, rebuilding.",
+	"Согласовать текст письма клиентам":       "Agree the wording of the customer letter",
+	"Поднять квоту на хранилище":              "Raise the storage quota",
+	"смежники не подтвердили формат выгрузки": "the partners have not confirmed the export format",
+	"Смежники обещали ответить до среды. Если не ответят — режем интеграцию из этого релиза.": "The partners promised an answer by Wednesday. If they don't reply, we cut the integration from this release.",
+	"Написал им ещё раз, приложил пример выгрузки.":                                           "Wrote to them again and attached a sample export.",
+	"ждём подписанный акт от склада":                                                          "waiting for the signed statement from the warehouse",
+	"выгрузка обращений будет после обеда":                                                    "the request export will be ready after lunch",
+	"ждали ключи от серверной":                                                                "we were waiting for the server room keys",
+
+	// Итерации и архив.
+	"Неделя 32": "Week 32",
+	"Закрыть июльские хвосты": "Tie up July's loose ends",
+	"Неделя 33": "Week 33",
+	"Довести релиз склада до стенда": "Get the warehouse release onto the test rig",
+	"Старый регламент приёмки":       "Old acceptance procedure",
+	"Отменённая закупка бытовки":     "Cancelled site cabin purchase",
+
+	// Карточки «Платформы».
+	"Вынести очередь в отдельный сервис":  "Move the queue into its own service",
+	"Обновить базу до 16-й версии":        "Upgrade the database to version 16",
+	"Разобраться с ростом времени ответа": "Find out why response times are growing",
+}
