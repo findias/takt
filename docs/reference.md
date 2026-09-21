@@ -39,6 +39,7 @@ Beyond roles, the owner appoints:
 | `Enter` | open a card |
 | `E` | rename without opening |
 | `Escape` | close a panel, a menu or the palette |
+| Arrows on a column's edge | widen or narrow the column; double-click the edge to reset |
 
 ## Filters
 

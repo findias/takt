@@ -10,7 +10,6 @@ import {
 import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
-import { InviteScreen } from '../widgets/Invite.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Appearance } from '../shared/ui/Appearance.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
@@ -29,6 +28,11 @@ import { ScreenError } from '../shared/ui/Field'
 const Team = lazy(() => import('../widgets/Team.tsx').then((m) => ({ default: m.Team })))
 const Structure = lazy(() =>
   import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
+)
+// Приглашение открывают один раз в жизни, по ссылке: остальным его
+// экран в куске доски ни к чему.
+const InviteScreen = lazy(() =>
+  import('../widgets/Invite.tsx').then((m) => ({ default: m.InviteScreen })),
 )
 
 const TABS = [
@@ -171,18 +175,20 @@ function Screens() {
 
   if (route.name === 'invite') {
     return (
-      <InviteScreen
-        token={route.token}
-        // Кто сейчас в браузере: приглашение адресное, и человеку, вошедшему
-        // под другой почтой, форму заведения аккаунта показывать незачем —
-        // ему нужно другое действие.
-        signedInAs={principal?.email ?? null}
-        onJoined={(p) => {
-          setPrincipal(p)
-          leaveInvite()
-        }}
-        onCancel={leaveInvite}
-      />
+      <Suspense fallback={<div className="centered">Открываем приглашение…</div>}>
+        <InviteScreen
+          token={route.token}
+          // Кто сейчас в браузере: приглашение адресное, и человеку, вошедшему
+          // под другой почтой, форму заведения аккаунта показывать незачем —
+          // ему нужно другое действие.
+          signedInAs={principal?.email ?? null}
+          onJoined={(p) => {
+            setPrincipal(p)
+            leaveInvite()
+          }}
+          onCancel={leaveInvite}
+        />
+      </Suspense>
     )
   }
 

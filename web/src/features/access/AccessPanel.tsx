@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { VISIBILITY_NAMES, api } from '../../shared/api/index.ts'
-import type { BoardAccess as Access, Member, Team } from '../../shared/api/index.ts'
+import { api } from '../../shared/api/index.ts'
+import type { Member, Team } from '../../shared/api/index.ts'
 import { BoardAccess } from './BoardAccess.tsx'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 
@@ -61,14 +61,3 @@ export function AccessPanel({
   )
 }
 
-/** Короткая подпись для шапки: кто видит доску прямо сейчас. */
-export function visibilityLabel(access: Access | null): string {
-  if (!access) return 'Доступ'
-  if (access.visibility === 'team') {
-    return access.teamName ? `Видна: ${access.teamName}` : 'Видна: команде'
-  }
-  if (access.visibility === 'private') {
-    return `Видна: ${access.members.length} поимённо`
-  }
-  return `Видна: ${VISIBILITY_NAMES.org.toLowerCase()}`
-}

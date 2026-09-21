@@ -1271,7 +1271,10 @@ select:disabled {
   container-type: inline-size;
   container-name: column;
 
-  flex: 0 0 17.5rem;
+  /* Своя ширина — переменной: её ставит ручка и прямо во время
+     перетаскивания, минуя React. Умолчание — прежняя общая ширина. */
+  flex: 0 0 var(--column-width, 17.5rem);
+  position: relative;
   background: var(--column);
   border: 1px solid var(--column-rule);
   border-radius: var(--radius-lg);
@@ -1283,6 +1286,43 @@ select:disabled {
 }
 .column--over {
   border-color: var(--accent);
+}
+/* Ручка ширины — на правой кромке колонки, половиной наружу: зона
+   нажатия во всю цель нажатия, видимая полоса — тонкая и только
+   под указателем или фокусом. Меж колонками зазор, и ручка ложится
+   в него, не заходя на карточки. */
+.column-resizer {
+  position: absolute;
+  inset-block: var(--space-2);
+  inset-inline-end: calc(-0.5 * var(--target));
+  inline-size: var(--target);
+  /* Над соседней колонкой, в чей зазор ручка заходит половиной. */
+  z-index: var(--layer-raised);
+  cursor: col-resize;
+  touch-action: none;
+}
+.column-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(50% - 1px);
+  inline-size: 2px;
+  border-radius: 1px;
+  background: transparent;
+}
+/* Под указателем — акцентом, а не цветом границы: полоса лежит ровно
+   на кромке колонки, и цвет границы с ней сливался — снимок показал
+   наведение, неотличимое от покоя. */
+.column-resizer:hover::after,
+.column-resizer:active::after {
+  background: var(--accent);
+}
+.column-resizer:focus-visible {
+  outline: none;
+}
+.column-resizer:focus-visible::after {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 .column--ghost {
   background: none;

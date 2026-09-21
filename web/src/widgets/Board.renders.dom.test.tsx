@@ -176,3 +176,27 @@ it('выделение одной карточки не перерисовыва
   // но классом на экране, а не свойством каждой карточки.
   expect(renders.count - before).toBeLessThanOrEqual(2)
 })
+
+// Ширина колонки — свойство колонки, а не карточек: потянули ручку —
+// карточки в ней не перерисовываются (ROADMAP 28.2). Меряется
+// клавиатурой: так изменение доходит до сохранения тем же путём,
+// что и отпускание мыши.
+it('изменение ширины колонки не перерисовывает карточки', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  snapshot.mockResolvedValue(board())
+  localStorage.clear()
+
+  render(
+    <Board boardId="board" cardId={null} onCard={() => {}} unit="points" meId="я" isOwner canEdit onBack={() => {}} />,
+  )
+  await screen.findByRole('group', { name: /Карточка «первая»/ })
+  await waitFor(() => expect(renders.count).toBe(CARDS.length))
+
+  const before = renders.count
+  screen.getByRole('separator', { name: 'Ширина колонки «Очередь»' }).focus()
+  await user.keyboard('{ArrowRight}{ArrowRight}')
+  expect(screen.getByRole('region', { name: 'Очередь' }).style.getPropertyValue('--column-width')).toBe(
+    '19.5rem',
+  )
+  expect(renders.count - before).toBe(0)
+})

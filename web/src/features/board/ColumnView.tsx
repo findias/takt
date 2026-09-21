@@ -17,6 +17,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/ico
 import { NO_SUBTASKS } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { CardView } from './CardView.tsx'
+import { ColumnResizer } from './ColumnResizer.tsx'
 import type { ColumnPatch } from './useBoard.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 
@@ -61,6 +62,12 @@ type ColumnProps = {
   /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
   justMoved: string | null
   labels: BoardLabel[]
+  /** Своя ширина колонки в rem; `null` — не трогали. */
+  width: number | null
+  /** Сохранить ширину; `null` — вернуть исходную. Колонка передаётся
+   *  аргументом, чтобы обработчик был один на всю доску и не ломал
+   *  мемоизацию. */
+  onResize: (columnId: string, rem: number | null) => void
   /** Доска — ради выбора метки: он спрашивает, где на ней можно
    *  завести новую. */
   boardId: string
@@ -125,6 +132,7 @@ const CHUNK = 100
 
 export function ColumnView(props: ColumnProps) {
   const dropRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
   const [over, setOver] = useState(false)
   const [adding, setAdding] = useState(false)
   // Свёрнутая колонка не показывает ничего, кроме счётчика, — а форма
@@ -177,9 +185,25 @@ export function ColumnView(props: ColumnProps) {
 
   return (
     <section
+      ref={sectionRef}
       className={`column${over ? ' column--over' : ''}${props.collapsed ? ' column--collapsed' : ''}`}
       aria-label={props.name}
+      style={
+        props.width === null || props.collapsed
+          ? undefined
+          : ({ '--column-width': `${props.width}rem` } as React.CSSProperties)
+      }
     >
+      {/* Свёрнутая колонка не тянется: у неё нет ширины, которую было бы
+          видно, — только полоса со счётчиком. */}
+      {!props.collapsed && (
+        <ColumnResizer
+          name={props.name}
+          width={props.width}
+          columnRef={sectionRef}
+          onCommit={(rem) => props.onResize(props.columnId, rem)}
+        />
+      )}
       <header className="column-header">
         {/* Название и счётчик — одна мысль «в этой колонке столько
             работы», поэтому стоят рядом. Раньше счётчик висел посередине

@@ -2110,3 +2110,46 @@ test('в списке досок видны ключ, видимость и об
   await expect(row).toContainText('всей организации')
   await expect(row).toContainText('2 карточки')
 })
+
+// Ширину колонки тянут мышью (ROADMAP 28.2): в «В работе» длинные
+// названия и метки, в «Готово» — один заголовок, и одна ширина на все
+// одинаково не подходит обеим. Ширина — личное дело смотрящего и живёт
+// в браузере, поэтому переживает перезагрузку.
+test('ширина колонки тянется мышью и переживает перезагрузку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с широкой колонкой')
+  const doing = page.getByRole('region', { name: 'В работе' })
+  const before = (await doing.boundingBox())!.width
+
+  const handle = page.getByRole('separator', { name: 'Ширина колонки «В работе»' })
+  const box = (await handle.boundingBox())!
+  // Зона нажатия — не меньше цели нажатия: четырёхпиксельную полосу
+  // пальцем не берут.
+  expect(box.width).toBeGreaterThanOrEqual(24)
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 })
+  await page.mouse.up()
+  const wider = (await doing.boundingBox())!.width
+  expect(wider).toBeGreaterThan(before + 100)
+
+  // Соседняя колонка не тронута: ширина у каждой своя.
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  expect(Math.round((await queue.boundingBox())!.width)).toBe(Math.round(before))
+
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'В работе' })).toBeVisible()
+  expect(Math.round((await page.getByRole('region', { name: 'В работе' }).boundingBox())!.width)).toBe(
+    Math.round(wider),
+  )
+
+  // Двойной щелчок возвращает исходную.
+  await page.getByRole('separator', { name: 'Ширина колонки «В работе»' }).dblclick()
+  await expect
+    .poll(async () => Math.round((await page.getByRole('region', { name: 'В работе' }).boundingBox())!.width))
+    .toBe(Math.round(before))
+
+  // Свёрнутая колонка не тянется: ручки у неё нет.
+  await page.getByRole('region', { name: 'Готово' }).getByRole('button', { name: 'Свернуть «Готово»' }).click()
+  await expect(page.getByRole('separator', { name: 'Ширина колонки «Готово»' })).toHaveCount(0)
+})

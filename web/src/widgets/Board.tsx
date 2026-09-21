@@ -40,6 +40,7 @@ import type { Sort } from '../features/board/tableSort.ts'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
+import { useColumnWidths } from '../features/board/columnWidth.ts'
 import { nextCard } from '../features/board/navigation.ts'
 import { childrenOf, dependenciesOf, parentsOf, rangeWords } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
@@ -61,7 +62,7 @@ import {
   SearchIcon,
   TagIcon,
 } from '../shared/ui/icons.tsx'
-import { AccessPanel, visibilityLabel } from '../features/access/AccessPanel.tsx'
+import { visibilityLabel } from '../features/access/visibility.ts'
 import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
 import { ScreenError } from '../shared/ui/Field'
@@ -91,6 +92,11 @@ const Changes = lazy(() =>
 )
 const CardArchive = lazy(() =>
   import('../features/board/CardArchive.tsx').then((m) => ({ default: m.CardArchive })),
+)
+// Панель доступа открывают редко и нажатием — грузить её с доской
+// значит платить за неё при каждом открытии доски (П7).
+const AccessPanel = lazy(() =>
+  import('../features/access/AccessPanel.tsx').then((m) => ({ default: m.AccessPanel })),
 )
 const IterationReport = lazy(() =>
   import('../features/board/IterationReport.tsx').then((m) => ({ default: m.IterationReport })),
@@ -168,6 +174,7 @@ export function Board({
   // из всплывающего уведомления — исчезло оно, и карточка недостижима.
   const [showArchive, setShowArchive] = useState(false)
   const { collapsed, toggle: toggleColumn } = useCollapsedColumns(boardId)
+  const { widths: columnWidths, setWidth: resizeColumn } = useColumnWidths(boardId)
   const [palette, setPalette] = useState(false)
   // На узком экране колонки не помещаются рядом, и горизонтальная
   // прокрутка доски превращает работу в поиск: показываем одну колонку
@@ -859,6 +866,8 @@ export function Board({
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
+        width={columnWidths[columnId] ?? null}
+        onResize={resizeColumn}
         cards={base.cards}
         unit={unit}
         sleDays={base.info.sleDays}
@@ -1269,12 +1278,14 @@ export function Board({
       </ConfirmDialog>
 
       {showAccess && (
-        <AccessPanel
-          boardId={boardId}
-          canEdit={canEdit}
-          onClose={() => setShowAccess(false)}
-          onChanged={loadAccess}
-        />
+        <Suspense fallback={null}>
+          <AccessPanel
+            boardId={boardId}
+            canEdit={canEdit}
+            onClose={() => setShowAccess(false)}
+            onChanged={loadAccess}
+          />
+        </Suspense>
       )}
 
       {openCard && base.cards[openCard] && (

@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { ApiError, VISIBILITY_NAMES, api } from '../shared/api/index.ts'
 import { plural } from '../shared/lib/plural.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
-import { BoardAccess } from '../features/access/BoardAccess.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { ScreenError } from '../shared/ui/Field'
+
+// Настройку доступа раскрывают у одной доски и изредка — тот же довод,
+// что у панели доступа на самой доске: грузить её вместе со списком
+// значит платить за неё при каждом открытии (П7).
+const BoardAccess = lazy(() =>
+  import('../features/access/BoardAccess.tsx').then((m) => ({ default: m.BoardAccess })),
+)
 
 /**
  * Вторая строка доски: ключ, кому видна и сколько работы.
@@ -145,13 +151,15 @@ export function BoardList({
               </div>
             </div>
             {openAccess === b.id && (
-              <BoardAccess
-                boardId={b.id}
-                people={people}
-                teams={teams}
-                canEdit={canEdit}
-                onClose={() => setOpenAccess(null)}
-              />
+              <Suspense fallback={<Skeleton lines={3} />}>
+                <BoardAccess
+                  boardId={b.id}
+                  people={people}
+                  teams={teams}
+                  canEdit={canEdit}
+                  onClose={() => setOpenAccess(null)}
+                />
+              </Suspense>
             )}
           </li>
         ))}
