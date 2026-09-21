@@ -44,6 +44,10 @@ async function backToBoard(page: Page, url: string) {
 }
 
 test('снимки экранов', async ({ page, browser }) => {
+  // Один сценарий снимает все экраны подряд, и тридцати секунд
+  // по умолчанию перестало хватать: 21.09.2026 он шёл 29 с и следующим
+  // же снимком упал по времени — не на поломке, а на числе экранов.
+  test.setTimeout(120_000)
   await page.setViewportSize({ width: 1440, height: 900 })
 
   await page.goto('/')
