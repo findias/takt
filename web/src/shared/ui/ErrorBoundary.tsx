@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { t } from '../i18n/index.ts'
 
 /**
  * Что видно, когда отрисовка упала.
@@ -32,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     // В консоль — целиком, вместе с деревом компонентов: на экране
     // столько показывать некому, а в консоли это первое, что открывают.
-    console.error('Отрисовка упала:', error, info.componentStack)
+    console.error(t.ui.crashLog, error, info.componentStack)
   }
 
   render() {
@@ -42,21 +43,15 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="centered">
         <div className="panel stack">
-          <h1>Экран не отрисовался</h1>
-          <p>
-            Это ошибка в самом приложении, а не в ваших данных: они на месте.
-            Перезагрузка чаще всего возвращает всё как было.
-          </p>
-          <p className="muted small">
-            Если повторяется — пришлите тому, кто чинит, текст ниже: по нему видно,
-            где именно сломалось.
-          </p>
+          <h1>{t.ui.crashTitle}</h1>
+          <p>{t.ui.crashBody}</p>
+          <p className="muted small">{t.ui.crashReport}</p>
           {/* Текст ошибки выделяется и копируется. Моноширинный,
               с переносом: сообщения бывают длинными, а обрезанное
               сообщение бесполезно ровно той частью, которую обрезали. */}
           <pre className="error-details">{error.message || String(error)}</pre>
           <div className="row">
-            <button onClick={() => window.location.reload()}>Перезагрузить</button>
+            <button onClick={() => window.location.reload()}>{t.ui.reload}</button>
             {/* Возврат к списку досок — второй выход: если ломается
                 один экран, остальные обычно живы. */}
             <button
@@ -65,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 window.location.href = '/'
               }}
             >
-              Ко всем доскам
+              {t.ui.toAllBoards}
             </button>
           </div>
         </div>

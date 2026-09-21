@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { plural } from '../lib/plural.ts'
+import { t } from '../i18n/index.ts'
 
 /**
  * Поле формы: подпись, подсказка, отказ.
@@ -235,7 +235,6 @@ export function useFormErrors() {
   }
 }
 
-const плуралСимвол = (n: number) => plural(n, 'символ', 'символа', 'символов')
 
 type Control = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
 
@@ -256,12 +255,12 @@ function isControl(node: Element): node is Control {
  */
 function messageFor(control: Control): string {
   const v = control.validity
-  if (v.valueMissing) return 'Заполните'
+  if (v.valueMissing) return t.ui.fillIn
   if (v.typeMismatch) {
     if (control instanceof HTMLInputElement && control.type === 'url') {
-      return 'Адрес начинается с http:// или https://'
+      return t.ui.urlScheme
     }
-    return 'Похоже, в адресе опечатка: нужен вид имя@домен'
+    return t.ui.emailTypo
   }
   // Длина называется числами, а не правилом: правило уже сказано
   // подсказкой под полем, и повторить его слово в слово значит
@@ -270,16 +269,16 @@ function messageFor(control: Control): string {
   if (v.tooShort && 'minLength' in control) {
     const надо = control.minLength
     const есть = control.value.length
-    return `Сейчас ${есть} ${плуралСимвол(есть)}, нужно ${надо}`
+    return t.ui.tooShort(есть, надо)
   }
   if (v.tooLong && 'maxLength' in control) {
     const надо = control.maxLength
     const есть = control.value.length
-    return `Сейчас ${есть} ${плуралСимвол(есть)}, можно ${надо}`
+    return t.ui.tooLong(есть, надо)
   }
-  if (v.rangeUnderflow && 'min' in control) return `Не меньше ${control.min}`
-  if (v.rangeOverflow && 'max' in control) return `Не больше ${control.max}`
-  if (v.stepMismatch) return 'Нужно целое число'
-  if (v.patternMismatch) return control.title || 'Не подходит по виду'
-  return 'Не подходит'
+  if (v.rangeUnderflow && 'min' in control) return t.ui.notLess(control.min)
+  if (v.rangeOverflow && 'max' in control) return t.ui.notMore(control.max)
+  if (v.stepMismatch) return t.ui.wholeNumber
+  if (v.patternMismatch) return control.title || t.ui.badPattern
+  return t.ui.invalid
 }

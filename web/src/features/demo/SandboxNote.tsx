@@ -1,3 +1,5 @@
+import { locale, t } from '../../shared/i18n/index.ts'
+
 /**
  * Пометка песочницы публичного демо в шапке.
  *
@@ -11,8 +13,8 @@ export function SandboxNote({ expiresAt }: { expiresAt?: string }) {
   if (!expiresAt) return null
   const when = sandboxEnds(expiresAt)
   return (
-    <span className="sandbox-note" title="Песочница публичного демо: своя у каждого посетителя, никто другой её не видит">
-      Демо · исчезнет {when}
+    <span className="sandbox-note" title={t.demo.noteTitle}>
+      {t.demo.note(when)}
     </span>
   )
 }
@@ -20,7 +22,7 @@ export function SandboxNote({ expiresAt }: { expiresAt?: string }) {
 /** Когда исчезнет — днём и временем по часам смотрящего: «22 сентября,
  *  21:40». Секунды и год человеку ни о чём не говорят. */
 export function sandboxEnds(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
+  return new Date(iso).toLocaleString(locale(), {
     day: 'numeric',
     month: 'long',
     hour: '2-digit',

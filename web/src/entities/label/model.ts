@@ -3,6 +3,7 @@
 // доски: проверяется без браузера и без сети.
 
 import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Откуда метка — словами, для подписи рядом с чипом.
@@ -15,11 +16,11 @@ import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
 export function labelOrigin(label: Label): string {
   switch (label.scope) {
     case 'team':
-      return `подразделение «${label.scopeName ?? ''}»`
+      return t.model.originTeam(label.scopeName ?? '')
     case 'board':
-      return `доска «${label.scopeName ?? ''}»`
+      return t.model.originBoard(label.scopeName ?? '')
     default:
-      return 'вся организация'
+      return t.model.originOrg
   }
 }
 
@@ -30,7 +31,7 @@ export function labelOrigin(label: Label): string {
  */
 export function labelTitle(label: Label): string {
   const parts = [`${label.name} — ${labelOrigin(label)}`]
-  if (label.archived) parts.push('в архиве')
+  if (label.archived) parts.push(t.model.archived)
   return parts.join(', ')
 }
 
@@ -139,10 +140,10 @@ export function pickerItems(
 export function placeWords(place: LabelPlace): string {
   switch (place.scope) {
     case 'board':
-      return 'на этой доске'
+      return t.model.placeBoard
     case 'team':
-      return `в подразделении «${place.name}»`
+      return t.model.placeTeam(place.name)
     default:
-      return 'на всю организацию'
+      return t.model.placeOrg
   }
 }

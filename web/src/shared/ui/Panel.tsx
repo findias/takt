@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEscape } from '../lib/useEscape.ts'
+import { t } from '../i18n/index.ts'
 
 /**
  * Панель в трёх режимах.
@@ -18,11 +19,9 @@ import { useEscape } from '../lib/useEscape.ts'
  */
 export type PanelMode = 'side' | 'center' | 'full'
 
-const MODES: Record<PanelMode, string> = {
-  side: 'Сбоку',
-  center: 'По центру',
-  full: 'Во весь экран',
-}
+const MODES: PanelMode[] = ['side', 'center', 'full']
+const modeName = (m: PanelMode) =>
+  m === 'side' ? t.ui.panelSide : m === 'center' ? t.ui.panelCenter : t.ui.panelFull
 
 /** Режим запоминается: переключать его каждый раз никто не станет. */
 export function usePanelMode(): [PanelMode, (mode: PanelMode) => void] {
@@ -116,17 +115,17 @@ export function Panel({
           {actions}
           <select
             value={mode}
-            aria-label="Как показывать панель"
+            aria-label={t.ui.panelMode}
             onChange={(e) => onMode(e.target.value as PanelMode)}
           >
-            {(Object.keys(MODES) as PanelMode[]).map((m) => (
+            {MODES.map((m) => (
               <option key={m} value={m}>
-                {MODES[m]}
+                {modeName(m)}
               </option>
             ))}
           </select>
           <button className="link" onClick={onClose}>
-            Закрыть
+            {t.common.close}
           </button>
         </div>
       </header>

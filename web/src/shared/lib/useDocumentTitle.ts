@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
+import { t } from '../i18n/index.ts'
 
-/** Как называется приложение, когда сказать больше нечего. */
-const APP = 'Доска'
 
 /**
  * Заголовок вкладки браузера.
@@ -24,7 +23,7 @@ export function useDocumentTitle(what: string | null): void {
   useEffect(() => {
     if (!what) return
     const было = document.title
-    document.title = `${what} · ${APP}`
+    document.title = `${what} · ${t.ui.appName}`
     // Возврат прежнего важен для карточки: закрыли панель — заголовок
     // обязан вернуться к доске, а не остаться на закрытой карточке.
     return () => {

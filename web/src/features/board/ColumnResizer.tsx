@@ -7,6 +7,7 @@ import {
   COLUMN_WIDTH_STEP,
   clampColumnWidth,
 } from './columnWidth.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Ручка ширины колонки.
@@ -51,7 +52,7 @@ export function ColumnResizer({
       className="column-resizer"
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Ширина колонки «${name}»`}
+      aria-label={t.ui.columnWidth(name)}
       aria-valuenow={current}
       aria-valuemin={COLUMN_WIDTH_MIN}
       aria-valuemax={COLUMN_WIDTH_MAX}

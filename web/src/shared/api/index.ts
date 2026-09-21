@@ -1,4 +1,5 @@
 // Клиент API. Одна точка входа, чтобы обработка ошибок и таймаутов
+import { lang, live, t } from '../i18n/index.ts'
 // не расползалась по компонентам.
 
 // Названия ролей и видимостей вынесены отдельно: этот модуль читают
@@ -264,13 +265,7 @@ export type Delivery = {
 
 export { WEBHOOK_EVENT_NAMES } from './events.ts'
 
-export const SCOPE_NAMES: Record<string, string> = {
-  'boards:read': 'Читать доски',
-  'boards:write': 'Изменять доски',
-  'structure:read': 'Читать структуру',
-  'audit:read': 'Читать журнал',
-  'scim:write': 'Заводить людей из каталога',
-}
+export const SCOPE_NAMES = live(() => t.api.scopes)
 
 /** Разрешение каталога. Права у него свои: подразделения и их состав
  *  ключу открывает отдельная политика базы, а не роль владельца, которую
@@ -414,11 +409,7 @@ export type Priority = 'highest' | 'high' | 'medium' | 'low'
 
 export type LinkKind = 'subtask' | 'blocks' | 'relates'
 
-export const LINK_KIND_NAMES: Record<LinkKind, string> = {
-  subtask: 'Подзадача',
-  blocks: 'Блокирует',
-  relates: 'Связана с',
-}
+export const LINK_KIND_NAMES = live(() => t.api.linkKinds) as Record<LinkKind, string>
 
 export type Link = { fromCard: string; toCard: string; kind: LinkKind }
 
@@ -523,13 +514,7 @@ export type Iteration = {
  *  сложит разные сущности с общим названием. */
 export type FieldKind = 'text' | 'number' | 'date' | 'select' | 'checkbox'
 
-export const FIELD_KIND_NAMES: Record<FieldKind, string> = {
-  text: 'Текст',
-  number: 'Число',
-  date: 'Дата',
-  select: 'Выбор',
-  checkbox: 'Да или нет',
-}
+export const FIELD_KIND_NAMES = live(() => t.api.fieldKinds) as Record<FieldKind, string>
 
 export type CardField = {
   id: string
@@ -607,16 +592,7 @@ export type ManagedLabel = Label & { canManage: boolean }
 export type LabelPlace = { scope: LabelScope; id?: string; name: string }
 export type LabelTone = 'slate' | 'green' | 'blue' | 'violet' | 'rose' | 'amber' | 'teal' | 'brown'
 
-export const TONE_NAMES: Record<LabelTone, string> = {
-  slate: 'Серый',
-  green: 'Зелёный',
-  blue: 'Синий',
-  violet: 'Фиолетовый',
-  rose: 'Розовый',
-  amber: 'Янтарный',
-  teal: 'Бирюзовый',
-  brown: 'Коричневый',
-}
+export const TONE_NAMES = live(() => t.api.tones) as Record<LabelTone, string>
 
 export type Patch = {
   /** Метки карточки целиком: «вот как теперь», а не «добавили такую-то».
@@ -648,7 +624,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly body: any,
   ) {
-    super(body?.error ?? `Ошибка ${status}`)
+    super(body?.error ?? t.api.httpError(status))
   }
   get isConflict() {
     return this.status === 409
@@ -688,7 +664,12 @@ async function request<T>(
   try {
     response = await fetch(path, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      // Язык — выбранный в интерфейсе, а не браузера: сервер называет
+      // отказы словами, и они обязаны совпасть с языком экрана.
+      headers:
+        body === undefined
+          ? { 'Accept-Language': lang }
+          : { 'Content-Type': 'application/json', 'Accept-Language': lang },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
       credentials: 'same-origin',
@@ -701,7 +682,7 @@ async function request<T>(
     // постоянное место на экране, пока оно не кончится.
     setConnected(false)
     throw new NetworkError(
-      controller.signal.aborted ? 'Сервер не ответил за 10 секунд' : 'Нет связи с сервером',
+      controller.signal.aborted ? t.api.timeout : t.api.offline,
     )
   } finally {
     clearTimeout(timer)

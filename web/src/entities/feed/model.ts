@@ -7,6 +7,7 @@
 import { blockUntilWords, dateWords, priorityLabel } from '../card/model.ts'
 import { ROLE_NAMES, VISIBILITY_NAMES } from '../../shared/api/names.ts'
 import type { AuditEntry, BoardEvent, CardField, Priority } from '../../shared/api/index.ts'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Что произошло с карточкой.
@@ -21,37 +22,37 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
   const p = event.payload ?? {}
   switch (event.type) {
     case 'created':
-      return 'создана'
+      return t.feed.created
     case 'moved': {
       // В событии лежит снимок колонок на момент перехода, а не ссылки:
       // переименование колонки не должно переписывать историю.
       const to = name(p.to)
       const from = name(p.from)
-      const where = from && to ? `из «${from}» в «${to}»` : to ? `в «${to}»` : 'перемещена'
-      if (p.crossedStart === true) return `${where} — работа началась`
-      if (p.crossedFinish === true) return `${where} — работа закончена`
+      const where = from && to ? t.feed.movedFromTo(from, to) : to ? t.feed.movedTo(to) : t.feed.moved
+      if (p.crossedStart === true) return t.feed.workStarted(where)
+      if (p.crossedFinish === true) return t.feed.workFinished(where)
       return where
     }
     case 'renamed':
-      return typeof p.title === 'string' ? `переименована в «${p.title}»` : 'переименована'
+      return typeof p.title === 'string' ? t.feed.renamedTo(p.title) : t.feed.renamed
     case 'described':
-      return 'изменено описание'
+      return t.feed.described
     case 'archived':
-      return 'убрана с доски'
+      return t.feed.archived
     case 'linked':
-      return `связана: ${linkKind(p.kind)}`
+      return t.feed.linked(linkKind(p.kind))
     case 'unlinked':
-      return `связь снята: ${linkKind(p.kind)}`
+      return t.feed.unlinked(linkKind(p.kind))
     case 'commented':
-      return 'написано в обсуждении'
+      return t.feed.commented
     case 'iteration_added':
-      return 'добавлена в итерацию'
+      return t.feed.iterationAdded
     case 'iteration_removed':
-      return 'убрана из итерации'
+      return t.feed.iterationRemoved
     case 'estimated':
-      return typeof p.estimate === 'number' ? `оценена в ${p.estimate}` : 'оценка изменена'
+      return typeof p.estimate === 'number' ? t.feed.estimatedAt(p.estimate) : t.feed.estimated
     case 'restored':
-      return 'возвращена на доску'
+      return t.feed.restored
     case 'committed':
       // Словами, как и вся остальная лента: одна машинная дата посреди
       // речи читается как чужая строка. Но без отсчёта от сегодня —
@@ -59,39 +60,39 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       // запись о прошлом не имеет права меняться от того, что прошло
       // время.
       return typeof p.dueOn === 'string'
-        ? `обязательство: ${dateWords(p.dueOn)}`
-        : 'обязательство снято'
+        ? t.feed.committedTo(dateWords(p.dueOn))
+        : t.feed.uncommitted
     case 'prioritised':
       return typeof p.priority === 'string'
-        ? `приоритет: ${priorityLabel(p.priority as Priority).toLowerCase()}`
-        : 'изменён приоритет'
+        ? t.feed.priorityTo(priorityLabel(p.priority as Priority).toLowerCase())
+        : t.feed.prioritised
     // «Отмечена», а не «сделана»: слово называет действие человека,
     // а не факт о работе. Поток о ней по-прежнему судит по колонке
     // финиша, и ставить эти два события в один ряд нельзя.
     case 'done':
-      return 'отмечена сделанной'
+      return t.feed.done
     case 'undone':
-      return 'отметка «сделана» снята'
+      return t.feed.undone
     case 'blocked':
-      return typeof p.reason === 'string' ? `заблокирована: ${p.reason}` : 'заблокирована'
+      return typeof p.reason === 'string' ? t.feed.blockedFor(p.reason) : t.feed.blocked
     case 'unblocked':
-      return 'блокировка снята'
+      return t.feed.unblocked
     // Автора у снятия по сроку нет, и строка читается как строка без
     // автора: «сама» говорит, почему подписи нет.
     case 'block_expired':
-      return 'блокировка снята сама: вышел срок'
+      return t.feed.blockExpired
     case 'block_until':
       return typeof p.until === 'string'
-        ? `срок блокировки: до ${blockUntilWords(p.until)}`
-        : 'блокировка стала бессрочной'
+        ? t.feed.blockUntil(blockUntilWords(p.until))
+        : t.feed.blockOpenEnded
     case 'field_set': {
       const field = fields.find((f) => f.id === p.fieldId)
-      if (!field) return 'заполнено своё поле'
-      return `«${field.name}»: ${fieldValueText(p.value, field.kind)}`
+      if (!field) return t.feed.fieldSet
+      return t.feed.fieldValue(field.name, fieldValueText(p.value, field.kind))
     }
     case 'field_cleared': {
       const field = fields.find((f) => f.id === p.fieldId)
-      return field ? `поле «${field.name}» очищено` : 'своё поле очищено'
+      return field ? t.feed.fieldClearedNamed(field.name) : t.feed.fieldCleared
     }
     default:
       // Неизвестный тип показываем как есть. Событие уже случилось,
@@ -108,9 +109,9 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
  * человек так и написал.
  */
 function fieldValueText(value: unknown, kind: CardField['kind']): string {
-  if (typeof value === 'boolean') return value ? 'да' : 'нет'
+  if (typeof value === 'boolean') return value ? t.feed.yes : t.feed.no
   if (typeof value === 'number') return String(value)
-  if (typeof value !== 'string') return 'значение изменено'
+  if (typeof value !== 'string') return t.feed.valueChanged
   if (kind === 'date') return dateWords(value)
   // Длинное значение обрывается: строка журнала — одна строка, и абзац
   // из своего поля вытесняет из неё всё остальное.
@@ -127,7 +128,7 @@ function fieldValueText(value: unknown, kind: CardField['kind']): string {
  * до сих пор их просто выбрасывали.
  */
 export function auditText(entry: AuditEntry, people: Record<string, string> = {}): string {
-  const what = SUBJECTS[entry.subject] ?? entry.subject
+  const what = t.feed.subjects[entry.subject] ?? entry.subject
   const named = subjectName(entry)
   const about = named ? `${what} «${named}»` : what
   // Записи про людей имени в снимке не хранят — там идентификатор.
@@ -137,13 +138,13 @@ export function auditText(entry: AuditEntry, people: Record<string, string> = {}
   const tail = who ? ` · ${who}` : ''
   switch (entry.action) {
     case 'insert':
-      return `${about}: добавлено${tail}`
+      return t.feed.added(about, tail)
     case 'update': {
       const changed = changeText(entry)
-      return changed ? `${about}: изменено — ${changed}${tail}` : `${about}: изменено${tail}`
+      return changed ? t.feed.changedWhat(about, changed, tail) : t.feed.changed(about, tail)
     }
     case 'delete':
-      return `${about}: удалено${tail}`
+      return t.feed.removed(about, tail)
     default:
       return `${about}: ${entry.action}${tail}`
   }
@@ -184,14 +185,14 @@ function changeText(entry: AuditEntry): string {
   )
   if (changed.length === 0) return ''
 
-  const named = changed.map((key) => FIELDS[key] ?? key)
+  const named = changed.map((key) => t.feed.fields[key] ?? key)
   if (changed.length === 1) {
     const key = changed[0]
     const values = VALUES[key]
     if (values) return `${named[0]}: ${values(before[key])} → ${values(after[key])}`
     return named[0]
   }
-  if (named.length > 3) return `${named.slice(0, 3).join(', ')} и ещё ${named.length - 3}`
+  if (named.length > 3) return t.feed.andMore(named.slice(0, 3).join(', '), named.length - 3)
   return named.join(', ')
 }
 
@@ -204,24 +205,6 @@ function side(entry: AuditEntry, which: 'old' | 'new'): Record<string, unknown> 
 // бы изменённой, ничем не отличаясь от соседней.
 const NOISE = new Set(['id', 'org_id', 'version', 'created_at', 'updated_at', 'card_seq'])
 
-const FIELDS: Record<string, string> = {
-  name: 'название',
-  key: 'ключ',
-  role: 'роль',
-  email: 'почта',
-  visibility: 'видимость',
-  team_id: 'подразделение',
-  parent_id: 'вышестоящее подразделение',
-  project_id: 'проект',
-  archived_at: 'архив',
-  discarded_at: 'удаление',
-  accepted_at: 'принято',
-  revoked_at: 'отозвано',
-  expires_at: 'срок действия',
-  sle_days: 'ожидаемый срок',
-  sle_probability: 'доля в срок',
-  audit_retention_days: 'срок хранения журнала',
-}
 
 // Значения, у которых есть человеческое имя. Остальные показываются
 // только именем поля: подставлять в ленту идентификатор — то же самое,
@@ -232,25 +215,10 @@ const VALUES: Record<string, (value: unknown) => string> = {
 }
 
 function sideValue(names: Record<string, string>, value: unknown): string {
-  if (typeof value !== 'string') return 'не задано'
+  if (typeof value !== 'string') return t.feed.unset
   return (names[value] ?? value).toLowerCase()
 }
 
-const SUBJECTS: Record<string, string> = {
-  memberships: 'Участие в организации',
-  invites: 'Приглашение',
-  teams: 'Подразделение',
-  team_members: 'Состав подразделения',
-  board_members: 'Состав доски',
-  observers: 'Наблюдение',
-  boards: 'Доска',
-  cards: 'Карточка',
-  users: 'Личность',
-  // Выгрузка попадает в журнал как действие, а не как таблица: строка
-  // берётся из кода, а не из имени отношения, — но читателю журнала
-  // это всё равно раздел, и сырое слово в ленте выглядит недоделкой.
-  export: 'Выгрузка данных',
-}
 
 /** Имя, которое стоит показать рядом с записью. */
 export function actorText(actor: string | null): string {
@@ -260,11 +228,11 @@ export function actorText(actor: string | null): string {
   //
   // Не «без имени»: так читается, будто у человека нет имени. Подписи
   // нет — потому что подписывать было некому.
-  return actor ?? 'без подписи'
+  return actor ?? t.feed.noActor
 }
 
 export function timeText(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
+  return new Date(iso).toLocaleString(locale(), {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
@@ -283,12 +251,12 @@ function name(side: unknown): string {
 function linkKind(kind: unknown): string {
   switch (kind) {
     case 'subtask':
-      return 'подзадача'
+      return t.feed.linkSubtask
     case 'blocks':
-      return 'блокирует'
+      return t.feed.linkBlocks
     case 'relates':
-      return 'смежная'
+      return t.feed.linkRelates
     default:
-      return typeof kind === 'string' ? kind : 'связь'
+      return typeof kind === 'string' ? kind : t.feed.link
   }
 }

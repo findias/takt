@@ -14,6 +14,7 @@
  */
 
 import { initials } from '../lib/initials.ts'
+import { t } from '../i18n/index.ts'
 
 const TONES = 8
 
@@ -94,7 +95,7 @@ export function Avatar({ name, size = SIZE }: { name: string; size?: number }) {
  */
 export function AvatarMore({ count, size = SIZE }: { count: number; size?: number }) {
   return (
-    <span className="avatar-more" style={sizing(size, ДОЛЯ_СЧЁТЧИКА)} title={`и ещё ${count}`}>
+    <span className="avatar-more" style={sizing(size, ДОЛЯ_СЧЁТЧИКА)} title={t.ui.andMore(count)}>
       +{count}
     </span>
   )

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode } from 'react'
 import { CloseIcon } from './icons.tsx'
 import { IconButton } from './Button.tsx'
+import { t } from '../i18n/index.ts'
 
 /**
  * Сообщения о том, что произошло.
@@ -92,7 +93,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
                 {toast.action.label}
               </button>
             )}
-            <IconButton label="Закрыть сообщение" onClick={() => dismiss(toast.id)}>
+            <IconButton label={t.ui.closeMessage} onClick={() => dismiss(toast.id)}>
               <CloseIcon />
             </IconButton>
           </div>

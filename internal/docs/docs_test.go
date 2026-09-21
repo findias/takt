@@ -221,11 +221,18 @@ func TestDocsMentionRealCommandsAndPaths(t *testing.T) {
 // «Наблюдатель области» и «Наблюдающий» — разница, из-за которой
 // человек ищет несуществующую настройку.
 func TestDocsUseTheSameWordsAsTheProduct(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join(корень(t), "web", "src", "shared", "api", "names.ts"))
+	// Словарь — раздел `names` русского каталога: с выбором языка
+	// (ROADMAP 30.2) слова переехали туда из shared/api/names.ts.
+	raw, err := os.ReadFile(filepath.Join(корень(t), "web", "src", "shared", "i18n", "ru.ts"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	словарь := string(raw)
+	начало := strings.Index(string(raw), "\n  names: {")
+	if начало < 0 {
+		t.Fatal("в русском каталоге нет раздела names — сверять не с чем")
+	}
+	конец := strings.Index(string(raw)[начало:], "\n  },")
+	словарь := string(raw)[начало : начало+конец]
 	слова := regexp.MustCompile(`'([А-ЯЁ][^']+)'`).FindAllStringSubmatch(словарь, -1)
 	if len(слова) == 0 {
 		t.Fatal("словарь названий пуст — сверять не с чем")

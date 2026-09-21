@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from './Button.tsx'
+import { t } from '../i18n/index.ts'
 
 /**
  * Диалог подтверждения.
@@ -28,7 +29,7 @@ export function ConfirmDialog({
   open,
   title,
   children,
-  confirmLabel = 'Подтвердить',
+  confirmLabel = t.ui.confirm,
   danger = false,
   busy = false,
   confirmDisabled = false,
@@ -109,7 +110,7 @@ export function ConfirmDialog({
           {confirmLabel}
         </Button>
         <Button kind="quiet" onClick={onCancel}>
-          Отмена
+          {t.common.cancel}
         </Button>
       </div>
     </dialog>

@@ -1,4 +1,5 @@
 import { useToast } from './Toast.tsx'
+import { t } from '../i18n/index.ts'
 
 /**
  * Копирование в буфер обмена.
@@ -30,27 +31,27 @@ export function CopyButton({
 
   return (
     <button
-      aria-label={`Скопировать ${what}`}
+      aria-label={t.ui.copyWhat(what)}
       onClick={() => {
         const done = navigator.clipboard?.writeText(value)
         if (!done) {
           notify({
-            text: `Браузер не дал скопировать ${what} — выделите поле и скопируйте вручную.`,
+            text: t.ui.copyRefused(what),
             tone: 'warning',
           })
           return
         }
         void done.then(
-          () => notify({ text: `Скопировали ${what}.`, tone: 'info' }),
+          () => notify({ text: t.ui.copied(what), tone: 'info' }),
           () =>
             notify({
-              text: `Не удалось скопировать ${what} — выделите поле и скопируйте вручную.`,
+              text: t.ui.copyFailed(what),
               tone: 'warning',
             }),
         )
       }}
     >
-      Скопировать
+      {t.ui.copy}
     </button>
   )
 }

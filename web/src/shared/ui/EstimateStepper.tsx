@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MinusIcon, PlusIcon } from './icons.tsx'
 import { unitLabel } from '../../entities/card/model.ts'
 import type { EstimateUnit } from '../api/index.ts'
+import { t } from '../i18n/index.ts'
 
 export function EstimateStepper({
   value,
@@ -85,7 +86,7 @@ export function EstimateStepper({
       <button
         type="button"
         className="btn btn--quiet btn--icon"
-        aria-label="Уменьшить оценку"
+        aria-label={t.ui.estimateLess}
         disabled={draft === null}
         onClick={() => step(-1)}
       >
@@ -101,7 +102,7 @@ export function EstimateStepper({
         // от «оценили нулём».
         value={draft === null ? '' : draft}
         placeholder="—"
-        aria-label="Оценка"
+        aria-label={t.ui.estimate}
         onChange={(e) => {
           const raw = e.target.value.trim()
           if (raw === '') return send(null)
@@ -112,14 +113,14 @@ export function EstimateStepper({
       <button
         type="button"
         className="btn btn--quiet btn--icon"
-        aria-label="Увеличить оценку"
+        aria-label={t.ui.estimateMore}
         onClick={() => step(1)}
       >
         <PlusIcon />
       </button>
       {/* Единица — подпись, а не элемент управления: меняется она
           в настройках доски, одна на всю доску. */}
-      <span className="stepper-unit">{draft === null ? 'без оценки' : `${draft} ${unitLabel(draft, unit)}`}</span>
+      <span className="stepper-unit">{draft === null ? t.ui.noEstimate : `${draft} ${unitLabel(draft, unit)}`}</span>
     </span>
   )
 }

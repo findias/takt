@@ -5,7 +5,6 @@
 // другой команды или на доску, которой спрашивающий не видит. Разложить
 // это по полкам можно без сети — значит, здесь и раскладываем.
 
-import { plural } from '../../shared/lib/plural.ts'
 import type {
   Card,
   EstimateUnit,
@@ -15,6 +14,7 @@ import type {
   Priority,
 } from '../../shared/api/index.ts'
 import type { BaseState } from '../board/model.ts'
+import { live, locale, t } from '../../shared/i18n/index.ts'
 
 /** Куда ведёт связь и что об этом известно. */
 export type Related = {
@@ -187,7 +187,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       id,
       kind,
       title: own.title,
-      where: 'На этой доске',
+      where: t.card.onThisBoard,
       elsewhere: null,
       stage: null,
       promise: null,
@@ -213,8 +213,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       kind,
       title: foreign.title,
       where: foreign.teamName
-        ? `Доска «${foreign.boardName}» · ${foreign.teamName}`
-        : `Доска «${foreign.boardName}»`,
+        ? t.card.onBoardOfTeam(foreign.boardName, foreign.teamName)
+        : t.card.onBoard(foreign.boardName),
       elsewhere: foreign.teamName ?? foreign.boardName,
       stage: stageOf(foreign),
       // Обещание показывается, пока работа не сделана: обещание сроков
@@ -235,9 +235,9 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
   return {
     id,
     kind,
-    title: 'Карточка недоступна',
-    where: 'В подразделении, которого вам не видно',
-    elsewhere: 'у соседей',
+    title: t.card.unavailable,
+    where: t.card.hiddenTeam,
+    elsewhere: t.card.neighbours,
     stage: null,
     promise: null,
     done: false,
@@ -259,11 +259,8 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
  * сюда смотрят, про место и не спрашивает: «третью неделю лежит»
  * и «делают со вчера» — это про то, взялись или нет.
  */
-const STAGES: Record<LinkedCard['columnKind'], string> = {
-  queue: 'Ещё не начали',
-  in_progress: 'Уже делают',
-  done: 'Сделали',
-}
+const stageName = (kind: LinkedCard['columnKind']) =>
+  kind === 'queue' ? t.card.stageQueue : kind === 'in_progress' ? t.card.stageInProgress : t.card.stageDone
 
 /**
  * Что происходит с чужой карточкой: взялись ли за неё и где она стоит.
@@ -272,8 +269,8 @@ const STAGES: Record<LinkedCard['columnKind'], string> = {
  * того, в какой колонке она при этом стояла.
  */
 function stageOf(card: LinkedCard): string {
-  if (card.archived) return 'Работу не взяли'
-  return `${STAGES[card.columnKind]} · ${card.columnName}`
+  if (card.archived) return t.card.notTaken
+  return `${stageName(card.columnKind)} · ${card.columnName}`
 }
 
 /**
@@ -286,16 +283,9 @@ function stageOf(card: LinkedCard): string {
  */
 function promiseOf(card: LinkedCard): string | null {
   if (card.sleDays === null) return null
-  return `обычно ${card.sleDays} ${plural(card.sleDays, ...UNITS.days)} с вероятностью ${card.sleProbability}%`
+  return t.card.promise(card.sleDays, card.sleProbability)
 }
 
-// Названия единиц оценки живут здесь, а не в клиенте API: модель берёт
-// оттуда только типы, и они стираются при сборке.
-const UNITS: Record<EstimateUnit, [string, string, string]> = {
-  points: ['очко', 'очка', 'очков'],
-  hours: ['час', 'часа', 'часов'],
-  days: ['день', 'дня', 'дней'],
-}
 
 /**
  * Подпись прогресса.
@@ -321,33 +311,28 @@ export function blockedParts(subtasks: Related[]): Related[] {
 /** Строка тревоги для родителя, у которого стоят части. */
 export function blockedPartsLabel(parts: Related[]): string | null {
   if (parts.length === 0) return null
-  if (parts.length > 1) return `Части заблокированы: ${parts.length}`
+  if (parts.length > 1) return t.card.partsBlocked(parts.length)
   // Причина своей части известна и говорит больше названия: «ждём
   // доступ к стенду» — это ответ, а «часть заблокирована» — только
   // повод открыть карточку.
   const [one] = parts
   return one.blockedReason
-    ? `Часть заблокирована: ${one.blockedReason}`
-    : `Часть заблокирована: ${one.title}`
+    ? t.card.partBlocked(one.blockedReason)
+    : t.card.partBlocked(one.title)
 }
 
 export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   if (!card.progress || card.progress.total === 0) return null
   const { done, total, byWeight } = card.progress
-  const base = `${number(done)} из ${number(total)}`
+  const base = t.card.progress(number(done), number(total))
   if (!byWeight || !unit) return base
-  return `${base} ${plural(total, ...UNITS[unit])}`
+  return `${base} ${t.card.unit(total, unit)}`
 }
 
 /** Как уровень называется человеку. «Средний» не показывается
  *  на карточке: это умолчание, и подпись у каждой второй карточки —
  *  шум. */
-export const PRIORITY_NAMES: Record<Priority, string> = {
-  highest: 'Наивысший',
-  high: 'Высокий',
-  medium: 'Средний',
-  low: 'Низкий',
-}
+export const PRIORITY_NAMES = live(() => t.card.priority) as Record<Priority, string>
 
 /**
  * Как называется уровень, каким бы он ни пришёл.
@@ -376,12 +361,7 @@ export function priorityLabel(priority: Priority): string {
  * стоит в списке. «Горит» совпадает с одноимённым отбором намеренно:
  * отбор показывает верх шкалы, и называться они обязаны одинаково.
  */
-export const PRIORITY_SHORT: Record<Priority, string> = {
-  highest: 'горит',
-  high: 'важно',
-  medium: 'обычный',
-  low: 'фоном',
-}
+export const PRIORITY_SHORT = live(() => t.card.priorityShort) as Record<Priority, string>
 
 export function priorityShort(priority: Priority): string {
   return PRIORITY_SHORT[priority] ?? String(priority)
@@ -411,7 +391,7 @@ export function priorityRank(priority: Priority): number {
  */
 export function dateWords(iso: string, now: Date = new Date()): string {
   const at = new Date(`${iso}T00:00:00`)
-  return at.toLocaleDateString('ru-RU', {
+  return at.toLocaleDateString(locale(), {
     day: 'numeric',
     month: 'short',
     // Год — только чужой: в «21 авг 2026 г.» год читают, ничего
@@ -466,8 +446,8 @@ export function rangeWords(from: string, to: string, now: Date = new Date()): st
  */
 export function blockUntilWords(iso: string): string {
   const at = new Date(iso)
-  const day = at.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-  const time = at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const day = at.toLocaleDateString(locale(), { day: 'numeric', month: 'long' })
+  const time = at.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })
   return `${day}, ${time}`
 }
 
@@ -487,14 +467,14 @@ export function blockUntilLabel(
 ): { text: string; soon: boolean; expired: boolean } {
   const at = new Date(iso)
   const left = at.getTime() - now.getTime()
-  if (left <= 0) return { text: 'срок блокировки истёк', soon: true, expired: true }
+  if (left <= 0) return { text: t.card.blockExpired, soon: true, expired: true }
   const soon = left < 86_400_000
-  const time = at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const time = at.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })
   const dayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   const days = Math.round((dayOf(at) - dayOf(now)) / 86_400_000)
-  if (days === 0) return { text: `до ${time} сегодня`, soon, expired: false }
-  if (days === 1) return { text: `до завтра, ${time}`, soon, expired: false }
-  return { text: `до ${blockUntilWords(iso)}`, soon, expired: false }
+  if (days === 0) return { text: t.card.blockUntilToday(time), soon, expired: false }
+  if (days === 1) return { text: t.card.blockUntilTomorrow(time), soon, expired: false }
+  return { text: t.card.blockUntil(blockUntilWords(iso)), soon, expired: false }
 }
 
 export function dueLabel(dueOn: string, now: Date = new Date()): { text: string; days: number } {
@@ -504,11 +484,11 @@ export function dueLabel(dueOn: string, now: Date = new Date()): { text: string;
 
   // Ближние дни названы словами, а не числом: «завтра» читается
   // с одного взгляда, «через 1 дн.» приходится складывать.
-  if (days === 0) return { text: 'сегодня', days }
-  if (days === 1) return { text: 'завтра', days }
-  if (days === -1) return { text: 'прошёл вчера', days }
-  if (days < 0) return { text: `прошёл ${-days} дн. назад`, days }
-  return { text: `через ${days} дн.`, days }
+  if (days === 0) return { text: t.card.dueToday, days }
+  if (days === 1) return { text: t.card.dueTomorrow, days }
+  if (days === -1) return { text: t.card.dueYesterday, days }
+  if (days < 0) return { text: t.card.duePast(-days), days }
+  return { text: t.card.dueIn(days), days }
 }
 
 /**
@@ -546,19 +526,11 @@ export function dueIsBurning(dueOn: string | null, now?: Date): boolean {
 // видела «8 ч» на доске и «8 ч.» в отчёте. Разойтись им ничто
 // не мешало: единицу до сих пор нельзя было даже выбрать, и часы
 // не видел никто.
-export const UNIT_SHORT: Record<EstimateUnit, string> = {
-  points: 'очк.',
-  hours: 'ч',
-  days: 'дн.',
-}
+export const UNIT_SHORT = live(() => t.card.unitShort) as Record<EstimateUnit, string>
 
 /** Полные названия — там, где единицу выбирают: в списке из трёх слов
  *  сокращения читаются как опечатки. */
-export const UNIT_NAMES: Record<EstimateUnit, string> = {
-  points: 'очках',
-  hours: 'часах',
-  days: 'днях',
-}
+export const UNIT_NAMES = live(() => t.card.unitNames) as Record<EstimateUnit, string>
 
 /**
  * Оценка словами.
@@ -573,14 +545,14 @@ export function estimateLabel(value: number | null, unit: EstimateUnit): string 
 /** «5 карточек» — счётом, а не числом рядом со словом: сообщение
  *  об отмене и подпись таблицы обязаны читаться вслух как речь. */
 export function cardsLabel(n: number): string {
-  return `${n} ${plural(n, 'карточка', 'карточки', 'карточек')}`
+  return t.card.cards(n)
 }
 
 /** Единица оценки со склонением при числе: «3 часа», «20 очков».
  *  Правило склонения одно на весь интерфейс — иначе однажды будет
  *  написано «2 очков». */
 export function unitLabel(n: number, unit: EstimateUnit): string {
-  return plural(n, ...UNITS[unit])
+  return t.card.unit(n, unit)
 }
 
 /** Дробные оценки существуют, но «2.00» на карточке не нужно никому. */

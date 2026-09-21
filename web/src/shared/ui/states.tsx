@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from './Button.tsx'
+import { t } from '../i18n/index.ts'
 
 /**
  * Состояния экрана: загрузка, ошибка, пустота.
@@ -81,11 +82,11 @@ export function ErrorState({
 }) {
   return (
     <div className="state state--error" role="alert">
-      <p className="state-title">Не удалось {what}</p>
+      <p className="state-title">{t.ui.failedTo(what)}</p>
       <p className="muted small">{error}</p>
       {onRetry && (
         <Button kind="primary" onClick={onRetry}>
-          Повторить
+          {t.ui.retry}
         </Button>
       )}
     </div>

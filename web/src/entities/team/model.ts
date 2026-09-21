@@ -2,8 +2,8 @@
 // переноса и подписи. Всё, что можно проверить без браузера и без сети,
 // вынесено сюда — по той же причине, что и boardModel.
 
-import { plural } from '../../shared/lib/plural.ts'
 import type { Team } from '../../shared/api/index.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Предел вложенности подразделений. Держит его база; здесь значение нужно,
@@ -122,9 +122,9 @@ export function canNestInside(node: TreeNode): boolean {
  */
 export function counters(node: TreeNode): string {
   const parts: string[] = []
-  if (node.members > 0) parts.push(`${node.members} ${plural(node.members, 'человек', 'человека', 'человек')}`)
-  if (node.boards > 0) parts.push(`${node.boards} ${plural(node.boards, 'доска', 'доски', 'досок')}`)
-  if (parts.length === 0) return 'без людей и досок'
+  if (node.members > 0) parts.push(t.model.people(node.members))
+  if (node.boards > 0) parts.push(t.model.boards(node.boards))
+  if (parts.length === 0) return t.model.emptyTeam
   return parts.join(' · ')
 }
 

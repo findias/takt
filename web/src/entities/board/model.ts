@@ -23,6 +23,7 @@ import type {
   Snapshot,
   OperationResult,
 } from '../../shared/api/index.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 export type BaseState = {
   info: BoardInfo
@@ -314,9 +315,9 @@ export function parseLimitDraft(
 /** Подписи разметки колонки: что она означает для потока. */
 export function flowMarks(column: Column): string[] {
   const marks: string[] = []
-  if (column.isStartedPoint) marks.push('начало работы')
-  if (column.isFinishedPoint) marks.push('финиш')
-  if (column.wipLimitHard && column.wipLimit !== null) marks.push('жёсткий лимит')
+  if (column.isStartedPoint) marks.push(t.model.markStarted)
+  if (column.isFinishedPoint) marks.push(t.model.markFinished)
+  if (column.wipLimitHard && column.wipLimit !== null) marks.push(t.model.markHardLimit)
   return marks
 }
 
@@ -336,10 +337,10 @@ export function flowIssues(columns: Column[]): string[] {
 
   const issues: string[] = []
   if (!live.some((c) => c.isStartedPoint)) {
-    issues.push('Не отмечено начало работы: время цикла и возраст карточек не посчитаются')
+    issues.push(t.model.noStart)
   }
   if (!live.some((c) => c.isFinishedPoint)) {
-    issues.push('Не отмечен финиш: пропускная способность и время цикла не посчитаются')
+    issues.push(t.model.noFinish)
   }
 
   // Финиш левее начала — не запрет, а почти наверняка ошибка разметки:
@@ -347,7 +348,7 @@ export function flowIssues(columns: Column[]): string[] {
   const start = live.findIndex((c) => c.isStartedPoint)
   const finish = live.findIndex((c) => c.isFinishedPoint)
   if (start >= 0 && finish >= 0 && finish < start) {
-    issues.push('Финиш стоит раньше начала работы: проверьте разметку колонок')
+    issues.push(t.model.finishBeforeStart)
   }
   return issues
 }
@@ -395,7 +396,7 @@ export function ageLabel(
   if (days === null) return null
   // До десяти дней — с десятой долей: разница между «полдня» и «два
   // дня» в начале работы важнее, чем между 24 и 25 днями в конце.
-  return `${days < 10 ? days.toFixed(1) : Math.round(days)} дн.`
+  return t.model.days(days < 10 ? days.toFixed(1) : Math.round(days))
 }
 
 /**
@@ -415,7 +416,7 @@ export function agingLabel(
   if (!sleDays || !card.startedAt || card.finishedAt) return null
   const days = (now - Date.parse(card.startedAt)) / 86_400_000
   if (!(days > sleDays)) return null
-  return `Идёт ${Math.floor(days)} дн. — дольше обещанных ${sleDays}`
+  return t.model.aging(Math.floor(days), sleDays)
 }
 
 /**
