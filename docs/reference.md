@@ -57,6 +57,29 @@ Beyond roles, the owner appoints:
 
 None, by assignee, by label, by iteration, by priority.
 
+## Labels
+
+A label belongs to one place, and that place decides where it can be
+hung. Every list that offers a label also says where it comes from.
+
+| Where it is created | Where it can be hung | Who creates and archives it |
+| --- | --- | --- |
+| The organisation | on every board | anyone who can edit |
+| A subdivision | on the boards of the subdivision and of all subdivisions inside it | its members, its administrators, the owner |
+| A board | on that board only | whoever can edit the board |
+
+- The same name cannot be used twice where the places overlap:
+  an organisation label «Срочно» rules out «Срочно» on any subdivision
+  or board. The refusal names where the label already is.
+- A board label is visible only to those who can see the board.
+- An archived label stays on the cards it already marks and still
+  shows there; it can no longer be hung until it is brought back from
+  the archive on «Команда» (Team).
+- When a board is handed to another subdivision, or a subdivision is
+  moved in the tree, labels already hung stay on the cards. If one no
+  longer applies there, the card panel says so, and it can still be
+  taken off.
+
 ## Metrics in «Поток» (flow)
 
 | Metric | What it answers |

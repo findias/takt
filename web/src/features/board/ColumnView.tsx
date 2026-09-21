@@ -8,7 +8,7 @@ import type {
   Column,
   ColumnKind,
   EstimateUnit,
-  Label,
+  BoardLabel,
   Priority,
 } from '../../shared/api/index.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
@@ -60,7 +60,7 @@ type ColumnProps = {
   onAssign: (cardId: string, userId: string, on: boolean) => void
   /** Карточка, которую только что перенесли: вспыхивает на новом месте. */
   justMoved: string | null
-  labels: Label[]
+  labels: BoardLabel[]
   /** Может ли смотрящий менять доску: у наблюдателя действий нет
    *  вовсе, а не «есть, но откажут». */
   canEdit: boolean

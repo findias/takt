@@ -13,7 +13,7 @@ import type {
   EstimateUnit,
   FieldValue,
   Iteration,
-  Label,
+  BoardLabel,
   LinkKind,
   Priority,
 } from '../../shared/api/index.ts'
@@ -33,6 +33,7 @@ import {
   progressRatio,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
+import { groupByOrigin, labelOrigin } from '../../entities/label/model.ts'
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -1107,9 +1108,11 @@ function PriorityPicker({
  * за этим возвращался на доску: панель показывает всё о работе,
  * кроме того, чем она помечена.
  *
- * Метки определяются в организации, а не на доске: одинаково названная
- * метка на двух досках — одна метка, иначе фильтр собирать не из чего.
- * Поэтому список здесь общий, а не «метки этой доски».
+ * Метка принадлежит организации, подразделению или доске, и здесь это
+ * написано рядом с каждой: две «Срочно» из разных мест иначе
+ * не различить, а «почему этой нет на соседней доске» не на что
+ * ответить. Висящие показываются все, даже убранные и чужие, — снять
+ * их больше негде; предлагаются только действующие на доске.
  */
 function Labels({
   labels,
@@ -1117,24 +1120,25 @@ function Labels({
   canEdit,
   onLabel,
 }: {
-  labels: Label[]
+  labels: BoardLabel[]
   own: string[]
   canEdit: boolean
   onLabel: (labelId: string, on: boolean) => void
 }) {
-  if (labels.length === 0) {
+  const hung = labels.filter((l) => own.includes(l.id))
+  const free = labels.filter((l) => l.offered && !own.includes(l.id))
+
+  if (hung.length === 0 && free.length === 0) {
     return (
       <section className="stack">
         <h3 className="section-title">Метки</h3>
         <p className="muted small">
-          Меток в организации ещё нет. Заводят их на вкладке «Команда» — общими
-          на все доски.
+          Меток для этой доски ещё нет. Заводят их на вкладке «Команда» — на всю
+          организацию, на подразделение или на одну доску.
         </p>
       </section>
     )
   }
-
-  const free = labels.filter((l) => !own.includes(l.id))
 
   return (
     <section className="stack">
@@ -1143,7 +1147,7 @@ function Labels({
       {/* «Ни одной.» не говорило ни что это, ни что с этим делать.
           Список меток стоит ниже — на него и указываем; наблюдателю
           указывать не на что, он метки не вешает. */}
-      {own.length === 0 && (
+      {hung.length === 0 && (
         <p className="muted small">
           {canEdit
             ? 'Меток на этой карточке нет — повесить можно списком ниже.'
@@ -1154,22 +1158,25 @@ function Labels({
       {/* Строкой на метку, как у исполнителей рядом: крестик внутри
           чипа пришлось бы растить до цели нажатия в 24 пикселя,
           и чип с коротким словом раздулся бы вдвое. */}
-      {labels
-        .filter((l) => own.includes(l.id))
-        .map((label) => (
-          <div className="related" key={label.id}>
-            <span className={`chip chip--${label.tone}`}>{label.name}</span>
-            {canEdit && (
-              <button
-                className="link"
-                aria-label={`Снять метку «${label.name}»`}
-                onClick={() => onLabel(label.id, false)}
-              >
-                Снять
-              </button>
-            )}
-          </div>
-        ))}
+      {hung.map((label) => (
+        <div className="related" key={label.id}>
+          <span className={`chip chip--${label.tone}`}>{label.name}</span>
+          <span className="muted small related-grow">
+            {labelOrigin(label)}
+            {label.archived && ', в архиве'}
+            {!label.archived && !label.offered && ', на этой доске не действует'}
+          </span>
+          {canEdit && (
+            <button
+              className="link"
+              aria-label={`Снять метку «${label.name}»`}
+              onClick={() => onLabel(label.id, false)}
+            >
+              Снять
+            </button>
+          )}
+        </div>
+      ))}
 
       {canEdit && free.length > 0 && (
         <select
@@ -1178,10 +1185,14 @@ function Labels({
           onChange={(e) => e.target.value && onLabel(e.target.value, true)}
         >
           <option value="">Повесить метку…</option>
-          {free.map((label) => (
-            <option key={label.id} value={label.id}>
-              {label.name}
-            </option>
+          {groupByOrigin(free).map((group) => (
+            <optgroup key={group.key} label={group.title}>
+              {group.labels.map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       )}

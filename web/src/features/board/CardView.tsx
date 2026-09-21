@@ -23,7 +23,8 @@ import {
   unitLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import type { Card, Column, EstimateUnit, Label, Priority } from '../../shared/api/index.ts'
+import { labelOrigin, labelTitle } from '../../entities/label/model.ts'
+import type { BoardLabel, Card, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
@@ -72,7 +73,7 @@ type CardProps = {
   /** on = назначить, off = снять: исполнителей несколько, и «назначить
    *  никому» больше не имеет смысла. */
   onAssign: (cardId: string, userId: string, on: boolean) => void
-  labels: Label[]
+  labels: BoardLabel[]
   cardLabels: string[]
   /** Родительская задача, если карточка — чья-то подзадача. */
   parent?: { id: string; title: string; onThisBoard: boolean }
@@ -443,11 +444,17 @@ function CardViewInner({
                 }
                 className={`field label-field${own.length === 0 ? ' field--empty' : ''}`}
                 align="right"
-                items={labels.map((label) => ({
-                  label: label.name,
-                  checked: cardLabels.includes(label.id),
-                  onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
-                }))}
+                // Предлагаются действующие здесь; висящие — всегда,
+                // даже убранные и чужие: снять их больше негде.
+                items={labels
+                  .filter((label) => label.offered || cardLabels.includes(label.id))
+                  .map((label) => ({
+                    id: label.id,
+                    label: label.name,
+                    hint: labelOrigin(label),
+                    checked: cardLabels.includes(label.id),
+                    onSelect: () => onLabel(cardId, label.id, !cardLabels.includes(label.id)),
+                  }))}
               >
                 {own.length === 0 ? (
                   '+ метка'
@@ -460,7 +467,7 @@ function CardViewInner({
                       <span
                         key={label.id}
                         className={`label-dot label-dot--${label.tone}`}
-                        title={label.name}
+                        title={labelTitle(label)}
                       />
                     ))}
                   </span>

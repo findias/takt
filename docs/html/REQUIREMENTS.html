@@ -141,6 +141,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Т10</td><td>Заведение людей из каталога по SCIM</td><td><code>internal/httpapi/scim_test.go</code></td></tr>
 <tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
 <tr><td>Т12</td><td>Выгрузка всех данных организации одним файлом</td><td><code>internal/httpapi/export_test.go</code></td></tr>
+<tr><td>Т13</td><td>Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации</td><td><code>internal/board/labels_scope_test.go</code>, <code>internal/board/labels_test.go</code>, <code>internal/httpapi/labels_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2>Пределы</h2>
@@ -245,7 +246,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-6-ga856d12-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

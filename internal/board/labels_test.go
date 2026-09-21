@@ -16,11 +16,26 @@ import (
 
 func (f *fixture) label(name string) Label {
 	f.t.Helper()
-	l, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, name, "green")
+	l, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, LabelDraft{Name: name, Tone: "green"})
 	if err != nil {
 		f.t.Fatalf("создание метки: %v", err)
 	}
 	return l
+}
+
+// boardLabel — метка из словаря снимка доски фикстуры.
+func (f *fixture) boardLabel(id string) *BoardLabel {
+	f.t.Helper()
+	return boardLabelIn(f.snapshot(), id)
+}
+
+func boardLabelIn(snap Snapshot, id string) *BoardLabel {
+	for _, l := range snap.Labels {
+		if l.ID == id {
+			return &l
+		}
+	}
+	return nil
 }
 
 func (f *fixture) labelsOf(cardID string) []string {
@@ -57,18 +72,18 @@ func TestLabelNamesAreUniqueInTheOrganisation(t *testing.T) {
 	f := newFixture(t)
 	f.label("Срочно")
 
-	_, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, "срочно", "rose")
+	_, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, LabelDraft{Name: "срочно", Tone: "rose"})
 	if !errors.Is(err, ErrLabelExists) {
 		t.Errorf("вторая «срочно» заведена, ошибка: %v", err)
 	}
 
 	// Пустое название — не метка.
-	if _, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, "   ", "green"); !errors.Is(err, ErrBadRequest) {
+	if _, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, LabelDraft{Name: "   ", Tone: "green"}); !errors.Is(err, ErrBadRequest) {
 		t.Errorf("метка без названия принята, ошибка: %v", err)
 	}
 	// Оттенок берётся из закрытого набора: сырой цвет в тёмной теме
 	// начал бы светиться.
-	if _, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, "Своя", "#ff0000"); !errors.Is(err, ErrBadRequest) {
+	if _, err := f.svc.CreateLabel(f.ctx, f.orgID, f.actorID, LabelDraft{Name: "Своя", Tone: "#ff0000"}); !errors.Is(err, ErrBadRequest) {
 		t.Errorf("выдуманный оттенок принят, ошибка: %v", err)
 	}
 }
@@ -86,19 +101,20 @@ func TestArchivedLabelStaysOnCards(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// В словаре её больше нет — вешать нечего.
-	labels, err := f.svc.Labels(f.ctx, f.orgID, f.actorID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, l := range labels {
-		if l.ID == old.ID {
-			t.Error("убранная метка всё ещё предлагается")
-		}
-	}
-	// А на карточке — осталась.
+	// На карточке осталась.
 	if got := f.labelsOf(cardID); len(got) != 1 || got[0] != old.ID {
 		t.Errorf("история переписана: метка исчезла с карточки, %v", got)
+	}
+	// И в словаре снимка тоже — с пометкой, что не предлагается.
+	// Прежде эта проверка смотрела только на cardLabels, и была зелёной,
+	// пока клиент, не находя метки в словаре, молча убирал её с карточки:
+	// идентификатор без названия показать нечем.
+	in := f.boardLabel(old.ID)
+	if in == nil {
+		t.Fatal("убранной метки нет в словаре снимка — на карточке её не показать")
+	}
+	if !in.Archived || in.Offered {
+		t.Errorf("убранная метка в снимке: archived=%v offered=%v, ждали true/false", in.Archived, in.Offered)
 	}
 	// И повесить её заново уже нельзя.
 	if _, err := f.apply("LABEL_CARD", map[string]any{
@@ -137,17 +153,11 @@ func TestSnapshotCarriesLabelDictionary(t *testing.T) {
 	f := newFixture(t)
 	urgent := f.label("Срочно")
 
-	snap := f.snapshot()
-	found := false
-	for _, l := range snap.Labels {
-		if l.ID == urgent.ID {
-			found = true
-			if l.Name != "Срочно" || l.Tone != "green" {
-				t.Errorf("метка приехала испорченной: %+v", l)
-			}
-		}
+	l := f.boardLabel(urgent.ID)
+	if l != nil && (l.Name != "Срочно" || l.Tone != "green" || l.Scope != ScopeOrg || !l.Offered) {
+		t.Errorf("метка приехала испорченной: %+v", *l)
 	}
-	if !found {
+	if l == nil {
 		t.Error("метки нет в снимке — показывать нечего")
 	}
 }

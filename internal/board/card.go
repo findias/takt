@@ -60,16 +60,15 @@ func (s *Service) Card(ctx context.Context, orgID, userID, boardID, cardID strin
 		}
 
 		rows, err := tx.Query(ctx, `
-			select l.id, l.name, l.tone
-			  from card_labels cl join labels l on l.id = cl.label_id
-			 where cl.card_id = $1
-			 order by l.name`, cardID)
+			select `+labelColumns+labelJoins+`
+			  join card_labels cl on cl.label_id = l.id
+			 where cl.card_id = $1`+labelOrder, cardID)
 		if err != nil {
 			return err
 		}
 		for rows.Next() {
-			var l Label
-			if err := rows.Scan(&l.ID, &l.Name, &l.Tone); err != nil {
+			l, err := scanLabel(rows)
+			if err != nil {
 				rows.Close()
 				return err
 			}

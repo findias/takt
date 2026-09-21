@@ -14,7 +14,8 @@ import {
 import { SORT_DIRECTION, SORT_NAMES, comparator } from './tableSort.ts'
 import type { Sort } from './tableSort.ts'
 import type { BaseState } from '../../entities/board/model.ts'
-import type { Card, Column, EstimateUnit, Label } from '../../shared/api/index.ts'
+import type { Card, Column, EstimateUnit, BoardLabel } from '../../shared/api/index.ts'
+import { labelTitle } from '../../entities/label/model.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 
 /**
@@ -57,7 +58,7 @@ export function TableView({
   unit: EstimateUnit
   sort: Sort
   people: Record<string, string>
-  labels: Label[]
+  labels: BoardLabel[]
   onOpenCard: (cardId: string) => void
   onMoveToColumn: (cardId: string, columnId: string) => void
   onAssign: (cardId: string, userId: string, on: boolean) => void
@@ -164,7 +165,7 @@ export function TableView({
                   {own.map((id) => {
                     const label = labels.find((l) => l.id === id)
                     return label ? (
-                      <span key={id} className={`chip chip--${label.tone}`}>
+                      <span key={id} className={`chip chip--${label.tone}`} title={labelTitle(label)}>
                         {label.name}
                       </span>
                     ) : null

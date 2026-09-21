@@ -317,14 +317,27 @@ func (f *filler) workspace() error {
 		return err
 	}
 
-	// Метки и своё поле — на всю организацию.
+	// Метки всех трёх областей: на экране меток иначе нечего
+	// группировать, а в меню карточки — не видно, что подписано
+	// происхождение. «Техдолг» заведён у «Разработки», а виден на доске
+	// «Платформа» — так видно, что подразделение действует вниз
+	// по дереву. «Старый формат» повешен и убран в архив: без такой
+	// метки не проверить глазом, что убранная остаётся на карточке.
 	labels := map[string]string{}
-	for name, tone := range map[string]string{"Срочно": "rose", "Смежники": "teal", "Риск": "amber"} {
-		l, err := f.boards.CreateLabel(f.ctx, f.orgID, f.owner(), name, tone)
+	for _, d := range []board.LabelDraft{
+		{Name: "Срочно", Tone: "rose"},
+		{Name: "Смежники", Tone: "teal"},
+		{Name: "Риск", Tone: "amber"},
+		{Name: "Старый формат", Tone: "slate"},
+		{Name: "Ключевой клиент", Tone: "violet", TeamID: f.teamIDs["Продажи"]},
+		{Name: "Техдолг", Tone: "brown", TeamID: f.teamIDs["Разработка"]},
+		{Name: "Ждём склад", Tone: "blue", BoardID: postavki.ID},
+	} {
+		l, err := f.boards.CreateLabel(f.ctx, f.orgID, f.owner(), d)
 		if err != nil {
 			return err
 		}
-		labels[name] = l.ID
+		labels[d.Name] = l.ID
 	}
 	customer, err := f.boards.CreateField(f.ctx, f.orgID, f.owner(), "Заказчик", "text", nil)
 	if err != nil {
@@ -366,16 +379,16 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		note     string
 	}
 	plan := []card{
-		{"Согласовать смету с подрядчиком", "Очередь", 5, []string{"Срочно"}, nil,
+		{"Согласовать смету с подрядчиком", "Очередь", 5, []string{"Срочно", "Ключевой клиент"}, nil,
 			"Смета на второй этап. Спорные позиции — леса и вывоз грунта."},
-		{"Обновить регламент приёмки", "Очередь", 3, nil, []string{"boris@example.test"}, ""},
+		{"Обновить регламент приёмки", "Очередь", 3, []string{"Ждём склад"}, []string{"boris@example.test"}, ""},
 		{"Разобрать обращения за неделю", "В работе", 2, nil,
 			[]string{"vera@example.test", "boris@example.test"},
 			"Восемнадцать обращений, половина — про сроки поставки."},
 		{"Выпустить релиз склада", "В работе", 8, []string{"Риск", "Смежники"},
 			[]string{"anna@example.test"}, "Ждём подтверждения от смежников по интеграции."},
 		{"Перевезти стенд в новый офис", "Готово", 3, nil, []string{"boris@example.test"}, ""},
-		{"Закрыть акт за июль", "Готово", 2, nil, []string{"vera@example.test"}, ""},
+		{"Закрыть акт за июль", "Готово", 2, []string{"Старый формат"}, []string{"vera@example.test"}, ""},
 		{"Проверить остатки на складе", "Готово", 1, nil, nil, ""},
 	}
 	columns := map[string]string{"Очередь": queue.ID, "В работе": doing.ID, "Готово": done.ID}
@@ -574,8 +587,15 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	}
 
 	// Сохранённый вид, итерации — открытая и закрытая, архив карточек.
+	// Метка в адресе — идентификатором и под именем `labels`: так её
+	// читает фильтр. Прежде здесь стояло `label=Срочно`, и вид отбирал
+	// только по исполнителю — метку фильтр молча не узнавал.
 	if _, err := f.boards.SaveView(f.ctx, f.orgID, f.owner(), b.ID,
-		"Мои срочные", "assignee=me&label=Срочно"); err != nil {
+		"Мои срочные", "assignee=me&labels="+labels["Срочно"]); err != nil {
+		return err
+	}
+	// Убрана после того, как повешена: с карточки она не снимается.
+	if err := f.boards.ArchiveLabel(f.ctx, f.orgID, f.owner(), labels["Старый формат"]); err != nil {
 		return err
 	}
 	if err := f.iterations(b, ids); err != nil {

@@ -10,7 +10,7 @@
 // переупорядочивание ответов не могут оставить доску в странном виде.
 
 import type {
-  Label,
+  BoardLabel,
   BoardInfo,
   Card,
   CardField,
@@ -44,7 +44,7 @@ export type BaseState = {
   /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
   /** Словарь меток и то, что чем помечено. */
-  labels: Label[]
+  labels: BoardLabel[]
   cardLabels: Record<string, string[]>
   /** cardId → исполнители в порядке назначения. Первый — тот, кто взялся
    *  первым: порядок несёт смысл и потому сохраняется. */

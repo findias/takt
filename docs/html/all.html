@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-dirty.</p>
+<p>Every section in one file. Version v0.2.3-6-ga856d12-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -379,6 +379,22 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <h2>Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority.</p>
+<h2>Labels</h2>
+<p>A label belongs to one place, and that place decides where it can be hung. Every list that offers a label also says where it comes from.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Where it is created</th><th>Where it can be hung</th><th>Who creates and archives it</th></tr></thead>
+<tbody>
+<tr><td>The organisation</td><td>on every board</td><td>anyone who can edit</td></tr>
+<tr><td>A subdivision</td><td>on the boards of the subdivision and of all subdivisions inside it</td><td>its members, its administrators, the owner</td></tr>
+<tr><td>A board</td><td>on that board only</td><td>whoever can edit the board</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>The same name cannot be used twice where the places overlap: an organisation label «Срочно» rules out «Срочно» on any subdivision or board. The refusal names where the label already is.</li>
+<li>A board label is visible only to those who can see the board.</li>
+<li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on «Команда» (Team).</li>
+<li>When a board is handed to another subdivision, or a subdivision is moved in the tree, labels already hung stay on the cards. If one no longer applies there, the card panel says so, and it can still be taken off.</li>
+</ul>
 <h2>Metrics in «Поток» (flow)</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
@@ -1055,6 +1071,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <tr><td>Т10</td><td>Заведение людей из каталога по SCIM</td><td><code>internal/httpapi/scim_test.go</code></td></tr>
 <tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
 <tr><td>Т12</td><td>Выгрузка всех данных организации одним файлом</td><td><code>internal/httpapi/export_test.go</code></td></tr>
+<tr><td>Т13</td><td>Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации</td><td><code>internal/board/labels_scope_test.go</code>, <code>internal/board/labels_test.go</code>, <code>internal/httpapi/labels_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2>Пределы</h2>

@@ -551,10 +551,11 @@ export type Snapshot = {
   /** Кого можно назначить. Приезжает со снимком: иначе исполнитель
    *  на карточке остался бы идентификатором. */
   people: Person[]
-  /** Словарь меток организации и то, что чем помечено. Раздельно:
-   *  иначе название метки уезжало бы в снимок столько раз, на скольких
-   *  карточках оно висит. */
-  labels: Label[]
+  /** Метки, действующие на доске, вместе с теми, что висят на её
+   *  карточках (даже убранными и чужими), и то, что чем помечено.
+   *  Раздельно: иначе название метки уезжало бы в снимок столько раз,
+   *  на скольких карточках оно висит. */
+  labels: BoardLabel[]
   cardLabels: Record<string, string[]>
   /** Кто над чем работает: cardId → люди в порядке назначения.
    *  Первый — тот, кого назначили первым: порядок несёт смысл. */
@@ -568,9 +569,36 @@ export type Person = { userId: string; name: string }
  *  ему не нужно. */
 export type BoardView = { id: string; name: string; query: string }
 
-/** Метка организации. Цвет — имя оттенка из закрытого набора, а не
- *  значение: сырой цвет в тёмной теме начал бы светиться. */
-export type Label = { id: string; name: string; tone: LabelTone }
+/** Метка. Цвет — имя оттенка из закрытого набора, а не значение: сырой
+ *  цвет в тёмной теме начал бы светиться.
+ *
+ *  Принадлежит организации, подразделению (и действует на досках всех
+ *  вложенных) или одной доске. Откуда она — часть метки, а не справка:
+ *  без этого две «Срочно» из разных мест не различить. */
+export type Label = {
+  id: string
+  name: string
+  tone: LabelTone
+  scope: LabelScope
+  /** Подразделение или доска, которым метка принадлежит; у метки
+   *  организации пусто. */
+  scopeId?: string
+  scopeName?: string
+  /** Убрана в архив: не предлагается, но остаётся там, где висит. */
+  archived: boolean
+}
+export type LabelScope = 'org' | 'team' | 'board'
+
+/** Метка в снимке доски. `offered` — можно ли повесить её здесь: нельзя
+ *  у убранной и у оставшейся на карточке из чужой области. */
+export type BoardLabel = Label & { offered: boolean }
+
+/** Метка в списке управления: может ли спрашивающий её убрать и вернуть. */
+export type ManagedLabel = Label & { canManage: boolean }
+
+/** Где человек может завести метку. Считает сервер: права
+ *  на подразделение наследуются вниз по дереву. */
+export type LabelPlace = { scope: LabelScope; id?: string; name: string }
 export type LabelTone = 'slate' | 'green' | 'blue' | 'violet' | 'rose' | 'amber' | 'teal' | 'brown'
 
 export const TONE_NAMES: Record<LabelTone, string> = {
@@ -840,10 +868,20 @@ export const api = {
     request<BoardView>('POST', `/api/boards/${boardId}/views`, { name, query }),
   deleteView: (id: string) => request<void>('DELETE', `/api/views/${id}`),
 
-  listLabels: () => request<{ labels: Label[]; tones: LabelTone[] }>('GET', '/api/labels'),
-  createLabel: (name: string, tone: LabelTone) =>
-    request<Label>('POST', '/api/labels', { name, tone }),
+  listLabels: () =>
+    request<{ labels: ManagedLabel[]; tones: LabelTone[]; places: LabelPlace[] }>(
+      'GET',
+      '/api/labels',
+    ),
+  createLabel: (name: string, tone: LabelTone, place: LabelPlace) =>
+    request<Label>('POST', '/api/labels', {
+      name,
+      tone,
+      teamId: place.scope === 'team' ? place.id : undefined,
+      boardId: place.scope === 'board' ? place.id : undefined,
+    }),
   archiveLabel: (id: string) => request<void>('DELETE', `/api/labels/${id}`),
+  restoreLabel: (id: string) => request<void>('POST', `/api/labels/${id}/restore`),
 
   /** Догнать пропущенное патчами вместо целого снимка. */
   changes: (boardId: string, since: number) =>

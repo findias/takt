@@ -1,5 +1,6 @@
 import { PRIORITIES, PRIORITY_NAMES, cardsLabel } from '../../entities/card/model.ts'
-import type { Column, Label, Priority } from '../../shared/api/index.ts'
+import type { Column, BoardLabel, Priority } from '../../shared/api/index.ts'
+import { labelOrigin } from '../../entities/label/model.ts'
 import { Button } from '../../shared/ui/Button.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { ArchiveIcon, ClockIcon, MoveIcon, PeopleIcon, TagIcon } from '../../shared/ui/icons.tsx'
@@ -40,7 +41,7 @@ export function BulkBar({
 }: {
   count: number
   columns: Column[]
-  labels: Label[]
+  labels: BoardLabel[]
   /** userId → имя. */
   people: Record<string, string>
   onMove: (columnId: string) => void
@@ -50,6 +51,9 @@ export function BulkBar({
   onArchive: () => void
   onClear: () => void
 }) {
+  // Убранные и чужие метки в снимке есть ради карточек, где висят;
+  // вешать их нельзя, и предлагать незачем.
+  const offered = labels.filter((label) => label.offered)
   return (
     // Живая область: полоса появляется внизу экрана, далеко от флажка,
     // по которому её вызвали, и тот, кто не видит экрана, иначе
@@ -94,14 +98,16 @@ export function BulkBar({
           — одно решение, а переключение дало бы половину помеченных
           и половину снятых, то есть результат, зависящий от того,
           что было раньше. */}
-      {labels.length > 0 && (
+      {offered.length > 0 && (
         <Menu
           label="Пометить выделенные"
           className="btn"
           align="left"
           drop="up"
-          items={labels.map((label) => ({
+          items={offered.map((label) => ({
+            id: label.id,
             label: label.name,
+            hint: labelOrigin(label),
             icon: <TagIcon />,
             onSelect: () => onLabel(label.id),
           }))}

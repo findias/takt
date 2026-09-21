@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Iteration, Label, Person } from '../../shared/api/index.ts'
+import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
+import { groupByOrigin, labelTitle } from '../../entities/label/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { NARROW, useMedia } from '../../shared/lib/useMedia.ts'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
@@ -34,7 +35,7 @@ export function FilterBar({
 }: {
   filters: Filters
   people: Person[]
-  labels: Label[]
+  labels: BoardLabel[]
   /** Открытые итерации доски: закрытые не отбирают — их смотрят
    *  отчётом, а не доской. */
   iterations: Iteration[]
@@ -124,13 +125,22 @@ export function FilterBar({
             }}
           >
             <option value="">Метка…</option>
-            {labels
-              .filter((label) => !filters.labels.includes(label.id))
-              .map((label) => (
-                <option key={label.id} value={label.id}>
-                  {label.name}
-                </option>
-              ))}
+            {/* Отбирать можно и по убранной метке, и по чужой: они
+                висят на карточках, и найти такие карточки — первый
+                вопрос, который задают, наткнувшись на них. Группы —
+                по происхождению: две одноимённые метки из разных мест
+                иначе стояли бы в списке неразличимыми строками. */}
+            {groupByOrigin(labels.filter((label) => !filters.labels.includes(label.id))).map(
+              (group) => (
+                <optgroup key={group.key} label={group.title}>
+                  {group.labels.map((label) => (
+                    <option key={label.id} value={label.id}>
+                      {label.archived ? `${label.name} (в архиве)` : label.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ),
+            )}
           </select>
         )}
 
@@ -140,6 +150,7 @@ export function FilterBar({
             <button
               key={id}
               className={`chip chip--${label?.tone ?? 'slate'} chip--removable`}
+              title={label ? labelTitle(label) : undefined}
               aria-label={`Убрать из фильтра метку «${label?.name ?? id}»`}
               onClick={() =>
                 onChange({

@@ -45,6 +45,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/labels", s.authed(s.handleListLabels))
 	mux.HandleFunc("POST /api/labels", s.authed(s.handleCreateLabel))
 	mux.HandleFunc("DELETE /api/labels/{id}", s.authed(s.handleArchiveLabel))
+	mux.HandleFunc("POST /api/labels/{id}/restore", s.authed(s.handleRestoreLabel))
 	mux.HandleFunc("GET /api/boards/{id}/views", s.authed(s.handleListViews))
 	mux.HandleFunc("POST /api/boards/{id}/views", s.authed(s.handleSaveView))
 	mux.HandleFunc("DELETE /api/views/{id}", s.authed(s.handleDeleteView))
@@ -403,16 +404,23 @@ func (s *Server) handleDeleteView(w http.ResponseWriter, r *http.Request, p auth
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Метки заводятся на организацию, как и свои поля: одинаково названная
-// метка на двух досках — это одна метка, иначе фильтр по организации
-// собирать не из чего.
+// Метка принадлежит организации, подразделению или доске. Список отдаёт
+// все видимые метки вместе с убранными — их возвращают отсюда же, —
+// и места, где спрашивающий может завести новую: права на подразделение
+// наследуются вниз по дереву, и считать их на клиенте значило бы
+// повторить политику базы там, где она не действует.
 func (s *Server) handleListLabels(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	labels, err := s.boards.Labels(r.Context(), p.OrgID, p.ID)
 	if err != nil {
 		s.fail(w, "список меток", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"labels": labels, "tones": board.Tones})
+	places, err := s.boards.LabelPlaces(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "список меток", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"labels": labels, "tones": board.Tones, "places": places})
 }
 
 func (s *Server) handleCreateLabel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
@@ -421,23 +429,21 @@ func (s *Server) handleCreateLabel(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	var req struct {
-		Name string `json:"name"`
-		Tone string `json:"tone"`
+		Name    string `json:"name"`
+		Tone    string `json:"tone"`
+		TeamID  string `json:"teamId"`
+		BoardID string `json:"boardId"`
 	}
 	if !decode(w, r, &req) {
 		return
 	}
-	label, err := s.boards.CreateLabel(r.Context(), p.OrgID, p.ID, req.Name, req.Tone)
-	switch {
-	case errors.Is(err, board.ErrLabelExists):
-		writeError(w, http.StatusConflict, board.ErrLabelExists.Error())
-	case err != nil:
-		if s.failAccess(w, "создание метки", err) {
-			return
-		}
-	default:
-		writeJSON(w, http.StatusCreated, label)
+	label, err := s.boards.CreateLabel(r.Context(), p.OrgID, p.ID, board.LabelDraft{
+		Name: req.Name, Tone: req.Tone, TeamID: req.TeamID, BoardID: req.BoardID,
+	})
+	if s.failLabel(w, "создание метки", err) {
+		return
 	}
+	writeJSON(w, http.StatusCreated, label)
 }
 
 // Метка убирается из обихода, но не снимается с карточек: карточка,
@@ -448,11 +454,42 @@ func (s *Server) handleArchiveLabel(w http.ResponseWriter, r *http.Request, p au
 		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
 		return
 	}
-	if s.failAccess(w, "архивация метки",
+	if s.failLabel(w, "архивация метки",
 		s.boards.ArchiveLabel(r.Context(), p.OrgID, p.ID, r.PathValue("id"))) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleRestoreLabel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	if s.failLabel(w, "возврат метки",
+		s.boards.RestoreLabel(r.Context(), p.OrgID, p.ID, r.PathValue("id"))) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// failLabel — отказы меток своими словами. Общий failAccess ответил бы
+// на пропавшую метку «доска не найдена».
+func (s *Server) failLabel(w http.ResponseWriter, what string, err error) bool {
+	switch {
+	case err == nil:
+		return false
+	case errors.Is(err, board.ErrLabelExists):
+		// Текст называет, где метка уже есть, — у LabelTakenError он свой.
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, board.ErrLabelNotYours):
+		writeError(w, http.StatusForbidden, board.ErrLabelNotYours.Error())
+	case errors.Is(err, board.ErrLabelNotFound):
+		writeError(w, http.StatusNotFound, board.ErrLabelNotFound.Error())
+	default:
+		return s.failAccess(w, what, err)
+	}
+	return true
 }
 
 func (s *Server) handleListFields(w http.ResponseWriter, r *http.Request, p auth.Principal) {

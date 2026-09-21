@@ -93,6 +93,16 @@ func Verify(ctx context.Context, db *store.Store) error {
 			`select count(distinct card_id) >= 2 from card_labels where org_id = $1`,
 		},
 		{
+			"метки организации, подразделения и доски",
+			`select count(distinct (team_id is null, board_id is null)) = 3
+			   from labels where org_id = $1 and archived_at is null`,
+		},
+		{
+			"убранная в архив метка на карточке",
+			`select exists (select 1 from card_labels cl join labels l on l.id = cl.label_id
+			                 where cl.org_id = $1 and l.archived_at is not null)`,
+		},
+		{
 			"карточка с несколькими исполнителями",
 			`select exists (select 1 from card_assignees where org_id = $1
 			                 group by card_id having count(*) > 1)`,

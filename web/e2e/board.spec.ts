@@ -462,10 +462,13 @@ test('метка заводится в организации и вешаетс�
   await page.getByRole('button', { name: 'Команда' }).click()
   await page.getByPlaceholder('Название метки').fill('Срочно')
   await page.getByRole('button', { name: 'Завести метку' }).click()
-  await expect(page.getByText('Срочно')).toBeVisible()
+  // Ждём чип, а не слово: «срочно» стоит и в объяснении пустого
+  // списка, и ожидание по подстроке проходило раньше, чем метка
+  // заводилась.
+  await expect(page.getByText('Срочно', { exact: true })).toBeVisible()
   await page.getByPlaceholder('Название метки').fill('Важное')
   await page.getByRole('button', { name: 'Завести метку' }).click()
-  await expect(page.getByText('Важное')).toBeVisible()
+  await expect(page.getByText('Важное', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Доски' }).click()
   await createBoard(page, 'Доска с метками')
@@ -480,8 +483,9 @@ test('метка заводится в организации и вешаетс�
   // остаётся в подсказке и в имени поля — цвет не может быть
   // единственным носителем смысла.
   await expect(card.getByRole('button', { name: 'Метки: Срочно' })).toBeVisible()
-  // Точная подсказка — у самой точки: у поля она «Метки: Срочно».
-  await expect(card.getByTitle('Срочно', { exact: true })).toBeVisible()
+  // Точная подсказка — у самой точки: название и откуда метка.
+  // У поля она «Метки: Срочно».
+  await expect(card.getByTitle('Срочно — вся организация', { exact: true })).toBeVisible()
 
   // Переживает перезагрузку — это данные, а не украшение экрана.
   // Ждём подтверждения: метка вешается мгновенно, а уходит следом.

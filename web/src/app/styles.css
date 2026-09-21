@@ -406,7 +406,7 @@ button.link {
 }
 /* Пять состояний обязательны каждому элементу: покой, наведение, фокус
    с клавиатуры, нажатие, недоступность. У кнопки-ссылки — а ею набрана
-   половина действий экрана: «Снять», «Разметка», «Убрать из списка» —
+   половина действий экрана: «Снять», «Разметка», «Убрать в архив» —
    не было ни наведения, ни нажатия, ни недоступности: наводишь и
    нажимаешь, а экран молчит до ответа сервера. */
 button.link:hover:not(:disabled) {
@@ -985,6 +985,14 @@ input[type='radio'] {
   gap: var(--space-3);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--rule);
+}
+/* Заголовок группы меток — место, где они действуют. Тише заголовка
+   раздела, но не шрифтом подсказки: это имя группы, а не пояснение. */
+.label-group-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-2);
 }
 .member-list li:last-child {
   border-bottom: none;
@@ -2024,6 +2032,12 @@ textarea.description {
   gap: var(--space-2);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--rule);
+}
+/* Уточнение рядом с названием — откуда метка — занимает середину
+   строки и переносится, а не выталкивает кнопку за край панели. */
+.related-grow {
+  flex: 1;
+  min-width: 0;
 }
 .related:last-child {
   border-bottom: none;
@@ -3373,6 +3387,15 @@ textarea.description {
 }
 .menu-item--danger {
   color: var(--warn);
+}
+/* Откуда метка — тише подписи и прижато вправо: список читается
+   колонкой названий, а происхождение смотрят, когда названия совпали
+   или метка незнакома. */
+.menu-hint {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  color: var(--ink-3);
+  font-size: var(--text-sm);
 }
 .menu-item:disabled {
   opacity: 0.5;

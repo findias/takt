@@ -172,6 +172,22 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2>Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority.</p>
+<h2>Labels</h2>
+<p>A label belongs to one place, and that place decides where it can be hung. Every list that offers a label also says where it comes from.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Where it is created</th><th>Where it can be hung</th><th>Who creates and archives it</th></tr></thead>
+<tbody>
+<tr><td>The organisation</td><td>on every board</td><td>anyone who can edit</td></tr>
+<tr><td>A subdivision</td><td>on the boards of the subdivision and of all subdivisions inside it</td><td>its members, its administrators, the owner</td></tr>
+<tr><td>A board</td><td>on that board only</td><td>whoever can edit the board</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>The same name cannot be used twice where the places overlap: an organisation label «Срочно» rules out «Срочно» on any subdivision or board. The refusal names where the label already is.</li>
+<li>A board label is visible only to those who can see the board.</li>
+<li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on «Команда» (Team).</li>
+<li>When a board is handed to another subdivision, or a subdivision is moved in the tree, labels already hung stay on the cards. If one no longer applies there, the card panel says so, and it can still be taken off.</li>
+</ul>
 <h2>Metrics in «Поток» (flow)</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
@@ -237,7 +253,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2>The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-6-ga856d12-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

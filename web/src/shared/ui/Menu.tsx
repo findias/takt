@@ -48,6 +48,12 @@ export type MenuItem = {
    *  `menuitemcheckbox` читается вслух вместе с «включено», а галочка
    *  без роли осталась бы значком, о котором скринридер молчит. */
   checked?: boolean
+  /** Тихое уточнение после подписи: откуда метка. Подпись остаётся
+   *  короткой — по её первой букве ходит клавиатура. */
+  hint?: string
+  /** Ключ пункта, когда подписи могут совпасть: две «Срочно» из разных
+   *  подразделений на одной карточке — редкость, но не невозможность. */
+  id?: string
 }
 
 export function Menu({
@@ -228,7 +234,7 @@ export function Menu({
         >
           {items.map((item, i) => (
             <button
-              key={item.label}
+              key={item.id ?? item.label}
               type="button"
               role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
               aria-checked={item.checked}
@@ -252,6 +258,7 @@ export function Menu({
                 </span>
               )}
               {item.label}
+              {item.hint && <span className="menu-hint">{item.hint}</span>}
             </button>
           ))}
         </div>

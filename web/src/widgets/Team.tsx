@@ -7,7 +7,6 @@ import {
   DIRECTORY_SCOPE,
   FIELD_KIND_NAMES,
   SCOPE_NAMES,
-  TONE_NAMES,
 } from '../shared/api/index.ts'
 import type {
   ApiClient,
@@ -16,8 +15,6 @@ import type {
   CardField,
   FieldKind,
   Invite,
-  Label,
-  LabelTone,
   Member,
   Principal,
   Role,
@@ -27,6 +24,7 @@ import { Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { Field, useFormErrors } from '../shared/ui/Field.tsx'
 import { Webhooks } from '../features/webhooks/Webhooks.tsx'
+import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -226,7 +224,7 @@ export function Team({ principal }: { principal: Principal }) {
 
       <CardFields canEdit={principal.role !== 'viewer'} />
 
-      <Labels canEdit={principal.role !== 'viewer'} />
+      <LabelsSection />
 
       {isOwner && <Clients />}
 
@@ -439,102 +437,6 @@ function Clients() {
  * поле на двух досках — это одно поле, иначе сводный отчёт сложит разные
  * сущности с общим названием. Поэтому и живут они здесь, а не на доске.
  */
-/**
- * Метки организации.
- *
- * Заводятся здесь, а не на доске, по той же причине, что и поля:
- * одинаково названная метка на двух досках — это одна метка, иначе
- * фильтр по организации собирать не из чего.
- *
- * Убранная метка не снимается с карточек: карточка, помеченная полгода
- * назад, объясняет этим своё время в очереди, и стирать это задним
- * числом значит делать историю неверной.
- */
-function Labels({ canEdit }: { canEdit: boolean }) {
-  const [labels, setLabels] = useState<Label[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [tone, setTone] = useState<LabelTone>('green')
-
-  const load = useCallback(() => {
-    api
-      .listLabels()
-      .then((r) => setLabels(r.labels))
-      .catch(() => setLabels([]))
-  }, [])
-
-  useEffect(load, [load])
-
-  const act = (p: Promise<unknown>) => {
-    setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
-  }
-
-  return (
-    <section className="stack">
-      <h2 className="section-title">Метки</h2>
-      <ScreenError>{error}</ScreenError>
-      {labels.length === 0 ? (
-        <p className="muted small">
-          Меток нет. Метка отвечает на вопрос «да или нет» — срочно, снаружи,
-          ждём ответа — и занимает на карточке столько же места, сколько слово.
-          Заводится на всю организацию: одинаково названная метка на двух
-          досках это одна метка.
-        </p>
-      ) : (
-        <ul className="member-list">
-          {labels.map((label) => (
-            <li key={label.id}>
-              <span className={`chip chip--${label.tone}`}>{label.name}</span>
-              {canEdit && (
-                <button
-                  className="link"
-                  title="Метка останется на карточках, где уже висит"
-                  onClick={() => act(api.archiveLabel(label.id))}
-                >
-                  Убрать из списка
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {canEdit && (
-        <form
-          className="row"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!name.trim()) return
-            act(api.createLabel(name.trim(), tone).then(() => setName('')))
-          }}
-        >
-          <input
-            value={name}
-            aria-label="Название метки"
-            placeholder="Название метки"
-            onChange={(e) => setName(e.target.value)}
-          />
-          <select
-            value={tone}
-            aria-label="Оттенок метки"
-            onChange={(e) => setTone(e.target.value as LabelTone)}
-          >
-            {(Object.keys(TONE_NAMES) as LabelTone[]).map((t) => (
-              <option key={t} value={t}>
-                {TONE_NAMES[t]}
-              </option>
-            ))}
-          </select>
-          <button type="submit" disabled={!name.trim()}>
-            Завести метку
-          </button>
-        </form>
-      )}
-    </section>
-  )
-}
-
 /**
  * В чём организация оценивает работу.
  *
