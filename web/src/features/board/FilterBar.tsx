@@ -5,6 +5,7 @@ import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
 import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
 import type { Filters } from './filters.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Полоса фильтров.
@@ -83,8 +84,8 @@ export function FilterBar({
         <input
           type="search"
           value={text}
-          placeholder="Найти карточку"
-          aria-label="Найти карточку"
+          placeholder={t.filters.findCard}
+          aria-label={t.filters.findCard}
           onChange={(e) => setText(e.target.value)}
         />
       </label>
@@ -100,20 +101,20 @@ export function FilterBar({
         onKeyDown={closeOnEscape}
         aria-expanded={open}
         aria-controls={restId}
-        aria-label={active > 0 ? `Отбор: включено ${active}` : 'Отбор'}
+        aria-label={active > 0 ? t.filters.filterOn(active) : t.filters.filter}
         onClick={() => setOpen((v) => !v)}
       >
         <FilterIcon />
-        <span className="tool-label">Отбор</span>
+        <span className="tool-label">{t.filters.filter}</span>
         {active > 0 && <span className="filter-count">{active}</span>}
       </Button>
       {!isEmpty(filters) && (
         <>
           <span className="muted small">
-            {hidden > 0 ? `скрыто ${hidden}` : 'ничего не скрыто'}
+            {hidden > 0 ? t.filters.hidden(hidden) : t.filters.nothingHidden}
           </span>
           <Button kind="quiet" onClick={() => onChange(EMPTY)}>
-            Показать все
+            {t.filters.showAll}
           </Button>
         </>
       )}
@@ -121,11 +122,11 @@ export function FilterBar({
       <div className="filters-rest row" id={restId} hidden={!open} onKeyDown={closeOnEscape}>
         <select
           value={filters.assignee ?? ''}
-          aria-label="Исполнитель"
+          aria-label={t.filters.assignee}
           onChange={(e) => onChange({ ...filters, assignee: e.target.value || null })}
         >
-          <option value="">Все исполнители</option>
-          <option value={UNASSIGNED}>Ни на ком</option>
+          <option value="">{t.filters.allAssignees}</option>
+          <option value={UNASSIGNED}>{t.filters.unassigned}</option>
           {people.map((person) => (
             <option key={person.userId} value={person.userId}>
               {person.name}
@@ -139,11 +140,11 @@ export function FilterBar({
         {iterations.length > 0 && (
           <select
             value={filters.iteration ?? ''}
-            aria-label="Итерация"
+            aria-label={t.filters.iteration}
             onChange={(e) => onChange({ ...filters, iteration: e.target.value || null })}
           >
-            <option value="">Все итерации</option>
-            <option value={NO_ITERATION}>Не в итерации</option>
+            <option value="">{t.filters.allIterations}</option>
+            <option value={NO_ITERATION}>{t.filters.notInIteration}</option>
             {iterations.map((iteration) => (
               <option key={iteration.id} value={iteration.id}>
                 {iteration.name}
@@ -155,7 +156,7 @@ export function FilterBar({
         {labels.length > 0 && (
           <select
             value=""
-            aria-label="Добавить метку в фильтр"
+            aria-label={t.filters.addLabel}
             onChange={(e) => {
               const id = e.target.value
               if (id && !filters.labels.includes(id)) {
@@ -163,7 +164,7 @@ export function FilterBar({
               }
             }}
           >
-            <option value="">Метка…</option>
+            <option value="">{t.filters.labelPick}</option>
             {/* Отбирать можно и по убранной метке, и по чужой: они
                 висят на карточках, и найти такие карточки — первый
                 вопрос, который задают, наткнувшись на них. Группы —
@@ -174,7 +175,7 @@ export function FilterBar({
                 <optgroup key={group.key} label={group.title}>
                   {group.labels.map((label) => (
                     <option key={label.id} value={label.id}>
-                      {label.archived ? `${label.name} (в архиве)` : label.name}
+                      {label.archived ? t.filters.archivedLabel(label.name) : label.name}
                     </option>
                   ))}
                 </optgroup>
@@ -190,7 +191,7 @@ export function FilterBar({
               key={id}
               className={`chip chip--${label?.tone ?? 'slate'} chip--removable`}
               title={label ? labelTitle(label) : undefined}
-              aria-label={`Убрать из фильтра метку «${label?.name ?? id}»`}
+              aria-label={t.filters.removeLabel(label?.name ?? id)}
               onClick={() =>
                 onChange({
                   ...filters,
@@ -213,7 +214,7 @@ export function FilterBar({
             checked={filters.urgent}
             onChange={(e) => onChange({ ...filters, urgent: e.target.checked })}
           />
-          <span>Горит</span>
+          <span>{t.filters.urgent}</span>
         </label>
 
         {/* «Срок подходит» — про обещанное наружу, а «Дольше
@@ -225,7 +226,7 @@ export function FilterBar({
             checked={filters.due}
             onChange={(e) => onChange({ ...filters, due: e.target.checked })}
           />
-          <span>Срок подходит</span>
+          <span>{t.filters.dueSoon}</span>
         </label>
 
         <label className="row row--tight small">
@@ -234,7 +235,7 @@ export function FilterBar({
             checked={filters.blocked}
             onChange={(e) => onChange({ ...filters, blocked: e.target.checked })}
           />
-          <span>Заблокированные</span>
+          <span>{t.filters.blocked}</span>
         </label>
 
         {/* Рядом с «Заблокированными»: это те из них, что снимутся сами
@@ -247,7 +248,7 @@ export function FilterBar({
             checked={filters.expiring}
             onChange={(e) => onChange({ ...filters, expiring: e.target.checked })}
           />
-          <span>Блокировка истекает</span>
+          <span>{t.filters.expiring}</span>
         </label>
         )}
 
@@ -257,7 +258,7 @@ export function FilterBar({
             checked={filters.aging}
             onChange={(e) => onChange({ ...filters, aging: e.target.checked })}
           />
-          <span>Дольше обещанного</span>
+          <span>{t.filters.aging}</span>
         </label>
 
       </div>
@@ -268,7 +269,7 @@ export function FilterBar({
 /** Кнопка сброса для узких мест, где полосе не хватает ширины. */
 export function ClearFilters({ onClear }: { onClear: () => void }) {
   return (
-    <IconButton label="Сбросить фильтры" onClick={onClear}>
+    <IconButton label={t.filters.reset} onClick={onClear}>
       <CloseIcon />
     </IconButton>
   )

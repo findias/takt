@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-20-g9e03722-dirty.</p>
+<p>Every section in one file. Version v0.2.3-22-g670cc79-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1144,7 +1144,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <tr><td>П4</td><td>Таблица на 1000 строк открывается меньше чем за секунду, сортировка — 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
 <tr><td>П5</td><td>Тридцать человек на одной доске не медленнее очереди из тридцати</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
 <tr><td>П6</td><td>Соседняя доска не замедляется от занятой</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
-<tr><td>П7</td><td>Входной кусок клиента — не больше 400 КБ (120 КБ сжатым)</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П7</td><td>Скрипты при открытии, вместе с каталогом языка, — не больше 130 КБ сжатыми; сервер отдаёт их сжатыми</td><td><code>web/e2e/perf.spec.ts</code>, <code>internal/httpapi/static_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2>Как продукт себя ведёт</h2>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiError, MIN_PASSWORD, api } from '../shared/api/index.ts'
 import type { AuthMethods, Principal } from '../shared/api/index.ts'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
+import { t } from '../shared/i18n/index.ts'
 
 export function Auth({
   onSignedIn,
@@ -72,7 +73,7 @@ export function Auth({
     } catch (e) {
       // «Демо заполнено» и «слишком много подряд» — отказы без поля,
       // и оба говорят, когда повторить.
-      form.reportForm(e instanceof Error ? e.message : 'Не получилось')
+      form.reportForm(e instanceof Error ? e.message : t.common.notDone)
     } finally {
       setBusy(false)
     }
@@ -97,7 +98,7 @@ export function Auth({
           : await api.register(org, name, email, password)
       onSignedIn(principal)
     } catch (e) {
-      const text = e instanceof Error ? e.message : 'Не получилось'
+      const text = e instanceof Error ? e.message : t.common.notDone
       // Занятая почта — отказ одному полю, и он встаёт под ним:
       // общая плашка внизу формы заставляет искать, к чему она.
       // Различается кодом, а не текстом.
@@ -120,7 +121,7 @@ export function Auth({
         {/* Заголовку можно отдать фокус: возвращать его после подмены
             экрана некуда, а `body` значит «обход с начала страницы». */}
         <h1 ref={heading} tabIndex={-1}>
-          {mode === 'login' ? 'Вход' : 'Новая организация'}
+          {mode === 'login' ? t.auth.signIn : t.auth.newOrg}
         </h1>
 
         {/* Живой регион один на экран и смонтирован всегда: диктор
@@ -150,12 +151,10 @@ export function Auth({
               disabled={busy}
               onClick={trySandbox}
             >
-              {busy ? 'Готовим демо…' : 'Попробовать без регистрации'}
+              {busy ? t.auth.preparingDemo : t.auth.tryDemo}
             </button>
-            <p className="small muted">
-              Своя организация с примерами досок на сутки. Никто, кроме вас, её не видит.
-            </p>
-            <p className="divider small muted">или войти</p>
+            <p className="small muted">{t.auth.demoExplain}</p>
+            <p className="divider small muted">{t.auth.orSignIn}</p>
           </>
         )}
 
@@ -164,9 +163,9 @@ export function Auth({
             {/* Сверху, а не снизу: там, где корпоративный вход настроен,
                 он и есть обычный способ, а пароль — исключение. */}
             <a className="button button--wide" href="/api/auth/oidc/start">
-              Войти через {methods.oidc.label ?? 'провайдера'}
+              {t.auth.signInWith(methods.oidc.label ?? t.auth.provider)}
             </a>
-            <p className="divider small muted">или по паролю</p>
+            <p className="divider small muted">{t.auth.orPassword}</p>
           </>
         )}
 
@@ -175,18 +174,18 @@ export function Auth({
             {/* Название необязательно: пустое сервер заменит на «Моя
                 команда», и требовать его на первом же экране — значит
                 просить решение там, где его ещё не приняли. */}
-            <Field label="Название организации" {...form.field('org')}>
+            <Field label={t.auth.orgName} {...form.field('org')}>
               {(bind) => (
                 <input
                   {...bind}
                   name="org"
                   value={org}
                   onChange={(e) => setOrg(e.target.value)}
-                  placeholder="Моя команда"
+                  placeholder={t.auth.orgNamePlaceholder}
                 />
               )}
             </Field>
-            <Field label="Как вас зовут" {...form.field('name')}>
+            <Field label={t.auth.yourName} {...form.field('name')}>
               {(bind) => (
                 <input
                   {...bind}
@@ -199,7 +198,7 @@ export function Auth({
             </Field>
           </>
         )}
-        <Field label="Почта" {...form.field('email')}>
+        <Field label={t.auth.email} {...form.field('email')}>
           {(bind) => (
             <input
               {...bind}
@@ -216,8 +215,8 @@ export function Auth({
             и узнавать правило по отказу — значит придумывать дважды.
             На входе подсказки нет — там пароль уже есть. */}
         <Field
-          label={mode === 'login' ? 'Пароль' : 'Придумайте пароль'}
-          hint={mode === 'register' ? `Не короче ${MIN_PASSWORD} символов.` : undefined}
+          label={mode === 'login' ? t.auth.password : t.auth.newPassword}
+          hint={mode === 'register' ? t.auth.passwordRule(MIN_PASSWORD) : undefined}
           {...form.field('password')}
         >
           {(bind) => (
@@ -239,7 +238,7 @@ export function Auth({
         {/* Главное действие на экране одно: в демо это «Попробовать»,
             и вход по паролю становится обычной кнопкой. */}
         <button className={methods?.demo?.enabled ? 'secondary' : 'primary'} type="submit" disabled={busy}>
-          {busy ? 'Секунду…' : mode === 'login' ? 'Войти' : 'Завести организацию'}
+          {busy ? t.auth.wait : mode === 'login' ? t.auth.signInButton : t.auth.createOrg}
         </button>
         {/* На закрытой установке организации заводит владелец, и кнопки,
             ведущей к отказу, быть не должно: предлагать дверь, которой
@@ -259,7 +258,7 @@ export function Auth({
               form.clear()
             }}
           >
-            {mode === 'login' ? 'Завести новую организацию' : 'У меня уже есть аккаунт'}
+            {mode === 'login' ? t.auth.toRegister : t.auth.toLogin}
           </button>
         )}
         {/* В демо это объяснение ни о чём: посетитель заводит песочницу,
@@ -267,8 +266,8 @@ export function Auth({
         {!methods?.demo?.enabled && (
           <p className="muted small">
             {methods && !methods.signup?.enabled
-              ? 'Организации на этой установке заводит владелец. Чтобы присоединиться, нужна ссылка-приглашение от него.'
-              : 'Чтобы присоединиться к существующей команде, нужна ссылка-приглашение от её владельца.'}
+              ? t.auth.closedSignup
+              : t.auth.joinByInvite}
           </p>
         )}
       </form>

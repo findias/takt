@@ -36,6 +36,7 @@ import type { Related } from '../../entities/card/model.ts'
 import { labelOrigin } from '../../entities/label/model.ts'
 import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -61,15 +62,12 @@ import { LabelCombobox } from './LabelPicker.tsx'
  */
 type TabId = 'talk' | 'work' | 'history'
 
-const TABS = [
-  { id: 'talk', label: 'Обсуждение' },
-  { id: 'work', label: 'Работа' },
-  { id: 'history', label: 'История' },
-]
+const TAB_IDS: TabId[] = ['talk', 'work', 'history']
+const tabs = () => TAB_IDS.map((id) => ({ id, label: t.panel[id] }))
 
 /** С чего открывается карточка. Первая вкладка — она же умолчание:
  *  выбранная не первая читается как «здесь уже что-то трогали». */
-const FIRST_TAB: TabId = TABS[0].id as TabId
+const FIRST_TAB: TabId = TAB_IDS[0]
 
 export function CardPanel({
   base,
@@ -176,15 +174,15 @@ export function CardPanel({
       // Номер над названием: открыв карточку по ссылке из переписки,
       // первым делом сверяют, та ли это задача.
       eyebrow={<span className="card-number">{card.number}</span>}
-      label={`Карточка ${card.number} «${card.title}»`}
+      label={t.panel.cardLabel(card.number, card.title)}
       onClose={onClose}
     >
       <Tabs
         base={ids}
-        tabs={TABS}
+        tabs={tabs()}
         active={tab}
         onSelect={(id) => setTab(id as TabId)}
-        label="Разделы карточки"
+        label={t.panel.sections}
       />
 
       <TabPanel base={ids} id={tab}>
@@ -193,14 +191,14 @@ export function CardPanel({
             {card.blocked ? (
               <div className="blocked">
                 <div className="stack">
-                  <strong>Заблокирована</strong>
+                  <strong>{t.panel.blocked}</strong>
                   <span className="small">{card.blocked.reason}</span>
                   {/* Кто держит — строкой с переходом: «ждём вот эту
                       работу» без пути к ней отправляет искать её
                       поиском по доске. */}
                   {blocker && (
                     <span className="small">
-                      Держит:{' '}
+                      {t.panel.heldBy}{' '}
                       {blocker.onThisBoard ? (
                         <button className="link" onClick={() => onOpenCard(blocker.id)}>
                           {blocker.title}
@@ -219,10 +217,10 @@ export function CardPanel({
                       признаком значит портить единственную честную меру.
                       Но сказать об этом обязаны. */}
                   {blocker?.done && (
-                    <span className="small">Эта работа уже сделана — блокировку можно снять.</span>
+                    <span className="small">{t.panel.holderDone}</span>
                   )}
                   <span className="muted small">
-                    с {new Date(card.blocked.blockedAt).toLocaleString('ru-RU')}
+                    {t.panel.since(new Date(card.blocked.blockedAt).toLocaleString(locale()))}
                   </span>
                   <BlockUntilEditor
                     until={card.blocked.until}
@@ -235,8 +233,8 @@ export function CardPanel({
                     слово. Глазами их различают по месту, с диктора они
                     звучат одинаково; имя называет объект. */}
                 {canEdit && (
-                  <button aria-label="Снять блокировку" onClick={() => onUnblock(card.id)}>
-                    Снять
+                  <button aria-label={t.panel.unblock} onClick={() => onUnblock(card.id)}>
+                    {t.panel.lift}
                   </button>
                 )}
               </div>
@@ -260,7 +258,7 @@ export function CardPanel({
 
             {holdingUp.length > 0 && (
               <p className="small">
-                Из-за неё стоит:{' '}
+                {t.panel.holdingUp}{' '}
                 {holdingUp.map((c, i) => (
                   <span key={c.id}>
                     {i > 0 && ', '}
@@ -341,7 +339,7 @@ export function CardPanel({
                 {/* Одно понятие — одно слово: связь называется парой
                     «родительская задача» и «подзадача». «Часть задачи»
                     было третьим словом на то же самое. */}
-                <h3 className="section-title">Родительская задача</h3>
+                <h3 className="section-title">{t.panel.parent}</h3>
                 <RelatedRow
                   related={details.parent}
                   canEdit={canEdit}
@@ -353,7 +351,7 @@ export function CardPanel({
 
             <section className="stack">
               <div className="row row--between">
-                <h3 className="section-title">Подзадачи</h3>
+                <h3 className="section-title">{t.panel.subtasks}</h3>
                 {label && <span className="muted small">{label}</span>}
               </div>
 
@@ -364,7 +362,7 @@ export function CardPanel({
                   aria-valuenow={card.progress?.done ?? 0}
                   aria-valuemin={0}
                   aria-valuemax={card.progress?.total ?? 0}
-                  aria-label={`Готово ${label}`}
+                  aria-label={t.panel.done(label)}
                 >
                   <div
                     className="progress-fill"
@@ -374,10 +372,7 @@ export function CardPanel({
               )}
 
               {details.subtasks.length === 0 && (
-                <p className="muted small">
-                  Подзадач нет. Подзадача может идти на доске другой команды — прогресс всё равно
-                  посчитается здесь.
-                </p>
+                <p className="muted small">{t.panel.noSubtasks}</p>
               )}
               {details.subtasks.map((s) => (
                 <RelatedRow
@@ -419,7 +414,7 @@ export function CardPanel({
                 вместе, и раздел под ней не находил никто. */}
             {details.related.length > 0 && (
               <section className="stack">
-                <h3 className="section-title">Связи</h3>
+                <h3 className="section-title">{t.panel.links}</h3>
                 {details.related.map((r) => (
                   <RelatedRow
                     key={`${r.kind}-${r.id}`}
@@ -496,9 +491,9 @@ function RelatedRow({
   const title = (
     <>
       {related.done && !markable && <span aria-hidden="true">✓ </span>}
-      {related.done && <span className="sr-only">Готово. </span>}
+      {related.done && <span className="sr-only">{t.panel.doneSr}</span>}
       {related.blocked && <span aria-hidden="true">⛔ </span>}
-      {related.blocked && <span className="sr-only">Заблокирована. </span>}
+      {related.blocked && <span className="sr-only">{t.panel.blockedSr}</span>}
       {related.title}
     </>
   )
@@ -511,8 +506,8 @@ function RelatedRow({
           role="checkbox"
           aria-checked={related.done}
           className="subtask-check"
-          title={related.done ? 'Снять отметку' : 'Отметить сделанной'}
-          aria-label={`Сделана: ${related.title}`}
+          title={related.done ? t.panel.unmarkDone : t.panel.markDone}
+          aria-label={t.panel.doneOf(related.title)}
           onClick={() => onMarkDone?.(related.id, !related.done)}
         >
           <span className={`subtask-box${related.done ? ' subtask-box--done' : ''}`} />
@@ -542,12 +537,12 @@ function RelatedRow({
         // Слово то же, что на доске у держащей стороны зависимости:
         // «держит» там и «держит» здесь — про одно и то же.
         <button className="link" onClick={onHold}>
-          Держит
+          {t.panel.holds}
         </button>
       )}
       {canEdit && related.reachable && (
         <button className="link link--remove" onClick={onRemove}>
-          Убрать
+          {t.panel.remove}
         </button>
       )}
     </div>
@@ -579,7 +574,7 @@ function IterationPicker({
   if (!canEdit) {
     return (
       <p className="muted small">
-        Итерация: {currentIteration ? currentIteration.name : 'не назначена'}
+        {t.panel.iterationIs(currentIteration ? currentIteration.name : t.panel.iterationNone)}
       </p>
     )
   }
@@ -593,20 +588,20 @@ function IterationPicker({
   if (currentIteration?.closedAt) {
     return (
       <p className="muted small">
-        Итерация: {currentIteration.name} — закрыта, и состав её больше не меняется.
+        {t.panel.iterationClosed(currentIteration.name)}
       </p>
     )
   }
 
   return (
     <label className="row row--tight">
-      <span className="muted small">Итерация</span>
+      <span className="muted small">{t.panel.iteration}</span>
       <select
         value={current ?? ''}
-        aria-label="Итерация карточки"
+        aria-label={t.panel.iterationOf}
         onChange={(e) => onChange(e.target.value || null)}
       >
-        <option value="">Без итерации</option>
+        <option value="">{t.panel.noIteration}</option>
         {open.map((i) => (
           <option key={i.id} value={i.id}>
             {i.name}
@@ -639,7 +634,7 @@ function Estimate({
   if (!canEdit) {
     return (
       <p className="muted small">
-        Оценка: {value === null ? 'не поставлена' : `${value} ${UNIT_SHORT[unit]}`}
+        {t.panel.estimateIs(value === null ? t.panel.estimateNone : `${value} ${UNIT_SHORT[unit]}`)}
       </p>
     )
   }
@@ -650,7 +645,7 @@ function Estimate({
   // с клавиатуры по-прежнему можно: значение осталось полем.
   return (
     <div className="field-row">
-      <span className="field-label">Оценка</span>
+      <span className="field-label">{t.panel.estimate}</span>
       <EstimateStepper value={value} unit={unit} onChange={onSave} />
     </div>
   )
@@ -680,7 +675,7 @@ function Fields({
 
   return (
     <section className="stack">
-      <h3 className="section-title">Поля</h3>
+      <h3 className="section-title">{t.panel.fields}</h3>
       {fields.map((field) => (
         <FieldRow
           key={field.id}
@@ -803,20 +798,20 @@ function Description({
   // а он исчезает от первой буквы.
   return (
     <section className="stack">
-      <h3 className="section-title">Описание</h3>
+      <h3 className="section-title">{t.panel.description}</h3>
       {!canEdit ? (
         value ? (
           <p className="description">{value}</p>
         ) : (
-          <p className="muted small">Описания нет.</p>
+          <p className="muted small">{t.panel.noDescription}</p>
         )
       ) : (
         <textarea
           className="description"
           rows={4}
           value={draft}
-          placeholder="Что нужно сделать и что считать сделанным"
-          aria-label="Описание карточки"
+          placeholder={t.panel.descriptionPlaceholder}
+          aria-label={t.panel.descriptionLabel}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => draft !== value && onSave(draft)}
         />
@@ -848,7 +843,7 @@ function BlockForm({
   if (!open && !holder) {
     return (
       <button className="link" onClick={() => setOpen(true)}>
-        Заблокировать…
+        {t.panel.blockAsk}
       </button>
     )
   }
@@ -867,19 +862,19 @@ function BlockForm({
         setOpen(false)
       }}
     >
-      {holder && <span className="small">Держит «{holder}». Чего от неё ждём?</span>}
+      {holder && <span className="small">{t.panel.heldByAsk(holder)}</span>}
       <div className="row">
       <input
         autoFocus
         value={reason}
-        placeholder={holder ? 'Чего ждём от этой части' : 'Чего ждём'}
-        aria-label="Причина блокировки"
+        placeholder={holder ? t.panel.waitingForPart : t.panel.waitingFor}
+        aria-label={t.panel.blockReason}
         onChange={(e) => setReason(e.target.value)}
       />
       {/* Срок необязателен, и подпись это говорит: пустое поле —
           «пока не снимут», а не недоделка. */}
       <label className="row row--tight small">
-        <span>Снимется само (необязательно)</span>
+        <span>{t.panel.liftsItself}</span>
         <input type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)} />
       </label>
       {/* Глагол называет то, что произойдёт. «Отметить» не отвечает
@@ -887,7 +882,7 @@ function BlockForm({
           пара — два похожих слова, из которых первое ещё и приглушено,
           пока причина не набрана. */}
       <Button kind="primary" type="submit" disabled={!reason.trim()}>
-        Заблокировать
+        {t.panel.block}
       </Button>
       <Button
         kind="quiet"
@@ -897,7 +892,7 @@ function BlockForm({
           onCancel?.()
         }}
       >
-        Отмена
+        {t.common.cancel}
       </Button>
       </div>
     </form>
@@ -931,27 +926,25 @@ function Assignees({
 
   return (
     <section className="stack">
-      <h3 className="section-title">Кто делает</h3>
+      <h3 className="section-title">{t.panel.who}</h3>
 
       {assignees.length === 0 && (
-        <p className="muted small">
-          Пока никто. Работа сначала появляется, потом обретает исполнителя.
-        </p>
+        <p className="muted small">{t.panel.nobody}</p>
       )}
 
       {assignees.map((id) => (
         <div className="related" key={id}>
           <div className="row row--tight">
-            <Avatar name={people[id] ?? 'Кто-то'} />
-            <span>{people[id] ?? 'Кто-то'}</span>
+            <Avatar name={people[id] ?? t.common.someone} />
+            <span>{people[id] ?? t.common.someone}</span>
           </div>
           {canEdit && (
             <button
               className="link"
-              aria-label={`Снять исполнителя: ${people[id] ?? 'кто-то'}`}
+              aria-label={t.panel.unassign(people[id] ?? t.panel.someoneLower)}
               onClick={() => onAssign(id, false)}
             >
-              Снять
+              {t.panel.lift}
             </button>
           )}
         </div>
@@ -960,10 +953,10 @@ function Assignees({
       {canEdit && free.length > 0 && (
         <select
           value=""
-          aria-label="Добавить исполнителя"
+          aria-label={t.panel.addAssignee}
           onChange={(e) => e.target.value && onAssign(e.target.value, true)}
         >
-          <option value="">Добавить исполнителя…</option>
+          <option value="">{t.panel.addAssigneePick}</option>
           {free.map(([id, name]) => (
             <option key={id} value={id}>
               {name}
@@ -1014,15 +1007,15 @@ function DoneMark({
     return (
       <p className="muted small">
         {done
-          ? `Отмечена сделанной ${new Date(doneAt).toLocaleDateString('ru-RU')}`
-          : 'Не отмечена сделанной'}
+          ? t.panel.markedDoneOn(new Date(doneAt).toLocaleDateString(locale()))
+          : t.panel.notMarkedDone}
       </p>
     )
   }
 
   return (
     <div className="field-row">
-      <span className="field-label">Готовность</span>
+      <span className="field-label">{t.panel.readiness}</span>
       <button
         type="button"
         role="checkbox"
@@ -1031,10 +1024,10 @@ function DoneMark({
         onClick={() => onChange(!done)}
       >
         <span className={`subtask-box${done ? ' subtask-box--done' : ''}`} aria-hidden="true" />
-        <span>Сделана</span>
+        <span>{t.panel.doneMark}</span>
       </button>
       <span className="muted small">
-        {done ? `с ${new Date(doneAt).toLocaleDateString('ru-RU')}` : 'не двигает по доске'}
+        {done ? t.panel.since(new Date(doneAt).toLocaleDateString(locale())) : t.panel.doesNotMove}
       </span>
     </div>
   )
@@ -1057,24 +1050,24 @@ function DuePicker({
             число мы это обещали», а отвечать на него, заставляя
             складывать дни в уме, — издевательство. */}
         {value
-          ? `Обязательство: ${dateWords(value)} · ${dueLabel(value).text}`
-          : 'Обязательства нет'}
+          ? t.panel.commitmentIs(dateWords(value), dueLabel(value).text)
+          : t.panel.noCommitment}
       </p>
     )
   }
 
   return (
     <label className="field-row">
-      <span className="field-label">Обязательство</span>
+      <span className="field-label">{t.panel.commitment}</span>
       <input
         type="date"
         value={value ?? ''}
-        aria-label="Дата обязательства"
+        aria-label={t.panel.commitmentDate}
         onChange={(e) => onChange(e.target.value || null)}
       />
       {value && (
-        <button className="link" aria-label="Снять обязательство" onClick={() => onChange(null)}>
-          Снять
+        <button className="link" aria-label={t.panel.clearCommitment} onClick={() => onChange(null)}>
+          {t.panel.lift}
         </button>
       )}
     </label>
@@ -1103,12 +1096,12 @@ function PriorityPicker({
   onChange: (next: Priority) => void
 }) {
   if (!canEdit) {
-    return <p className="muted small">Приоритет: {priorityLabel(value).toLowerCase()}</p>
+    return <p className="muted small">{t.panel.priorityIs(priorityLabel(value).toLowerCase())}</p>
   }
 
   return (
     <label className="field-row">
-      <span className="field-label">Приоритет</span>
+      <span className="field-label">{t.panel.priority}</span>
       <select value={value} onChange={(e) => onChange(e.target.value as Priority)}>
         {PRIORITIES.map((level) => (
           <option key={level} value={level}>
@@ -1154,11 +1147,11 @@ function Labels({
 
   return (
     <section className="stack">
-      <h3 className="section-title">Метки</h3>
+      <h3 className="section-title">{t.panel.labels}</h3>
 
       {/* Наблюдателю указывать не на что: он метки не вешает. Тому, кто
           правит, пустое место не нужно — поле ниже и есть действие. */}
-      {hung.length === 0 && !canEdit && <p className="muted small">Меток на этой карточке нет.</p>}
+      {hung.length === 0 && !canEdit && <p className="muted small">{t.panel.noLabels}</p>}
 
       {/* Строкой на метку, как у исполнителей рядом: крестик внутри
           чипа пришлось бы растить до цели нажатия в 24 пикселя,
@@ -1168,16 +1161,16 @@ function Labels({
           <span className={`chip chip--${label.tone}`}>{label.name}</span>
           <span className="muted small related-grow">
             {labelOrigin(label)}
-            {label.archived && ', в архиве'}
-            {!label.archived && !label.applies && ', на этой доске не действует'}
+            {label.archived && t.panel.labelArchived}
+            {!label.archived && !label.applies && t.panel.labelNotHere}
           </span>
           {canEdit && (
             <button
               className="link"
-              aria-label={`Снять метку «${label.name}»`}
+              aria-label={t.panel.removeLabel(label.name)}
               onClick={() => onLabel(label.id, false)}
             >
-              Снять
+              {t.panel.lift}
             </button>
           )}
         </div>
@@ -1191,7 +1184,7 @@ function Labels({
           labels={labels}
           hung={own}
           canEdit={canEdit}
-          inputLabel="Повесить или завести метку"
+          inputLabel={t.panel.hangOrCreate}
           quietWhenIdle
           onToggle={onLabel}
         />
@@ -1247,17 +1240,17 @@ function NewSubtask({
       <div className="row row--tight">
         <input
           value={title}
-          placeholder="Что нужно сделать?"
-          aria-label="Название подзадачи"
+          placeholder={t.panel.whatToDo}
+          aria-label={t.panel.subtaskName}
           onChange={(e) => setTitle(e.target.value)}
         />
         {boards.length > 0 && (
           <select
             value={boardId}
-            aria-label="Доска подзадачи"
+            aria-label={t.panel.subtaskBoard}
             onChange={(e) => setBoardId(e.target.value)}
           >
-            <option value="">На этой доске</option>
+            <option value="">{t.panel.onThisBoard}</option>
             {boards.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -1266,16 +1259,13 @@ function NewSubtask({
           </select>
         )}
         <Button kind="primary" type="submit" icon={<PlusIcon />} disabled={!title.trim()}>
-          Подзадача
+          {t.panel.subtask}
         </Button>
       </div>
       {/* Сказано до нажатия, а не после отказа: правила доски-получателя
           заказ не обходит, и это лучше знать заранее. */}
       {target && (
-        <p className="muted small">
-          Работа ляжет на доску «{target.name}»: в её первую колонку, под её лимит и её обещание
-          срока. Прогресс этой карточки её посчитает.
-        </p>
+        <p className="muted small">{t.panel.goesTo(target.name)}</p>
       )}
     </form>
   )
@@ -1302,12 +1292,12 @@ function LinkPicker({
 
   return (
     <details className="link-picker">
-      <summary className="muted small">Связать с существующей карточкой</summary>
+      <summary className="muted small">{t.panel.linkExisting}</summary>
       <div className="row row--tight">
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as LinkKind)}
-          aria-label="Вид связи"
+          aria-label={t.panel.linkKind}
         >
           {(Object.keys(LINK_KIND_NAMES) as LinkKind[]).map((k) => (
             <option key={k} value={k}>
@@ -1317,10 +1307,10 @@ function LinkPicker({
         </select>
         <select
           value=""
-          aria-label="Карточка для связи"
+          aria-label={t.panel.linkCard}
           onChange={(e) => e.target.value && onPick(e.target.value, kind)}
         >
-          <option value="">Выбрать карточку…</option>
+          <option value="">{t.panel.pickCard}</option>
           {candidates.map((c) => (
             <option key={c.id} value={c.id}>
               {c.title}
@@ -1366,12 +1356,12 @@ function History({
     }
   }, [boardId, cardId, version])
 
-  if (failed) return <p className="muted small">Историю не удалось прочитать.</p>
-  if (!events) return <p className="muted small">Загружаем историю…</p>
+  if (failed) return <p className="muted small">{t.panel.historyFailed}</p>
+  if (!events) return <p className="muted small">{t.panel.historyLoading}</p>
 
   return (
     <section className="stack">
-      <h3 className="section-title">История</h3>
+      <h3 className="section-title">{t.panel.history}</h3>
       <ul className="feed">
         {events.map((e) => (
           <li key={e.id}>

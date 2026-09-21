@@ -71,5 +71,8 @@ if (!HTMLDialogElement.prototype.showModal) {
 
 // Каталог языка: у приложения его грузит main.tsx до первой отрисовки,
 // у тестов — вот здесь. Русский: проверки ищут подписи по-русски.
-import { loadLang } from '../i18n/index.ts'
+import { ALL_SECTIONS, loadLang, loadSections } from '../i18n/index.ts'
 await loadLang('ru')
+// Экраны в проверках монтируются напрямую, мимо `lazy`, — их разделы
+// каталога грузятся здесь, все сразу.
+await loadSections(...ALL_SECTIONS)

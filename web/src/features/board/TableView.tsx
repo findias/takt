@@ -17,6 +17,7 @@ import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, BoardLabel } from '../../shared/api/index.ts'
 import { labelTitle } from '../../entities/label/model.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Доска плоским списком.
@@ -100,39 +101,39 @@ export function TableView({
   const shown = rows.length > window_.limit ? rows.slice(0, window_.limit) : rows
 
   if (rows.length === 0) {
-    return <p className="muted small table-empty">Ни одной карточки — показывать нечего.</p>
+    return <p className="muted small table-empty">{t.talk.tableEmpty}</p>
   }
 
   return (
     <div className="table-wrap">
       <table className="board-table">
         <caption className="sr-only">
-          Карточки доски списком, {SORT_NAMES[sort]}
+          {t.talk.tableCaption(SORT_NAMES[sort])}
         </caption>
         <thead>
           <tr>
-            <th scope="col">Ключ</th>
-            <th scope="col">Задача</th>
+            <th scope="col">{t.talk.colKey}</th>
+            <th scope="col">{t.talk.colTask}</th>
             <SortableHead sort={sort} by="column" onSort={onSort}>
-              Колонка
+              {t.talk.colColumn}
             </SortableHead>
-            <th scope="col">Кто делает</th>
-            <th scope="col">Метки</th>
+            <th scope="col">{t.talk.colWho}</th>
+            <th scope="col">{t.talk.colLabels}</th>
             <SortableHead sort={sort} by="priority" onSort={onSort}>
-              Приоритет
+              {t.talk.colPriority}
             </SortableHead>
             <SortableHead sort={sort} by="estimate" onSort={onSort}>
-              Оценка
+              {t.talk.colEstimate}
             </SortableHead>
             <SortableHead sort={sort} by="age" onSort={onSort}>
-              Возраст
+              {t.talk.colAge}
             </SortableHead>
             <SortableHead sort={sort} by="due" onSort={onSort}>
-              Срок
+              {t.talk.colDue}
             </SortableHead>
-            <th scope="col">Итерация</th>
+            <th scope="col">{t.talk.colIteration}</th>
             <th scope="col">
-              <span className="sr-only">Действия</span>
+              <span className="sr-only">{t.talk.colActions}</span>
             </th>
           </tr>
         </thead>
@@ -152,11 +153,11 @@ export function TableView({
                 <td className="muted small">{columnName[card.columnId]}</td>
                 <td>
                   {assignees.length === 0 ? (
-                    <span className="muted small">никто</span>
+                    <span className="muted small">{t.talk.nobody}</span>
                   ) : (
                     <span className="avatars">
                       {assignees.map((id) => (
-                        <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                        <Avatar key={id} name={people[id] ?? t.common.someone} />
                       ))}
                     </span>
                   )}
@@ -204,17 +205,17 @@ export function TableView({
                 <td className="muted small">{iterationName[base.cardIterations[card.id]] ?? '—'}</td>
                 <td>
                   <Menu
-                    label={`Действия карточки «${card.title}»`}
+                    label={t.talk.cardActions(card.title)}
                     items={[
-                      { label: 'Открыть', onSelect: () => onOpenCard(card.id) },
+                      { label: t.talk.open, onSelect: () => onOpenCard(card.id) },
                       ...columns
                         .filter((c) => c.id !== card.columnId)
                         .map((c) => ({
-                          label: `Перенести в «${c.name}»`,
+                          label: t.talk.moveTo(c.name),
                           onSelect: () => onMoveToColumn(card.id, c.id),
                         })),
                       ...Object.entries(people).map(([id, name]) => ({
-                        label: assignees.includes(id) ? `Снять: ${name}` : `Назначить: ${name}`,
+                        label: assignees.includes(id) ? t.talk.unassign(name) : t.talk.assignTo(name),
                         onSelect: () => onAssign(card.id, id, !assignees.includes(id)),
                       })),
                     ]}
@@ -234,7 +235,7 @@ export function TableView({
                а не показанные. */
             <tr ref={window_.tail} className="table-tail">
               <td colSpan={11} tabIndex={0} onFocus={window_.more} className="muted small">
-                Ещё {window_.rest}: прокрутите, чтобы показать
+                {t.talk.moreRows(window_.rest)}
               </td>
             </tr>
           )}
@@ -284,7 +285,7 @@ function SortableHead({
     <th scope="col" aria-sort={current ? SORT_DIRECTION[by] : 'none'}>
       <button
         className="link table-sort"
-        aria-label={current ? `${SORT_NAMES[by]} — так и отсортировано` : `Отсортировать ${SORT_NAMES[by]}`}
+        aria-label={current ? t.talk.sortedBy(SORT_NAMES[by]) : t.talk.sortBy(SORT_NAMES[by])}
         onClick={() => onSort(by)}
       >
         {children}

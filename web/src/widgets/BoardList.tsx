@@ -1,12 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { ApiError, VISIBILITY_NAMES, api } from '../shared/api/index.ts'
-import { plural } from '../shared/lib/plural.ts'
 import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { t } from '../shared/i18n/index.ts'
 
 // Настройку доступа раскрывают у одной доски и изредка — тот же довод,
 // что у панели доступа на самой доске: грузить её вместе со списком
@@ -27,12 +27,12 @@ function boardLine(b: BoardInfo, teams: Team[]): string {
   const parts = [b.key]
   if (b.visibility === 'team') {
     const team = teams.find((t) => t.id === b.teamId)
-    parts.push(team ? `подразделению «${team.name}»` : VISIBILITY_NAMES.team.toLowerCase())
+    parts.push(team ? t.boards.visibleToTeam(team.name) : VISIBILITY_NAMES.team.toLowerCase())
   } else if (b.visibility) {
     parts.push(VISIBILITY_NAMES[b.visibility].toLowerCase())
   }
   if (b.cards !== undefined) {
-    parts.push(`${b.cards} ${plural(b.cards, 'карточка', 'карточки', 'карточек')}`)
+    parts.push(t.card.cards(b.cards))
   }
   return parts.join(' · ')
 }
@@ -71,7 +71,7 @@ export function BoardList({
     api
       .listBoards()
       .then((r) => setBoards(r.boards))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить список'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.boards.loadFailed))
   }, [])
 
   // Перезагружаем при смене организации: доски у каждой свои.
@@ -95,10 +95,10 @@ export function BoardList({
       <ScreenError>{error}</ScreenError>
       {boards === null && <Skeleton lines={3} />}
       {boards?.length === 0 && (
-        <EmptyState title="Досок пока нет">
+        <EmptyState title={t.boards.emptyTitle}>
           {canEdit
-            ? 'Доска — это колонки и карточки: заведите первую внизу, остальное появится по ходу дела.'
-            : 'В этой организации ещё не завели ни одной доски. Заводит их тот, кто может изменять данные.'}
+            ? t.boards.emptyEditor
+            : t.boards.emptyReader}
         </EmptyState>
       )}
 
@@ -121,16 +121,16 @@ export function BoardList({
                 <button
                   className="link"
                   aria-expanded={openAccess === b.id}
-                  aria-label={`Доступ к доске «${b.name}»`}
+                  aria-label={t.boards.accessTo(b.name)}
                   onClick={() => setOpenAccess((v) => (v === b.id ? null : b.id))}
                 >
-                  Доступ
+                  {t.boards.access}
                 </button>
                 {canEdit && (
                   <button
                     className="link link--remove"
-                    aria-label={`Убрать доску «${b.name}» в архив`}
-                    title="Карточки и история сохранятся"
+                    aria-label={t.boards.archiveBoard(b.name)}
+                    title={t.boards.archiveKeeps}
                     onClick={() => {
                       api
                         .archiveBoard(b.id)
@@ -141,11 +141,11 @@ export function BoardList({
                           return api.archivedBoards().then((r) => setArchived(r.boards))
                         })
                         .catch((e) =>
-                          setError(e instanceof Error ? e.message : 'Не удалось убрать доску'),
+                          setError(e instanceof Error ? e.message : t.boards.archiveFailed),
                         )
                     }}
                   >
-                    В архив
+                    {t.boards.toArchive}
                   </button>
                 )}
               </div>
@@ -183,7 +183,7 @@ export function BoardList({
               return api.archivedBoards()
             })
             .then((r) => setArchived(r.boards))
-            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось вернуть доску'))
+            .catch((e) => setError(e instanceof Error ? e.message : t.boards.restoreFailed))
         }
         // Удалять насовсем может один владелец: действие необратимо,
         // и уносит оно работу целой команды.
@@ -199,8 +199,8 @@ export function BoardList({
           нельзя ответить, не посмотрев, что именно удаляешь. */}
       <ConfirmDialog
         open={toDelete !== null}
-        title="Удалить доску навсегда?"
-        confirmLabel="Удалить навсегда"
+        title={t.boards.deleteTitle}
+        confirmLabel={t.boards.deleteForever}
         danger
         confirmDisabled={typed.trim() !== toDelete?.name}
         onCancel={() => {
@@ -221,27 +221,21 @@ export function BoardList({
               // но сказать, что случилось, обязано: строка исчезает
               // из архива молча, и это ровно то, чего человек боится
               // после «навсегда».
-              notify({ text: `Доска «${board.name}» удалена навсегда.`, tone: 'warning' })
+              notify({ text: t.boards.deleted(board.name), tone: 'warning' })
             })
-            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось удалить доску'))
+            .catch((e) => setError(e instanceof Error ? e.message : t.boards.deleteFailed))
         }}
       >
-        <p>
-          Доска «{toDelete?.name}» исчезнет вместе со всеми карточками, колонками, итерациями,
-          обсуждениями и историей работы. Вернуть будет нечем.
-        </p>
-        <p className="muted small">
-          В журнале действий останется запись о том, кто её удалил. Наберите название доски, чтобы
-          подтвердить.
-        </p>
+        <p>{t.boards.deleteBody(toDelete?.name ?? '')}</p>
+        <p className="muted small">{t.boards.deleteAudit}</p>
         {/* В подсказке поля стоит слово «название», а не само название:
             барьер задуман как заминка, а подсказка-ответ прямо в поле,
             куда его надо переписать, эту заминку и отменяет. Само
             название названо выше, в первой строке диалога. */}
         <input
           value={typed}
-          aria-label="Название доски для подтверждения"
-          placeholder="Название доски"
+          aria-label={t.boards.confirmName}
+          placeholder={t.boards.boardName}
           onChange={(e) => setTyped(e.target.value)}
         />
       </ConfirmDialog>
@@ -271,7 +265,7 @@ export function BoardList({
                 // Про ключ отвечает код, а не текст: разбор текста
                 // ломается на первой же правке формулировки.
                 const code = e instanceof ApiError ? e.body?.code : undefined
-                const text = e instanceof Error ? e.message : 'Не удалось завести доску'
+                const text = e instanceof Error ? e.message : t.boards.createFailed
                 if (code === 'board_key_invalid' || code === 'board_key_taken') {
                   form.report({ key: text })
                 } else {
@@ -282,14 +276,14 @@ export function BoardList({
         >
           {/* Подписи нет на экране, но есть у поля: действие названо
               кнопкой в конце ряда, а имя нужно диктору и отказу. */}
-          <Field label="Название новой доски" hiddenLabel {...form.field('name')}>
+          <Field label={t.boards.newBoardName} hiddenLabel {...form.field('name')}>
             {(bind) => (
               <input
                 {...bind}
                 name="name"
                 value={name}
                 required
-                placeholder="Название новой доски"
+                placeholder={t.boards.newBoardName}
                 onChange={(e) => setName(e.target.value)}
               />
             )}
@@ -303,7 +297,7 @@ export function BoardList({
               бы свою колонку и разорвало ряд на три строки. Связано
               с полем всё равно — `describedBy`. */}
           <Field
-            label="Ключ доски — префикс номеров карточек"
+            label={t.boards.keyLabel}
             hiddenLabel
             describedBy="board-key-hint"
             {...form.field('key')}
@@ -315,13 +309,13 @@ export function BoardList({
                 className="key-input"
                 value={key}
                 maxLength={6}
-                placeholder="Ключ"
+                placeholder={t.boards.key}
                 onChange={(e) => setKey(e.target.value.toUpperCase())}
               />
             )}
           </Field>
-          <button className="primary" type="submit" aria-label="Завести доску">
-            Завести
+          <button className="primary" type="submit" aria-label={t.boards.createBoard}>
+            {t.boards.create}
           </button>
         </form>
       )}
@@ -331,8 +325,7 @@ export function BoardList({
           о нём из отказа — значит узнать поздно. */}
       {canEdit && (
         <p className="muted small" id="board-key-hint">
-          Ключ — начало номеров карточек: ПОСТ-14. Пустой выведем из названия;
-          сменить его потом уже нельзя.
+          {t.boards.keyHint}
         </p>
       )}
       {/* Отказ, у которого своего поля нет: «доска в архиве», «нет
@@ -368,21 +361,18 @@ function Archive({
   if (boards === null) {
     return (
       <button className="link" onClick={onOpen}>
-        Показать архив
+        {t.boards.showArchive}
       </button>
     )
   }
   if (boards.length === 0)
     return (
-      <p className="muted small">
-        В архиве пусто. Сюда попадают доски, убранные из списка: они не удаляются,
-        и вернуть их можно отсюда.
-      </p>
+      <p className="muted small">{t.boards.archiveEmpty}</p>
     )
 
   return (
     <section className="stack">
-      <h2 className="section-title">Архив</h2>
+      <h2 className="section-title">{t.boards.archive}</h2>
       <ul className="member-list">
         {boards.map((b) => (
           <li key={b.id}>
@@ -399,19 +389,19 @@ function Archive({
             {canEdit && (
               <button
                 className="link"
-                aria-label={`Вернуть из архива: ${b.name}`}
+                aria-label={t.boards.restoreFrom(b.name)}
                 onClick={() => onRestore(b.id)}
               >
-                Вернуть
+                {t.boards.restore}
               </button>
             )}
             {onDelete && (
               <button
                 className="link link--danger"
-                aria-label={`Удалить навсегда: ${b.name}`}
+                aria-label={t.boards.deleteForeverOf(b.name)}
                 onClick={() => onDelete(b)}
               >
-                Удалить навсегда
+                {t.boards.deleteForever}
               </button>
             )}
           </li>

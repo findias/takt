@@ -19,9 +19,68 @@
  * и сборке в 398. Вынесенными они не стоят ничего тому, кто их
  * не читает.
  */
-import type { Catalog } from './ru.ts'
+import type { ru } from './ru.ts'
+import type { team } from './ru/team.ts'
+import type { hooks } from './ru/hooks.ts'
+import type { labelsAdmin } from './ru/labelsAdmin.ts'
+import type { structure } from './ru/structure.ts'
+import type { flow } from './ru/flow.ts'
+import type { flowReport } from './ru/flowReport.ts'
 
-export type { Catalog }
+/**
+ * Разделы, которые едут со своим экраном, а не при открытии.
+ *
+ * Тексты «Команды», «Структуры», «Потока» раньше лежали в отдельных
+ * кусках этих экранов и грузились, только когда экран открывали.
+ * Единый каталог унёс их в первую загрузку — 22 КБ, которых первому
+ * экрану не нужно (замер 21.09.2026). Раздел грузится вместе с кодом
+ * экрана (`withSections` в `lazy`) и до его отрисовки: обратиться
+ * к `t.team` раньше, чем экран загружен, нечем и незачем.
+ */
+type Lazy = {
+  team: typeof team
+  hooks: typeof hooks
+  labelsAdmin: typeof labelsAdmin
+  structure: typeof structure
+  flow: typeof flow
+  flowReport: typeof flowReport
+}
+export type Section = keyof Lazy
+export type Catalog = typeof ru & Lazy
+
+const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknown>>>> = {
+  team: { ru: () => import('./ru/team.ts'), en: () => import('./en/team.ts') },
+  hooks: { ru: () => import('./ru/hooks.ts'), en: () => import('./en/hooks.ts') },
+  labelsAdmin: {
+    ru: () => import('./ru/labelsAdmin.ts'),
+    en: () => import('./en/labelsAdmin.ts'),
+  },
+  structure: { ru: () => import('./ru/structure.ts'), en: () => import('./en/structure.ts') },
+  flow: { ru: () => import('./ru/flow.ts'), en: () => import('./en/flow.ts') },
+  flowReport: {
+    ru: () => import('./ru/flowReport.ts'),
+    en: () => import('./en/flowReport.ts'),
+  },
+}
+
+/** Подгрузить разделы на выбранном языке. Повторная загрузка ничего
+ *  не стоит: сборщик отдаёт уже загруженный модуль. */
+export async function loadSections(...names: Section[]): Promise<void> {
+  await Promise.all(
+    names.map(async (name) => {
+      const module = await SECTIONS[name][lang]()
+      ;(t as Record<string, unknown>)[name] = module[name]
+    }),
+  )
+}
+
+/** Для `lazy`: код экрана и его тексты — одним ожиданием. */
+export function withSections<T>(load: () => Promise<T>, ...names: Section[]): () => Promise<T> {
+  return () => Promise.all([load(), loadSections(...names)]).then(([m]) => m)
+}
+
+/** Все разделы разом — для проверок, которым экраны нужны сразу. */
+export const ALL_SECTIONS = Object.keys(SECTIONS) as Section[]
 export type Lang = 'ru' | 'en'
 export const LANGS: Lang[] = ['ru', 'en']
 
@@ -47,7 +106,9 @@ export function preferredLang(): Lang {
 export async function loadLang(next: Lang): Promise<void> {
   const catalog =
     next === 'en' ? (await import('./en.ts')).en : (await import('./ru.ts')).ru
-  t = catalog
+  // Копия, а не сам модуль: разделы экранов дописываются в неё
+  // по мере загрузки.
+  t = { ...catalog } as Catalog
   lang = next
   if (typeof document !== 'undefined') document.documentElement.lang = next
 }

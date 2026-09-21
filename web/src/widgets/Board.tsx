@@ -67,6 +67,7 @@ import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
 import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { locale, t, withSections } from '../shared/i18n/index.ts'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
 // по которому вынесены экраны организации: доска открывается всегда,
@@ -87,7 +88,13 @@ import { ScreenError } from '../shared/ui/Field'
  */
 const loadTableView = () => import('../features/board/TableView.tsx')
 const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView })))
-const Flow = lazy(() => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })))
+const Flow = lazy(
+  withSections(
+    () => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })),
+    'flow',
+    'flowReport',
+  ),
+)
 const Changes = lazy(() =>
   import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })),
 )
@@ -99,8 +106,12 @@ const CardArchive = lazy(() =>
 const AccessPanel = lazy(() =>
   import('../features/access/AccessPanel.tsx').then((m) => ({ default: m.AccessPanel })),
 )
-const IterationReport = lazy(() =>
-  import('../features/board/IterationReport.tsx').then((m) => ({ default: m.IterationReport })),
+const IterationReport = lazy(
+  withSections(
+    () =>
+      import('../features/board/IterationReport.tsx').then((m) => ({ default: m.IterationReport })),
+    'flowReport',
+  ),
 )
 
 export function Board({
@@ -390,8 +401,8 @@ export function Board({
     const actions: Command[] = [
       {
         id: 'flow',
-        title: 'Показать поток',
-        hint: 'метрики доски',
+        title: t.screen.showFlow,
+        hint: t.screen.flowHint,
         icon: <FlowIcon />,
         run: () => {
           setOpenCard(null)
@@ -400,8 +411,8 @@ export function Board({
       },
       {
         id: 'archive',
-        title: 'Показать архив карточек',
-        hint: 'убранные с доски',
+        title: t.screen.showArchive,
+        hint: t.screen.archiveHint,
         icon: <ArchiveIcon />,
         run: () => {
           setOpenCard(null)
@@ -411,7 +422,7 @@ export function Board({
       },
       {
         id: 'access',
-        title: 'Кому видна доска',
+        title: t.screen.whoSees,
         icon: <PeopleIcon />,
         run: () => setShowAccess(true),
       },
@@ -420,7 +431,7 @@ export function Board({
         .map((g) => ({
           id: `group-${g}`,
           title: GROUPING_NAMES[g],
-          hint: 'группировка',
+          hint: t.screen.groupingHint,
           icon: <TagIcon />,
           run: () => setGrouping(g),
         })),
@@ -429,8 +440,8 @@ export function Board({
         : [
             {
               id: 'clear-filters',
-              title: 'Показать все карточки',
-              hint: 'сбросить фильтры',
+              title: t.screen.showAllCards,
+              hint: t.screen.resetHint,
               icon: <CloseIcon />,
               run: () => setFilters(EMPTY),
             },
@@ -446,7 +457,7 @@ export function Board({
     () =>
       Object.entries(base?.people ?? {})
         .map(([userId, name]) => ({ userId, name }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+        .sort((a, b) => a.name.localeCompare(b.name, locale())),
     [base?.people],
   )
 
@@ -529,8 +540,12 @@ export function Board({
         moveCard(cardId, next, { place: 'end' })
         flash(cardId)
         announce(
-          `Карточка «${card.title}» перенесена из «${base.columns[card.columnId].name}» ` +
-            `в «${base.columns[next].name}», последняя из ${(order[next]?.length ?? 0) + 1}`,
+          t.screen.movedAcross(
+            card.title,
+            base.columns[card.columnId].name,
+            base.columns[next].name,
+            (order[next]?.length ?? 0) + 1,
+          ),
         )
         refocus(cardId)
         return
@@ -549,8 +564,7 @@ export function Board({
       const to = direction === 'up' ? at : at + 2
       flash(cardId)
       announce(
-        `Карточка «${card.title}» перенесена на позицию ${to} из ${list.length} ` +
-          `в колонке «${base.columns[card.columnId].name}»`,
+        t.screen.movedWithin(card.title, to, list.length, base.columns[card.columnId].name),
       )
       refocus(cardId)
     },
@@ -573,8 +587,7 @@ export function Board({
       if (!card || card.columnId === columnId) return
       moveCard(cardId, columnId, { place: 'end' })
       announce(
-        `Карточка «${card.title}» перенесена из «${base.columns[card.columnId].name}» ` +
-          `в «${base.columns[columnId].name}»`,
+        t.screen.movedTo(card.title, base.columns[card.columnId].name, base.columns[columnId].name),
       )
       refocus(cardId)
     },
@@ -800,7 +813,7 @@ export function Board({
     return (
       <div className="board-screen">
         <EmptyState
-          title="Доска в архиве"
+          title={t.screen.archivedTitle}
           action={
             <Button
               kind="primary"
@@ -809,12 +822,11 @@ export function Board({
                 await board.reload()
               }}
             >
-              Вернуть из архива
+              {t.screen.restoreFromArchive}
             </Button>
           }
         >
-          Карточки и журнал целы — доска просто убрана с глаз. Вернуть её
-          можно прямо отсюда.
+          {t.screen.archivedBody}
         </EmptyState>
       </div>
     )
@@ -829,17 +841,17 @@ export function Board({
     return (
       <div className="board-screen">
         <ErrorState
-          what="загрузить доску"
+          what={t.screen.loadWhat}
           error={
             пропала
-              ? `${board.loadError}. Возможно, её убрали или доступ к ней закрыли.`
+              ? t.screen.gone(board.loadError)
               : board.loadError
           }
           onRetry={пропала ? undefined : () => void board.reload()}
         />
         {пропала && (
           <button className="btn" onClick={onBack}>
-            Все доски
+            {t.screen.allBoards}
           </button>
         )}
       </div>
@@ -932,23 +944,23 @@ export function Board({
       <header className="board-header">
         <button className="btn btn--quiet" onClick={onBack}>
           <ChevronLeftIcon />
-          Все доски
+          {t.screen.allBoards}
         </button>
         <h1>{base.info.name}</h1>
         {/* Ключ стоит у названия, потому что больше ему стоять негде:
             в номерах карточек он виден только там, где карточки уже есть,
             а знать его нужно раньше — по нему доску называют в разговоре
             и ищут карточку по номеру. */}
-        <span className="board-key" title="Ключ доски — начало номеров её карточек">
+        <span className="board-key" title={t.screen.keyTitle}>
           {base.info.key}
         </span>
-        <span className="version" title="Версия доски растёт с каждой операцией">
+        <span className="version" title={t.screen.versionTitle}>
           v{base.info.version}
         </span>
         <SandboxNote expiresAt={sandboxExpiresAt} />
         {board.pending > 0 && (
-          <span className="pending" title="Изменения ещё не подтверждены сервером">
-            сохраняем… {board.pending}
+          <span className="pending" title={t.screen.pendingTitle}>
+            {t.screen.saving(board.pending)}
           </span>
         )}
         {/* Тема и плотность живут и здесь. Плотность нужна ровно там, где
@@ -981,11 +993,11 @@ export function Board({
         {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
             а не выпадающий список, — вариантов три, и выбранный должен
             быть виден без нажатия. */}
-        <div className="segment" role="group" aria-label="Вид доски">
+        <div className="segment" role="group" aria-label={t.screen.viewGroup}>
           {[
-            { key: 'board', name: 'Доска' },
-            { key: 'table', name: 'Таблица' },
-            { key: 'changes', name: 'Изменения' },
+            { key: 'board', name: t.screen.viewBoard },
+            { key: 'table', name: t.screen.viewTable },
+            { key: 'changes', name: t.screen.viewChanges },
           ].map((item) => (
             <button
               key={item.key}
@@ -1008,7 +1020,7 @@ export function Board({
         {asTable && (
           <select
             value={sort}
-            aria-label="Сортировка"
+            aria-label={t.screen.sort}
             onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
           >
             {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
@@ -1030,7 +1042,7 @@ export function Board({
         <select
           className="grouping"
           value={grouping}
-          aria-label="Группировка"
+          aria-label={t.screen.grouping}
           onChange={(e) => setGrouping(e.target.value as Grouping)}
         >
           {(Object.keys(GROUPING_NAMES) as Grouping[]).map((g) => (
@@ -1047,7 +1059,7 @@ export function Board({
         <div className="row board-tools">
           <button className="btn btn--quiet palette-open" onClick={() => setPalette(true)}>
             <SearchIcon />
-            Найти
+            {t.screen.find}
             <span className="muted small">{paletteHint()}</span>
           </button>
           <button
@@ -1061,7 +1073,7 @@ export function Board({
             }}
           >
             <FlowIcon />
-            <span className="tool-label">Поток</span>
+            <span className="tool-label">{t.screen.flow}</span>
           </button>
           <button
             className="btn btn--quiet"
@@ -1073,7 +1085,7 @@ export function Board({
             }}
           >
             <ArchiveIcon />
-            <span className="tool-label">Архив</span>
+            <span className="tool-label">{t.screen.archive}</span>
           </button>
         </div>
       </div>
@@ -1098,19 +1110,17 @@ export function Board({
       {Object.keys(base.cards).length === 0 && (
         <div className="note empty-board board-toolbar" role="note">
           <p className="small">
-            <strong>На доске ещё нет карточек.</strong> Это не поломка — просто здесь пока ничего не
-            заводили.
+            <strong>{t.screen.emptyBoard}</strong>
+            {t.screen.emptyBoardNotBroken}
           </p>
           <p className="muted small">
-            Заведите первую в колонке «{base.columns[base.columnIds[0]]?.name ?? 'первой'}». Дальше
-            её можно перетащить мышью, перенести кнопкой на самой карточке или клавишами: Ctrl со
-            стрелками.
+            {t.screen.emptyBoardHow(base.columns[base.columnIds[0]]?.name ?? t.screen.firstColumn)}
           </p>
         </div>
       )}
 
       {narrow && (
-        <div className="column-switch board-toolbar" role="tablist" aria-label="Колонки">
+        <div className="column-switch board-toolbar" role="tablist" aria-label={t.screen.columns}>
           {base.columnIds.map((columnId) => {
             const current = columnId === (visibleColumn ?? base.columnIds[0])
             return (
@@ -1274,8 +1284,8 @@ export function Board({
           «вы уверены?» без имени того, что исчезнет, отвечают не читая. */}
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Удалить навсегда?"
-        confirmLabel="Удалить навсегда"
+        title={t.screen.deleteTitle}
+        confirmLabel={t.screen.deleteForever}
         danger
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => {
@@ -1284,13 +1294,8 @@ export function Board({
           if (card) void board.deleteCard(card.id).then(() => setArchiveKey((k) => k + 1))
         }}
       >
-        <p>
-          «{pendingDelete?.title ?? 'Карточка'}» исчезнет вместе с историей её работы, связями
-          и обсуждением. Вернуть будет нечем — в отличие от архива.
-        </p>
-        <p className="muted small">
-          В журнале действий останется запись о том, кто её удалил и что в ней было.
-        </p>
+        <p>{t.screen.deleteBody(pendingDelete?.title ?? t.screen.aCard)}</p>
+        <p className="muted small">{t.screen.deleteAudit}</p>
       </ConfirmDialog>
 
       {showAccess && (
@@ -1354,7 +1359,7 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
   if (!adding)
     return (
       <button className="column column--ghost" onClick={() => setAdding(true)}>
-        + Колонка
+        {t.screen.addColumn}
       </button>
     )
   return (
@@ -1372,13 +1377,13 @@ function NewColumn({ onCreate }: { onCreate: (name: string) => void }) {
       <input
         autoFocus
         value={value}
-        aria-label="Название колонки"
-        placeholder="Название колонки"
+        aria-label={t.screen.columnName}
+        placeholder={t.screen.columnName}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setAdding(false)}
       />
-      <button type="submit" aria-label="Завести колонку">
-        Завести
+      <button type="submit" aria-label={t.screen.createColumn}>
+        {t.screen.create}
       </button>
     </form>
   )
@@ -1438,7 +1443,7 @@ function Iterations({
 
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(onChanged).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(onChanged).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   return (
@@ -1447,11 +1452,11 @@ function Iterations({
 
       <ConfirmDialog
         open={toClose !== null}
-        title="Закрыть итерацию?"
+        title={t.screen.closeIterationTitle}
         // Не просто «Закрыть»: рядом на экране живёт «Закрыть» панели,
         // и одно и то же слово означало бы то «уйти отсюда», то
         // «заморозить состав навсегда».
-        confirmLabel="Закрыть итерацию"
+        confirmLabel={t.screen.closeIteration}
         danger
         onCancel={() => setToClose(null)}
         onConfirm={() => {
@@ -1460,15 +1465,12 @@ function Iterations({
           if (it) act(api.closeIteration(boardId, it.id))
         }}
       >
-        <p>
-          Состав «{toClose?.name}» замрёт: закрытая итерация больше не принимает и не отпускает
-          карточки. Открыть обратно нечем.
-        </p>
+        <p>{t.screen.closeIterationBody(toClose?.name ?? '')}</p>
       </ConfirmDialog>
       <div className="row row--tight">
         {/* «Итераций нет» — только когда их нет вовсе. Рядом со списком
             закрытых эта надпись противоречила бы сама себе. */}
-        {iterations.length === 0 && !adding && <span className="muted small">Итераций нет</span>}
+        {iterations.length === 0 && !adding && <span className="muted small">{t.screen.noIterations}</span>}
         {open.map((i) => (
           <span key={i.id} className="mark" title={i.goal}>
             <button className="link" onClick={() => onReport(i)}>
@@ -1479,21 +1481,21 @@ function Iterations({
             {canEdit && (
               <button
                 className="link"
-                aria-label={`Закрыть итерацию «${i.name}»`}
+                aria-label={t.screen.closeIterationOf(i.name)}
                 onClick={() => setToClose(i)}
               >
                 {/* Полностью: одинокое «закрыть» у плашки читалось как
                     «убрать плашку», а действие необратимое — состав
                     итерации застывает. На том же экране «Закрыть» есть
                     у каждой панели (разбор 21.09.2026). */}
-                Закрыть итерацию
+                {t.screen.closeIteration}
               </button>
             )}
           </span>
         ))}
         {closed.length > 0 && (
           <>
-            <span className="muted small">Закрытые:</span>
+            <span className="muted small">{t.screen.closed}</span>
             {closed.map((i) => (
               <button key={i.id} className="link" title={i.goal} onClick={() => onReport(i)}>
                 {i.name}
@@ -1503,7 +1505,7 @@ function Iterations({
         )}
         {canEdit && !adding && (
           <button className="link" onClick={() => setAdding(true)}>
-            + итерация
+            {t.screen.addIteration}
           </button>
         )}
       </div>
@@ -1531,18 +1533,18 @@ function Iterations({
           <input
             name="name"
             autoFocus
-            aria-label="Название итерации"
-            placeholder="Название"
+            aria-label={t.screen.iterationName}
+            placeholder={t.screen.name}
             required
           />
-          <input name="startsOn" type="date" required aria-label="Начало" />
-          <input name="endsOn" type="date" required aria-label="Конец" />
-          <input name="goal" aria-label="Цель итерации" placeholder="Цель" />
-          <button type="submit" aria-label="Завести итерацию">
-            Завести
+          <input name="startsOn" type="date" required aria-label={t.screen.starts} />
+          <input name="endsOn" type="date" required aria-label={t.screen.ends} />
+          <input name="goal" aria-label={t.screen.goalLabel} placeholder={t.screen.goal} />
+          <button type="submit" aria-label={t.screen.createIteration}>
+            {t.screen.create}
           </button>
           <Button kind="quiet" type="button" onClick={() => setAdding(false)}>
-            Отмена
+            {t.common.cancel}
           </Button>
         </form>
       )}

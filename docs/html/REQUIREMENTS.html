@@ -157,7 +157,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>П4</td><td>Таблица на 1000 строк открывается меньше чем за секунду, сортировка — 200 мс</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
 <tr><td>П5</td><td>Тридцать человек на одной доске не медленнее очереди из тридцати</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
 <tr><td>П6</td><td>Соседняя доска не замедляется от занятой</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
-<tr><td>П7</td><td>Входной кусок клиента — не больше 400 КБ (120 КБ сжатым)</td><td><code>web/e2e/perf.spec.ts</code></td></tr>
+<tr><td>П7</td><td>Скрипты при открытии, вместе с каталогом языка, — не больше 130 КБ сжатыми; сервер отдаёт их сжатыми</td><td><code>web/e2e/perf.spec.ts</code>, <code>internal/httpapi/static_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2>Как продукт себя ведёт</h2>
@@ -248,7 +248,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-20-g9e03722-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-22-g670cc79-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

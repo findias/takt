@@ -4,6 +4,7 @@ import { agingLabel } from '../../entities/board/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import { UNIT_SHORT } from '../../entities/card/model.ts'
 import type { EstimateUnit } from '../../shared/api/index.ts'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Сколько на ком висит.
@@ -67,14 +68,14 @@ export function Workload({
     }
 
     return [...load.entries()]
-      .map(([userId, row]) => ({ userId, name: base.people[userId] ?? 'Кто-то', ...row }))
-      .sort((a, b) => b.cards - a.cards || a.name.localeCompare(b.name, 'ru'))
+      .map(([userId, row]) => ({ userId, name: base.people[userId] ?? t.common.someone, ...row }))
+      .sort((a, b) => b.cards - a.cards || a.name.localeCompare(b.name, locale()))
   }, [base, order])
 
   if (rows.length === 0) return null
 
   return (
-    <div className="workload" role="group" aria-label="Сколько на ком висит">
+    <div className="workload" role="group" aria-label={t.board.workloadLabel}>
       {rows.map((row) => (
         <span
           key={row.userId}
@@ -103,10 +104,10 @@ function title(
   row: { name: string; cards: number; weight: number; unestimated: number; overdue: boolean },
   unit: EstimateUnit,
 ): string {
-  const parts = [`${row.name}: ${row.cards} в работе`]
+  const parts = [t.board.workloadInWork(row.name, row.cards)]
   if (row.weight > 0) parts.push(`${number(row.weight)} ${UNIT_SHORT[unit]}`)
-  if (row.unestimated > 0) parts.push(`${row.unestimated} без оценки`)
-  if (row.overdue) parts.push('есть карточка дольше обещанного')
+  if (row.unestimated > 0) parts.push(t.board.workloadUnestimated(row.unestimated))
+  if (row.overdue) parts.push(t.board.workloadOverdue)
   return parts.join(', ')
 }
 

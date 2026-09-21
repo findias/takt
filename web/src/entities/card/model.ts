@@ -122,7 +122,7 @@ export function childrenOf(base: BaseState): Record<string, Related[]> {
     ;(children[link.fromCard] ??= []).push(resolve(base, link.toCard, 'subtask'))
   }
   for (const list of Object.values(children)) {
-    list.sort((a, b) => a.title.localeCompare(b.title, 'ru'))
+    list.sort((a, b) => a.title.localeCompare(b.title, locale()))
   }
   return children
 }
@@ -176,7 +176,7 @@ export function cardDetails(base: BaseState, cardId: string): CardDetails | null
       else details.related.push(other)
     }
   }
-  details.subtasks.sort((a, b) => a.title.localeCompare(b.title, 'ru'))
+  details.subtasks.sort((a, b) => a.title.localeCompare(b.title, locale()))
   return details
 }
 
@@ -584,5 +584,5 @@ export function candidatesForSubtask(base: BaseState, details: CardDetails): Car
 
   return Object.values(base.cards)
     .filter((c) => !taken.has(c.id) && !hasParent.has(c.id))
-    .sort((a, b) => a.title.localeCompare(b.title, 'ru'))
+    .sort((a, b) => a.title.localeCompare(b.title, locale()))
 }

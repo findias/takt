@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { blockUntilLabel } from '../../entities/card/model.ts'
 import { Button } from '../../shared/ui/Button.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Срок блокировки в панели карточки (ROADMAP 28.1).
@@ -52,10 +53,10 @@ export function BlockUntilEditor({
     <div className="stack stack--tight">
       {label ? (
         <span className={`small${label.soon ? ' block-ending' : ''}`}>
-          {label.expired ? label.text : `Снимется сама: ${label.text}`}
+          {label.expired ? label.text : t.board.liftsItself(label.text)}
         </span>
       ) : (
-        <span className="muted small">Бессрочная — пока не снимут.</span>
+        <span className="muted small">{t.board.openEnded}</span>
       )}
       {canEdit && (
         // Без формы: кнопка отправки в форме у проекта всегда главная,
@@ -63,7 +64,7 @@ export function BlockUntilEditor({
         <div className="row row--tight">
           <input
             type="datetime-local"
-            aria-label="Срок блокировки"
+            aria-label={t.board.blockDeadline}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -74,11 +75,11 @@ export function BlockUntilEditor({
             }}
           />
           <Button type="button" disabled={!fromLocalInput(draft)} onClick={commit}>
-            {until ? 'Перенести срок' : 'Поставить срок'}
+            {until ? t.board.moveDeadline : t.board.setDeadline}
           </Button>
           {until && (
             <Button kind="quiet" type="button" onClick={() => onChange(null)}>
-              Сделать бессрочной
+              {t.board.makeOpenEnded}
             </Button>
           )}
         </div>

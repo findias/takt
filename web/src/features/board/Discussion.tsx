@@ -5,6 +5,7 @@ import type { Comment } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
 import { Button } from '../../shared/ui/Button.tsx'
 import { ScreenError } from '../../shared/ui/Field'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Обсуждение карточки.
@@ -33,7 +34,7 @@ export function Discussion({
     api
       .comments(boardId, cardId)
       .then((r) => setComments(r.comments))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось прочитать обсуждение'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.talk.readFailed))
   }, [boardId, cardId])
 
   useEffect(load, [load])
@@ -41,23 +42,23 @@ export function Discussion({
   const [toDelete, setToDelete] = useState<string | null>(null)
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(load).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
-  if (!comments) return <p className="muted small">Загружаем обсуждение…</p>
+  if (!comments) return <p className="muted small">{t.talk.loading}</p>
 
   const roots = comments.filter((c) => c.parentId === null)
   const repliesOf = (id: string) => comments.filter((c) => c.parentId === id)
 
   return (
     <section className="stack">
-      <h3 className="section-title">Обсуждение</h3>
+      <h3 className="section-title">{t.talk.title}</h3>
       {/* Удалённую реплику не вернуть — значит, спрашивает. Прежде
           удалял с первого нажатия (разбор 21.09.2026). */}
       <ConfirmDialog
         open={toDelete !== null}
-        title="Удалить реплику?"
-        confirmLabel="Удалить реплику"
+        title={t.talk.deleteTitle}
+        confirmLabel={t.talk.deleteReply}
         danger
         onCancel={() => setToDelete(null)}
         onConfirm={() => {
@@ -66,11 +67,11 @@ export function Discussion({
           if (id) act(api.deleteComment(id))
         }}
       >
-        <p>Текст пропадёт; в ветке останется «Реплика удалена».</p>
+        <p>{t.talk.deleteBody}</p>
       </ConfirmDialog>
       <ScreenError>{error}</ScreenError>
 
-      {roots.length === 0 && <p className="muted small">Пока тихо.</p>}
+      {roots.length === 0 && <p className="muted small">{t.talk.quiet}</p>}
 
       {roots.map((c) => (
         <div key={c.id} className="stack">
@@ -95,7 +96,7 @@ export function Discussion({
             ))}
             {replyTo === c.id && canEdit && (
               <NewComment
-                placeholder="Ответить"
+                placeholder={t.talk.reply}
                 onSend={(body) => {
                   act(api.addComment(boardId, cardId, body, c.id, []))
                   setReplyTo(null)
@@ -108,7 +109,7 @@ export function Discussion({
 
       {canEdit && (
         <NewComment
-          placeholder="Написать в обсуждение"
+          placeholder={t.talk.write}
           onSend={(body) => act(api.addComment(boardId, cardId, body, null, []))}
         />
       )}
@@ -137,29 +138,29 @@ function CommentRow({
   const mine = comment.authorId === meId
 
   if (comment.deleted) {
-    return <p className="muted small comment comment--deleted">Реплика удалена</p>
+    return <p className="muted small comment comment--deleted">{t.talk.deleted}</p>
   }
 
   return (
     <div className="comment">
       <div className="row row--between">
         <span className="small">
-          <strong>{comment.author ?? 'без имени'}</strong>{' '}
+          <strong>{comment.author ?? t.talk.noName}</strong>{' '}
           <span className="muted">{timeText(comment.createdAt)}</span>
         </span>
         <div className="row row--tight">
           {onReply && canEdit && (
             <button className="link" onClick={onReply}>
-              Ответить
+              {t.talk.reply}
             </button>
           )}
           {mine && canEdit && !editing && (
             <>
               <button className="link" onClick={() => setEditing(true)}>
-                Править
+                {t.talk.edit}
               </button>
               <button className="link link--danger" onClick={onDelete}>
-                Удалить
+                {t.talk.delete}
               </button>
             </>
           )}
@@ -180,12 +181,12 @@ function CommentRow({
             className="description"
             rows={3}
             autoFocus
-            aria-label="Текст сообщения"
+            aria-label={t.talk.text}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
           />
           <div className="row row--tight">
-            <button type="submit">Сохранить</button>
+            <button type="submit">{t.common.save}</button>
             <Button
               kind="quiet"
               type="button"
@@ -194,7 +195,7 @@ function CommentRow({
                 setEditing(false)
               }}
             >
-              Отмена
+              {t.common.cancel}
             </Button>
           </div>
         </form>
@@ -204,7 +205,7 @@ function CommentRow({
 
       {comment.editedAt && !editing && (
         <div className="row row--tight">
-          <span className="muted small">изменено {timeText(comment.editedAt)}</span>
+          <span className="muted small">{t.talk.edited} {timeText(comment.editedAt)}</span>
           {/* «Изменено» без прежнего текста бесполезно: спрашивают
               не «правил ли он», а «что там было написано до». */}
           <button
@@ -218,7 +219,7 @@ function CommentRow({
                     .catch(() => setWas([]))
             }
           >
-            {was ? 'скрыть' : 'что было'}
+            {was ? t.talk.hide : t.talk.previous}
           </button>
         </div>
       )}
@@ -258,7 +259,7 @@ function NewComment({
         onChange={(e) => setBody(e.target.value)}
       />
       <button type="submit" disabled={!body.trim()}>
-        Отправить
+        {t.talk.send}
       </button>
     </form>
   )

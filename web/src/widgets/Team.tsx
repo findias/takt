@@ -26,6 +26,7 @@ import { Field, useFormErrors } from '../shared/ui/Field.tsx'
 import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { locale, t } from '../shared/i18n/index.ts'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -41,7 +42,7 @@ export function Team({ principal }: { principal: Principal }) {
         setMembers(r.members)
         setInvites(r.invites)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить команду'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.team.loadFailed))
   }, [])
 
   useEffect(load, [load])
@@ -58,7 +59,7 @@ export function Team({ principal }: { principal: Principal }) {
     p.then(() => {
       load()
       if (done) notify({ text: done, tone: 'info' })
-    }).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    }).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   return (
@@ -70,8 +71,8 @@ export function Team({ principal }: { principal: Principal }) {
           нечестно — подписи под работой остаются. */}
       <ConfirmDialog
         open={toErase !== null}
-        title="Удалить данные человека?"
-        confirmLabel="Удалить данные"
+        title={t.team.eraseTitle}
+        confirmLabel={t.team.erase}
         danger
         onCancel={() => setToErase(null)}
         onConfirm={() => {
@@ -83,18 +84,12 @@ export function Team({ principal }: { principal: Principal }) {
         {/* Имя стоит в именительном падеже и подлежащим: склонять чужие
             имена подстановкой нельзя, а «У «Иван Петров»» — это ошибка,
             которую видно сразу. */}
-        <p>
-          «{toErase?.name}» перестанет быть участником организации. Имя, почта и способ входа
-          будут стёрты, сессии оборвутся.
-        </p>
-        <p className="muted small">
-          Работа, которую он делал, останется: карточки, комментарии и записи журнала продолжат
-          на неё ссылаться — просто без имени. Стереть их значило бы стереть историю чужой работы.
-        </p>
+        <p>{t.team.eraseBody(toErase?.name ?? '')}</p>
+        <p className="muted small">{t.team.eraseKeeps}</p>
       </ConfirmDialog>
 
       <section className="stack">
-        <h2 className="section-title">В организации</h2>
+        <h2 className="section-title">{t.team.inOrg}</h2>
         {members === null && <Skeleton lines={2} />}
         <ul className="member-list">
           {members?.map((m) => (
@@ -106,7 +101,7 @@ export function Team({ principal }: { principal: Principal }) {
                     уникальной почты, и показывать «…@clients.invalid»
                     значит показывать устройство вместо смысла. */}
                 <span className="muted small">
-                  {m.kind === 'service' ? 'ключ интеграции' : m.email}
+                  {m.kind === 'service' ? t.team.integrationKey : m.email}
                 </span>
               </div>
               {/* Ключу не предлагают ни роли, ни исключения, ни удаления
@@ -115,12 +110,12 @@ export function Team({ principal }: { principal: Principal }) {
                   интеграций». Раньше всё это предлагалось, и «Удалить
                   данные» отвечало отказом. */}
               {m.kind === 'service' ? (
-                <span className="role-chip">ключ</span>
+                <span className="role-chip">{t.team.key}</span>
               ) : isOwner && m.userId !== principal.id ? (
                 <div className="row">
                   <select
                     value={m.role}
-                    aria-label={`Роль: ${m.name}`}
+                    aria-label={t.team.roleOf(m.name)}
                     onChange={(e) => act(api.setRole(m.userId, e.target.value as Role))}
                   >
                     {(Object.keys(ROLE_NAMES) as Role[]).map((r) => (
@@ -132,18 +127,18 @@ export function Team({ principal }: { principal: Principal }) {
                   <button
                     className="link link--remove"
                     onClick={() => act(api.removeMember(m.userId))}
-                    aria-label={`Исключить ${m.name}`}
+                    aria-label={t.team.removeOf(m.name)}
                   >
-                    Исключить
+                    {t.team.remove}
                   </button>
                   {/* Исключение обратимо приглашением, обезличивание
                       не обратимо ничем — и потому спрашивает. */}
                   <button
                     className="link link--danger"
                     onClick={() => setToErase(m)}
-                    aria-label={`Удалить данные: ${m.name}`}
+                    aria-label={t.team.eraseOf(m.name)}
                   >
-                    Удалить данные
+                    {t.team.erase}
                   </button>
                 </div>
               ) : (
@@ -156,7 +151,7 @@ export function Team({ principal }: { principal: Principal }) {
 
       {isOwner && (
         <section className="stack">
-          <h2 className="section-title">Пригласить</h2>
+          <h2 className="section-title">{t.team.invite}</h2>
           <InviteForm
             onCreated={(invite) => {
               setFreshLink(invite.link ?? null)
@@ -166,10 +161,7 @@ export function Team({ principal }: { principal: Principal }) {
 
           {freshLink && (
             <div className="note">
-              <p className="small">
-                Ссылка создана. Она показывается один раз — в базе хранится только
-                её отпечаток. Перешлите её приглашённому.
-              </p>
+              <p className="small">{t.team.linkCreated}</p>
               <div className="row">
                 {/* Поле и кнопка называют, что в них: на этом экране
                     показывается один раз и ссылка-приглашение, и ключ
@@ -179,38 +171,40 @@ export function Team({ principal }: { principal: Principal }) {
                 <input
                   readOnly
                   value={freshLink}
-                  aria-label="Ссылка-приглашение"
+                  aria-label={t.team.inviteLink}
                   onFocus={(e) => e.target.select()}
                 />
-                <CopyButton value={freshLink} what="ссылку-приглашение" />
+                <CopyButton value={freshLink} what={t.team.inviteLinkWhat} />
               </div>
             </div>
           )}
 
           {invites.length > 0 && (
             <>
-              <h2 className="section-title">Ждут ответа</h2>
+              <h2 className="section-title">{t.team.pending}</h2>
               <ul className="member-list">
                 {invites.map((i) => (
                   <li key={i.id}>
                     <div className="member-who">
                       <span>{i.email}</span>
                       <span className="muted small">
-                        {ROLE_NAMES[i.role]} · до{' '}
-                        {new Date(i.expiresAt).toLocaleDateString('ru-RU')}
+                        {t.team.until(
+                          ROLE_NAMES[i.role],
+                          new Date(i.expiresAt).toLocaleDateString(locale()),
+                        )}
                       </span>
                     </div>
                     <button
                       className="link link--remove"
-                      aria-label={`Отозвать приглашение: ${i.email}`}
+                      aria-label={t.team.revokeInviteOf(i.email)}
                       onClick={() =>
                         act(
                           api.revokeInvite(i.id),
-                          `Приглашение для ${i.email} отозвано: ссылка больше не работает.`,
+                          t.team.inviteRevoked(i.email),
                         )
                       }
                     >
-                      Отозвать приглашение
+                      {t.team.revokeInvite}
                     </button>
                   </li>
                 ))}
@@ -241,7 +235,7 @@ export function Team({ principal }: { principal: Principal }) {
           сломалось, и спрашивают не у того, у кого есть терминал.
           Экран «Команда» — то место, куда за этим и пойдут. */}
       {principal.version && (
-        <p className="muted small version-line">Версия установки: {principal.version}</p>
+        <p className="muted small version-line">{t.team.version(principal.version)}</p>
       )}
     </div>
   )
@@ -278,8 +272,8 @@ function Clients() {
     <section className="stack">
       <ConfirmDialog
         open={toRevoke !== null}
-        title="Отозвать ключ?"
-        confirmLabel="Отозвать ключ"
+        title={t.team.revokeKeyTitle}
+        confirmLabel={t.team.revokeKey}
         danger
         onCancel={() => setToRevoke(null)}
         onConfirm={() => {
@@ -290,23 +284,15 @@ function Clients() {
           api
             .revokeClient(key.id)
             .then(load)
-            .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+            .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
         }}
       >
-        <p>
-          Ключ «{toRevoke?.name}» перестанет работать сразу: всё, что ходит с ним в API, получит
-          отказ.
-        </p>
-        <p className="muted small">
-          Вернуть его нельзя — только выпустить новый и прописать в той системе заново.
-        </p>
+        <p>{t.team.revokeKeyBody(toRevoke?.name ?? '')}</p>
+        <p className="muted small">{t.team.revokeKeyFinal}</p>
       </ConfirmDialog>
-      <h2 className="section-title">Ключи для интеграций</h2>
+      <h2 className="section-title">{t.team.keys}</h2>
       <ScreenError>{error}</ScreenError>
-      <p className="muted small">
-        Ключ принадлежит организации, а не человеку: интеграция живёт дольше того,
-        кто её завёл. Действия ключа видны в журнале наравне с людскими.
-      </p>
+      <p className="muted small">{t.team.keysExplain}</p>
 
       {clients.length > 0 && (
         <ul className="member-list">
@@ -317,8 +303,8 @@ function Clients() {
                 <span className="muted small">
                   {c.prefix}… · {c.scopes.map((s) => SCOPE_NAMES[s] ?? s).join(', ')}
                   {c.lastUsedAt
-                    ? ` · работал ${new Date(c.lastUsedAt).toLocaleDateString('ru-RU')}`
-                    : ' · ещё не работал'}
+                    ? t.team.usedOn(new Date(c.lastUsedAt).toLocaleDateString(locale()))
+                    : t.team.neverUsed}
                 </span>
               </div>
               {/* «Отозвать» стояло и здесь, и у приглашения — на одном
@@ -330,10 +316,10 @@ function Clients() {
                   отзывал с первого нажатия (разбор 21.09.2026). */}
               <button
                 className="link link--danger"
-                aria-label={`Отозвать ключ «${c.name}»`}
+                aria-label={t.team.revokeKeyOf(c.name)}
                 onClick={() => setToRevoke(c)}
               >
-                Отозвать ключ
+                {t.team.revokeKey}
               </button>
             </li>
           ))}
@@ -342,18 +328,15 @@ function Clients() {
 
       {fresh && (
         <div className="note">
-          <p className="small">
-            Ключ создан. Он показывается один раз — в базе хранится только его
-            отпечаток. Скопируйте и положите туда, откуда его возьмёт интеграция.
-          </p>
+          <p className="small">{t.team.keyCreated}</p>
           <div className="row">
             <input
               readOnly
               value={fresh}
-              aria-label="Ключ доступа"
+              aria-label={t.team.accessKey}
               onFocus={(e) => e.target.select()}
             />
-            <CopyButton value={fresh} what="ключ доступа" />
+            <CopyButton value={fresh} what={t.team.accessKeyWhat} />
           </div>
         </div>
       )}
@@ -379,7 +362,7 @@ function Clients() {
               setExpires('')
               load()
             })
-            .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести ключ'))
+            .catch((e) => setError(e instanceof Error ? e.message : t.team.keyCreateFailed))
         }}
       >
         {/* Ряд из полей, а не из поля и висящей рядом подписи. Подпись
@@ -388,7 +371,7 @@ function Clients() {
             и который диктор не читает вместе с полем. Отсюда же и
             `aria-label`, дублировавший её словом в слово. */}
         <div className="form-row">
-          <Field label="Для чего ключ" {...form.field('name')}>
+          <Field label={t.team.keyPurpose} {...form.field('name')}>
             {(bind) => (
               <input
                 {...bind}
@@ -399,7 +382,7 @@ function Clients() {
               />
             )}
           </Field>
-          <Field label="Действует до" {...form.field('expires')}>
+          <Field label={t.team.validUntil} {...form.field('expires')}>
             {(bind) => (
               <input
                 {...bind}
@@ -412,13 +395,13 @@ function Clients() {
           </Field>
           <button
             type="submit"
-            aria-label="Завести ключ"
+            aria-label={t.team.createKey}
             // Гаснет только там, где нажатие бессмысленно: ключ без прав
             // не заводится вовсе. Про пустое имя скажет отказ у поля —
             // погашенная кнопка молчит о том, чего ждёт.
             disabled={scopes.length === 0}
           >
-            Завести
+            {t.team.create}
           </button>
         </div>
         <div className="checkbox-grid">
@@ -443,12 +426,7 @@ function Clients() {
             </label>
           ))}
         </div>
-        <p className="muted small">
-          Ключ для каталога заводится отдельно: он ведёт подразделения и их
-          состав и работает только со /scim/v2. Владельцем организации такой
-          ключ не становится — доски и настройки ему закрыты. Для досок —
-          второй ключ.
-        </p>
+        <p className="muted small">{t.team.directoryKey}</p>
       </form>
     </section>
   )
@@ -480,13 +458,13 @@ function EstimateUnitChoice({ principal }: { principal: Principal }) {
 
   return (
     <section className="stack">
-      <h2 className="section-title">Оценка</h2>
+      <h2 className="section-title">{t.team.estimate}</h2>
       <ScreenError>{error}</ScreenError>
       <label className="row row--tight">
-        <span className="muted small">Работу оцениваем в</span>
+        <span className="muted small">{t.team.estimateIn}</span>
         <select
           value={unit}
-          aria-label="Единица оценки"
+          aria-label={t.team.unit}
           onChange={(e) => {
             const next = e.target.value as EstimateUnit
             const was = unit
@@ -496,13 +474,13 @@ function EstimateUnitChoice({ principal }: { principal: Principal }) {
               .setEstimateUnit(next)
               .then(() =>
                 notify({
-                  text: `Работу оцениваем в ${UNIT_NAMES[next]}. Числа остались прежними.`,
+                  text: t.team.unitChanged(UNIT_NAMES[next]),
                   tone: 'info',
                 }),
               )
               .catch((e) => {
                 setUnit(was)
-                setError(e instanceof Error ? e.message : 'Не удалось сменить единицу')
+                setError(e instanceof Error ? e.message : t.team.unitFailed)
               })
           }}
         >
@@ -513,11 +491,7 @@ function EstimateUnitChoice({ principal }: { principal: Principal }) {
           ))}
         </select>
       </label>
-      <p className="muted small">
-        Числа на карточках не пересчитываются: тройка останется тройкой, сменится
-        подпись под ней. Очки не переводятся в часы никаким коэффициентом — это
-        разные способы обещать.
-      </p>
+      <p className="muted small">{t.team.unitExplain}</p>
     </section>
   )
 }
@@ -540,18 +514,15 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
 
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(load).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   return (
     <section className="stack">
-      <h2 className="section-title">Поля карточек</h2>
+      <h2 className="section-title">{t.team.fields}</h2>
       <ScreenError>{error}</ScreenError>
       {fields.length === 0 ? (
-        <p className="muted small">
-          Полей нет. Поле заводится на всю организацию: одинаково названное поле
-          на двух досках — это одно поле, иначе сводный отчёт складывает разное.
-        </p>
+        <p className="muted small">{t.team.noFields}</p>
       ) : (
         <ul className="member-list">
           {fields.map((f) => (
@@ -566,10 +537,10 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
               {canEdit && (
                 <button
                   className="link link--remove"
-                  title="Значения карточек останутся: поле заводили ради них"
+                  title={t.team.fieldKeeps}
                   onClick={() => act(api.archiveField(f.id))}
                 >
-                  Убрать
+                  {t.team.removeField}
                 </button>
               )}
             </li>
@@ -596,13 +567,13 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
         >
           <input
             value={name}
-            aria-label="Название поля"
-            placeholder="Название поля"
+            aria-label={t.team.fieldName}
+            placeholder={t.team.fieldName}
             onChange={(e) => setName(e.target.value)}
           />
           <select
             value={kind}
-            aria-label="Вид поля"
+            aria-label={t.team.fieldKind}
             onChange={(e) => setKind(e.target.value as FieldKind)}
           >
             {(Object.keys(FIELD_KIND_NAMES) as FieldKind[]).map((k) => (
@@ -614,13 +585,13 @@ function CardFields({ canEdit }: { canEdit: boolean }) {
           {kind === 'select' && (
             <input
               value={options}
-              aria-label="Варианты через запятую"
-              placeholder="Варианты через запятую"
+              aria-label={t.team.fieldOptions}
+              placeholder={t.team.fieldOptions}
               onChange={(e) => setOptions(e.target.value)}
             />
           )}
           <button type="submit" disabled={!name.trim()}>
-            Завести поле
+            {t.team.createField}
           </button>
         </form>
       )}
@@ -644,24 +615,19 @@ function Export() {
 
   return (
     <section className="stack">
-      <h2 className="section-title">Выгрузка</h2>
-      <p className="muted small">
-        Всё, что накопила организация: команды, доски, карточки, обсуждения,
-        итерации и настройки. Секреты — подписи вебхуков и ключи доступа —
-        в файл не попадают: восстановить по ним нечего, а потерять файл
-        значило бы потерять доступ.
-      </p>
+      <h2 className="section-title">{t.team.export}</h2>
+      <p className="muted small">{t.team.exportExplain}</p>
       <label className="row row--tight">
         <input
           type="checkbox"
           checked={withAudit}
           onChange={(e) => setWithAudit(e.target.checked)}
         />
-        <span className="small">Добавить журнал действий — он обычно больше всего остального</span>
+        <span className="small">{t.team.withAudit}</span>
       </label>
       <p>
         <a className="button" href={`/api/export${withAudit ? '?audit=1' : ''}`} download>
-          Скачать файл
+          {t.team.download}
         </a>
       </p>
     </section>
@@ -711,12 +677,8 @@ function AuditFeed({ people }: { people: Member[] }) {
 
   return (
     <section className="stack">
-      <h2 className="section-title">Что происходило</h2>
-      <p className="muted small">
-        Журнал ведёт база, а не приложение: изменение, сделанное в обход интерфейса,
-        попадает сюда наравне с остальными. Записи только дописываются. «Без подписи» —
-        сделанное не человеком: наполнением, миграцией, служебной задачей.
-      </p>
+      <h2 className="section-title">{t.team.audit}</h2>
+      <p className="muted small">{t.team.auditExplain}</p>
       <ul className="feed">
         {entries.slice(0, shown).map((e) => (
           <li key={e.id}>
@@ -738,7 +700,7 @@ function AuditFeed({ people }: { people: Member[] }) {
             setShown((n) => n + FIRST_ENTRIES)
           }}
         >
-          Показать ещё
+          {t.common.showMore}
         </button>
       )}
     </section>
@@ -776,25 +738,25 @@ function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
           // наверх раздела, к заголовку «В организации», за пределы
           // формы: там его принимали за отказ всего экрана.
           .catch((e) =>
-            form.report({ email: e instanceof Error ? e.message : 'Не удалось пригласить' }),
+            form.report({ email: e instanceof Error ? e.message : t.team.inviteFailed }),
           )
           .finally(() => setBusy(false))
       }}
     >
-      <Field label="Почта коллеги" hiddenLabel {...form.field('email')}>
+      <Field label={t.team.colleagueEmail} hiddenLabel {...form.field('email')}>
         {(bind) => (
           <input
             {...bind}
             name="email"
             type="email"
             value={email}
-            placeholder="Почта коллеги"
+            placeholder={t.team.colleagueEmail}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         )}
       </Field>
-      <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label="Роль">
+      <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label={t.team.role}>
         {(Object.keys(ROLE_NAMES) as Role[]).map((r) => (
           <option key={r} value={r}>
             {ROLE_NAMES[r]}
@@ -804,7 +766,7 @@ function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
       {/* Кнопка гаснет только на время запроса: про пустое поле скажет
           отказ у поля, а погашенная кнопка молчит о том, чего ждёт. */}
       <button type="submit" disabled={busy}>
-        Пригласить
+        {t.team.invite}
       </button>
     </form>
   )

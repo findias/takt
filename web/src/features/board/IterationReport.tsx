@@ -4,6 +4,7 @@ import { api } from '../../shared/api/index.ts'
 import { UNIT_SHORT, rangeWords } from '../../entities/card/model.ts'
 import type { EstimateUnit, Iteration, IterationReport as Report } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Отчёт по итерации.
@@ -52,57 +53,54 @@ export function IterationReport({
       mode={mode}
       onMode={setMode}
       title={iteration.name}
-      label={`Отчёт по итерации «${iteration.name}»`}
+      label={t.flowReport.reportOf(iteration.name)}
       onClose={onClose}
     >
-      <ScreenError>{failed ? 'Не удалось прочитать отчёт.' : undefined}</ScreenError>
-      {!report && !failed && <p className="muted small">Считаем…</p>}
+      <ScreenError>{failed ? t.flowReport.reportFailed : undefined}</ScreenError>
+      {!report && !failed && <p className="muted small">{t.flowReport.counting}</p>}
       {report && (
         <>
           <section className="stack">
             <p className="muted small">
               {rangeWords(iteration.startsOn, iteration.endsOn)}
               {closed
-                ? ` · закрыта ${dateText(closed)}, состав застыл`
-                : ' · идёт, посчитано на сейчас'}
+                ? t.flowReport.closedOn(dateText(closed))
+                : t.flowReport.running}
             </p>
             {iteration.goal && <p>{iteration.goal}</p>}
           </section>
 
           <section className="stack">
-            <h3 className="section-title">Что было в составе</h3>
+            <h3 className="section-title">{t.flowReport.scope}</h3>
             {report.totals.committed === 0 ? (
               <p className="muted small">
-                Ни одной карточки. {closed ? 'Так она и закрылась.' : 'Пока пусто.'}
+                {t.flowReport.noCards} {closed ? t.flowReport.closedEmpty : t.flowReport.stillEmpty}
               </p>
             ) : (
               <>
                 <div className="row row--tight">
                   <Figure
-                    label="сделано"
-                    value={`${report.totals.done} из ${report.totals.committed}`}
+                    label={t.flowReport.doneLabel}
+                    value={t.flowReport.ofTotal(report.totals.done, report.totals.committed)}
                   />
                   {/* Вес показывается только когда оценены все: сумма без
                       неоценённых врёт в меньшую сторону, и подпись
                       «12 из 20» скрывала бы это молча. */}
                   {report.totals.byWeight && (
                     <Figure
-                      label={`сделано ${UNIT_SHORT[unit]}`}
-                      value={`${num(report.totals.doneWeight)} из ${num(report.totals.committedWeight)}`}
+                      label={t.flowReport.doneWeight(UNIT_SHORT[unit])}
+                      value={t.flowReport.ofTotal(num(report.totals.doneWeight), num(report.totals.committedWeight))}
                     />
                   )}
                   {report.totals.lateAdded > 0 && (
-                    <Figure label="пришло после начала" value={String(report.totals.lateAdded)} />
+                    <Figure label={t.flowReport.lateAdded} value={String(report.totals.lateAdded)} />
                   )}
                   {report.totals.dropped > 0 && (
-                    <Figure label="убрано по дороге" value={String(report.totals.dropped)} />
+                    <Figure label={t.flowReport.dropped} value={String(report.totals.dropped)} />
                   )}
                 </div>
                 {!report.totals.byWeight && (
-                  <p className="muted small">
-                    В составе есть неоценённые карточки — вес не считается: сумма без них
-                    показала бы меньше, чем было.
-                  </p>
+                  <p className="muted small">{t.flowReport.unestimated}</p>
                 )}
               </>
             )}
@@ -115,7 +113,7 @@ export function IterationReport({
                   <div className="member-who">
                     <button className="link related-open" onClick={() => onOpenCard(c.id)}>
                       {c.done && <span aria-hidden="true">✓ </span>}
-                      {c.done && <span className="sr-only">Сделана. </span>}
+                      {c.done && <span className="sr-only">{t.flowReport.doneSr}</span>}
                       {c.number} · {c.title}
                     </button>
                     <span className="muted small">{marks(c, unit) || ' '}</span>
@@ -135,9 +133,9 @@ export function IterationReport({
  *  когда он есть. */
 function marks(c: Report['cards'][number], unit: EstimateUnit): string {
   const out: string[] = []
-  if (c.dropped) out.push('убрана из итерации')
-  if (c.lateAdd) out.push('пришла после начала')
-  if (c.archived) out.push('убрана с доски')
+  if (c.dropped) out.push(t.flowReport.cardDropped)
+  if (c.lateAdd) out.push(t.flowReport.cardLate)
+  if (c.archived) out.push(t.flowReport.cardArchived)
   if (c.estimate !== null) out.push(`${num(c.estimate)} ${UNIT_SHORT[unit]}`)
   return out.join(' · ')
 }
@@ -147,7 +145,7 @@ function num(value: number): string {
 }
 
 function dateText(iso: string): string {
-  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  return new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })
 }
 
 function Figure({ label, value }: { label: string; value: string }) {

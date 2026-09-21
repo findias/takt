@@ -24,6 +24,7 @@
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { BlockedIcon, CommentIcon, PeopleIcon } from '../../shared/ui/icons.tsx'
 import type { Related } from '../../entities/card/model.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 export function SubtaskRow({
   subtask,
@@ -77,8 +78,8 @@ export function SubtaskRow({
           role="checkbox"
           aria-checked={subtask.done}
           className="subtask-check"
-          title={subtask.done ? 'Снять отметку' : 'Отметить сделанной'}
-          aria-label={`Сделана: ${subtask.title}`}
+          title={subtask.done ? t.board.unmarkDone : t.board.markDone}
+          aria-label={t.board.doneOf(subtask.title)}
           onClick={() => onMarkDone(subtask.id, !subtask.done)}
         >
           <span className="subtask-box" aria-hidden="true" />
@@ -114,7 +115,7 @@ export function SubtaskRow({
         // наше: мера разбиения её считает, и спрятать значит соврать
         // про меру.
         <span className="subtask-name">
-          <span className="muted">Нет доступа</span>
+          <span className="muted">{t.board.noAccess}</span>
           <span className="subtask-where" title={subtask.where}>
             <PeopleIcon size={11} />
             {subtask.elsewhere}
@@ -131,16 +132,16 @@ export function SubtaskRow({
             className="subtask-blocked"
             title={
               subtask.blockedReason
-                ? `Заблокирована: ${subtask.blockedReason}`
-                : 'Заблокирована'
+                ? t.board.blockedFor(subtask.blockedReason)
+                : t.board.blocked
             }
-            aria-label="Заблокирована"
+            aria-label={t.board.blocked}
           >
             <BlockedIcon size={12} />
           </span>
         )}
         {replies > 0 && (
-          <span className="subtask-replies" title={`Реплик в обсуждении: ${replies}`}>
+          <span className="subtask-replies" title={t.board.replies(replies)}>
             <CommentIcon size={12} />
             {replies}
           </span>
@@ -148,7 +149,7 @@ export function SubtaskRow({
         {assignees.length > 0 && (
           <span className="avatars">
             {assignees.slice(0, 2).map((id) => (
-              <Avatar key={id} name={people[id] ?? 'Кто-то'} size={AVATAR_SMALL} />
+              <Avatar key={id} name={people[id] ?? t.common.someone} size={AVATAR_SMALL} />
             ))}
             {assignees.length > 2 && (
               <AvatarMore count={assignees.length - 2} size={AVATAR_SMALL} />

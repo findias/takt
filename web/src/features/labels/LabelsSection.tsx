@@ -4,6 +4,7 @@ import type { LabelPlace, LabelTone, ManagedLabel } from '../../shared/api/index
 import { groupByOrigin } from '../../entities/label/model.ts'
 import { ScreenError } from '../../shared/ui/Field.tsx'
 import { useToast } from '../../shared/ui/Toast.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Метки: все, какие видно, по месту, где они действуют.
@@ -31,7 +32,7 @@ export function LabelsSection() {
         setLabels(r.labels)
         setPlaces(r.places)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Метки не загрузились'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.labelsAdmin.labelsFailed))
   }, [])
 
   useEffect(load, [load])
@@ -41,15 +42,15 @@ export function LabelsSection() {
     p.then(() => {
       load()
       done?.()
-    }).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    }).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   const archive = (label: ManagedLabel) =>
     act(api.archiveLabel(label.id), () =>
       notify({
-        text: `Метка «${label.name}» убрана в архив. С карточек она не снята.`,
+        text: t.labelsAdmin.labelArchived(label.name),
         tone: 'info',
-        action: { label: 'Вернуть', onAct: () => act(api.restoreLabel(label.id)) },
+        action: { label: t.labelsAdmin.restore, onAct: () => act(api.restoreLabel(label.id)) },
       }),
     )
 
@@ -58,16 +59,11 @@ export function LabelsSection() {
 
   return (
     <section className="stack">
-      <h2 className="section-title">Метки</h2>
+      <h2 className="section-title">{t.labelsAdmin.labels}</h2>
       <ScreenError>{error}</ScreenError>
 
       {live.length === 0 ? (
-        <p className="muted small">
-          Меток нет. Метка отвечает на вопрос «да или нет» — срочно, снаружи,
-          ждём ответа — и занимает на карточке столько же места, сколько слово.
-          Заводится на всю организацию, на подразделение вместе с вложенными
-          или на одну доску.
-        </p>
+        <p className="muted small">{t.labelsAdmin.labelsEmpty}</p>
       ) : (
         groupByOrigin(live).map((group) => (
           <div className="stack stack--tight" key={group.key}>
@@ -79,10 +75,10 @@ export function LabelsSection() {
                   {label.canManage && (
                     <button
                       className="link link--remove"
-                      aria-label={`Убрать в архив метку «${label.name}»`}
+                      aria-label={t.labelsAdmin.archiveLabel(label.name)}
                       onClick={() => archive(label)}
                     >
-                      Убрать в архив
+                      {t.labelsAdmin.toArchive}
                     </button>
                   )}
                 </li>
@@ -94,11 +90,8 @@ export function LabelsSection() {
 
       {archived.length > 0 && (
         <div className="stack stack--tight">
-          <h3 className="label-group-title">Убранные в архив</h3>
-          <p className="muted small">
-            С карточек они не сняты и видны там, но повесить их заново нельзя, пока
-            не вернёте.
-          </p>
+          <h3 className="label-group-title">{t.labelsAdmin.archivedTitle}</h3>
+          <p className="muted small">{t.labelsAdmin.archivedExplain}</p>
           <ul className="member-list">
             {archived.map((label) => (
               <li key={label.id}>
@@ -109,10 +102,10 @@ export function LabelsSection() {
                 {label.canManage && (
                   <button
                     className="link"
-                    aria-label={`Вернуть из архива метку «${label.name}»`}
+                    aria-label={t.labelsAdmin.restoreLabel(label.name)}
                     onClick={() => act(api.restoreLabel(label.id))}
                   >
-                    Вернуть из архива
+                    {t.labelsAdmin.restoreFromArchive}
                   </button>
                 )}
               </li>
@@ -161,34 +154,34 @@ function NewLabel({
     >
       <input
         value={name}
-        aria-label="Название метки"
-        placeholder="Название метки"
+        aria-label={t.labelsAdmin.labelName}
+        placeholder={t.labelsAdmin.labelName}
         onChange={(e) => setName(e.target.value)}
       />
       <select
         value={tone}
-        aria-label="Оттенок метки"
+        aria-label={t.labelsAdmin.labelTone}
         onChange={(e) => setTone(e.target.value as LabelTone)}
       >
-        {(Object.keys(TONE_NAMES) as LabelTone[]).map((t) => (
-          <option key={t} value={t}>
-            {TONE_NAMES[t]}
+        {(Object.keys(TONE_NAMES) as LabelTone[]).map((tone) => (
+          <option key={tone} value={tone}>
+            {TONE_NAMES[tone]}
           </option>
         ))}
       </select>
       {places.length > 1 && (
         <select
           value={key(place)}
-          aria-label="Где действует метка"
+          aria-label={t.labelsAdmin.labelPlace}
           onChange={(e) => setPlaceKey(e.target.value)}
         >
-          <PlaceOptions places={places} scope="org" title="Организация" keyOf={key} />
-          <PlaceOptions places={places} scope="team" title="Подразделение" keyOf={key} />
-          <PlaceOptions places={places} scope="board" title="Доска" keyOf={key} />
+          <PlaceOptions places={places} scope="org" title={t.labelsAdmin.placeOrg} keyOf={key} />
+          <PlaceOptions places={places} scope="team" title={t.labelsAdmin.placeTeam} keyOf={key} />
+          <PlaceOptions places={places} scope="board" title={t.labelsAdmin.placeBoard} keyOf={key} />
         </select>
       )}
       <button type="submit" disabled={!name.trim()}>
-        Завести метку
+        {t.labelsAdmin.createLabel}
       </button>
     </form>
   )
@@ -208,7 +201,7 @@ function PlaceOptions({
   const own = places.filter((p) => p.scope === scope)
   if (own.length === 0) return null
   if (scope === 'org') {
-    return <option value={keyOf(own[0])}>На всю организацию</option>
+    return <option value={keyOf(own[0])}>{t.labelsAdmin.wholeOrg}</option>
   }
   return (
     <optgroup label={title}>

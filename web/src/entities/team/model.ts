@@ -3,7 +3,7 @@
 // вынесено сюда — по той же причине, что и boardModel.
 
 import type { Team } from '../../shared/api/index.ts'
-import { t } from '../../shared/i18n/index.ts'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Предел вложенности подразделений. Держит его база; здесь значение нужно,
@@ -40,7 +40,7 @@ export function buildTree(teams: Team[]): TreeNode[] {
   }
 
   const sort = (nodes: TreeNode[]) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+    nodes.sort((a, b) => a.name.localeCompare(b.name, locale()))
     for (const node of nodes) sort(node.children)
   }
   sort(roots)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { VISIBILITY_NAMES, api } from '../../shared/api/index.ts'
 import type { BoardAccess as Access, Member, Team, Visibility } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Кому видна доска.
@@ -41,7 +42,7 @@ export function BoardAccess({
     api
       .boardAccess(boardId)
       .then(setAccess)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось прочитать доступ'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.parts.accessReadFailed))
   }, [boardId])
 
   useEffect(load, [load])
@@ -51,10 +52,10 @@ export function BoardAccess({
     p.then(() => {
       load()
       onChanged?.()
-    }).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    }).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
-  if (!access) return <div className="access">{error ?? 'Загружаем…'}</div>
+  if (!access) return <div className="access">{error ?? t.parts.loading}</div>
 
 
   const outside = people.filter((p) => !access.members.some((m) => m.userId === p.userId))
@@ -65,7 +66,7 @@ export function BoardAccess({
 
       <div className="row">
         <label className="muted small" htmlFor={`vis-${boardId}`}>
-          Видна
+          {t.parts.visibleLabel}
         </label>
         <select
           id={`vis-${boardId}`}
@@ -77,7 +78,7 @@ export function BoardAccess({
             // база откажет, но объяснять это ошибкой незачем.
             const team = next === 'team' ? (access.teamId ?? teams[0]?.id ?? null) : null
             if (next === 'team' && !team) {
-              setError('Сначала заведите подразделение на вкладке «Структура»')
+              setError(t.parts.needTeamFirst)
               return
             }
             act(api.setBoardAccess(boardId, next, team))
@@ -100,12 +101,12 @@ export function BoardAccess({
           <select
             value={access.teamId ?? ''}
             disabled={!canEdit}
-            aria-label="Подразделение"
+            aria-label={t.parts.subdivision}
             onChange={(e) =>
               act(api.setBoardAccess(boardId, access.visibility, e.target.value))
             }
           >
-            {access.visibility !== 'team' && <option value="">Без подразделения</option>}
+            {access.visibility !== 'team' && <option value="">{t.parts.noSubdivision}</option>}
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -116,23 +117,16 @@ export function BoardAccess({
 
         {onClose && (
           <button className="link" onClick={onClose}>
-            Закрыть
+            {t.common.close}
           </button>
         )}
       </div>
 
       {access.visibility === 'private' ? (
-        <p className="muted small">
-          Закрытая доска открывается поимённо. Её не видит ни наблюдатель, ни владелец
-          организации, если он не вписан — на то она и закрытая.
-        </p>
+        <p className="muted small">{t.parts.privateExplain}</p>
       ) : (
         canEdit && (
-          <p className="muted small">
-            «Только вписанным» оставит доску тем, кто в её составе, и закрывающий
-            попадает в состав сам: доску, закрытую вокруг чужих людей, не смог бы
-            вернуть никто. Вписывает в состав владелец организации.
-          </p>
+          <p className="muted small">{t.parts.privateHint}</p>
         )
       )}
 
@@ -142,10 +136,7 @@ export function BoardAccess({
           состав: на доске втроём человек видел, что он один. Умолчание
           становится враньём ровно тогда, когда о нём не сказано. */}
       {access.visibility === 'private' && !access.rosterComplete && (
-        <p className="muted small">
-          Показан только ваш доступ: кто ещё вписан в эту доску, видит владелец
-          организации.
-        </p>
+        <p className="muted small">{t.parts.rosterPartial}</p>
       )}
 
       {access.members.length > 0 && (
@@ -158,7 +149,7 @@ export function BoardAccess({
               </div>
               {canEdit && (
                 <button className="link link--remove" onClick={() => act(api.removeBoardMember(boardId, m.userId))}>
-                  Убрать
+                  {t.parts.remove}
                 </button>
               )}
             </li>
@@ -169,12 +160,12 @@ export function BoardAccess({
       {canEdit && outside.length > 0 && (
         <select
           value=""
-          aria-label="Вписать в доску"
+          aria-label={t.parts.addToBoard}
           onChange={(e) => {
             if (e.target.value) act(api.addBoardMember(boardId, e.target.value))
           }}
         >
-          <option value="">Вписать человека…</option>
+          <option value="">{t.parts.addPerson}</option>
           {outside.map((p) => (
             <option key={p.userId} value={p.userId}>
               {p.name}

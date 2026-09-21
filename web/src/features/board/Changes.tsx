@@ -4,6 +4,7 @@ import { api } from '../../shared/api/index.ts'
 import type { BoardEvent, CardField } from '../../shared/api/index.ts'
 import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Что происходило на доске.
@@ -42,7 +43,7 @@ export function Changes({
           setEvents((prev) => (before && prev ? [...prev, ...feed.events] : feed.events))
           setNext(feed.next)
         })
-        .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось прочитать ленту'))
+        .catch((e) => setError(e instanceof Error ? e.message : t.board.feedFailed))
     },
     [boardId, mine],
   )
@@ -61,22 +62,22 @@ export function Changes({
       <div className="stack stack--tight">
         <label className="row row--tight">
           <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
-          <span>Только про меня</span>
+          <span>{t.board.onlyMine}</span>
         </label>
         <p className="muted small">
           {mine
-            ? 'Карточки, где вы исполнитель, и реплики, где вас упомянули.'
-            : 'Всё, что происходило на доске, от свежего к старому.'}
+            ? t.board.mineExplain
+            : t.board.allExplain}
         </p>
       </div>
 
       <ScreenError>{error}</ScreenError>
-      {events === null && !error && <p className="muted small">Читаем…</p>}
+      {events === null && !error && <p className="muted small">{t.common.reading}</p>}
       {events?.length === 0 && (
         <p className="muted small">
           {mine
-            ? 'Про вас пока ничего: ни одной карточки за вами и ни одного упоминания.'
-            : 'Пока ничего не происходило.'}
+            ? t.board.mineEmpty
+            : t.board.allEmpty}
         </p>
       )}
 
@@ -103,7 +104,7 @@ export function Changes({
 
       {next && (
         <Button kind="quiet" onClick={() => load(next)}>
-          Показать ещё
+          {t.common.showMore}
         </Button>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -269,27 +270,50 @@ test('длинная колонка дорисовывается по мере �
 })
 
 test('сборка не разрастается', () => {
-  // Потолок в 400 КБ на скрипты: доска должна открываться по мобильной
-  // сети, а не только на рабочем месте. Проверка стоит здесь потому,
-  // что разрастание происходит не сразу и не одним куском — его
-  // замечают, когда уже поздно.
+  // Потолок на скрипты при открытии: доска должна открываться
+  // по мобильной сети, а не только на рабочем месте. Проверка стоит
+  // здесь потому, что разрастание происходит не сразу и не одним
+  // куском — его замечают, когда уже поздно.
   //
-  // Считается то, что браузер берёт при открытии: входной кусок и всё,
-  // что он тянет за собой предзагрузкой. Экраны организации вынесены
-  // в отдельные куски и приезжают тогда, когда за ними приходят;
-  // складывать их сюда значило бы мерить не то, чего человек ждёт,
-  // — и наказывать за разделение, ради которого оно и сделано.
+  // Меряется сжатый вес — то, что браузер реально качает: сервер отдаёт
+  // assets/ в gzip (compress.go), и так же считают бюджеты Lighthouse
+  // и size-limit. До 21.09.2026 здесь стояли 400 КБ несжатых байт,
+  // а сервер не сжимал вовсе, и мерка была честной. С выбором языка
+  // (ROADMAP 30.2) подписи уехали в каталог: кириллица в UTF-8 — два
+  // байта на букву, но жмётся она хорошо, и несжатая мерка наказывала
+  // её вдвое против того, что уходит по сети. Порог 130 КБ — прежние
+  // 120 сжатых и запас на второй язык, решение владельца 21.09.2026.
+  //
+  // Считается то, что браузер берёт при открытии: входной кусок, всё,
+  // что он тянет предзагрузкой, и каталог языка — без него первый экран
+  // не рисуется. Экраны организации и их разделы каталога вынесены
+  // и приезжают, когда за ними приходят; складывать их сюда значило бы
+  // мерить не то, чего человек ждёт.
   const dist = join(import.meta.dirname, '..', 'dist')
   const html = readFileSync(join(dist, 'index.html'), 'utf8')
   const entry = [...html.matchAll(/(?:src|href)="\/([^"]+\.js)"/g)].map((m) => m[1])
   expect(entry.length).toBeGreaterThan(0)
-  const total = entry.reduce((sum, name) => sum + statSync(join(dist, name)).size, 0)
+  const gz = (path: string) => gzipSync(readFileSync(path), { level: 9 }).length
+  const base = entry.reduce((sum, name) => sum + gz(join(dist, name)), 0)
+
+  const assets = readdirSync(join(dist, 'assets'))
+  const catalog = (lang: string) => {
+    const name = assets.find((n) => new RegExp(`^${lang}-[\\w-]+\\.js$`).test(n))
+    expect(name, `каталог языка ${lang} не нашёлся в сборке`).toBeTruthy()
+    return gz(join(dist, 'assets', name!))
+  }
+  const ru = base + catalog('ru')
+  const en = base + catalog('en')
 
   // Отложенные куски называются рядом: пусть их не считают, но пусть
   // будет видно, что они есть и сколько их.
-  const lazy = readdirSync(join(dist, 'assets'))
+  const lazy = assets
     .filter((name) => name.endsWith('.js') && !entry.some((e) => e.endsWith(name)))
-    .map((name) => `${name} ${Math.round(statSync(join(dist, 'assets', name)).size / 1024)} КБ`)
-  console.log(`при открытии: ${Math.round(total / 1024)} КБ; отложено: ${lazy.join(', ') || 'нет'}`)
-  expect(total).toBeLessThan(400 * 1024)
+    .map((name) => `${name} ${Math.round(gz(join(dist, 'assets', name)) / 1024)}`)
+  console.log(
+    `при открытии, сжатое: по-русски ${Math.round(ru / 1024)} КБ, по-английски ${Math.round(en / 1024)} КБ; ` +
+      `отложено, КБ: ${lazy.join(', ') || 'нет'}`,
+  )
+  expect(ru).toBeLessThan(130 * 1024)
+  expect(en).toBeLessThan(130 * 1024)
 })

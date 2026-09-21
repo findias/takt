@@ -16,6 +16,23 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { test } from 'node:test'
+// Каталог целиком, с разделами экранов: его загружает подготовка
+// проверок (node-setup.ts).
+import { t as ru } from '../shared/i18n/index.ts'
+
+/** Подпись из каталога: с выбором языка (ROADMAP 30.2) кнопки пишут
+ *  `{t.boards.archive}`, а не слово, — и разбор, не развернувший
+ *  ссылку, перестал бы видеть глагол. Развернуть можно только строку;
+ *  функцию с аргументами — нет, и такая подпись остаётся ссылкой. */
+function развернуть(подпись: string): string {
+  return подпись.replace(/\{t\.([\w.]+)\}/g, (всё, путь: string) => {
+    let узел: unknown = ru
+    for (const шаг of путь.split('.')) {
+      узел = узел && typeof узел === 'object' ? (узел as Record<string, unknown>)[шаг] : undefined
+    }
+    return typeof узел === 'string' ? узел : всё
+  })
+}
 
 function исходники(): { путь: string; текст: string }[] {
   const корень = new URL('../', import.meta.url)
@@ -64,7 +81,7 @@ function кнопки(текст: string): { атрибуты: string; подп�
       .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
       .replace(/<[^>]+>/g, '')
       .trim()
-    out.push({ атрибуты: текст.slice(начало, i), подпись: тело, где: начало })
+    out.push({ атрибуты: текст.slice(начало, i), подпись: развернуть(тело), где: начало })
     от = конец
   }
 }

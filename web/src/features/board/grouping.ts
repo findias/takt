@@ -1,6 +1,7 @@
 import { priorityLabel, priorityRank } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Priority } from '../../shared/api/index.ts'
+import { live, locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Группировка доски по горизонтали — то, что в канбане называют
@@ -19,13 +20,7 @@ import type { Priority } from '../../shared/api/index.ts'
  */
 export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority'
 
-export const GROUPING_NAMES: Record<Grouping, string> = {
-  none: 'Без группировки',
-  assignee: 'По исполнителю',
-  label: 'По метке',
-  iteration: 'По итерации',
-  priority: 'По приоритету',
-}
+export const GROUPING_NAMES = live(() => t.board.grouping) as Record<Grouping, string>
 
 export function parseGrouping(query: URLSearchParams): Grouping {
   const value = query.get('group')
@@ -86,7 +81,7 @@ export function groupsOf(
   // Пустая группа заводится заранее: работа без исполнителя, без метки
   // и вне итерации — то, ради чего на группировку и смотрят.
   const emptyTitle =
-    grouping === 'assignee' ? 'Ни на ком' : grouping === 'label' ? 'Без метки' : 'Вне итерации'
+    grouping === 'assignee' ? t.board.nobody : grouping === 'label' ? t.board.noLabel : t.board.noIteration
   if (grouping !== 'priority') ensure('none', emptyTitle)
 
   for (const [columnId, ids] of Object.entries(order)) {
@@ -102,7 +97,7 @@ export function groupsOf(
         // а не «чья это карточка целиком».
         const own = base.cardAssignees[cardId] ?? []
         if (own.length === 0) keys.push(['none', emptyTitle])
-        for (const id of own) keys.push([id, base.people[id] ?? 'Кто-то'])
+        for (const id of own) keys.push([id, base.people[id] ?? t.common.someone])
       } else if (grouping === 'label') {
         const own = base.cardLabels[cardId] ?? []
         if (own.length === 0) keys.push(['none', emptyTitle])
@@ -143,6 +138,6 @@ export function groupsOf(
   return list.sort((a, b) => {
     if (a.id === 'none') return 1
     if (b.id === 'none') return -1
-    return a.title.localeCompare(b.title, 'ru')
+    return a.title.localeCompare(b.title, locale())
   })
 }

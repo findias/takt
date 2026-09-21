@@ -1,8 +1,10 @@
 package httpapi
 
 import (
+	"compress/gzip"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -124,5 +126,75 @@ func TestPathOutsideTheWebDirTellsNothing(t *testing.T) {
 		t.Errorf("по чужому файлу ответ %d/%d байт, по несуществующему — %d/%d: "+
 			"разница отвечает на вопрос, есть ли он",
 			наружу.Code, наружу.Body.Len(), мимо.Code, мимо.Body.Len())
+	}
+}
+
+// Собранный клиент уходит сжатым тому, кто это умеет.
+//
+// До 21.09.2026 сервер отдавал скрипты как есть: основной кусок уходил
+// в браузер 394 КБ, хотя сжатым весил 115. Порог размера сборки
+// считает сжатый вес (e2e/perf.spec.ts) — и верен он, только если
+// сервер действительно сжимает; иначе проверка мерила бы то, чего
+// человек не получает.
+func TestBuiltClientTravelsCompressed(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "index.html"), "<!doctype html><title>Доска</title>")
+	if err := os.Mkdir(filepath.Join(dir, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := strings.Repeat("console.log('доска');\n", 200)
+	write(t, filepath.Join(dir, "assets", "index-abc123.js"), script)
+
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	impl := New(config.Config{BaseURL: "http://example.test", WebDir: dir}, nil, log, nil)
+	srv := httptest.NewServer(impl.Handler())
+	t.Cleanup(srv.Close)
+
+	get := func(encoding string) *http.Response {
+		req, _ := http.NewRequest("GET", srv.URL+"/assets/index-abc123.js", nil)
+		if encoding != "" {
+			req.Header.Set("Accept-Encoding", encoding)
+		}
+		// Транспорт сам просит gzip и сам разжимает — тогда проверять
+		// было бы нечего. Выключено, чтобы видеть ответ как есть.
+		client := &http.Client{Transport: &http.Transport{DisableCompression: true}}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { res.Body.Close() })
+		return res
+	}
+
+	res := get("gzip, deflate, br")
+	if res.Header.Get("Content-Encoding") != "gzip" {
+		t.Fatalf("скрипт ушёл несжатым: Content-Encoding %q", res.Header.Get("Content-Encoding"))
+	}
+	if !strings.Contains(res.Header.Get("Vary"), "Accept-Encoding") {
+		t.Error("нет Vary: Accept-Encoding — прокси отдаст сжатое тому, кто его не поймёт")
+	}
+	if got := res.Header.Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
+		t.Errorf("сжатие потеряло кэш: %q", got)
+	}
+	if ct := res.Header.Get("Content-Type"); !strings.Contains(ct, "javascript") {
+		t.Errorf("Content-Type %q: браузер не исполнит скрипт с чужим типом", ct)
+	}
+	zr, err := gzip.NewReader(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(zr)
+	if string(body) != script {
+		t.Error("разжатое не совпало с файлом")
+	}
+
+	// Кто не умеет — получает как есть.
+	plain := get("")
+	if plain.Header.Get("Content-Encoding") != "" {
+		t.Errorf("сжатое тому, кто не просил: %q", plain.Header.Get("Content-Encoding"))
+	}
+	raw, _ := io.ReadAll(plain.Body)
+	if string(raw) != script {
+		t.Error("несжатый ответ не совпал с файлом")
 	}
 }

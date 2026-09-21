@@ -3,9 +3,9 @@ import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
 import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
 import { dateWords } from '../../entities/card/model.ts'
-import { plural } from '../../shared/lib/plural.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Метрики потока.
@@ -37,7 +37,7 @@ export function Flow({
     api
       .metrics(boardId, days)
       .then(setReport)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось посчитать'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.flow.countFailed))
   }, [boardId, days])
 
   const [mode, setMode] = usePanelMode()
@@ -52,12 +52,12 @@ export function Flow({
   const days_ = (
     <select
       value={days}
-      aria-label="За сколько дней"
+      aria-label={t.flow.period}
       onChange={(e) => setDays(Number(e.target.value))}
     >
-      <option value={28}>4 недели</option>
-      <option value={90}>3 месяца</option>
-      <option value={180}>полгода</option>
+      <option value={28}>{t.flow.weeks4}</option>
+      <option value={90}>{t.flow.months3}</option>
+      <option value={180}>{t.flow.halfYear}</option>
     </select>
   )
 
@@ -65,13 +65,13 @@ export function Flow({
     <Panel
       mode={mode}
       onMode={setMode}
-      title="Поток"
-      label="Метрики потока"
+      title={t.flow.title}
+      label={t.flow.label}
       onClose={onClose}
       actions={days_}
     >
       <ScreenError>{error}</ScreenError>
-      {!report && <p className="muted small">Считаем…</p>}
+      {!report && <p className="muted small">{t.flow.counting}</p>}
       {report && (
         <>
 
@@ -84,23 +84,18 @@ export function Flow({
       />
 
       <section className="stack">
-        <h3 className="section-title">Время цикла</h3>
+        <h3 className="section-title">{t.flow.cycleTime}</h3>
         {report.cycleTime === null ? (
-          <p className="muted small">
-            Ни одна карточка не доведена до конца за это время. Считать не из чего —
-            и любое число здесь было бы выдумкой.
-          </p>
+          <p className="muted small">{t.flow.noCycle}</p>
         ) : (
           <>
             <div className="row row--tight">
-              <Figure label="половина за" value={`${round(report.cycleTime.p50)} дн.`} />
-              <Figure label="85 из 100 за" value={`${round(report.cycleTime.p85)} дн.`} />
-              <Figure label="95 из 100 за" value={`${round(report.cycleTime.p95)} дн.`} />
+              <Figure label={t.flow.halfIn} value={t.flow.days(round(report.cycleTime.p50))} />
+              <Figure label={t.flow.p85In} value={t.flow.days(round(report.cycleTime.p85))} />
+              <Figure label={t.flow.p95In} value={t.flow.days(round(report.cycleTime.p95))} />
             </div>
             <p className="muted small">
-              Посчитано по {report.cycleTime.count}{' '}
-              {plural(report.cycleTime.count, 'карточке', 'карточкам', 'карточкам')}
-              {report.cycleTime.count < 10 && ' — слишком мало, чтобы на это опираться'}.
+              {t.flow.countedBy(report.cycleTime.count, report.cycleTime.count < 10)}
             </p>
             <CycleScatter finished={report.finished} cycleTime={report.cycleTime} />
           </>
@@ -108,16 +103,10 @@ export function Flow({
       </section>
 
       <section className="stack">
-        <h3 className="section-title">Что идёт сейчас</h3>
-        <p className="muted small">
-          В работе {report.wip}. Возраст важнее времени цикла: время цикла говорит
-          о прошлом, возраст — о том, что застряло прямо сейчас.
-        </p>
+        <h3 className="section-title">{t.flow.now}</h3>
+        <p className="muted small">{t.flow.wip(report.wip)}</p>
         {report.aging.length === 0 ? (
-          <p className="muted small">
-            Ничего не начато — стареть нечему. Возраст появится, как только
-            карточка выйдет из очереди в работу.
-          </p>
+          <p className="muted small">{t.flow.nothingStarted}</p>
         ) : (
           <>
             {/* Диаграмма перед списком: она отвечает «что застряло»
@@ -133,13 +122,13 @@ export function Flow({
                 <div className="member-who">
                   <span>
                     {card.blocked && <span aria-hidden="true">⛔ </span>}
-                    {card.blocked && <span className="sr-only">Заблокирована. </span>}
+                    {card.blocked && <span className="sr-only">{t.flow.blockedSr}</span>}
                     {card.title}
                   </span>
                   <span className="muted small">{card.column}</span>
                 </div>
                 <span className={overdue(card.days, report) ? 'role-chip' : 'muted small'}>
-                  {round(card.days)} дн.
+                  {t.flow.days(round(card.days))}
                 </span>
               </li>
             ))}
@@ -150,13 +139,13 @@ export function Flow({
 
       {report.flow.length > 1 && (
         <section className="stack">
-          <h3 className="section-title">Как копится работа</h3>
+          <h3 className="section-title">{t.flow.cfd}</h3>
           <CumulativeFlow flow={report.flow} />
         </section>
       )}
 
       <section className="stack">
-        <h3 className="section-title">Пропускная способность</h3>
+        <h3 className="section-title">{t.flow.throughput}</h3>
         {/* Пустая сетка столбиков читается как поломка графика, а не как
             «нечего показывать». Пока ни одна карточка не доведена
             до конца, честнее сказать это словами. */}
@@ -167,64 +156,48 @@ export function Flow({
               // Неделя названа словами: в подсказке столбика стояло
               // «2026-05-18: 0» — машинная запись там, где человек
               // ищет глазами «какая это была неделя».
-              labels={report.throughput.map((w) => `неделя ${dateWords(w.week)}`)}
+              labels={report.throughput.map((w) => t.flow.week(dateWords(w.week)))}
             />
             <p className="muted small">
-              По неделям, только доведённое до конца.
-              {report.discarded > 0 &&
-                ` Ещё ${report.discarded} убрано с доски незавершёнными — в счёт они не идут.`}
+              {t.flow.byWeek}
+              {report.discarded > 0 && t.flow.discarded(report.discarded)}
             </p>
           </>
         ) : (
-          <p className="muted small">
-            Пока ничего не доведено до конца — считать нечего. Столбики появятся,
-            когда первая карточка дойдёт до колонки, отмеченной финишем.
-          </p>
+          <p className="muted small">{t.flow.noThroughput}</p>
         )}
       </section>
 
       {report.forecast && (
         <section className="stack">
-          <h3 className="section-title">Сколько займёт</h3>
+          <h3 className="section-title">{t.flow.forecast}</h3>
           <table className="figures">
             <thead>
               <tr>
-                <th>карточек</th>
-                <th>половина</th>
-                <th>85 из 100</th>
-                <th>95 из 100</th>
+                <th>{t.flow.cards}</th>
+                <th>{t.flow.half}</th>
+                <th>{t.flow.p85}</th>
+                <th>{t.flow.p95}</th>
               </tr>
             </thead>
             <tbody>
               {report.forecast.map((point) => (
                 <tr key={point.cards}>
                   <td>{point.cards}</td>
-                  <td>{point.p50} дн.</td>
-                  <td>{point.p85} дн.</td>
-                  <td>{point.p95} дн.</td>
+                  <td>{t.flow.days(point.p50)}</td>
+                  <td>{t.flow.days(point.p85)}</td>
+                  <td>{t.flow.days(point.p95)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="muted small">
-            Прогноз складывает случайные недели из прошлого — тысяча испытаний.
-            Он говорит только одно: что будет, если дальше будет как было.
+            {t.flow.forecastExplain}
             {/* Оговорка та же, что у времени цикла, и по той же причине:
                 прогноз считается из того же прошлого. Без неё «5 карточек
                 — 161 день» на трёх доведённых читается как расчёт,
                 а это гадание с точностью до дня. */}
-            {finished < 10 &&
-              ` Пока в прошлом всего ${finished} ${plural(
-                finished,
-                'карточка',
-                'карточки',
-                'карточек',
-              )} за ${report.throughput.length} ${plural(
-                report.throughput.length,
-                'неделю',
-                'недели',
-                'недель',
-              )} — слишком мало, чтобы на это опираться.`}
+            {finished < 10 && t.flow.tooLittle(finished, report.throughput.length)}
           </p>
           </section>
         )}
@@ -253,9 +226,7 @@ function Bars({ values, labels }: { values: number[]; labels: string[] }) {
       role="img"
       // Диктору читаются пары «неделя — сколько»: один ряд чисел
       // без недель не говорит ни о чём, а столбики он не видит.
-      aria-label={`Пропускная способность: ${values
-        .map((value, i) => `${labels[i]} — ${value}`)
-        .join(', ')}`}
+      aria-label={t.flow.throughputLabel(values.map((value, i) => `${labels[i]} — ${value}`).join(', '))}
     >
       {values.map((value, i) => (
         <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
@@ -307,28 +278,20 @@ function Promise_({
     api
       .setSLE(boardId, next, probability)
       .then(onChanged)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
       .finally(() => setBusy(false))
   }
 
   return (
     <section className="stack">
-      <h3 className="section-title">Обещание доски</h3>
+      <h3 className="section-title">{t.flow.promise}</h3>
       <ScreenError>{error}</ScreenError>
       {days === null ? (
-        <p className="muted small">
-          Обещания нет. Доска без истории обещать и не может — но как только
-          появятся доведённые до конца карточки, обещание стоит назвать:
-          с ним сравнивается возраст того, что идёт сейчас.
-        </p>
+        <p className="muted small">{t.flow.noPromise}</p>
       ) : (
         <p className="small">
-          <strong>
-            {probability}% работы проходит доску за {days}{' '}
-            {plural(days, 'день', 'дня', 'дней')}
-          </strong>
-          . С этим сроком сравнивается возраст карточек: перешагнувшая его
-          получает метку прямо на доске.
+          <strong>{t.flow.promiseIs(probability, days)}</strong>
+          {t.flow.promiseExplain}
         </p>
       )}
       {/* Пустой ряд оставлял в панели необъяснимый промежуток: кнопок
@@ -337,21 +300,20 @@ function Promise_({
       <div className="row row--tight">
         {suggestion !== null && suggestion !== days && (
           <button disabled={busy} onClick={() => save(suggestion)}>
-            {days === null ? 'Взять из истории' : 'Обновить по истории'}: {suggestion}{' '}
-            {plural(suggestion, 'день', 'дня', 'дней')}
+            {days === null
+              ? t.flow.takeFromHistory(suggestion)
+              : t.flow.updateFromHistory(suggestion)}
           </button>
         )}
         {days !== null && (
           <button className="link" disabled={busy} onClick={() => save(null)}>
-            Снять обещание
+            {t.flow.dropPromise}
           </button>
         )}
       </div>
       )}
       {suggestion === null && days === null && (
-        <p className="muted small">
-          Взять из истории пока нечего: ни одна карточка не доведена до конца.
-        </p>
+        <p className="muted small">{t.flow.nothingToTake}</p>
       )}
     </section>
   )

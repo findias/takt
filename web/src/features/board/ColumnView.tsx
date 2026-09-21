@@ -20,6 +20,7 @@ import { CardView } from './CardView.tsx'
 import { ColumnResizer } from './ColumnResizer.tsx'
 import type { ColumnPatch } from './useBoard.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
@@ -224,17 +225,17 @@ export function ColumnView(props: ColumnProps) {
             <button
               className="link column-settings-toggle"
               aria-expanded={settings}
-              aria-label={`Разметка колонки «${props.name}»`}
+              aria-label={t.column.markupOf(props.name)}
               onClick={() => setSettings((v) => !v)}
             >
-              Разметка
+              {t.column.markup}
             </button>
           )}
           {/* Сворачивание — личное предпочтение смотрящего, поэтому оно
               не в адресе и не на сервере: «Готово» мешает одному
               и нужна другому. */}
           <IconButton
-            label={props.collapsed ? `Развернуть «${props.name}»` : `Свернуть «${props.name}»`}
+            label={props.collapsed ? t.column.expand(props.name) : t.column.collapse(props.name)}
             onClick={props.onToggleCollapsed}
           >
             {props.collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
@@ -327,7 +328,7 @@ export function ColumnView(props: ColumnProps) {
             onFocus={window_.more}
             tabIndex={0}
           >
-            Ещё {window_.rest}: прокрутите, чтобы показать
+            {t.column.moreCards(window_.rest)}
           </div>
         )}
 
@@ -340,16 +341,14 @@ export function ColumnView(props: ColumnProps) {
             здесь было бы враньём. */}
         {props.cardIds.length === 0 && props.hiddenByFilter === 0 && props.partsInside > 0 && (
           <p className="empty">
-            Здесь только части задач — они показаны внутри самих задач. Всего в колонке:{' '}
-            {props.partsInside}.
+            {t.column.onlyParts(props.partsInside)}
           </p>
         )}
         {props.cardIds.length === 0 &&
           props.partsInside === 0 &&
           (props.hiddenByFilter > 0 ? (
             <p className="empty">
-              Под отбор ничего не подошло: скрыто {props.hiddenByFilter}. Вернёт кнопка «Показать
-              все».
+              {t.column.filteredOut(props.hiddenByFilter)}
             </p>
           ) : (
             <p className="empty">
@@ -359,8 +358,8 @@ export function ColumnView(props: ColumnProps) {
                   // из её полей — исполнителя, метки, итерации, важности.
                   // Карточка, брошенная в чужую дорожку, встала бы в свою,
                   // и это выглядело бы как «перенос не сработал».
-                  'Пусто: в этой дорожке в колонке ничего нет. Дорожка меняется не переносом, а полем карточки.'
-                : 'Пусто. Перетащите карточку сюда или перенесите кнопкой на ней.'}
+                  t.column.emptyLane
+                : t.column.empty}
             </p>
           ))}
       </div>
@@ -381,11 +380,11 @@ export function ColumnView(props: ColumnProps) {
         !props.collapsed && (
           <button
             className="add"
-            aria-label={`Завести карточку в «${props.name}»`}
+            aria-label={t.column.addCardTo(props.name)}
             onClick={() => setAdding(true)}
           >
             <PlusIcon />
-            Завести карточку
+            {t.column.addCard}
           </button>
         )
       )}
@@ -438,8 +437,8 @@ function NewCardForm({
         ref={field}
         autoFocus
         value={value}
-        aria-label="Что нужно сделать?"
-        placeholder="Что нужно сделать?"
+        aria-label={t.column.whatToDo}
+        placeholder={t.column.whatToDo}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onCancel()
@@ -452,15 +451,15 @@ function NewCardForm({
       <div className="row">
         <button
           type="submit"
-          aria-label={`Завести карточку в «${column}»`}
+          aria-label={t.column.addCardTo(column)}
           disabled={!value.trim()}
         >
-          Завести
+          {t.column.create}
         </button>
         {/* Отмена — тихая: цвет ссылки рядом с главным действием
             перетягивает взгляд на себя, и первым читается «Отмена». */}
         <Button kind="quiet" type="button" onClick={onCancel}>
-          Отмена
+          {t.common.cancel}
         </Button>
       </div>
     </form>
@@ -501,7 +500,7 @@ function ColumnCount({
         type="number"
         min={1}
         className="count-edit"
-        aria-label="Лимит карточек в колонке, пусто — без лимита"
+        aria-label={t.column.limitEdit}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -522,8 +521,8 @@ function ColumnCount({
       onClick={() => setEditing(true)}
       title={
         limit === null
-          ? 'Карточек в колонке. Нажмите, чтобы задать лимит'
-          : `${count} из ${limit}${hard ? ', жёсткий лимит' : ''}. Нажмите, чтобы изменить`
+          ? t.column.countTitle
+          : t.column.countOf(count, limit, hard)
       }
     >
       {label}
@@ -567,15 +566,15 @@ function ColumnSettings({
   return (
     <div className="column-settings stack">
       <label className="row row--tight">
-        <span className="muted small">Вид</span>
+        <span className="muted small">{t.column.kind}</span>
         <select
           value={column.kind}
-          aria-label={`Вид колонки «${column.name}»`}
+          aria-label={t.column.kindOf(column.name)}
           onChange={(e) => onUpdate({ kind: e.target.value as ColumnKind })}
         >
-          <option value="queue">Очередь</option>
-          <option value="in_progress">Работа</option>
-          <option value="done">Готово</option>
+          <option value="queue">{t.column.kindQueue}</option>
+          <option value="in_progress">{t.column.kindWork}</option>
+          <option value="done">{t.column.kindDone}</option>
         </select>
       </label>
 
@@ -585,7 +584,7 @@ function ColumnSettings({
           checked={column.isStartedPoint}
           onChange={(e) => onUpdate({ isStartedPoint: e.target.checked })}
         />
-        <span className="small">Здесь работа начинается</span>
+        <span className="small">{t.column.startsHere}</span>
       </label>
       <label className="row row--tight">
         <input
@@ -593,21 +592,21 @@ function ColumnSettings({
           checked={column.isFinishedPoint}
           onChange={(e) => onUpdate({ isFinishedPoint: e.target.checked })}
         />
-        <span className="small">Здесь работа заканчивается</span>
+        <span className="small">{t.column.endsHere}</span>
       </label>
       {/* Лимит стоит здесь же, над жёсткостью: раньше про него было
           сказано «сначала задайте лимит», а задать его отсюда было
           нечем — правился он нажатием по счётчику в шапке колонки,
           и про это не было сказано нигде. */}
       <label className="row row--tight">
-        <span className="muted small">Лимит</span>
+        <span className="muted small">{t.column.limit}</span>
         <input
           type="number"
           min={1}
           className="count-edit"
           value={limit}
-          placeholder="без лимита"
-          aria-label={`Лимит карточек в колонке «${column.name}», пусто — без лимита`}
+          placeholder={t.column.noLimit}
+          aria-label={t.column.limitOf(column.name)}
           onChange={(e) => setLimit(e.target.value)}
           onBlur={commitLimit}
           onKeyDown={(e) => {
@@ -624,7 +623,8 @@ function ColumnSettings({
           onChange={(e) => onUpdate({ wipLimitHard: e.target.checked })}
         />
         <span className="small">
-          Жёсткий лимит{column.wipLimit === null ? ' — сначала задайте лимит выше' : ''}
+          {t.column.hardLimit}
+          {column.wipLimit === null ? t.column.setLimitFirst : ''}
         </span>
       </label>
 
@@ -632,8 +632,8 @@ function ColumnSettings({
         className="description"
         rows={2}
         value={policy}
-        placeholder="Правило входа: что должно быть сделано, чтобы карточка попала сюда"
-        aria-label={`Правило входа в колонку «${column.name}»`}
+        placeholder={t.column.policy}
+        aria-label={t.column.policyOf(column.name)}
         onChange={(e) => setPolicy(e.target.value)}
         onBlur={() => policy !== column.policy && onUpdate({ policy })}
       />

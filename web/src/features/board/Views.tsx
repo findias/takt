@@ -4,6 +4,7 @@ import type { BoardView } from '../../shared/api/index.ts'
 import { Button } from '../../shared/ui/Button.tsx'
 import { CloseIcon } from '../../shared/ui/icons.tsx'
 import { IconButton } from '../../shared/ui/Button.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Сохранённые виды.
@@ -50,7 +51,7 @@ export function Views({
         setNaming(false)
         load()
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось сохранить'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.board.saveFailed))
   }
 
   return (
@@ -61,7 +62,7 @@ export function Views({
             {view.name}
           </button>
           <IconButton
-            label={`Забыть вид «${view.name}»`}
+            label={t.board.forgetView(view.name)}
             onClick={() => void api.deleteView(view.id).then(load).catch(() => load())}
           >
             <CloseIcon />
@@ -80,16 +81,16 @@ export function Views({
           <input
             autoFocus
             value={name}
-            placeholder="Название вида"
-            aria-label="Название вида"
+            placeholder={t.board.viewName}
+            aria-label={t.board.viewName}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && setNaming(false)}
           />
           <Button kind="primary" type="submit" disabled={!name.trim()}>
-            Сохранить
+            {t.common.save}
           </Button>
           <Button kind="quiet" onClick={() => setNaming(false)}>
-            Отмена
+            {t.common.cancel}
           </Button>
         </form>
       ) : (
@@ -97,7 +98,7 @@ export function Views({
         // вид» при пустом фильтре сохраняла бы вид «доска как есть».
         query !== '' && (
           <Button kind="quiet" onClick={() => setNaming(true)}>
-            Сохранить вид
+            {t.board.saveView}
           </Button>
         )
       )}

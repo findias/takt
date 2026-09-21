@@ -1,5 +1,5 @@
-import { plural } from '../../shared/lib/plural.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Диаграммы потока.
@@ -68,12 +68,7 @@ export function CumulativeFlow({ flow }: { flow: FlowReport['flow'] }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Накопительная диаграмма потока за ${flow.length} ${plural(
-          flow.length,
-          'день',
-          'дня',
-          'дней',
-        )}. Сейчас: в очереди ${last.queued}, в работе ${last.inProgress}, сделано ${last.done}.`}
+        aria-label={t.flowReport.cfdLabel(flow.length, last.queued, last.inProgress, last.done)}
       >
         <Grid top={top} />
         {/* Сверху вниз: каждая следующая полоса перекрывает нижнюю
@@ -88,8 +83,7 @@ export function CumulativeFlow({ flow }: { flow: FlowReport['flow'] }) {
         ))}
       </svg>
       <figcaption className="muted small">
-        Снизу вверх: сделано, в работе, в очереди. Полоса, растущая вверх без движения
-        нижней границы, — это работа, которая копится, а не идёт.
+        {t.flowReport.cfdCaption}
       </figcaption>
     </figure>
   )
@@ -125,17 +119,11 @@ export function CycleScatter({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Время цикла по карточкам: ${finished.length} ${plural(
+        aria-label={t.flowReport.cycleLabel(
           finished.length,
-          'точка',
-          'точки',
-          'точек',
-        )}, от ${round(Math.min(...days))} до ${round(Math.max(...days))} ${plural(
-          Math.max(...days),
-          'дня',
-          'дней',
-          'дней',
-        )}.`}
+          round(Math.min(...days)),
+          round(Math.max(...days)),
+        )}
       >
         <Grid top={top} />
         {/* Подписи расходятся по вертикали, если сами линии сошлись:
@@ -143,8 +131,8 @@ export function CycleScatter({
             читаемой. Двигается подпись, а не линия: линия стоит там,
             где стоит число. */}
         {spread([
-          { label: 'половина', y: y(cycleTime.p50) },
-          { label: '85 из 100', y: y(cycleTime.p85) },
+          { label: t.flowReport.half, y: y(cycleTime.p50) },
+          { label: t.flowReport.p85, y: y(cycleTime.p85) },
         ]).map((line) => (
           <g key={line.label}>
             <line
@@ -170,13 +158,12 @@ export function CycleScatter({
             fill={c.days > cycleTime.p85 ? 'var(--warn)' : 'var(--accent)'}
             fillOpacity={0.75}
           >
-            <title>{`${c.title}: ${round(c.days)} дн.`}</title>
+            <title>{t.flowReport.cardDays(c.title, round(c.days))}</title>
           </circle>
         ))}
       </svg>
       <figcaption className="muted small">
-        Каждая точка — доведённая карточка. Красные прошли дольше 85 из 100: по ним и стоит
-        спрашивать, что случилось.
+        {t.flowReport.cycleCaption}
       </figcaption>
     </figure>
   )
@@ -211,17 +198,10 @@ export function AgingChart({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Возраст идущей работы: ${aging.length} ${plural(
+        aria-label={t.flowReport.agingLabel(
           aging.length,
-          'карточка',
-          'карточки',
-          'карточек',
-        )}, самая старая ${round(Math.max(...aging.map((c) => c.days)))} ${plural(
-          Math.max(...aging.map((c) => c.days)),
-          'день',
-          'дня',
-          'дней',
-        )}.`}
+          round(Math.max(...aging.map((c) => c.days))),
+        )}
       >
         <Grid top={top} />
         {median !== null && (
@@ -245,7 +225,7 @@ export function AgingChart({
               strokeDasharray="4 3"
             />
             <text x={W - PAD.right} y={y(sleDays) - 3} className="chart-note" textAnchor="end">
-              обещание
+              {t.flowReport.promise}
             </text>
           </g>
         )}
@@ -258,7 +238,7 @@ export function AgingChart({
             fill={c.blocked ? 'var(--warn)' : 'var(--accent)'}
             fillOpacity={c.blocked ? 0.9 : 0.7}
           >
-            <title>{`${c.title}: ${round(c.days)} дн. в «${c.column}»${c.blocked ? ', заблокирована' : ''}`}</title>
+            <title>{t.flowReport.agingPoint(c.title, round(c.days), c.column, c.blocked)}</title>
           </circle>
         ))}
         {columns.map((column) => (
@@ -268,7 +248,7 @@ export function AgingChart({
         ))}
       </svg>
       <figcaption className="muted small">
-        Заблокированные красным: они стареют, ничего не делая.
+        {t.flowReport.agingCaption}
       </figcaption>
     </figure>
   )

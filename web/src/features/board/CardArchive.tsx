@@ -5,6 +5,7 @@ import { api } from '../../shared/api/index.ts'
 import type { ArchivedCard } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Архив карточек доски.
@@ -56,7 +57,7 @@ export function CardArchive({
           setCards((prev) => (before && prev ? [...prev, ...r.cards] : r.cards))
           setNext(r.next)
         })
-        .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось прочитать архив'))
+        .catch((e) => setError(e instanceof Error ? e.message : t.parts.archiveReadFailed))
     },
     [boardId, query],
   )
@@ -71,33 +72,27 @@ export function CardArchive({
         setCards((prev) => prev?.filter((c) => c.id !== card.id) ?? null)
         onRestored()
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось вернуть карточку'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.parts.restoreCardFailed))
   }
 
   return (
-    <Panel mode={mode} onMode={setMode} title="Архив" label="Архив карточек" onClose={onClose}>
+    <Panel mode={mode} onMode={setMode} title={t.parts.archive} label={t.parts.cardArchive} onClose={onClose}>
       <ScreenError>{error}</ScreenError>
       {/* Поиск стоит всегда, а не появляется от числа карточек: строка
           поиска, возникающая на сто первой карточке, читается как сбой. */}
       <input
         type="search"
         value={query}
-        aria-label="Найти в архиве"
-        placeholder="Найти в архиве"
+        aria-label={t.parts.findInArchive}
+        placeholder={t.parts.findInArchive}
         onChange={(e) => setQuery(e.target.value)}
       />
-      {cards === null && !error && <p className="muted small">Читаем…</p>}
+      {cards === null && !error && <p className="muted small">{t.common.reading}</p>}
       {cards?.length === 0 && query.trim() !== '' && (
-        <p className="muted small">
-          В архиве ничего не нашлось по запросу «{query.trim()}». Поиск идёт по номеру, названию
-          и описанию.
-        </p>
+        <p className="muted small">{t.parts.archiveNothingFound(query.trim())}</p>
       )}
       {cards?.length === 0 && query.trim() === '' && (
-        <p className="muted small">
-          Архив пуст. Сюда попадают карточки, убранные с доски: они не удаляются, и вернуть их
-          можно отсюда.
-        </p>
+        <p className="muted small">{t.parts.archiveEmpty}</p>
       )}
 
       {cards && cards.length > 0 && (
@@ -118,21 +113,21 @@ export function CardArchive({
                 {/* Переносится, а не обрезается: имя того, кто убрал
                     карточку, оказывалось ровно за многоточием. */}
                 <span className="muted small related-note">
-                  {c.columnName} · убрана {timeText(c.archivedAt)}
+                  {c.columnName} · {t.parts.archivedAt(timeText(c.archivedAt))}
                   {c.actor ? ` · ${c.actor}` : ''}
-                  {c.outcome === 'done' ? ' · была доведена до конца' : ''}
+                  {c.outcome === 'done' ? t.parts.wasFinished : ''}
                 </span>
                 {/* Сказано до нажатия, а не после отказа. */}
                 {!c.restorable && (
                   <span className="muted small related-note">
-                    Колонка «{c.columnName}» тоже в архиве — вернуть некуда, пока не вернут её.
+                    {t.parts.columnArchived(c.columnName)}
                   </span>
                 )}
               </div>
               <div className="row row--tight">
                 {c.restorable && (
                   <button className="link" onClick={() => restore(c)}>
-                    Вернуть
+                    {t.parts.restore}
                   </button>
                 )}
                 {canDelete && (
@@ -140,7 +135,7 @@ export function CardArchive({
                     className="link link--danger"
                     onClick={() => onDelete(c.id, `${c.number} · ${c.title}`)}
                   >
-                    Удалить навсегда
+                    {t.parts.deleteForever}
                   </button>
                 )}
               </div>
@@ -151,7 +146,7 @@ export function CardArchive({
 
       {next && (
         <Button kind="quiet" onClick={() => load(next)}>
-          Показать ещё
+          {t.common.showMore}
         </Button>
       )}
     </Panel>

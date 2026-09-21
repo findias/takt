@@ -8,16 +8,11 @@
 import { ageDays } from '../../entities/board/model.ts'
 import { priorityRank } from '../../entities/card/model.ts'
 import type { Card } from '../../shared/api/index.ts'
+import { live, t } from '../../shared/i18n/index.ts'
 
 export type Sort = 'age' | 'column' | 'due' | 'estimate' | 'priority'
 
-export const SORT_NAMES: Record<Sort, string> = {
-  age: 'по возрасту',
-  column: 'по колонке',
-  due: 'по сроку',
-  estimate: 'по оценке',
-  priority: 'по приоритету',
-}
+export const SORT_NAMES = live(() => t.board.sort) as Record<Sort, string>
 
 /**
  * Куда растёт столбец, по которому выстроены строки.

@@ -4,6 +4,7 @@ import { LabelPickerButton } from './LabelPicker.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { ArchiveIcon, ClockIcon, MoveIcon, PeopleIcon, TagIcon } from '../../shared/ui/icons.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Полоса действий над выделенными карточками.
@@ -57,11 +58,11 @@ export function BulkBar({
     // Живая область: полоса появляется внизу экрана, далеко от флажка,
     // по которому её вызвали, и тот, кто не видит экрана, иначе
     // не узнает, что выделение вообще к чему-то привело.
-    <div className="bulk-bar" role="status" aria-label="Действия над выделенными">
-      <span className="bulk-count">Выделено: {cardsLabel(count)}</span>
+    <div className="bulk-bar" role="status" aria-label={t.parts.bulkActions}>
+      <span className="bulk-count">{t.parts.bulkSelected} {cardsLabel(count)}</span>
 
       <Menu
-        label="Перенести выделенные"
+        label={t.parts.bulkMove}
         className="btn btn--primary"
         align="left"
         drop="up"
@@ -75,11 +76,11 @@ export function BulkBar({
         }))}
       >
         <MoveIcon />
-        Перенести
+        {t.parts.move}
       </Menu>
 
       <Menu
-        label="Приоритет выделенным"
+        label={t.parts.bulkPriority}
         className="btn"
         align="left"
         drop="up"
@@ -90,7 +91,7 @@ export function BulkBar({
         }))}
       >
         <ClockIcon />
-        Приоритет
+        {t.parts.priority}
       </Menu>
 
       {/* Метка ставится, а не переключается: «пометить десять карточек»
@@ -102,7 +103,7 @@ export function BulkBar({
           есть только у тех, кто правит доску, поэтому заводить здесь
           можно всегда, где позволяет место. */}
       <LabelPickerButton
-        label="Пометить выделенные"
+        label={t.parts.bulkLabel}
         className="btn"
         align="left"
         drop="up"
@@ -113,11 +114,11 @@ export function BulkBar({
         onToggle={(labelId) => onLabel(labelId)}
       >
         <TagIcon />
-        Метка
+        {t.parts.label}
       </LabelPickerButton>
 
       <Menu
-        label="Назначить на выделенные"
+        label={t.parts.bulkAssign}
         className="btn"
         align="left"
         drop="up"
@@ -128,17 +129,17 @@ export function BulkBar({
         }))}
       >
         <PeopleIcon />
-        Назначить
+        {t.parts.assign}
       </Menu>
 
       {/* Убрать — обратимо и потому без вопроса: отмена предлагается
           уведомлением, одна на всю пачку. */}
       <Button kind="danger" icon={<ArchiveIcon />} onClick={onArchive}>
-        В архив
+        {t.parts.toArchive}
       </Button>
 
       <Button kind="quiet" onClick={onClear}>
-        Снять выделение
+        {t.parts.clearSelection}
       </Button>
     </div>
   )

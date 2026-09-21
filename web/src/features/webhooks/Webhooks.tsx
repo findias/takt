@@ -4,8 +4,8 @@ import type { Delivery, Webhook, WebhookPolicy } from '../../shared/api/index.ts
 import { Skeleton } from '../../shared/ui/states.tsx'
 import { CopyButton } from '../../shared/ui/CopyButton.tsx'
 import { Field, useFormErrors } from '../../shared/ui/Field.tsx'
-import { plural } from '../../shared/lib/plural.ts'
 import { ScreenError } from '../../shared/ui/Field'
+import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
  * Срок словами и с той точностью, какая тут есть.
@@ -17,9 +17,8 @@ import { ScreenError } from '../../shared/ui/Field'
  * не врёт точностью, которой нет.
  */
 function примерно(минут: number): string {
-  if (минут < 90) return `около ${Math.round(минут / 10) * 10} минут`
-  const часов = Math.round(минут / 60)
-  return `около ${часов} ${plural(часов, 'часа', 'часов', 'часов')}`
+  if (минут < 90) return t.hooks.aboutMinutes(Math.round(минут / 10) * 10)
+  return t.hooks.aboutHours(Math.round(минут / 60))
 }
 
 /**
@@ -65,17 +64,14 @@ export function Webhooks() {
 
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(load).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   return (
     <section className="stack">
-      <h2 className="section-title">Подписки на события</h2>
+      <h2 className="section-title">{t.hooks.title}</h2>
       <ScreenError>{error}</ScreenError>
-      <p className="muted small">
-        Подписка уносит события наружу: мы отправляем их на ваш адрес и подписываем ключом,
-        чтобы получатель мог убедиться, что письмо от нас. Доставка идёт не менее одного раза.
-      </p>
+      <p className="muted small">{t.hooks.intro}</p>
       {/* Что доставка делает сама — целиком и числами. Прежде здесь
           стояло «повторяем, удваивая паузу», и из этого нельзя было
           узнать ни сколько раз мы повторим, ни того, что после
@@ -84,13 +80,14 @@ export function Webhooks() {
           работа обязана говорить, где она остановится. */}
       {policy && (
         <p className="muted small">
-          Что мы делаем сами: ждём ответа {policy.timeoutSeconds} с; если получатель
-          не ответил — повторяем до {policy.attempts} раз, удваивая паузу
-          от {policy.firstDelaySeconds} с до {Math.round(policy.maxDelaySeconds / 60)} мин.
-          Всего это {примерно(policy.giveUpAfterMinutes)}. Дальше не пробуем: подписка
-          отключается, и события по ней перестают копиться вовсе. Включит её обратно
-          любой повтор доставки вручную. Журнал доставленного храним{' '}
-          {policy.keepDeliveredDays} дней и потом убираем сами.
+          {t.hooks.policy({
+            timeout: policy.timeoutSeconds,
+            attempts: policy.attempts,
+            first: policy.firstDelaySeconds,
+            maxMinutes: Math.round(policy.maxDelaySeconds / 60),
+            total: примерно(policy.giveUpAfterMinutes),
+            keepDays: policy.keepDeliveredDays,
+          })}
         </p>
       )}
 
@@ -108,28 +105,25 @@ export function Webhooks() {
 
       {fresh && (
         <div className="note">
-          <p className="small">
-            Подписка создана. Ключ подписи показывается один раз — положите его туда, где
-            получатель проверяет заголовок подписи.
-          </p>
+          <p className="small">{t.hooks.created}</p>
           <div className="row">
             <input
               readOnly
               value={fresh.secret ?? ''}
-              aria-label="Ключ подписи"
+              aria-label={t.hooks.secret}
               onFocus={(e) => e.target.select()}
             />
-            <CopyButton value={fresh.secret ?? ''} what="ключ подписи" />
+            <CopyButton value={fresh.secret ?? ''} what={t.hooks.secretWhat} />
           </div>
           {/* Ключ без правила проверки бесполезен, а правило до сих пор
               можно было узнать только чтением нашего кода. */}
           <p className="small muted">
-            Проверяется так: <code>X-Signature</code> — это{' '}
-            <code>sha256=</code> и HMAC-SHA256 от строки «
-            <code>X-Timestamp</code>.тело запроса», ключом служит эта строка.
-            Полностью — в{' '}
+            {t.hooks.checkHow} <code>X-Signature</code> {t.hooks.checkIs}{' '}
+            <code>sha256=</code> {t.hooks.checkHmac}
+            <code>X-Timestamp</code>
+            {t.hooks.checkBody}{' '}
             <a href="/api/v1/openapi.json" target="_blank" rel="noreferrer">
-              описании контракта
+              {t.hooks.contract}
             </a>
             .
           </p>
@@ -162,25 +156,25 @@ export function Webhooks() {
               // до отправки. Он и встаёт под адресом — общая плашка
               // под рядом из трёх полей не говорит, какое переписывать.
               form.report({
-                url: e instanceof Error ? e.message : 'Не удалось завести подписку',
+                url: e instanceof Error ? e.message : t.hooks.createFailed,
               })
             })
         }}
       >
         <div className="form-row">
-          <Field label="Название подписки" hiddenLabel {...form.field('name')}>
+          <Field label={t.hooks.name} hiddenLabel {...form.field('name')}>
             {(bind) => (
               <input
                 {...bind}
                 name="name"
                 value={name}
-                placeholder="Для чего подписка"
+                placeholder={t.hooks.namePlaceholder}
                 required
                 onChange={(e) => setName(e.target.value)}
               />
             )}
           </Field>
-          <Field label="Адрес получателя" hiddenLabel {...form.field('url')}>
+          <Field label={t.hooks.url} hiddenLabel {...form.field('url')}>
             {(bind) => (
               <input
                 {...bind}
@@ -197,8 +191,8 @@ export function Webhooks() {
               подписка без событий не доставляет ничего. Про пустые поля
               скажет отказ у поля — он объясняет, а погашенная кнопка
               молчит. */}
-          <button type="submit" aria-label="Завести подписку" disabled={events.length === 0}>
-            Завести
+          <button type="submit" aria-label={t.hooks.create} disabled={events.length === 0}>
+            {t.hooks.createShort}
           </button>
         </div>
         {/* Подписка без событий ничего не доставляет — сервер такую
@@ -253,14 +247,14 @@ function HookRow({
           {hook.disabled && (
             <>
               <span className="mark mark--fail">
-                Отключена: получатель не отвечал. {hook.lastError ?? ''}
+                {t.hooks.disabled} {hook.lastError ?? ''}
               </span>
               {/* Что теперь делать — отдельной строкой, а не в той же
                   отметке: причина отказа приходит от получателя, длины
                   и вида непредсказуемых, и совет, приписанный к ней
                   встык, читается её продолжением. */}
               <span className="muted small">
-                Повтор любой доставки включит подписку снова — как и «Возобновить».
+                {t.hooks.disabledHint}
               </span>
             </>
           )}
@@ -268,10 +262,9 @@ function HookRow({
               и «остановлено вами» человек должен различать, не вчитываясь. */}
           {hook.paused && !hook.disabled && (
             <>
-              <span className="mark">Приостановлена</span>
+              <span className="mark">{t.hooks.paused}</span>
               <span className="muted small">
-                Пока стоит пауза, события по этой подписке не копятся: возобновление
-                не обернётся лавиной за всё время простоя.
+                {t.hooks.pausedHint}
               </span>
             </>
           )}
@@ -281,16 +274,16 @@ function HookRow({
               ответ на него не должен требовать ещё одного нажатия. */}
           {!hook.disabled && !hook.paused && (hook.pending > 0 || hook.lastTryAt) && (
             <span className="muted small">
-              {hook.pending > 0 && `В очереди: ${hook.pending}. `}
+              {hook.pending > 0 && t.hooks.queued(hook.pending)}
               {hook.lastTryAt &&
-                `Последняя попытка ${new Date(hook.lastTryAt).toLocaleString('ru-RU')}` +
-                  (hook.lastStatus !== null ? `, ответ ${hook.lastStatus}.` : '.')}
+                t.hooks.lastTry(new Date(hook.lastTryAt).toLocaleString(locale())) +
+                  (hook.lastStatus !== null ? t.hooks.answered(hook.lastStatus) : '.')}
             </span>
           )}
         </div>
         <div className="row row--tight">
           <button className="link" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-            {open ? 'Скрыть доставки' : 'Доставки'}
+            {open ? t.hooks.hideDeliveries : t.hooks.deliveries}
           </button>
           {/* Обратимое стоит раньше необратимого и не спрашивает,
               необратимое — спрашивает. До паузы вмешаться в идущую
@@ -301,18 +294,18 @@ function HookRow({
             onClick={() => onAct(api.pauseWebhook(hook.id, !hook.paused))}
             aria-label={
               hook.paused
-                ? `Возобновить подписку «${hook.name}»`
-                : `Приостановить подписку «${hook.name}»`
+                ? t.hooks.resumeOf(hook.name)
+                : t.hooks.pauseOf(hook.name)
             }
           >
-            {hook.paused ? 'Возобновить' : 'Приостановить'}
+            {hook.paused ? t.hooks.resume : t.hooks.pause}
           </button>
           <button
             className="link link--danger"
             onClick={() => onAct(api.deleteWebhook(hook.id))}
-            aria-label={`Удалить подписку «${hook.name}»`}
+            aria-label={t.hooks.deleteOf(hook.name)}
           >
-            Удалить
+            {t.hooks.delete}
           </button>
         </div>
       </div>
@@ -343,7 +336,7 @@ function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => vo
 
   if (list === null) return <Skeleton lines={2} />
   if (list.length === 0) {
-    return <p className="muted small">Доставок ещё не было: событий, на которые она подписана, не случалось.</p>
+    return <p className="muted small">{t.hooks.noDeliveries}</p>
   }
 
   return (
@@ -358,9 +351,9 @@ function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => vo
                   {WEBHOOK_EVENT_NAMES[d.event] ?? d.event} · {state(d)}
                 </span>
                 <span className="muted small">
-                  {new Date(d.createdAt).toLocaleString('ru-RU')}
-                  {d.attempts > 0 && ` · попыток: ${d.attempts}`}
-                  {d.lastStatus !== null && ` · ответ ${d.lastStatus}`}
+                  {new Date(d.createdAt).toLocaleString(locale())}
+                  {d.attempts > 0 && t.hooks.attempts(d.attempts)}
+                  {d.lastStatus !== null && t.hooks.status(d.lastStatus)}
                   {d.lastError && ` · ${d.lastError}`}
                 </span>
               </div>
@@ -382,11 +375,11 @@ function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => vo
                         onRetried()
                       })
                       .catch((e) =>
-                        setError(e instanceof Error ? e.message : 'Не удалось повторить'),
+                        setError(e instanceof Error ? e.message : t.hooks.retryFailed),
                       )
                   }}
                 >
-                  Повторить
+                  {t.hooks.retry}
                 </button>
               )}
             </div>
@@ -401,8 +394,8 @@ function Deliveries({ hookId, onRetried }: { hookId: string; onRetried: () => vo
  *  ещё пробуем. Последнее называет время следующей попытки — иначе
  *  «не доставлено» читается как «не доставится». */
 function state(d: Delivery): string {
-  if (d.delivered) return 'доставлено'
-  if (d.failed) return 'не доставлено, попытки исчерпаны'
-  if (d.nextTry) return `следующая попытка ${new Date(d.nextTry).toLocaleTimeString('ru-RU')}`
-  return 'в очереди'
+  if (d.delivered) return t.hooks.delivered
+  if (d.failed) return t.hooks.gaveUp
+  if (d.nextTry) return t.hooks.nextTry(new Date(d.nextTry).toLocaleTimeString(locale()))
+  return t.hooks.inQueue
 }

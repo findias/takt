@@ -44,6 +44,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '../../shared/ui/icons.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Карточка на доске.
@@ -266,7 +267,7 @@ function CardViewInner({
   const alarm = card?.blocked
     ? {
         kind: 'blocked',
-        text: `Заблокирована: ${card.blocked.reason}`,
+        text: t.cardView.blockedFor(card.blocked.reason),
         title: card.blocked.reason,
       }
     : stuckParts.length > 0
@@ -280,9 +281,9 @@ function CardViewInner({
       // пометкой — иначе он вытесняет с доски старение, которое
       // и есть главный сигнал канбана.
       due && dueIsBurning(card?.dueOn ?? null)
-      ? { kind: 'due', text: `срок ${due.text}`, title: 'Дата обязательства' }
+      ? { kind: 'due', text: t.cardView.due(due.text), title: t.cardView.commitmentDate }
       : aging
-        ? { kind: 'aging', text: aging, title: 'Возраст считается от начала работы' }
+        ? { kind: 'aging', text: aging, title: t.cardView.ageFromStart }
         : null
   // Кто делает части — объединение по ним же, без повторов и в их
   // порядке. Считается из своих подзадач, а не из снимка доски:
@@ -365,7 +366,7 @@ function CardViewInner({
       // Подсказка читается скринридером при переходе на карточку —
       // это единственное место, где о сокращениях можно сказать тому,
       // кто не видит экрана.
-      aria-label={`Карточка «${title}». Стрелки — переход, Ctrl со стрелками — перенос, Enter — открыть, E — переименовать.`}
+      aria-label={t.cardView.aria(title)}
       onKeyDown={onKeyDown}
       onClick={onClick}
     >
@@ -373,7 +374,7 @@ function CardViewInner({
         <EditableText
           value={title}
           autoFocus
-          label="Название карточки"
+          label={t.cardView.titleLabel}
           onSave={(next) => {
             onRename(cardId, next)
             setEditing(false)
@@ -399,7 +400,7 @@ function CardViewInner({
               type="checkbox"
               className="card-check"
               checked={selected}
-              aria-label={`Выделить «${title}»`}
+              aria-label={t.cardView.select(title)}
               // Выделение снимается с нажатия, а не с изменения: shift
               // живёт в событии мыши, а `change` у флажка модификаторов
               // не несёт вовсе — на этом диапазон и не работал. Пробел
@@ -424,7 +425,7 @@ function CardViewInner({
                     у карточки два имени. Слово то же, что в панели, —
                     подзадача, а не «часть». */}
                 <span aria-hidden="true">↳ </span>
-                <span className="sr-only">подзадача задачи </span>
+                <span className="sr-only">{t.cardView.subtaskOf}</span>
                 {parent.onThisBoard ? (
                   <button className="link" onClick={() => onOpen(parent.id)}>
                     {parent.title}
@@ -450,8 +451,8 @@ function CardViewInner({
               <LabelPickerButton
                 label={
                   own.length > 0
-                    ? `Метки: ${own.map((l) => l.name).join(', ')}`
-                    : 'Метки: ни одной'
+                    ? t.cardView.labelsOf(own.map((l) => l.name).join(', '))
+                    : t.cardView.noLabels
                 }
                 className={`field label-field${own.length === 0 ? ' field--empty' : ''}`}
                 align="right"
@@ -462,7 +463,7 @@ function CardViewInner({
                 onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
               >
                 {own.length === 0 ? (
-                  '+ метка'
+                  t.cardView.addLabel
                 ) : (
                   <span className="label-dots">
                     {/* Больше четырёх точек не показываем: пятая уже
@@ -495,21 +496,21 @@ function CardViewInner({
                 и её высота от наведения не зависит. */}
             {canEdit && (
             <Menu
-              label={`Действия карточки «${title}»`}
+              label={t.cardView.actions(title)}
               className="btn btn--icon btn--quiet card-slot"
               items={[
-                { label: 'Переименовать', icon: <EditIcon />, onSelect: () => setEditing(true) },
+                { label: t.cardView.rename, icon: <EditIcon />, onSelect: () => setEditing(true) },
                 // Верх шкалы переключается прямо с доски: «это горит»
                 // говорят чаще, чем меняют что-либо ещё, а вся шкала
                 // живёт в панели.
                 card?.priority === 'highest'
                   ? {
-                      label: 'Вернуть средний приоритет',
+                      label: t.cardView.backToMedium,
                       icon: <ClockIcon />,
                       onSelect: () => onPrioritise(cardId, 'medium'),
                     }
                   : {
-                      label: 'Наивысший приоритет',
+                      label: t.cardView.toHighest,
                       icon: <ClockIcon />,
                       onSelect: () => onPrioritise(cardId, 'highest'),
                     },
@@ -519,17 +520,17 @@ function CardViewInner({
                 // а не про переезд: колонка карточки не меняется.
                 card?.doneAt
                   ? {
-                      label: 'Снять отметку «сделана»',
+                      label: t.cardView.unmarkDone,
                       icon: <CheckIcon />,
                       onSelect: () => onMarkDone(cardId, false),
                     }
                   : {
-                      label: 'Отметить сделанной',
+                      label: t.cardView.markDone,
                       icon: <CheckIcon />,
                       onSelect: () => onMarkDone(cardId, true),
                     },
                 {
-                  label: 'Завести подзадачу',
+                  label: t.cardView.addSubtask,
                   icon: <PlusIcon />,
                   onSelect: () => {
                     setOpen(true)
@@ -538,7 +539,7 @@ function CardViewInner({
                 },
                 card?.blocked
                   ? {
-                      label: 'Снять блокировку',
+                      label: t.cardView.unblock,
                       icon: <BlockedIcon />,
                       onSelect: () => onUnblock(cardId),
                     }
@@ -546,19 +547,19 @@ function CardViewInner({
                       // Причину пишут словами: список готовых
                       // формулировок отвечает не на тот вопрос — важно,
                       // чего ждём именно здесь.
-                      label: 'Заблокировать…',
+                      label: t.cardView.block,
                       icon: <BlockedIcon />,
                       onSelect: () => setBlocking(true),
                     },
                 ...columns
                   .filter((c) => c.id !== columnId)
                   .map((c) => ({
-                    label: `Перенести в «${c.name}»`,
+                    label: t.cardView.moveTo(c.name),
                     icon: <MoveIcon />,
                     onSelect: () => onMoveToColumn(cardId, c.id),
                   })),
                 {
-                  label: 'Убрать в архив',
+                  label: t.cardView.archive,
                   icon: <ArchiveIcon />,
                   danger: true,
                   onSelect: () => onArchive(cardId),
@@ -569,7 +570,7 @@ function CardViewInner({
                 ...(onDelete
                   ? [
                       {
-                        label: 'Удалить навсегда',
+                        label: t.cardView.deleteForever,
                         icon: <TrashIcon />,
                         danger: true,
                         onSelect: () => onDelete(cardId, title),
@@ -588,8 +589,8 @@ function CardViewInner({
               она держит» приходилось выяснять, открыв карточку:
               то есть ровно тем способом, от которого эта строка
               и должна избавлять. */}
-          <Dependency label="Ждёт" cards={waitsFor} onOpen={onOpen} />
-          <Dependency label="Держит" cards={holds} onOpen={onOpen} />
+          <Dependency label={t.cardView.waits} cards={waitsFor} onOpen={onOpen} />
+          <Dependency label={t.cardView.holds} cards={holds} onOpen={onOpen} />
 
           {/* Заголовок и кто делает — одна строка: «что за работа»
               и «кого спрашивать» читают вместе, и второй ряд ради
@@ -611,8 +612,8 @@ function CardViewInner({
             <Menu
               label={
                 assignees.length > 0
-                  ? `Исполнители: ${assignees.map((id) => people[id] ?? 'Кто-то').join(', ')}`
-                  : 'Исполнителей нет'
+                  ? t.cardView.assigneesOf(assignees.map((id) => people[id] ?? t.common.someone).join(', '))
+                  : t.cardView.noAssignees
               }
               className={`field${assignees.length === 0 ? ' field--empty' : ''}`}
               align="right"
@@ -623,11 +624,11 @@ function CardViewInner({
               }))}
             >
               {assignees.length === 0 ? (
-                '+ кто'
+                t.cardView.addAssignee
               ) : (
                 <span className="avatars">
                   {shownAssignees.map((id) => (
-                    <Avatar key={id} name={people[id] ?? 'Кто-то'} />
+                    <Avatar key={id} name={people[id] ?? t.common.someone} />
                   ))}
                   {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}
                 </span>
@@ -659,7 +660,7 @@ function CardViewInner({
                   ровно там, где он нужен. */}
               {until && (
                 <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
-                  {until.expired ? until.text : `снимется ${until.text}`}
+                  {until.expired ? until.text : t.cardView.liftsIn(until.text)}
                 </span>
               )}
 
@@ -676,9 +677,10 @@ function CardViewInner({
                   // управление ищет по тому, что человек прочёл
                   // (WCAG 2.5.3). Полное имя рядом — чтобы диктору
                   // было понятно, о какой шкале речь.
-                  label={`Приоритет: ${priorityShort(card.priority)} — ${priorityLabel(
-                    card.priority,
-                  ).toLowerCase()}`}
+                  label={t.cardView.priorityOf(
+                    priorityShort(card.priority),
+                    priorityLabel(card.priority).toLowerCase(),
+                  )}
                   className="field"
                   align="left"
                   items={PRIORITIES.map((level) => ({
@@ -701,14 +703,14 @@ function CardViewInner({
                   даже горящий: тревога занята блокировкой, но знать,
                   что при этом горит дата, важно именно ей. */}
               {due && alarm?.kind !== 'due' && (
-                <span className="card-due" title="Дата обязательства">
-                  срок {due.text}
+                <span className="card-due" title={t.cardView.commitmentDate}>
+                  {t.cardView.dueWord} {due.text}
                 </span>
               )}
 
               {/* Итерация — тоже про «к чему привязано». */}
               {iteration && (
-                <span className="mark mark--quiet" title="Итерация">
+                <span className="mark mark--quiet" title={t.cardView.iteration}>
                   {iteration}
                 </span>
               )}
@@ -720,7 +722,7 @@ function CardViewInner({
               {card.estimate !== null && (
                 <span
                   className="card-estimate"
-                  title={`Оценка: ${card.estimate} ${unitLabel(card.estimate, unit)}`}
+                  title={t.cardView.estimateOf(card.estimate, unitLabel(card.estimate, unit))}
                 >
                   {card.estimate}
                 </span>
@@ -735,7 +737,7 @@ function CardViewInner({
                   «11 дн.» рядом с «Идёт 11 дн. — дольше обещанных 3»
                   — это одно и то же число дважды. */}
               {age && alarm?.kind !== 'aging' && (
-                <span className="card-age" title="Идёт от начала работы">
+                <span className="card-age" title={t.cardView.runningSinceStart}>
                   {age}
                 </span>
               )}
@@ -745,8 +747,8 @@ function CardViewInner({
             <EditableText
               value=""
               autoFocus
-              label="Причина блокировки"
-              placeholder="Чего ждём"
+              label={t.cardView.blockReason}
+              placeholder={t.cardView.waitingFor}
               onSave={(reason) => {
                 // Пустая причина не блокирует: блокировка без причины
                 // не отличается от карточки, которая просто стоит.
@@ -777,9 +779,7 @@ function CardViewInner({
                   // кнопки нельзя: спецификация ARIA объявляет содержимое
                   // кнопки представлением, и роль внутри неё пропадает —
                   // мера просто перестала бы читаться вслух.
-                  aria-label={`Подзадачи: готово ${progressLabel(card, unit)}. ${
-                    open ? 'Скрыть подзадачи' : 'Показать подзадачи'
-                  }`}
+                  aria-label={t.cardView.subtasksToggle(progressLabel(card, unit) ?? '', open)}
                   onClick={() => setOpen(!open)}
                 >
                   {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
@@ -801,7 +801,7 @@ function CardViewInner({
                     aria-valuenow={card.progress.done}
                     aria-valuemin={0}
                     aria-valuemax={card.progress.total}
-                    aria-label={`Подзадачи: готово ${progressLabel(card, unit)}`}
+                    aria-label={t.cardView.subtasksDone(progressLabel(card, unit) ?? '')}
                   >
                     <div
                       className="progress-fill"
@@ -817,9 +817,9 @@ function CardViewInner({
                   пор доска отвечала «работа разбита», молча о том, кого
                   спрашивать. Аватар отвечает на это без раскрытия. */}
               {subtaskAssignees.length > 0 && (
-                <span className="avatars" title="На кого разложены части">
+                <span className="avatars" title={t.cardView.partsOn}>
                   {subtaskAssignees.slice(0, 3).map((id) => (
-                    <Avatar key={id} name={people[id] ?? 'Кто-то'} size={AVATAR_SMALL} />
+                    <Avatar key={id} name={people[id] ?? t.common.someone} size={AVATAR_SMALL} />
                   ))}
                 </span>
               )}
@@ -852,8 +852,8 @@ function CardViewInner({
                   <EditableText
                     value=""
                     autoFocus
-                    label="Название подзадачи"
-                    placeholder="Что нужно сделать?"
+                    label={t.cardView.subtaskName}
+                    placeholder={t.cardView.whatToDo}
                     onSave={(title) => {
                       if (title.trim()) onSubtask(cardId, title.trim())
                       setAdding(false)
@@ -862,7 +862,7 @@ function CardViewInner({
                   />
                 ) : (
                   <button className="link" onClick={() => setAdding(true)}>
-                    + Подзадача
+                    {t.cardView.newSubtask}
                   </button>
                 )}
               </li>
@@ -916,8 +916,7 @@ function Dependency({
             .map((c) => c.title)
             .join(', ')}
         >
-          {' '}
-          и ещё {cards.length - 1}
+          {t.cardView.andMore(cards.length - 1)}
         </span>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Командная палитра.
@@ -100,13 +101,13 @@ export function Palette({
   }
 
   return (
-    <dialog className="palette" ref={ref} aria-label="Поиск и команды" onKeyDown={onKeyDown}>
+    <dialog className="palette" ref={ref} aria-label={t.board.paletteLabel} onKeyDown={onKeyDown}>
       <input
         autoFocus
         className="palette-input"
         value={text}
-        placeholder="Карточка или команда"
-        aria-label="Поиск и команды"
+        placeholder={t.board.palettePlaceholder}
+        aria-label={t.board.paletteLabel}
         // Список — часть поля: так скринридер объявляет число найденного
         // и текущий вариант, не требуя уходить из поля ввода.
         role="combobox"
@@ -116,7 +117,7 @@ export function Palette({
         onChange={(e) => setText(e.target.value)}
       />
 
-      <ul className="palette-list" id="palette-list" role="listbox" aria-label="Найденное">
+      <ul className="palette-list" id="palette-list" role="listbox" aria-label={t.board.paletteFound}>
         {found.map((command, i) => (
           <li key={command.id}>
             <button
@@ -141,7 +142,7 @@ export function Palette({
         ))}
         {found.length === 0 && (
           <li className="muted small palette-empty">
-            Ничего не нашлось. Палитра ищет по названиям карточек и команд.
+            {t.board.paletteEmpty}
           </li>
         )}
       </ul>

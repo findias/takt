@@ -6,6 +6,7 @@ import { labelOrigin, pickerItems, placeWords } from '../../entities/label/model
 import type { PickerItem } from '../../entities/label/model.ts'
 import { CheckIcon } from '../../shared/ui/icons.tsx'
 import { topLayer, useAnchored } from '../../shared/ui/anchored.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Выбор метки: поиск по существующим и заведение новой в том же поле.
@@ -76,7 +77,7 @@ export function LabelCombobox({
   onToggle,
   onDone,
   onEscape,
-  inputLabel = 'Найти или завести метку',
+  inputLabel = t.parts.findOrCreateLabel,
   quietWhenIdle = false,
 }: LabelChoiceProps & {
   /** Действие выполнено — всплывающее закрывается, встроенное чистит поле. */
@@ -133,7 +134,7 @@ export function LabelCombobox({
     } catch (e) {
       // Отказ сервера называет, где метка уже есть или кто может её
       // завести, — и живёт у поля, где его и ждут.
-      setError(e instanceof Error ? e.message : 'Не получилось')
+      setError(e instanceof Error ? e.message : t.common.notDone)
     } finally {
       setBusy(false)
     }
@@ -176,7 +177,7 @@ export function LabelCombobox({
       <input
         value={text}
         aria-label={inputLabel}
-        placeholder={canEdit ? 'Метка: найти или завести' : 'Метка: найти'}
+        placeholder={canEdit ? t.parts.labelFindOrCreate : t.parts.labelFind}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={items.length > 0}
@@ -197,7 +198,7 @@ export function LabelCombobox({
       <p className="form-error" id={errorId} aria-live="polite">
         {error}
       </p>
-      <ul className="palette-list label-options" id={listId} role="listbox" aria-label="Метки">
+      <ul className="palette-list label-options" id={listId} role="listbox" aria-label={t.parts.labels}>
         {items.map((item, i) => (
           <li key={item.key} role="presentation">
             <button
@@ -229,13 +230,13 @@ export function LabelCombobox({
         <p className="muted small">
           {text.trim()
             ? canEdit && places === null
-              ? 'Проверяем, где можно завести метку…'
+              ? t.parts.checkingPlaces
               : canEdit
-                ? 'Такой метки нет, а завести её для этой доски вам нельзя.'
-                : 'Такой метки нет.'
+                ? t.parts.noSuchLabelCannotCreate
+                : t.parts.noSuchLabel
             : canEdit
-              ? 'Меток для этой доски ещё нет — наберите название, чтобы завести.'
-              : 'Меток для этой доски ещё нет.'}
+              ? t.parts.noLabelsTypeToCreate
+              : t.parts.noLabels}
         </p>
       )}
     </div>
@@ -263,7 +264,7 @@ function ItemText({ item, marked }: { item: PickerItem; marked: boolean }) {
     return (
       <>
         {marked && <span className="menu-check" aria-hidden="true" />}
-        <span className="palette-title">Вернуть из архива «{item.label.name}»</span>
+        <span className="palette-title">{t.parts.restoreLabel(item.label.name)}</span>
         <span className="menu-hint">{labelOrigin(item.label)}</span>
       </>
     )
@@ -271,7 +272,7 @@ function ItemText({ item, marked }: { item: PickerItem; marked: boolean }) {
   return (
     <>
       {marked && <span className="menu-check" aria-hidden="true" />}
-      <span className="palette-title">Завести «{item.name}»</span>
+      <span className="palette-title">{t.parts.createLabel(item.name)}</span>
       <span className="menu-hint">{placeWords(item.place)}</span>
     </>
   )
@@ -350,7 +351,7 @@ export function LabelPickerButton({
           style={box ? { top: box.top, left: box.left } : { opacity: 0 }}
           id={popupId}
           role="dialog"
-          aria-label="Метки"
+          aria-label={t.parts.labels}
           ref={floatRef}
           onKeyDown={(e) => {
             if (e.key === 'Tab') close(false)

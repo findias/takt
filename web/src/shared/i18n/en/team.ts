@@ -1,0 +1,78 @@
+import type { team as ru } from '../ru/team.ts'
+
+export const team: typeof ru = {
+    loadFailed: 'Could not load the team',
+    eraseTitle: 'Erase this person’s data?',
+    erase: 'Erase data',
+    eraseBody: (name: string) =>
+      `“${name}” will stop being a member of the organisation. Name, e-mail and sign-in method will be erased, sessions will end.`,
+    eraseKeeps:
+      'The work done stays: cards, comments and audit entries will keep pointing to it — just without a name. Erasing them would erase the history of other people’s work.',
+    inOrg: 'In the organisation',
+    integrationKey: 'integration key',
+    key: 'key',
+    roleOf: (name: string) => `Role: ${name}`,
+    removeOf: (name: string) => `Remove ${name}`,
+    remove: 'Remove',
+    eraseOf: (name: string) => `Erase data: ${name}`,
+    invite: 'Invite',
+    linkCreated:
+      'Link created. It is shown once — only its fingerprint is stored. Send it to the person you invite.',
+    inviteLink: 'Invitation link',
+    inviteLinkWhat: 'the invitation link',
+    pending: 'Waiting for an answer',
+    until: (role: string, when: string) => `${role} · until ${when}`,
+    revokeInviteOf: (email: string) => `Revoke invitation: ${email}`,
+    inviteRevoked: (email: string) => `Invitation for ${email} revoked: the link no longer works.`,
+    revokeInvite: 'Revoke invitation',
+    version: (v: string) => `Installation version: ${v}`,
+    revokeKeyTitle: 'Revoke the key?',
+    revokeKey: 'Revoke key',
+    revokeKeyBody: (name: string) =>
+      `Key “${name}” stops working at once: everything that uses it for the API will be refused.`,
+    revokeKeyFinal: 'It cannot be brought back — only a new one issued and set up in that system again.',
+    keys: 'Integration keys',
+    keysExplain:
+      'A key belongs to the organisation, not to a person: an integration outlives whoever set it up. What a key does shows in the audit log alongside people.',
+    usedOn: (when: string) => ` · last used ${when}`,
+    neverUsed: ' · not used yet',
+    revokeKeyOf: (name: string) => `Revoke key “${name}”`,
+    keyCreated:
+      'Key created. It is shown once — only its fingerprint is stored. Copy it and put it where the integration will read it.',
+    accessKey: 'Access key',
+    accessKeyWhat: 'the access key',
+    keyCreateFailed: 'Could not create the key',
+    keyPurpose: 'What the key is for',
+    validUntil: 'Valid until',
+    createKey: 'Create key',
+    create: 'Create',
+    directoryKey:
+      'A directory key is created separately: it runs subdivisions and their members and works only with /scim/v2. Such a key never becomes an organisation owner — boards and settings are closed to it. For boards, use a second key.',
+    estimate: 'Estimation',
+    estimateIn: 'We estimate work in',
+    unit: 'Estimate unit',
+    unitChanged: (unit: string) => `We estimate work in ${unit}. The numbers stayed the same.`,
+    unitFailed: 'Could not change the unit',
+    unitExplain:
+      'Numbers on cards are not converted: a three stays a three, only the caption under it changes. Points do not convert to hours by any factor — they are different ways to promise.',
+    fields: 'Card fields',
+    noFields:
+      'No fields. A field is created for the whole organisation: a field with the same name on two boards is one field, otherwise a combined report would add up different things.',
+    fieldKeeps: 'Card values stay: the field was created for them',
+    removeField: 'Remove',
+    fieldName: 'Field name',
+    fieldKind: 'Field kind',
+    fieldOptions: 'Options, comma-separated',
+    createField: 'Create field',
+    export: 'Export',
+    exportExplain:
+      'Everything the organisation has accumulated: teams, boards, cards, discussions, iterations and settings. Secrets — webhook signing keys and access keys — do not go into the file: there is nothing to restore from them, and losing the file would mean losing access.',
+    withAudit: 'Include the audit log — it is usually larger than everything else',
+    download: 'Download file',
+    audit: 'What happened',
+    auditExplain:
+      'The log is kept by the database, not the application: a change made around the interface lands here like any other. Entries are only ever appended. “Unsigned” means done by no person: seeding, a migration, a background job.',
+    inviteFailed: 'Could not invite',
+    colleagueEmail: 'Colleague’s e-mail',
+    role: 'Role',
+}

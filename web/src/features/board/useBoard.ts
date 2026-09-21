@@ -25,6 +25,7 @@ import {
 } from '../../entities/board/model.ts'
 import { PRIORITY_NAMES, cardsLabel } from '../../entities/card/model.ts'
 import type { BaseState, MoveCommand } from '../../entities/board/model.ts'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Как хук сообщает о том, что пошло не так.
@@ -84,8 +85,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
       // ни догадаться, что помогает обновление страницы.
       if (!Array.isArray(snap.columns) || !Array.isArray(snap.cards)) {
         throw new Error(
-          'Ответ сервера не похож на снимок доски. Похоже, страница открыта давно ' +
-            'и устарела: обновите её (Ctrl+R или Cmd+R).',
+          t.ops.stale,
         )
       }
       setLoadStatus(null)
@@ -94,7 +94,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     } catch (e) {
       if (e instanceof ApiError && e.body?.code === 'board_archived') setArchived(true)
       setLoadStatus(e instanceof ApiError ? e.status : null)
-      setLoadError(e instanceof Error ? e.message : 'Не удалось загрузить доску')
+      setLoadError(e instanceof Error ? e.message : t.ops.loadBoard)
     } finally {
       setLoading(false)
     }
@@ -164,7 +164,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
             return current
           })
           notify({
-            text: conflict.error ?? 'Доска изменилась, пока вы перетаскивали карточку',
+            text: conflict.error ?? t.ops.changedWhileDragging,
             tone: 'warning',
           })
           return
@@ -175,15 +175,15 @@ export function useBoard(boardId: string | null, notify: Notify) {
           // Предлагаем повтор с тем же operationId: если операция всё-таки
           // дошла до сервера, второй раз она не выполнится.
           notify({
-            text: `${e.message}. Карточка вернулась на место.`,
+            text: t.ops.cardBack(e.message),
             tone: 'warning',
-            action: { label: 'Повторить', onAct: () => setQueue((list) => [...list, command]) },
+            action: { label: t.ops.retry, onAct: () => setQueue((list) => [...list, command]) },
           })
           return
         }
 
         notify({
-          text: e instanceof Error ? e.message : 'Не удалось переместить карточку',
+          text: e instanceof Error ? e.message : t.ops.moveCard,
           tone: 'warning',
         })
       } finally {
@@ -418,7 +418,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
 
   const createCard = useCallback(
     (columnId: string, title: string) =>
-      run('CREATE_CARD', { columnId, title, place: 'end' }, 'Не удалось завести карточку'),
+      run('CREATE_CARD', { columnId, title, place: 'end' }, t.ops.createCard),
     [run],
   )
   const renameCard = useCallback(
@@ -428,7 +428,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { title },
         'UPDATE_CARD',
         { cardId, title },
-        'Не удалось переименовать карточку',
+        t.ops.renameCard,
       ),
     [patchCard],
   )
@@ -443,13 +443,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const archiveCard = useCallback(
     async (cardId: string) => {
       const title = titleOf(cardId)
-      await run('ARCHIVE_CARD', { cardId }, 'Не удалось убрать карточку')
+      await run('ARCHIVE_CARD', { cardId }, t.ops.archiveCard)
       notify({
-        text: title ? `«${title}» убрана в архив` : 'Карточка убрана в архив',
+        text: title ? t.ops.titledArchived(title) : t.ops.cardArchived,
         tone: 'info',
         action: {
-          label: 'Вернуть',
-          onAct: () => void run('RESTORE_CARD', { cardId }, 'Не удалось вернуть карточку'),
+          label: t.ops.restore,
+          onAct: () => void run('RESTORE_CARD', { cardId }, t.ops.restoreCard),
         },
       })
     },
@@ -490,9 +490,9 @@ export function useBoard(boardId: string | null, notify: Notify) {
    *  в одну строку — это не сообщение, а список. */
   const namesOf = useCallback(
     (cardIds: string[]) => {
-      const names = cardIds.map((id) => titles.current.get(id) ?? 'без названия')
+      const names = cardIds.map((id) => titles.current.get(id) ?? t.ops.untitled)
       if (names.length <= 3) return names.join(', ')
-      return `${names.slice(0, 3).join(', ')} и ещё ${names.length - 3}`
+      return t.ops.andMore(names.slice(0, 3).join(', '), names.length - 3)
     },
     [],
   )
@@ -510,7 +510,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         const columnId = shown.current?.cards[id]?.columnId
         if (columnId) was.set(id, columnId)
       }
-      const name = shown.current?.columns[toColumnId]?.name ?? 'другую колонку'
+      const name = shown.current?.columns[toColumnId]?.name ?? t.ops.anotherColumn
       const { done, failed } = await applyToMany(cardIds, 'MOVE_CARD', (cardId) => ({
         cardId,
         toColumnId,
@@ -518,10 +518,10 @@ export function useBoard(boardId: string | null, notify: Notify) {
       }))
       if (done.length > 0) {
         notify({
-          text: `${cardsLabel(done.length)} перенесено в «${name}»`,
+          text: t.ops.bulkMoved(cardsLabel(done.length), name),
           tone: 'info',
           action: {
-            label: 'Вернуть',
+            label: t.ops.restore,
             onAct: () => {
               void (async () => {
                 for (const cardId of done) {
@@ -539,7 +539,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         })
       }
       if (failed.length > 0) {
-        notify({ text: `Не удалось перенести: ${namesOf(failed)}`, tone: 'warning' })
+        notify({ text: t.ops.bulkMoveFailed(namesOf(failed)), tone: 'warning' })
       }
       return done.length
     },
@@ -553,16 +553,16 @@ export function useBoard(boardId: string | null, notify: Notify) {
       const { done, failed } = await applyToMany(cardIds, 'ARCHIVE_CARD', (cardId) => ({ cardId }))
       if (done.length > 0) {
         notify({
-          text: `${cardsLabel(done.length)} убрано в архив`,
+          text: t.ops.bulkArchived(cardsLabel(done.length)),
           tone: 'info',
           action: {
-            label: 'Вернуть',
+            label: t.ops.restore,
             onAct: () => void applyToMany(done, 'RESTORE_CARD', (cardId) => ({ cardId })),
           },
         })
       }
       if (failed.length > 0) {
-        notify({ text: `Не удалось убрать: ${namesOf(failed)}`, tone: 'warning' })
+        notify({ text: t.ops.bulkArchiveFailed(namesOf(failed)), tone: 'warning' })
       }
       return done.length
     },
@@ -579,24 +579,24 @@ export function useBoard(boardId: string | null, notify: Notify) {
    */
   const labelMany = useCallback(
     async (cardIds: string[], labelId: string) => {
-      const name = shown.current?.labels.find((l) => l.id === labelId)?.name ?? 'метка'
+      const name = shown.current?.labels.find((l) => l.id === labelId)?.name ?? t.ops.aLabel
       const { done, failed } = await applyToMany(cardIds, 'LABEL_CARD', (cardId) => ({
         cardId,
         labelId,
       }))
       if (done.length > 0) {
         notify({
-          text: `${cardsLabel(done.length)} помечено: «${name}»`,
+          text: t.ops.bulkLabelled(cardsLabel(done.length), name),
           tone: 'info',
           action: {
-            label: 'Снять',
+            label: t.ops.undo,
             onAct: () =>
               void applyToMany(done, 'UNLABEL_CARD', (cardId) => ({ cardId, labelId })),
           },
         })
       }
       if (failed.length > 0) {
-        notify({ text: `Не удалось пометить: ${namesOf(failed)}`, tone: 'warning' })
+        notify({ text: t.ops.bulkLabelFailed(namesOf(failed)), tone: 'warning' })
       }
       return done.length
     },
@@ -607,24 +607,24 @@ export function useBoard(boardId: string | null, notify: Notify) {
    *  исполнителей несколько, и «назначить» никого не снимает. */
   const assignMany = useCallback(
     async (cardIds: string[], userId: string) => {
-      const who = shown.current?.people[userId] ?? 'человек'
+      const who = shown.current?.people[userId] ?? t.ops.aPerson
       const { done, failed } = await applyToMany(cardIds, 'ASSIGN_CARD', (cardId) => ({
         cardId,
         userId,
       }))
       if (done.length > 0) {
         notify({
-          text: `${cardsLabel(done.length)} назначено: ${who}`,
+          text: t.ops.bulkAssigned(cardsLabel(done.length), who),
           tone: 'info',
           action: {
-            label: 'Снять',
+            label: t.ops.undo,
             onAct: () =>
               void applyToMany(done, 'UNASSIGN_CARD', (cardId) => ({ cardId, userId })),
           },
         })
       }
       if (failed.length > 0) {
-        notify({ text: `Не удалось назначить: ${namesOf(failed)}`, tone: 'warning' })
+        notify({ text: t.ops.bulkAssignFailed(namesOf(failed)), tone: 'warning' })
       }
       return done.length
     },
@@ -651,10 +651,10 @@ export function useBoard(boardId: string | null, notify: Notify) {
       }))
       if (done.length > 0) {
         notify({
-          text: `${cardsLabel(done.length)}: приоритет ${PRIORITY_NAMES[priority].toLowerCase()}`,
+          text: t.ops.bulkPriority(cardsLabel(done.length), PRIORITY_NAMES[priority].toLowerCase()),
           tone: 'info',
           action: {
-            label: 'Вернуть',
+            label: t.ops.restore,
             onAct: () => {
               void (async () => {
                 for (const cardId of done) {
@@ -668,7 +668,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         })
       }
       if (failed.length > 0) {
-        notify({ text: `Не удалось изменить приоритет: ${namesOf(failed)}`, tone: 'warning' })
+        notify({ text: t.ops.bulkPriorityFailed(namesOf(failed)), tone: 'warning' })
       }
       return done.length
     },
@@ -688,22 +688,22 @@ export function useBoard(boardId: string | null, notify: Notify) {
   const deleteCard = useCallback(
     async (cardId: string) => {
       const title = titleOf(cardId)
-      await run('DELETE_CARD', { cardId }, 'Не удалось удалить карточку')
+      await run('DELETE_CARD', { cardId }, t.ops.deleteCard)
       reload()
       notify({
-        text: title ? `«${title}» удалена навсегда` : 'Карточка удалена навсегда',
+        text: title ? t.ops.titledDeleted(title) : t.ops.cardDeleted,
         tone: 'info',
       })
     },
     [run, reload, notify, titleOf],
   )
   const createColumn = useCallback(
-    (name: string) => run('CREATE_COLUMN', { name }, 'Не удалось завести колонку'),
+    (name: string) => run('CREATE_COLUMN', { name }, t.ops.createColumn),
     [run],
   )
   const renameColumn = useCallback(
     (columnId: string, name: string) =>
-      run('RENAME_COLUMN', { columnId, name }, 'Не удалось переименовать колонку'),
+      run('RENAME_COLUMN', { columnId, name }, t.ops.renameColumn),
     [run],
   )
   // null снимает оценку, отсутствие поля её не трогает: иначе
@@ -740,8 +740,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
         notify({
           text:
             e instanceof Error
-              ? `Не удалось изменить метки: ${e.message}`
-              : 'Не удалось изменить метки',
+              ? t.ops.labelsFailedWhy(e.message)
+              : t.ops.labels,
           tone: 'warning',
         })
       }
@@ -782,8 +782,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
         notify({
           text:
             e instanceof Error
-              ? `Не удалось изменить исполнителей: ${e.message}`
-              : 'Не удалось изменить исполнителей',
+              ? t.ops.assigneesFailedWhy(e.message)
+              : t.ops.assignees,
           tone: 'warning',
         })
       }
@@ -805,7 +805,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { priority },
         'UPDATE_CARD',
         { cardId, priority },
-        'Не удалось изменить приоритет',
+        t.ops.priority,
       ),
     [patchCard],
   )
@@ -818,7 +818,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { dueOn },
         'UPDATE_CARD',
         { cardId, dueOn },
-        'Не удалось изменить дату обязательства',
+        t.ops.due,
       ),
     [patchCard],
   )
@@ -829,7 +829,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { estimate },
         'UPDATE_CARD',
         { cardId, estimate },
-        'Не удалось сохранить оценку',
+        t.ops.estimate,
       ),
     [patchCard],
   )
@@ -841,7 +841,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { description },
         'UPDATE_CARD',
         { cardId, description },
-        'Не удалось сохранить описание',
+        t.ops.description,
       ),
     [patchCard],
   )
@@ -864,13 +864,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // же, и третьего состояния заводить незачем.
   const setCardField = useCallback(
     (cardId: string, fieldId: string, value: string | number | boolean | null) =>
-      runAndReload('SET_CARD_FIELD', { cardId, fieldId, value }, 'Не удалось сохранить поле'),
+      runAndReload('SET_CARD_FIELD', { cardId, fieldId, value }, t.ops.field),
     [runAndReload],
   )
 
   const addToIteration = useCallback(
     (cardId: string, iterationId: string) =>
-      runAndReload('ADD_TO_ITERATION', { cardId, iterationId }, 'Не удалось добавить в итерацию'),
+      runAndReload('ADD_TO_ITERATION', { cardId, iterationId }, t.ops.iterationAdd),
     [runAndReload],
   )
   const removeFromIteration = useCallback(
@@ -878,7 +878,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload(
         'REMOVE_FROM_ITERATION',
         { cardId, iterationId },
-        'Не удалось убрать из итерации',
+        t.ops.iterationRemove,
       ),
     [runAndReload],
   )
@@ -896,18 +896,18 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload(
         'CREATE_SUBTASK',
         { parentCardId, title, columnId, boardId },
-        'Не удалось завести подзадачу',
+        t.ops.subtask,
       ),
     [runAndReload],
   )
   const linkCards = useCallback(
     (fromCard: string, toCard: string, kind: LinkKind) =>
-      runAndReload('LINK_CARDS', { fromCard, toCard, kind }, 'Не удалось связать карточки'),
+      runAndReload('LINK_CARDS', { fromCard, toCard, kind }, t.ops.link),
     [runAndReload],
   )
   const unlinkCards = useCallback(
     (fromCard: string, toCard: string, kind: LinkKind) =>
-      runAndReload('UNLINK_CARDS', { fromCard, toCard, kind }, 'Не удалось убрать связь'),
+      runAndReload('UNLINK_CARDS', { fromCard, toCard, kind }, t.ops.unlink),
     [runAndReload],
   )
   /**
@@ -925,7 +925,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
         { doneAt: done ? new Date().toISOString() : null },
         'SET_CARD_DONE',
         { cardId, done },
-        done ? 'Не удалось отметить сделанной' : 'Не удалось снять отметку',
+        done ? t.ops.markDone : t.ops.unmarkDone,
       ),
     [patchCard],
   )
@@ -940,7 +940,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload(
         'BLOCK_CARD',
         { cardId, reason, blockingCard, until },
-        'Не удалось отметить блокировку',
+        t.ops.block,
       ),
     [runAndReload],
   )
@@ -948,11 +948,11 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // бессрочная. Причина не трогается.
   const setBlockUntil = useCallback(
     (cardId: string, until: string | null) =>
-      runAndReload('SET_BLOCK_UNTIL', { cardId, until }, 'Не удалось изменить срок блокировки'),
+      runAndReload('SET_BLOCK_UNTIL', { cardId, until }, t.ops.blockUntil),
     [runAndReload],
   )
   const unblockCard = useCallback(
-    (cardId: string) => runAndReload('UNBLOCK_CARD', { cardId }, 'Не удалось снять блокировку'),
+    (cardId: string) => runAndReload('UNBLOCK_CARD', { cardId }, t.ops.unblock),
     [runAndReload],
   )
 
@@ -961,7 +961,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // передаётся ровно то, что человек тронул.
   const updateColumn = useCallback(
     (columnId: string, patch: ColumnPatch) =>
-      run('UPDATE_COLUMN', { columnId, ...patch }, 'Не удалось изменить колонку'),
+      run('UPDATE_COLUMN', { columnId, ...patch }, t.ops.column),
     [run],
   )
 
@@ -969,7 +969,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // и «не трогать» приходится различать явно.
   const setColumnLimit = useCallback(
     (columnId: string, wipLimit: number | null) =>
-      run('UPDATE_COLUMN', { columnId, wipLimit }, 'Не удалось изменить лимит колонки'),
+      run('UPDATE_COLUMN', { columnId, wipLimit }, t.ops.columnLimit),
     [run],
   )
 

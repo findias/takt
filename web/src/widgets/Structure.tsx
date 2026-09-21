@@ -22,6 +22,7 @@ import { Skeleton } from '../shared/ui/states.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { Menu } from '../shared/ui/Menu.tsx'
 import { ArchiveIcon, EditIcon, MoreIcon, MoveIcon, PlusIcon } from '../shared/ui/icons.tsx'
+import { t } from '../shared/i18n/index.ts'
 
 /**
  * Структура организации: дерево подразделений, их состав и наблюдение.
@@ -68,7 +69,7 @@ export function Structure({
         setAdmins(adm.admins)
         setArchived(arch.teams)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось загрузить структуру'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.structure.loadFailed))
   }, [])
 
   useEffect(load, [load])
@@ -77,7 +78,7 @@ export function Structure({
   // и показывать их надо как есть, а не заменять общим «не получилось».
   const act = (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : 'Не получилось'))
+    p.then(load).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
   }
 
   if (teams === null) return <Skeleton lines={3} />
@@ -96,14 +97,12 @@ export function Structure({
 
       <section className="stack">
         <div className="row row--between">
-          <h2 className="section-title">Подразделения</h2>
-          {isOwner && <NewTeam parent={null} label="Новое подразделение" onCreate={act} />}
+          <h2 className="section-title">{t.structure.teams}</h2>
+          {isOwner && <NewTeam parent={null} label={t.structure.newTeam} onCreate={act} />}
         </div>
 
         {tree.length === 0 && (
-          <p className="muted small">
-            Подразделений пока нет. Пока их нет, все доски видны всей организации.
-          </p>
+          <p className="muted small">{t.structure.noTeams}</p>
         )}
 
         <ul className="tree">
@@ -174,25 +173,25 @@ function ArchivedTeams({
   if (teams.length === 0) return null
   return (
     <section className="stack">
-      <h2 className="section-title">Убранные подразделения</h2>
+      <h2 className="section-title">{t.structure.archivedTeams}</h2>
       <ul className="member-list">
-        {teams.map((t) => (
-          <li key={t.id}>
+        {teams.map((team) => (
+          <li key={team.id}>
             <div className="member-who">
-              <span>{t.name}</span>
+              <span>{team.name}</span>
               <span className="muted small">
-                {t.parentName ? `Подразделение «${t.parentName}»` : 'Корневое подразделение'}
+                {team.parentName ? t.structure.teamOf(team.parentName) : t.structure.rootTeam}
               </span>
             </div>
-            {t.parentArchived ? (
-              <span className="muted small">сперва верните «{t.parentName}»</span>
-            ) : t.parentId === null || !canManage(t.parentId) ? null : (
+            {team.parentArchived ? (
+              <span className="muted small">{t.structure.restoreParentFirst(team.parentName ?? '')}</span>
+            ) : team.parentId === null || !canManage(team.parentId) ? null : (
               <button
                 className="link"
-                aria-label={`Вернуть из архива: ${t.name}`}
-                onClick={() => onAct(api.restoreTeam(t.id))}
+                aria-label={t.structure.restoreFrom(team.name)}
+                onClick={() => onAct(api.restoreTeam(team.id))}
               >
-                Вернуть
+                {t.structure.restore}
               </button>
             )}
           </li>
@@ -252,13 +251,13 @@ function TeamNode({
         {mine && (
           <div className="tree-actions">
             <Menu
-              label={`Действия подразделения «${node.name}»`}
+              label={t.structure.actionsOf(node.name)}
               items={[
                 ...(canNestInside(node)
-                  ? [{ label: 'Завести отдел…', icon: <PlusIcon />, onSelect: () => setAsking('child') }]
+                  ? [{ label: t.structure.addDept, icon: <PlusIcon />, onSelect: () => setAsking('child') }]
                   : []),
                 {
-                  label: 'Переименовать…',
+                  label: t.structure.rename,
                   icon: <EditIcon />,
                   onSelect: () => {
                     // Узел из каталога переименовать можно, и это не ошибка:
@@ -267,9 +266,8 @@ function TeamNode({
                     // в каталоге, — и сказано это до ввода, а не после.
                     const name = window.prompt(
                       node.fromDirectory
-                        ? 'Новое название. Имя этому подразделению даёт каталог: ' +
-                            'при следующей синхронизации оно вернётся'
-                        : 'Новое название',
+                        ? t.structure.newNameFromDirectory
+                        : t.structure.newName,
                       node.name,
                     )
                     if (name && name.trim() && name !== node.name) {
@@ -281,13 +279,13 @@ function TeamNode({
                 // место у строки, а не пунктами меню: подразделений
                 // десятки, и меню длиной в дерево не читается.
                 ...(node.parentId || parents.length > 0
-                  ? [{ label: 'Перенести…', icon: <MoveIcon />, onSelect: () => setAsking('move') }]
+                  ? [{ label: t.structure.move, icon: <MoveIcon />, onSelect: () => setAsking('move') }]
                   : []),
                 // Убирается в архив и возвращается оттуда, поэтому
                 // без вопроса и не цветом тревоги: тревога — для того,
                 // что не вернуть.
                 {
-                  label: 'Убрать подразделение',
+                  label: t.structure.removeTeam,
                   icon: <ArchiveIcon />,
                   onSelect: () => onAct(api.archiveTeam(node.id)),
                 },
@@ -302,7 +300,7 @@ function TeamNode({
       {asking === 'child' && (
         <NewTeam
           parent={node.id}
-          title={`Завести отдел в «${node.name}»`}
+          title={t.structure.addDeptIn(node.name)}
           onCreate={onAct}
           onDone={() => setAsking(null)}
         />
@@ -325,7 +323,7 @@ function TeamNode({
           {/* Чем занято подразделение — второй вопрос к узлу после
               «кто здесь», и до сих пор раскрытие на него не отвечало,
               хотя число досок в строке узла стояло с самого начала. */}
-          <h3 className="section-title">Доски</h3>
+          <h3 className="section-title">{t.structure.boards}</h3>
           <TeamBoards teamId={node.id} onOpen={onOpenBoard} />
         </div>
       )}
@@ -383,7 +381,7 @@ function TeamMembers({
 
   return (
     <div className="stack">
-      <h3 className="section-title">Состав</h3>
+      <h3 className="section-title">{t.structure.members}</h3>
       {/* Состав узла из каталога ведёт каталог: провайдеры шлют полную
           замену, и вписанный руками исчезает при следующей
           синхронизации. Выбирает это не наша сторона — единственное,
@@ -391,17 +389,13 @@ function TeamMembers({
           вписывал участника, действие отвечало «готово», и участник
           пропадал без объяснения. */}
       {fromDirectory && (
-        <p className="muted small">
-          Подразделение ведёт каталог. Вписанные здесь вручную исчезнут при
-          следующей синхронизации — состав меняют в каталоге.
-        </p>
+        <p className="muted small">{t.structure.fromDirectory}</p>
       )}
       {members === null ? (
         <Skeleton lines={2} />
       ) : members.length === 0 ? (
         <p className="muted small">
-          Никого нет. Участник подразделения работает и во всех отделах под ним,
-          а ведущим показывается тот, кто за подразделение отвечает.
+          {t.structure.nobody}
           {/* Опустеть подразделение может и само: каталог отключает
               человека, и последний уходит из состава. Доски при этом
               остаются за узлом, а командную доску видит только свой —
@@ -410,11 +404,8 @@ function TeamMembers({
               она просто перестала быть кому-то видна. */}
           {boards > 0 &&
             (peopleAbove
-              ? ' Доски подразделения остались за ним: их видят те, кто состоит выше по дереву.'
-              : ' Доски подразделения остались за ним, но рядовому участнику они сейчас' +
-                ' не видны: командную доску видит свой, а своих нет ни здесь, ни выше.' +
-                ' Доступ остаётся у владельца, у администратора этой области' +
-                ' и у наблюдателя за ней.')}
+              ? t.structure.boardsSeenAbove
+              : t.structure.boardsUnseen)}
         </p>
       ) : (
         <ul className="member-list">
@@ -424,14 +415,14 @@ function TeamMembers({
                 <span>{m.name}</span>
                 <span className="muted small">{m.email}</span>
               </div>
-              {m.lead && <span className="role-chip">Ведущий</span>}
+              {m.lead && <span className="role-chip">{t.structure.lead}</span>}
               {canManage && (
                 <button
                   className="link link--remove"
-                  aria-label={`Убрать из состава: ${m.name}`}
+                  aria-label={t.structure.removeMemberOf(m.name)}
                   onClick={() => act(api.removeTeamMember(teamId, m.userId))}
                 >
-                  Убрать из состава
+                  {t.structure.removeMember}
                 </button>
               )}
             </li>
@@ -442,12 +433,12 @@ function TeamMembers({
       {canManage && outside.length > 0 && (
         <select
           value=""
-          aria-label="Добавить в подразделение"
+          aria-label={t.structure.addToTeam}
           onChange={(e) => {
             if (e.target.value) act(api.addTeamMember(teamId, e.target.value))
           }}
         >
-          <option value="">Добавить человека…</option>
+          <option value="">{t.structure.addPerson}</option>
           {outside.map((p) => (
             <option key={p.userId} value={p.userId}>
               {p.name}
@@ -480,11 +471,7 @@ function TeamBoards({ teamId, onOpen }: { teamId: string; onOpen: (boardId: stri
   if (boards === null) return <Skeleton lines={1} />
   if (boards.length === 0) {
     return (
-      <p className="muted small">
-        Досок нет. Доска попадает сюда, когда у неё выбрано это подразделение, — и
-        остаётся, даже если видна всей организации: «чья доска» и «кому видно» разные
-        вопросы.
-      </p>
+      <p className="muted small">{t.structure.noBoards}</p>
     )
   }
 
@@ -502,7 +489,7 @@ function TeamBoards({ teamId, onOpen }: { teamId: string; onOpen: (boardId: stri
                 организации» — это два обрывка, и первый читается
                 опечаткой. */}
             <span className="muted small">
-              ключ {b.key} · видна {VISIBILITY_NAMES[b.visibility].toLowerCase()}
+              {t.structure.boardLine(b.key, VISIBILITY_NAMES[b.visibility].toLowerCase())}
             </span>
           </div>
         </li>
@@ -558,13 +545,13 @@ function NewTeam({
       <input
         autoFocus
         value={name}
-        aria-label={title ?? 'Название подразделения'}
-        placeholder="Название"
+        aria-label={title ?? t.structure.teamName}
+        placeholder={t.structure.name}
         onChange={(e) => setName(e.target.value)}
         onBlur={() => !name.trim() && close()}
       />
-      <button type="submit" aria-label={title ?? 'Завести подразделение'} disabled={!name.trim()}>
-        Завести
+      <button type="submit" aria-label={title ?? t.structure.createTeam} disabled={!name.trim()}>
+        {t.structure.create}
       </button>
     </form>
   )
@@ -591,7 +578,7 @@ function MoveTeam({
       <select
         autoFocus
         value=""
-        aria-label={`Перенести: ${node.name}`}
+        aria-label={t.structure.moveOf(node.name)}
         onChange={(e) => {
           if (!e.target.value) return
           const to = e.target.value === 'root' ? null : e.target.value
@@ -601,11 +588,11 @@ function MoveTeam({
         onKeyDown={(e) => e.key === 'Escape' && onDone()}
         onBlur={onDone}
       >
-        <option value="">Куда перенести…</option>
-        {node.parentId && <option value="root">В корень</option>}
+        <option value="">{t.structure.whereTo}</option>
+        {node.parentId && <option value="root">{t.structure.toRoot}</option>}
         {parents.map((p) => (
           <option key={p.id} value={p.id}>
-            В «{p.name}»
+            {t.structure.into(p.name)}
           </option>
         ))}
       </select>
@@ -641,14 +628,11 @@ function Observation({
 
   return (
     <section className="stack">
-      <h2 className="section-title">Наблюдение</h2>
-      <p className="muted small">
-        Наблюдатель видит доски подразделения и всех отделов под ним, но ничего в них
-        не меняет. Закрытые доски не видны и наблюдателю — они открываются поимённо.
-      </p>
+      <h2 className="section-title">{t.structure.observation}</h2>
+      <p className="muted small">{t.structure.observationExplain}</p>
 
       {observers.length === 0 ? (
-        <p className="muted small">Наблюдателей нет.</p>
+        <p className="muted small">{t.structure.noObservers}</p>
       ) : (
         <ul className="member-list">
           {observers.map((o) => (
@@ -656,16 +640,16 @@ function Observation({
               <div className="member-who">
                 <span>{o.name}</span>
                 <span className="muted small">
-                  {o.teamName ? `Подразделение «${o.teamName}»` : 'Вся организация'}
+                  {o.teamName ? t.structure.teamOf(o.teamName) : t.structure.wholeOrg}
                 </span>
               </div>
               {(isOwner || (o.teamId !== null && canManage(o.teamId))) && (
                 <button
                   className="link link--remove"
-                  aria-label={`Отозвать наблюдение: ${o.name}`}
+                  aria-label={t.structure.revokeObservationOf(o.name)}
                   onClick={() => onAct(api.revokeObservation(o.id))}
                 >
-                  Отозвать наблюдение
+                  {t.structure.revokeObservation}
                 </button>
               )}
             </li>
@@ -685,24 +669,24 @@ function Observation({
             setTeamId('')
           }}
         >
-          <select value={userId} onChange={(e) => setUserId(e.target.value)} aria-label="Кому">
-            <option value="">Кому…</option>
+          <select value={userId} onChange={(e) => setUserId(e.target.value)} aria-label={t.structure.whom}>
+            <option value="">{t.structure.whomPick}</option>
             {people.map((p) => (
               <option key={p.userId} value={p.userId}>
                 {p.name}
               </option>
             ))}
           </select>
-          <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label="За чем">
-            <option value="">{isOwner ? 'За всей организацией' : 'За чем…'}</option>
-            {canObserve.map((t) => (
-              <option key={t.id} value={t.id}>
-                За «{t.name}»
+          <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label={t.structure.overWhat}>
+            <option value="">{isOwner ? t.structure.overWholeOrg : t.structure.overWhatPick}</option>
+            {canObserve.map((team) => (
+              <option key={team.id} value={team.id}>
+                {t.structure.over(team.name)}
               </option>
             ))}
           </select>
           <button type="submit" disabled={!userId || (!isOwner && !teamId)}>
-            Выдать
+            {t.structure.grant}
           </button>
         </form>
       )}
@@ -737,31 +721,26 @@ function Administration({
 
   return (
     <section className="stack">
-      <h2 className="section-title">Кто за что отвечает</h2>
-      <p className="muted small">
-        Администратор подразделения заводит отделы под собой, вписывает людей,
-        ставит наблюдателей и распоряжается досками своей области. Корневые
-        подразделения, наблюдение за всей организацией и раздачу полномочий
-        владелец организации оставляет за собой.
-      </p>
+      <h2 className="section-title">{t.structure.whoRuns}</h2>
+      <p className="muted small">{t.structure.whoRunsExplain}</p>
 
       {admins.length === 0 ? (
-        <p className="muted small">Никто не назначен.</p>
+        <p className="muted small">{t.structure.nobodyAppointed}</p>
       ) : (
         <ul className="member-list">
           {admins.map((a) => (
             <li key={a.id}>
               <div className="member-who">
                 <span>{a.name}</span>
-                <span className="muted small">Подразделение «{a.teamName}»</span>
+                <span className="muted small">{t.structure.teamOf(a.teamName)}</span>
               </div>
               {isOwner && (
                 <button
                   className="link link--remove"
-                  aria-label={`Снять полномочия: ${a.name}`}
+                  aria-label={t.structure.revokeAdminOf(a.name)}
                   onClick={() => onAct(api.revokeAdmin(a.id))}
                 >
-                  Снять полномочия
+                  {t.structure.revokeAdmin}
                 </button>
               )}
             </li>
@@ -780,16 +759,16 @@ function Administration({
             setTeamId('')
           }}
         >
-          <select value={userId} onChange={(e) => setUserId(e.target.value)} aria-label="Кому">
-            <option value="">Кому…</option>
+          <select value={userId} onChange={(e) => setUserId(e.target.value)} aria-label={t.structure.whom}>
+            <option value="">{t.structure.whomPick}</option>
             {people.map((p) => (
               <option key={p.userId} value={p.userId}>
                 {p.name}
               </option>
             ))}
           </select>
-          <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label="За что">
-            <option value="">За какое подразделение…</option>
+          <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label={t.structure.forWhat}>
+            <option value="">{t.structure.forWhichTeam}</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -797,7 +776,7 @@ function Administration({
             ))}
           </select>
           <button type="submit" disabled={!userId || !teamId}>
-            Назначить
+            {t.structure.appoint}
           </button>
         </form>
       )}

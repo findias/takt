@@ -4,6 +4,7 @@ import type { InviteInfo, Principal } from '../shared/api/index.ts'
 import { Button } from '../shared/ui/Button.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { t } from '../shared/i18n/index.ts'
 
 /**
  * Приём приглашения по ссылке.
@@ -37,7 +38,7 @@ export function InviteScreen({
     api
       .inviteInfo(token)
       .then(setInfo)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Ссылка не работает'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.auth.linkBroken))
   }, [token])
 
   // Полноэкранный отказ — только когда не открылось само приглашение.
@@ -48,18 +49,15 @@ export function InviteScreen({
     return (
       <div className="centered">
         <div className="panel">
-          <h1>Приглашение не открылось</h1>
+          <h1>{t.auth.inviteFailed}</h1>
           <ScreenError>{error}</ScreenError>
-          <p className="muted small">
-            Попросите владельца организации прислать новую ссылку — приглашения
-            действуют неделю и отзываются вручную.
-          </p>
-          <button onClick={onCancel}>На главную</button>
+          <p className="muted small">{t.auth.inviteAskNew}</p>
+          <button onClick={onCancel}>{t.auth.toHome}</button>
         </div>
       </div>
     )
 
-  if (!info) return <div className="centered">Открываем приглашение…</div>
+  if (!info) return <div className="centered">{t.auth.openingInvite}</div>
 
   // Приглашение адресное. Вошедшему под другой почтой заводить второй
   // аккаунт не на что — ему нужно выйти, поэтому вместо формы он видит
@@ -76,7 +74,7 @@ export function InviteScreen({
       // заново и уже незнакомцу — с полями имени и пароля, если аккаунта нет.
       .then(() => location.reload())
       .catch((e) => {
-        setError(e instanceof Error ? e.message : 'Не удалось выйти')
+        setError(e instanceof Error ? e.message : t.auth.signOutFailed)
         setBusy(false)
       })
   }
@@ -99,7 +97,7 @@ export function InviteScreen({
     } catch (e) {
       // Приглашение адресное, почта не редактируется — значит отказ
       // относится к попытке целиком, а не к какому-то из двух полей.
-      form.reportForm(e instanceof Error ? e.message : 'Не удалось принять приглашение')
+      form.reportForm(e instanceof Error ? e.message : t.auth.acceptFailed)
     } finally {
       setBusy(false)
     }
@@ -108,10 +106,10 @@ export function InviteScreen({
   return (
     <div className="centered">
       <form className="panel" ref={form.ref} noValidate onSubmit={accept}>
-        <h1>Вас зовут в «{info.orgName}»</h1>
+        <h1>{t.auth.invitedTo(info.orgName)}</h1>
         <p className="muted small">
-          Приглашение для <strong>{info.email}</strong>, роль —{' '}
-          {ROLE_NAMES[info.role].toLowerCase()}.
+          {t.auth.inviteFor} <strong>{info.email}</strong>
+          {t.auth.inviteRole(ROLE_NAMES[info.role].toLowerCase())}
         </p>
 
         {wrongAccount ? (
@@ -119,18 +117,18 @@ export function InviteScreen({
             {/* Адрес приглашения назван строкой выше, здесь только второй —
                 тот, под которым человек вошёл. */}
             <p>
-              Вы вошли как <strong>{signedInAs}</strong> — это другой адрес.
+              {t.auth.signedInAs} <strong>{signedInAs}</strong> {t.auth.otherAddress}
             </p>
             <button type="button" disabled={busy} onClick={signOutAndReopen}>
-              Выйти и открыть приглашение заново
+              {t.auth.signOutAndReopen}
             </button>
             <Button kind="quiet" type="button" onClick={onCancel}>
-              Не сейчас
+              {t.auth.notNow}
             </Button>
           </>
         ) : info.needsAccount ? (
           <>
-            <Field label="Как вас зовут" {...form.field('name')}>
+            <Field label={t.auth.yourName} {...form.field('name')}>
               {(bind) => (
                 <input
                   {...bind}
@@ -143,8 +141,8 @@ export function InviteScreen({
               )}
             </Field>
             <Field
-              label="Придумайте пароль"
-              hint={`Не короче ${MIN_PASSWORD} символов.`}
+              label={t.auth.newPassword}
+              hint={t.auth.passwordRule(MIN_PASSWORD)}
               {...form.field('password')}
             >
               {(bind) => (
@@ -162,9 +160,7 @@ export function InviteScreen({
             </Field>
           </>
         ) : (
-          <p className="muted small">
-            Аккаунт с этой почтой уже есть. Если вы не вошли, сначала войдите под ним.
-          </p>
+          <p className="muted small">{t.auth.accountExists}</p>
         )}
 
         <FormError>{form.formError}</FormError>
@@ -175,10 +171,10 @@ export function InviteScreen({
         {!wrongAccount && (
           <>
             <button type="submit" disabled={busy}>
-              {busy ? 'Секунду…' : 'Присоединиться'}
+              {busy ? t.auth.wait : t.auth.join}
             </button>
             <Button kind="quiet" type="button" onClick={onCancel}>
-              Не сейчас
+              {t.auth.notNow}
             </Button>
           </>
         )}

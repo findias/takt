@@ -3,6 +3,7 @@ import { api } from '../../shared/api/index.ts'
 import type { Member, Team } from '../../shared/api/index.ts'
 import { BoardAccess } from './BoardAccess.tsx'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
+import { t } from '../../shared/i18n/index.ts'
 
 /**
  * Кому видна доска — на самой доске, а не только в её списке.
@@ -46,8 +47,8 @@ export function AccessPanel({
     <Panel
       mode={mode}
       onMode={setMode}
-      title="Кому видна доска"
-      label="Доступ к доске"
+      title={t.boards.whoSees}
+      label={t.boards.boardAccess}
       onClose={onClose}
     >
       <BoardAccess

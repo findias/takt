@@ -21,15 +21,28 @@ import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
+import { t, withSections } from '../shared/i18n/index.ts'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
 // заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
 // это вместе с доской значит платить за них при каждом открытии доски.
 // Правило то же, что и везде в производительности: самая быстрая
 // работа — та, которой нет.
-const Team = lazy(() => import('../widgets/Team.tsx').then((m) => ({ default: m.Team })))
-const Structure = lazy(() =>
-  import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
+// Тексты этих экранов едут вместе с ними (`withSections`): в первую
+// загрузку они не попадают по той же причине, что и код.
+const Team = lazy(
+  withSections(
+    () => import('../widgets/Team.tsx').then((m) => ({ default: m.Team })),
+    'team',
+    'hooks',
+    'labelsAdmin',
+  ),
+)
+const Structure = lazy(
+  withSections(
+    () => import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
+    'structure',
+  ),
 )
 // Приглашение открывают один раз в жизни, по ссылке: остальным его
 // экран в куске доски ни к чему.
@@ -37,11 +50,8 @@ const InviteScreen = lazy(() =>
   import('../widgets/Invite.tsx').then((m) => ({ default: m.InviteScreen })),
 )
 
-const TABS = [
-  ['boards', 'Доски'],
-  ['team', 'Команда'],
-  ['structure', 'Структура'],
-] as const
+const TABS = ['boards', 'team', 'structure'] as const
+const tabTitle = (name: (typeof TABS)[number]) => t.app[name]
 
 /** Сообщения общие на всё приложение: их очередь и время жизни —
  *  не забота экрана, который их вызвал. */
@@ -87,7 +97,7 @@ function Offline() {
     <p className="offline" role="status">
       {connected
         ? ''
-        : 'Связи с сервером нет. Сделанное не потеряется: как только связь вернётся, повторите действие.'}
+        : t.app.offline}
     </p>
   )
 }
@@ -167,8 +177,8 @@ function Screens() {
     route.name === 'board'
       ? null
       : route.name === 'invite'
-        ? 'Приглашение'
-        : (TABS.find(([name]) => name === route.name)?.[1] ?? null),
+        ? t.app.invitation
+        : (TABS.find((name) => name === route.name) ? tabTitle(route.name as (typeof TABS)[number]) : null),
   )
 
   // Принятое приглашение заменяет адрес, а не добавляет в историю:
@@ -177,7 +187,7 @@ function Screens() {
 
   if (route.name === 'invite') {
     return (
-      <Suspense fallback={<div className="centered">Открываем приглашение…</div>}>
+      <Suspense fallback={<div className="centered">{t.auth.openingInvite}</div>}>
         <InviteScreen
           token={route.token}
           // Кто сейчас в браузере: приглашение адресное, и человеку, вошедшему
@@ -194,12 +204,12 @@ function Screens() {
     )
   }
 
-  if (checking) return <div className="centered">Проверяем сессию…</div>
+  if (checking) return <div className="centered">{t.app.checkingSession}</div>
   if (!principal)
     return (
       <Auth
         notice={
-          ended ? 'Сессия истекла — войдите снова. Вы вернётесь на ту же страницу.' : null
+          ended ? t.auth.sessionEnded : null
         }
         onSignedIn={(p) => {
           setEnded(false)
@@ -244,15 +254,15 @@ function Screens() {
           }}
         />
 
-        <nav className="tabs" aria-label="Разделы">
-          {TABS.map(([name, title]) => (
+        <nav className="tabs" aria-label={t.app.sections}>
+          {TABS.map((name) => (
             <button
               key={name}
               className={route.name === name ? 'tab tab--active' : 'tab'}
               aria-current={route.name === name ? 'page' : undefined}
               onClick={() => navigate(name === 'boards' ? '/' : `/${name}`)}
             >
-              {title}
+              {tabTitle(name)}
             </button>
           ))}
         </nav>
@@ -324,7 +334,7 @@ function OrgHeader({
     api
       .switchOrg(orgId)
       .then(onSwitched)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось переключиться'))
+      .catch((e) => setError(e instanceof Error ? e.message : t.app.switchFailed))
   }
 
   return (
@@ -335,7 +345,7 @@ function OrgHeader({
             className="org-select"
             value={principal.orgId}
             onChange={(e) => switchTo(e.target.value)}
-            aria-label="Организация"
+            aria-label={t.app.organisation}
           >
             {orgs.map((o) => (
               <option key={o.orgId} value={o.orgId}>
@@ -358,7 +368,7 @@ function OrgHeader({
             означало бы «незнакомцу нельзя, а любому участнику можно». */}
         {signup && (
           <button className="link" onClick={() => setCreating((v) => !v)}>
-            {creating ? 'Отмена' : 'Новая организация'}
+            {creating ? t.common.cancel : t.app.newOrg}
           </button>
         )}
         {/* В песочнице пароля не знает никто, в том числе посетитель:
@@ -371,28 +381,25 @@ function OrgHeader({
               setError(null)
             }}
           >
-            {changing ? 'Отмена' : 'Пароль'}
+            {changing ? t.common.cancel : t.app.password}
           </button>
         )}
         {/* Из песочницы выходят насовсем: пароля нет, и вернуться в неё
             нечем. Необратимое спрашивает. */}
         <button className="link" onClick={sandbox ? () => setLeaving(true) : onSignOut}>
-          Выйти
+          {t.app.signOut}
         </button>
         <ConfirmDialog
           open={leaving}
-          title="Выйти из демо?"
-          confirmLabel="Выйти из демо"
+          title={t.app.leaveDemoTitle}
+          confirmLabel={t.app.leaveDemo}
           onCancel={() => setLeaving(false)}
           onConfirm={() => {
             setLeaving(false)
             onSignOut()
           }}
         >
-          <p>
-            Вернуться в эту песочницу будет нельзя: у неё нет пароля. Новую можно завести на
-            экране входа.
-          </p>
+          <p>{t.app.leaveDemoBody}</p>
         </ConfirmDialog>
         <Appearance />
       </div>
@@ -413,7 +420,7 @@ function OrgHeader({
                 load()
                 onSwitched(p)
               })
-              .catch((e) => setError(e instanceof Error ? e.message : 'Не удалось завести'))
+              .catch((e) => setError(e instanceof Error ? e.message : t.app.createFailed))
           }}
         >
           {/* Одно поле в ряду с кнопкой: подпись здесь заняла бы строку
@@ -423,12 +430,12 @@ function OrgHeader({
           <input
             autoFocus
             value={name}
-            aria-label="Название организации"
-            placeholder="Название организации"
+            aria-label={t.app.orgName}
+            placeholder={t.app.orgName}
             onChange={(e) => setName(e.target.value)}
           />
-          <button type="submit" aria-label="Завести организацию" disabled={!name.trim()}>
-            Завести
+          <button type="submit" aria-label={t.app.createOrg} disabled={!name.trim()}>
+            {t.app.create}
           </button>
         </form>
       )}
@@ -476,11 +483,11 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
           .then(() => {
             setCurrent('')
             setNext('')
-            notify({ text: 'Пароль сменён, остальные устройства вышли', tone: 'info' })
+            notify({ text: t.app.passwordChanged, tone: 'info' })
             onDone()
           })
           .catch((e) => {
-            const text = e instanceof Error ? e.message : 'Не удалось сменить'
+            const text = e instanceof Error ? e.message : t.app.changeFailed
             // Оба отказа сервера здесь адресные, и адрес у них разный:
             // «текущий неверен» — про первое поле, «совпадает
             // с текущим» — про второе. Общая плашка внизу заставляла бы
@@ -493,7 +500,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
           .finally(() => setBusy(false))
       }}
     >
-      <Field label="Текущий пароль" {...form.field('current')}>
+      <Field label={t.app.currentPassword} {...form.field('current')}>
         {(bind) => (
           <input
             {...bind}
@@ -510,8 +517,8 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       {/* Правило названо до ввода, а не после: придумывать пароль
           и узнавать требование по отказу — значит придумывать дважды. */}
       <Field
-        label="Новый пароль"
-        hint={`Не короче ${MIN_PASSWORD} символов.`}
+        label={t.app.newPassword}
+        hint={t.auth.passwordRule(MIN_PASSWORD)}
         {...form.field('next')}
       >
         {(bind) => (
@@ -530,8 +537,8 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       <div className="row">
         {/* Кнопка не гаснет на незаполненной форме: погашенная кнопка
             не объясняет, чего не хватает, а отказ у поля — объясняет. */}
-        <button type="submit" aria-label="Сменить пароль" disabled={busy}>
-          Сменить
+        <button type="submit" aria-label={t.app.changePassword} disabled={busy}>
+          {t.app.change}
         </button>
         {/* Отдельным действием, потому что и повод отдельный: сессия
             утекает и без пароля — чужой компьютер, забытая вкладка. */}
@@ -545,16 +552,16 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
             api
               .signOutElsewhere()
               .then(() => {
-                notify({ text: 'Остальные устройства вышли', tone: 'info' })
+                notify({ text: t.app.signedOutElsewhere, tone: 'info' })
                 onDone()
               })
               .catch((e) =>
-                form.reportForm(e instanceof Error ? e.message : 'Не удалось'),
+                form.reportForm(e instanceof Error ? e.message : t.common.notDone),
               )
               .finally(() => setBusy(false))
           }}
         >
-          Выйти на всех устройствах
+          {t.app.signOutEverywhere}
         </button>
       </div>
       <FormError>{form.formError}</FormError>
