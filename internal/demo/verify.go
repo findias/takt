@@ -183,6 +183,12 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			`select count(*) >= 3 from cards where org_id = $1 and external_source is not null`,
 		},
 		{
+			// Метка человека, которого перенос не нашёл, — вид метки,
+			// которого руками не завести; без неё его не увидеть.
+			"метка человека из переноса",
+			`select count(*) >= 1 from labels where org_id = $1 and kind = 'person' and archived_at is null`,
+		},
+		{
 			// Без прошлого метрики потока считать не из чего: карточка,
 			// законченная секунду назад, даёт время цикла в ноль дней.
 			// Порог мягче обещанных трёх недель нарочно: проверка ловит
@@ -229,7 +235,7 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 // TopUp доливает в уже наполненную базу то, что наполнение научилось
 // заводить позже, — чтобы новое обещание сверки не требовало сносить
 // базу стенда и демо. Сейчас это перенесённые из таблицы карточки
-// (этап 23). Повтор безопасен: перенос пропускает уже переехавшее
+// и метка человека, которого перенос не нашёл (этап 23). Повтор безопасен: перенос пропускает уже переехавшее
 // по внешнему ключу.
 func TopUp(ctx context.Context, db *store.Store) error {
 	var orgID, ownerID string

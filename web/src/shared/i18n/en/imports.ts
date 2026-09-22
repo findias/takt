@@ -92,10 +92,12 @@ export const imports: typeof ru = {
   kinds: { queue: 'queue', in_progress: 'work', done: 'done' },
   labels: 'New labels of this board',
   archivedLabels: 'Labels in the archive — not attached; restore them on the Team screen',
-  missing: 'Emails not found — the cards are imported without these assignees',
+  missing: 'Emails not found — instead of these assignees the cards will carry their labels',
   missingPerson: (email: string, n: number) => `${email} — ${cards(n)}`,
   missingHint:
-    'Import does not create people — it only finds them by email. Add them on the Team screen and import again: cards will not double, assignees will be added.',
+    'Import does not create people — it only finds them by email. Their cards get a label with the person’s name so the work is not lost. Add the people on the Team screen and import again: cards will not double, assignees will be added and the labels removed.',
+  personLabel: (label: string) => ` · label “${label}”`,
+  unlabeled: (n: number) => `Person labels removed now that the people were found: ${cards(n)}.`,
   assignedLater: (n: number) =>
     `Assignees added to already imported cards: ${n} — these people were added after the previous import.`,
   skipped: (n: number) =>

@@ -52,9 +52,12 @@ type ImportReport struct {
 	Skipped []ImportSkip `json:"skipped"`
 	// AssignedLater — сколько исполнителей повтор дописал в уже
 	// переехавшие карточки: людей завели после первого переноса.
-	AssignedLater int            `json:"assignedLater"`
-	NewColumns    []ImportColumn `json:"newColumns"`
-	NewLabels     []string       `json:"newLabels"`
+	AssignedLater int `json:"assignedLater"`
+	// Unlabeled — со скольких карточек сняты метки людей: человек
+	// нашёлся и стал исполнителем, замена больше не нужна.
+	Unlabeled  int            `json:"unlabeled"`
+	NewColumns []ImportColumn `json:"newColumns"`
+	NewLabels  []string       `json:"newLabels"`
 	// ColumnValues — значения колонки файла и куда каждое ляжет.
 	ColumnValues []ImportValue `json:"columnValues"`
 	// BoardColumns — колонки существующей доски, из которых выбирают,
@@ -108,6 +111,9 @@ type MissingPerson struct {
 	Email string `json:"email"`
 	Name  string `json:"name,omitempty"`
 	Cards int    `json:"cards"`
+	// Label — метка человека, которую получат его карточки (0062):
+	// исполнитель не найден, но с карточек не пропадает.
+	Label string `json:"label,omitempty"`
 }
 
 // Import переносит разобранный файл на доску.
@@ -119,7 +125,8 @@ type MissingPerson struct {
 // карточки, перенесённой раньше на чужую доску.
 //
 // Человек сопоставляется по почте, и ненайденный не выдумывается:
-// карточка едет без исполнителя, а почта — в отчёт. Завести человека
+// карточка едет без исполнителя, а почта — в отчёт. Чтобы его работа
+// не потерялась, карточки получают его метку (personLabels). Завести человека
 // молча значило бы подсунуть организации сотрудника, которого в ней
 // нет. Назначение через импорт не шлёт уведомлений: двести известий
 // «вас назначили» о задачах, которые человек вёл и вчера, — шум.
@@ -388,6 +395,14 @@ func (s *Service) Import(
 	var todo []importRow
 	var laterCards, laterPeople []string
 	nameless := map[string]int{}
+	// Пары «карточка — человек источника»: ненайденные получат метку,
+	// найденные — лишатся её, если она висела с прошлого прогона.
+	var found, absent cardPeople
+	// Имя по ключу человека — для названия его метки.
+	names := maps.Clone(plan.Names)
+	if names == nil {
+		names = map[string]string{}
+	}
 	for i, c := range plan.Cards {
 		if sk, ok := already[c.ExternalID]; ok {
 			sk.Row, sk.Title = c.Row, c.Title
@@ -398,15 +413,20 @@ func (s *Service) Import(
 			// порядок «сперва люди, потом перенос» был бы единственным
 			// рабочим, и узнавали бы об этом, когда поздно.
 			if alreadyHere[c.ExternalID] {
+				id := alreadyID[c.ExternalID]
 				for _, e := range c.Assignees {
 					if uid, ok := people[e]; ok {
-						laterCards, laterPeople = append(laterCards, alreadyID[c.ExternalID]), append(laterPeople, uid)
+						laterCards, laterPeople = append(laterCards, id), append(laterPeople, uid)
+						found.add(id, e)
 					} else {
 						missing[e]++
+						absent.add(id, e)
 					}
 				}
-				for _, name := range c.Unmatched {
-					nameless[name]++
+				for _, u := range c.Unmatched {
+					nameless[u.Name]++
+					absent.add(id, sourceKey(u.Key))
+					names[sourceKey(u.Key)] = u.Name
 				}
 			}
 			continue
@@ -436,6 +456,7 @@ func (s *Service) Import(
 				links, assignees = append(links, id), append(assignees, uid)
 			} else {
 				missing[e]++
+				absent.add(id, e)
 			}
 		}
 		for _, name := range r.card.Labels {
@@ -443,8 +464,10 @@ func (s *Service) Import(
 				labelCards, labelIDs = append(labelCards, id), append(labelIDs, lid)
 			}
 		}
-		for _, name := range r.card.Unmatched {
-			nameless[name]++
+		for _, u := range r.card.Unmatched {
+			nameless[u.Name]++
+			absent.add(id, sourceKey(u.Key))
+			names[sourceKey(u.Key)] = u.Name
 		}
 	}
 	// Исполнители и метки — тоже одним запросом на вид. Назначение
@@ -479,11 +502,15 @@ func (s *Service) Import(
 	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, people, &rep); err != nil {
 		return rep, err
 	}
+	labelOf, err := personLabels(ctx, tx, orgID, actorID, rep.BoardID, names, found, absent, &rep)
+	if err != nil {
+		return rep, err
+	}
 	for e, n := range missing {
-		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Email: e, Cards: n})
+		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Email: e, Cards: n, Label: labelOf[e]})
 	}
 	for name, n := range nameless {
-		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Name: name, Cards: n})
+		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Name: name, Cards: n, Label: nameLabels(labelOf, names, name)})
 	}
 	sortMissing(rep.MissingPeople)
 
@@ -837,7 +864,7 @@ func importLabels(ctx context.Context, tx pgx.Tx, orgID, boardID string, cards [
 	}
 	rows, err := tx.Query(ctx, `
 		select lower(name), id, archived_at is not null from labels
-		 where lower(name) = any($1)
+		 where lower(name) = any($1) and kind = 'regular'
 		   and label_path_prefix(label_path(team_id, board_id), label_path(null, $2))
 		 order by archived_at nulls first`, lower, boardID)
 	if err != nil {
@@ -1065,4 +1092,116 @@ func importRelations(
 		}
 	}
 	return nil
+}
+
+// cardPeople — пары «карточка — человек источника» (почта или nameKey).
+type cardPeople struct{ cards, keys []string }
+
+func (p *cardPeople) add(card, key string) {
+	p.cards, p.keys = append(p.cards, card), append(p.keys, key)
+}
+
+// sourceKey — ключ человека, у которого источник не дал почты: его
+// идентификатор в источнике. С приставкой, чтобы не совпасть с почтой.
+func sourceKey(id string) string { return "source:" + id }
+
+// nameLabels — метки людей с этим именем, через запятую: в отчёте тёзки
+// идут одной строкой, а меток у них по одной на каждого.
+func nameLabels(labelOf, names map[string]string, name string) string {
+	var out []string
+	for _, key := range slices.Sorted(maps.Keys(names)) {
+		if names[key] == name && strings.HasPrefix(key, "source:") && labelOf[key] != "" {
+			out = append(out, labelOf[key])
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
+// personLabels вешает метку человека на карточки ненайденных исполнителей
+// и снимает её с тех, где человек нашёлся (ROADMAP 23.6, миграция 0062).
+//
+// Метка — доски, вида person, по одной на человека: повторный перенос
+// находит её по source_person, а не по названию, — название могли
+// поправить руками. Опустевшая метка человека уходит в архив: её
+// единственный смысл — пометить карточки, и без них она только шумит
+// в отборе. Возвращает название метки по ключу человека — для отчёта.
+func personLabels(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
+	names map[string]string, found, absent cardPeople, rep *ImportReport) (map[string]string, error) {
+	out := map[string]string{}
+
+	if len(found.cards) > 0 {
+		tag, err := tx.Exec(ctx, `
+			delete from card_labels cl
+			 using labels l, unnest($2::uuid[], $3::text[]) as t(c, k)
+			 where l.id = cl.label_id and l.board_id = $1 and l.kind = 'person'
+			   and cl.card_id = t.c and l.source_person = t.k`, boardID, found.cards, found.keys)
+		if err != nil {
+			return nil, err
+		}
+		rep.Unlabeled = int(tag.RowsAffected())
+	}
+
+	if len(absent.cards) > 0 {
+		// Какие метки людей уже есть на доске и какие названия заняты.
+		ids := map[string]string{}
+		taken := map[string]bool{}
+		rows, err := tx.Query(ctx, `
+			select id, source_person, name from labels
+			 where board_id = $1 and kind = 'person' and archived_at is null`, boardID)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id, key, name string
+			if err := rows.Scan(&id, &key, &name); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			ids[key], out[key], taken[strings.ToLower(name)] = id, name, true
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+		var labelIDs []string
+		for _, key := range absent.keys {
+			if _, ok := ids[key]; !ok {
+				name := key
+				if n := names[key]; n != "" {
+					name = n
+				}
+				// Два разных человека с одним именем — две метки: слить
+				// их значило бы приписать работу одного другому.
+				base := name
+				for n := 2; taken[strings.ToLower(name)]; n++ {
+					name = fmt.Sprintf("%s (%d)", base, n)
+				}
+				taken[strings.ToLower(name)] = true
+				var id string
+				if err := tx.QueryRow(ctx, `
+					insert into labels (org_id, name, tone, board_id, kind, source_person)
+					values ($1, $2, 'slate', $3, 'person', $4) returning id`,
+					orgID, name, boardID, key).Scan(&id); err != nil {
+					return nil, err
+				}
+				ids[key], out[key] = id, name
+			}
+			labelIDs = append(labelIDs, ids[key])
+		}
+		if _, err := tx.Exec(ctx, `
+			insert into card_labels (org_id, card_id, label_id, added_by)
+			select $1, c, l, $4 from unnest($2::uuid[], $3::uuid[]) as t(c, l)
+			on conflict (card_id, label_id) do nothing`, orgID, absent.cards, labelIDs, actorID); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+		update labels l set archived_at = now()
+		 where l.board_id = $1 and l.kind = 'person' and l.archived_at is null
+		   and not exists (select 1 from card_labels cl where cl.label_id = l.id)`, boardID); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

@@ -33,7 +33,7 @@ import {
   progressRatio,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import { labelOrigin } from '../../entities/label/model.ts'
+import { labelOrigin, chipClass } from '../../entities/label/model.ts'
 import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
 import { locale, t } from '../../shared/i18n/index.ts'
@@ -1166,7 +1166,7 @@ function Labels({
           и чип с коротким словом раздулся бы вдвое. */}
       {hung.map((label) => (
         <div className="related" key={label.id}>
-          <span className={`chip chip--${label.tone}`}>{label.name}</span>
+          <span className={chipClass(label)}>{label.name}</span>
           <span className="muted small related-grow">
             {labelOrigin(label)}
             {label.archived && t.panel.labelArchived}

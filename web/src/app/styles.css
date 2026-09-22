@@ -2810,6 +2810,11 @@ textarea.description {
 }
 /* Цвет берётся из тона метки — те же восемь пар, что у .chip--*,
    но здесь нужна «чернильная» половина пары. */
+.label-dot--person {
+  background: transparent;
+  color: var(--ink-3);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
 .label-dot--slate {
   --hue: var(--hue-slate);
   --chip-fg-c-own: 0.018;
@@ -3556,6 +3561,15 @@ textarea.description {
 }
 .chip--brown {
   --hue: var(--hue-brown);
+}
+/* Метка человека из переноса (ROADMAP 23.6): контур без заливки.
+   Она техническая — замещает исполнителя, которого не нашли, — и не
+   должна спорить с настоящими метками. Контур — `--rule-strong`,
+   а не волосяной `--rule`: граница — единственное, что её рисует. */
+.chip--person {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px dashed var(--rule-strong);
 }
 
 /* В тёмной теме метки не осветляются, а затемняются: светлая плашка

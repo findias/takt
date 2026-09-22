@@ -97,9 +97,16 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 			switch {
 			case !ok:
 			case person.Email != nil && strings.TrimSpace(*person.Email) != "":
-				card.Assignees = append(card.Assignees, strings.ToLower(strings.TrimSpace(*person.Email)))
+				email := strings.ToLower(strings.TrimSpace(*person.Email))
+				card.Assignees = append(card.Assignees, email)
+				if person.Name != "" {
+					if plan.Names == nil {
+						plan.Names = map[string]string{}
+					}
+					plan.Names[email] = person.Name
+				}
 			default:
-				card.Unmatched = append(card.Unmatched, person.Name)
+				card.Unmatched = append(card.Unmatched, importer.Unmatched{Key: person.ExternalID, Name: person.Name})
 			}
 		}
 		for _, id := range c.Labels {

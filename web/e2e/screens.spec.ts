@@ -103,6 +103,14 @@ test('снимки экранов', async ({ page, browser }) => {
   const boardUrl = page.url()
   await page.screenshot({ path: `${SHOTS}/03-доска.png` })
 
+  // Метка человека, которого перенос не нашёл (ROADMAP 23.6): контур
+  // рядом с настоящими метками — не должна спорить с ними.
+  await page.getByRole('group', { name: /Перенести справочник поставщиков/ }).click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/36-метка-человека.png` })
+  await page.goto(boardUrl)
+
   // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
   // сказать об этом, а не притворяться пустыми.
   await page.getByRole('button', { name: /^Отбор/ }).click()

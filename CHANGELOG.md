@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Ten migrations, all safe for the running version.** `0052` gives
+**Eleven migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -21,7 +21,9 @@ a person has switched off, `0059` adds the two time-driven kinds
 (a block ending within a day, a card past the board's promise), `0060`
 gives a card an optional key in the system it was imported from, so
 that importing the same file twice creates no duplicates, `0061` marks
-an email a person set for themselves (see the next paragraph). They
+an email a person set for themselves (see the next paragraph), `0062`
+gives labels a kind, so that an import can mark the cards of a person it
+did not find. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -121,6 +123,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   come. Dates come across, moves between columns do not. Imported cards
   are marked in their history and in «Поток», which can count without
   them.
+- **Nobody disappears from imported cards.** An assignee the import did
+  not find among the organisation's people leaves a label with their
+  name on each of their cards. The label is drawn as an outline, is not
+  offered when labelling by hand, and the filter finds it. Once the
+  person is added and the board imported again, they become the
+  assignee and the label comes off.
 - **Import from YouGile.** The same screen takes a YouGile board over
   its API: sign in once to get the company's API key, pick the board,
   see what will happen. Tasks, columns, subtasks as parts, assignees by

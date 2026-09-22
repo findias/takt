@@ -77,7 +77,17 @@ type Label struct {
 	// Убрана в архив: больше не предлагается, но остаётся там,
 	// где уже висит.
 	Archived bool `json:"archived"`
+	// regular или person — метка исполнителя из источника переноса,
+	// которого не нашли среди участников (0062). Её не предлагают
+	// в выборе метки и рисуют контуром: она техническая.
+	Kind string `json:"kind"`
 }
+
+// Виды меток (0062).
+const (
+	LabelRegular = "regular"
+	LabelPerson  = "person"
+)
 
 // BoardLabel — метка в снимке доски.
 type BoardLabel struct {
@@ -129,7 +139,8 @@ const labelColumns = `
 	     else 'org' end,
 	coalesce(l.board_id, l.team_id),
 	coalesce(lb.name, lt.name),
-	l.archived_at is not null`
+	l.archived_at is not null,
+	l.kind`
 
 const labelJoins = `
 	  from labels l
@@ -146,7 +157,7 @@ type rowScanner interface{ Scan(dest ...any) error }
 
 func scanLabel(row rowScanner, extra ...any) (Label, error) {
 	var l Label
-	dest := append([]any{&l.ID, &l.Name, &l.Tone, &l.Scope, &l.ScopeID, &l.ScopeName, &l.Archived}, extra...)
+	dest := append([]any{&l.ID, &l.Name, &l.Tone, &l.Scope, &l.ScopeID, &l.ScopeName, &l.Archived, &l.Kind}, extra...)
 	err := row.Scan(dest...)
 	return l, err
 }
@@ -339,6 +350,7 @@ func labelNameFree(ctx context.Context, tx pgx.Tx, name, teamID, boardID, except
 	taken, err := scanLabel(tx.QueryRow(ctx, `
 		select `+labelColumns+labelJoins+`
 		 where l.archived_at is null
+		   and l.kind = 'regular'
 		   and lower(l.name) = lower($1)
 		   and l.id::text <> $4
 		   and (label_path_prefix(label_path(l.team_id, l.board_id),
@@ -627,7 +639,8 @@ func scanBoardLabel(row rowScanner) (BoardLabel, error) {
 	var l BoardLabel
 	var err error
 	l.Label, err = scanLabel(row, &l.Applies)
-	l.Offered = l.Applies && !l.Archived
+	// Метку человека вешает только перенос: руками вешают настоящие.
+	l.Offered = l.Applies && !l.Archived && l.Kind == LabelRegular
 	return l, err
 }
 

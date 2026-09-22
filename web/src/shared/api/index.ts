@@ -431,6 +431,8 @@ export type ImportReport = {
   skipped: { row: number; title: string; number?: string; board?: string }[]
   /** Исполнители, дописанные повтором в уже перенесённые карточки. */
   assignedLater: number
+  /** Со скольких карточек сняты метки людей: человек нашёлся. */
+  unlabeled?: number
   newColumns: { name: string; kind: ColumnKind }[]
   newLabels: string[]
   /** Значения колонки файла и куда каждое ляжет. */
@@ -441,7 +443,8 @@ export type ImportReport = {
   /** Что источник знает, а мы не переносим, — словами. */
   lost: string[]
   /** Почта, которой нет в организации, или имя человека без почты. */
-  missingPeople: { email: string; name?: string; cards: number }[]
+  /** `label` — метка человека, которую получат его карточки. */
+  missingPeople: { email: string; name?: string; cards: number; label?: string }[]
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
   dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' | 'excel' }[]
 }
@@ -716,6 +719,10 @@ export type Label = {
   scopeName?: string
   /** Убрана в архив: не предлагается, но остаётся там, где висит. */
   archived: boolean
+  /** `person` — метка исполнителя из переноса, которого не нашли среди
+   *  участников. Техническая: рисуется контуром, руками не вешается.
+   *  `?` — старый сервер поля не знает. */
+  kind?: 'regular' | 'person'
 }
 export type LabelScope = 'org' | 'team' | 'board'
 

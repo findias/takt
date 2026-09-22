@@ -281,10 +281,15 @@ What the preview names, so that nothing is lost silently:
 - **Emails not found.** Assignees are matched by email among the
   people of the organisation, and nobody is created on the way: the
   card comes without that assignee, and the email is listed with the
-  number of cards. People are added by an administrator on the **Team**
-  screen, not by the import: add them, import again, and the second run
-  adds them as assignees to the cards that already came — without
-  bringing those cards twice.
+  number of cards. So that the work is not lost, each such person's
+  cards get a label with their name (their email, if the spreadsheet
+  gives no name). The label is technical: it is drawn as an outline,
+  it is not offered when labelling a card by hand, and the board filter
+  finds it. Two namesakes get two labels. People are added by an
+  administrator on the **Team** screen, not by the import: add them,
+  import again, and the second run adds them as assignees to the cards
+  that already came — without bringing those cards twice — and removes
+  their labels.
 - **Row problems.** A row without a title is not imported; a value
   that cannot be read (an estimate that is not a number, an unknown
   priority, a date that is not a date) is dropped, and the rest of the

@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { groupByOrigin, labelOrigin, labelTitle, pickerItems } from './model.ts'
+import { chipClass, dotClass, groupByOrigin, labelOrigin, labelTitle, pickerItems } from './model.ts'
 import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
 
 function label(name: string, scope: Label['scope'], scopeId?: string, scopeName?: string): Label {
@@ -101,4 +101,13 @@ test('висящую чужую можно снять, а не повесить 
 
 test('без прав заводить — только существующие', () => {
   assert.deepEqual(kinds(pickerItems('Новая', [onBoard('Срочно')], [], [])), [])
+})
+
+// Метка человека из переноса рисуется контуром, а не своим тоном:
+// тон у неё есть (колонка обязательная), но он ничего не значит.
+test('метка человека рисуется контуром, обычная — своим тоном', () => {
+  assert.equal(chipClass({ tone: 'green' }), 'chip chip--green')
+  assert.equal(chipClass({ tone: 'slate', kind: 'person' }), 'chip chip--person')
+  assert.equal(dotClass({ tone: 'slate', kind: 'person' }), 'label-dot label-dot--person')
+  assert.equal(dotClass({ tone: 'rose', kind: 'regular' }), 'label-dot label-dot--rose')
 })

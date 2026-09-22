@@ -132,7 +132,9 @@ insensitively, and nobody is created on the way. `email` is `null`
 when the source did not give it — Trello gives members' e-mails only to
 a workspace administrator, so a package collected by anyone else has
 no e-mails, and `takt-fetch` says so before it starts. A person without
-a match is not assigned; the report lists them by e-mail or by name.
+a match is not assigned; the report lists them by e-mail or by name, and
+their cards get a technical label with their name — one per person, told
+apart by `externalId`, so two namesakes get two labels.
 
 **Labels** become labels of the board by name; a label with the same
 name that already applies to the board is reused.

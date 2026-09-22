@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
-import { groupByOrigin, labelTitle } from '../../entities/label/model.ts'
+import { groupByOrigin, labelTitle, chipClass } from '../../entities/label/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
 import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
@@ -189,7 +189,7 @@ export function FilterBar({
           return (
             <button
               key={id}
-              className={`chip chip--${label?.tone ?? 'slate'} chip--removable`}
+              className={`${label ? chipClass(label) : 'chip chip--slate'} chip--removable`}
               title={label ? labelTitle(label) : undefined}
               aria-label={t.filters.removeLabel(label?.name ?? id)}
               onClick={() =>

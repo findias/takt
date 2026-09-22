@@ -71,7 +71,7 @@ func TestWhatIsWrittenIsRead(t *testing.T) {
 		t.Fatalf("план: %+v", plan)
 	}
 	first := plan.Cards[0]
-	if strings.Join(first.Assignees, ",") != "anna@example.test" || strings.Join(first.Unmatched, ",") != "Иван Петров" {
+	if strings.Join(first.Assignees, ",") != "anna@example.test" || len(first.Unmatched) != 1 || first.Unmatched[0].Name != "Иван Петров" || first.Unmatched[0].Key == "" {
 		t.Fatalf("люди: почта найдена у одного, имя без почты — у другого: %+v", first)
 	}
 	if first.Priority != "high" || first.Due == nil || len(first.Links) != 1 || first.Comments[0].AuthorName != "Иван Петров" {

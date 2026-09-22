@@ -54,6 +54,7 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
             {report.missingPeople.map((p) => (
               <li key={p.email || p.name}>
                 {p.email ? s.missingPerson(p.email, p.cards) : s.noEmail(p.name ?? '', p.cards)}
+                {p.label && p.label !== p.email && s.personLabel(p.label)}
               </li>
             ))}
           </ul>
@@ -61,6 +62,7 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
       )}
 
       {report.assignedLater > 0 && <p>{s.assignedLater(report.assignedLater)}</p>}
+      {(report.unlabeled ?? 0) > 0 && <p>{s.unlabeled(report.unlabeled ?? 0)}</p>}
       {report.skipped.length > 0 && (
         <p>
           {s.skipped(report.skipped.length)}

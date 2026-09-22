@@ -43,6 +43,12 @@ test('английские снимки для документации', async 
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/03-board.png` })
 
+  await page.getByRole('group', { name: /Move the supplier directory/ }).click()
+  await page.getByRole('tab', { name: 'Work' }).click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/36-person-label.png` })
+  await page.goto(boardUrl)
+
   await page.getByRole('group', { name: /Ship the warehouse release/ }).click()
   await page.getByRole('tab', { name: 'Work' }).click()
   await page.waitForTimeout(400)

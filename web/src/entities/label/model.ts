@@ -6,6 +6,18 @@ import type { BoardLabel, Label, LabelPlace } from '../../shared/api/index.ts'
 import { t } from '../../shared/i18n/index.ts'
 
 /**
+ * Класс чипа и точки метки. Метка человека из переноса — техническая
+ * и рисуется контуром без заливки: она замещает исполнителя, которого
+ * не нашли, и не должна спорить с настоящими метками за внимание.
+ */
+export function chipClass(label: Pick<Label, 'tone' | 'kind'>): string {
+  return label.kind === 'person' ? 'chip chip--person' : `chip chip--${label.tone}`
+}
+export function dotClass(label: Pick<Label, 'tone' | 'kind'>): string {
+  return label.kind === 'person' ? 'label-dot label-dot--person' : `label-dot label-dot--${label.tone}`
+}
+
+/**
  * Откуда метка — словами, для подписи рядом с чипом.
  *
  * Подразделение и доска названы по имени, и своя доска тоже: подпись

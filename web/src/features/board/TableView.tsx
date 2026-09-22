@@ -15,7 +15,7 @@ import { SORT_DIRECTION, SORT_NAMES, comparator } from './tableSort.ts'
 import type { Sort } from './tableSort.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, Column, EstimateUnit, BoardLabel } from '../../shared/api/index.ts'
-import { labelTitle } from '../../entities/label/model.ts'
+import { labelTitle, chipClass } from '../../entities/label/model.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 import { t } from '../../shared/i18n/index.ts'
 
@@ -166,7 +166,7 @@ export function TableView({
                   {own.map((id) => {
                     const label = labels.find((l) => l.id === id)
                     return label ? (
-                      <span key={id} className={`chip chip--${label.tone}`} title={labelTitle(label)}>
+                      <span key={id} className={chipClass(label)} title={labelTitle(label)}>
                         {label.name}
                       </span>
                     ) : null

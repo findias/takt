@@ -919,13 +919,18 @@ func (f *filler) imported() error {
 		return &t
 	}
 	done, work := i18n.Name(f.ctx, "Готово"), i18n.Name(f.ctx, "В работе")
-	plan := importer.Plan{Source: importer.SourceTable, Rows: 4, Cards: []importer.Card{
-		{Row: 2, Title: f.w("Сверить остатки за июль"), Column: done, ExternalID: "OLD-101", Created: ago(62), Done: ago(44)},
-		{Row: 3, Title: f.w("Продлить договор с перевозчиком"), Column: done, ExternalID: "OLD-102", Created: ago(55), Done: ago(38)},
-		{Row: 4, Title: f.w("Описать упаковку для хрупкого"), Column: done, ExternalID: "OLD-103", Created: ago(50), Done: ago(31)},
-		{Row: 5, Title: f.w("Перенести справочник поставщиков"), Column: work, ExternalID: "OLD-104", Created: ago(24),
-			Assignees: []string{f.email(People[1])}},
-	}}
+	// Человек прежней системы, которого в организации нет: его карточка
+	// приезжает с меткой человека (ROADMAP 23.6) — без неё не на чем
+	// увидеть, как такая метка выглядит рядом с настоящими.
+	gone := "k.lebedev@old-tracker.example"
+	plan := importer.Plan{Source: importer.SourceTable, Rows: 4,
+		Names: map[string]string{gone: f.w("Кирилл Лебедев")}, Cards: []importer.Card{
+			{Row: 2, Title: f.w("Сверить остатки за июль"), Column: done, ExternalID: "OLD-101", Created: ago(62), Done: ago(44)},
+			{Row: 3, Title: f.w("Продлить договор с перевозчиком"), Column: done, ExternalID: "OLD-102", Created: ago(55), Done: ago(38)},
+			{Row: 4, Title: f.w("Описать упаковку для хрупкого"), Column: done, ExternalID: "OLD-103", Created: ago(50), Done: ago(31)},
+			{Row: 5, Title: f.w("Перенести справочник поставщиков"), Column: work, ExternalID: "OLD-104", Created: ago(24),
+				Assignees: []string{f.email(People[1]), gone}},
+		}}
 	_, err := f.boards.Import(f.ctx, f.orgID, f.owner(), board.ImportTarget{BoardID: boardID}, plan, true)
 	return err
 }

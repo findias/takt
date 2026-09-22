@@ -225,7 +225,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Nothing is written until the last step: the preview does the whole import and throws it away, so it shows exactly what you will get.</p>
 <p>What the preview names, so that nothing is lost silently:</p>
 <ul>
-<li><strong>Emails not found.</strong> Assignees are matched by email among the people of the organisation, and nobody is created on the way: the card comes without that assignee, and the email is listed with the number of cards. People are added by an administrator on the <strong>Team</strong> screen, not by the import: add them, import again, and the second run adds them as assignees to the cards that already came — without bringing those cards twice.</li>
+<li><strong>Emails not found.</strong> Assignees are matched by email among the people of the organisation, and nobody is created on the way: the card comes without that assignee, and the email is listed with the number of cards. So that the work is not lost, each such person&#39;s cards get a label with their name (their email, if the spreadsheet gives no name). The label is technical: it is drawn as an outline, it is not offered when labelling a card by hand, and the board filter finds it. Two namesakes get two labels. People are added by an administrator on the <strong>Team</strong> screen, not by the import: add them, import again, and the second run adds them as assignees to the cards that already came — without bringing those cards twice — and removes their labels.</li>
 <li><strong>Row problems.</strong> A row without a title is not imported; a value that cannot be read (an estimate that is not a number, an unknown priority, a date that is not a date) is dropped, and the rest of the row comes. Rows are numbered as in the file, the way Excel shows them, empty rows included.</li>
 <li><strong>How dates were read.</strong> A date column is read as a whole in one of four forms: <code>2026-09-22</code>, <code>22.09.2026</code>, Jira&#39;s <code>22/Sep/26</code>, or an Excel date cell.</li>
 <li><strong>Columns.</strong> A new board gets the columns from the file, put in order of meaning: queue, work, unrecognised stages, done. “In progress” becomes the start of work and “Done” the finish; if there is no done column, one is added. On an existing board missing columns are added before the done column, and its markup is left alone.</li>
@@ -328,7 +328,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-53-ge0226d1-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-54-g4409400-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

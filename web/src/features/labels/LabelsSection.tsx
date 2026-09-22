@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { TONE_NAMES, api } from '../../shared/api/index.ts'
 import type { LabelPlace, LabelTone, ManagedLabel } from '../../shared/api/index.ts'
-import { groupByOrigin } from '../../entities/label/model.ts'
+import { groupByOrigin, chipClass } from '../../entities/label/model.ts'
 import { ScreenError } from '../../shared/ui/Field.tsx'
 import { useToast } from '../../shared/ui/Toast.tsx'
 import { t } from '../../shared/i18n/index.ts'
@@ -71,7 +71,7 @@ export function LabelsSection() {
             <ul className="member-list">
               {group.labels.map((label) => (
                 <li key={label.id}>
-                  <span className={`chip chip--${label.tone}`}>{label.name}</span>
+                  <span className={chipClass(label)}>{label.name}</span>
                   {label.canManage && (
                     <button
                       className="link link--remove"
@@ -96,7 +96,7 @@ export function LabelsSection() {
             {archived.map((label) => (
               <li key={label.id}>
                 <span className="row row--tight">
-                  <span className={`chip chip--${label.tone}`}>{label.name}</span>
+                  <span className={chipClass(label)}>{label.name}</span>
                   <span className="muted small">{groupByOrigin([label])[0].title}</span>
                 </span>
                 {label.canManage && (

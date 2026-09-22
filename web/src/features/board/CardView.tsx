@@ -24,7 +24,7 @@ import {
   unitLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import { labelTitle } from '../../entities/label/model.ts'
+import { labelTitle, dotClass } from '../../entities/label/model.ts'
 import { LabelPickerButton } from './LabelPicker.tsx'
 import type { BoardLabel, Card, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
@@ -472,7 +472,7 @@ function CardViewInner({
                     {own.slice(0, 4).map((label) => (
                       <span
                         key={label.id}
-                        className={`label-dot label-dot--${label.tone}`}
+                        className={dotClass(label)}
                         title={labelTitle(label)}
                       />
                     ))}

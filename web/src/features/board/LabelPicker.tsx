@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../../shared/api/index.ts'
 import type { BoardLabel, LabelPlace } from '../../shared/api/index.ts'
-import { labelOrigin, pickerItems, placeWords } from '../../entities/label/model.ts'
+import { labelOrigin, pickerItems, placeWords, dotClass } from '../../entities/label/model.ts'
 import type { PickerItem } from '../../entities/label/model.ts'
 import { CheckIcon } from '../../shared/ui/icons.tsx'
 import { topLayer, useAnchored } from '../../shared/ui/anchored.ts'
@@ -264,7 +264,7 @@ function ItemText({ item, marked }: { item: PickerItem; marked: boolean }) {
             {item.checked ? <CheckIcon /> : null}
           </span>
         )}
-        <span className={`label-dot label-dot--${item.label.tone}`} aria-hidden="true" />
+        <span className={dotClass(item.label)} aria-hidden="true" />
         <span className="palette-title">{item.label.name}</span>
         <span className="menu-hint">{labelOrigin(item.label)}</span>
       </>

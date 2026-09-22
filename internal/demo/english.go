@@ -16,6 +16,7 @@ var english = map[string]string{
 	"Продлить договор с перевозчиком":  "Renew the carrier contract",
 	"Описать упаковку для хрупкого":    "Specify packaging for fragile goods",
 	"Перенести справочник поставщиков": "Move the supplier directory",
+	"Кирилл Лебедев":                   "Kirill Lebedev",
 
 	// Люди, организация, служебное.
 	"Анна Королёва":        "Anna Clarke",

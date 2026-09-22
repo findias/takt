@@ -38,6 +38,7 @@ type importAnswer struct {
 		Missing      []struct {
 			Email string `json:"email"`
 			Cards int    `json:"cards"`
+			Label string `json:"label"`
 		} `json:"missingPeople"`
 		Problems []struct {
 			Row     int    `json:"row"`
@@ -375,6 +376,41 @@ func TestPersonAddedAfterImportIsAssignedOnRerun(t *testing.T) {
 	if len(first.Report.Missing) != 1 || first.Report.Missing[0].Email != later {
 		t.Fatalf("почта не найдена и названа: %+v", first.Report.Missing)
 	}
+	// Ненайденный не пропадает с карточки: на ней его метка. Имени
+	// таблица не дала — меткой служит почта. Метка техническая: в выборе
+	// метки её не предлагают.
+	if first.Report.Missing[0].Label != later {
+		t.Fatalf("метка человека в отчёте: %+v", first.Report.Missing)
+	}
+	personLabels := func() (hung int, offered bool) {
+		var snap struct {
+			Labels []struct {
+				ID       string `json:"id"`
+				Kind     string `json:"kind"`
+				Offered  bool   `json:"offered"`
+				Archived bool   `json:"archived"`
+			} `json:"labels"`
+			CardLabels map[string][]string `json:"cardLabels"`
+		}
+		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+first.Report.BoardID, nil, http.StatusOK), &snap)
+		for _, l := range snap.Labels {
+			if l.Kind != "person" {
+				continue
+			}
+			offered = offered || l.Offered
+			for _, ids := range snap.CardLabels {
+				for _, id := range ids {
+					if id == l.ID {
+						hung++
+					}
+				}
+			}
+		}
+		return hung, offered
+	}
+	if hung, offered := personLabels(); hung != 1 || offered {
+		t.Fatalf("метка человека: висит на %d карточках (ожидалась одна), предлагается: %v", hung, offered)
+	}
 
 	// Администратор заводит человека.
 	inv := owner.mustDo("POST", "/api/invites", map[string]any{"email": later, "role": "member"}, http.StatusCreated)
@@ -390,6 +426,7 @@ func TestPersonAddedAfterImportIsAssignedOnRerun(t *testing.T) {
 			Created       int   `json:"created"`
 			Skipped       []any `json:"skipped"`
 			AssignedLater int   `json:"assignedLater"`
+			Unlabeled     int   `json:"unlabeled"`
 			Missing       []any `json:"missingPeople"`
 		} `json:"report"`
 	}
@@ -409,5 +446,9 @@ func TestPersonAddedAfterImportIsAssignedOnRerun(t *testing.T) {
 	}
 	if total != 1 {
 		t.Fatalf("исполнителей на доске %d, ожидался один: %v", total, snap.Assignees)
+	}
+	// Человек нашёлся — замена больше не нужна.
+	if hung, _ := personLabels(); hung != 0 || again.Report.Unlabeled != 1 {
+		t.Fatalf("метка человека после того, как он нашёлся: висит на %d, снято %d", hung, again.Report.Unlabeled)
 	}
 }

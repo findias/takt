@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/findias/takt/internal/importer/pack"
 )
@@ -151,5 +154,70 @@ func TestPackageMovesInPartsLinksAndDiscussion(t *testing.T) {
 	answerRaw := owner.mustDo("POST", "/api/import/package", map[string]any{"file": []byte("не пакет"), "newBoardName": "Z"}, http.StatusBadRequest)
 	if field(t, answerRaw, "code") != "import_package" {
 		t.Fatalf("испорченный пакет: %s", answerRaw)
+	}
+}
+
+// Ненайденные исполнители остаются на карточках метками (ROADMAP 23.6):
+// по имени, а не по почте, если источник его дал; два тёзки — две
+// метки, иначе работа одного приписалась бы другому.
+func TestMissingPeopleBecomePersonLabels(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Метки людей")
+	b := pack.Board{
+		ExternalID: "b-1", Title: "Склад",
+		Columns: []pack.Column{{ExternalID: "c-1", Title: "Нужно сделать"}},
+		People: []pack.Person{
+			{ExternalID: "u-1", Name: "Иван"},
+			{ExternalID: "u-2", Name: "Иван"},
+			{ExternalID: "u-3", Name: "Пётр Сидоров", Email: strp("petr-" + uuid.NewString()[:8] + "@example.test")},
+		},
+		Cards: []pack.Card{
+			{ExternalID: "t-1", Title: "Первая", Column: "c-1", Assignees: []string{"u-1", "u-3"}},
+			{ExternalID: "t-2", Title: "Вторая", Column: "c-1", Assignees: []string{"u-2"}},
+			{ExternalID: "t-3", Title: "Третья", Column: "c-1", Assignees: []string{"u-1"}},
+		},
+	}
+	var buf bytes.Buffer
+	if err := pack.Write(&buf, pack.Manifest{CreatedBy: "проверка", Source: pack.Source{System: "yougile"}}, []pack.Board{b}); err != nil {
+		t.Fatal(err)
+	}
+	var ans struct {
+		Report struct {
+			BoardID string `json:"boardId"`
+		} `json:"report"`
+	}
+	_ = json.Unmarshal(owner.mustDo("POST", "/api/import/package",
+		map[string]any{"file": buf.Bytes(), "newBoardName": "Склад", "apply": true}, http.StatusOK), &ans)
+
+	var snap struct {
+		Cards  []struct{ ID, Title string } `json:"cards"`
+		Labels []struct {
+			ID, Name, Kind string
+		} `json:"labels"`
+		CardLabels map[string][]string `json:"cardLabels"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+ans.Report.BoardID, nil, http.StatusOK), &snap)
+	name := map[string]string{}
+	for _, l := range snap.Labels {
+		if l.Kind == "person" {
+			name[l.ID] = l.Name
+		}
+	}
+	on := map[string][]string{}
+	for _, c := range snap.Cards {
+		for _, id := range snap.CardLabels[c.ID] {
+			on[c.Title] = append(on[c.Title], name[id])
+		}
+		slices.Sort(on[c.Title])
+	}
+	want := map[string][]string{
+		"Первая": {"Иван", "Пётр Сидоров"},
+		"Вторая": {"Иван (2)"},
+		"Третья": {"Иван"},
+	}
+	for title, labels := range want {
+		if !slices.Equal(on[title], labels) {
+			t.Errorf("%s: метки людей %q, ожидались %q", title, on[title], labels)
+		}
 	}
 }
