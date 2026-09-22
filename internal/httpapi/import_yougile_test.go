@@ -44,6 +44,7 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 	tasks := map[string][]map[string]any{
 		"c-todo": {
 			{"id": "t-1", "title": "Сверить остатки", "columnId": "c-todo", "timestamp": ms(20 * 24 * time.Hour),
+				"idTaskProject": "СКЛ-7", "idTaskCommon": "ID-1207",
 				"assigned": []string{"u-1", "u-2"}, "description": "<p>По складу <b>№2</b></p><p>до пятницы</p>",
 				"stickers":   map[string]string{"s-prio": "st-high", "s-area": "st-wh"},
 				"deadline":   map[string]any{"deadline": ms(-72 * time.Hour)},
@@ -229,6 +230,7 @@ func TestYougileBoardMovesInWithWhatItLoses(t *testing.T) {
 	done := owner.yougile("", body, http.StatusOK).Report
 	var snap struct {
 		Cards []struct {
+			ID          string `json:"id"`
 			Title       string `json:"title"`
 			Description string `json:"description"`
 			Priority    string `json:"priority"`
@@ -243,6 +245,12 @@ func TestYougileBoardMovesInWithWhatItLoses(t *testing.T) {
 	for _, c := range snap.Cards {
 		switch c.Title {
 		case "Сверить остатки":
+			// В истории — номер задачи для людей, по которому её найдут
+			// в YouGile, а не внутренний идентификатор.
+			detail := string(owner.mustDo("GET", "/api/boards/"+done.BoardID+"/events?cardId="+c.ID, nil, http.StatusOK))
+			if !strings.Contains(detail, `"externalId":"СКЛ-7"`) || !strings.Contains(detail, `"imported":"yougile"`) {
+				t.Errorf("в истории нет номера задачи YouGile: %.600s", detail)
+			}
 			if c.Priority != "high" || c.DueOn == "" ||
 				c.Description != "По складу №2\nдо пятницы\n\nШаги:\n- [x] Выгрузить\n- [ ] Сверить" {
 				t.Fatalf("задача перенесена так: %+v", c)

@@ -76,6 +76,9 @@ type Card struct {
 	Description string
 	// Ключ, по которому второй прогон узнаёт уже перенесённое.
 	ExternalID string
+	// Number — номер в источнике для человека («DEV-12»); пусто — ключ
+	// и есть номер (таблица) или номера у источника нет.
+	Number string
 	// Почты: человек сопоставляется по почте, и только по ней.
 	Assignees []string
 	Labels    []string

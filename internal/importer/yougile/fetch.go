@@ -1,6 +1,7 @@
 package yougile
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -184,6 +185,7 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		}
 		card := pack.Card{
 			ExternalID:  t.ID,
+			Number:      cmp.Or(t.IDTaskProject, t.IDTaskCommon),
 			Title:       strings.TrimSpace(t.Title),
 			Description: description(t),
 			Column:      t.ColumnID,

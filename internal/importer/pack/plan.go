@@ -62,7 +62,7 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 		}
 		card := importer.Card{
 			Row: row, Title: strings.TrimSpace(c.Title), Description: c.Description,
-			ExternalID: c.ExternalID, Estimate: c.Estimate, Created: c.CreatedAt, Done: c.FinishedAt,
+			ExternalID: c.ExternalID, Number: strings.TrimSpace(c.Number), Estimate: c.Estimate, Created: c.CreatedAt, Done: c.FinishedAt,
 		}
 		if card.Title == "" || card.ExternalID == "" {
 			plan.Problems = append(plan.Problems, importer.Problem{Row: row, Field: importer.FieldTitle, Skipped: true,

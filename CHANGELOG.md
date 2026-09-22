@@ -151,7 +151,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   does not stop the board. People are matched, created or left out as
   chosen in the preview (see below). When YouGile answers something
   unexpected, the refusal says what it answered instead of «internal
-  error».
+  error». A card's history says «imported from YouGile» with the task's
+  number there, so it can be found in the old system.
 - **Import packages.** The import screen reads a `.takt` package — boards
   from another tracker built outside a closed network and carried in —
   with subtasks, links and discussions, one board at a time with the

@@ -102,7 +102,11 @@ type Label struct {
 }
 
 type Card struct {
-	ExternalID  string     `json:"externalId"`
+	ExternalID string `json:"externalId"`
+	// Number — номер задачи в источнике так, как его видят люди
+	// («DEV-12»). Необязателен: externalId у YouGile — uuid, и по нему
+	// задачу в старой системе не найти, а по номеру — найти.
+	Number      string     `json:"number,omitempty"`
 	Title       string     `json:"title"`
 	Description string     `json:"description,omitempty"`
 	Column      string     `json:"column"`

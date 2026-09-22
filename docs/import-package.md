@@ -144,6 +144,7 @@ name that already applies to the board is reused.
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `externalId` | yes | the task's identifier in the source; with `source.system` it is the key that makes a second import skip what already came |
+| `number` | no | the task's number as people know it (`DEV-12`); the card's history names it, so the task can be found in the old system. Without it the history names `externalId`, unless that is a UUID |
 | `title` | yes | non-empty; a card without a title is not imported and is named |
 | `description` | no | plain text; the exporter turns the source's markup into text and appends checklists as `- [x] item` lines |
 | `column` | yes | a column `externalId` of this board |

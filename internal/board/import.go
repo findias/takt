@@ -666,10 +666,14 @@ func insertImported(
 		}
 		fact := map[string]any{"to": columnFact(r.col), "imported": source}
 		// Свой ключ файла — в событии: по нему карточку находят
-		// в прежней системе. Выведенный из заголовка ключ ничего
-		// не говорит человеку и в событие не идёт.
-		if !strings.HasPrefix(r.card.ExternalID, "title:") {
-			fact["externalId"] = r.card.ExternalID
+		// в прежней системе. Номер для людей («DEV-12») — вместо ключа,
+		// если источник его дал. Ключ, выведенный из заголовка, и uuid
+		// источника ничего не говорят человеку и в событие не идут.
+		switch key := r.card.ExternalID; {
+		case r.card.Number != "":
+			fact["externalId"] = r.card.Number
+		case !strings.HasPrefix(key, "title:") && !looksLikeUUID(key):
+			fact["externalId"] = key
 		}
 		body, err := json.Marshal(fact)
 		if err != nil {
@@ -1196,4 +1200,23 @@ func personLabels(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string
 		return nil, err
 	}
 	return out, nil
+}
+
+// looksLikeUUID — ключ источника вида 8-4-4-4-12: внутренний
+// идентификатор, по которому человек задачу не найдёт.
+func looksLikeUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i, r := range s {
+		switch {
+		case i == 8 || i == 13 || i == 18 || i == 23:
+			if r != '-' {
+				return false
+			}
+		case !strings.ContainsRune("0123456789abcdefABCDEF", r):
+			return false
+		}
+	}
+	return true
 }

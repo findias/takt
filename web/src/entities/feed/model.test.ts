@@ -117,6 +117,16 @@ test('остальные события переводятся по типу', (
     eventText(event('created', { imported: 'table', externalId: 'OLD-7' })),
     'перенесена из таблицы, там — OLD-7',
   )
+  // Из YouGile — так и сказано; номер задачи для людей показан,
+  // а внутренний uuid, как писали прежде, — нет.
+  assert.equal(
+    eventText(event('created', { imported: 'yougile', externalId: 'DEV-12' })),
+    'перенесена из YouGile, там — DEV-12',
+  )
+  assert.equal(
+    eventText(event('created', { imported: 'yougile', externalId: 'bdb0f018-e0d3-4204-acdc-ea36e5500c02' })),
+    'перенесена из YouGile',
+  )
   assert.equal(eventText(event('renamed', { title: 'Новое' })), 'переименована в «Новое»')
   assert.equal(eventText(event('archived')), 'убрана с доски')
   assert.equal(eventText(event('blocked', { reason: 'ждём стенд' })), 'заблокирована: ждём стенд')

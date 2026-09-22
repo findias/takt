@@ -211,6 +211,7 @@ color:var(--ink-3);font-size:.85rem}
 <thead><tr><th>Field</th><th>Required</th><th>Meaning</th></tr></thead>
 <tbody>
 <tr><td><code>externalId</code></td><td>yes</td><td>the task&#39;s identifier in the source; with <code>source.system</code> it is the key that makes a second import skip what already came</td></tr>
+<tr><td><code>number</code></td><td>no</td><td>the task&#39;s number as people know it (<code>DEV-12</code>); the card&#39;s history names it, so the task can be found in the old system. Without it the history names <code>externalId</code>, unless that is a UUID</td></tr>
 <tr><td><code>title</code></td><td>yes</td><td>non-empty; a card without a title is not imported and is named</td></tr>
 <tr><td><code>description</code></td><td>no</td><td>plain text; the exporter turns the source&#39;s markup into text and appends checklists as <code>- [x] item</code> lines</td></tr>
 <tr><td><code>column</code></td><td>yes</td><td>a column <code>externalId</code> of this board</td></tr>
@@ -241,7 +242,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Passwords, API keys, tokens and session cookies of the source system. <code>takt-fetch</code> takes them from the command line or the environment and does not write them anywhere; a test searches every package it writes for the key it was given.</p>
 <h2 id="versions">Versions</h2>
 <p>A change that an existing reader would misread — a field renamed, a meaning changed, a required field added — raises <code>version</code>. Adding an optional field does not: readers ignore fields they do not know inside <code>boards/&lt;n&gt;.json</code>. A reader states every version it accepts, and a newer package is refused with the versions this installation reads, so that the answer is “upgrade takt”, not a half-imported board.</p>
-<footer>Takt, version v0.2.3-57-g1d70160-dirty. Built from import-package.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-58-geaf1c3f-dirty. Built from import-package.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

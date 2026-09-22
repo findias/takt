@@ -20,19 +20,22 @@ var ErrTooBig = fmt.Errorf("на доске YouGile больше %d задач �
 const Source = "yougile"
 
 type task struct {
-	ID                 string            `json:"id"`
-	Title              string            `json:"title"`
-	Description        string            `json:"description"`
-	ColumnID           string            `json:"columnId"`
-	Assigned           []string          `json:"assigned"`
-	Completed          bool              `json:"completed"`
-	CompletedTimestamp int64             `json:"completedTimestamp"`
-	Archived           bool              `json:"archived"`
-	Deleted            bool              `json:"deleted"`
-	Timestamp          int64             `json:"timestamp"`
-	Subtasks           []string          `json:"subtasks"`
-	Stickers           map[string]string `json:"stickers"`
-	Deadline           *struct {
+	ID                 string   `json:"id"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	ColumnID           string   `json:"columnId"`
+	Assigned           []string `json:"assigned"`
+	Completed          bool     `json:"completed"`
+	CompletedTimestamp int64    `json:"completedTimestamp"`
+	Archived           bool     `json:"archived"`
+	Deleted            bool     `json:"deleted"`
+	Timestamp          int64    `json:"timestamp"`
+	// Номера задачи для людей: в проекте («DEV-12») и сквозной.
+	IDTaskProject string            `json:"idTaskProject"`
+	IDTaskCommon  string            `json:"idTaskCommon"`
+	Subtasks      []string          `json:"subtasks"`
+	Stickers      map[string]string `json:"stickers"`
+	Deadline      *struct {
 		Deadline int64 `json:"deadline"`
 	} `json:"deadline"`
 	Checklists []struct {
