@@ -147,8 +147,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   email, deadlines, dates, stickers as labels (a priority sticker as the
   priority) and checklists come across; what does not — YouGile's
   archive, chats, files, rights, time tracking — is listed before the
-  import. People are not created: an administrator adds them, and
-  importing again assigns them to cards that already came.
+  import, and so is a subtask YouGile would not return: one such subtask
+  does not stop the board. People are matched, created or left out as
+  chosen in the preview (see below). When YouGile answers something
+  unexpected, the refusal says what it answered instead of «internal
+  error».
 - **Import packages.** The import screen reads a `.takt` package — boards
   from another tracker built outside a closed network and carried in —
   with subtasks, links and discussions, one board at a time with the

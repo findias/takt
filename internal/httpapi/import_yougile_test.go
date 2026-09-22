@@ -27,6 +27,8 @@ type fakeYougile struct {
 	seen    []string
 	// Почта, под которой YouGile знает нашего владельца: её сопоставят.
 	owner string
+	// Колонки отвечают 500: YouGile ответил не так, как ждали.
+	brokenColumns bool
 }
 
 const (
@@ -51,7 +53,7 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 		},
 		"c-done": {
 			{"id": "t-4", "title": "Отчёт за август", "columnId": "c-done", "timestamp": ms(40 * 24 * time.Hour),
-				"completed": true, "completedTimestamp": ms(30 * 24 * time.Hour), "subtasks": []string{"t-9"}},
+				"completed": true, "completedTimestamp": ms(30 * 24 * time.Hour), "subtasks": []string{"t-9", "t-broken"}},
 		},
 	}
 	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +95,15 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 		}
 		if r.Header.Get("Authorization") != "Bearer "+ygKey {
 			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		f.mu.Lock()
+		broken := f.brokenColumns
+		f.mu.Unlock()
+		switch {
+		// Одна подзадача, которую YouGile не отдаёт, не роняет доску.
+		case path == "tasks/t-broken", path == "columns" && broken:
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		switch path {
@@ -197,7 +208,7 @@ func TestYougileBoardMovesInWithWhatItLoses(t *testing.T) {
 	}
 	// Названо то, что не едет: архив, подзадачи, чат и файлы.
 	lost := strings.Join(preview.Lost, " | ")
-	for _, want := range []string{"архива YouGile: 1", "чаты задач", "учёт времени"} {
+	for _, want := range []string{"архива YouGile: 1", "чаты задач", "учёт времени", "YouGile не отдал: 1"} {
 		if !strings.Contains(lost, want) {
 			t.Fatalf("потери не названы (%q): %q", want, lost)
 		}
@@ -286,5 +297,22 @@ func TestYougileCanBeSwitchedOff(t *testing.T) {
 		map[string]any{"login": "a@b.test", "password": "x"}, http.StatusForbidden)
 	if field(t, raw, "code") != "yougile_off" {
 		t.Fatalf("выключенный YouGile: %s", raw)
+	}
+}
+
+// Неожиданный ответ YouGile — не «внутренняя ошибка, попробуйте ещё раз»:
+// отказ называет, что ответил YouGile, и код у него свой.
+func TestYougileOddAnswerIsNamed(t *testing.T) {
+	fake := newFakeYougile(t)
+	a := newAPIWith(t, func(c *config.Config) { c.YougileURL = fake.URL })
+	owner := a.registerOrg("Странный YouGile")
+	fake.owner = owner.email
+	fake.mu.Lock()
+	fake.brokenColumns = true
+	fake.mu.Unlock()
+	raw := owner.mustDo("POST", "/api/import/yougile",
+		map[string]any{"key": ygKey, "board": ygBoard, "newBoardName": "Склад"}, http.StatusBadGateway)
+	if field(t, raw, "code") != "yougile_failed" || !strings.Contains(string(raw), "500") {
+		t.Fatalf("неожиданный ответ YouGile: %s", raw)
 	}
 }

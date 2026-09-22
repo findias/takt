@@ -133,6 +133,7 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		}
 	}
 	parentOf := map[string]string{}
+	unread := 0
 	for i := 0; i < len(tasks); i++ {
 		for _, child := range tasks[i].Subtasks {
 			if _, ok := parentOf[child]; !ok {
@@ -149,10 +150,18 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 			}
 			var t task
 			if err := c.do(ctx, http.MethodGet, "tasks/"+url.PathEscape(child), nil, nil, &t); err != nil {
-				if errors.Is(err, ErrNotFound) {
-					continue
+				// Предел запросов, пропавшая сеть и отменённый запрос —
+				// про весь перенос: повторять его целиком. Всё прочее —
+				// про одну подзадачу (удалена, в чужом проекте, ответ
+				// не того вида): она не должна ронять сотни карточек
+				// доски, а называется в отчёте числом.
+				if errors.Is(err, ErrBusy) || errors.Is(err, ErrUnreachable) || ctx.Err() != nil {
+					return pack.Board{}, err
 				}
-				return pack.Board{}, err
+				if !errors.Is(err, ErrNotFound) {
+					unread++
+				}
+				continue
 			}
 			// Подзадача без колонки этой доски встаёт в колонку родителя:
 			// иначе ей на доске места нет, а терять часть работы нельзя.
@@ -251,6 +260,9 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		out.Cards = append(out.Cards, card)
 	}
 
+	if unread > 0 {
+		out.Lost = append(out.Lost, fmt.Sprintf("подзадачи, которые YouGile не отдал: %d", unread))
+	}
 	if archived > 0 {
 		out.Lost = append(out.Lost, fmt.Sprintf("задачи из архива YouGile: %d", archived))
 	}

@@ -54,6 +54,7 @@ var en = map[string]string{
 	"у человека нет почты — впишите её, чтобы завести":                                                  "this person has no email — enter one to create them",
 	"«%s» — не почта: впишите адрес вида имя@домен":                                                     "“%s” is not an email: enter an address like name@domain",
 	"адрес занят учётной записью вне организации — пригласите человека обычным приглашением":            "the address belongs to an account outside the organisation — invite the person with an ordinary invitation",
+	"подзадачи, которые YouGile не отдал: %s":                                                           "subtasks YouGile would not return: %s",
 	"ключом язык не выбирают: это настройка человека":                                                   "a key cannot choose a language: it is a person's setting",
 	"уведомление называется идентификатором, а это не он":                                               "a notification is named by its identifier, and this is not one",
 	"такого повода уведомлений нет":                                                                     "there is no such notification reason",

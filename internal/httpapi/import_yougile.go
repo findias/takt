@@ -75,7 +75,12 @@ func (s *Server) yougileFailed(w http.ResponseWriter, err error) {
 	case errors.Is(err, yougile.ErrNotFound):
 		writeCoded(w, http.StatusNotFound, "yougile_not_found", err.Error())
 	default:
-		s.fail(w, "обращение к YouGile", err)
+		// Неожиданный ответ YouGile — не внутренняя ошибка takt, и прятать
+		// причину за «попробуйте ещё раз» значит отправить человека
+		// повторять то, что повторится. Текст отказа наш: код ответа
+		// и путь запроса, без ключа и данных доски.
+		s.log.Error("обращение к YouGile", "err", err)
+		writeCoded(w, http.StatusBadGateway, "yougile_failed", err.Error())
 	}
 }
 

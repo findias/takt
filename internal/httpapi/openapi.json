@@ -79,6 +79,7 @@
               "yougile_denied",
               "yougile_unreachable",
               "yougile_busy",
+              "yougile_failed",
               "yougile_not_found",
               "yougile_off",
               "internal"
