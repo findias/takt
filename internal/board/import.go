@@ -52,10 +52,12 @@ type ImportReport struct {
 	// куда положить значение. У новой доски пусто: там выбирать не из чего.
 	BoardColumns []ImportColumnRef `json:"boardColumns"`
 	// Метки, найденные только в архиве: вешать убранное молча нельзя.
-	ArchivedLabels []string              `json:"archivedLabels"`
-	MissingPeople  []MissingPerson       `json:"missingPeople"`
-	Problems       []importer.Problem    `json:"problems"`
-	Dates          []importer.DateFormat `json:"dates"`
+	ArchivedLabels []string `json:"archivedLabels"`
+	// Lost — что источник знает, а мы не переносим.
+	Lost          []string              `json:"lost"`
+	MissingPeople []MissingPerson       `json:"missingPeople"`
+	Problems      []importer.Problem    `json:"problems"`
+	Dates         []importer.DateFormat `json:"dates"`
 }
 
 // ImportSkip — строка, которая уже переехала раньше.
@@ -122,6 +124,7 @@ func (s *Service) Import(
 		Skipped: []ImportSkip{}, NewColumns: []ImportColumn{}, NewLabels: []string{},
 		ArchivedLabels: []string{}, MissingPeople: []MissingPerson{},
 		ColumnValues: []ImportValue{}, BoardColumns: []ImportColumnRef{},
+		Lost: append([]string{}, plan.Lost...),
 	}
 	if rep.Problems == nil {
 		rep.Problems = []importer.Problem{}

@@ -64,6 +64,11 @@
               "signup_closed",
               "import_unreadable",
               "import_mapping",
+              "yougile_denied",
+              "yougile_unreachable",
+              "yougile_busy",
+              "yougile_not_found",
+              "yougile_off",
               "internal"
             ]
           }

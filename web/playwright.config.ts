@@ -15,6 +15,9 @@ import { defineConfig } from '@playwright/test'
 // плохая сделка, а в закрытом контуре ещё и невыполнимая.
 
 const PORT = Number(process.env.E2E_PORT ?? 8098)
+// Поддельный YouGile (ROADMAP 23.3): перенос по API проверяется против
+// него — настоящий в проверках недоступен.
+const YOUGILE_PORT = Number(process.env.FAKE_YOUGILE_PORT ?? 8097)
 const DATABASE_URL =
   process.env.E2E_DATABASE_URL ??
   process.env.TEST_DATABASE_URL ??
@@ -41,14 +44,21 @@ export default defineConfig({
   },
   // Сервер поднимается тот же самый, что едет в образе: свой бинарник
   // и своя статика. Отдельная сборка «для тестов» проверяла бы себя.
-  webServer: {
-    // SIGNUP=open: сценарии начинаются с заведения организации, а
-    // умолчание `first` закрывает регистрацию после первой же — база
-    // у прогонов общая. Сами режимы проверяются в Go, против базы.
-    command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist SIGNUP=open go run ./cmd/takt serve`,
-    cwd: '..',
-    url: `http://127.0.0.1:${PORT}/readyz`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: `FAKE_YOUGILE_PORT=${YOUGILE_PORT} node e2e/fake-yougile.mjs`,
+      port: YOUGILE_PORT,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      // SIGNUP=open: сценарии начинаются с заведения организации, а
+      // умолчание `first` закрывает регистрацию после первой же — база
+      // у прогонов общая. Сами режимы проверяются в Go, против базы.
+      command: `DATABASE_URL='${DATABASE_URL}' LISTEN_ADDR=':${PORT}' BASE_URL='http://127.0.0.1:${PORT}' WEB_DIR=./web/dist SIGNUP=open YOUGILE_URL='http://127.0.0.1:${YOUGILE_PORT}' go run ./cmd/takt serve`,
+      cwd: '..',
+      url: `http://127.0.0.1:${PORT}/readyz`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 })

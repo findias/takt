@@ -3838,6 +3838,23 @@ textarea.description {
 .import-file select {
   font-weight: 400;
 }
+/* Откуда — в строку: два коротких варианта столбцом читались бы
+   двумя пунктами формы, а это один выбор. */
+.import-source {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+}
+.import-source legend {
+  flex-basis: 100%;
+}
+.import-login {
+  max-width: 28rem;
+}
+.import-login .import-file input,
+.import-login .import-file select {
+  width: 100%;
+}
 /* Поле под своим переключателем — со сдвигом на ширину флажка:
    иначе оно читается третьим пунктом выбора. */
 .import-indent {

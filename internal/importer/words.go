@@ -79,7 +79,7 @@ var (
 	}
 	queueWords = map[string]bool{
 		"очередь": true, "бэклог": true, "новые": true, "новая": true, "запланировано": true,
-		"к выполнению": true, "идеи": true, "сделать": true,
+		"к выполнению": true, "идеи": true, "сделать": true, "нужно сделать": true,
 		"backlog": true, "to do": true, "todo": true, "new": true, "open": true,
 		"planned": true, "ideas": true, "queue": true,
 	}
@@ -105,3 +105,19 @@ Move the customer directory,Queue,"boris@example.test, vera@example.test","data;
 Set up the report export,Done,vera@example.test,,2,low,,2026-08-20,2026-09-05,,OLD-3
 `
 )
+
+// PriorityOf — наша ступень приоритета по чужому слову.
+func PriorityOf(word string) (string, bool) {
+	p, ok := priorityWords[strings.ToLower(strings.TrimSpace(word))]
+	return p, ok
+}
+
+// IsPriorityName — называет ли поле источника приоритет: у YouGile
+// приоритет — это стикер, и назван он как угодно.
+func IsPriorityName(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "приоритет", "важность", "срочность", "priority", "importance", "urgency":
+		return true
+	}
+	return false
+}

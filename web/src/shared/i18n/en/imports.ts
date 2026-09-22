@@ -4,8 +4,27 @@ import type { imports as ru } from '../ru/imports.ts'
 const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`
 
 export const imports: typeof ru = {
+  source: 'From',
+  fromFile: 'A spreadsheet',
+  fromYougile: 'YouGile',
+  ygIntro:
+    'A YouGile board is imported whole through its API. The password is needed once, to get the company’s API key; we keep neither the password nor the key. If the server is in a closed network, export a table from YouGile (Reports → Tables) and import it as a spreadsheet.',
+  ygLogin: 'YouGile email',
+  ygPassword: 'YouGile password',
+  ygFind: 'Find companies',
+  ygCompany: 'Company',
+  ygGetKey: 'Get the key',
+  ygKey: 'API key',
+  ygHaveKey: 'I have an API key',
+  ygUseKey: 'Use the key',
+  ygKeyCreated: 'An API key for the import was created in YouGile. Once the import is done you can delete it there.',
+  ygBoard: 'YouGile board',
+  ygBoardOf: (project: string, board: string) => `${project} · ${board}`,
+  ygLoading: 'Asking YouGile…',
+  ygChangeKey: 'Another company or key',
+  lost: 'Not imported',
   intro:
-    'Tasks from Excel, Google Sheets or another tracker’s export — onto a board. We show what will happen first and import only after that.',
+    'Tasks from Excel, Google Sheets, another tracker’s export or straight from YouGile — onto a board. We show what will happen first and import only after that.',
   sample: 'Download a sample spreadsheet',
   sampleHint:
     'The sample’s columns are recognised on their own. We guess the encoding and the separator: Excel saves CSV its own way, and that is fine.',

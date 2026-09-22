@@ -368,6 +368,21 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21г-перенос-на-существующую-доску.png`, fullPage: true })
 
+  // Из YouGile — против поддельного YouGile (e2e/fake-yougile.mjs):
+  // вход, затем предпросмотр со списком того, что не едет.
+  await page.goto('/import')
+  await page.getByRole('radio', { name: 'Из YouGile' }).check()
+  await page.waitForTimeout(200)
+  await page.screenshot({ path: `${SHOTS}/21д-перенос-из-yougile-вход.png`, fullPage: true })
+  await page.getByLabel('Почта в YouGile').fill('anna@yougile.test')
+  await page.getByLabel('Пароль в YouGile').fill('parol12345')
+  await page.getByRole('button', { name: 'Найти компании' }).click()
+  await page.getByRole('button', { name: 'Получить ключ' }).click()
+  await page.getByLabel('Доска YouGile').selectOption({ label: 'Логистика · Склад' })
+  await expect(page.getByText(/Переедут 3 карточки/)).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21е-перенос-из-yougile.png`, fullPage: true })
+
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него
   // на этом экране можно всё, и разницы не видно. Борис отвечает

@@ -451,6 +451,8 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 		"--set", "oidc.existingSecret=takt-oidc",
 		// Демо тоже включено: DEMO передаётся только при нём.
 		"--set", "demo=true",
+		// Адрес YouGile передаётся, только когда задан: пусто — облачный.
+		"--set", "yougile.url=https://yougile.example.test",
 		"--set", "signup=closed",
 	)
 	if err != nil {

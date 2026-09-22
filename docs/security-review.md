@@ -41,6 +41,7 @@ the database is unreachable; `takt doctor` prints it first.
 | out | PostgreSQL on `DATABASE_URL` | always |
 | out | the OIDC provider you configured | only with `OIDC_ISSUER` set |
 | out | the addresses of subscriptions an owner created | only when subscriptions exist |
+| out | YouGile on `YOUGILE_URL` (the cloud one unless set) | only while someone imports a board from YouGile; `YOUGILE_URL=off` rules it out |
 
 That is the whole list. The product opens **no other outbound
 connection**: no telemetry, no update check, no licence server, no
@@ -255,7 +256,7 @@ usually rests on: a vulnerability in a dependency we never call.
 | use `sslmode=verify-full` for a database over a network | otherwise credentials and data cross it in the clear |
 | keep the container as the chart ships it: non-root uid 10001, read-only root filesystem, no capabilities, `seccomp: RuntimeDefault` | the application keeps no state on disk — everything is in the database — so it needs neither write access nor privileges |
 | put secrets in a Secret or an `EnvironmentFile` with mode 0600 | they arrive as environment variables; a world-readable unit file undoes that |
-| restrict egress to the database, and to the provider and subscription addresses if you use them | the product cannot restrict its own outbound traffic, and an owner chooses subscription addresses |
+| restrict egress to the database, and to the provider, subscription addresses and YouGile if you use them; in a closed network set `YOUGILE_URL=off` | the product cannot restrict its own outbound traffic, and an owner chooses subscription addresses |
 | back the database up and test recovery | there is no state anywhere else, and the migration runs before the pods are replaced — `helm rollback` returns the pods, not the schema |
 | set `SIGNUP=closed` where accounts come from the directory | otherwise the first anonymous visitor can create an organisation |
 
@@ -274,7 +275,8 @@ usually rests on: a vulnerability in a dependency we never call.
 | a leaked invitation token | single use, expires, opens exactly one row and nothing beyond it | `org_test.go` |
 | a tampered artefact | SHA-256 over every file, SBOM alongside | `SHA256SUMS` |
 | a vulnerable dependency | four scanners, a VEX statement, Dependabot | the runs of `security.yml` and `codeql.yml` |
-| the server made to call an internal address | only an owner can create a subscription | **not held by the product** — restrict egress on your side |
+| the server made to call an internal address | only an owner can create a subscription; the YouGile address comes from configuration, never from the person importing | **not held by the product** — restrict egress on your side |
+| YouGile credentials kept or leaked | the password passes through the server once, to get the company's API key, and the key lives in the browser tab; neither is stored or logged | `import_yougile_test.go` |
 | an owner acting against their own organisation | nothing, by definition of the role | the audit log records it |
 
 ## What the product does not do
@@ -316,7 +318,7 @@ otherwise would be worse than no table.
 | РСБ (logging of security events) | the audit log written by triggers, kept indefinitely, readable through the API |
 | АНЗ (vulnerability analysis) | four scanners, SBOM, VEX, published timelines for reports |
 | ОЦЛ (integrity) | checksums over every artefact, version compiled into the binary, migrations forward only |
-| ЗИС (protection of the system and communications) | no outbound connections beyond the three named; TLS at your boundary |
+| ЗИС (protection of the system and communications) | no outbound connections beyond the four named; TLS at your boundary |
 
 **International**
 

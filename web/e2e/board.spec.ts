@@ -2612,3 +2612,31 @@ test('значение из файла ложится в выбранную ко
   await expect(page.getByRole('region', { name: 'In Review' })).toHaveCount(0)
   await expect(cardIn(page, 'Icebox', 'Plan Q4')).toBeVisible()
 })
+
+test('доска YouGile переезжает по API и называет, что не едет', async ({ page }) => {
+  await register(page)
+  await page.goto('/import')
+  await page.getByRole('radio', { name: 'Из YouGile' }).check()
+  await page.getByLabel('Почта в YouGile').fill('anna@yougile.test')
+  await page.getByLabel('Пароль в YouGile').fill('не тот')
+  await page.getByRole('button', { name: 'Найти компании' }).click()
+  await expect(page.getByText(/YouGile не принял вход/)).toBeVisible()
+
+  await page.getByLabel('Пароль в YouGile').fill('parol12345')
+  await page.getByRole('button', { name: 'Найти компании' }).click()
+  await expect(page.getByLabel('Компания')).toHaveValue('co-1')
+  await page.getByRole('button', { name: 'Получить ключ' }).click()
+  await expect(page.getByText(/В YouGile заведён ключ API/)).toBeVisible()
+  // Пароля на экране больше нет — он был нужен только для ключа.
+  await expect(page.getByLabel('Пароль в YouGile')).toHaveCount(0)
+
+  await page.getByLabel('Доска YouGile').selectOption({ label: 'Логистика · Склад' })
+  await expect(page.getByText('Переедут 3 карточки из 4 строк.')).toBeVisible()
+  await expect(page.getByText('задачи из архива YouGile: 1')).toBeVisible()
+  await expect(page.getByText(/подзадачи \(задач с ними: 1\)/)).toBeVisible()
+  await expect(page.getByText('nikto@yougile.test — 1 карточка')).toBeVisible()
+  await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
+  await page.getByRole('button', { name: 'Открыть доску' }).click()
+  await expect(cardIn(page, 'В работе', 'Заказать поддоны')).toBeVisible()
+  await expect(cardIn(page, 'Нужно сделать', 'Сверить остатки')).toBeVisible()
+})

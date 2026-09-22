@@ -61,6 +61,19 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
         </p>
       )}
 
+      {/* Что источник знает, а мы не везём, — списком до переноса:
+          молчаливая потеря хуже названной. */}
+      {report.lost.length > 0 && (
+        <div>
+          <h4>{s.lost}</h4>
+          <ul className="import-list">
+            {report.lost.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {report.problems.length > 0 && (
         <div>
           <h4>{s.problems}</h4>

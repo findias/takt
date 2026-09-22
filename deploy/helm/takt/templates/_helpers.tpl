@@ -121,6 +121,10 @@ DATABASE_URL
 - name: DEMO
   value: "on"
 {{- end }}
+{{- with .Values.yougile.url }}
+- name: YOUGILE_URL
+  value: {{ . | quote }}
+{{- end }}
 {{- if .Values.oidc.enabled }}
 - name: OIDC_ISSUER
   value: {{ required "нужен oidc.issuer: адрес провайдера входа" .Values.oidc.issuer | quote }}

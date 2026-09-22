@@ -315,6 +315,39 @@ spreadsheet**); its columns are recognised without any changes. One
 import takes up to 10,000 rows and 5 MB and runs in seconds; split
 a bigger file.
 
+<!-- anchor: import-yougile -->
+### Import a board from YouGile
+
+A YouGile board comes over whole through its API: columns, tasks,
+assignees, deadlines, dates, stickers and checklists.
+
+1. **Boards** tab → **Import tasks from a spreadsheet…** → **YouGile**.
+2. Enter the email and password you sign in to YouGile with, press
+   **Find companies**, pick the company and press **Get the key**. The
+   password is used once, to get the company's API key; if the company
+   has no key yet, one is created in YouGile and the screen says so —
+   delete it there once the import is done. If you already have a key,
+   **I have an API key** takes it instead. Neither the password nor the
+   key is stored.
+3. Pick the **YouGile board**, then where to — a new board or an
+   existing one, exactly as for a spreadsheet — and read **What will
+   happen**.
+
+What comes across: every task that is not in YouGile's archive, into
+the column of the same name; assignees by email; the deadline as the
+due date; the created and finished dates; stickers as labels named
+“Sticker: value”, except a sticker called Priority, whose values
+become the card's priority; checklists at the end of the description.
+What does not, and the preview lists it under **Not imported**: tasks
+in YouGile's archive, subtasks (for now), task chats, files, access
+rights and time tracking. Importing the same board again skips what
+has already come.
+
+The server has to reach YouGile. In a closed network it cannot: export
+a table in YouGile (Reports → Tables) and import it as a spreadsheet.
+An administrator can switch import over the API off altogether with
+`YOUGILE_URL=off`; for a boxed YouGile, `YOUGILE_URL` holds its address.
+
 <!-- anchor: team -->
 ## The organisation
 

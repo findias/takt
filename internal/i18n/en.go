@@ -319,4 +319,22 @@ var en = map[string]string{
 	"лист «%s» не читается: %s": "sheet “%s” cannot be read: %s",
 	"лист «%s» не читается: строка %s за пределом Excel":              "sheet “%s” cannot be read: row %s is beyond Excel's limit",
 	"колонки, выбранной для «%s», на доске уже нет — выберите другую": "the column chosen for “%s” is no longer on the board — choose another",
+
+	// --- Перенос из YouGile ---
+	"укажите почту и пароль, с которыми входите в YouGile": "enter the email and password you use to sign in to YouGile",
+	"укажите почту, пароль и компанию YouGile":             "enter your YouGile email, password and company",
+	"нужен ключ API YouGile":                               "a YouGile API key is needed",
+	"нужен ключ API YouGile и доска, откуда переносить":    "a YouGile API key and the board to import from are needed",
+	"YouGile не отвечает — если сервер в закрытом контуре, выгрузите таблицу в YouGile («Отчёты → Таблицы») и перенесите её файлом": "YouGile does not answer — if the server is in a closed network, export a table from YouGile (Reports → Tables) and import it as a file",
+	"YouGile не принял вход или ключ — проверьте почту, пароль и компанию":                                                          "YouGile did not accept the sign-in or the key — check the email, password and company",
+	"YouGile просит подождать: слишком много запросов — повторите через минуту":                                                     "YouGile asks to wait: too many requests — try again in a minute",
+	"в YouGile нет такой доски — выберите доску из списка":                                                                          "there is no such board in YouGile — choose one from the list",
+	"YouGile ответил %s на %s":            "YouGile answered %s to %s",
+	"ответ YouGile на %s не разобран: %s": "the YouGile answer to %s could not be read: %s",
+	"на доске YouGile больше %s задач — перенесите её таблицей по частям":                                "the YouGile board has more than %s tasks — import it as a table in parts",
+	"задача без названия — не переносится":                                                               "a task without a title — not imported",
+	"задачи из архива YouGile: %s":                                                                       "tasks in the YouGile archive: %s",
+	"подзадачи (задач с ними: %s) — части переносятся следующим срезом":                                  "subtasks (tasks that have them: %s) — parts are imported in a later release",
+	"чат задач, файлы, права доступа и учёт времени — их в карточке нет":                                 "task chats, files, access rights and time tracking — a card has none of them",
+	"перенос из YouGile на этой установке выключен — выгрузите таблицу в YouGile и перенесите её файлом": "import from YouGile is switched off on this installation — export a table from YouGile and import it as a file",
 }

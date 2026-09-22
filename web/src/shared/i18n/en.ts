@@ -413,7 +413,7 @@ export const en: typeof ru = {
     boards: 'Boards',
     team: 'Team',
     structure: 'Structure',
-    import: 'Import from a spreadsheet',
+    import: 'Import tasks',
     sections: 'Sections',
     offline:
       'No connection to the server. Nothing is lost: once the connection is back, repeat the action.',

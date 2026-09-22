@@ -60,6 +60,13 @@ come in English when the `lang` cookie or `Accept-Language` asks for
 it. Without either the answer is Russian, as before, so integrations
 see no change.
 
+**A new setting, `YOUGILE_URL`, and a new outbound connection.**
+Importing a board from YouGile makes the server call YouGile, only
+while someone does so. Unset, that is the cloud `https://ru.yougile.com`;
+a boxed YouGile has its own address; `off` switches import over the API
+off. In a closed network set `off` and keep importing spreadsheets.
+The Helm chart takes it as `yougile.url`.
+
 **A new setting, `DEMO`, and it must stay off on your installation.**
 `DEMO=on` is for the public demo only: the sign-in screen offers anyone
 a sandbox organisation with sample data for 24 hours. It refuses to
@@ -92,6 +99,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   come. Dates come across, moves between columns do not. Imported cards
   are marked in their history and in «Поток», which can count without
   them.
+- **Import from YouGile.** The same screen takes a YouGile board over
+  its API: sign in once to get the company's API key, pick the board,
+  see what will happen. Tasks, columns, assignees by email, deadlines,
+  dates, stickers as labels and checklists come across; what does not —
+  YouGile's archive, subtasks for now, chats, files, rights, time
+  tracking — is listed before the import.
 - **Notifications.** A bell in the header counts what is unread: being
   called into a discussion (**@ Mention** under a reply), assigned to
   a card, a block on your card, less than a day left on that block, the

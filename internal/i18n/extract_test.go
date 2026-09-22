@@ -107,8 +107,13 @@ func goMessages(t *testing.T, root string) []message {
 			continue
 		}
 		files, _ := filepath.Glob(filepath.Join(root, d.Name(), "*.go"))
+		// И вложенные пакеты (importer/yougile): говорят они с человеком
+		// так же, а без этого выпадали бы из проверки молча.
+		nested, _ := filepath.Glob(filepath.Join(root, d.Name(), "*", "*.go"))
+		files = append(files, nested...)
 		for _, path := range files {
-			if strings.HasSuffix(path, "_test.go") || quietFiles[d.Name()+"/"+filepath.Base(path)] {
+			rel, _ := filepath.Rel(root, path)
+			if strings.HasSuffix(path, "_test.go") || quietFiles[filepath.ToSlash(rel)] {
 				continue
 			}
 			f, err := parser.ParseFile(fset, path, nil, 0)

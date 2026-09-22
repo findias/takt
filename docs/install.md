@@ -142,6 +142,7 @@ on installing without internet access, below, covers it.
 | `OIDC_LABEL` | the caption on the sign-in button |
 | `DEMO` | leave unset: `on` turns the installation into a public demo where anyone creates a sandbox |
 | `STAND` | leave unset: `staging` is for our own test stand of a branch |
+| `YOUGILE_URL` | where import from YouGile goes: unset is the cloud `https://ru.yougile.com`, a boxed YouGile has its own address, `off` switches import over the API off (importing a spreadsheet always works) |
 
 **Migrations are a separate command,** `takt migrate`, not part of
 startup. On one replica it makes no difference; on two, a simultaneous

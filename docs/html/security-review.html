@@ -141,6 +141,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>out</td><td>PostgreSQL on <code>DATABASE_URL</code></td><td>always</td></tr>
 <tr><td>out</td><td>the OIDC provider you configured</td><td>only with <code>OIDC_ISSUER</code> set</td></tr>
 <tr><td>out</td><td>the addresses of subscriptions an owner created</td><td>only when subscriptions exist</td></tr>
+<tr><td>out</td><td>YouGile on <code>YOUGILE_URL</code> (the cloud one unless set)</td><td>only while someone imports a board from YouGile; <code>YOUGILE_URL=off</code> rules it out</td></tr>
 </tbody>
 </table></div>
 <p>That is the whole list. The product opens <strong>no other outbound connection</strong>: no telemetry, no update check, no licence server, no crash reporting, no CDN. The client bundle and the documentation are served by the same process from its own files — which is why the installation works in a network with no route to the internet at all, and why the documentation pages carry no external reference either.</p>
@@ -225,7 +226,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>use <code>sslmode=verify-full</code> for a database over a network</td><td>otherwise credentials and data cross it in the clear</td></tr>
 <tr><td>keep the container as the chart ships it: non-root uid 10001, read-only root filesystem, no capabilities, <code>seccomp: RuntimeDefault</code></td><td>the application keeps no state on disk — everything is in the database — so it needs neither write access nor privileges</td></tr>
 <tr><td>put secrets in a Secret or an <code>EnvironmentFile</code> with mode 0600</td><td>they arrive as environment variables; a world-readable unit file undoes that</td></tr>
-<tr><td>restrict egress to the database, and to the provider and subscription addresses if you use them</td><td>the product cannot restrict its own outbound traffic, and an owner chooses subscription addresses</td></tr>
+<tr><td>restrict egress to the database, and to the provider, subscription addresses and YouGile if you use them; in a closed network set <code>YOUGILE_URL=off</code></td><td>the product cannot restrict its own outbound traffic, and an owner chooses subscription addresses</td></tr>
 <tr><td>back the database up and test recovery</td><td>there is no state anywhere else, and the migration runs before the pods are replaced — <code>helm rollback</code> returns the pods, not the schema</td></tr>
 <tr><td>set <code>SIGNUP=closed</code> where accounts come from the directory</td><td>otherwise the first anonymous visitor can create an organisation</td></tr>
 </tbody>
@@ -245,7 +246,8 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>a leaked invitation token</td><td>single use, expires, opens exactly one row and nothing beyond it</td><td><code>org_test.go</code></td></tr>
 <tr><td>a tampered artefact</td><td>SHA-256 over every file, SBOM alongside</td><td><code>SHA256SUMS</code></td></tr>
 <tr><td>a vulnerable dependency</td><td>four scanners, a VEX statement, Dependabot</td><td>the runs of <code>security.yml</code> and <code>codeql.yml</code></td></tr>
-<tr><td>the server made to call an internal address</td><td>only an owner can create a subscription</td><td><strong>not held by the product</strong> — restrict egress on your side</td></tr>
+<tr><td>the server made to call an internal address</td><td>only an owner can create a subscription; the YouGile address comes from configuration, never from the person importing</td><td><strong>not held by the product</strong> — restrict egress on your side</td></tr>
+<tr><td>YouGile credentials kept or leaked</td><td>the password passes through the server once, to get the company&#39;s API key, and the key lives in the browser tab; neither is stored or logged</td><td><code>import_yougile_test.go</code></td></tr>
 <tr><td>an owner acting against their own organisation</td><td>nothing, by definition of the role</td><td>the audit log records it</td></tr>
 </tbody>
 </table></div>
@@ -273,7 +275,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>РСБ (logging of security events)</td><td>the audit log written by triggers, kept indefinitely, readable through the API</td></tr>
 <tr><td>АНЗ (vulnerability analysis)</td><td>four scanners, SBOM, VEX, published timelines for reports</td></tr>
 <tr><td>ОЦЛ (integrity)</td><td>checksums over every artefact, version compiled into the binary, migrations forward only</td></tr>
-<tr><td>ЗИС (protection of the system and communications)</td><td>no outbound connections beyond the three named; TLS at your boundary</td></tr>
+<tr><td>ЗИС (protection of the system and communications)</td><td>no outbound connections beyond the four named; TLS at your boundary</td></tr>
 </tbody>
 </table></div>
 <p><strong>International</strong></p>
@@ -306,7 +308,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as “all fine”.</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.3-44-g929fc16-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-45-g828e77c-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -423,6 +423,8 @@ export type ImportReport = {
   /** Колонки существующей доски для выбора; у новой пусто. */
   boardColumns: { id: string; name: string }[]
   archivedLabels: string[]
+  /** Что источник знает, а мы не переносим, — словами. */
+  lost: string[]
   missingPeople: { email: string; cards: number }[]
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
   dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' | 'excel' }[]
@@ -762,7 +764,6 @@ export class NetworkError extends Error {
 }
 
 const TIMEOUT_MS = 10_000
-const IMPORT_TIMEOUT_MS = 120_000
 
 /**
  * keepalive — «доведи запрос до конца, даже если страницы уже нет».
@@ -776,7 +777,9 @@ const IMPORT_TIMEOUT_MS = 120_000
  * Остальным запросам это не нужно: их ответ читают тут же и без него
  * ничего не происходит.
  */
-async function request<T>(
+/** Для клиентов API, которые едут отдельным куском вместе со своим
+ *  экраном (перенос): тот же запрос, те же отказы и та же связь. */
+export async function request<T>(
   method: string,
   path: string,
   body?: unknown,
@@ -1054,11 +1057,6 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
-  /** Импорт из таблицы: предпросмотр (`apply: false`) и перенос —
-   *  один и тот же запрос. Файл — base64; ждём дольше обычного:
-   *  перенос тысяч строк идёт, пока человек смотрит на кнопку. */
-  importTable: (body: ImportRequest) =>
-    request<ImportAnswer>('POST', '/api/import/table', body, false, IMPORT_TIMEOUT_MS),
   comments: (boardId: string, cardId: string) =>
     request<{ comments: Comment[] }>('GET', `/api/boards/${boardId}/cards/${cardId}/comments`),
   addComment: (

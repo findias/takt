@@ -111,33 +111,13 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 
 	out.Sample = readableDates(out.Sample, table.Headers, plan.Dates)
 
-	columnMap := map[string]string{}
-	for v, id := range req.Columns {
-		columnMap[strings.ToLower(strings.TrimSpace(v))] = id
-	}
-	target := board.ImportTarget{BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap}
-	rep, err := s.boards.Import(r.Context(), p.OrgID, p.ID, target, plan, req.Apply)
-	switch {
-	case err == nil:
-	case errors.Is(err, board.ErrNotFound):
-		writeError(w, http.StatusNotFound, "доска не найдена")
-		return
-	case errors.Is(err, board.ErrReadOnlyBoard):
-		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
-		return
-	case errors.Is(err, board.ErrBadRequest):
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	default:
-		s.fail(w, "импорт таблицы", err)
+	rep, ok := s.importPlan(w, r, p, plan, board.ImportTarget{
+		BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap(req.Columns),
+	}, req.Apply)
+	if !ok {
 		return
 	}
-	// Претензии к строкам говорятся на языке запроса, как и отказы:
-	// они того же рода — объясняют, что делать.
-	for i := range rep.Problems {
-		rep.Problems[i].Message = i18n.Name(r.Context(), rep.Problems[i].Message)
-	}
-	out.Report = &rep
+	out.Report = rep
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -186,4 +166,47 @@ func readableDates(sample [][]string, headers []string, dates []importer.DateFor
 		}
 	}
 	return out
+}
+
+// columnMap — выбор человека «значение → колонка» в том виде, в каком
+// его сравнивает перенос: без учёта регистра и пробелов по краям.
+func columnMap(in map[string]string) map[string]string {
+	out := map[string]string{}
+	for v, id := range in {
+		out[strings.ToLower(strings.TrimSpace(v))] = id
+	}
+	return out
+}
+
+// importPlan переносит разобранное — из таблицы или из YouGile —
+// и отвечает отказом сам. false — отказ уже записан.
+func (s *Server) importPlan(
+	w http.ResponseWriter, r *http.Request, p auth.Principal,
+	plan importer.Plan, target board.ImportTarget, apply bool,
+) (*board.ImportReport, bool) {
+	rep, err := s.boards.Import(r.Context(), p.OrgID, p.ID, target, plan, apply)
+	switch {
+	case err == nil:
+	case errors.Is(err, board.ErrNotFound):
+		writeError(w, http.StatusNotFound, "доска не найдена")
+		return nil, false
+	case errors.Is(err, board.ErrReadOnlyBoard):
+		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
+		return nil, false
+	case errors.Is(err, board.ErrBadRequest):
+		writeError(w, http.StatusBadRequest, err.Error())
+		return nil, false
+	default:
+		s.fail(w, "импорт", err)
+		return nil, false
+	}
+	// Претензии к строкам и потери говорятся на языке запроса, как
+	// и отказы: они того же рода — объясняют, что делать.
+	for i := range rep.Problems {
+		rep.Problems[i].Message = i18n.Name(r.Context(), rep.Problems[i].Message)
+	}
+	for i := range rep.Lost {
+		rep.Lost[i] = i18n.Name(r.Context(), rep.Lost[i])
+	}
+	return &rep, true
 }

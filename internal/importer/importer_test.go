@@ -188,7 +188,7 @@ func TestSamplesMapThemselves(t *testing.T) {
 func TestColumnKindsFromNames(t *testing.T) {
 	for name, want := range map[string]string{
 		"Готово": "done", "Done": "done", "В работе": "in_progress", "In Progress": "in_progress",
-		"Бэклог": "queue", "To Do": "queue", "Review": "", "На согласовании": "",
+		"Бэклог": "queue", "To Do": "queue", "Нужно сделать": "queue", "Review": "", "На согласовании": "",
 	} {
 		if got := ColumnKind(name); got != want {
 			t.Errorf("%s: %s, ожидалось %s", name, got, want)

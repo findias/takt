@@ -61,6 +61,15 @@ type Config struct {
 	// Включается только явным STAND=staging; с демо не совмещается —
 	// стенд показывает недопринятое, а демо видят клиенты.
 	Stand bool
+
+	// YougileURL — адрес YouGile, откуда переносят доски по API
+	// (ROADMAP 23.3). Облачный по умолчанию; у коробочного YouGile свой.
+	// Запросы идут только сюда: адрес задаёт тот, кто ставит, а не тот,
+	// кто переносит, — иначе перенос стал бы способом постучаться
+	// сервером куда угодно во внутренней сети. «off» выключает перенос
+	// из YouGile совсем: у закрытой установки не должно быть даже
+	// попытки выйти наружу, и проверяющий хочет видеть это настройкой.
+	YougileURL string
 }
 
 type OIDCConfig struct {
@@ -103,6 +112,9 @@ const (
 	SignupClosed SignupMode = "closed"
 )
 
+// YougileOff — перенос из YouGile выключен.
+const YougileOff = "off"
+
 func Load() (Config, error) {
 	c := Config{
 		BaseURL:     env("BASE_URL", "http://localhost:8080"),
@@ -112,6 +124,7 @@ func Load() (Config, error) {
 		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
 		Demo:        env("DEMO", "") == "on",
 		Stand:       env("STAND", "") == "staging",
+		YougileURL:  strings.TrimRight(env("YOUGILE_URL", "https://ru.yougile.com"), "/"),
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
 			ClientID:     env("OIDC_CLIENT_ID", ""),
@@ -123,6 +136,11 @@ func Load() (Config, error) {
 
 	if c.DatabaseURL == "" {
 		return c, fmt.Errorf("не задан DATABASE_URL")
+	}
+	if c.YougileURL != YougileOff {
+		if u, err := url.Parse(c.YougileURL); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			return c, fmt.Errorf("YOUGILE_URL=%q: нужен адрес вида https://ru.yougile.com или off", c.YougileURL)
+		}
 	}
 	switch c.Signup {
 	case SignupFirst, SignupOpen, SignupClosed:
