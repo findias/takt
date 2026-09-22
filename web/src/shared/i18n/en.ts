@@ -285,6 +285,8 @@ export const en: typeof ru = {
   },
   feed: {
     created: 'created',
+    imported: 'imported from a spreadsheet',
+    importedAs: (key: string) => `imported from a spreadsheet, was ${key} there`,
     movedFromTo: (from: string, to: string) => `from “${from}” to “${to}”`,
     movedTo: (to: string) => `to “${to}”`,
     moved: 'moved',

@@ -2528,6 +2528,19 @@ test('таблица переезжает на доску: предпросмо�
   await expect(cardIn(page, 'В работе', 'Сверить остатки')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Заказать тару')).toBeVisible()
 
+  // Перенесённое помечено: в истории карточки и в отчёте потока,
+  // где его можно отключить.
+  await cardIn(page, 'В работе', 'Сверить остатки').click()
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(page.getByText('перенесена из таблицы')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Поток' }).click()
+  await expect(page.getByText(/1 карточка этого отчёта перенесена из другой системы/)).toBeVisible()
+  await expect(page.getByText(/^В работе 1\./)).toBeVisible()
+  await page.getByRole('checkbox', { name: 'Считать без перенесённых' }).check()
+  await expect(page.getByText(/^В работе 0\./)).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
   // Тот же файл ещё раз — в ту же доску: переносить нечего.
   await page.goto('/import')
   await page.getByLabel('Файл CSV или Excel').setInputFiles(file)

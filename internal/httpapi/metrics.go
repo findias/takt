@@ -28,7 +28,10 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request, p auth.Pr
 		}
 	}
 
-	report, err := s.metrics.Report(r.Context(), p.OrgID, p.ID, r.PathValue("id"), days)
+	// Перенесённое из другой системы — по просьбе без него: отчёт
+	// обязан уметь отделить перенесённое от прожитого (этап 23).
+	opt := metrics.Options{WithoutImported: r.URL.Query().Get("withoutImported") == "true"}
+	report, err := s.metrics.ReportWith(r.Context(), p.OrgID, p.ID, r.PathValue("id"), days, opt)
 	if errors.Is(err, metrics.ErrNoData) {
 		writeError(w, http.StatusNotFound, "доска не найдена")
 		return

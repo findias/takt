@@ -22,6 +22,14 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
   const p = event.payload ?? {}
   switch (event.type) {
     case 'created':
+      // Перенесённая из другой системы — так и сказано, с ключом там,
+      // если он был: по нему её находят в старой системе. Дата события —
+      // день переноса, а не заведения там; без этой строки история
+      // выглядела бы так, будто работу завели сегодня.
+      if (typeof p.imported === 'string')
+        return typeof p.externalId === 'string'
+          ? t.feed.importedAs(p.externalId)
+          : t.feed.imported
       return t.feed.created
     case 'moved': {
       // В событии лежит снимок колонок на момент перехода, а не ссылки:

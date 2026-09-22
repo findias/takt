@@ -422,6 +422,12 @@
             "in": "query",
             "schema": { "type": "integer", "default": 90, "minimum": 7, "maximum": 365 },
             "description": "Окно в днях. Это часть вопроса, а не настройка: команда полугодовой давности — другая команда. Меньше 7 и больше 365 подтягиваются к границе, нечисловое значение берётся как 90."
+          },
+          {
+            "name": "withoutImported",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false },
+            "description": "Не считать карточки, перенесённые из другой системы. Их даты взяты оттуда, а начало работы там неизвестно и принято равным дате заведения, — время цикла у них ближе ко времени выполнения заказа. С true отчёт — только о том, что прожито на этой доске."
           }
         ],
         "responses": {
@@ -431,7 +437,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["days", "cycleTime", "finished", "throughput", "wip", "aging", "flow", "forecast", "discarded"],
+                  "required": ["days", "cycleTime", "finished", "throughput", "wip", "aging", "flow", "forecast", "discarded", "imported", "withoutImported"],
                   "properties": {
                     "days": { "type": "integer", "description": "Окно, за которое посчитано, — уже подтянутое к границам." },
                     "cycleTime": {
@@ -449,12 +455,13 @@
                       "description": "Точки на диаграмме: что доведено до конца и за сколько дней.",
                       "items": {
                         "type": "object",
-                        "required": ["id", "title", "finishedOn", "days"],
+                        "required": ["id", "title", "finishedOn", "days", "imported"],
                         "properties": {
                           "id": { "type": "string", "format": "uuid" },
                           "title": { "type": "string" },
                           "finishedOn": { "type": "string", "format": "date", "description": "День по календарю: часа на диаграмме не разглядеть." },
-                          "days": { "type": "number" }
+                          "days": { "type": "number" },
+                          "imported": { "type": "boolean", "description": "Перенесена из другой системы: дни посчитаны от даты заведения там." }
                         }
                       }
                     },
@@ -476,13 +483,14 @@
                       "description": "Что идёт сейчас и сколько уже идёт: время цикла говорит о прошлом, возраст — о том, что застряло сейчас.",
                       "items": {
                         "type": "object",
-                        "required": ["id", "title", "column", "days", "blocked"],
+                        "required": ["id", "title", "column", "days", "blocked", "imported"],
                         "properties": {
                           "id": { "type": "string", "format": "uuid" },
                           "title": { "type": "string" },
                           "column": { "type": "string" },
                           "days": { "type": "number" },
-                          "blocked": { "type": "boolean", "description": "Заблокированная карточка стареет, ничего не делая, — в списке старения это первое, что нужно видеть." }
+                          "blocked": { "type": "boolean", "description": "Заблокированная карточка стареет, ничего не делая, — в списке старения это первое, что нужно видеть." },
+                          "imported": { "type": "boolean", "description": "Перенесена из другой системы: возраст считается от даты заведения там." }
                         }
                       }
                     },
@@ -514,7 +522,9 @@
                         }
                       }
                     },
-                    "discarded": { "type": "integer", "description": "Сколько убрано с доски незавершёнными." }
+                    "discarded": { "type": "integer", "description": "Сколько убрано с доски незавершёнными." },
+                    "imported": { "type": "integer", "description": "Сколько карточек отчёта перенесены из другой системы: закончены в окне или идут сейчас. Считается и при withoutImported=true — чтобы было видно, сколько отброшено." },
+                    "withoutImported": { "type": "boolean", "description": "Отчёт посчитан без перенесённых карточек." }
                   }
                 }
               }

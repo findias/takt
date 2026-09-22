@@ -149,21 +149,34 @@ export function CycleScatter({
             </text>
           </g>
         ))}
-        {finished.map((c) => (
-          <circle
-            key={c.id}
-            cx={x(c.finishedOn)}
-            cy={y(c.days)}
-            r={3}
-            fill={c.days > cycleTime.p85 ? 'var(--warn)' : 'var(--accent)'}
-            fillOpacity={0.75}
-          >
-            <title>{t.flowReport.cardDays(c.title, round(c.days))}</title>
-          </circle>
-        ))}
+        {finished.map((c) => {
+          const tone = c.days > cycleTime.p85 ? 'var(--warn)' : 'var(--accent)'
+          // Перенесённая — полым кружком: её дни посчитаны от даты
+          // заведения в прежней системе, и сравнивать её с прожитыми
+          // наравне нельзя. Форма, а не цвет: цвет уже занят «дольше
+          // обещанного», и различать два признака одним цветом нельзя.
+          return (
+            <circle
+              key={c.id}
+              cx={x(c.finishedOn)}
+              cy={y(c.days)}
+              r={3}
+              fill={c.imported ? 'none' : tone}
+              stroke={c.imported ? tone : undefined}
+              strokeWidth={c.imported ? 1.5 : undefined}
+              fillOpacity={0.75}
+            >
+              <title>
+                {t.flowReport.cardDays(c.title, round(c.days))}
+                {c.imported ? ` · ${t.flow.importedMark}` : ''}
+              </title>
+            </circle>
+          )
+        })}
       </svg>
       <figcaption className="muted small">
         {t.flowReport.cycleCaption}
+        {finished.some((c) => c.imported) && ` ${t.flow.importedHollow}`}
       </figcaption>
     </figure>
   )

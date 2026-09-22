@@ -176,6 +176,12 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			`select count(*) >= 1 from cards where org_id = $1 and archived_at is not null`,
 		},
 		{
+			// Без перенесённых не на чем увидеть, как отчёт отделяет
+			// их от прожитого.
+			"карточки, перенесённые из таблицы",
+			`select count(*) >= 3 from cards where org_id = $1 and external_source is not null`,
+		},
+		{
 			// Без прошлого метрики потока считать не из чего: карточка,
 			// законченная секунду назад, даёт время цикла в ноль дней.
 			// Порог мягче обещанных трёх недель нарочно: проверка ловит

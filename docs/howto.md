@@ -286,10 +286,21 @@ has already come.
 
 History: dates come across, moves between columns do not — the old
 system had its own columns, and its moves passed off as ours would give
-a metric you cannot trust. The cycle time of finished cards counts
-right away (from the created date, since the start of work is not
-known); the cumulative flow diagram fills from the day of the import.
-Assignment by import sends no notifications.
+a metric you cannot trust. The start of work there is not known either,
+so it is taken as the created date: an imported card's cycle time is
+closer to its whole lead time. Assignment by import sends no
+notifications.
+
+Imported cards are marked, so they can be told apart from work lived
+on the board:
+
+- the card's history says «перенесена из таблицы» and, if the file had
+  one, its key in the old system;
+- **Flow** says how many cards of the report were imported, draws
+  them as hollow dots on the cycle-time chart, marks them in the aging
+  list, and **Count without imported cards** recalculates every figure
+  — cycle time, throughput, the forecast, the cumulative flow — without
+  them.
 
 A sample spreadsheet is on the same screen (**Download a sample
 spreadsheet**); its columns are recognised without any changes. One

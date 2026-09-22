@@ -567,6 +567,8 @@ describe('поток словами, а не машинными строками
     flow: [],
     forecast: null,
     discarded: 0,
+    imported: 0,
+    withoutImported: false,
   }
 
   // Прогноз считается из того же прошлого, что и время цикла, но

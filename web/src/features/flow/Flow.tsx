@@ -32,14 +32,17 @@ export function Flow({
 }) {
   const [report, setReport] = useState<FlowReport | null>(null)
   const [days, setDays] = useState(90)
+  // Без перенесённых — выбор разговора, а не настройка доски: хранить
+  // его незачем, открыли поток снова — считаем всё.
+  const [withoutImported, setWithoutImported] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api
-      .metrics(boardId, days)
+      .metrics(boardId, days, withoutImported)
       .then(setReport)
       .catch((e) => setError(e instanceof Error ? e.message : t.flow.countFailed))
-  }, [boardId, days])
+  }, [boardId, days, withoutImported])
 
   const [mode, setMode] = usePanelMode()
 
@@ -83,6 +86,23 @@ export function Flow({
         suggestion={report.cycleTime ? Math.ceil(report.cycleTime.p85) : null}
         onChanged={onPromise}
       />
+
+      {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
+          читается уже с этой оговоркой. Переключатель виден, пока есть
+          что отключать, — и после отключения тоже, чтобы вернуться. */}
+      {report.imported > 0 && (
+        <section className="stack stack--tight">
+          <p className="small">{t.flow.importedNote(report.imported)}</p>
+          <label>
+            <input
+              type="checkbox"
+              checked={withoutImported}
+              onChange={(e) => setWithoutImported(e.target.checked)}
+            />
+            {t.flow.withoutImported}
+          </label>
+        </section>
+      )}
 
       <section className="stack">
         <div className="section-head">
@@ -132,7 +152,10 @@ export function Flow({
                     {card.blocked && <span className="sr-only">{t.flow.blockedSr}</span>}
                     {card.title}
                   </span>
-                  <span className="muted small">{card.column}</span>
+                  <span className="muted small">
+                    {card.column}
+                    {card.imported && ` · ${t.flow.importedMark}`}
+                  </span>
                 </div>
                 <span className={overdue(card.days, report) ? 'role-chip' : 'muted small'}>
                   {t.flow.days(round(card.days))}

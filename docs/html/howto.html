@@ -229,7 +229,12 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>Labels.</strong> Labels are found by name among those that apply to the board; missing ones are created as labels of this board.</li>
 </ul>
 <p>Importing the same file again creates no duplicates: every card remembers its key in the old system (the <strong>Key in the old system</strong> column, or the title if there is none), and a second run skips what has already come.</p>
-<p>History: dates come across, moves between columns do not — the old system had its own columns, and its moves passed off as ours would give a metric you cannot trust. The cycle time of finished cards counts right away (from the created date, since the start of work is not known); the cumulative flow diagram fills from the day of the import. Assignment by import sends no notifications.</p>
+<p>History: dates come across, moves between columns do not — the old system had its own columns, and its moves passed off as ours would give a metric you cannot trust. The start of work there is not known either, so it is taken as the created date: an imported card&#39;s cycle time is closer to its whole lead time. Assignment by import sends no notifications.</p>
+<p>Imported cards are marked, so they can be told apart from work lived on the board:</p>
+<ul>
+<li>the card&#39;s history says «перенесена из таблицы» and, if the file had one, its key in the old system;</li>
+<li><strong>Flow</strong> says how many cards of the report were imported, draws them as hollow dots on the cycle-time chart, marks them in the aging list, and <strong>Count without imported cards</strong> recalculates every figure — cycle time, throughput, the forecast, the cumulative flow — without them.</li>
+</ul>
 <p>A sample spreadsheet is on the same screen (<strong>Download a sample spreadsheet</strong>); its columns are recognised without any changes. One import takes up to 10,000 rows and 5 MB and runs in seconds; split a bigger file.</p>
 <h2 id="team">The organisation</h2>
 <h3 id="invite-someone">Invite someone</h3>
@@ -299,7 +304,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-42-g526f0e2-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-43-g8706e99-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

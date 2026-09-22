@@ -33,6 +33,7 @@ import (
 	"github.com/findias/takt/internal/auth"
 	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/i18n"
+	"github.com/findias/takt/internal/importer"
 	"github.com/findias/takt/internal/org"
 	"github.com/findias/takt/internal/store"
 	"github.com/findias/takt/internal/team"
@@ -251,6 +252,11 @@ func (f *filler) fill() error {
 	}
 	if err := f.backdate(); err != nil {
 		return fmt.Errorf("сдвиг отметок в прошлое: %w", err)
+	}
+	// Перенос — после сдвига: сдвиг переписывает даты всех сделанных
+	// карточек, а у перенесённых они свои, из прежней системы.
+	if err := f.imported(); err != nil {
+		return fmt.Errorf("перенос из таблицы: %w", err)
 	}
 	// Уведомления по времени — после сдвига в прошлое: карточка, которая
 	// идёт дольше обещанного, становится такой только теперь.
@@ -894,6 +900,33 @@ func (f *filler) blockDeadlines(b board.Info, ids map[string]string) error {
 		return err
 	}
 	_, err := f.boards.ExpireBlocks(f.ctx)
+	return err
+}
+
+// imported переносит на «Поставки» несколько задач из прежней системы —
+// тем же путём, что и экран «Перенос из таблицы». Без них не на чем
+// увидеть, как перенесённое помечено в истории карточки и отделено
+// от прожитого в отчёте потока.
+func (f *filler) imported() error {
+	var boardID string
+	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select id from boards where key = $1`, f.w("ПОСТ")).Scan(&boardID)
+	}); err != nil {
+		return err
+	}
+	ago := func(days int) *time.Time {
+		t := time.Now().AddDate(0, 0, -days)
+		return &t
+	}
+	done, work := i18n.Name(f.ctx, "Готово"), i18n.Name(f.ctx, "В работе")
+	plan := importer.Plan{Source: importer.SourceTable, Rows: 4, Cards: []importer.Card{
+		{Row: 2, Title: f.w("Сверить остатки за июль"), Column: done, ExternalID: "OLD-101", Created: ago(62), Done: ago(44)},
+		{Row: 3, Title: f.w("Продлить договор с перевозчиком"), Column: done, ExternalID: "OLD-102", Created: ago(55), Done: ago(38)},
+		{Row: 4, Title: f.w("Описать упаковку для хрупкого"), Column: done, ExternalID: "OLD-103", Created: ago(50), Done: ago(31)},
+		{Row: 5, Title: f.w("Перенести справочник поставщиков"), Column: work, ExternalID: "OLD-104", Created: ago(24),
+			Assignees: []string{f.email(People[1])}},
+	}}
+	_, err := f.boards.Import(f.ctx, f.orgID, f.owner(), board.ImportTarget{BoardID: boardID}, plan, true)
 	return err
 }
 

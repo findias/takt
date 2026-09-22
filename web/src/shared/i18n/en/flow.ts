@@ -51,4 +51,9 @@ export const flow: typeof ru = {
     updateFromHistory: (days: number) => `Update from history: ${days} ${days === 1 ? 'day' : 'days'}`,
     dropPromise: 'Drop the promise',
     nothingToTake: 'Nothing to take from history yet: no card has been finished.',
+    importedNote: (n: number) =>
+      `${n} ${n === 1 ? 'card' : 'cards'} in this report ${n === 1 ? 'was' : 'were'} imported from another system. Their dates come from there, and since the start of work there is unknown it is taken as the created date — so their cycle time runs longer than the work really took.`,
+    withoutImported: 'Count without imported cards',
+    importedMark: 'imported',
+    importedHollow: 'Hollow ones were imported from another system.',
 }

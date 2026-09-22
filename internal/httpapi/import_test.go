@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Импорт из таблицы (ROADMAP 23.1–23.2). Проверяются обещания этапа:
@@ -232,5 +234,58 @@ func TestLargeTableImportsInSeconds(t *testing.T) {
 	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+r.Report.BoardID, nil, http.StatusOK), &snap)
 	if len(snap.Cards) != 2000 {
 		t.Fatalf("на доске %d карточек", len(snap.Cards))
+	}
+}
+
+// Отчёт отделяет перенесённое от прожитого: даты перенесённых взяты
+// из другой системы, а начало работы там неизвестно, и смешивать их
+// время цикла со своим молча нельзя.
+func TestFlowMetricsTellImportedFromLived(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Метрики переезда")
+	boardID := owner.board("Поток")
+	var snap struct {
+		Columns []struct{ ID, Name string } `json:"columns"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap)
+	work, done := snap.Columns[1].ID, snap.Columns[len(snap.Columns)-1].ID
+	lived := owner.cardOn(boardID, "Прожитая")
+	for _, to := range []string{work, done} {
+		owner.op(boardID, uuid.NewString(), "MOVE_CARD", map[string]any{"cardId": lived, "toColumnId": to, "place": "end"})
+	}
+
+	file := "Заголовок;Колонка;Создана;Завершена\n" +
+		"Старая первая;Готово;01.08.2026;20.08.2026\n" +
+		"Старая вторая;Готово;05.08.2026;25.08.2026\n"
+	owner.importTable(map[string]any{"file": []byte(file), "boardId": boardID, "apply": true}, http.StatusOK)
+
+	type report struct {
+		CycleTime *struct {
+			Count int `json:"count"`
+		} `json:"cycleTime"`
+		Finished []struct {
+			Title    string `json:"title"`
+			Imported bool   `json:"imported"`
+		} `json:"finished"`
+		Imported        int  `json:"imported"`
+		WithoutImported bool `json:"withoutImported"`
+	}
+	var all, own report
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/v1/boards/"+boardID+"/metrics", nil, http.StatusOK), &all)
+	if all.CycleTime == nil || all.CycleTime.Count != 3 || all.Imported != 2 || all.WithoutImported {
+		t.Fatalf("всё вместе: %+v", all)
+	}
+	marked := 0
+	for _, f := range all.Finished {
+		if f.Imported {
+			marked++
+		}
+	}
+	if marked != 2 {
+		t.Fatalf("помечены %d точек из двух перенесённых: %+v", marked, all.Finished)
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/v1/boards/"+boardID+"/metrics?withoutImported=true", nil, http.StatusOK), &own)
+	if own.CycleTime == nil || own.CycleTime.Count != 1 || own.Imported != 2 || !own.WithoutImported {
+		t.Fatalf("без перенесённых: %+v", own)
 	}
 }

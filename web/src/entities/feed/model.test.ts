@@ -111,6 +111,12 @@ test('переведены все виды событий, а не почти в
 
 test('остальные события переводятся по типу', () => {
   assert.equal(eventText(event('created')), 'создана')
+  // Перенесённая названа перенесённой, с прежним ключом, если он был.
+  assert.equal(eventText(event('created', { imported: 'table' })), 'перенесена из таблицы')
+  assert.equal(
+    eventText(event('created', { imported: 'table', externalId: 'OLD-7' })),
+    'перенесена из таблицы, там — OLD-7',
+  )
   assert.equal(eventText(event('renamed', { title: 'Новое' })), 'переименована в «Новое»')
   assert.equal(eventText(event('archived')), 'убрана с доски')
   assert.equal(eventText(event('blocked', { reason: 'ждём стенд' })), 'заблокирована: ждём стенд')

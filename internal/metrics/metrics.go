@@ -55,6 +55,21 @@ type Report struct {
 	// Показывается рядом с пропускной способностью намеренно: в неё они
 	// не входят, и молчать об их числе значит скрывать половину картины.
 	Discarded int `json:"discarded"`
+	// Imported — сколько карточек отчёта перенесены из другой системы
+	// (этап 23): закончены в окне или идут сейчас. Их даты взяты
+	// оттуда, а начало работы там неизвестно и принято равным дате
+	// заведения, — значит время цикла у них ближе ко времени выполнения
+	// заказа. Отчёт обязан уметь отделить перенесённое от прожитого.
+	Imported int `json:"imported"`
+	// WithoutImported — отчёт посчитан без перенесённых карточек.
+	WithoutImported bool `json:"withoutImported"`
+}
+
+// Options — как считать. Нулевое значение — как всегда.
+type Options struct {
+	// WithoutImported — не считать перенесённые карточки: метрика
+	// тогда только о том, что прожито на этой доске.
+	WithoutImported bool
 }
 
 type Percentiles struct {
@@ -75,6 +90,9 @@ type FinishedCard struct {
 	// расставляются по дням, и час на диаграмме не разглядеть.
 	FinishedOn string  `json:"finishedOn"`
 	Days       float64 `json:"days"`
+	// Imported — перенесена из другой системы: её дни посчитаны
+	// от даты заведения там.
+	Imported bool `json:"imported"`
 }
 
 type WeeklyCount struct {
@@ -90,6 +108,9 @@ type AgingCard struct {
 	// Blocked — заблокированная карточка стареет, ничего не делая;
 	// в списке старения это первое, что нужно видеть.
 	Blocked bool `json:"blocked"`
+	// Imported — перенесена из другой системы; возраст считается
+	// от даты заведения там.
+	Imported bool `json:"imported"`
 }
 
 type FlowDay struct {
@@ -115,6 +136,11 @@ func New(db *store.Store) *Service { return &Service{db: db} }
 
 // Report собирает отчёт по доске за последние days дней.
 func (s *Service) Report(ctx context.Context, orgID, userID, boardID string, days int) (Report, error) {
+	return s.ReportWith(ctx, orgID, userID, boardID, days, Options{})
+}
+
+// ReportWith — то же, с выбором, как считать.
+func (s *Service) ReportWith(ctx context.Context, orgID, userID, boardID string, days int, opt Options) (Report, error) {
 	if days < 7 {
 		days = 7
 	}
@@ -122,7 +148,10 @@ func (s *Service) Report(ctx context.Context, orgID, userID, boardID string, day
 		days = 365
 	}
 	report := Report{Days: days, Throughput: []WeeklyCount{}, Aging: []AgingCard{},
-		Flow: []FlowDay{}, Finished: []FinishedCard{}}
+		Flow: []FlowDay{}, Finished: []FinishedCard{}, WithoutImported: opt.WithoutImported}
+	// Условие одно на все запросы: разойтись метрикам одного отчёта
+	// в том, что считать, негде.
+	lived := opt.WithoutImported
 
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		// Доска должна быть видна: недоступная неотличима от несуществующей.
@@ -137,16 +166,19 @@ func (s *Service) Report(ctx context.Context, orgID, userID, boardID string, day
 			return ErrNoData
 		}
 
-		if err := s.cycleTime(ctx, tx, boardID, days, &report); err != nil {
+		if err := s.cycleTime(ctx, tx, boardID, days, lived, &report); err != nil {
 			return err
 		}
-		if err := s.throughput(ctx, tx, boardID, days, &report); err != nil {
+		if err := s.throughput(ctx, tx, boardID, days, lived, &report); err != nil {
 			return err
 		}
-		if err := s.aging(ctx, tx, boardID, &report); err != nil {
+		if err := s.aging(ctx, tx, boardID, lived, &report); err != nil {
 			return err
 		}
-		return s.flow(ctx, tx, boardID, days, &report)
+		if err := s.imported(ctx, tx, boardID, days, &report); err != nil {
+			return err
+		}
+		return s.flow(ctx, tx, boardID, days, lived, &report)
 	})
 	if err != nil {
 		return Report{}, err
@@ -156,7 +188,7 @@ func (s *Service) Report(ctx context.Context, orgID, userID, boardID string, day
 	return report, nil
 }
 
-func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
+func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days int, lived bool, out *Report) error {
 	var p Percentiles
 	// Считается только по доведённому до конца: выброшенная карточка
 	// не имеет времени цикла, она имеет время до отказа, а это другая
@@ -172,7 +204,8 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 			 where board_id = $1 and outcome = 'done'
 			   and started_at is not null and finished_at is not null
 			   and finished_at >= now() - make_interval(days => $2)
-		  ) t`, boardID, days).Scan(&p.P50, &p.P85, &p.P95, &p.Count)
+			   and (not $3 or external_source is null)
+		  ) t`, boardID, days, lived).Scan(&p.P50, &p.P85, &p.P95, &p.Count)
 	if err != nil {
 		return err
 	}
@@ -183,8 +216,9 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	if err := tx.QueryRow(ctx, `
 		select count(*) from cards
 		 where board_id = $1 and outcome = 'discarded'
-		   and updated_at >= now() - make_interval(days => $2)`,
-		boardID, days).Scan(&out.Discarded); err != nil {
+		   and updated_at >= now() - make_interval(days => $2)
+		   and (not $3 or external_source is null)`,
+		boardID, days, lived).Scan(&out.Discarded); err != nil {
 		return err
 	}
 
@@ -192,19 +226,21 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	// потому что условие одно и то же.
 	rows, err := tx.Query(ctx, `
 		select id, title, to_char(finished_at, 'YYYY-MM-DD'),
-		       extract(epoch from (finished_at - started_at)) / 86400.0
+		       extract(epoch from (finished_at - started_at)) / 86400.0,
+		       external_source is not null
 		  from cards
 		 where board_id = $1 and outcome = 'done'
 		   and started_at is not null and finished_at is not null
 		   and finished_at >= now() - make_interval(days => $2)
-		 order by finished_at`, boardID, days)
+		   and (not $3 or external_source is null)
+		 order by finished_at`, boardID, days, lived)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var c FinishedCard
-		if err := rows.Scan(&c.ID, &c.Title, &c.FinishedOn, &c.Days); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.FinishedOn, &c.Days, &c.Imported); err != nil {
 			return err
 		}
 		out.Finished = append(out.Finished, c)
@@ -212,7 +248,7 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	return rows.Err()
 }
 
-func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
+func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, days int, lived bool, out *Report) error {
 	// Недели без единой законченной карточки тоже нужны: без них прогноз
 	// считает, что команда всегда что-то доводит до конца, а это неправда.
 	rows, err := tx.Query(ctx, `
@@ -228,8 +264,9 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 		  left join cards c
 		    on c.board_id = $1
 		   and date_trunc('week', c.finished_at) = w.week
+		   and (not $3 or c.external_source is null)
 		 group by w.week
-		 order by w.week`, boardID, days)
+		 order by w.week`, boardID, days, lived)
 	if err != nil {
 		return err
 	}
@@ -244,24 +281,26 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 	return rows.Err()
 }
 
-func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, out *Report) error {
+func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, lived bool, out *Report) error {
 	rows, err := tx.Query(ctx, `
 		select c.id, c.title, col.name,
 		       extract(epoch from (now() - c.started_at)) / 86400.0,
 		       exists (select 1 from card_blocks b
-		                where b.card_id = c.id and b.unblocked_at is null)
+		                where b.card_id = c.id and b.unblocked_at is null),
+		       c.external_source is not null
 		  from cards c
 		  join board_columns col on col.id = c.column_id
 		 where c.board_id = $1 and c.archived_at is null
 		   and c.started_at is not null and c.finished_at is null
-		 order by c.started_at`, boardID)
+		   and (not $2 or c.external_source is null)
+		 order by c.started_at`, boardID, lived)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var a AgingCard
-		if err := rows.Scan(&a.ID, &a.Title, &a.Column, &a.Days, &a.Blocked); err != nil {
+		if err := rows.Scan(&a.ID, &a.Title, &a.Column, &a.Days, &a.Blocked, &a.Imported); err != nil {
 			return err
 		}
 		out.Aging = append(out.Aging, a)
@@ -273,6 +312,18 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, out *Rep
 	return nil
 }
 
+// imported считает перенесённые карточки, которых касается отчёт:
+// закончены в окне или идут сейчас. Считается всегда, и без них тоже:
+// «посчитано без 40 перенесённых» говорит, сколько отброшено.
+func (s *Service) imported(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
+	return tx.QueryRow(ctx, `
+		select count(*) from cards
+		 where board_id = $1 and external_source is not null
+		   and (finished_at >= now() - make_interval(days => $2)
+		        or (archived_at is null and started_at is not null and finished_at is null))`,
+		boardID, days).Scan(&out.Imported)
+}
+
 // flow — три полосы по дням.
 //
 // Считается из отметок карточки, а не из журнала переходов. Разница
@@ -280,7 +331,7 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, out *Rep
 // — сделано», но не видно, в какой именно колонке карточка стояла. Полная
 // диаграмма накопления по колонкам требует проигрывания журнала, а он
 // у нас есть; когда понадобится, это делается отдельно и стоит дороже.
-func (s *Service) flow(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
+func (s *Service) flow(ctx context.Context, tx pgx.Tx, boardID string, days int, lived bool, out *Report) error {
 	rows, err := tx.Query(ctx, `
 		with days as (
 			select generate_series(
@@ -298,8 +349,9 @@ func (s *Service) flow(ctx context.Context, tx pgx.Tx, boardID string, days int,
 		       count(c.id) filter (where c.finished_at <= d.day + interval '1 day')
 		  from days d
 		  left join cards c on c.board_id = $1 and c.archived_at is null
+		                   and (not $3 or c.external_source is null)
 		 group by d.day
-		 order by d.day`, boardID, days)
+		 order by d.day`, boardID, days, lived)
 	if err != nil {
 		return err
 	}

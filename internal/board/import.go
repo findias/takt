@@ -501,7 +501,14 @@ func insertImported(
 		if id == "" {
 			continue
 		}
-		body, err := json.Marshal(map[string]any{"to": columnFact(r.col), "imported": source})
+		fact := map[string]any{"to": columnFact(r.col), "imported": source}
+		// Свой ключ файла — в событии: по нему карточку находят
+		// в прежней системе. Выведенный из заголовка ключ ничего
+		// не говорит человеку и в событие не идёт.
+		if !strings.HasPrefix(r.card.ExternalID, "title:") {
+			fact["externalId"] = r.card.ExternalID
+		}
+		body, err := json.Marshal(fact)
 		if err != nil {
 			return nil, err
 		}

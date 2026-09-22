@@ -327,15 +327,19 @@ export type FlowReport = {
   /** Сами точки, а не только проценты: три случая по двадцать дней
    *  и двадцать по три дают одинаковую медиану и совершенно разный
    *  разговор на разборе. */
-  finished: { id: string; title: string; finishedOn: string; days: number }[]
+  finished: { id: string; title: string; finishedOn: string; days: number; imported: boolean }[]
   throughput: { week: string; count: number }[]
   wip: number
-  aging: { id: string; title: string; column: string; days: number; blocked: boolean }[]
+  aging: { id: string; title: string; column: string; days: number; blocked: boolean; imported: boolean }[]
   flow: { day: string; queued: number; inProgress: number; done: number }[]
   forecast: { cards: number; p50: number; p85: number; p95: number }[] | null
   /** Выброшенные не входят в пропускную способность — но молчать об их
    *  числе значит скрывать половину картины. */
   discarded: number
+  /** Сколько карточек отчёта перенесены из другой системы: их даты
+   *  взяты оттуда, и отчёт обязан уметь отделить их от прожитого. */
+  imported: number
+  withoutImported: boolean
 }
 
 export type Visibility = 'org' | 'team' | 'private'
@@ -1070,8 +1074,11 @@ export const api = {
   commentRevisions: (commentId: string) =>
     request<{ revisions: string[] }>('GET', `/api/comments/${commentId}/revisions`),
 
-  metrics: (boardId: string, days = 90) =>
-    request<FlowReport>('GET', `/api/boards/${boardId}/metrics?days=${days}`),
+  metrics: (boardId: string, days = 90, withoutImported = false) =>
+    request<FlowReport>(
+      'GET',
+      `/api/boards/${boardId}/metrics?days=${days}` + (withoutImported ? '&withoutImported=true' : ''),
+    ),
 
   listFields: () => request<{ fields: CardField[] }>('GET', '/api/fields'),
   createField: (name: string, kind: FieldKind, options: string[]) =>

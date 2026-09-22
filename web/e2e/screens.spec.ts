@@ -363,9 +363,14 @@ test('снимки экранов', async ({ page, browser }) => {
   await areaPage.getByLabel('Почта').fill('boris@example.test')
   await areaPage.getByLabel('Пароль').fill(PASSWORD)
   await areaPage.getByRole('button', { name: 'Войти' }).click()
-  // Организация выбирается явно: Борис состоит не в одной, а какая
-  // откроется по умолчанию — не наше дело угадывать.
-  await areaPage.getByLabel('Организация').selectOption({ label: 'Северный проект' })
+  // Организация выбирается явно, если их несколько: на обжитой базе
+  // Борис попадает и в организации проверок, и какая откроется по
+  // умолчанию — не наше дело угадывать. На свежем стенде организация
+  // у него одна, и выбирать нечего — ждать выбора значило бы висеть
+  // до конца отведённого времени.
+  await expect(areaPage.getByRole('button', { name: 'Структура' })).toBeVisible()
+  const orgs = areaPage.getByLabel('Организация')
+  if (await orgs.count()) await orgs.selectOption({ label: 'Северный проект' })
   await areaPage.getByRole('button', { name: 'Структура' }).click()
   await expect(areaPage.getByRole('button', { name: '▸ Платформа' })).toBeVisible({
     timeout: 10_000,

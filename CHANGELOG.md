@@ -41,7 +41,10 @@ subscription receives only the events ticked on it, so existing ones
 stay as they were; tick the new events to receive them. A receiver
 that rejects event types it does not know should learn these two.
 
-**The integration contract grows, nothing is taken away.** `BLOCK_CARD`
+**The integration contract grows, nothing is taken away.** The metrics
+report (`GET /api/v1/boards/{id}/metrics`) gains `imported`,
+`withoutImported` and an `imported` flag on finished and aging cards;
+`?withoutImported=true` leaves imported cards out. `BLOCK_CARD`
 accepts an optional `until` (ISO 8601 with a zone, in the future);
 `SET_BLOCK_UNTIL` moves or clears it. A label created without a scope
 is an organisation label, exactly as before.
@@ -85,7 +88,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   which emails were not found (nobody is created), which rows have
   problems, how dates were read. Cards go to a new board or an
   existing one; importing the same file again skips what has already
-  come. Dates come across, moves between columns do not.
+  come. Dates come across, moves between columns do not. Imported cards
+  are marked in their history and in «Поток», which can count without
+  them.
 - **Notifications.** A bell in the header counts what is unread: being
   called into a discussion (**@ Mention** under a reply), assigned to
   a card, a block on your card, less than a day left on that block, the

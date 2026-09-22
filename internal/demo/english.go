@@ -11,6 +11,12 @@ package demo
 // песочнице не остаётся ни одной кириллической буквы
 // (TestEnglishSandboxHasNoRussian).
 var english = map[string]string{
+	// Перенесённое из прежней системы.
+	"Сверить остатки за июль":          "Reconcile July stock",
+	"Продлить договор с перевозчиком":  "Renew the carrier contract",
+	"Описать упаковку для хрупкого":    "Specify packaging for fragile goods",
+	"Перенести справочник поставщиков": "Move the supplier directory",
+
 	// Люди, организация, служебное.
 	"Анна Королёва":        "Anna Clarke",
 	"Борис Дятлов":         "Boris Dale",

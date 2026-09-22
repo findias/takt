@@ -290,6 +290,8 @@ export const ru = {
   },
   feed: {
     created: 'создана',
+    imported: 'перенесена из таблицы',
+    importedAs: (key: string) => `перенесена из таблицы, там — ${key}`,
     movedFromTo: (from: string, to: string) => `из «${from}» в «${to}»`,
     movedTo: (to: string) => `в «${to}»`,
     moved: 'перемещена',
