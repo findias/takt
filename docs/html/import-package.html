@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import package</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="glossary.html">Glossary</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="security-review.html">Security review</a>
+<a href="import-package.html" aria-current="page">Import package</a>
+<a href="SECURITY.html">Security policy</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">What changed</a>
+<a href="CHANGELOG.ru.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>Import package</h1>
+<p><strong>Status: specification, version 1.</strong> Nothing reads or writes this format yet. This page is the promise the exporter (<code>takt-fetch</code>) and the import inside takt will both be checked against; once they exist, the page stops being a plan and becomes their description.</p>
+<h2 id="what-it-is-for">What it is for</h2>
+<p>An import package is one file that carries boards from another tracker — YouGile, Jira, Trello, Kaiten, Weeek, Asana, Notion, ClickUp, monday — into takt installed in a closed network.</p>
+<p>The move is cut in two at the perimeter. Outside, where there is internet, <code>takt-fetch</code> signs in to the other tracker, collects the boards and writes a package. The file is carried across by whatever means the network allows. Inside, takt reads the package and imports it through the same preview as a spreadsheet: where each column goes, whose e-mails were not found, what did not come. The takt server in the closed network opens no new connection for this, and has no code that talks to other trackers&#39; clouds beyond what it already had.</p>
+<p>Why a package and not a spreadsheet: a spreadsheet loses what has no cell — subtasks, links between cards, discussions, several boards at once. A package keeps them.</p>
+<h2 id="the-file">The file</h2>
+<p>A ZIP archive with the <code>.takt</code> extension. Inside:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Entry</th><th>What</th></tr></thead>
+<tbody>
+<tr><td><code>manifest.json</code></td><td>what the package is, where it came from, a SHA-256 of every other entry</td></tr>
+<tr><td><code>boards/&lt;n&gt;.json</code></td><td>one board: columns, people, labels, cards; <code>&lt;n&gt;</code> is 1, 2, 3…</td></tr>
+</tbody>
+</table></div>
+<p>Nothing else is read; any other entry is refused, not ignored, so that a package cannot carry something past the reader unnoticed. Text is UTF-8 JSON. Moments are RFC 3339 in UTC (<code>2026-09-22T10:15:00Z</code>), dates without a time are <code>YYYY-MM-DD</code>.</p>
+<h2 id="manifest-json">manifest.json</h2>
+<pre><code>{
+  &#34;format&#34;: &#34;takt-import-package&#34;,
+  &#34;version&#34;: 1,
+  &#34;createdAt&#34;: &#34;2026-09-22T10:15:00Z&#34;,
+  &#34;createdBy&#34;: &#34;takt-fetch v0.4.0&#34;,
+  &#34;collectedBy&#34;: &#34;Anna Clarke, migration of the warehouse boards&#34;,
+  &#34;source&#34;: {
+    &#34;system&#34;: &#34;yougile&#34;,
+    &#34;url&#34;: &#34;https://ru.yougile.com&#34;,
+    &#34;account&#34;: &#34;Northern logistics&#34;
+  },
+  &#34;boards&#34;: [
+    { &#34;file&#34;: &#34;boards/1.json&#34;, &#34;sha256&#34;: &#34;9f2c…&#34;, &#34;title&#34;: &#34;Warehouse&#34;, &#34;cards&#34;: 214 }
+  ],
+  &#34;lost&#34;: [&#34;task chats: files attached to messages&#34;]
+}</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>format</code></td><td>always <code>takt-import-package</code>: tells a package from any other JSON</td></tr>
+<tr><td><code>version</code></td><td>the format version, an integer. The reader refuses a version it does not know and says which versions it reads</td></tr>
+<tr><td><code>createdAt</code>, <code>createdBy</code></td><td>when and by which program the package was written</td></tr>
+<tr><td><code>collectedBy</code></td><td>free text: who collected it and why. Not a signature — the package is not signed in version 1</td></tr>
+<tr><td><code>source.system</code></td><td>where the boards came from: <code>yougile</code>, <code>jira</code>, <code>trello</code>, <code>kaiten</code>, <code>weeek</code>, <code>asana</code>, <code>notion</code>, <code>clickup</code>, <code>monday</code></td></tr>
+<tr><td><code>source.url</code>, <code>source.account</code></td><td>which installation and which account or company, for the report</td></tr>
+<tr><td><code>boards</code></td><td>every board entry with its SHA-256 (lower-case hex), title and number of cards</td></tr>
+<tr><td><code>lost</code></td><td>what the source had and the package does not carry, in words — shown in the preview under <strong>Not imported</strong></td></tr>
+</tbody>
+</table></div>
+<p><strong>Integrity.</strong> The reader computes SHA-256 of every board entry and compares it with the manifest; one mismatch refuses the whole package and names the entry. This catches a file damaged on the way. It does not prove who wrote the package: the package has no signature in version 1.</p>
+<h2 id="boards-lt-n-gt-json">boards/&amp;lt;n&amp;gt;.json</h2>
+<pre><code>{
+  &#34;externalId&#34;: &#34;b-1&#34;,
+  &#34;title&#34;: &#34;Warehouse&#34;,
+  &#34;columns&#34;: [
+    { &#34;externalId&#34;: &#34;c-1&#34;, &#34;title&#34;: &#34;To do&#34;, &#34;kind&#34;: &#34;queue&#34; },
+    { &#34;externalId&#34;: &#34;c-2&#34;, &#34;title&#34;: &#34;In progress&#34;, &#34;kind&#34;: &#34;in_progress&#34; },
+    { &#34;externalId&#34;: &#34;c-3&#34;, &#34;title&#34;: &#34;Done&#34;, &#34;kind&#34;: &#34;done&#34; }
+  ],
+  &#34;people&#34;: [
+    { &#34;externalId&#34;: &#34;u-1&#34;, &#34;email&#34;: &#34;anna@example.test&#34;, &#34;name&#34;: &#34;Anna Clarke&#34; },
+    { &#34;externalId&#34;: &#34;u-2&#34;, &#34;email&#34;: null, &#34;name&#34;: &#34;Ivan Petrov&#34; }
+  ],
+  &#34;labels&#34;: [
+    { &#34;externalId&#34;: &#34;st-2&#34;, &#34;name&#34;: &#34;Area: Warehouse 2&#34; }
+  ],
+  &#34;cards&#34;: [
+    {
+      &#34;externalId&#34;: &#34;t-1&#34;,
+      &#34;title&#34;: &#34;Reconcile stock&#34;,
+      &#34;description&#34;: &#34;Warehouse 2, by Friday&#34;,
+      &#34;column&#34;: &#34;c-1&#34;,
+      &#34;assignees&#34;: [&#34;u-1&#34;, &#34;u-2&#34;],
+      &#34;labels&#34;: [&#34;st-2&#34;],
+      &#34;estimate&#34;: 3,
+      &#34;priority&#34;: &#34;high&#34;,
+      &#34;due&#34;: &#34;2026-09-30&#34;,
+      &#34;createdAt&#34;: &#34;2026-09-02T08:00:00Z&#34;,
+      &#34;finishedAt&#34;: null,
+      &#34;parent&#34;: null,
+      &#34;links&#34;: [{ &#34;kind&#34;: &#34;blocks&#34;, &#34;to&#34;: &#34;t-4&#34; }],
+      &#34;comments&#34;: [
+        { &#34;author&#34;: &#34;u-2&#34;, &#34;at&#34;: &#34;2026-09-03T09:12:00Z&#34;, &#34;text&#34;: &#34;Started with row 1&#34; }
+      ]
+    }
+  ],
+  &#34;lost&#34;: []
+}</code></pre>
+<p>Every object is referred to by its <code>externalId</code> — the identifier in the source system, a string. References point only inside the same board file; a card&#39;s <code>parent</code> or link target on another board is dropped and named in the report.</p>
+<p><strong>Columns</strong> are listed in board order. <code>kind</code> is a hint — <code>queue</code>, <code>in_progress</code>, <code>done</code> or <code>null</code> when the exporter could not tell; the preview shows it and a person can send any column to another one on an existing board, exactly as for a spreadsheet.</p>
+<p><strong>People</strong> are matched by e-mail against the organisation, case insensitively, and nobody is created on the way. <code>email</code> is <code>null</code> when the source did not give it — Trello gives members&#39; e-mails only to a workspace administrator, so a package collected by anyone else has no e-mails, and <code>takt-fetch</code> says so before it starts. A person without a match is not assigned; the report lists them by e-mail or by name.</p>
+<p><strong>Labels</strong> become labels of the board by name; a label with the same name that already applies to the board is reused.</p>
+<p><strong>Cards</strong>:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Field</th><th>Required</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>externalId</code></td><td>yes</td><td>the task&#39;s identifier in the source; with <code>source.system</code> it is the key that makes a second import skip what already came</td></tr>
+<tr><td><code>title</code></td><td>yes</td><td>non-empty; a card without a title is not imported and is named</td></tr>
+<tr><td><code>description</code></td><td>no</td><td>plain text; the exporter turns the source&#39;s markup into text and appends checklists as <code>- [x] item</code> lines</td></tr>
+<tr><td><code>column</code></td><td>yes</td><td>a column <code>externalId</code> of this board</td></tr>
+<tr><td><code>assignees</code>, <code>labels</code></td><td>no</td><td><code>externalId</code>s of people and labels of this board</td></tr>
+<tr><td><code>estimate</code></td><td>no</td><td>a positive number</td></tr>
+<tr><td><code>priority</code></td><td>no</td><td><code>low</code>, <code>medium</code>, <code>high</code>, <code>highest</code>; absent means <code>medium</code></td></tr>
+<tr><td><code>due</code></td><td>no</td><td>a date</td></tr>
+<tr><td><code>createdAt</code>, <code>finishedAt</code></td><td>no</td><td>moments; <code>finishedAt</code> on a card in a done column is when it was finished</td></tr>
+<tr><td><code>parent</code></td><td>no</td><td>the <code>externalId</code> of the parent card: the card becomes its part (subtask)</td></tr>
+<tr><td><code>links</code></td><td>no</td><td><code>blocks</code> or <code>relates</code>, to a card <code>externalId</code> of this board</td></tr>
+<tr><td><code>comments</code></td><td>no</td><td>in time order; <code>author</code> is a person <code>externalId</code> or <code>null</code></td></tr>
+</tbody>
+</table></div>
+<p>The key of a second import is <code>source.system</code> with the card&#39;s <code>externalId</code>. For YouGile it is the same key as import over the API uses, so a board brought over the API first and from a package later does not come twice.</p>
+<p><strong>Comments</strong> come across with their date. The author is the matched person when their e-mail is found; otherwise the comment is written on behalf of the person importing, and begins with the author&#39;s name as text — “from YouGile: Ivan Petrov” — so that nobody is invented and nothing is attributed to the wrong person.</p>
+<p><strong>History</strong> follows the rule of every import: dates come across, moves between columns do not. The old system had its own columns, and its moves passed off as ours would give a metric no one can trust. Imported cards are marked, and <strong>Flow</strong> can count without them.</p>
+<h2 id="limits">Limits</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>What</th><th>Limit</th><th>Beyond it</th></tr></thead>
+<tbody>
+<tr><td>cards on one board</td><td>10,000</td><td>the board is refused with the number; split it at the source</td></tr>
+<tr><td>package uploaded on the import screen</td><td>50 MB</td><td>the screen says so; an administrator imports it from the command line on the server, where the file size is not limited</td></tr>
+<tr><td>one entry unpacked</td><td>256 MB</td><td>the package is refused: a small archive that unpacks into gigabytes is not a package</td></tr>
+<tr><td>entries</td><td>1,000</td><td>the package is refused</td></tr>
+</tbody>
+</table></div>
+<h2 id="what-never-goes-into-a-package">What never goes into a package</h2>
+<p>Passwords, API keys, tokens and session cookies of the source system. <code>takt-fetch</code> takes them from the command line or the environment and does not write them anywhere; a test searches every package it writes for the key it was given.</p>
+<h2 id="versions">Versions</h2>
+<p>A change that an existing reader would misread — a field renamed, a meaning changed, a required field added — raises <code>version</code>. Adding an optional field does not: readers ignore fields they do not know inside <code>boards/&lt;n&gt;.json</code>. A reader states every version it accepts, and a newer package is refused with the versions this installation reads, so that the answer is “upgrade takt”, not a half-imported board.</p>
+<footer>Takt, version v0.2.3-46-ga163dda-dirty. Built from import-package.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

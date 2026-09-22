@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пакет переноса</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html">Справочник</a>
+<a href="памятка.html">Памятка</a>
+<a href="словарь.html">Словарь</a>
+<a href="устройство.html">Устройство</a>
+<a href="установка.html">Установка</a>
+<a href="проверка-иб.html">Проверка ИБ</a>
+<a href="пакет-переноса.html" aria-current="page">Пакет переноса</a>
+<a href="../overview.html">In English</a>
+</nav>
+<h1>Пакет переноса</h1>
+<p><strong>Состояние: спецификация, версия 1.</strong> Этот формат пока никто не пишет и не читает. Страница — обещание, по которому будут проверяться и выгрузчик (<code>takt-fetch</code>), и импорт в takt; когда они появятся, страница перестанет быть планом и станет их описанием.</p>
+<h2 id="зачем-он">Зачем он</h2>
+<p>Пакет переноса — один файл, в котором доски из другого трекера — YouGile, Jira, Trello, Kaiten, Weeek, Asana, Notion, ClickUp, monday — переезжают в takt, установленный в закрытом контуре.</p>
+<p>Переезд разрезан надвое по периметру. Снаружи, где есть интернет, <code>takt-fetch</code> входит в чужой трекер, собирает доски и пишет пакет. Файл переносят через периметр тем способом, который сеть позволяет. Внутри takt читает пакет и переносит его через тот же предпросмотр, что и таблицу: куда ложится каждая колонка, чьи почты не нашлись, что не переехало. Сервер takt в закрытом контуре не открывает ради этого ни одного нового соединения, и кода, говорящего с облаками чужих трекеров, у него не прибавляется.</p>
+<p>Почему пакет, а не таблица: таблица теряет то, чему нет ячейки, — подзадачи, связи между карточками, обсуждение, несколько досок разом. Пакет их сохраняет.</p>
+<h2 id="файл">Файл</h2>
+<p>Архив ZIP с расширением <code>.takt</code>. Внутри:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Часть</th><th>Что</th></tr></thead>
+<tbody>
+<tr><td><code>manifest.json</code></td><td>что это за пакет, откуда он, SHA-256 каждой другой части</td></tr>
+<tr><td><code>boards/&lt;n&gt;.json</code></td><td>одна доска: колонки, люди, метки, карточки; <code>&lt;n&gt;</code> — 1, 2, 3…</td></tr>
+</tbody>
+</table></div>
+<p>Ничего другого не читается; любая другая часть отвергается, а не пропускается, — чтобы пакет не пронёс мимо читающего ничего незаметно. Текст — JSON в UTF-8. Моменты — RFC 3339 в UTC (<code>2026-09-22T10:15:00Z</code>), даты без времени — <code>YYYY-MM-DD</code>.</p>
+<h2 id="manifest-json">manifest.json</h2>
+<pre><code>{
+  &#34;format&#34;: &#34;takt-import-package&#34;,
+  &#34;version&#34;: 1,
+  &#34;createdAt&#34;: &#34;2026-09-22T10:15:00Z&#34;,
+  &#34;createdBy&#34;: &#34;takt-fetch v0.4.0&#34;,
+  &#34;collectedBy&#34;: &#34;Anna Clarke, migration of the warehouse boards&#34;,
+  &#34;source&#34;: {
+    &#34;system&#34;: &#34;yougile&#34;,
+    &#34;url&#34;: &#34;https://ru.yougile.com&#34;,
+    &#34;account&#34;: &#34;Northern logistics&#34;
+  },
+  &#34;boards&#34;: [
+    { &#34;file&#34;: &#34;boards/1.json&#34;, &#34;sha256&#34;: &#34;9f2c…&#34;, &#34;title&#34;: &#34;Warehouse&#34;, &#34;cards&#34;: 214 }
+  ],
+  &#34;lost&#34;: [&#34;task chats: files attached to messages&#34;]
+}</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>Поле</th><th>Смысл</th></tr></thead>
+<tbody>
+<tr><td><code>format</code></td><td>всегда <code>takt-import-package</code>: отличает пакет от любого другого JSON</td></tr>
+<tr><td><code>version</code></td><td>версия формата, целое число. Незнакомую версию читающий отвергает и говорит, какие версии он читает</td></tr>
+<tr><td><code>createdAt</code>, <code>createdBy</code></td><td>когда и какой программой записан пакет</td></tr>
+<tr><td><code>collectedBy</code></td><td>свободный текст: кто собрал и зачем. Не подпись — в версии 1 пакет не подписывается</td></tr>
+<tr><td><code>source.system</code></td><td>откуда доски: <code>yougile</code>, <code>jira</code>, <code>trello</code>, <code>kaiten</code>, <code>weeek</code>, <code>asana</code>, <code>notion</code>, <code>clickup</code>, <code>monday</code></td></tr>
+<tr><td><code>source.url</code>, <code>source.account</code></td><td>какая установка и какая учётная запись или компания — для отчёта</td></tr>
+<tr><td><code>boards</code></td><td>каждая часть с доской: её SHA-256 (шестнадцатеричный, строчными), название и число карточек</td></tr>
+<tr><td><code>lost</code></td><td>что источник знал, а пакет не несёт, — словами; показывается в предпросмотре под <strong>«Не переносится»</strong></td></tr>
+</tbody>
+</table></div>
+<p><strong>Целостность.</strong> Читающий считает SHA-256 каждой части с доской и сверяет с манифестом; одно расхождение — и отвергается весь пакет с названием части. Это ловит файл, испорченный по дороге. Кто написал пакет, это не доказывает: в версии 1 подписи у пакета нет.</p>
+<h2 id="boards-lt-n-gt-json">boards/&amp;lt;n&amp;gt;.json</h2>
+<pre><code>{
+  &#34;externalId&#34;: &#34;b-1&#34;,
+  &#34;title&#34;: &#34;Warehouse&#34;,
+  &#34;columns&#34;: [
+    { &#34;externalId&#34;: &#34;c-1&#34;, &#34;title&#34;: &#34;To do&#34;, &#34;kind&#34;: &#34;queue&#34; },
+    { &#34;externalId&#34;: &#34;c-2&#34;, &#34;title&#34;: &#34;In progress&#34;, &#34;kind&#34;: &#34;in_progress&#34; },
+    { &#34;externalId&#34;: &#34;c-3&#34;, &#34;title&#34;: &#34;Done&#34;, &#34;kind&#34;: &#34;done&#34; }
+  ],
+  &#34;people&#34;: [
+    { &#34;externalId&#34;: &#34;u-1&#34;, &#34;email&#34;: &#34;anna@example.test&#34;, &#34;name&#34;: &#34;Anna Clarke&#34; },
+    { &#34;externalId&#34;: &#34;u-2&#34;, &#34;email&#34;: null, &#34;name&#34;: &#34;Ivan Petrov&#34; }
+  ],
+  &#34;labels&#34;: [
+    { &#34;externalId&#34;: &#34;st-2&#34;, &#34;name&#34;: &#34;Area: Warehouse 2&#34; }
+  ],
+  &#34;cards&#34;: [
+    {
+      &#34;externalId&#34;: &#34;t-1&#34;,
+      &#34;title&#34;: &#34;Reconcile stock&#34;,
+      &#34;description&#34;: &#34;Warehouse 2, by Friday&#34;,
+      &#34;column&#34;: &#34;c-1&#34;,
+      &#34;assignees&#34;: [&#34;u-1&#34;, &#34;u-2&#34;],
+      &#34;labels&#34;: [&#34;st-2&#34;],
+      &#34;estimate&#34;: 3,
+      &#34;priority&#34;: &#34;high&#34;,
+      &#34;due&#34;: &#34;2026-09-30&#34;,
+      &#34;createdAt&#34;: &#34;2026-09-02T08:00:00Z&#34;,
+      &#34;finishedAt&#34;: null,
+      &#34;parent&#34;: null,
+      &#34;links&#34;: [{ &#34;kind&#34;: &#34;blocks&#34;, &#34;to&#34;: &#34;t-4&#34; }],
+      &#34;comments&#34;: [
+        { &#34;author&#34;: &#34;u-2&#34;, &#34;at&#34;: &#34;2026-09-03T09:12:00Z&#34;, &#34;text&#34;: &#34;Started with row 1&#34; }
+      ]
+    }
+  ],
+  &#34;lost&#34;: []
+}</code></pre>
+<p>Всякий объект называется своим <code>externalId</code> — идентификатором в системе-источнике, строкой. Ссылки ведут только внутрь того же файла доски; <code>parent</code> или цель связи на другой доске отбрасывается и называется в отчёте.</p>
+<p><strong>Колонки</strong> перечислены в порядке доски. <code>kind</code> — подсказка: <code>queue</code>, <code>in_progress</code>, <code>done</code> или <code>null</code>, если выгрузчик не понял; предпросмотр её показывает, и на существующей доске человек может отдать любую колонку в другую — так же, как у таблицы.</p>
+<p><strong>Люди</strong> сопоставляются с организацией по почте, без учёта регистра, и никто не заводится по дороге. <code>email</code> — <code>null</code>, когда источник его не отдал: Trello отдаёт почты участников только администратору рабочего пространства, поэтому в пакете, собранном кем-то другим, почт нет, и <code>takt-fetch</code> говорит об этом до начала. Человек без пары не назначается; отчёт называет его почтой или именем.</p>
+<p><strong>Метки</strong> становятся метками доски по названию; одноимённая метка, уже действующая на доске, берётся она.</p>
+<p><strong>Карточки</strong>:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Поле</th><th>Обязательно</th><th>Смысл</th></tr></thead>
+<tbody>
+<tr><td><code>externalId</code></td><td>да</td><td>идентификатор задачи в источнике; вместе с <code>source.system</code> это ключ, по которому повторный перенос пропускает уже переехавшее</td></tr>
+<tr><td><code>title</code></td><td>да</td><td>непустой; карточка без названия не переносится и называется</td></tr>
+<tr><td><code>description</code></td><td>нет</td><td>простой текст; выгрузчик переводит разметку источника в текст и дописывает чек-листы строками <code>- [x] пункт</code></td></tr>
+<tr><td><code>column</code></td><td>да</td><td><code>externalId</code> колонки этой доски</td></tr>
+<tr><td><code>assignees</code>, <code>labels</code></td><td>нет</td><td><code>externalId</code> людей и меток этой доски</td></tr>
+<tr><td><code>estimate</code></td><td>нет</td><td>положительное число</td></tr>
+<tr><td><code>priority</code></td><td>нет</td><td><code>low</code>, <code>medium</code>, <code>high</code>, <code>highest</code>; нет поля — <code>medium</code></td></tr>
+<tr><td><code>due</code></td><td>нет</td><td>дата</td></tr>
+<tr><td><code>createdAt</code>, <code>finishedAt</code></td><td>нет</td><td>моменты; <code>finishedAt</code> у карточки в готовой колонке — когда её закончили</td></tr>
+<tr><td><code>parent</code></td><td>нет</td><td><code>externalId</code> родительской карточки: карточка становится её частью (подзадачей)</td></tr>
+<tr><td><code>links</code></td><td>нет</td><td><code>blocks</code> или <code>relates</code>, к <code>externalId</code> карточки этой доски</td></tr>
+<tr><td><code>comments</code></td><td>нет</td><td>по порядку времени; <code>author</code> — <code>externalId</code> человека или <code>null</code></td></tr>
+</tbody>
+</table></div>
+<p>Ключ повторного переноса — <code>source.system</code> вместе с <code>externalId</code> карточки. У YouGile это тот же ключ, что у переноса по API, поэтому доска, привезённая сначала по API, а потом пакетом, дважды не приедет.</p>
+<p><strong>Комментарии</strong> переезжают со своей датой. Автор — найденный по почте человек; иначе комментарий пишется от имени того, кто переносит, и начинается с имени автора текстом — «из YouGile: Иван Петров», — чтобы никто не был выдуман и ничего не приписано не тому.</p>
+<p><strong>История</strong> подчиняется правилу всякого переноса: даты переезжают, переходы между колонками — нет. У прежней системы свои колонки, и её переходы, выданные за наши, дали бы метрику, которой никто не может верить. Перенесённые карточки помечены, и <strong>«Поток»</strong> умеет считать без них.</p>
+<h2 id="пределы">Пределы</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Что</th><th>Предел</th><th>Сверх него</th></tr></thead>
+<tbody>
+<tr><td>карточек на одной доске</td><td>10 000</td><td>доска отвергается с числом; разделите её в источнике</td></tr>
+<tr><td>пакет, загруженный на экране переноса</td><td>50 МБ</td><td>экран так и говорит; администратор переносит его с командной строки на сервере, где размер файла не ограничен</td></tr>
+<tr><td>одна часть в распакованном виде</td><td>256 МБ</td><td>пакет отвергается: маленький архив, распаковывающийся в гигабайты, — не пакет</td></tr>
+<tr><td>частей</td><td>1 000</td><td>пакет отвергается</td></tr>
+</tbody>
+</table></div>
+<h2 id="чего-в-пакете-не-бывает-никогда">Чего в пакете не бывает никогда</h2>
+<p>Паролей, ключей API, токенов и cookie сессий системы-источника. <code>takt-fetch</code> берёт их из командной строки или окружения и никуда не пишет; проверка ищет в каждом записанном пакете ключ, который выгрузчику дали.</p>
+<h2 id="версии">Версии</h2>
+<p>Изменение, которое существующий читающий понял бы неверно, — переименованное поле, сменившийся смысл, новое обязательное поле, — поднимает <code>version</code>. Новое необязательное поле — не поднимает: незнакомые поля внутри <code>boards/&lt;n&gt;.json</code> читающий пропускает. Читающий называет все версии, которые принимает, а более новый пакет отвергается с перечнем версий, которые читает эта установка, — чтобы ответом было «обновите takt», а не наполовину перенесённая доска.</p>
+<footer>Takt, версия v0.2.3-46-ga163dda-dirty. Страница собрана из пакет-переноса.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>
