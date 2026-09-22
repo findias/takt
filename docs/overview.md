@@ -5,9 +5,9 @@ metrics computed from that work, an organisation with roles and
 subdivisions, integrations. It runs inside your own perimeter — no
 cloud and no external services required.
 
-**The product interface is in Russian.** These English pages quote
-everything a user clicks the way it appears on screen, with a
-translation next to it. The Russian original of this page is
+**The interface speaks English and Russian.** These pages name every
+button as it appears in the English interface; the screenshots still
+show the Russian one. The Russian version of this page is
 [here](ru/индекс.md).
 
 ![The board](screenshots/доска.png)
@@ -87,17 +87,3 @@ are in the [installation guide](install.md); what the product
 commits not to break is in the [requirements](../REQUIREMENTS.md);
 what changed between versions is in the
 [changelog](../CHANGELOG.md).
-
-## Words you will see on screen
-
-| On screen | Means |
-| --- | --- |
-| «Доски» | Boards |
-| «Команда» | Team: people, invitations, keys, subscriptions, export |
-| «Структура» | Structure: subdivisions |
-| «Доска», «Таблица», «Изменения» | Board, Table, Changes — three views |
-| «Поток» | Flow: metrics |
-| «Архив» | Archive |
-| «Завести доску», «Завести карточку» | Create a board, create a card |
-| «В архив», «Вернуть» | Archive it, restore it |
-| «Владелец», «Участник», «Наблюдатель» | Owner, member, viewer |

@@ -370,7 +370,7 @@ about the person are read from `userinfo` over the same connection.
 ## Directory provisioning (SCIM)
 
 The provider pushes employees and groups to `/scim/v2/…`. The key is an
-ordinary one from **«Ключи для интеграций»** (integration keys) with
+ordinary one from **Integration keys** with
 the single `scim:write` scope; the
 key itself determines the organisation, because a separate "where to
 provision" setting would be a second source of truth.

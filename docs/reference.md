@@ -3,16 +3,17 @@
 Lists and tables: what lives where, what things are called, what equals
 what. Not read in order — read when needed.
 
-**The interface is in Russian.** On-screen wording is quoted, with a
-translation next to it.
+**The interface speaks English and Russian;** the language is chosen
+behind your name in the header. Buttons are named here as they appear
+in the English interface. Screenshots still show the Russian one.
 
 ## Roles in the organisation
 
 | Role | Reads | Changes work | Runs the organisation |
 | --- | --- | --- | --- |
-| «Владелец» (owner) | yes | yes | yes |
-| «Участник» (member) | yes | yes | no |
-| «Наблюдатель» (viewer) | yes | no | no |
+| **Owner** | yes | yes | yes |
+| **Member** | yes | yes | no |
+| **Viewer** | yes | no | no |
 
 Beyond roles, the owner appoints:
 
@@ -25,9 +26,9 @@ Beyond roles, the owner appoints:
 
 | Visibility | Who sees it |
 | --- | --- |
-| «Всей организации» | everyone in the organisation |
-| «Своей команде» | people in the subdivision that owns the board |
-| «Только вписанным» | those listed by name |
+| **Whole organisation** | everyone in the organisation |
+| **Own subdivision** | people in the subdivision that owns the board |
+| **Listed people only** | those listed by name |
 
 ## Keys
 
@@ -49,27 +50,26 @@ Beyond roles, the owner appoints:
 | Text | cards whose title contains the substring |
 | Assignee | whose cards; separately, "nobody's" |
 | Labels | cards carrying **all** the selected labels |
-| «Горит» | highest and high priority |
-| «Срок подходит» | due today, tomorrow, the day after, or overdue |
-| «Заблокированные» | those where work has stalled |
-| «Блокировка истекает» | blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks |
-| «Дольше обещанного» | those running longer than the board's promise |
+| **Urgent** | highest and high priority |
+| **Due soon** | due today, tomorrow, the day after, or overdue |
+| **Blocked** | those where work has stalled |
+| **Block ending** | blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks |
+| **Longer than promised** | those running longer than the board's promise |
 | Iteration | attached to an iteration; separately, "not in an iteration" |
 
 ## Blocks with a deadline
 
-A block may be given a moment when it lifts itself — «Снимется само»
-when blocking, «Срок блокировки» on a blocked card. Leave it empty and
+A block may be given a moment when it lifts itself — **Lifts itself (optional)**
+when blocking, **Block deadline** on a blocked card. Leave it empty and
 the block stays until someone lifts it; that is the normal case.
 
 - The deadline is a moment, not a day, shown in your own time zone.
   A moment in the past is refused: to lift a block now, use
-  «Снять блокировку».
+  **Lift the block**.
 - The server checks every minute, and once at start-up. The block is
   closed at its deadline, not at the moment of the check, so time spent
   blocked does not depend on when the check ran.
-- It appears in the card's history and in «Изменения» as «блокировка
-  снята сама: вышел срок», without an author, and subscribers receive
+- It appears in the card's history and in **Changes** as **block lifted by itself: the deadline passed**, without an author, and subscribers receive
   `card.block_expired`.
 - Less than a day before the deadline, the line under the card becomes
   bold and dashed. Nothing is mailed: the board is where you see it.
@@ -115,23 +115,23 @@ hung. Every list that offers a label also says where it comes from.
   or in the bulk bar) and pick where it should apply — this board, its
   subdivision or a wider one, or the whole organisation. It is created
   and hung in one go, with a colour picked for you; change the colour on
-  «Команда». Typing the name of an existing label offers that label,
+  **Team**. Typing the name of an existing label offers that label,
   in any letter case, and typing the name of an archived one offers to
   bring it back instead of creating a second one.
 - The same name cannot be used twice where the places overlap:
-  an organisation label «Срочно» rules out «Срочно» on any subdivision
+  an organisation label “Urgent” rules out “Urgent” on any subdivision
   or board. The refusal names where the label already is.
 - A board label is visible only to those who can see the board.
 - An archived label stays on the cards it already marks and still
   shows there; it can no longer be hung until it is brought back from
-  the archive on «Команда» (Team).
+  the archive on **Team**.
 - When a board is handed to another subdivision, or a subdivision is
   moved in the tree, labels already hung stay on the cards. If one no
   longer applies there, the card panel says so, and it can still be
   taken off.
 
 <!-- anchor: flow -->
-## Metrics in «Поток» (flow)
+## Metrics in **Flow**
 
 | Metric | What it answers |
 | --- | --- |

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Словарь</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html">Справочник</a>
+<a href="памятка.html">Памятка</a>
+<a href="словарь.html" aria-current="page">Словарь</a>
+<a href="устройство.html">Устройство</a>
+<a href="установка.html">Установка</a>
+<a href="проверка-иб.html">Проверка ИБ</a>
+<a href="../overview.html">In English</a>
+</nav>
+<h1>Словарь</h1>
+<p>Одно понятие — одно слово. Это слова, которыми говорят интерфейс и эта документация, и что каждое из них значит в Takt.</p>
+<h2 id="работа-на-доске">Работа на доске</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Слово</th><th>Что значит</th></tr></thead>
+<tbody>
+<tr><td>Доска</td><td>Работа одной команды, которая движется по колонкам. У доски есть ключ, видимость и, если команда его задала, обещание</td></tr>
+<tr><td>Ключ доски</td><td>Короткое начало номеров карточек: <code>ПОСТ</code> даёт <code>ПОСТ-14</code>. Задаётся один раз, при заведении доски: номера карточек уходят в переписку и меняться не должны</td></tr>
+<tr><td>Карточка</td><td>Одна единица работы. Её номер — ключ доски и порядковое число</td></tr>
+<tr><td>Колонка</td><td>Этап, через который проходит работа: у новой доски <strong>«Очередь»</strong>, <strong>«В работе»</strong>, <strong>«Готово»</strong></td></tr>
+<tr><td>Разметка колонок</td><td>Две отметки на колонках: <strong>начало работы</strong> — с этой колонки работа считается начатой; <strong>финиш</strong> — здесь она считается законченной. Метрики потока считаются по разметке, а не по датам, заполненным руками</td></tr>
+<tr><td>Лимит колонки</td><td>Сколько карточек колонке стоит держать. Превышение подсвечивается, но не запрещается: лимит нужен, чтобы перегруз был виден</td></tr>
+<tr><td>Жёсткий лимит</td><td>Лимит, который отказывает: в полную колонку карточку не перенести, и отказ говорит сначала освободить место</td></tr>
+<tr><td>Обещание доски</td><td>За сколько дней работа обычно проходит доску и с какой вероятностью — «обычно 8 дней с вероятностью 85%». Карточки, идущие дольше, собирает отбор <strong>«Дольше обещанного»</strong></td></tr>
+<tr><td>Блокировка</td><td>Карточка, которая чего-то ждёт, всегда с причиной. У блокировки может быть срок, после которого она снимется сама</td></tr>
+<tr><td>Подзадача</td><td>Часть карточки. Это обычная карточка, она может жить на доске другой команды; у задачи видно «сколько из скольких»</td></tr>
+<tr><td>Метка</td><td>Отметка на карточке. Принадлежит одному из трёх мест — организации, подразделению (со всем, что в него вложено) или одной доске — и предлагается только там</td></tr>
+<tr><td>Итерация</td><td>Спринт или релиз: название и даты. Закрытие навсегда замораживает её состав и даёт отчёт</td></tr>
+<tr><td>Дорожки</td><td>Доска, разрезанная на ряды по исполнителю, метке, итерации или приоритету. Срез той же доски, а не другая доска</td></tr>
+<tr><td>Отбор</td><td>Условия, которые прячут остальную доску. Живёт в адресе страницы, поэтому им можно поделиться ссылкой</td></tr>
+<tr><td>Сохранённый вид</td><td>Отбор, группировка и раскладка под именем, чтобы к ним вернуться</td></tr>
+<tr><td>Архив</td><td>Куда уходят убранные карточки и доски. Всё оттуда можно вернуть; удаление насовсем — отдельное действие, которое называет, что исчезнет</td></tr>
+</tbody>
+</table></div>
+<h2 id="метрики-потока">Метрики потока</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Слово</th><th>Что значит</th></tr></thead>
+<tbody>
+<tr><td>Время цикла</td><td>Сколько дней работа идёт от <strong>начала работы</strong> до <strong>финиша</strong>; показывается перцентилями, а не средним</td></tr>
+<tr><td>Пропускная способность</td><td>Сколько карточек доходит до <strong>финиша</strong> за неделю</td></tr>
+<tr><td>В работе</td><td>Сколько карточек сейчас между <strong>началом работы</strong> и <strong>финишем</strong></td></tr>
+<tr><td>Возраст</td><td>Сколько уже идёт карточка, которая ещё в работе</td></tr>
+<tr><td>Накопление</td><td>Три полосы по дням — не начато, в работе, сделано, — чтобы видеть, где работа копится</td></tr>
+<tr><td>Прогноз</td><td>Сколько дней может занять довести столько-то карточек, тремя перцентилями: «если дальше пойдёт как шло»</td></tr>
+<tr><td>Выброшено</td><td>Карточки, убранные с доски незавершёнными</td></tr>
+</tbody>
+</table></div>
+<h2 id="организация">Организация</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Слово</th><th>Что значит</th></tr></thead>
+<tbody>
+<tr><td>Организация</td><td>Все, кто работает в одном Takt, и их доски. Организации друг друга не видят</td></tr>
+<tr><td>Подразделение</td><td>Отдел или команда в дереве организации. Ему могут принадлежать доски и метки</td></tr>
+<tr><td>Владелец</td><td>Читает, меняет работу и управляет организацией</td></tr>
+<tr><td>Участник</td><td>Читает и меняет работу</td></tr>
+<tr><td>Наблюдатель</td><td>Только читает</td></tr>
+<tr><td>Администратор подразделения</td><td>Управляет своим поддеревом: кто в нём, вложенные подразделения, доски</td></tr>
+<tr><td>Наблюдатель области</td><td>Читает всё в своём поддереве</td></tr>
+<tr><td>Видимость доски</td><td>Кто видит доску: вся организация, своё подразделение или только вписанные</td></tr>
+<tr><td>Ключ интеграции</td><td>Доступ для другой системы, ограниченный выданными разрешениями; отзывается одним действием</td></tr>
+<tr><td>Подписка на события</td><td>Адрес, который получает событие каждый раз, когда с карточками что-то происходит</td></tr>
+</tbody>
+</table></div>
+<footer>Takt, версия v0.2.3-33-g54c4a63-dirty. Страница собрана из словарь.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>

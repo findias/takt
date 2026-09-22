@@ -45,6 +45,7 @@ var Страницы = []Страница{
 	{"howto", "howto.md", "ru/как.md", "How to", "Как сделать", false},
 	{"reference", "reference.md", "ru/справочник.md", "Reference", "Справочник", false},
 	{"cheatsheet", "cheatsheet.md", "ru/памятка.md", "Cheat sheet", "Памятка", false},
+	{"glossary", "glossary.md", "ru/словарь.md", "Glossary", "Словарь", false},
 	{"architecture", "architecture.md", "ru/устройство.md", "Design decisions", "Устройство", true},
 	{"install", "install.md", "ru/установка.md", "Installation", "Установка", true},
 	{"security-review", "security-review.md", "ru/проверка-иб.md", "Security review", "Проверка ИБ", true},

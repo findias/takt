@@ -29,9 +29,10 @@ from that markup rather than from fields someone filled in by hand.
 **The interface speaks Russian and English**; the language follows the
 browser until the person picks one behind their name in the header;
 the choice is stored with the account and follows them to any device. The
-English documentation under [`docs/`](docs/overview.md) still quotes
-what a user clicks in Russian, the way it appears on the Russian
-screen, with a translation beside it.
+English documentation under [`docs/`](docs/overview.md) names every
+button as the English interface shows it; its screenshots still show
+the Russian one. The same documentation opens inside the application
+as help (`F1`).
 
 **To install it** — [`docs/install.md`](docs/install.md): what it
 requires, docker compose, a binary under systemd, a chart in

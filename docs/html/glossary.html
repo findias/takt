@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works, and why</title>
+<title>Glossary</title>
 <style>
 :root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
 --ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
@@ -106,8 +106,8 @@ color:var(--ink-3);font-size:.85rem}
 <a href="howto.html">How to</a>
 <a href="reference.html">Reference</a>
 <a href="cheatsheet.html">Cheat sheet</a>
-<a href="glossary.html">Glossary</a>
-<a href="architecture.html" aria-current="page">Design decisions</a>
+<a href="glossary.html" aria-current="page">Glossary</a>
+<a href="architecture.html">Design decisions</a>
 <a href="install.html">Installation</a>
 <a href="security-review.html">Security review</a>
 <a href="SECURITY.html">Security policy</a>
@@ -116,45 +116,60 @@ color:var(--ink-3);font-size:.85rem}
 <a href="CHANGELOG.ru.html">Что менялось</a>
 <a href="ru/индекс.html">По-русски</a>
 </nav>
-<h1>How it works, and why</h1>
-<p>This page does not say where to click; it says why things are the way they are. People read it when a product decision looks strange: there is almost always an argument behind it worth knowing.</p>
-<p>Instructions are in <a href="howto.html">How to</a>, lists in the <a href="reference.html">Reference</a>.</p>
-<h2 id="card-order-is-manual">Card order is manual</h2>
-<p>Cards sit in a column in the order somebody put them there. Neither priority nor a due date changes it.</p>
-<p>The reason: order answers &#34;what do I take next&#34;, and a person answers that, not a sort. Priority says what matters more; a due date says what was promised outside. Those are three different questions, and substituting one for another loses two of the three.</p>
-<h2 id="a-column-limit-is-highlighted-not-enforced">A column limit is highlighted, not enforced</h2>
-<p>An exceeded limit is visible but does not stop you moving a card.</p>
-<p>A limit exists to make overload visible, not to argue with someone who has already decided. None of the products that have limits block the move: a hard stop breaks the single scenario the limit is there for.</p>
-<h2 id="blocking-is-a-reason-not-a-status">Blocking is a reason, not a status</h2>
-<p>You cannot block a card without an explanation: the reason is required and shows on the board itself.</p>
-<p>&#34;Blocked&#34; on its own answers no question — neither &#34;who are we waiting for&#34; nor &#34;what now&#34;. A reason answers both.</p>
-<h2 id="the-irreversible-asks-the-reversible-does-not">The irreversible asks, the reversible does not</h2>
-<p>Archiving a card takes one press, with <strong>Restore</strong> right next to it. Deleting a board for good takes typing its name.</p>
-<p>People close &#34;are you sure?&#34; dialogues without reading, so the confirmation stands where you cannot come back, and stays out of the way where you can.</p>
-<h2 id="changes-spread-on-their-own">Changes spread on their own</h2>
-<p>An open board updates for everyone looking at it, without a reload.</p>
-<p>One database connection per process holds this up, not one per tab: a hundred open boards is the stated scale, and a subscription per tab would have run out of connections somewhere in the thirties.</p>
-<h2 id="isolation-between-organisations-is-held-by-the-database">Isolation between organisations is held by the database</h2>
-<p>One organisation&#39;s data is invisible to another not because the code says so, but because the database&#39;s policies are built that way.</p>
-<p>A check in code is forgotten at the next edit; a database policy applies to every query, including the one written in a hurry. For the same reason the application refuses to start if the role it connects with bypasses policies.</p>
-<h2 id="the-forecast-speaks-of-probability-not-of-a-date">The forecast speaks of probability, not of a date</h2>
-<p><strong>Flow</strong> gives three numbers instead of one: half the cases land within so many days, 85 % within so many, 95 % within so many.</p>
-<p>A single number where a probability is being computed reads as a promise. The forecast samples random past weeks and answers exactly one question: what happens if things continue as they have been. If there is not enough past, it says that too.</p>
-<h2 id="metrics-come-from-work-not-from-ticks">Metrics come from work, not from ticks</h2>
-<p>Cycle time, throughput and ageing are taken from when a card entered work and when it was carried to the end.</p>
-<p>Separate &#34;started&#34; and &#34;finished&#34; fields, filled in by hand, drift from reality in the first busy week — and drift silently.</p>
-<h2 id="a-board-s-key-never-changes">A board&#39;s key never changes</h2>
-<p>The key — the prefix of card numbers — is set once.</p>
-<p>A card number ends up in correspondence, in neighbouring teams&#39; backlogs and in other systems. Changing it would invalidate every existing reference at once.</p>
-<h2 id="an-invitation-is-addressed-and-single-use">An invitation is addressed and single-use</h2>
-<p>The link is bound to an e-mail and shown once: only a fingerprint of it is stored.</p>
-<p>A link that works for any address is a door into your organisation, lying in somebody&#39;s inbox.</p>
-<h2 id="removing-and-anonymising-are-different-actions">Removing and anonymising are different actions</h2>
-<p>Someone who left stops being in the organisation, but their cards, comments and audit entries stay: the work was done, and erasing it because they left is not on. Anonymising is a separate action, irreversible, and asked about separately.</p>
-<h2 id="delivery-gives-up-out-loud">Delivery gives up out loud</h2>
-<p>If a receiver does not answer, we retry eight times with a doubling pause — about two hours — and then disable the subscription.</p>
-<p>Quietly accumulating undelivered events for years is worse than stopping and saying so: all that time, the neighbouring system believes nothing is happening here.</p>
-<footer>Takt, version v0.2.3-33-g54c4a63-dirty. Built from architecture.md — edit the source, not this page.</footer>
+<h1>Glossary</h1>
+<p>One concept, one word. These are the words the interface and this documentation use, and what each of them means in Takt.</p>
+<h2 id="work-on-the-board">Work on the board</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Board</td><td>One team&#39;s work, moving through columns. A board has a key, a visibility and, if the team sets one, a promise</td></tr>
+<tr><td>Board key</td><td>A short prefix of card numbers: <code>ПОСТ</code> gives <code>ПОСТ-14</code>. Set once, when the board is created: card numbers end up in correspondence and must not change</td></tr>
+<tr><td>Card</td><td>One piece of work. Its number is the board key plus a sequence number</td></tr>
+<tr><td>Column</td><td>A stage the work goes through: <strong>Queue</strong>, <strong>In progress</strong>, <strong>Done</strong> on a new board</td></tr>
+<tr><td>Column markup</td><td>Two marks on the columns: <strong>work starts</strong> — from this column on, work counts as started; <strong>finish</strong> — here it counts as finished. Flow metrics are computed from the markup, not from dates filled in by hand</td></tr>
+<tr><td>WIP limit</td><td>How many cards a column should hold. Going over it is highlighted, not forbidden: the limit exists to make overload visible</td></tr>
+<tr><td>Hard limit</td><td>A limit that does refuse: a card is not moved into a full column, and the refusal says to make room first</td></tr>
+<tr><td>Board promise</td><td>How many days work usually takes to cross the board, and with what probability — &#34;usually 8 days with 85% probability&#34;. Cards running longer show up under <strong>Longer than promised</strong></td></tr>
+<tr><td>Block</td><td>A card that is waiting for something, always with a reason. A block may have a deadline, after which it lifts itself</td></tr>
+<tr><td>Subtask</td><td>A part of a card. It is an ordinary card and may live on another team&#39;s board; the parent shows &#34;so many of so many&#34;</td></tr>
+<tr><td>Label</td><td>A mark on a card. It belongs to one of three places — the organisation, a subdivision (with everything inside it) or one board — and is offered only there</td></tr>
+<tr><td>Iteration</td><td>A sprint or a release: a name and dates. Closing it freezes what it contains for good and produces a report</td></tr>
+<tr><td>Swimlanes</td><td>The board sliced into rows by assignee, label, iteration or priority. A slice of the same board, not another board</td></tr>
+<tr><td>Filter</td><td>Conditions that hide the rest of the board. It lives in the page address, so it can be shared as a link</td></tr>
+<tr><td>Saved view</td><td>A filter, a grouping and a layout with a name, to come back to</td></tr>
+<tr><td>Archive</td><td>Where cards and boards go when taken away. Everything there can be restored; deleting for good is a separate action that says what will disappear</td></tr>
+</tbody>
+</table></div>
+<h2 id="flow-metrics">Flow metrics</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Cycle time</td><td>How many days work takes from <strong>work starts</strong> to <strong>finish</strong>; shown as percentiles, not an average</td></tr>
+<tr><td>Throughput</td><td>How many cards reach <strong>finish</strong> per week</td></tr>
+<tr><td>Work in progress</td><td>How many cards are between <strong>work starts</strong> and <strong>finish</strong> right now</td></tr>
+<tr><td>Age</td><td>How long a card that is still in progress has been going</td></tr>
+<tr><td>Accumulation</td><td>Three bands by day — not started, in progress, done — to see where work piles up</td></tr>
+<tr><td>Forecast</td><td>How many days finishing so many cards may take, as three percentiles: &#34;if it goes on as it went&#34;</td></tr>
+<tr><td>Discarded</td><td>Cards taken off the board unfinished</td></tr>
+</tbody>
+</table></div>
+<h2 id="the-organisation">The organisation</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Organisation</td><td>Everyone who works in one Takt, and their boards. Organisations do not see each other</td></tr>
+<tr><td>Subdivision</td><td>A department or a team in the organisation&#39;s tree. Boards and labels may belong to it</td></tr>
+<tr><td>Owner</td><td>Reads, changes work and runs the organisation</td></tr>
+<tr><td>Member</td><td>Reads and changes work</td></tr>
+<tr><td>Viewer</td><td>Only reads</td></tr>
+<tr><td>Subdivision administrator</td><td>Runs their own subtree: who is in it, nested subdivisions, boards</td></tr>
+<tr><td>Area observer</td><td>Reads everything in their subtree</td></tr>
+<tr><td>Board visibility</td><td>Who sees a board: the whole organisation, its own subdivision, or listed people only</td></tr>
+<tr><td>Integration key</td><td>Access for another system, limited to the scopes it was given; revoked in one action</td></tr>
+<tr><td>Event subscription</td><td>An address that receives an event every time something happens to cards</td></tr>
+</tbody>
+</table></div>
+<footer>Takt, version v0.2.3-33-g54c4a63-dirty. Built from glossary.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -6,8 +6,9 @@ own — no need to read them in order.
 If this is your first time here, walk through the [first fifteen
 minutes](quickstart.md) first; the rest will make more sense.
 
-**The interface is in Russian.** Buttons are quoted the way they appear
-on screen, with a translation next to them.
+**The interface speaks English and Russian;** the language is chosen
+behind your name in the header. Buttons are named here as they appear
+in the English interface. Screenshots still show the Russian one.
 
 <!-- anchor: board -->
 ## Working on the board
@@ -22,22 +23,19 @@ shows less than everything, and says so in the column.
 
 ### Filter down to what you need
 
-1. Above the board press «Отбор» (filter) and pick your conditions:
-   assignee, labels, «горит» (urgent), «срок подходит» (due soon),
-   «заблокированные» (blocked), «дольше обещанного» (past the
-   promise), iteration. The button shows how many are on, and next
-   to it you see how many cards are hidden and «Показать все» (show
-   all).
+1. Above the board press **Filter** and pick your conditions:
+   assignee, labels, **Urgent**, **Due soon**, **Blocked**,
+   **Longer than promised**, iteration. The button shows how many are on, and next
+   to it you see how many cards are hidden and **Show all**.
 2. To share the result, copy the page address — the filter lives in it.
-3. To come back to a filter later, press **«Сохранить вид»** (save
-   view) and give it a name.
+3. To come back to a filter later, press **Save view** and give it a name.
 
-Labels combine with AND: pick «срочно» and «снаружи» and you get cards
+Labels combine with AND: pick “Urgent” and “External” and you get cards
 carrying both.
 
 ### Slice the board into swimlanes
 
-In the **«Без группировки»** (no grouping) list, choose what to slice
+In the **No grouping** list, choose what to slice
 by: assignee, label, iteration or priority.
 
 Swimlanes are a slice, not a different board: you cannot drag a card
@@ -47,7 +45,7 @@ To change the lane, change the property.
 <!-- anchor: table -->
 ### Compare cards against each other
 
-Press **«Таблица»** (table) in the board header. Same set of cards as a
+Press **Table** in the board header. Same set of cards as a
 flat list: age, due date and estimate side by side.
 
 Click a column heading to sort. The order lives in the address, so a
@@ -55,9 +53,8 @@ sorted list can be sent to someone.
 
 ### Put a label on a card
 
-1. On the card press «+ метка» (or the coloured dots, if it already
-   carries labels), or open the card and find **«Метки»** (labels) on
-   the **«Работа»** tab.
+1. On the card press **+ label**, or open the card and find **Labels** on
+   the **Work** tab.
 2. Start typing. The list offers the labels that apply on this board;
    next to each one it says where it comes from — this board, a
    subdivision, or the whole organisation.
@@ -83,21 +80,21 @@ run, and the organisation.
 If a label with that name already exists where the places overlap, the
 picker offers that label instead of a second one, and an archived one
 is offered back from the archive. Colours, archiving and the full list
-live on **«Команда»**, in the **«Метки»** section.
+live on **Team**, in the **Labels** section.
 
 ### Block work until a date
 
-1. Open the card's **«…»** menu and choose **«Заблокировать…»** (block),
-   or press **«Заблокировать…»** in the card panel.
+1. Open the card's **…** menu and choose **Block…**,
+   or press **Block…** in the card panel.
 2. Write what you are waiting for.
-3. If you know when it ends, fill in **«Снимется само (необязательно)»**
+3. If you know when it ends, fill in **Lifts itself (optional)**
    (lifts itself, optional): a date and a time.
 
 At that moment the block lifts itself: nobody has to come back to the
 card. The day before, the line under the card becomes bold, and the
-filter **«Блокировка истекает»** gathers such cards. To move the
-deadline, open the card and press **«Перенести срок»**; to lift the
-block now, press **«Снять блокировку»**.
+filter **Block ending** gathers such cards. To move the
+deadline, open the card and press **Move deadline**; to lift the
+block now, press **Lift the block**.
 
 ### Make a column wider
 
@@ -111,11 +108,10 @@ board stays as it was.
 <!-- anchor: appearance -->
 ### Switch to the dark theme or a denser board
 
-1. Click your name in the header — it opens **«Личные настройки»**
+1. Click your name in the header — it opens **Personal settings**
    (personal settings).
-2. **«Оформление»** (appearance) tab: **«Как в системе»** (as the
-   system), **«Светлая»** (light), **«Тёмная»** (dark); below them
-   **«Плотнее»** (denser).
+2. **Appearance** tab: **System**, **Light**, **Dark**; below them
+   **Compact**.
 
 The change applies at once. Theme and density are remembered in this
 browser: on another device they can be different.
@@ -123,7 +119,7 @@ browser: on another device they can be different.
 <!-- anchor: language -->
 ### Switch the interface language
 
-Click your name, **«Язык»** (language) tab, and choose **Русский** or
+Click your name, **Language** tab, and choose **Русский** or
 **English**. The page reloads in the chosen language.
 
 The choice is stored with your account: the next time you sign in on
@@ -132,30 +128,31 @@ Until you choose, the language follows the browser.
 
 ### Get help on the screen you are on
 
-Press **«Справка»** (help) in the header, `F1` or `?`. Help opens in a
+Press **Help** in the header, `F1` or `?`. Help opens in a
 new tab, at the section about the screen you are on — the board, a card,
-the table, «Поток», the archive, the team or the structure — and in the
+the table, **Flow**, the archive, the team or the structure — and in the
 language of the interface. It is this same documentation, built from the
 same version as the application. The search field above the contents
-finds a section by any word in it, and «Что нового» (what's new) lists
+finds a section by any word in it, and **What’s new** lists
 what changed for people using the board in this version.
 
 ### Change your password or sign out
 
-Both live behind your name as well. **«Вход»** (sign-in) tab: the
-current password, the new one, **«Сменить»** (change). Changing the
+Both live behind your name as well. **Sign-in** tab: the
+current password, the new one, **Change**. Changing the
 password signs out every other device; to sign them out without
-changing it, press **«Выйти на всех устройствах»** (sign out on all
-devices). **«Выйти»** (sign out) is at the bottom of the window.
+changing it, press **Sign out on all devices**. **Sign out** is at the bottom of the window.
 
 Someone who signs in through the company identity provider changes the
 password there, not here.
 
 ### Split work into parts
 
-1. Open the card, **«Работа»** (work) tab.
-2. In the subtasks section press **«Добавить»** (add).
-3. Type the name of the part.
+1. Open the card, **Work** tab.
+2. In the subtasks section, type the name of the part into
+   **What needs doing?**
+3. Press **Subtask**. To give the part to another team, pick their board
+   in the list next to the name first.
 
 A part is an ordinary card: it can live on a different board if a
 different team does the work. The parent card grows a "so many of so
@@ -164,21 +161,19 @@ many" bar.
 <!-- anchor: archive -->
 ### Take a card off the board
 
-Hover the card, open the **«…»** menu and choose **«В архив»** (to the
-archive). A message appears with a **«Вернуть»** (restore) button, in
+Hover the card, open the **…** menu and choose **Archive**. A message appears with a **Restore** button, in
 case that was the wrong card.
 
-Archived cards sit in **«Архив»** and come back from there at any time.
+Archived cards sit in **Archive** and come back from there at any time.
 Deleting for good asks for confirmation and cannot be undone.
 
 <!-- anchor: iterations -->
 ### Run a sprint or a release
 
-1. In the strip above the board press **«+ итерация»** (+ iteration).
-2. Set a name, a start and an end, press **«Завести итерацию»**.
-3. On cards, pick the iteration (**«Работа»** tab).
-4. When the time is up press **«Закрыть итерацию»** (close the
-   iteration). It asks first, because closing freezes what the
+1. In the strip above the board press **+ iteration**.
+2. Set a name, a start and an end, press **Create iteration**.
+3. On cards, pick the iteration (**Work** tab).
+4. When the time is up press **Close iteration**. It asks first, because closing freezes what the
    iteration contains for good. A report appears: what made it and
    what did not.
 
@@ -187,8 +182,8 @@ Deleting for good asks for confirmation and cannot be undone.
 
 ### Invite someone
 
-1. **«Команда»** tab → **«Пригласить»** section.
-2. Enter an e-mail, pick a role, press **«Пригласить»**.
+1. **Team** tab → **Invite** section.
+2. Enter an e-mail, pick a role, press **Invite**.
 3. Send the link to the person.
 
 The link lasts a week, is bound to that address, and is shown once. If
@@ -199,9 +194,9 @@ it gets lost, revoke the invitation and create a new one.
 1. Open the board and press the visibility button in the header — it
    starts with `Видна:` (visible to).
 2. Choose the visibility:
-   - **«Всей организации»** — everyone in the organisation;
-   - **«Своей команде»** — people in the subdivision that owns it;
-   - **«Только вписанным»** — only those listed by name.
+   - **Whole organisation** — everyone in the organisation;
+   - **Own subdivision** — people in the subdivision that owns it;
+   - **Listed people only** — only those listed by name.
 3. For the last one, add people to the list.
 
 Closing a board adds you to it: otherwise your very first action would
@@ -211,9 +206,9 @@ lock you out.
 
 Pick one of two; they do different things:
 
-- **«Исключить»** (remove) — the person is no longer in the
+- **Remove** — the person is no longer in the
   organisation. Their cards, comments and audit entries stay.
-- **«Удалить данные»** (erase data) — name and e-mail are erased, the
+- **Erase data** — name and e-mail are erased, the
   traces of their work remain unnamed. Irreversible, and asked about
   separately.
 
@@ -222,50 +217,48 @@ If someone left but the work must stay traceable, the first is enough.
 <!-- anchor: structure -->
 ### Set up subdivisions
 
-1. The **«Структура»** (structure) tab.
-2. Press **«Новое подразделение»** (new subdivision), enter a name.
+1. The **Structure** tab.
+2. Press **New subdivision**, enter a name.
 3. Everything else about a subdivision is in the **⋮** menu at the end
-   of its row: **«Завести отдел…»** (create a department inside it),
-   **«Переименовать…»** (rename), **«Перенести…»** (move elsewhere in
-   the tree), **«Убрать подразделение»** (remove). A question opens a
+   of its row: **Create a department…**,
+   **Rename…**, **Move…**, **Remove subdivision**. A question opens a
    field right under the row.
-4. Appoint a subdivision administrator in **«Кто за что отвечает»**
+4. Appoint a subdivision administrator in **Who runs what**
    (who runs what) — they will run their own subtree.
 
-A removed subdivision is not gone: it waits under **«Убранные
-подразделения»** (removed subdivisions) and comes back with
-**«Вернуть»** (restore).
+A removed subdivision is not gone: it waits under **Removed subdivisions** and comes back with
+**Restore**.
 
 ## Integrations
 
 ### Issue a key for an integration
 
-1. **«Команда»** tab → **«Ключи для интеграций»** (integration keys).
+1. **Team** tab → **Integration keys**.
 2. State what the key is for and pick its scopes.
-3. Press **«Завести»** and copy the key — it is shown once.
+3. Press **Create** and copy the key — it is shown once.
 
 For the directory (SCIM), issue a **separate** key: such a key works
 only against `/scim/v2` and gives no access to boards.
 
-**«Отозвать ключ»** (revoke) asks first: the key stops working at once,
+**Revoke key** asks first: the key stops working at once,
 and nothing brings it back — you issue a new one.
 
 ### Receive events in your own system
 
-1. **«Команда»** tab → **«Подписки на события»** (event subscriptions).
+1. **Team** tab → **Event subscriptions**.
 2. Enter a name and the receiver's address, tick the events.
-3. Press **«Завести»** and keep the signing key — we sign every
+3. Press **Create** and keep the signing key — we sign every
    delivery with it.
 
-If the receiver goes down for maintenance, press **«Приостановить»**
+If the receiver goes down for maintenance, press **Pause**
 (pause): while paused, events do not pile up, so resuming does not turn
 into an avalanche.
 
 ### Work out why an event did not arrive
 
-1. On the subscription press **«Доставки»** (deliveries).
+1. On the subscription press **Deliveries**.
 2. Look at the attempts and the receiver's response.
-3. Once the receiver is fixed, press **«Повторить»** (retry) on what
+3. Once the receiver is fixed, press **Retry** on what
    did not arrive.
 
 A retry also re-enables the subscription if we disabled it after a long
@@ -273,10 +266,10 @@ run of failures.
 
 ### Take all the organisation's data
 
-**«Команда»** tab → **«Выгрузка»** (export) → **«Скачать файл»**
+**Team** tab → **Export** → **Download file**
 (download).
 
-Tick **«Добавить журнал действий»** (include the audit log) if you need
+Tick **Include the audit log** if you need
 it too: the log is usually larger than everything else combined.
 
 ## Installing and operating

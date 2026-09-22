@@ -35,7 +35,7 @@ for" nor "what now". A reason answers both.
 
 ## The irreversible asks, the reversible does not
 
-Archiving a card takes one press, with «Вернуть» (restore) right next
+Archiving a card takes one press, with **Restore** right next
 to it. Deleting a board for good takes typing its name.
 
 People close "are you sure?" dialogues without reading, so the
@@ -62,7 +62,7 @@ with bypasses policies.
 
 ## The forecast speaks of probability, not of a date
 
-«Поток» gives three numbers instead of one: half the cases land within
+**Flow** gives three numbers instead of one: half the cases land within
 so many days, 85 % within so many, 95 % within so many.
 
 A single number where a probability is being computed reads as a

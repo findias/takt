@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-32-g695557e-dirty.</p>
+<p>Every section in one file. Version v0.2.3-33-g54c4a63-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -109,6 +109,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><a href="#howto">How to</a></li>
 <li><a href="#reference">Reference</a></li>
 <li><a href="#cheatsheet">Cheat sheet</a></li>
+<li><a href="#glossary">Glossary</a></li>
 <li><a href="#architecture">Design decisions</a></li>
 <li><a href="#install">Installation</a></li>
 <li><a href="#security-review">Security review</a></li>
@@ -120,7 +121,7 @@ color:var(--ink-3);font-size:.85rem}
 <section id="overview">
 <h1>Takt</h1>
 <p>A kanban board with flow metrics, for one team: work on the board, metrics computed from that work, an organisation with roles and subdivisions, integrations. It runs inside your own perimeter — no cloud and no external services required.</p>
-<p><strong>The product interface is in Russian.</strong> These English pages quote everything a user clicks the way it appears on screen, with a translation next to it. The Russian original of this page is <a href="ru/индекс.html">here</a>.</p>
+<p><strong>The interface speaks English and Russian.</strong> These pages name every button as it appears in the English interface; the screenshots still show the Russian one. The Russian version of this page is <a href="ru/индекс.html">here</a>.</p>
 <figure><img src="screenshots/доска.png" alt="The board" loading="lazy">
 <figcaption>The board</figcaption></figure>
 <h2 id="where-to-start">Where to start</h2>
@@ -151,62 +152,47 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="how-it-is-deployed">How it is deployed</h2>
 <p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
 <p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="CHANGELOG.html">changelog</a>.</p>
-<h2 id="words-you-will-see-on-screen">Words you will see on screen</h2>
-<div class="tablewrap"><table>
-<thead><tr><th>On screen</th><th>Means</th></tr></thead>
-<tbody>
-<tr><td>«Доски»</td><td>Boards</td></tr>
-<tr><td>«Команда»</td><td>Team: people, invitations, keys, subscriptions, export</td></tr>
-<tr><td>«Структура»</td><td>Structure: subdivisions</td></tr>
-<tr><td>«Доска», «Таблица», «Изменения»</td><td>Board, Table, Changes — three views</td></tr>
-<tr><td>«Поток»</td><td>Flow: metrics</td></tr>
-<tr><td>«Архив»</td><td>Archive</td></tr>
-<tr><td>«Завести доску», «Завести карточку»</td><td>Create a board, create a card</td></tr>
-<tr><td>«В архив», «Вернуть»</td><td>Archive it, restore it</td></tr>
-<tr><td>«Владелец», «Участник», «Наблюдатель»</td><td>Owner, member, viewer</td></tr>
-</tbody>
-</table></div>
 </section>
 <section id="quickstart">
 <h1>First fifteen minutes</h1>
 <p>Walk this path once and the board will stop needing explanations. We will create a board, put work on it, carry that work to the end, and invite a colleague.</p>
 <p>You need a board open in a browser and fifteen minutes.</p>
-<p><strong>The interface is in Russian.</strong> Buttons are quoted below exactly as they appear on screen, with a translation next to them.</p>
+<p><strong>The interface speaks English and Russian;</strong> the language is chosen behind your name in the header. Buttons are named here as they appear in the English interface. Screenshots still show the Russian one.</p>
 <figure><img src="screenshots/список-досок.png" alt="The list of boards" loading="lazy">
 <figcaption>The list of boards</figcaption></figure>
 <h2 id="create-board">1. Create a board</h2>
 <ol>
-<li>On the main screen, type a name into <strong>«Название новой доски»</strong> (name of the new board).</li>
-<li>Next to it, in <strong>«Ключ»</strong> (key), type a short word — <code>ПОСТ</code>, say. It becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty and we derive it from the name.</li>
-<li>Press <strong>«Завести»</strong> (create).</li>
+<li>On the main screen, type a name into <strong>New board name</strong> (name of the new board).</li>
+<li>Next to it, in <strong>Key</strong>, type a short word — <code>ПОСТ</code>, say. It becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty and we derive it from the name.</li>
+<li>Press <strong>Create</strong>.</li>
 </ol>
-<p>The board opens straight away with three columns: «Очередь» (queue), «В работе» (in progress), «Готово» (done). Those are stages of work, and you can change them.</p>
+<p>The board opens straight away with three columns: <strong>Queue</strong>, <strong>In progress</strong>, <strong>Done</strong>. Those are stages of work, and you can change them.</p>
 <h2 id="2-put-work-on-it">2. Put work on it</h2>
 <ol>
-<li>At the bottom of «Очередь», press <strong>«Завести карточку»</strong> (create a card).</li>
+<li>At the bottom of <strong>Queue</strong>, press <strong>Create card</strong>.</li>
 <li>Write what needs doing and press <code>Enter</code>.</li>
 </ol>
 <p>Create three or four cards: with one, the board shows nothing.</p>
 <h2 id="3-move-a-card">3. Move a card</h2>
-<p>Drag a card into «В работе». Or, faster: focus it from the keyboard and press <code>Ctrl</code> with the right arrow.</p>
+<p>Drag a card into <strong>In progress</strong>. Or, faster: focus it from the keyboard and press <code>Ctrl</code> with the right arrow.</p>
 <p>The card flashes in its new place — that is how the board shows where it went. Everyone with this board open sees the change immediately.</p>
 <h2 id="describe-work">4. Describe the work</h2>
 <ol>
 <li>Click the card&#39;s title; a panel opens.</li>
-<li>Go to the <strong>«Работа»</strong> (work) tab.</li>
+<li>Go to the <strong>Work</strong> tab.</li>
 <li>Assign an owner, set an estimate and a due date.</li>
 </ol>
 <figure><img src="screenshots/карточка.png" alt="A card" loading="lazy">
 <figcaption>A card</figcaption></figure>
-<p>If work has stalled, press <strong>«Заблокировать»</strong> (block) and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all. If you know when the wait ends, fill in <strong>«Снимется само (необязательно)»</strong> — the block lifts itself at that moment.</p>
-<p>To mark what kind of work it is, add a label: press «+ метка» on the card and type. A label that does not exist yet is created right there — for this board, a subdivision, or the whole organisation.</p>
+<p>If work has stalled, press <strong>Block</strong> and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all. If you know when the wait ends, fill in <strong>Lifts itself (optional)</strong> — the block lifts itself at that moment.</p>
+<p>To mark what kind of work it is, add a label: press <strong>+ label</strong> on the card and type. A label that does not exist yet is created right there — for this board, a subdivision, or the whole organisation.</p>
 <h2 id="5-carry-it-to-the-end">5. Carry it to the end</h2>
-<p>Move the card into «Готово». After a few such cards, open <strong>«Поток»</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
+<p>Move the card into <strong>Done</strong>. After a few such cards, open <strong>Flow</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
 <h2 id="6-invite-a-colleague">6. Invite a colleague</h2>
 <ol>
-<li>Open the <strong>«Команда»</strong> (team) tab.</li>
-<li>Under <strong>«Пригласить»</strong> (invite), enter an e-mail and pick a role.</li>
-<li>Press <strong>«Пригласить»</strong> and send the link that appears.</li>
+<li>Open the <strong>Team</strong> tab.</li>
+<li>Under <strong>Invite</strong>, enter an e-mail and pick a role.</li>
+<li>Press <strong>Invite</strong> and send the link that appears.</li>
 </ol>
 <p>The link is addressed: someone with a different e-mail cannot accept it. It is shown once — only a fingerprint of it is stored.</p>
 <h2 id="what-next">What next</h2>
@@ -220,27 +206,27 @@ color:var(--ink-3);font-size:.85rem}
 <h1>How to</h1>
 <p>Answers to specific questions. Each one is short and stands on its own — no need to read them in order.</p>
 <p>If this is your first time here, walk through the <a href="quickstart.html">first fifteen minutes</a> first; the rest will make more sense.</p>
-<p><strong>The interface is in Russian.</strong> Buttons are quoted the way they appear on screen, with a translation next to them.</p>
+<p><strong>The interface speaks English and Russian;</strong> the language is chosen behind your name in the header. Buttons are named here as they appear in the English interface. Screenshots still show the Russian one.</p>
 <h2 id="board">Working on the board</h2>
 <h3 id="find-a-card">Find a card</h3>
 <p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
 <p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
 <h3 id="filter-down-to-what-you-need">Filter down to what you need</h3>
 <ol>
-<li>Above the board press «Отбор» (filter) and pick your conditions: assignee, labels, «горит» (urgent), «срок подходит» (due soon), «заблокированные» (blocked), «дольше обещанного» (past the promise), iteration. The button shows how many are on, and next to it you see how many cards are hidden and «Показать все» (show all).</li>
+<li>Above the board press <strong>Filter</strong> and pick your conditions: assignee, labels, <strong>Urgent</strong>, <strong>Due soon</strong>, <strong>Blocked</strong>, <strong>Longer than promised</strong>, iteration. The button shows how many are on, and next to it you see how many cards are hidden and <strong>Show all</strong>.</li>
 <li>To share the result, copy the page address — the filter lives in it.</li>
-<li>To come back to a filter later, press <strong>«Сохранить вид»</strong> (save view) and give it a name.</li>
+<li>To come back to a filter later, press <strong>Save view</strong> and give it a name.</li>
 </ol>
-<p>Labels combine with AND: pick «срочно» and «снаружи» and you get cards carrying both.</p>
+<p>Labels combine with AND: pick “Urgent” and “External” and you get cards carrying both.</p>
 <h3 id="slice-the-board-into-swimlanes">Slice the board into swimlanes</h3>
-<p>In the <strong>«Без группировки»</strong> (no grouping) list, choose what to slice by: assignee, label, iteration or priority.</p>
+<p>In the <strong>No grouping</strong> list, choose what to slice by: assignee, label, iteration or priority.</p>
 <p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
 <h3 id="table">Compare cards against each other</h3>
-<p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
+<p>Press <strong>Table</strong> in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
 <h3 id="put-a-label-on-a-card">Put a label on a card</h3>
 <ol>
-<li>On the card press «+ метка» (or the coloured dots, if it already carries labels), or open the card and find <strong>«Метки»</strong> (labels) on the <strong>«Работа»</strong> tab.</li>
+<li>On the card press <strong>+ label</strong>, or open the card and find <strong>Labels</strong> on the <strong>Work</strong> tab.</li>
 <li>Start typing. The list offers the labels that apply on this board; next to each one it says where it comes from — this board, a subdivision, or the whole organisation.</li>
 <li>Pick one, or press <code>Enter</code>.</li>
 </ol>
@@ -253,104 +239,104 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>the whole organisation</strong> — on every board.</li>
 </ul>
 <p>Pick one and the label is created and hung in one go, with a colour chosen for you. You are only offered the places you are allowed to create labels in: a board you can edit, a subdivision you belong to or run, and the organisation.</p>
-<p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>«Команда»</strong>, in the <strong>«Метки»</strong> section.</p>
+<p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>Team</strong>, in the <strong>Labels</strong> section.</p>
 <h3 id="block-work-until-a-date">Block work until a date</h3>
 <ol>
-<li>Open the card&#39;s <strong>«…»</strong> menu and choose <strong>«Заблокировать…»</strong> (block), or press <strong>«Заблокировать…»</strong> in the card panel.</li>
+<li>Open the card&#39;s <strong>…</strong> menu and choose <strong>Block…</strong>, or press <strong>Block…</strong> in the card panel.</li>
 <li>Write what you are waiting for.</li>
-<li>If you know when it ends, fill in <strong>«Снимется само (необязательно)»</strong> (lifts itself, optional): a date and a time.</li>
+<li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong> (lifts itself, optional): a date and a time.</li>
 </ol>
-<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>«Блокировка истекает»</strong> gathers such cards. To move the deadline, open the card and press <strong>«Перенести срок»</strong>; to lift the block now, press <strong>«Снять блокировку»</strong>.</p>
+<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>.</p>
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
 <h3 id="appearance">Switch to the dark theme or a denser board</h3>
 <ol>
-<li>Click your name in the header — it opens <strong>«Личные настройки»</strong> (personal settings).</li>
-<li><strong>«Оформление»</strong> (appearance) tab: <strong>«Как в системе»</strong> (as the system), <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark); below them <strong>«Плотнее»</strong> (denser).</li>
+<li>Click your name in the header — it opens <strong>Personal settings</strong> (personal settings).</li>
+<li><strong>Appearance</strong> tab: <strong>System</strong>, <strong>Light</strong>, <strong>Dark</strong>; below them <strong>Compact</strong>.</li>
 </ol>
 <p>The change applies at once. Theme and density are remembered in this browser: on another device they can be different.</p>
 <h3 id="language">Switch the interface language</h3>
-<p>Click your name, <strong>«Язык»</strong> (language) tab, and choose <strong>Русский</strong> or <strong>English</strong>. The page reloads in the chosen language.</p>
+<p>Click your name, <strong>Language</strong> tab, and choose <strong>Русский</strong> or <strong>English</strong>. The page reloads in the chosen language.</p>
 <p>The choice is stored with your account: the next time you sign in on another computer or phone, the interface opens in the same language. Until you choose, the language follows the browser.</p>
 <h3 id="get-help-on-the-screen-you-are-on">Get help on the screen you are on</h3>
-<p>Press <strong>«Справка»</strong> (help) in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, «Поток», the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application. The search field above the contents finds a section by any word in it, and «Что нового» (what&#39;s new) lists what changed for people using the board in this version.</p>
+<p>Press <strong>Help</strong> in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, <strong>Flow</strong>, the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application. The search field above the contents finds a section by any word in it, and <strong>What’s new</strong> lists what changed for people using the board in this version.</p>
 <h3 id="change-your-password-or-sign-out">Change your password or sign out</h3>
-<p>Both live behind your name as well. <strong>«Вход»</strong> (sign-in) tab: the current password, the new one, <strong>«Сменить»</strong> (change). Changing the password signs out every other device; to sign them out without changing it, press <strong>«Выйти на всех устройствах»</strong> (sign out on all devices). <strong>«Выйти»</strong> (sign out) is at the bottom of the window.</p>
+<p>Both live behind your name as well. <strong>Sign-in</strong> tab: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
 <h3 id="split-work-into-parts">Split work into parts</h3>
 <ol>
-<li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
-<li>In the subtasks section press <strong>«Добавить»</strong> (add).</li>
-<li>Type the name of the part.</li>
+<li>Open the card, <strong>Work</strong> tab.</li>
+<li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
+<li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
 <p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
 <h3 id="archive">Take a card off the board</h3>
-<p>Hover the card, open the <strong>«…»</strong> menu and choose <strong>«В архив»</strong> (to the archive). A message appears with a <strong>«Вернуть»</strong> (restore) button, in case that was the wrong card.</p>
-<p>Archived cards sit in <strong>«Архив»</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
+<p>Hover the card, open the <strong>…</strong> menu and choose <strong>Archive</strong>. A message appears with a <strong>Restore</strong> button, in case that was the wrong card.</p>
+<p>Archived cards sit in <strong>Archive</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
 <h3 id="iterations">Run a sprint or a release</h3>
 <ol>
-<li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
-<li>Set a name, a start and an end, press <strong>«Завести итерацию»</strong>.</li>
-<li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
-<li>When the time is up press <strong>«Закрыть итерацию»</strong> (close the iteration). It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
+<li>In the strip above the board press <strong>+ iteration</strong>.</li>
+<li>Set a name, a start and an end, press <strong>Create iteration</strong>.</li>
+<li>On cards, pick the iteration (<strong>Work</strong> tab).</li>
+<li>When the time is up press <strong>Close iteration</strong>. It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
 </ol>
 <h2 id="team">The organisation</h2>
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
-<li><strong>«Команда»</strong> tab → <strong>«Пригласить»</strong> section.</li>
-<li>Enter an e-mail, pick a role, press <strong>«Пригласить»</strong>.</li>
+<li><strong>Team</strong> tab → <strong>Invite</strong> section.</li>
+<li>Enter an e-mail, pick a role, press <strong>Invite</strong>.</li>
 <li>Send the link to the person.</li>
 </ol>
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
 <h3 id="close-a-board-to-outsiders">Close a board to outsiders</h3>
 <ol>
 <li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
-<li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
+<li>Choose the visibility: - <strong>Whole organisation</strong> — everyone in the organisation; - <strong>Own subdivision</strong> — people in the subdivision that owns it; - <strong>Listed people only</strong> — only those listed by name.</li>
 <li>For the last one, add people to the list.</li>
 </ol>
 <p>Closing a board adds you to it: otherwise your very first action would lock you out.</p>
 <h3 id="handle-someone-leaving">Handle someone leaving</h3>
 <p>Pick one of two; they do different things:</p>
 <ul>
-<li><strong>«Исключить»</strong> (remove) — the person is no longer in the organisation. Their cards, comments and audit entries stay.</li>
-<li><strong>«Удалить данные»</strong> (erase data) — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
+<li><strong>Remove</strong> — the person is no longer in the organisation. Their cards, comments and audit entries stay.</li>
+<li><strong>Erase data</strong> — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
 </ul>
 <p>If someone left but the work must stay traceable, the first is enough.</p>
 <h3 id="structure">Set up subdivisions</h3>
 <ol>
-<li>The <strong>«Структура»</strong> (structure) tab.</li>
-<li>Press <strong>«Новое подразделение»</strong> (new subdivision), enter a name.</li>
-<li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>«Завести отдел…»</strong> (create a department inside it), <strong>«Переименовать…»</strong> (rename), <strong>«Перенести…»</strong> (move elsewhere in the tree), <strong>«Убрать подразделение»</strong> (remove). A question opens a field right under the row.</li>
-<li>Appoint a subdivision administrator in <strong>«Кто за что отвечает»</strong> (who runs what) — they will run their own subtree.</li>
+<li>The <strong>Structure</strong> tab.</li>
+<li>Press <strong>New subdivision</strong>, enter a name.</li>
+<li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>Create a department…</strong>, <strong>Rename…</strong>, <strong>Move…</strong>, <strong>Remove subdivision</strong>. A question opens a field right under the row.</li>
+<li>Appoint a subdivision administrator in <strong>Who runs what</strong> (who runs what) — they will run their own subtree.</li>
 </ol>
-<p>A removed subdivision is not gone: it waits under <strong>«Убранные подразделения»</strong> (removed subdivisions) and comes back with <strong>«Вернуть»</strong> (restore).</p>
+<p>A removed subdivision is not gone: it waits under <strong>Removed subdivisions</strong> and comes back with <strong>Restore</strong>.</p>
 <h2 id="integrations">Integrations</h2>
 <h3 id="issue-a-key-for-an-integration">Issue a key for an integration</h3>
 <ol>
-<li><strong>«Команда»</strong> tab → <strong>«Ключи для интеграций»</strong> (integration keys).</li>
+<li><strong>Team</strong> tab → <strong>Integration keys</strong>.</li>
 <li>State what the key is for and pick its scopes.</li>
-<li>Press <strong>«Завести»</strong> and copy the key — it is shown once.</li>
+<li>Press <strong>Create</strong> and copy the key — it is shown once.</li>
 </ol>
 <p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
-<p><strong>«Отозвать ключ»</strong> (revoke) asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
+<p><strong>Revoke key</strong> asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
 <h3 id="receive-events-in-your-own-system">Receive events in your own system</h3>
 <ol>
-<li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
+<li><strong>Team</strong> tab → <strong>Event subscriptions</strong>.</li>
 <li>Enter a name and the receiver&#39;s address, tick the events.</li>
-<li>Press <strong>«Завести»</strong> and keep the signing key — we sign every delivery with it.</li>
+<li>Press <strong>Create</strong> and keep the signing key — we sign every delivery with it.</li>
 </ol>
-<p>If the receiver goes down for maintenance, press <strong>«Приостановить»</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
+<p>If the receiver goes down for maintenance, press <strong>Pause</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
 <h3 id="work-out-why-an-event-did-not-arrive">Work out why an event did not arrive</h3>
 <ol>
-<li>On the subscription press <strong>«Доставки»</strong> (deliveries).</li>
+<li>On the subscription press <strong>Deliveries</strong>.</li>
 <li>Look at the attempts and the receiver&#39;s response.</li>
-<li>Once the receiver is fixed, press <strong>«Повторить»</strong> (retry) on what did not arrive.</li>
+<li>Once the receiver is fixed, press <strong>Retry</strong> on what did not arrive.</li>
 </ol>
 <p>A retry also re-enables the subscription if we disabled it after a long run of failures.</p>
 <h3 id="take-all-the-organisation-s-data">Take all the organisation&#39;s data</h3>
-<p><strong>«Команда»</strong> tab → <strong>«Выгрузка»</strong> (export) → <strong>«Скачать файл»</strong> (download).</p>
-<p>Tick <strong>«Добавить журнал действий»</strong> (include the audit log) if you need it too: the log is usually larger than everything else combined.</p>
+<p><strong>Team</strong> tab → <strong>Export</strong> → <strong>Download file</strong> (download).</p>
+<p>Tick <strong>Include the audit log</strong> if you need it too: the log is usually larger than everything else combined.</p>
 <h2 id="installing-and-operating">Installing and operating</h2>
 <p>Details are in the <a href="install.html">installation guide</a>.</p>
 <h3 id="check-that-the-installation-was-done-right">Check that the installation was done right</h3>
@@ -367,14 +353,14 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <section id="reference">
 <h1>Reference</h1>
 <p>Lists and tables: what lives where, what things are called, what equals what. Not read in order — read when needed.</p>
-<p><strong>The interface is in Russian.</strong> On-screen wording is quoted, with a translation next to it.</p>
+<p><strong>The interface speaks English and Russian;</strong> the language is chosen behind your name in the header. Buttons are named here as they appear in the English interface. Screenshots still show the Russian one.</p>
 <h2 id="roles-in-the-organisation">Roles in the organisation</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Role</th><th>Reads</th><th>Changes work</th><th>Runs the organisation</th></tr></thead>
 <tbody>
-<tr><td>«Владелец» (owner)</td><td>yes</td><td>yes</td><td>yes</td></tr>
-<tr><td>«Участник» (member)</td><td>yes</td><td>yes</td><td>no</td></tr>
-<tr><td>«Наблюдатель» (viewer)</td><td>yes</td><td>no</td><td>no</td></tr>
+<tr><td><strong>Owner</strong></td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td><strong>Member</strong></td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td><strong>Viewer</strong></td><td>yes</td><td>no</td><td>no</td></tr>
 </tbody>
 </table></div>
 <p>Beyond roles, the owner appoints:</p>
@@ -389,9 +375,9 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <div class="tablewrap"><table>
 <thead><tr><th>Visibility</th><th>Who sees it</th></tr></thead>
 <tbody>
-<tr><td>«Всей организации»</td><td>everyone in the organisation</td></tr>
-<tr><td>«Своей команде»</td><td>people in the subdivision that owns the board</td></tr>
-<tr><td>«Только вписанным»</td><td>those listed by name</td></tr>
+<tr><td><strong>Whole organisation</strong></td><td>everyone in the organisation</td></tr>
+<tr><td><strong>Own subdivision</strong></td><td>people in the subdivision that owns the board</td></tr>
+<tr><td><strong>Listed people only</strong></td><td>those listed by name</td></tr>
 </tbody>
 </table></div>
 <h2 id="keys">Keys</h2>
@@ -415,20 +401,20 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td>Text</td><td>cards whose title contains the substring</td></tr>
 <tr><td>Assignee</td><td>whose cards; separately, &#34;nobody&#39;s&#34;</td></tr>
 <tr><td>Labels</td><td>cards carrying <strong>all</strong> the selected labels</td></tr>
-<tr><td>«Горит»</td><td>highest and high priority</td></tr>
-<tr><td>«Срок подходит»</td><td>due today, tomorrow, the day after, or overdue</td></tr>
-<tr><td>«Заблокированные»</td><td>those where work has stalled</td></tr>
-<tr><td>«Блокировка истекает»</td><td>blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks</td></tr>
-<tr><td>«Дольше обещанного»</td><td>those running longer than the board&#39;s promise</td></tr>
+<tr><td><strong>Urgent</strong></td><td>highest and high priority</td></tr>
+<tr><td><strong>Due soon</strong></td><td>due today, tomorrow, the day after, or overdue</td></tr>
+<tr><td><strong>Blocked</strong></td><td>those where work has stalled</td></tr>
+<tr><td><strong>Block ending</strong></td><td>blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks</td></tr>
+<tr><td><strong>Longer than promised</strong></td><td>those running longer than the board&#39;s promise</td></tr>
 <tr><td>Iteration</td><td>attached to an iteration; separately, &#34;not in an iteration&#34;</td></tr>
 </tbody>
 </table></div>
 <h2 id="blocks-with-a-deadline">Blocks with a deadline</h2>
-<p>A block may be given a moment when it lifts itself — «Снимется само» when blocking, «Срок блокировки» on a blocked card. Leave it empty and the block stays until someone lifts it; that is the normal case.</p>
+<p>A block may be given a moment when it lifts itself — <strong>Lifts itself (optional)</strong> when blocking, <strong>Block deadline</strong> on a blocked card. Leave it empty and the block stays until someone lifts it; that is the normal case.</p>
 <ul>
-<li>The deadline is a moment, not a day, shown in your own time zone. A moment in the past is refused: to lift a block now, use «Снять блокировку».</li>
+<li>The deadline is a moment, not a day, shown in your own time zone. A moment in the past is refused: to lift a block now, use <strong>Lift the block</strong>.</li>
 <li>The server checks every minute, and once at start-up. The block is closed at its deadline, not at the moment of the check, so time spent blocked does not depend on when the check ran.</li>
-<li>It appears in the card&#39;s history and in «Изменения» as «блокировка снята сама: вышел срок», without an author, and subscribers receive <code>card.block_expired</code>.</li>
+<li>It appears in the card&#39;s history and in <strong>Changes</strong> as <strong>block lifted by itself: the deadline passed</strong>, without an author, and subscribers receive <code>card.block_expired</code>.</li>
 <li>Less than a day before the deadline, the line under the card becomes bold and dashed. Nothing is mailed: the board is where you see it.</li>
 </ul>
 <h2 id="colours">Colours</h2>
@@ -457,13 +443,13 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <ul>
-<li>A label that does not exist yet can be created right from the card: type its name into the label picker (on the card, in the card panel, or in the bulk bar) and pick where it should apply — this board, its subdivision or a wider one, or the whole organisation. It is created and hung in one go, with a colour picked for you; change the colour on «Команда». Typing the name of an existing label offers that label, in any letter case, and typing the name of an archived one offers to bring it back instead of creating a second one.</li>
-<li>The same name cannot be used twice where the places overlap: an organisation label «Срочно» rules out «Срочно» on any subdivision or board. The refusal names where the label already is.</li>
+<li>A label that does not exist yet can be created right from the card: type its name into the label picker (on the card, in the card panel, or in the bulk bar) and pick where it should apply — this board, its subdivision or a wider one, or the whole organisation. It is created and hung in one go, with a colour picked for you; change the colour on <strong>Team</strong>. Typing the name of an existing label offers that label, in any letter case, and typing the name of an archived one offers to bring it back instead of creating a second one.</li>
+<li>The same name cannot be used twice where the places overlap: an organisation label “Urgent” rules out “Urgent” on any subdivision or board. The refusal names where the label already is.</li>
 <li>A board label is visible only to those who can see the board.</li>
-<li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on «Команда» (Team).</li>
+<li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on <strong>Team</strong>.</li>
 <li>When a board is handed to another subdivision, or a subdivision is moved in the tree, labels already hung stay on the cards. If one no longer applies there, the card panel says so, and it can still be taken off.</li>
 </ul>
-<h2 id="flow">Metrics in «Поток» (flow)</h2>
+<h2 id="flow">Metrics in <strong>Flow</strong></h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
 <tbody>
@@ -533,15 +519,15 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </section>
 <section id="cheatsheet">
 <h1>Cheat sheet</h1>
-<p>One A4 sheet for day one. Labels are quoted from the Russian interface.</p>
+<p>One A4 sheet for day one. Labels are named as in the English interface.</p>
 <h2 id="where-things-are">Where things are</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Where</th><th>What is there</th></tr></thead>
 <tbody>
-<tr><td>«Доски» (Boards)</td><td>boards of the organisation and the archive</td></tr>
-<tr><td>«Команда» (Team)</td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
-<tr><td>«Структура» (Structure)</td><td>subdivisions as a tree</td></tr>
-<tr><td>Board header</td><td>«Доска», «Таблица», «Изменения» — three views of one set; «Поток» — metrics; «Архив» — the archive</td></tr>
+<tr><td><strong>Boards</strong></td><td>boards of the organisation and the archive</td></tr>
+<tr><td><strong>Team</strong></td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
+<tr><td><strong>Structure</strong></td><td>subdivisions as a tree</td></tr>
+<tr><td>Board header</td><td><strong>Board</strong>, <strong>Table</strong>, <strong>Changes</strong> — three views of one set; <strong>Flow</strong> — metrics; <strong>Archive</strong> — the archive</td></tr>
 </tbody>
 </table></div>
 <h2 id="keys">Keys</h2>
@@ -558,19 +544,74 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <h2 id="five-actions">Five actions</h2>
 <ol>
-<li><strong>Create a board</strong> — on the main screen: name, key, «Завести».</li>
+<li><strong>Create a board</strong> — on the main screen: name, key, <strong>Create</strong>.</li>
 <li><strong>Create a card</strong> — at the bottom of a column, then <code>Enter</code>.</li>
 <li><strong>Move a card</strong> — drag it, or press <code>Ctrl</code> with an arrow.</li>
-<li><strong>Filter</strong> — «Отбор» above the board; it lives in the address bar, and «Сохранить вид» saves it as a named view.</li>
-<li><strong>Archive</strong> — the «…» menu on a card, «В архив»; «Вернуть» is offered next to the message.</li>
+<li><strong>Filter</strong> — <strong>Filter</strong> above the board; it lives in the address bar, and <strong>Save view</strong> saves it as a named view.</li>
+<li><strong>Archive</strong> — the <strong>…</strong> menu on a card, <strong>Archive</strong>; <strong>Restore</strong> is offered next to the message.</li>
 </ol>
 <h2 id="when-something-looks-wrong">When something looks wrong</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>You see</th><th>It means</th></tr></thead>
 <tbody>
-<tr><td>A banner «Связи с сервером нет»</td><td>the server is unreachable; nothing is lost</td></tr>
-<tr><td>A card jumped back</td><td>the move never reached the server; press «Повторить»</td></tr>
+<tr><td>A banner <strong>No connection to the server</strong></td><td>the server is unreachable; nothing is lost</td></tr>
+<tr><td>A card jumped back</td><td>the move never reached the server; press <strong>Retry</strong></td></tr>
 <tr><td>The board shows less than you expect</td><td>a filter is on; the column says how many are hidden</td></tr>
+</tbody>
+</table></div>
+</section>
+<section id="glossary">
+<h1>Glossary</h1>
+<p>One concept, one word. These are the words the interface and this documentation use, and what each of them means in Takt.</p>
+<h2 id="work-on-the-board">Work on the board</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Board</td><td>One team&#39;s work, moving through columns. A board has a key, a visibility and, if the team sets one, a promise</td></tr>
+<tr><td>Board key</td><td>A short prefix of card numbers: <code>ПОСТ</code> gives <code>ПОСТ-14</code>. Set once, when the board is created: card numbers end up in correspondence and must not change</td></tr>
+<tr><td>Card</td><td>One piece of work. Its number is the board key plus a sequence number</td></tr>
+<tr><td>Column</td><td>A stage the work goes through: <strong>Queue</strong>, <strong>In progress</strong>, <strong>Done</strong> on a new board</td></tr>
+<tr><td>Column markup</td><td>Two marks on the columns: <strong>work starts</strong> — from this column on, work counts as started; <strong>finish</strong> — here it counts as finished. Flow metrics are computed from the markup, not from dates filled in by hand</td></tr>
+<tr><td>WIP limit</td><td>How many cards a column should hold. Going over it is highlighted, not forbidden: the limit exists to make overload visible</td></tr>
+<tr><td>Hard limit</td><td>A limit that does refuse: a card is not moved into a full column, and the refusal says to make room first</td></tr>
+<tr><td>Board promise</td><td>How many days work usually takes to cross the board, and with what probability — &#34;usually 8 days with 85% probability&#34;. Cards running longer show up under <strong>Longer than promised</strong></td></tr>
+<tr><td>Block</td><td>A card that is waiting for something, always with a reason. A block may have a deadline, after which it lifts itself</td></tr>
+<tr><td>Subtask</td><td>A part of a card. It is an ordinary card and may live on another team&#39;s board; the parent shows &#34;so many of so many&#34;</td></tr>
+<tr><td>Label</td><td>A mark on a card. It belongs to one of three places — the organisation, a subdivision (with everything inside it) or one board — and is offered only there</td></tr>
+<tr><td>Iteration</td><td>A sprint or a release: a name and dates. Closing it freezes what it contains for good and produces a report</td></tr>
+<tr><td>Swimlanes</td><td>The board sliced into rows by assignee, label, iteration or priority. A slice of the same board, not another board</td></tr>
+<tr><td>Filter</td><td>Conditions that hide the rest of the board. It lives in the page address, so it can be shared as a link</td></tr>
+<tr><td>Saved view</td><td>A filter, a grouping and a layout with a name, to come back to</td></tr>
+<tr><td>Archive</td><td>Where cards and boards go when taken away. Everything there can be restored; deleting for good is a separate action that says what will disappear</td></tr>
+</tbody>
+</table></div>
+<h2 id="flow-metrics">Flow metrics</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Cycle time</td><td>How many days work takes from <strong>work starts</strong> to <strong>finish</strong>; shown as percentiles, not an average</td></tr>
+<tr><td>Throughput</td><td>How many cards reach <strong>finish</strong> per week</td></tr>
+<tr><td>Work in progress</td><td>How many cards are between <strong>work starts</strong> and <strong>finish</strong> right now</td></tr>
+<tr><td>Age</td><td>How long a card that is still in progress has been going</td></tr>
+<tr><td>Accumulation</td><td>Three bands by day — not started, in progress, done — to see where work piles up</td></tr>
+<tr><td>Forecast</td><td>How many days finishing so many cards may take, as three percentiles: &#34;if it goes on as it went&#34;</td></tr>
+<tr><td>Discarded</td><td>Cards taken off the board unfinished</td></tr>
+</tbody>
+</table></div>
+<h2 id="the-organisation">The organisation</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Organisation</td><td>Everyone who works in one Takt, and their boards. Organisations do not see each other</td></tr>
+<tr><td>Subdivision</td><td>A department or a team in the organisation&#39;s tree. Boards and labels may belong to it</td></tr>
+<tr><td>Owner</td><td>Reads, changes work and runs the organisation</td></tr>
+<tr><td>Member</td><td>Reads and changes work</td></tr>
+<tr><td>Viewer</td><td>Only reads</td></tr>
+<tr><td>Subdivision administrator</td><td>Runs their own subtree: who is in it, nested subdivisions, boards</td></tr>
+<tr><td>Area observer</td><td>Reads everything in their subtree</td></tr>
+<tr><td>Board visibility</td><td>Who sees a board: the whole organisation, its own subdivision, or listed people only</td></tr>
+<tr><td>Integration key</td><td>Access for another system, limited to the scopes it was given; revoked in one action</td></tr>
+<tr><td>Event subscription</td><td>An address that receives an event every time something happens to cards</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -588,7 +629,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>You cannot block a card without an explanation: the reason is required and shows on the board itself.</p>
 <p>&#34;Blocked&#34; on its own answers no question — neither &#34;who are we waiting for&#34; nor &#34;what now&#34;. A reason answers both.</p>
 <h2 id="the-irreversible-asks-the-reversible-does-not">The irreversible asks, the reversible does not</h2>
-<p>Archiving a card takes one press, with «Вернуть» (restore) right next to it. Deleting a board for good takes typing its name.</p>
+<p>Archiving a card takes one press, with <strong>Restore</strong> right next to it. Deleting a board for good takes typing its name.</p>
 <p>People close &#34;are you sure?&#34; dialogues without reading, so the confirmation stands where you cannot come back, and stays out of the way where you can.</p>
 <h2 id="changes-spread-on-their-own">Changes spread on their own</h2>
 <p>An open board updates for everyone looking at it, without a reload.</p>
@@ -597,7 +638,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>One organisation&#39;s data is invisible to another not because the code says so, but because the database&#39;s policies are built that way.</p>
 <p>A check in code is forgotten at the next edit; a database policy applies to every query, including the one written in a hurry. For the same reason the application refuses to start if the role it connects with bypasses policies.</p>
 <h2 id="the-forecast-speaks-of-probability-not-of-a-date">The forecast speaks of probability, not of a date</h2>
-<p>«Поток» gives three numbers instead of one: half the cases land within so many days, 85 % within so many, 95 % within so many.</p>
+<p><strong>Flow</strong> gives three numbers instead of one: half the cases land within so many days, 85 % within so many, 95 % within so many.</p>
 <p>A single number where a probability is being computed reads as a promise. The forecast samples random past weeks and answers exactly one question: what happens if things continue as they have been. If there is not enough past, it says that too.</p>
 <h2 id="metrics-come-from-work-not-from-ticks">Metrics come from work, not from ticks</h2>
 <p>Cycle time, throughput and ageing are taken from when a card entered work and when it was carried to the end.</p>
@@ -792,7 +833,7 @@ helm install takt deploy/helm/takt \
 </ul>
 <p>The <code>id_token</code> signature is not verified, and that is deliberate: in the code flow the token comes to us directly from the provider&#39;s endpoint over TLS, which the specification explicitly considers sufficient (OIDC Core, 3.1.3.7). A hand-written JWT check — base64 parsing, key selection from JWKS, <code>alg</code> comparison — is exactly the code people get wrong, and getting it wrong costs the whole of authentication. Claims about the person are read from <code>userinfo</code> over the same connection.</p>
 <h2 id="directory-provisioning-scim">Directory provisioning (SCIM)</h2>
-<p>The provider pushes employees and groups to <code>/scim/v2/…</code>. The key is an ordinary one from <strong>«Ключи для интеграций»</strong> (integration keys) with the single <code>scim:write</code> scope; the key itself determines the organisation, because a separate &#34;where to provision&#34; setting would be a second source of truth.</p>
+<p>The provider pushes employees and groups to <code>/scim/v2/…</code>. The key is an ordinary one from <strong>Integration keys</strong> with the single <code>scim:write</code> scope; the key itself determines the organisation, because a separate &#34;where to provision&#34; setting would be a second source of truth.</p>
 <p>What our side does:</p>
 <ul>
 <li><strong>deactivation removes membership but not the person.</strong> Someone who left loses access immediately, while their cards, comments and audit entries stay signed by them. Deleting the record would mean rewriting history after the fact;</li>
@@ -842,7 +883,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <section id="security-review">
 <h1>Security review</h1>
 <p>What a corporate security review asks for, in one place: what gets installed, what crosses the perimeter, what holds the boundaries, and what is checked automatically. Next to every claim stands the thing that enforces it — a file, a test, a command — so it can be verified instead of believed.</p>
-<p>Two things this page is not. It is <strong>not a certificate</strong>: the product is not a certified information-security tool and does not pretend to be one. And it is <strong>not a review of your installation</strong>: half of what a reviewer cares about — TLS, network segmentation, backups, who can reach the database — is decided by whoever installs it. That half is marked «yours» below rather than quietly claimed.</p>
+<p>Two things this page is not. It is <strong>not a certificate</strong>: the product is not a certified information-security tool and does not pretend to be one. And it is <strong>not a review of your installation</strong>: half of what a reviewer cares about — TLS, network segmentation, backups, who can reach the database — is decided by whoever installs it. That half is marked “yours” below rather than quietly claimed.</p>
 <p>Everything here describes the version named in the footer of this page.</p>
 <h2 id="what-gets-installed">What gets installed</h2>
 <p>One process and one PostgreSQL database. No message broker, no cache, no object storage, no agents on other machines.</p>
@@ -885,8 +926,8 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <p>There are no file uploads anywhere in the product, so no user-supplied binary is ever stored, served or executed — which also means there is nothing here for a malware scanner to scan.</p>
 <p><strong>Personal data.</strong> Only what your own people type: a name, a work e-mail, and whatever they write on cards. The installation is yours, the database is yours, and the vendor receives nothing — there is no telemetry channel to receive it through. Under 152-ФЗ that makes you the operator and leaves no processor on our side; under GDPR the same shape means there is no transfer to a third party to legitimise.</p>
-<p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> («Удалить данные» for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
-<p><strong>Retention of the log.</strong> The audit log is never cleaned up automatically. A log kept for a month answers «who granted this access in March?» with silence, and that question is the reason the log exists. If your policy demands a limit, set it on your side of the database.</p>
+<p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> (<strong>Erase data</strong> for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
+<p><strong>Retention of the log.</strong> The audit log is never cleaned up automatically. A log kept for a month answers “who granted this access in March?” with silence, and that question is the reason the log exists. If your policy demands a limit, set it on your side of the database.</p>
 <h2 id="identity">Identity</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Way in</th><th>How it is held</th></tr></thead>
@@ -897,12 +938,12 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td>directory (SCIM 2.0)</td><td>a separate key with the <code>scim:write</code> scope only</td></tr>
 </tbody>
 </table></div>
-<p><strong>Sessions.</strong> A row in the database, an identifier in a cookie with <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code> whenever <code>BASE_URL</code> is https. Thirty days. <code>DELETE /api/me/sessions</code> ends every other session — the answer to «my laptop was stolen». A password change is not silent either: the session that changed it survives, the rest do not.</p>
+<p><strong>Sessions.</strong> A row in the database, an identifier in a cookie with <code>HttpOnly</code>, <code>SameSite=Lax</code> and <code>Secure</code> whenever <code>BASE_URL</code> is https. Thirty days. <code>DELETE /api/me/sessions</code> ends every other session — the answer to “my laptop was stolen”. A password change is not silent either: the session that changed it survives, the rest do not.</p>
 <p>Eight characters and no rules about digits or capitals is a deliberate position rather than an oversight: composition rules push people towards <code>Parol123!</code> and towards writing it down, while the thing that actually stops guessing — a limit on attempts — is below. Where your policy demands more, put people behind the corporate provider: then the policy is the provider&#39;s, which is where you can enforce it anyway.</p>
 <p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
 <p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
 <h2 id="access-control-and-isolation-between-organisations">Access control and isolation between organisations</h2>
-<p>Three roles — «Владелец» (owner), «Участник» (member), «Наблюдатель» (viewer) — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
+<p>Three roles — <strong>Owner</strong>, <strong>Member</strong>, <strong>Viewer</strong> (viewer) — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
 <p>Isolation between organisations is held by <strong>database policies, not by checks in the code</strong>. Every tenant table has row-level security forced on; the application connects with a role that has no <code>SUPERUSER</code>, no <code>BYPASSRLS</code> and no <code>CREATEDB</code>, and every transaction carries the tenant context. The consequence worth spelling out to a reviewer: even a mistake in the application cannot return another organisation&#39;s row, because the row never leaves the database. The consequence worth spelling out to an administrator: if the application is pointed at a superuser role, policies stop applying and the separation quietly disappears — which is why the installation guide creates the role explicitly and <code>takt doctor</code> checks that the policies really do apply to the role the application connects with, naming the fix when they do not.</p>
 <h2 id="audit-and-logs">Audit and logs</h2>
 <p>The audit log is written by <strong>database triggers</strong>, not by application code: membership, invitations, subdivisions, board membership, observers, and the creation, deletion and visibility changes of boards. A code path cannot forget to write it, and a policy prevents an actor from signing someone else&#39;s name. It is read by an owner and by an observer of the whole organisation; to anyone else the log looks empty rather than forbidden.</p>
@@ -1027,7 +1068,7 @@ make sbom            # what it is built from, CycloneDX
 takt doctor          # what a running installation actually has
 sha256sum -c SHA256SUMS</code></pre>
 <p>The first two lines are the ones worth doing before anything else: check out the tag, rebuild, and you get the same bytes we published. A sum you can only compare against ours proves that we did not change our mind about the file; a sum you can reproduce proves that the binary is the source you just read.</p>
-<p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
+<p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as “all fine”.</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
 </section>
@@ -1268,7 +1309,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <h3 id="for-people-using-the-board">For people using the board</h3>
 <ul>
 <li><strong>The interface speaks English as well as Russian.</strong> It follows the browser until the person chooses; the choice is stored with the account and follows them to any device.</li>
-<li><strong>Help inside the application.</strong> «Справка» in the header, <code>F1</code> or <code>?</code> opens the documentation at the section about the screen you are on, in the interface language, with a search over every section and a «Что нового» (what&#39;s new) page for this version. It is served by the server itself, built from the same version, and needs no internet.</li>
+<li><strong>Help inside the application.</strong> «Справка» in the header, <code>F1</code> or <code>?</code> opens the documentation at the section about the screen you are on, in the interface language, with a search over every section and a «Что нового» (what&#39;s new) page for this version and a glossary. It is served by the server itself, built from the same version, and needs no internet.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
 <li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
@@ -1385,7 +1426,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <h3 id="для-тех-кто-работает-на-доске">Для тех, кто работает на доске</h3>
 <ul>
 <li><strong>Интерфейс говорит и по-английски.</strong> Пока человек не выбрал язык, он берётся из браузера; выбор хранится в учётной записи и встречает его на любом устройстве.</li>
-<li><strong>Справка внутри приложения.</strong> «Справка» в шапке, <code>F1</code> или <code>?</code> открывают документацию на разделе про тот экран, где вы сейчас, на языке интерфейса, с поиском по всем разделам и страницей «Что нового» этой версии. Её отдаёт сам сервер, собрана она из той же версии, и интернет ей не нужен.</li>
+<li><strong>Справка внутри приложения.</strong> «Справка» в шапке, <code>F1</code> или <code>?</code> открывают документацию на разделе про тот экран, где вы сейчас, на языке интерфейса, с поиском по всем разделам, страницей «Что нового» этой версии и словарём терминов. Её отдаёт сам сервер, собрана она из той же версии, и интернет ей не нужен.</li>
 <li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
 <li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>

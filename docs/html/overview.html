@@ -106,6 +106,7 @@ color:var(--ink-3);font-size:.85rem}
 <a href="howto.html">How to</a>
 <a href="reference.html">Reference</a>
 <a href="cheatsheet.html">Cheat sheet</a>
+<a href="glossary.html">Glossary</a>
 <a href="architecture.html">Design decisions</a>
 <a href="install.html">Installation</a>
 <a href="security-review.html">Security review</a>
@@ -117,7 +118,7 @@ color:var(--ink-3);font-size:.85rem}
 </nav>
 <h1>Takt</h1>
 <p>A kanban board with flow metrics, for one team: work on the board, metrics computed from that work, an organisation with roles and subdivisions, integrations. It runs inside your own perimeter — no cloud and no external services required.</p>
-<p><strong>The product interface is in Russian.</strong> These English pages quote everything a user clicks the way it appears on screen, with a translation next to it. The Russian original of this page is <a href="ru/индекс.html">here</a>.</p>
+<p><strong>The interface speaks English and Russian.</strong> These pages name every button as it appears in the English interface; the screenshots still show the Russian one. The Russian version of this page is <a href="ru/индекс.html">here</a>.</p>
 <figure><img src="screenshots/доска.png" alt="The board" loading="lazy">
 <figcaption>The board</figcaption></figure>
 <h2 id="where-to-start">Where to start</h2>
@@ -148,22 +149,7 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="how-it-is-deployed">How it is deployed</h2>
 <p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
 <p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="CHANGELOG.html">changelog</a>.</p>
-<h2 id="words-you-will-see-on-screen">Words you will see on screen</h2>
-<div class="tablewrap"><table>
-<thead><tr><th>On screen</th><th>Means</th></tr></thead>
-<tbody>
-<tr><td>«Доски»</td><td>Boards</td></tr>
-<tr><td>«Команда»</td><td>Team: people, invitations, keys, subscriptions, export</td></tr>
-<tr><td>«Структура»</td><td>Structure: subdivisions</td></tr>
-<tr><td>«Доска», «Таблица», «Изменения»</td><td>Board, Table, Changes — three views</td></tr>
-<tr><td>«Поток»</td><td>Flow: metrics</td></tr>
-<tr><td>«Архив»</td><td>Archive</td></tr>
-<tr><td>«Завести доску», «Завести карточку»</td><td>Create a board, create a card</td></tr>
-<tr><td>«В архив», «Вернуть»</td><td>Archive it, restore it</td></tr>
-<tr><td>«Владелец», «Участник», «Наблюдатель»</td><td>Owner, member, viewer</td></tr>
-</tbody>
-</table></div>
-<footer>Takt, version v0.2.3-32-g695557e-dirty. Built from overview.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-33-g54c4a63-dirty. Built from overview.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

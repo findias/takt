@@ -11,7 +11,7 @@ not a certified information-security tool and does not pretend to be
 one. And it is **not a review of your installation**: half of what a
 reviewer cares about — TLS, network segmentation, backups, who can reach
 the database — is decided by whoever installs it. That half is marked
-«yours» below rather than quietly claimed.
+“yours” below rather than quietly claimed.
 
 Everything here describes the version named in the footer of this page.
 
@@ -93,7 +93,7 @@ telemetry channel to receive it through. Under 152-ФЗ that makes you the
 operator and leaves no processor on our side; under GDPR the same shape
 means there is no transfer to a third party to legitimise.
 
-**Erasure.** `DELETE /api/members/{userId}/identity` («Удалить данные»
+**Erasure.** `DELETE /api/members/{userId}/identity` (**Erase data**
 for an owner) anonymises a person: the name becomes `Удалённый
 участник`, the e-mail becomes an address in the reserved `.invalid`
 domain, the password hash and the OIDC binding are emptied, sessions and
@@ -107,8 +107,8 @@ someone else's organisation is beyond reach — it goes away with its
 retention period.
 
 **Retention of the log.** The audit log is never cleaned up
-automatically. A log kept for a month answers «who granted this access
-in March?» with silence, and that question is the reason the log exists.
+automatically. A log kept for a month answers “who granted this access
+in March?” with silence, and that question is the reason the log exists.
 If your policy demands a limit, set it on your side of the database.
 
 ## Identity
@@ -123,7 +123,7 @@ If your policy demands a limit, set it on your side of the database.
 **Sessions.** A row in the database, an identifier in a cookie with
 `HttpOnly`, `SameSite=Lax` and `Secure` whenever `BASE_URL` is https.
 Thirty days. `DELETE /api/me/sessions` ends every other session — the
-answer to «my laptop was stolen». A password change is not silent
+answer to “my laptop was stolen”. A password change is not silent
 either: the session that changed it survives, the rest do not.
 
 Eight characters and no rules about digits or capitals is a deliberate
@@ -149,7 +149,7 @@ before it is read.
 
 ## Access control and isolation between organisations
 
-Three roles — «Владелец» (owner), «Участник» (member), «Наблюдатель»
+Three roles — **Owner**, **Member**, **Viewer**
 (viewer) — plus two appointments an owner makes: an administrator of a
 subdivision, who runs their own subtree, and an observer of an area, who
 reads it. Boards are visible to the whole organisation, to one
@@ -362,7 +362,7 @@ isolation it names the two settings a review always asks about — whether
 the connection to the database is over a network without TLS, and who is
 allowed to create organisations. Neither is called a failure, because
 either can be a deliberate decision; both are named, because silence
-about them reads as «all fine».
+about them reads as “all fine”.
 
 To see the isolation for yourself, connect to the database as the
 application role and count boards: the answer is zero without a tenant

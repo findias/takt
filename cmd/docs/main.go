@@ -32,6 +32,7 @@ var исходники = []источник{
 	{"docs/howto.md", "How to"},
 	{"docs/reference.md", "Reference"},
 	{"docs/cheatsheet.md", "Cheat sheet"},
+	{"docs/glossary.md", "Glossary"},
 	{"docs/architecture.md", "Design decisions"},
 	{"docs/install.md", "Installation"},
 	// Страница для проверки ИБ и политика раскрытия — рядом: их читает
@@ -64,6 +65,7 @@ var русские = []источник{
 	{"docs/ru/как.md", "Как сделать"},
 	{"docs/ru/справочник.md", "Справочник"},
 	{"docs/ru/памятка.md", "Памятка"},
+	{"docs/ru/словарь.md", "Словарь"},
 	{"docs/ru/устройство.md", "Устройство"},
 	{"docs/ru/установка.md", "Установка"},
 	{"docs/ru/проверка-иб.md", "Проверка ИБ"},

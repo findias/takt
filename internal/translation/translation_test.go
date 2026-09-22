@@ -44,6 +44,7 @@ var пары = map[string]string{
 	"docs/howto.md":           "docs/ru/как.md",
 	"docs/reference.md":       "docs/ru/справочник.md",
 	"docs/cheatsheet.md":      "docs/ru/памятка.md",
+	"docs/glossary.md":        "docs/ru/словарь.md",
 	"docs/architecture.md":    "docs/ru/устройство.md",
 	"docs/install.md":         "docs/ru/установка.md",
 	"docs/security-review.md": "docs/ru/проверка-иб.md",

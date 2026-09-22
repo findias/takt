@@ -1,15 +1,15 @@
 # Cheat sheet
 
-One A4 sheet for day one. Labels are quoted from the Russian interface.
+One A4 sheet for day one. Labels are named as in the English interface.
 
 ## Where things are
 
 | Where | What is there |
 | --- | --- |
-| «Доски» (Boards) | boards of the organisation and the archive |
-| «Команда» (Team) | people, invitations, labels, keys, subscriptions, export |
-| «Структура» (Structure) | subdivisions as a tree |
-| Board header | «Доска», «Таблица», «Изменения» — three views of one set; «Поток» — metrics; «Архив» — the archive |
+| **Boards** | boards of the organisation and the archive |
+| **Team** | people, invitations, labels, keys, subscriptions, export |
+| **Structure** | subdivisions as a tree |
+| Board header | **Board**, **Table**, **Changes** — three views of one set; **Flow** — metrics; **Archive** — the archive |
 
 ## Keys
 
@@ -24,19 +24,19 @@ One A4 sheet for day one. Labels are quoted from the Russian interface.
 
 ## Five actions
 
-1. **Create a board** — on the main screen: name, key, «Завести».
+1. **Create a board** — on the main screen: name, key, **Create**.
 2. **Create a card** — at the bottom of a column, then `Enter`.
 3. **Move a card** — drag it, or press `Ctrl` with an arrow.
-4. **Filter** — «Отбор» above the board; it lives in the address bar,
-   and «Сохранить вид» saves it as a named view.
-5. **Archive** — the «…» menu on a card, «В архив»; «Вернуть» is offered
+4. **Filter** — **Filter** above the board; it lives in the address bar,
+   and **Save view** saves it as a named view.
+5. **Archive** — the **…** menu on a card, **Archive**; **Restore** is offered
    next to the message.
 
 ## When something looks wrong
 
 | You see | It means |
 | --- | --- |
-| A banner «Связи с сервером нет» | the server is unreachable; nothing is lost |
-| A card jumped back | the move never reached the server; press «Повторить» |
+| A banner **No connection to the server** | the server is unreachable; nothing is lost |
+| A card jumped back | the move never reached the server; press **Retry** |
 | The board shows less than you expect | a filter is on; the column says how many are hidden |
 
