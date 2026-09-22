@@ -91,8 +91,14 @@ func main() {
 	case "demo":
 		switch err := demo.Fill(ctx, db); {
 		case errors.Is(err, demo.ErrAlreadyFilled):
-			log.Info("демонстрационные данные уже есть — оставляю как есть",
-				"обновить", "make stand (сносит базу)")
+			log.Info("демонстрационные данные уже есть — оставляю как есть, доливаю новое",
+				"обновить целиком", "make stand (сносит базу)")
+			// Долив — то, чему наполнение научилось позже: без него новое
+			// обещание сверки требовало бы сносить базу стенда и демо.
+			if err := demo.TopUp(ctx, db); err != nil {
+				log.Error("долив демонстрационных данных не прошёл", "err", err)
+				os.Exit(1)
+			}
 		case err != nil:
 			log.Error("демонстрационные данные не завелись", "err", err)
 			os.Exit(1)
@@ -113,6 +119,10 @@ func main() {
 		// и документации (ROADMAP 30.5).
 		switch err := demo.FillEnglish(ctx, db); {
 		case errors.Is(err, demo.ErrAlreadyFilled):
+			if err := demo.TopUpEnglish(ctx, db); err != nil {
+				log.Error("долив английских демонстрационных данных не прошёл", "err", err)
+				os.Exit(1)
+			}
 		case err != nil:
 			log.Error("английские демонстрационные данные не завелись", "err", err)
 			os.Exit(1)

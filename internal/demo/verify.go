@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/findias/takt/internal/i18n"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -223,4 +224,40 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			strings.Join(missing, "; "))
 	}
 	return nil
+}
+
+// TopUp доливает в уже наполненную базу то, что наполнение научилось
+// заводить позже, — чтобы новое обещание сверки не требовало сносить
+// базу стенда и демо. Сейчас это перенесённые из таблицы карточки
+// (этап 23). Повтор безопасен: перенос пропускает уже переехавшее
+// по внешнему ключу.
+func TopUp(ctx context.Context, db *store.Store) error {
+	var orgID, ownerID string
+	err := db.Pool.QueryRow(ctx, `
+		select o.id, u.id from orgs o
+		  join memberships m on m.org_id = o.id
+		  join users u on u.id = m.user_id
+		 where o.name = $1 and lower(u.email) = $2`, OrgName, People[0].Email).
+		Scan(&orgID, &ownerID)
+	if err != nil {
+		return err
+	}
+	f := newFiller(ctx, db)
+	f.orgID, f.people[People[0].Email] = orgID, ownerID
+	return f.imported()
+}
+
+// TopUpEnglish — то же для английской организации стенда.
+func TopUpEnglish(ctx context.Context, db *store.Store) error {
+	var orgID, ownerID string
+	if err := db.Pool.QueryRow(ctx, `
+		select m.org_id, u.id from users u
+		  join memberships m on m.user_id = u.id
+		 where lower(u.email) = $1 limit 1`, EnglishEmail(People[0])).Scan(&orgID, &ownerID); err != nil {
+		return err
+	}
+	f := newFiller(i18n.WithLang(ctx, i18n.EN), db)
+	f.english = true
+	f.orgID, f.people[People[0].Email] = orgID, ownerID
+	return f.imported()
 }
