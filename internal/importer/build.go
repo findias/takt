@@ -73,9 +73,12 @@ func Build(t Table, m Mapping) (Plan, error) {
 	seenColumn := map[string]bool{}
 	seenKey := map[string]int{}
 	for n, row := range t.Rows {
-		// Строка заголовков — первая, значит первая строка задач — вторая:
-		// так её номер совпадает с тем, что человек видит в Excel.
+		// Номер — тот, что человек видит в Excel. Без записанных номеров
+		// строки идут подряд за заголовками: первая строка задач — вторая.
 		line := n + 2
+		if n < len(t.Lines) {
+			line = t.Lines[n]
+		}
 		problem := func(f Field, value, format string, args ...any) {
 			p.Problems = append(p.Problems, Problem{Row: line, Field: f, Value: value, Message: fmt.Sprintf(format, args...)})
 		}
@@ -184,7 +187,27 @@ var dateLayouts = map[string][]string{
 	"jira": {"02/Jan/06 3:04 PM", "2/Jan/06 3:04 PM", "02/Jan/06 15:04", "02/Jan/06", "2/Jan/06"},
 }
 
-var dateOrder = []string{"iso", "dotted", "jira"}
+// Четвёртый вид — число: так Excel хранит дату в ячейке, а в текст
+// её превращает стиль, который мы не читаем. Дни от 30.12.1899,
+// дробная часть — время суток.
+var dateOrder = []string{"iso", "dotted", "jira", "excel"}
+
+// Excel считает дни от 30.12.1899 (с ошибкой 1900 года, которую эта
+// точка отсчёта и учитывает); 2958465 — 31.12.9999, его последний день.
+var excelEpoch = time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+
+// ExcelDate читает дату ячейки Excel (дни от 30.12.1899).
+func ExcelDate(s string) (time.Time, bool) { return parseExcelDate(s) }
+
+func parseExcelDate(s string) (time.Time, bool) {
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil || v < 1 || v > 2958465 {
+		return time.Time{}, false
+	}
+	days := math.Floor(v)
+	secs := math.Round((v - days) * 86400)
+	return excelEpoch.AddDate(0, 0, int(days)).Add(time.Duration(secs) * time.Second), true
+}
 
 // dateFormatOf выбирает вид, которым читается больше всего значений.
 func dateFormatOf(values []string) string {
@@ -204,6 +227,9 @@ func dateFormatOf(values []string) string {
 }
 
 func parseDate(s, format string) (time.Time, bool) {
+	if format == "excel" {
+		return parseExcelDate(s)
+	}
 	for _, layout := range dateLayouts[format] {
 		if d, err := time.Parse(layout, s); err == nil {
 			return d.UTC(), true

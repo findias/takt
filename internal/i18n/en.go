@@ -311,4 +311,11 @@ var en = map[string]string{
 	"файл не в UTF-8 и не в Windows-1251: %s":                                    "the file is neither UTF-8 nor Windows-1251: %s",
 	"строка %s: файл не разбирается как CSV (%s)":                                "line %s: the file cannot be read as CSV (%s)",
 	"в файле больше %s строк — перенесите его по частям":                         "the file has more than %s rows — import it in parts",
+	"файл не похож на книгу Excel (.xlsx)":                                       "the file does not look like an Excel workbook (.xlsx)",
+	"такого листа в книге нет — выберите лист из списка":                         "there is no such sheet in the workbook — pick one from the list",
+	"в книге больше %s частей — это не таблица задач":                            "the workbook has more than %s parts — this is not a task table",
+	"общие строки книги не читаются: %s":                                         "the workbook's shared strings cannot be read: %s",
+	"в книге нет %s":            "the workbook has no %s",
+	"лист «%s» не читается: %s": "sheet “%s” cannot be read: %s",
+	"лист «%s» не читается: строка %s за пределом Excel": "sheet “%s” cannot be read: row %s is beyond Excel's limit",
 }

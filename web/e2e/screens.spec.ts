@@ -1,3 +1,4 @@
+import { workbook } from './xlsx.ts'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -309,7 +310,7 @@ test('снимки экранов', async ({ page, browser }) => {
   // строкой без заголовка, незнакомым приоритетом. Только предпросмотр:
   // переносить на демонстрационные доски снимку незачем.
   await page.goto('/import')
-  await page.getByLabel('Файл CSV').setInputFiles({
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
     name: 'Выгрузка из старой доски.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(
@@ -327,6 +328,28 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21б-перенос-на-телефоне.png`, fullPage: true })
   await page.setViewportSize({ width: 1440, height: 900 })
+
+  // Книга Excel: выбор листа виден, только когда листов больше одного.
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
+    name: 'План на квартал.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: workbook([
+      { name: 'Обложка', rows: [['План на квартал']] },
+      {
+        name: 'Задачи',
+        rows: [
+          ['Название', 'Статус', 'Ответственный', 'Срок'],
+          ['Сверить остатки на складе', 'В работе', 'anna@example.test', 46295],
+          ['Заказать тару на октябрь', 'Очередь', 'boris@example.test', ''],
+        ],
+      },
+      { name: 'Архив', rows: [['Название'], ['Старая задача']] },
+    ]),
+  })
+  await expect(page.getByText(/Переедут 2 карточки/)).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21в-перенос-книги-excel.png`, fullPage: true })
 
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него

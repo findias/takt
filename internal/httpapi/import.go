@@ -31,6 +31,8 @@ type importTableRequest struct {
 	// Пусто — сопоставление предлагает сервер по заголовкам.
 	Mapping importer.Mapping `json:"mapping"`
 	BoardID string           `json:"boardId"`
+	// Лист книги Excel; пусто — первый. У CSV листов нет.
+	Sheet string `json:"sheet"`
 	// Название новой доски, если boardId пуст.
 	NewBoardName string `json:"newBoardName"`
 	// false — предпросмотр: всё то же, но ничего не записано.
@@ -38,12 +40,17 @@ type importTableRequest struct {
 }
 
 type importTableResponse struct {
+	// Листы книги в порядке Excel; у CSV — пусто.
+	Sheets []string `json:"sheets"`
+	// Лист, который прочитан: выбранный или первый с таблицей.
+	Sheet   string           `json:"sheet,omitempty"`
 	Headers []string         `json:"headers"`
 	Mapping importer.Mapping `json:"mapping"`
 	// Первые строки как есть — чтобы сопоставлять, глядя на данные,
 	// а не только на заголовки.
 	Sample [][]string `json:"sample"`
-	// Почему перенести нельзя, пока не поправлено сопоставление.
+	// Почему перенести нельзя: сопоставление без заголовка или лист
+	// без таблицы.
 	MappingError string              `json:"mappingError,omitempty"`
 	Report       *board.ImportReport `json:"report"`
 }
@@ -67,13 +74,23 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 		writeError(w, http.StatusRequestEntityTooLarge, "файл больше 5 МБ — перенесите его по частям")
 		return
 	}
-	table, err := importer.ReadCSV(req.File)
-	if err != nil {
+	table, sheets, sheet, err := importer.Read(req.File, req.Sheet)
+	if err != nil && (len(sheets) == 0 || req.Apply) {
 		writeCoded(w, http.StatusBadRequest, "import_unreadable", err.Error())
 		return
 	}
-
-	out := importTableResponse{Headers: table.Headers, Mapping: req.Mapping}
+	out := importTableResponse{Sheets: sheets, Sheet: sheet, Headers: table.Headers, Mapping: req.Mapping}
+	if out.Sheets == nil {
+		out.Sheets = []string{}
+	}
+	if err != nil {
+		// Книга читается, лист — нет: отвечаем списком листов и тем,
+		// что не так с этим, — иначе выбрать другой лист негде.
+		out.Headers, out.Mapping, out.Sample = []string{}, importer.Mapping{}, [][]string{}
+		out.MappingError = i18n.Name(r.Context(), err.Error())
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
 	if out.Mapping == nil {
 		out.Mapping = importer.Suggest(table.Headers)
 	}
@@ -88,6 +105,8 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 		writeJSON(w, http.StatusOK, out)
 		return
 	}
+
+	out.Sample = readableDates(out.Sample, table.Headers, plan.Dates)
 
 	target := board.ImportTarget{BoardID: req.BoardID, NewBoardName: req.NewBoardName}
 	rep, err := s.boards.Import(r.Context(), p.OrgID, p.ID, target, plan, req.Apply)
@@ -128,4 +147,36 @@ func (s *Server) handleImportSample(w http.ResponseWriter, r *http.Request) {
 	}
 	// BOM — чтобы Excel открыл кириллицу как кириллицу, а не кракозябрами.
 	_, _ = w.Write([]byte("\xef\xbb\xbf" + strings.TrimLeft(sample, "\n")))
+}
+
+// readableDates показывает дату ячейки Excel датой, а не числом: в книге
+// срок хранится днями от 1899 года, и «46295» в примере человеку ничего
+// не говорит. Меняется только пример на экране — переносится то же.
+func readableDates(sample [][]string, headers []string, dates []importer.DateFormat) [][]string {
+	cols := map[int]bool{}
+	for _, d := range dates {
+		if d.Format != "excel" {
+			continue
+		}
+		for i, h := range headers {
+			if h == d.Header {
+				cols[i] = true
+			}
+		}
+	}
+	if len(cols) == 0 {
+		return sample
+	}
+	out := make([][]string, len(sample))
+	for r, row := range sample {
+		out[r] = append([]string(nil), row...)
+		for i := range cols {
+			if i < len(row) {
+				if d, ok := importer.ExcelDate(row[i]); ok {
+					out[r][i] = d.Format("2006-01-02")
+				}
+			}
+		}
+	}
+	return out
 }

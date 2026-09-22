@@ -62,7 +62,9 @@ func ReadCSV(raw []byte) (Table, error) {
 		if blank(rec) {
 			continue
 		}
+		line, _ := r.FieldPos(0)
 		t.Rows = append(t.Rows, rec)
+		t.Lines = append(t.Lines, line)
 		if len(t.Rows) > MaxRows {
 			return Table{}, fmt.Errorf("в файле больше %d строк — перенесите его по частям", MaxRows)
 		}

@@ -3834,7 +3834,8 @@ textarea.description {
   align-items: flex-start;
   font-weight: 600;
 }
-.import-file input {
+.import-file input,
+.import-file select {
   font-weight: 400;
 }
 /* Поле под своим переключателем — со сдвигом на ширину флажка:

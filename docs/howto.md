@@ -232,14 +232,18 @@ Deleting for good asks for confirmation and cannot be undone.
 
 ### Import tasks from a spreadsheet
 
-Tasks from Excel, Google Sheets or another tracker's CSV export
-(Jira, YouGile, Kaiten and others can all save one) become cards on
-a board.
+Tasks from an Excel workbook (`.xlsx`), Google Sheets or another
+tracker's CSV export (Jira, YouGile, Kaiten and others can all save
+one) become cards on a board.
 
 1. **Boards** tab → **Import tasks from a spreadsheet…** under the
    form for a new board.
-2. Pick the CSV file. The encoding and the separator are guessed: Excel
-   saves CSV with semicolons and in Windows-1251, and that is fine.
+2. Pick the file — CSV or `.xlsx`. For CSV the encoding and the
+   separator are guessed: Excel saves CSV with semicolons and in
+   Windows-1251, and that is fine. For a workbook the first sheet that
+   holds a table is taken (a cover or summary sheet in front is
+   skipped), and **Workbook sheet** picks another; a report title above
+   the table is not taken for its headers.
 3. Check the file columns. The server suggests which card field each
    one goes to; change what is wrong. Only the title is required; the
    rest — board column, assignees, labels, estimate, priority, due
@@ -262,9 +266,11 @@ What the preview names, so that nothing is lost silently:
 - **Row problems.** A row without a title is not imported; a value
   that cannot be read (an estimate that is not a number, an unknown
   priority, a date that is not a date) is dropped, and the rest of the
-  row comes. Rows are numbered as in Excel, with the header row first.
+  row comes. Rows are numbered as in the file, the way Excel shows
+  them, empty rows included.
 - **How dates were read.** A date column is read as a whole in one of
-  three forms: `2026-09-22`, `22.09.2026` or Jira's `22/Sep/26`.
+  four forms: `2026-09-22`, `22.09.2026`, Jira's `22/Sep/26`, or an
+  Excel date cell.
 - **Columns.** A new board gets the columns from the file, put in order
   of meaning: queue, work, unrecognised stages, done. “In progress”
   becomes the start of work and “Done” the finish; if there is no done

@@ -143,7 +143,7 @@ test('на всех экранах цели нажатия не мельче 24 
   // Перенос из таблицы — с разобранным файлом: переключатели, выбор
   // поля и кнопка появляются только после него.
   await page.goto('/import')
-  await page.getByLabel('Файл CSV').setInputFiles({
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
     name: 'Задачи.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from('Заголовок;Колонка\nПервая;Очередь\n'),

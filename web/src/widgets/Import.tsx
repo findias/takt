@@ -29,6 +29,8 @@ export function ImportScreen() {
   const [target, setTarget] = useState<Target>({ kind: 'new', name: '' })
   const [boards, setBoards] = useState<BoardInfo[]>([])
   const [mapping, setMapping] = useState<ImportField[] | null>(null)
+  // Пусто — первый лист книги; у CSV листов нет вовсе.
+  const [sheet, setSheet] = useState('')
   const [answer, setAnswer] = useState<ImportAnswer | null>(null)
   const [busy, setBusy] = useState<'reading' | 'checking' | 'applying' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -53,6 +55,7 @@ export function ImportScreen() {
       .importTable({
         file: file.data,
         mapping,
+        sheet: sheet || undefined,
         boardId: boardId || undefined,
         // Название доски на предпросмотр не влияет, кроме подписи, —
         // поэтому и не перезапускает его: подпись берётся из поля.
@@ -63,7 +66,9 @@ export function ImportScreen() {
         if (n !== asked.current) return
         setAnswer(a)
         setError(null)
-        if (mapping === null) setMapping(a.mapping)
+        // Предложенное сервером в состояние не кладётся: пока человек
+        // ничего не правил, `null` и есть «как предложит сервер», а
+        // записанное оно перезапустило бы предпросмотр впустую.
       })
       .catch((e) => {
         if (n !== asked.current) return
@@ -73,12 +78,13 @@ export function ImportScreen() {
       .finally(() => {
         if (n === asked.current) setBusy(null)
       })
-  }, [file, mapping, boardId, target.kind])
+  }, [file, mapping, sheet, boardId, target.kind])
 
   const choose = (picked: File | undefined) => {
     setDone(null)
     setAnswer(null)
     setMapping(null)
+    setSheet('')
     setError(null)
     if (!picked) {
       setFile(null)
@@ -116,6 +122,7 @@ export function ImportScreen() {
       .importTable({
         file: file.data,
         mapping,
+        sheet: sheet || undefined,
         boardId: boardId || undefined,
         newBoardName: boardId ? undefined : boardName,
         apply: true,
@@ -164,12 +171,34 @@ export function ImportScreen() {
         <span>{t.imports.file}</span>
         <input
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           disabled={busy === 'applying'}
           onChange={(e) => choose(e.target.files?.[0])}
         />
       </label>
       {busy === 'reading' && <p className="muted small">{t.imports.reading}</p>}
+
+      {answer && answer.sheets.length > 1 && (
+        <label className="import-file">
+          <span>{t.imports.sheet}</span>
+          <select
+            value={sheet || answer.sheet || answer.sheets[0]}
+            disabled={busy === 'applying'}
+            onChange={(e) => {
+              // Другой лист — другие колонки: прежнее сопоставление
+              // к ним не относится, сервер предложит новое.
+              setMapping(null)
+              setSheet(e.target.value)
+            }}
+          >
+            {answer.sheets.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {answer && (
         <>
@@ -220,17 +249,19 @@ export function ImportScreen() {
             )}
           </fieldset>
 
-          <div className="stack stack--tight">
-            <h3 className="section-title">{t.imports.mapping}</h3>
-            <p className="muted small">{t.imports.mappingHint}</p>
-            <Mapping
-              headers={answer.headers}
-              sample={answer.sample}
-              mapping={mapping ?? answer.mapping}
-              onChange={setMapping}
-              disabled={busy === 'applying'}
-            />
-          </div>
+          {answer.headers.length > 0 && (
+            <div className="stack stack--tight">
+              <h3 className="section-title">{t.imports.mapping}</h3>
+              <p className="muted small">{t.imports.mappingHint}</p>
+              <Mapping
+                headers={answer.headers}
+                sample={answer.sample}
+                mapping={mapping ?? answer.mapping}
+                onChange={setMapping}
+                disabled={busy === 'applying'}
+              />
+            </div>
+          )}
 
           <div className="stack stack--tight" aria-live="polite">
             <h3 className="section-title">{t.imports.preview}</h3>

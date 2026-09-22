@@ -396,6 +396,8 @@ export type ImportRequest = {
   /** Пусто — сопоставление предлагает сервер по заголовкам. */
   mapping: ImportField[] | null
   boardId?: string
+  /** Лист книги Excel; пусто — первый. */
+  sheet?: string
   newBoardName?: string
   apply: boolean
 }
@@ -413,10 +415,14 @@ export type ImportReport = {
   archivedLabels: string[]
   missingPeople: { email: string; cards: number }[]
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
-  dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' }[]
+  dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' | 'excel' }[]
 }
 
 export type ImportAnswer = {
+  /** Листы книги Excel; у CSV пусто. */
+  sheets: string[]
+  /** Прочитанный лист: выбранный или первый, где есть таблица. */
+  sheet?: string
   headers: string[]
   mapping: ImportField[]
   sample: string[][]

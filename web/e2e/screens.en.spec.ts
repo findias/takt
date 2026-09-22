@@ -68,7 +68,7 @@ test('английские снимки для документации', async 
 
   // Import from a spreadsheet — preview only, the demo boards stay as they are.
   await page.goto('/import')
-  await page.getByLabel('CSV file').setInputFiles({
+  await page.getByLabel('CSV or Excel file').setInputFiles({
     name: 'Old board export.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(

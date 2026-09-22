@@ -1,3 +1,4 @@
+import { workbook } from './xlsx.ts'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -2511,7 +2512,7 @@ test('таблица переезжает на доску: предпросмо�
     ),
   }
   await page.getByRole('link', { name: 'Перенести задачи из таблицы…' }).click()
-  await page.getByLabel('Файл CSV').setInputFiles(file)
+  await page.getByLabel('Файл CSV или Excel').setInputFiles(file)
 
   // Сопоставление предложено само, предпросмотр говорит, что будет,
   // и называет потери: строку без заголовка и почту, которой нет.
@@ -2529,9 +2530,46 @@ test('таблица переезжает на доску: предпросмо�
 
   // Тот же файл ещё раз — в ту же доску: переносить нечего.
   await page.goto('/import')
-  await page.getByLabel('Файл CSV').setInputFiles(file)
+  await page.getByLabel('Файл CSV или Excel').setInputFiles(file)
   await page.getByRole('radio', { name: 'На существующую доску' }).check()
   await page.getByRole('combobox', { name: 'Доска' }).selectOption({ label: 'Склад' })
   await expect(page.getByText(/Уже перенесены раньше и пропущены: 2 карточки/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Переносить нечего' })).toBeDisabled()
+})
+
+test('книга Excel: лист выбирается, дата из ячейки понята', async ({ page }) => {
+  await register(page)
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
+    name: 'План.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: workbook([
+      { name: 'Сводка', rows: [['Отчёт за сентябрь'], ['Всего', 2]] },
+      {
+        name: 'Задачи',
+        rows: [
+          ['Выгрузка задач от 22.09.2026'],
+          [],
+          ['Название', 'Статус', 'Срок'],
+          ['Сверить остатки', 'В работе', 46295],
+          ['Заказать тару', 'Очередь', ''],
+        ],
+      },
+    ]),
+  })
+
+  // Первый лист — сводка без таблицы: взят второй, где таблица есть,
+  // и подпись выгрузки над ней заголовками не стала.
+  const sheet = page.getByRole('combobox', { name: 'Лист книги' })
+  await expect(sheet).toHaveValue('Задачи')
+  await expect(page.getByText('Переедут 2 карточки из 2 строк.')).toBeVisible()
+  // Выбрали сводку — сказано, что с ней не так, а вернуться можно.
+  await sheet.selectOption('Сводка')
+  await expect(page.getByText(/в файле нет строк/)).toBeVisible()
+  await sheet.selectOption('Задачи')
+  await expect(page.getByText('Переедут 2 карточки из 2 строк.')).toBeVisible()
+  await expect(page.getByText('«Срок» — дата ячейки Excel')).toBeVisible()
+  await page.getByRole('button', { name: 'Перенести 2 карточки' }).click()
+  await page.getByRole('button', { name: 'Открыть доску' }).click()
+  await expect(cardIn(page, 'В работе', 'Сверить остатки')).toBeVisible()
 })

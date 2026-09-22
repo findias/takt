@@ -5,11 +5,12 @@ const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`
 
 export const imports: typeof ru = {
   intro:
-    'Tasks from Excel, Google Sheets or another tracker’s CSV export — onto a board. We show what will happen first and import only after that.',
+    'Tasks from Excel, Google Sheets or another tracker’s export — onto a board. We show what will happen first and import only after that.',
   sample: 'Download a sample spreadsheet',
   sampleHint:
     'The sample’s columns are recognised on their own. We guess the encoding and the separator: Excel saves CSV its own way, and that is fine.',
-  file: 'CSV file',
+  file: 'CSV or Excel file',
+  sheet: 'Workbook sheet',
   reading: 'Reading the file…',
   tooBig: 'The file is larger than 5 MB — import it in parts',
   readFailed: 'Could not read the file',
@@ -61,7 +62,7 @@ export const imports: typeof ru = {
   row: (n: number) => `Row ${n}`,
   dates: 'How dates were read',
   dateOf: (header: string, how: string) => `“${header}” — ${how}`,
-  dateFormats: { iso: 'year-month-day, 2026-09-22', dotted: 'day.month.year, 22.09.2026', jira: 'as in Jira, 22/Sep/26' },
+  dateFormats: { iso: 'year-month-day, 2026-09-22', dotted: 'day.month.year, 22.09.2026', jira: 'as in Jira, 22/Sep/26', excel: 'an Excel date cell' },
   history:
     'Dates are imported, moves between columns are not: the old system had its own columns. Cycle time of finished cards counts right away, the cumulative flow diagram starts today.',
   apply: (n: number) => `Import ${cards(n)}`,

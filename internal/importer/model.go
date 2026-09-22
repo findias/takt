@@ -57,6 +57,10 @@ func Known(f Field) bool {
 type Table struct {
 	Headers []string
 	Rows    [][]string
+	// Номер каждой строки в файле: пустые строки пропускаются, и без
+	// него «строка 14» в отчёте указала бы не туда. Пусто — строки
+	// идут подряд сразу за заголовками.
+	Lines []int
 }
 
 // Mapping — какой колонке файла какое поле. Длина равна числу
@@ -101,7 +105,7 @@ type Problem struct {
 type DateFormat struct {
 	Field  Field  `json:"field"`
 	Header string `json:"header"`
-	// iso, dotted, jira.
+	// iso, dotted, jira, excel.
 	Format string `json:"format"`
 }
 

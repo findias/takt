@@ -79,8 +79,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   served by the server itself, built from the same version, and needs
   no internet.
 - **Import from a spreadsheet.** «Перенести задачи из таблицы…» under
-  the new-board form takes a CSV from Excel, Google Sheets or another
-  tracker's export, suggests which card field each column goes to, and
+  the new-board form takes an Excel workbook (`.xlsx`, any sheet) or
+  a CSV from Google Sheets or another tracker's export, suggests which card field each column goes to, and
   shows what will happen before anything is written: how many cards,
   which emails were not found (nobody is created), which rows have
   problems, how dates were read. Cards go to a new board or an
