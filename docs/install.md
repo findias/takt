@@ -508,7 +508,20 @@ was declared breaking, `CHANGELOG.md` says so in its own line.
 
 Boards from YouGile, Jira, Trello and other trackers come into a closed
 network as an [import package](import-package.md) — a `.takt` file
-built outside, where there is internet. A package up to 50 MB is
+built outside, where there is internet, by `takt-fetch` from the same
+release. So far it knows YouGile:
+
+```sh
+export YOUGILE_KEY=…                 # or YOUGILE_LOGIN (the password is asked for)
+takt-fetch yougile boards            # which boards there are, with their ids
+takt-fetch yougile fetch --board <id> --out warehouse.takt --collected-by "Anna, warehouse move"
+```
+
+`--all` takes every board of the company, `--no-chats` skips task chats
+(much faster, but discussions do not come), `--url` points to a boxed
+YouGile. The key and the password are never written into the package.
+
+Carried across, the package is imported inside. A package up to 50 MB is
 imported on the screen (**Boards** → **Import tasks from a
 spreadsheet…** → **Import package**). A bigger one, or many boards in a
 row, an administrator imports on the server:

@@ -133,6 +133,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>sbom/takt-server.cdx.json</code>, <code>sbom/takt-web.cdx.json</code></td><td>what it is built from, CycloneDX 1.6</td><td>summed together with the rest</td></tr>
 </tbody>
 </table></div>
+<p>The release also carries <strong><code>takt-fetch-vX.Y.Z-os-arch</code></strong> — the exporter that builds <a href="import-package.html">import packages</a> outside a closed network, for linux, macOS and Windows, with its own SBOM (<code>takt-fetch.cdx.json</code>) and its sum in <code>SHA256SUMS</code>. It is <strong>not part of the installation</strong>: it is not in the image, the chart or the bundle, and the takt binary contains none of its code for talking to other trackers&#39; clouds. It runs where there is internet, and what it produces is checked by takt on arrival — a part not in the manifest or a sum that does not match refuses the whole package.</p>
 <p>The version is compiled into the binary from <code>git describe</code>, not read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. <code>takt version</code> answers even when the database is unreachable; <code>takt doctor</code> prints it first.</p>
 <h2 id="what-crosses-the-perimeter">What crosses the perimeter</h2>
 <div class="tablewrap"><table>
@@ -309,7 +310,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as “all fine”.</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.3-47-g8d55e92-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-48-g8aa1426-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

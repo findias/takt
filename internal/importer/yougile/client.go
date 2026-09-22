@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -52,6 +53,13 @@ type Client struct {
 	Base string
 	Key  string
 	HTTP *http.Client
+	// Patient — на «слишком много запросов» ждать и повторять, а не
+	// отказывать. Выгрузчику нужно: он обходит чаты сотен задач и
+	// упирается в предел YouGile. Серверу — нет: человек на экране
+	// должен услышать «подождите», а не ждать молча минуту.
+	Patient bool
+	// wait — как ждать; подменяется в проверках, чтобы не спать.
+	wait func(time.Duration)
 }
 
 // New — клиент с разумным сроком на запрос: чужой медленный сервер
@@ -61,6 +69,14 @@ func New(base, key string) *Client {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
+	return c.try(ctx, method, path, query, body, out, 0)
+}
+
+// patience — сколько раз повторять терпеливому клиенту: паузы растут
+// вдвое, 1+2+…+64 — около двух минут на один запрос.
+const patience = 7
+
+func (c *Client) try(ctx context.Context, method, path string, query url.Values, body, out any, attempt int) error {
 	var reader io.Reader
 	if body != nil {
 		raw, err := json.Marshal(body)
@@ -86,6 +102,18 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 		return ErrUnreachable
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusTooManyRequests && c.Patient && attempt < patience {
+		pause := time.Duration(1<<attempt) * time.Second
+		if s, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && s > 0 && s <= 120 {
+			pause = time.Duration(s) * time.Second
+		}
+		wait := c.wait
+		if wait == nil {
+			wait = time.Sleep
+		}
+		wait(pause)
+		return c.try(ctx, method, path, query, body, out, attempt+1)
+	}
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized, resp.StatusCode == http.StatusForbidden:
 		return ErrDenied

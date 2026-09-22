@@ -60,6 +60,12 @@ come in English when the `lang` cookie or `Accept-Language` asks for
 it. Without either the answer is Russian, as before, so integrations
 see no change.
 
+**A new release file, `takt-fetch`, that is not installed.** The
+exporter for moving into a closed network: run where there is internet,
+it collects YouGile boards — with subtasks and task chats — into a
+`.takt` package. Built for linux, macOS and Windows, with its own SBOM
+and sum; it is not in the image, the chart or the bundle.
+
 **A new command, `takt import`, for boards coming into a closed
 network.** It imports an import package (`.takt`, see
 `docs/import-package.md`) on the server, on behalf of the person named

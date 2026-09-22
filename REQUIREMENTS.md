@@ -57,7 +57,7 @@
 | Т14 | Метку заводят прямо с карточки, не плодя двойников: одноимённая предлагается существующей, убранная — возвратом | `web/src/features/board/LabelPicker.dom.test.tsx`, `web/src/entities/label/model.test.ts`, `web/e2e/board.spec.ts` |
 | Т15 | У блокировки может быть срок: она снимается сама моментом срока, без автора, в любой организации, и видна заранее | `internal/board/block_until_test.go`, `web/src/entities/card/model.test.ts`, `web/e2e/board.spec.ts` |
 | Т16 | Перенос из таблицы: сперва предпросмотр, который ничего не пишет; ненайденный человек не заводится, а называется; плохая строка не роняет остальные; повтор того же файла двойников не заводит | `internal/importer/importer_test.go`, `internal/httpapi/import_test.go`, `web/e2e/board.spec.ts` |
-| Т17 | Пакет переноса из-за периметра: читается только описанное форматом, испорченный отвергается целиком с названием части; подзадачи, связи и обсуждение переезжают без выдуманных людей; большой пакет переносит администратор командой | `internal/importer/pack/pack_test.go`, `internal/httpapi/import_package_test.go`, `cmd/takt/import_test.go`, `web/e2e/board.spec.ts` |
+| Т17 | Пакет переноса из-за периметра: читается только описанное форматом, испорченный отвергается целиком с названием части; подзадачи, связи и обсуждение переезжают без выдуманных людей; большой пакет переносит администратор командой; выгрузчик не пишет в пакет ни ключа, ни пароля | `internal/importer/pack/pack_test.go`, `internal/httpapi/import_package_test.go`, `cmd/takt/import_test.go`, `cmd/takt-fetch/main_test.go`, `web/e2e/board.spec.ts` |
 
 ## Пределы
 

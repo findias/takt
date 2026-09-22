@@ -100,31 +100,9 @@ func (c *Client) Plan(ctx context.Context, boardID string) (importer.Plan, error
 		emails[u.ID] = strings.ToLower(strings.TrimSpace(u.Email))
 	}
 
-	labels := map[string]map[string]string{} // стикер → состояние → «Стикер: значение»
-	priority := map[string]map[string]string{}
-	stickers, err := all[sticker](ctx, c, "string-stickers", nil)
+	labels, priority, err := c.stickers(ctx)
 	if err != nil {
 		return importer.Plan{}, err
-	}
-	for _, s := range stickers {
-		if s.Deleted {
-			continue
-		}
-		labels[s.ID] = map[string]string{}
-		isPriority := importer.IsPriorityName(s.Name)
-		for _, st := range s.States {
-			if st.Deleted {
-				continue
-			}
-			if p, ok := importer.PriorityOf(st.Name); ok && isPriority {
-				if priority[s.ID] == nil {
-					priority[s.ID] = map[string]string{}
-				}
-				priority[s.ID][st.ID] = p
-				continue
-			}
-			labels[s.ID][st.ID] = strings.TrimSpace(s.Name) + ": " + strings.TrimSpace(st.Name)
-		}
 	}
 
 	plan := importer.Plan{Source: Source}
@@ -207,6 +185,38 @@ func (c *Client) Plan(ctx context.Context, boardID string) (importer.Plan, error
 	}
 	plan.Lost = append(plan.Lost, "чат задач, файлы, права доступа и учёт времени — их в карточке нет")
 	return plan, nil
+}
+
+// stickers — стикеры компании так, как их переносим: стикер
+// приоритета — нашим приоритетом, остальные — метками «Стикер:
+// значение». Одно на оба пути — экран и выгрузчик.
+func (c *Client) stickers(ctx context.Context) (labels, priority map[string]map[string]string, err error) {
+	labels, priority = map[string]map[string]string{}, map[string]map[string]string{}
+	stickers, err := all[sticker](ctx, c, "string-stickers", nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, s := range stickers {
+		if s.Deleted {
+			continue
+		}
+		labels[s.ID] = map[string]string{}
+		isPriority := importer.IsPriorityName(s.Name)
+		for _, st := range s.States {
+			if st.Deleted {
+				continue
+			}
+			if p, ok := importer.PriorityOf(st.Name); ok && isPriority {
+				if priority[s.ID] == nil {
+					priority[s.ID] = map[string]string{}
+				}
+				priority[s.ID][st.ID] = p
+				continue
+			}
+			labels[s.ID][st.ID] = strings.TrimSpace(s.Name) + ": " + strings.TrimSpace(st.Name)
+		}
+	}
+	return labels, priority, nil
 }
 
 func millis(ms int64) *time.Time {

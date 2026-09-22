@@ -222,6 +222,11 @@ sbom: ## Состав поставки в CycloneDX (dist/sbom)
 	# стандартной библиотеки сверяют именно по ней.
 	$(SECURITY_TOOLS)/cyclonedx-gomod app -json -licenses -std \
 	  -main cmd/takt -output $(SBOM_DIR)/takt-server.cdx.json .
+	# Выгрузчик — своя программа и свой состав: проверяющий поставку
+	# в контур должен видеть, что клиентов чужих облаков там нет,
+	# а проверяющий выгрузчик — из чего собран он.
+	$(SECURITY_TOOLS)/cyclonedx-gomod app -json -licenses -std \
+	  -main cmd/takt-fetch -output $(SBOM_DIR)/takt-fetch.cdx.json .
 	# Версия клиента ставится на время сборки состава и снимается сразу:
 	# в package.json её нет намеренно — версия в этом проекте вшивается
 	# из git, а не читается из файла, — а инструменту она нужна, иначе
@@ -321,6 +326,26 @@ build: web binary ## Собрать бинарник в bin/takt (вместе �
 .PHONY: binary
 binary: ## Собрать только бинарник, без клиента
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/takt ./cmd/takt
+
+# Выгрузчик для переезда в закрытый контур (docs/import-package.md) —
+# отдельной программой: в поставку takt он не входит. Запускают его
+# там, где есть интернет, — чаще на ноутбуке, чем на сервере, — поэтому
+# в выпуске он под три системы, а не только под linux.
+.PHONY: fetch
+fetch: ## Собрать выгрузчик takt-fetch в bin/takt-fetch
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" -o bin/takt-fetch ./cmd/takt-fetch
+
+FETCH_TARGETS ?= linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
+
+.PHONY: fetch-release
+fetch-release: ## Выгрузчик под все системы выпуска — в dist/
+	@mkdir -p dist
+	@for target in $(FETCH_TARGETS); do \
+	  os=$${target%/*}; arch=$${target#*/}; ext=; [ "$$os" = windows ] && ext=.exe; \
+	  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags="-s -w $(VERSION_LDFLAGS)" \
+	    -o dist/takt-fetch-$(VERSION)-$$os-$$arch$$ext ./cmd/takt-fetch || exit 1; \
+	  echo "dist/takt-fetch-$(VERSION)-$$os-$$arch$$ext"; \
+	done
 
 # Основания итогового слоя. Их два, и это не про размер образа:
 # alpine — умолчание и самый маленький; debian — glibc, куда чаще

@@ -340,6 +340,9 @@ var en = map[string]string{
 
 	// --- Пакет переноса ---
 	"из": "from",
+	"сообщения чатов без текста (вложения): %s":                                          "chat messages without text (attachments): %s",
+	"чаты задач — выгружены без них (--no-chats)":                                        "task chats — exported without them (--no-chats)",
+	"файлы, права доступа и учёт времени — их в карточке нет":                            "files, access rights and time tracking — a card has none of them",
 	"это пакет переноса takt — выберите источник «Пакет переноса»":                       "this is a takt import package — choose the “Import package” source",
 	"родитель «%s» не переехал — карточка переедет без него":                             "parent “%s” did not come across — the card comes without it",
 	"дерево подзадач глубже %s уровней — связь с родителем не переносится":               "the subtask tree is deeper than %s levels — the link to the parent is not imported",

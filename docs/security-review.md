@@ -28,6 +28,16 @@ object storage, no agents on other machines.
 | `bundle-vX.Y.Z-linux-arch/` | everything for a closed network: image, chart, documentation, SBOM | `SHA256SUMS` inside the bundle, over every file |
 | `sbom/takt-server.cdx.json`, `sbom/takt-web.cdx.json` | what it is built from, CycloneDX 1.6 | summed together with the rest |
 
+The release also carries **`takt-fetch-vX.Y.Z-os-arch`** — the exporter
+that builds [import packages](import-package.md) outside a closed
+network, for linux, macOS and Windows, with its own SBOM
+(`takt-fetch.cdx.json`) and its sum in `SHA256SUMS`. It is **not part
+of the installation**: it is not in the image, the chart or the bundle,
+and the takt binary contains none of its code for talking to other
+trackers' clouds. It runs where there is internet, and what it produces
+is checked by takt on arrival — a part not in the manifest or a sum
+that does not match refuses the whole package.
+
 The version is compiled into the binary from `git describe`, not read
 from a file: a file inside an image can be swapped, and the version has
 to be the same artefact as the code. `takt version` answers even when
