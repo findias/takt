@@ -411,6 +411,7 @@ export const en: typeof ru = {
     boards: 'Boards',
     team: 'Team',
     structure: 'Structure',
+    import: 'Import from a spreadsheet',
     sections: 'Sections',
     offline:
       'No connection to the server. Nothing is lost: once the connection is back, repeat the action.',
@@ -439,6 +440,7 @@ export const en: typeof ru = {
     signOutEverywhere: 'Sign out on all devices',
   },
   boards: {
+    importLink: 'Import tasks from a spreadsheet…',
     visibleToTeam: (team: string) => `subdivision “${team}”`,
     loadFailed: 'Could not load the list',
     emptyTitle: 'No boards yet',

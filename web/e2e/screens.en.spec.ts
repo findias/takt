@@ -65,4 +65,21 @@ test('английские снимки для документации', async 
   await page.getByRole('button', { name: 'Team', exact: true }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/19-team.png`, fullPage: true })
+
+  // Import from a spreadsheet — preview only, the demo boards stay as they are.
+  await page.goto('/import')
+  await page.getByLabel('CSV file').setInputFiles({
+    name: 'Old board export.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'Summary,Status,Assignee,Labels,Story Points,Priority,Due date\n' +
+        'Count the warehouse stock,In Progress,anna@en.example.test,warehouse,3,High,2026-09-30\n' +
+        'Order packaging for October,To Do,nobody@example.test,"warehouse, purchasing",,Medium,\n' +
+        'Agree the carrier contract,Review,vera@en.example.test,,5,ASAP,2026-10-15\n' +
+        ',To Do,,,,,\n',
+    ),
+  })
+  await expect(page.getByText(/3 cards of 4 rows/)).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21-import.png`, fullPage: true })
 })

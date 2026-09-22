@@ -305,6 +305,29 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/20в-узел-без-людей.png`, fullPage: true })
 
+  // Перенос из таблицы: предпросмотр с потерями — ненайденной почтой,
+  // строкой без заголовка, незнакомым приоритетом. Только предпросмотр:
+  // переносить на демонстрационные доски снимку незачем.
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV').setInputFiles({
+    name: 'Выгрузка из старой доски.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'Название;Статус;Ответственный;Теги;Оценка;Приоритет;Дедлайн;Описание\n' +
+        'Сверить остатки на складе;В работе;anna@example.test;склад;3;высокий;30.09.2026;По итогам инвентаризации\n' +
+        'Заказать тару на октябрь;Очередь;nikto@example.test;склад, закупки;;обычный;;\n' +
+        'Согласовать договор с перевозчиком;На согласовании;vera@example.test;;5;как можно скорее;15.10.2026;\n' +
+        ';Очередь;;;;;;\n',
+    ),
+  })
+  await expect(page.getByText(/Переедут 3 карточки/)).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21-перенос-из-таблицы.png`, fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21б-перенос-на-телефоне.png`, fullPage: true })
+  await page.setViewportSize({ width: 1440, height: 900 })
+
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него
   // на этом экране можно всё, и разницы не видно. Борис отвечает

@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Eight migrations, all safe for the running version.** `0052` gives
+**Nine migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -18,7 +18,9 @@ each person's interface language (empty until they choose), `0057`
 adds in-app notifications, each visible only to its recipient and only
 while they can see the board, `0058` stores which kinds of notification
 a person has switched off, `0059` adds the two time-driven kinds
-(a block ending within a day, a card past the board's promise). They
+(a block ending within a day, a card past the board's promise), `0060`
+gives a card an optional key in the system it was imported from, so
+that importing the same file twice creates no duplicates. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -76,6 +78,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   a «Что нового» (what's new) page for this version and a glossary. It is
   served by the server itself, built from the same version, and needs
   no internet.
+- **Import from a spreadsheet.** «Перенести задачи из таблицы…» under
+  the new-board form takes a CSV from Excel, Google Sheets or another
+  tracker's export, suggests which card field each column goes to, and
+  shows what will happen before anything is written: how many cards,
+  which emails were not found (nobody is created), which rows have
+  problems, how dates were read. Cards go to a new board or an
+  existing one; importing the same file again skips what has already
+  come. Dates come across, moves between columns do not.
 - **Notifications.** A bell in the header counts what is unread: being
   called into a discussion (**@ Mention** under a reply), assigned to
   a card, a block on your card, less than a day left on that block, the
@@ -120,6 +130,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
 ### Dependencies
 
 `golang.org/x/crypto` 0.57.0, `pgx` 5.11.0, `vitest` updated.
+`golang.org/x/text` (already in the build through `x/net`) is now used
+directly: it reads CSV saved by Excel in Windows-1251.
 
 ## v0.2.3 — 27 August 2026
 

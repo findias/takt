@@ -44,6 +44,13 @@ const Structure = lazy(
     'structure',
   ),
 )
+// Переезд делают раз в жизни организации — ему не место в куске доски.
+const ImportScreen = lazy(
+  withSections(
+    () => import('../widgets/Import.tsx').then((m) => ({ default: m.ImportScreen })),
+    'imports',
+  ),
+)
 // Приглашение открывают один раз в жизни, по ссылке: остальным его
 // экран в куске доски ни к чему.
 const InviteScreen = lazy(() =>
@@ -187,7 +194,9 @@ function Screens() {
       ? null
       : route.name === 'invite'
         ? t.app.invitation
-        : (TABS.find((name) => name === route.name) ? tabTitle(route.name as (typeof TABS)[number]) : null),
+        : route.name === 'import'
+          ? t.app.import
+          : (TABS.find((name) => name === route.name) ? tabTitle(route.name as (typeof TABS)[number]) : null),
   )
 
   // Справка с экрана. Доска кладёт свою тему сама — она знает, что
@@ -199,7 +208,9 @@ function Screens() {
         ? 'structure'
         : route.name === 'boards'
           ? 'boards'
-          : null,
+          : route.name === 'import'
+            ? 'import'
+            : null,
   )
   // F1 и «?» — справка по тому экрану, где человек сейчас. Слушатель
   // один на приложение: экраны о клавише не знают, они знают свою тему.
@@ -313,9 +324,10 @@ function Screens() {
           {/* Заглушка в форме списка, а не слово «загружаем»: кусок
               приезжает за десятки миллисекунд, и мигать словом дольше,
               чем показывать раскладку. */}
-          {(route.name === 'team' || route.name === 'structure') && (
+          {(route.name === 'team' || route.name === 'structure' || route.name === 'import') && (
             <Suspense fallback={<Skeleton lines={3} />}>
               {route.name === 'team' && <Team principal={principal} />}
+              {route.name === 'import' && <ImportScreen />}
               {route.name === 'structure' && (
                 <Structure principal={principal} onOpenBoard={(id) => navigate(boardPath(id))} />
               )}

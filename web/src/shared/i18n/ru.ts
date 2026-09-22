@@ -417,6 +417,7 @@ export const ru = {
     boards: 'Доски',
     team: 'Команда',
     structure: 'Структура',
+    import: 'Перенос из таблицы',
     sections: 'Разделы',
     offline:
       'Связи с сервером нет. Сделанное не потеряется: как только связь вернётся, повторите действие.',
@@ -445,6 +446,7 @@ export const ru = {
     signOutEverywhere: 'Выйти на всех устройствах',
   },
   boards: {
+    importLink: 'Перенести задачи из таблицы…',
     visibleToTeam: (team: string) => `подразделению «${team}»`,
     loadFailed: 'Не удалось загрузить список',
     emptyTitle: 'Досок пока нет',

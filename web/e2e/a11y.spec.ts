@@ -140,6 +140,19 @@ test('на всех экранах цели нажатия не мельче 24 
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
   expect(await tinyTargets(page), 'команда').toEqual([])
 
+  // Перенос из таблицы — с разобранным файлом: переключатели, выбор
+  // поля и кнопка появляются только после него.
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV').setInputFiles({
+    name: 'Задачи.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Заголовок;Колонка\nПервая;Очередь\n'),
+  })
+  await expect(page.getByRole('button', { name: 'Перенести 1 карточку' })).toBeVisible()
+  expect(await tinyTargets(page), 'перенос из таблицы').toEqual([])
+  await page.goto('/team')
+  await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
+
   // Метка на карточке — отдельный замер: без меток поле-метки показывает
   // слово и в цель нажатия укладывается, а с одной меткой съёживается
   // до точки в шесть пикселей. Проход глазами нашёл на стенде кнопку

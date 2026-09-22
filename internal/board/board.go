@@ -423,52 +423,63 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 func (s *Service) Create(ctx context.Context, orgID, userID, name, key string) (Info, error) {
 	var b Info
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
-		var projectID string
-		err := tx.QueryRow(ctx, `
-			select id from projects
-			 where archived_at is null
-			 order by created_at limit 1`).Scan(&projectID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			projects := i18n.Name(ctx, "Проекты")
-			err = tx.QueryRow(ctx,
-				`insert into projects (org_id, name) values ($1, $2) returning id`,
-				orgID, projects).Scan(&projectID)
-		}
-		if err != nil {
-			return err
-		}
-
-		b, err = insertBoard(ctx, tx, orgID, projectID, name, key)
-		if err != nil {
-			return err
-		}
-
 		// Колонки по умолчанию сразу размечены: без точек старта и финиша
 		// журнал переходов копится, а метрики потока по нему не считаются.
-		defaults := []Column{
+		var err error
+		b, _, err = createBoard(ctx, tx, orgID, name, key, []Column{
 			{Name: i18n.Name(ctx, "Очередь"), Kind: KindQueue},
 			{Name: i18n.Name(ctx, "В работе"), Kind: KindInProgress, IsStartedPoint: true},
 			{Name: i18n.Name(ctx, "Готово"), Kind: KindDone, IsFinishedPoint: true},
-		}
-		positions, err := rank.NBetween("", "", len(defaults))
-		if err != nil {
-			return err
-		}
-		for i, column := range defaults {
-			_, err = tx.Exec(ctx, `
-				insert into board_columns
-					(org_id, board_id, name, position, kind,
-					 is_started_point, is_finished_point)
-				values ($1, $2, $3, $4, $5, $6, $7)`,
-				orgID, b.ID, column.Name, positions[i], column.Kind,
-				column.IsStartedPoint, column.IsFinishedPoint)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
+		})
+		return err
 	})
 	return b, err
+}
+
+// createBoard заводит доску с данными колонками в первом живом проекте.
+// Общая для кнопки «Завести доску» и для импорта: доска, заведённая
+// переездом, ничем не должна отличаться от заведённой руками.
+func createBoard(ctx context.Context, tx pgx.Tx, orgID, name, key string, columns []Column) (Info, []Column, error) {
+	var projectID string
+	err := tx.QueryRow(ctx, `
+		select id from projects
+		 where archived_at is null
+		 order by created_at limit 1`).Scan(&projectID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		projects := i18n.Name(ctx, "Проекты")
+		err = tx.QueryRow(ctx,
+			`insert into projects (org_id, name) values ($1, $2) returning id`,
+			orgID, projects).Scan(&projectID)
+	}
+	if err != nil {
+		return Info{}, nil, err
+	}
+
+	b, err := insertBoard(ctx, tx, orgID, projectID, name, key)
+	if err != nil {
+		return Info{}, nil, err
+	}
+
+	positions, err := rank.NBetween("", "", len(columns))
+	if err != nil {
+		return Info{}, nil, err
+	}
+	out := make([]Column, 0, len(columns))
+	for i, column := range columns {
+		c, err := scanColumn(tx.QueryRow(ctx, `
+			insert into board_columns
+				(org_id, board_id, name, position, kind,
+				 is_started_point, is_finished_point)
+			values ($1, $2, $3, $4, $5, $6, $7)
+			returning `+columnFields,
+			orgID, b.ID, column.Name, positions[i], column.Kind,
+			column.IsStartedPoint, column.IsFinishedPoint))
+		if err != nil {
+			return Info{}, nil, err
+		}
+		out = append(out, c)
+	}
+	return b, out, nil
 }
 
 // Snapshot читает доску целиком вместе с её версией.

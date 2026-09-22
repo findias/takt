@@ -145,6 +145,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Т13</td><td>Метки организации, подразделения и доски: каждая действует в своей области, называет, откуда она, и остаётся на карточках после архивации</td><td><code>internal/board/labels_scope_test.go</code>, <code>internal/board/labels_test.go</code>, <code>internal/httpapi/labels_test.go</code></td></tr>
 <tr><td>Т14</td><td>Метку заводят прямо с карточки, не плодя двойников: одноимённая предлагается существующей, убранная — возвратом</td><td><code>web/src/features/board/LabelPicker.dom.test.tsx</code>, <code>web/src/entities/label/model.test.ts</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 <tr><td>Т15</td><td>У блокировки может быть срок: она снимается сама моментом срока, без автора, в любой организации, и видна заранее</td><td><code>internal/board/block_until_test.go</code>, <code>web/src/entities/card/model.test.ts</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т16</td><td>Перенос из таблицы: сперва предпросмотр, который ничего не пишет; ненайденный человек не заводится, а называется; плохая строка не роняет остальные; повтор того же файла двойников не заводит</td><td><code>internal/importer/importer_test.go</code>, <code>internal/httpapi/import_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="пределы">Пределы</h2>
@@ -249,7 +250,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-38-gc4a7da8-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-40-g01abb1e-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

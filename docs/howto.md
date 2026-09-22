@@ -227,6 +227,68 @@ Deleting for good asks for confirmation and cannot be undone.
    iteration contains for good. A report appears: what made it and
    what did not.
 
+<!-- anchor: import -->
+## Moving in
+
+### Import tasks from a spreadsheet
+
+Tasks from Excel, Google Sheets or another tracker's CSV export
+(Jira, YouGile, Kaiten and others can all save one) become cards on
+a board.
+
+1. **Boards** tab → **Import tasks from a spreadsheet…** under the
+   form for a new board.
+2. Pick the CSV file. The encoding and the separator are guessed: Excel
+   saves CSV with semicolons and in Windows-1251, and that is fine.
+3. Check the file columns. The server suggests which card field each
+   one goes to; change what is wrong. Only the title is required; the
+   rest — board column, assignees, labels, estimate, priority, due
+   date, created and finished dates, description, key in the old
+   system — is optional. **Don’t import** leaves a column out.
+4. Choose where to: **To a new board** (named after the file; change
+   the name if you like) or **To an existing board**.
+5. Read **What will happen** and press the button under it: it names
+   the number of cards that will come.
+
+Nothing is written until the last step: the preview does the whole
+import and throws it away, so it shows exactly what you will get.
+
+What the preview names, so that nothing is lost silently:
+
+- **Emails not found.** Assignees are matched by email among the
+  people of the organisation, and nobody is created on the way: the
+  card comes without that assignee, and the email is listed with the
+  number of cards. Invite the person and import the file again.
+- **Row problems.** A row without a title is not imported; a value
+  that cannot be read (an estimate that is not a number, an unknown
+  priority, a date that is not a date) is dropped, and the rest of the
+  row comes. Rows are numbered as in Excel, with the header row first.
+- **How dates were read.** A date column is read as a whole in one of
+  three forms: `2026-09-22`, `22.09.2026` or Jira's `22/Sep/26`.
+- **Columns.** A new board gets the columns from the file, put in order
+  of meaning: queue, work, unrecognised stages, done. “In progress”
+  becomes the start of work and “Done” the finish; if there is no done
+  column, one is added. On an existing board missing columns are added
+  before the done column, and its markup is left alone.
+- **Labels.** Labels are found by name among those that apply to the
+  board; missing ones are created as labels of this board.
+
+Importing the same file again creates no duplicates: every card
+remembers its key in the old system (the **Key in the old system**
+column, or the title if there is none), and a second run skips what
+has already come.
+
+History: dates come across, moves between columns do not — the old
+system had its own columns, and its moves passed off as ours would give
+a metric you cannot trust. The cycle time of finished cards counts
+right away (from the created date, since the start of work is not
+known); the cumulative flow diagram fills from the day of the import.
+Assignment by import sends no notifications.
+
+A sample spreadsheet is on the same screen (**Download a sample
+spreadsheet**); its columns are recognised without any changes. One
+import takes up to 5,000 rows and 5 MB; split a bigger file.
+
 <!-- anchor: team -->
 ## The organisation
 

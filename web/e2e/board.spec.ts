@@ -2497,3 +2497,41 @@ test('упоминание доходит колокольчиком и ведё
   await expect(him.getByRole('button', { name: /^Уведомления/ })).toHaveAccessibleName('Уведомления')
   await second.close()
 })
+
+test('таблица переезжает на доску: предпросмотр, перенос, повтор без двойников', async ({ page }) => {
+  await register(page)
+  const file = {
+    name: 'Склад.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'Заголовок;Колонка;Исполнитель;Оценка;Срок\n' +
+        'Сверить остатки;В работе;nikto@example.test;3;30.09.2026\n' +
+        'Заказать тару;Очередь;;;\n' +
+        ';Очередь;;;\n',
+    ),
+  }
+  await page.getByRole('link', { name: 'Перенести задачи из таблицы…' }).click()
+  await page.getByLabel('Файл CSV').setInputFiles(file)
+
+  // Сопоставление предложено само, предпросмотр говорит, что будет,
+  // и называет потери: строку без заголовка и почту, которой нет.
+  await expect(page.getByRole('combobox', { name: 'Поле карточки для колонки «Срок»' })).toHaveValue('due')
+  await expect(page.getByText('Переедут 2 карточки из 3 строк.')).toBeVisible()
+  await expect(page.getByText('nikto@example.test — 1 карточка')).toBeVisible()
+  await expect(page.getByText(/Строка 4:.*нет заголовка/)).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Название новой доски' })).toHaveValue('Склад')
+
+  await page.getByRole('button', { name: 'Перенести 2 карточки' }).click()
+  await expect(page.getByText('Перенесено: 2 карточки.')).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть доску' }).click()
+  await expect(cardIn(page, 'В работе', 'Сверить остатки')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Заказать тару')).toBeVisible()
+
+  // Тот же файл ещё раз — в ту же доску: переносить нечего.
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV').setInputFiles(file)
+  await page.getByRole('radio', { name: 'На существующую доску' }).check()
+  await page.getByRole('combobox', { name: 'Доска' }).selectOption({ label: 'Склад' })
+  await expect(page.getByText(/Уже перенесены раньше и пропущены: 2 карточки/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Переносить нечего' })).toBeDisabled()
+})

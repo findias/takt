@@ -7,6 +7,7 @@ import { useToast } from '../shared/ui/Toast.tsx'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { t } from '../shared/i18n/index.ts'
+import { navigate } from '../shared/router/index.ts'
 
 // Настройку доступа раскрывают у одной доски и изредка — тот же довод,
 // что у панели доступа на самой доске: грузить её вместе со списком
@@ -326,6 +327,23 @@ export function BoardList({
       {canEdit && (
         <p className="muted small" id="board-key-hint">
           {t.boards.keyHint}
+        </p>
+      )}
+      {/* Переезд — ссылкой, а не кнопкой: он ведёт на свой экран, и открыть
+          его в соседней вкладке — законное желание. */}
+      {canEdit && (
+        <p className="board-import">
+          <a
+            className="link link--alone"
+            href="/import"
+            onClick={(e) => {
+              if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return
+              e.preventDefault()
+              navigate('/import')
+            }}
+          >
+            {t.boards.importLink}
+          </a>
         </p>
       )}
       {/* Отказ, у которого своего поля нет: «доска в архиве», «нет

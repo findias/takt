@@ -435,15 +435,37 @@ button.link {
   color: var(--accent);
   padding: 0 var(--space-1);
 }
+/* Ссылка-переход в тексте — тем же цветом и с теми же состояниями,
+   что кнопка-ссылка: иначе браузерный синий спорит с акцентом темы,
+   а в тёмной теме и вовсе теряет контраст. */
+a.link {
+  color: var(--accent);
+  text-decoration: none;
+}
+/* Переезд — под формой новой доски, вплотную к правилу о ключе:
+   это второй способ завести доску, а не отдельный раздел. */
+.board-import {
+  margin: 0;
+}
+/* Ссылка, которая стоит сама по себе, а не внутри фразы, — цель
+   нажатия целиком (24 по WCAG 2.5.8): исключение для ссылок в тексте
+   на неё не распространяется. */
+a.link--alone {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
 /* Пять состояний обязательны каждому элементу: покой, наведение, фокус
    с клавиатуры, нажатие, недоступность. У кнопки-ссылки — а ею набрана
    половина действий экрана: «Снять», «Разметка», «Убрать в архив» —
    не было ни наведения, ни нажатия, ни недоступности: наводишь и
    нажимаешь, а экран молчит до ответа сервера. */
-button.link:hover:not(:disabled) {
+button.link:hover:not(:disabled),
+a.link:hover {
   text-decoration: underline;
 }
-button.link:active:not(:disabled) {
+button.link:active:not(:disabled),
+a.link:active {
   opacity: 0.65;
 }
 button.link:disabled {
@@ -3792,6 +3814,91 @@ textarea.description {
 .account-foot {
   border-top: 1px solid var(--rule);
   padding-top: var(--space-3);
+}
+
+/* Перенос из таблицы (ROADMAP 23.2). Экран читается сверху вниз
+   как форма, поэтому ширина строки ограничена — отчёт с длинными
+   почтами во всю ширину монитора не читается. Таблица сопоставления
+   шире: в ней примеры данных, и им нужно место. */
+.import-screen {
+  max-width: 60rem;
+}
+.import-screen > p {
+  margin: 0;
+  max-width: 44rem;
+}
+.import-file {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  font-weight: 600;
+}
+.import-file input {
+  font-weight: 400;
+}
+/* Поле под своим переключателем — со сдвигом на ширину флажка:
+   иначе оно читается третьим пунктом выбора. */
+.import-indent {
+  margin-left: var(--space-8);
+  width: auto;
+  max-width: min(24rem, calc(100% - var(--space-8)));
+}
+.import-mapping {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.import-mapping th,
+.import-mapping td {
+  text-align: left;
+  padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+}
+.import-mapping thead th {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.import-mapping tbody th {
+  font-weight: 600;
+}
+/* Пример — одна строка с многоточием: длинное описание в первой
+   строке файла растянуло бы таблицу на экран. */
+.import-example {
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.import-screen h2 {
+  margin: 0;
+}
+.import-report p {
+  margin: 0;
+}
+/* На телефоне пример уступает место выбору: без примера сопоставлять
+   можно по заголовку, а обрезанный выпадающий список не выбрать вовсе. */
+@media (max-width: 40rem) {
+  .import-mapping .import-example,
+  .import-mapping thead th:nth-child(2) {
+    display: none;
+  }
+  .import-mapping select {
+    max-width: 100%;
+  }
+}
+/* Части отчёта — подписью, а не заголовком раздела: крупные буквы
+   «Что получится» и «Колонки» в одном стиле делали бы части отчёта
+   соседями, а не его содержимым. */
+.import-report h4 {
+  margin: 0;
+  font-size: var(--text);
+  font-weight: 600;
+}
+.import-list {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-6);
 }
 
 /* «?» у понятия (ROADMAP 30.4). Кнопка — цель нажатия целиком

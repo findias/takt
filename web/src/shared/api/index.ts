@@ -361,6 +361,69 @@ export type Catchup = {
   full: boolean
 }
 
+/** Поле карточки, в которое ложится колонка файла; пусто — не переносится. */
+export type ImportField =
+  | ''
+  | 'title'
+  | 'column'
+  | 'assignees'
+  | 'labels'
+  | 'estimate'
+  | 'priority'
+  | 'due'
+  | 'created'
+  | 'done'
+  | 'description'
+  | 'external'
+
+export const IMPORT_FIELDS: Exclude<ImportField, ''>[] = [
+  'title',
+  'column',
+  'assignees',
+  'labels',
+  'estimate',
+  'priority',
+  'due',
+  'created',
+  'done',
+  'description',
+  'external',
+]
+
+export type ImportRequest = {
+  /** Файл целиком, base64. */
+  file: string
+  /** Пусто — сопоставление предлагает сервер по заголовкам. */
+  mapping: ImportField[] | null
+  boardId?: string
+  newBoardName?: string
+  apply: boolean
+}
+
+export type ImportReport = {
+  applied: boolean
+  boardId?: string
+  boardName: string
+  newBoard: boolean
+  rows: number
+  created: number
+  skipped: { row: number; title: string; number?: string; board?: string }[]
+  newColumns: { name: string; kind: ColumnKind }[]
+  newLabels: string[]
+  archivedLabels: string[]
+  missingPeople: { email: string; cards: number }[]
+  problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
+  dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' }[]
+}
+
+export type ImportAnswer = {
+  headers: string[]
+  mapping: ImportField[]
+  sample: string[][]
+  mappingError?: string
+  report: ImportReport | null
+}
+
 export type BoardInfo = {
   id: string
   name: string
@@ -683,6 +746,7 @@ export class NetworkError extends Error {
 }
 
 const TIMEOUT_MS = 10_000
+const IMPORT_TIMEOUT_MS = 120_000
 
 /**
  * keepalive — «доведи запрос до конца, даже если страницы уже нет».
@@ -701,9 +765,10 @@ async function request<T>(
   path: string,
   body?: unknown,
   keepalive = false,
+  timeoutMs = TIMEOUT_MS,
 ): Promise<T> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   let response: Response
   try {
     response = await fetch(path, {
@@ -973,6 +1038,11 @@ export const api = {
     request<AuditPage>('GET', '/api/audit' + (before ? `?before=${before}` : '')),
 
   listBoards: () => request<{ boards: BoardInfo[] }>('GET', '/api/boards'),
+  /** Импорт из таблицы: предпросмотр (`apply: false`) и перенос —
+   *  один и тот же запрос. Файл — base64; ждём дольше обычного:
+   *  перенос тысяч строк идёт, пока человек смотрит на кнопку. */
+  importTable: (body: ImportRequest) =>
+    request<ImportAnswer>('POST', '/api/import/table', body, false, IMPORT_TIMEOUT_MS),
   comments: (boardId: string, cardId: string) =>
     request<{ comments: Comment[] }>('GET', `/api/boards/${boardId}/cards/${cardId}/comments`),
   addComment: (

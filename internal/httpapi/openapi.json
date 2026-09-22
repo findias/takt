@@ -62,6 +62,8 @@
               "password_wrong",
               "password_same",
               "signup_closed",
+              "import_unreadable",
+              "import_mapping",
               "internal"
             ]
           }

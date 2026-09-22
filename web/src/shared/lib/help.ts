@@ -22,6 +22,7 @@ export const HELP_TOPICS = {
   team: 'howto#team',
   structure: 'howto#structure',
   account: 'howto#language',
+  import: 'howto#import',
   // Понятия с «?» (ROADMAP 30.4): «Подробнее в справке» ведёт сюда.
   markup: 'howto#columns',
   limit: 'howto#columns',

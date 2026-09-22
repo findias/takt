@@ -1,0 +1,117 @@
+// Package importer — переезд к нам из чужих досок и таблиц (ROADMAP, этап 23).
+//
+// Источники разные, а работа одна: разобрать чужое, сопоставить своему,
+// завести. Поэтому посередине стоит промежуточная модель — карточки
+// с полями, которые у нас есть, — а источник только её поставщик.
+// Иначе третий источник перепишет второй.
+//
+// Пакет ничего не знает о базе. Разбор файла и сборка карточек —
+// здесь и проверяются без неё; заводит доску и карточки internal/board,
+// и делает это дважды: на сухом прогоне в транзакции, которая
+// откатывается, и по-настоящему. Так предпросмотр показывает ровно
+// то, что случится, — вплоть до людей, которых не нашли по почте.
+package importer
+
+import "time"
+
+// Field — поле карточки, в которое ложится колонка файла.
+type Field string
+
+const (
+	// Пусто — колонка файла не переносится.
+	FieldNone        Field = ""
+	FieldTitle       Field = "title"
+	FieldColumn      Field = "column"
+	FieldAssignees   Field = "assignees"
+	FieldLabels      Field = "labels"
+	FieldEstimate    Field = "estimate"
+	FieldPriority    Field = "priority"
+	FieldDue         Field = "due"
+	FieldCreated     Field = "created"
+	FieldDone        Field = "done"
+	FieldDescription Field = "description"
+	FieldExternal    Field = "external"
+)
+
+// Fields — все поля, в порядке, в котором их предлагает экран.
+var Fields = []Field{
+	FieldTitle, FieldColumn, FieldAssignees, FieldLabels, FieldEstimate,
+	FieldPriority, FieldDue, FieldCreated, FieldDone, FieldDescription, FieldExternal,
+}
+
+// Known — есть ли такое поле.
+func Known(f Field) bool {
+	if f == FieldNone {
+		return true
+	}
+	for _, x := range Fields {
+		if x == f {
+			return true
+		}
+	}
+	return false
+}
+
+// Table — таблица как есть: заголовки и строки текста. Номер строки
+// для человека — номер в файле, считая строку заголовков первой.
+type Table struct {
+	Headers []string
+	Rows    [][]string
+}
+
+// Mapping — какой колонке файла какое поле. Длина равна числу
+// заголовков; пустое поле — колонка не переносится.
+type Mapping []Field
+
+// Card — карточка промежуточной модели.
+type Card struct {
+	// Строка файла — чтобы отчёт мог назвать её.
+	Row         int
+	Title       string
+	Column      string
+	Description string
+	// Ключ, по которому второй прогон узнаёт уже перенесённое.
+	ExternalID string
+	// Почты: человек сопоставляется по почте, и только по ней.
+	Assignees []string
+	Labels    []string
+	Estimate  *float64
+	// low, medium, high, highest; пусто — как у доски по умолчанию.
+	Priority string
+	Due      *time.Time
+	Created  *time.Time
+	Done     *time.Time
+}
+
+// Problem — что в строке не так. Плохая строка не роняет импорт:
+// она либо переезжает без негодного поля, либо не переезжает вовсе
+// (нет заголовка), и то и другое называется в отчёте.
+type Problem struct {
+	Row     int    `json:"row"`
+	Field   Field  `json:"field,omitempty"`
+	Value   string `json:"value,omitempty"`
+	Message string `json:"message"`
+	// Строка не переедет совсем.
+	Skipped bool `json:"skipped"`
+}
+
+// DateFormat — как понята колонка дат. Говорится вслух: 03.04 —
+// это третье апреля или четвёртое марта, решает файл, а не мы,
+// и человек обязан это увидеть до переноса.
+type DateFormat struct {
+	Field  Field  `json:"field"`
+	Header string `json:"header"`
+	// iso, dotted, jira.
+	Format string `json:"format"`
+}
+
+// Plan — разобранный файл: карточки, претензии к строкам и колонки
+// доски в порядке первого появления.
+type Plan struct {
+	Source   string
+	Cards    []Card
+	Problems []Problem
+	Columns  []string
+	Dates    []DateFormat
+	Rows     int
+}

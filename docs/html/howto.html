@@ -209,6 +209,28 @@ color:var(--ink-3);font-size:.85rem}
 <li>On cards, pick the iteration (<strong>Work</strong> tab).</li>
 <li>When the time is up press <strong>Close iteration</strong>. It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
 </ol>
+<h2 id="import">Moving in</h2>
+<h3 id="import-tasks-from-a-spreadsheet">Import tasks from a spreadsheet</h3>
+<p>Tasks from Excel, Google Sheets or another tracker&#39;s CSV export (Jira, YouGile, Kaiten and others can all save one) become cards on a board.</p>
+<ol>
+<li><strong>Boards</strong> tab → <strong>Import tasks from a spreadsheet…</strong> under the form for a new board.</li>
+<li>Pick the CSV file. The encoding and the separator are guessed: Excel saves CSV with semicolons and in Windows-1251, and that is fine.</li>
+<li>Check the file columns. The server suggests which card field each one goes to; change what is wrong. Only the title is required; the rest — board column, assignees, labels, estimate, priority, due date, created and finished dates, description, key in the old system — is optional. <strong>Don’t import</strong> leaves a column out.</li>
+<li>Choose where to: <strong>To a new board</strong> (named after the file; change the name if you like) or <strong>To an existing board</strong>.</li>
+<li>Read <strong>What will happen</strong> and press the button under it: it names the number of cards that will come.</li>
+</ol>
+<p>Nothing is written until the last step: the preview does the whole import and throws it away, so it shows exactly what you will get.</p>
+<p>What the preview names, so that nothing is lost silently:</p>
+<ul>
+<li><strong>Emails not found.</strong> Assignees are matched by email among the people of the organisation, and nobody is created on the way: the card comes without that assignee, and the email is listed with the number of cards. Invite the person and import the file again.</li>
+<li><strong>Row problems.</strong> A row without a title is not imported; a value that cannot be read (an estimate that is not a number, an unknown priority, a date that is not a date) is dropped, and the rest of the row comes. Rows are numbered as in Excel, with the header row first.</li>
+<li><strong>How dates were read.</strong> A date column is read as a whole in one of three forms: <code>2026-09-22</code>, <code>22.09.2026</code> or Jira&#39;s <code>22/Sep/26</code>.</li>
+<li><strong>Columns.</strong> A new board gets the columns from the file, put in order of meaning: queue, work, unrecognised stages, done. “In progress” becomes the start of work and “Done” the finish; if there is no done column, one is added. On an existing board missing columns are added before the done column, and its markup is left alone.</li>
+<li><strong>Labels.</strong> Labels are found by name among those that apply to the board; missing ones are created as labels of this board.</li>
+</ul>
+<p>Importing the same file again creates no duplicates: every card remembers its key in the old system (the <strong>Key in the old system</strong> column, or the title if there is none), and a second run skips what has already come.</p>
+<p>History: dates come across, moves between columns do not — the old system had its own columns, and its moves passed off as ours would give a metric you cannot trust. The cycle time of finished cards counts right away (from the created date, since the start of work is not known); the cumulative flow diagram fills from the day of the import. Assignment by import sends no notifications.</p>
+<p>A sample spreadsheet is on the same screen (<strong>Download a sample spreadsheet</strong>); its columns are recognised without any changes. One import takes up to 5,000 rows and 5 MB; split a bigger file.</p>
 <h2 id="team">The organisation</h2>
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
@@ -277,7 +299,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-38-gc4a7da8-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-40-g01abb1e-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
