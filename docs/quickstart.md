@@ -11,6 +11,7 @@ they appear on screen, with a translation next to them.
 
 ![The list of boards](screenshots/список-досок.png)
 
+<!-- anchor: create-board -->
 ## 1. Create a board
 
 1. On the main screen, type a name into **«Название новой доски»**
@@ -40,6 +41,7 @@ and press `Ctrl` with the right arrow.
 The card flashes in its new place — that is how the board shows where
 it went. Everyone with this board open sees the change immediately.
 
+<!-- anchor: describe-work -->
 ## 4. Describe the work
 
 1. Click the card's title; a panel opens.

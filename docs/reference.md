@@ -39,6 +39,7 @@ Beyond roles, the owner appoints:
 | `Enter` | open a card |
 | `E` | rename without opening |
 | `Escape` | close a panel, a menu or the palette |
+| `F1` or `?` | help on the screen you are on, in a new tab |
 | Arrows on a column's edge | widen or narrow the column; double-click the edge to reset |
 
 ## Filters
@@ -129,6 +130,7 @@ hung. Every list that offers a label also says where it comes from.
   longer applies there, the card panel says so, and it can still be
   taken off.
 
+<!-- anchor: flow -->
 ## Metrics in «Поток» (flow)
 
 | Metric | What it answers |

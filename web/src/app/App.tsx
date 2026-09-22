@@ -11,6 +11,8 @@ import { Auth } from '../widgets/Auth.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Account } from '../features/account/Account.tsx'
 import { StandBar } from '../features/stand/StandBar.tsx'
+import { HelpButton } from '../shared/ui/HelpButton.tsx'
+import { isHelpKey, openHelp, useHelpTopic } from '../shared/lib/help.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
@@ -186,6 +188,30 @@ function Screens() {
         ? t.app.invitation
         : (TABS.find((name) => name === route.name) ? tabTitle(route.name as (typeof TABS)[number]) : null),
   )
+
+  // Справка с экрана. Доска кладёт свою тему сама — она знает, что
+  // у неё открыто поверх, — а разделы организации кладутся здесь.
+  useHelpTopic(
+    route.name === 'team'
+      ? 'team'
+      : route.name === 'structure'
+        ? 'structure'
+        : route.name === 'boards'
+          ? 'boards'
+          : null,
+  )
+  // F1 и «?» — справка по тому экрану, где человек сейчас. Слушатель
+  // один на приложение: экраны о клавише не знают, они знают свою тему.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isHelpKey(e)) return
+      // F1 у браузера — его собственная справка; здесь она ни к чему.
+      e.preventDefault()
+      openHelp()
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [])
 
   // Принятое приглашение заменяет адрес, а не добавляет в историю:
   // возвращаться по «назад» к уже использованной ссылке некуда.
@@ -368,6 +394,7 @@ function OrgHeader({
 
       <div className="org-row muted small">
         <Account principal={principal} onSignOut={onSignOut} />
+        <HelpButton />
         {/* На закрытой установке организации заводит владелец: правило
             то же, что на экране входа, и место, где его можно обойти,
             должно быть закрыто там же. Иначе «регистрация закрыта»

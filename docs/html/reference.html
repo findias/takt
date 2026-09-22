@@ -118,7 +118,7 @@ color:var(--ink-3);font-size:.85rem}
 <h1>Reference</h1>
 <p>Lists and tables: what lives where, what things are called, what equals what. Not read in order — read when needed.</p>
 <p><strong>The interface is in Russian.</strong> On-screen wording is quoted, with a translation next to it.</p>
-<h2>Roles in the organisation</h2>
+<h2 id="roles-in-the-organisation">Roles in the organisation</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Role</th><th>Reads</th><th>Changes work</th><th>Runs the organisation</th></tr></thead>
 <tbody>
@@ -135,7 +135,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Area observer</td><td>reads everything in their subtree</td></tr>
 </tbody>
 </table></div>
-<h2>Board visibility</h2>
+<h2 id="board-visibility">Board visibility</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Visibility</th><th>Who sees it</th></tr></thead>
 <tbody>
@@ -144,7 +144,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>«Только вписанным»</td><td>those listed by name</td></tr>
 </tbody>
 </table></div>
-<h2>Keys</h2>
+<h2 id="keys">Keys</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Keys</th><th>What it does</th></tr></thead>
 <tbody>
@@ -154,10 +154,11 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>Enter</code></td><td>open a card</td></tr>
 <tr><td><code>E</code></td><td>rename without opening</td></tr>
 <tr><td><code>Escape</code></td><td>close a panel, a menu or the palette</td></tr>
+<tr><td><code>F1</code> or <code>?</code></td><td>help on the screen you are on, in a new tab</td></tr>
 <tr><td>Arrows on a column&#39;s edge</td><td>widen or narrow the column; double-click the edge to reset</td></tr>
 </tbody>
 </table></div>
-<h2>Filters</h2>
+<h2 id="filters">Filters</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Filter</th><th>What it shows</th></tr></thead>
 <tbody>
@@ -172,7 +173,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Iteration</td><td>attached to an iteration; separately, &#34;not in an iteration&#34;</td></tr>
 </tbody>
 </table></div>
-<h2>Blocks with a deadline</h2>
+<h2 id="blocks-with-a-deadline">Blocks with a deadline</h2>
 <p>A block may be given a moment when it lifts itself — «Снимется само» when blocking, «Срок блокировки» on a blocked card. Leave it empty and the block stays until someone lifts it; that is the normal case.</p>
 <ul>
 <li>The deadline is a moment, not a day, shown in your own time zone. A moment in the past is refused: to lift a block now, use «Снять блокировку».</li>
@@ -180,7 +181,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>It appears in the card&#39;s history and in «Изменения» as «блокировка снята сама: вышел срок», without an author, and subscribers receive <code>card.block_expired</code>.</li>
 <li>Less than a day before the deadline, the line under the card becomes bold and dashed. Nothing is mailed: the board is where you see it.</li>
 </ul>
-<h2>Colours</h2>
+<h2 id="colours">Colours</h2>
 <p>One colour, one meaning — so that red still means something on a busy board.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Colour</th><th>Where</th><th>Means</th></tr></thead>
@@ -191,11 +192,11 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>Actions follow the same rule: green adds something, grey removes something that can be brought back, red cannot be undone and always asks first.</p>
-<h2>What is remembered in the browser</h2>
+<h2 id="what-is-remembered-in-the-browser">What is remembered in the browser</h2>
 <p>Theme, density and column widths are personal and stay in the browser where they were set: the board of a colleague does not change, and on another computer you start with the defaults.</p>
-<h2>Groupings</h2>
+<h2 id="groupings">Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority.</p>
-<h2>Labels</h2>
+<h2 id="labels">Labels</h2>
 <p>A label belongs to one place, and that place decides where it can be hung. Every list that offers a label also says where it comes from.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Where it is created</th><th>Where it can be hung</th><th>Who creates and archives it</th></tr></thead>
@@ -212,7 +213,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>An archived label stays on the cards it already marks and still shows there; it can no longer be hung until it is brought back from the archive on «Команда» (Team).</li>
 <li>When a board is handed to another subdivision, or a subdivision is moved in the tree, labels already hung stay on the cards. If one no longer applies there, the card panel says so, and it can still be taken off.</li>
 </ul>
-<h2>Metrics in «Поток» (flow)</h2>
+<h2 id="flow">Metrics in «Поток» (flow)</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
 <tbody>
@@ -225,7 +226,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Discarded</td><td>how much was taken off the board unfinished</td></tr>
 </tbody>
 </table></div>
-<h2>Integration key scopes</h2>
+<h2 id="integration-key-scopes">Integration key scopes</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Scope</th><th>What it opens</th></tr></thead>
 <tbody>
@@ -236,9 +237,9 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>scim:write</code></td><td>provisioning people and groups from a directory (separate key only)</td></tr>
 </tbody>
 </table></div>
-<h2>Subscription events</h2>
+<h2 id="subscription-events">Subscription events</h2>
 <p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
-<h2>Installation settings</h2>
+<h2 id="installation-settings">Installation settings</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
 <tbody>
@@ -255,7 +256,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>STAND</code></td><td><code>staging</code> only for our own test stand of a branch: a strip on every screen and a note of the branch&#39;s commits; event subscriptions are switched off. Cannot be combined with <code>DEMO=on</code>. Off by default</td></tr>
 </tbody>
 </table></div>
-<h2>Subcommands</h2>
+<h2 id="subcommands">Subcommands</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Command</th><th>What it does</th></tr></thead>
 <tbody>
@@ -266,7 +267,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>takt demo</code></td><td>fills an empty database with demo data</td></tr>
 </tbody>
 </table></div>
-<h2>Limits</h2>
+<h2 id="limits">Limits</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>What</th><th>How much</th></tr></thead>
 <tbody>
@@ -277,9 +278,9 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>First paint of the board</td><td>under a second</td></tr>
 </tbody>
 </table></div>
-<h2>The integration API</h2>
+<h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-28-gd2ca236-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-30-gcea8844-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

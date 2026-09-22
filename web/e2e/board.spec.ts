@@ -2430,3 +2430,24 @@ test('имя открывает личные настройки, а язык п�
   await expect(second.getByRole('button', { name: /^Personal settings/ })).toBeVisible()
   await other.close()
 })
+
+// Справка с экрана (ROADMAP 30.3): «Справка» ведёт в раздел про тот
+// экран, где человек сейчас, и страница по этому адресу существует.
+test('справка открывается на разделе текущего экрана', async ({ page, context }) => {
+  await register(page)
+  await createBoard(page, 'Справочная')
+  const help = page.getByRole('link', { name: 'Справка' })
+  await help.hover()
+  await expect(help).toHaveAttribute('href', '/help/ru/howto#board')
+
+  await page.getByRole('button', { name: 'Поток' }).click()
+  await help.hover()
+  await expect(help).toHaveAttribute('href', '/help/ru/reference#flow')
+
+  // F1 — то же самое, в новой вкладке, и раздел на месте.
+  const [tab] = await Promise.all([context.waitForEvent('page'), page.keyboard.press('F1')])
+  await tab.waitForLoadState()
+  expect(new URL(tab.url()).pathname + new URL(tab.url()).hash).toBe('/help/ru/reference#flow')
+  await expect(tab.locator('#flow')).toBeVisible()
+  await expect(tab.getByRole('link', { name: '← Вернуться в Takt' })).toBeVisible()
+})

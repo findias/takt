@@ -43,6 +43,10 @@ export const en: typeof ru = {
     densityLegend: 'Density',
     appearanceHint: 'Theme and density are remembered in this browser: another device can have its own.',
   },
+  help: {
+    button: 'Help',
+    keys: 'Help on this screen — F1 or “?”',
+  },
   stand: {
     bar: (branch: string, version: string) => `Test stand: branch ${branch}, ${version}`,
     open: 'What is on the stand',

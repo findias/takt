@@ -42,6 +42,10 @@ export const ru = {
     densityLegend: 'Плотность',
     appearanceHint: 'Тема и плотность запоминаются в этом браузере: на другом устройстве они могут быть свои.',
   },
+  help: {
+    button: 'Справка',
+    keys: 'Справка по этому экрану — F1 или «?»',
+  },
   stand: {
     bar: (branch: string, version: string) => `Тестовый стенд: ветка ${branch}, ${version}`,
     open: 'Что на стенде',

@@ -20,6 +20,7 @@ One A4 sheet for day one. Labels are quoted from the Russian interface.
 | `Ctrl` + arrows | move a card between columns |
 | `Enter` | open a card |
 | `E` | rename without opening |
+| `F1` | help on this screen |
 
 ## Five actions
 

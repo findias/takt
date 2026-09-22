@@ -35,6 +35,7 @@ var en = map[string]string{
 	"новый пароль совпадает с текущим":                                   "the new password is the same as the current one",
 	"ключом язык не выбирают: это настройка человека":                    "a key cannot choose a language: it is a person's setting",
 	"такого языка нет: выберите ru или en":                               "no such language: choose ru or en",
+	"такой страницы справки нет — начните с /help/":                      "there is no such help page — start at /help/",
 	"у ключа нет сессий: ключ отзывают в разделе «Ключи для интеграций»": "a key has no sessions: revoke the key under “Integration keys”",
 	"Вход через провайдера сейчас недоступен":                            "Signing in through the provider is unavailable right now",
 	"Провайдер не пустил":                                                "The provider refused the sign-in",

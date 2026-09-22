@@ -9,6 +9,7 @@ minutes](quickstart.md) first; the rest will make more sense.
 **The interface is in Russian.** Buttons are quoted the way they appear
 on screen, with a translation next to them.
 
+<!-- anchor: board -->
 ## Working on the board
 
 ### Find a card
@@ -43,6 +44,7 @@ Swimlanes are a slice, not a different board: you cannot drag a card
 between them, because the lane is derived from a property of the card.
 To change the lane, change the property.
 
+<!-- anchor: table -->
 ### Compare cards against each other
 
 Press **«Таблица»** (table) in the board header. Same set of cards as a
@@ -106,6 +108,7 @@ to the usual width.
 The width is remembered in this browser, for you only: a colleague's
 board stays as it was.
 
+<!-- anchor: appearance -->
 ### Switch to the dark theme or a denser board
 
 1. Click your name in the header — it opens **«Личные настройки»**
@@ -117,6 +120,7 @@ board stays as it was.
 The change applies at once. Theme and density are remembered in this
 browser: on another device they can be different.
 
+<!-- anchor: language -->
 ### Switch the interface language
 
 Click your name, **«Язык»** (language) tab, and choose **Русский** or
@@ -125,6 +129,14 @@ Click your name, **«Язык»** (language) tab, and choose **Русский** 
 The choice is stored with your account: the next time you sign in on
 another computer or phone, the interface opens in the same language.
 Until you choose, the language follows the browser.
+
+### Get help on the screen you are on
+
+Press **«Справка»** (help) in the header, `F1` or `?`. Help opens in a
+new tab, at the section about the screen you are on — the board, a card,
+the table, «Поток», the archive, the team or the structure — and in the
+language of the interface. It is this same documentation, built from the
+same version as the application.
 
 ### Change your password or sign out
 
@@ -147,6 +159,7 @@ A part is an ordinary card: it can live on a different board if a
 different team does the work. The parent card grows a "so many of so
 many" bar.
 
+<!-- anchor: archive -->
 ### Take a card off the board
 
 Hover the card, open the **«…»** menu and choose **«В архив»** (to the
@@ -156,6 +169,7 @@ case that was the wrong card.
 Archived cards sit in **«Архив»** and come back from there at any time.
 Deleting for good asks for confirmation and cannot be undone.
 
+<!-- anchor: iterations -->
 ### Run a sprint or a release
 
 1. In the strip above the board press **«+ итерация»** (+ iteration).
@@ -166,6 +180,7 @@ Deleting for good asks for confirmation and cannot be undone.
    iteration contains for good. A report appears: what made it and
    what did not.
 
+<!-- anchor: team -->
 ## The organisation
 
 ### Invite someone
@@ -202,6 +217,7 @@ Pick one of two; they do different things:
 
 If someone left but the work must stay traceable, the first is enough.
 
+<!-- anchor: structure -->
 ### Set up subdivisions
 
 1. The **«Структура»** (structure) tab.

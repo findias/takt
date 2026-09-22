@@ -110,6 +110,11 @@ color:var(--ink-3);font-size:.85rem}
 :where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 `
 
+// Стиль — оформление страниц документации. Справка внутри приложения
+// (internal/help) берёт его же и дописывает своё: две разные таблицы
+// стилей у одного текста разошлись бы на первой правке цвета.
+func Стиль() string { return стиль }
+
 // Ссылка в оглавлении.
 type Пункт struct {
 	Файл string

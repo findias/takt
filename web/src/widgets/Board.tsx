@@ -67,6 +67,8 @@ import { useBoard } from '../features/board/useBoard.ts'
 import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { locale, t, withSections } from '../shared/i18n/index.ts'
+import { useHelpTopic } from '../shared/lib/help.ts'
+import { HelpButton } from '../shared/ui/HelpButton.tsx'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
 // по которому вынесены экраны организации: доска открывается всегда,
@@ -732,6 +734,22 @@ export function Board({
   // По какой итерации открыт отчёт. Закрытая итерация — это утверждение
   // «вот что было сделано», и посмотреть его должно быть можно.
   const [reportOf, setReportOf] = useState<Iteration | null>(null)
+  // Справка с экрана: о чём спрашивают, когда нажимают F1 здесь. Верхнее
+  // из открытого поверх доски — карточка, отчёт, «Поток», архив, — иначе
+  // раскладка: у таблицы свой раздел.
+  useHelpTopic(
+    openCard
+      ? 'card'
+      : reportOf
+        ? 'iterations'
+        : showFlow
+          ? 'flow'
+          : showArchive
+            ? 'archive'
+            : view === 'table'
+              ? 'table'
+              : 'board',
+  )
   // Название хранится вместе с идентификатором, а не берётся из доски:
   // карточку спрашивают удалить и из архива, а там её на доске уже нет.
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null)
@@ -983,6 +1001,7 @@ export function Board({
             <PeopleIcon />
             {visibilityLabel(access)}
           </button>
+          <HelpButton />
           {account}
         </div>
       </header>

@@ -119,31 +119,31 @@ color:var(--ink-3);font-size:.85rem}
 <p>Answers to specific questions. Each one is short and stands on its own — no need to read them in order.</p>
 <p>If this is your first time here, walk through the <a href="quickstart.html">first fifteen minutes</a> first; the rest will make more sense.</p>
 <p><strong>The interface is in Russian.</strong> Buttons are quoted the way they appear on screen, with a translation next to them.</p>
-<h2>Working on the board</h2>
-<h3>Find a card</h3>
+<h2 id="board">Working on the board</h2>
+<h3 id="find-a-card">Find a card</h3>
 <p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
 <p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
-<h3>Filter down to what you need</h3>
+<h3 id="filter-down-to-what-you-need">Filter down to what you need</h3>
 <ol>
 <li>Above the board press «Отбор» (filter) and pick your conditions: assignee, labels, «горит» (urgent), «срок подходит» (due soon), «заблокированные» (blocked), «дольше обещанного» (past the promise), iteration. The button shows how many are on, and next to it you see how many cards are hidden and «Показать все» (show all).</li>
 <li>To share the result, copy the page address — the filter lives in it.</li>
 <li>To come back to a filter later, press <strong>«Сохранить вид»</strong> (save view) and give it a name.</li>
 </ol>
 <p>Labels combine with AND: pick «срочно» and «снаружи» and you get cards carrying both.</p>
-<h3>Slice the board into swimlanes</h3>
+<h3 id="slice-the-board-into-swimlanes">Slice the board into swimlanes</h3>
 <p>In the <strong>«Без группировки»</strong> (no grouping) list, choose what to slice by: assignee, label, iteration or priority.</p>
 <p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
-<h3>Compare cards against each other</h3>
+<h3 id="table">Compare cards against each other</h3>
 <p>Press <strong>«Таблица»</strong> (table) in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
-<h3>Put a label on a card</h3>
+<h3 id="put-a-label-on-a-card">Put a label on a card</h3>
 <ol>
 <li>On the card press «+ метка» (or the coloured dots, if it already carries labels), or open the card and find <strong>«Метки»</strong> (labels) on the <strong>«Работа»</strong> tab.</li>
 <li>Start typing. The list offers the labels that apply on this board; next to each one it says where it comes from — this board, a subdivision, or the whole organisation.</li>
 <li>Pick one, or press <code>Enter</code>.</li>
 </ol>
 <p>To label several cards at once, select them and use the bar that appears at the bottom of the screen.</p>
-<h3>Create a label that does not exist yet</h3>
+<h3 id="create-a-label-that-does-not-exist-yet">Create a label that does not exist yet</h3>
 <p>Right from the card: type the new name into the label picker. Under the list the picker offers where the label should apply:</p>
 <ul>
 <li><strong>this board only</strong> — nobody else will see it offered;</li>
@@ -152,68 +152,70 @@ color:var(--ink-3);font-size:.85rem}
 </ul>
 <p>Pick one and the label is created and hung in one go, with a colour chosen for you. You are only offered the places you are allowed to create labels in: a board you can edit, a subdivision you belong to or run, and the organisation.</p>
 <p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>«Команда»</strong>, in the <strong>«Метки»</strong> section.</p>
-<h3>Block work until a date</h3>
+<h3 id="block-work-until-a-date">Block work until a date</h3>
 <ol>
 <li>Open the card&#39;s <strong>«…»</strong> menu and choose <strong>«Заблокировать…»</strong> (block), or press <strong>«Заблокировать…»</strong> in the card panel.</li>
 <li>Write what you are waiting for.</li>
 <li>If you know when it ends, fill in <strong>«Снимется само (необязательно)»</strong> (lifts itself, optional): a date and a time.</li>
 </ol>
 <p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>«Блокировка истекает»</strong> gathers such cards. To move the deadline, open the card and press <strong>«Перенести срок»</strong>; to lift the block now, press <strong>«Снять блокировку»</strong>.</p>
-<h3>Make a column wider</h3>
+<h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
-<h3>Switch to the dark theme or a denser board</h3>
+<h3 id="appearance">Switch to the dark theme or a denser board</h3>
 <ol>
 <li>Click your name in the header — it opens <strong>«Личные настройки»</strong> (personal settings).</li>
 <li><strong>«Оформление»</strong> (appearance) tab: <strong>«Как в системе»</strong> (as the system), <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark); below them <strong>«Плотнее»</strong> (denser).</li>
 </ol>
 <p>The change applies at once. Theme and density are remembered in this browser: on another device they can be different.</p>
-<h3>Switch the interface language</h3>
+<h3 id="language">Switch the interface language</h3>
 <p>Click your name, <strong>«Язык»</strong> (language) tab, and choose <strong>Русский</strong> or <strong>English</strong>. The page reloads in the chosen language.</p>
 <p>The choice is stored with your account: the next time you sign in on another computer or phone, the interface opens in the same language. Until you choose, the language follows the browser.</p>
-<h3>Change your password or sign out</h3>
+<h3 id="get-help-on-the-screen-you-are-on">Get help on the screen you are on</h3>
+<p>Press <strong>«Справка»</strong> (help) in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, «Поток», the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application.</p>
+<h3 id="change-your-password-or-sign-out">Change your password or sign out</h3>
 <p>Both live behind your name as well. <strong>«Вход»</strong> (sign-in) tab: the current password, the new one, <strong>«Сменить»</strong> (change). Changing the password signs out every other device; to sign them out without changing it, press <strong>«Выйти на всех устройствах»</strong> (sign out on all devices). <strong>«Выйти»</strong> (sign out) is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
-<h3>Split work into parts</h3>
+<h3 id="split-work-into-parts">Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
 <li>In the subtasks section press <strong>«Добавить»</strong> (add).</li>
 <li>Type the name of the part.</li>
 </ol>
 <p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
-<h3>Take a card off the board</h3>
+<h3 id="archive">Take a card off the board</h3>
 <p>Hover the card, open the <strong>«…»</strong> menu and choose <strong>«В архив»</strong> (to the archive). A message appears with a <strong>«Вернуть»</strong> (restore) button, in case that was the wrong card.</p>
 <p>Archived cards sit in <strong>«Архив»</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
-<h3>Run a sprint or a release</h3>
+<h3 id="iterations">Run a sprint or a release</h3>
 <ol>
 <li>In the strip above the board press <strong>«+ итерация»</strong> (+ iteration).</li>
 <li>Set a name, a start and an end, press <strong>«Завести итерацию»</strong>.</li>
 <li>On cards, pick the iteration (<strong>«Работа»</strong> tab).</li>
 <li>When the time is up press <strong>«Закрыть итерацию»</strong> (close the iteration). It asks first, because closing freezes what the iteration contains for good. A report appears: what made it and what did not.</li>
 </ol>
-<h2>The organisation</h2>
-<h3>Invite someone</h3>
+<h2 id="team">The organisation</h2>
+<h3 id="invite-someone">Invite someone</h3>
 <ol>
 <li><strong>«Команда»</strong> tab → <strong>«Пригласить»</strong> section.</li>
 <li>Enter an e-mail, pick a role, press <strong>«Пригласить»</strong>.</li>
 <li>Send the link to the person.</li>
 </ol>
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
-<h3>Close a board to outsiders</h3>
+<h3 id="close-a-board-to-outsiders">Close a board to outsiders</h3>
 <ol>
 <li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
 <li>Choose the visibility: - <strong>«Всей организации»</strong> — everyone in the organisation; - <strong>«Своей команде»</strong> — people in the subdivision that owns it; - <strong>«Только вписанным»</strong> — only those listed by name.</li>
 <li>For the last one, add people to the list.</li>
 </ol>
 <p>Closing a board adds you to it: otherwise your very first action would lock you out.</p>
-<h3>Handle someone leaving</h3>
+<h3 id="handle-someone-leaving">Handle someone leaving</h3>
 <p>Pick one of two; they do different things:</p>
 <ul>
 <li><strong>«Исключить»</strong> (remove) — the person is no longer in the organisation. Their cards, comments and audit entries stay.</li>
 <li><strong>«Удалить данные»</strong> (erase data) — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
 </ul>
 <p>If someone left but the work must stay traceable, the first is enough.</p>
-<h3>Set up subdivisions</h3>
+<h3 id="structure">Set up subdivisions</h3>
 <ol>
 <li>The <strong>«Структура»</strong> (structure) tab.</li>
 <li>Press <strong>«Новое подразделение»</strong> (new subdivision), enter a name.</li>
@@ -221,8 +223,8 @@ color:var(--ink-3);font-size:.85rem}
 <li>Appoint a subdivision administrator in <strong>«Кто за что отвечает»</strong> (who runs what) — they will run their own subtree.</li>
 </ol>
 <p>A removed subdivision is not gone: it waits under <strong>«Убранные подразделения»</strong> (removed subdivisions) and comes back with <strong>«Вернуть»</strong> (restore).</p>
-<h2>Integrations</h2>
-<h3>Issue a key for an integration</h3>
+<h2 id="integrations">Integrations</h2>
+<h3 id="issue-a-key-for-an-integration">Issue a key for an integration</h3>
 <ol>
 <li><strong>«Команда»</strong> tab → <strong>«Ключи для интеграций»</strong> (integration keys).</li>
 <li>State what the key is for and pick its scopes.</li>
@@ -230,36 +232,36 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
 <p><strong>«Отозвать ключ»</strong> (revoke) asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
-<h3>Receive events in your own system</h3>
+<h3 id="receive-events-in-your-own-system">Receive events in your own system</h3>
 <ol>
 <li><strong>«Команда»</strong> tab → <strong>«Подписки на события»</strong> (event subscriptions).</li>
 <li>Enter a name and the receiver&#39;s address, tick the events.</li>
 <li>Press <strong>«Завести»</strong> and keep the signing key — we sign every delivery with it.</li>
 </ol>
 <p>If the receiver goes down for maintenance, press <strong>«Приостановить»</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
-<h3>Work out why an event did not arrive</h3>
+<h3 id="work-out-why-an-event-did-not-arrive">Work out why an event did not arrive</h3>
 <ol>
 <li>On the subscription press <strong>«Доставки»</strong> (deliveries).</li>
 <li>Look at the attempts and the receiver&#39;s response.</li>
 <li>Once the receiver is fixed, press <strong>«Повторить»</strong> (retry) on what did not arrive.</li>
 </ol>
 <p>A retry also re-enables the subscription if we disabled it after a long run of failures.</p>
-<h3>Take all the organisation&#39;s data</h3>
+<h3 id="take-all-the-organisation-s-data">Take all the organisation&#39;s data</h3>
 <p><strong>«Команда»</strong> tab → <strong>«Выгрузка»</strong> (export) → <strong>«Скачать файл»</strong> (download).</p>
 <p>Tick <strong>«Добавить журнал действий»</strong> (include the audit log) if you need it too: the log is usually larger than everything else combined.</p>
-<h2>Installing and operating</h2>
+<h2 id="installing-and-operating">Installing and operating</h2>
 <p>Details are in the <a href="install.html">installation guide</a>.</p>
-<h3>Check that the installation was done right</h3>
+<h3 id="check-that-the-installation-was-done-right">Check that the installation was done right</h3>
 <pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>It answers as a list: right schema, right address, identity provider reachable, database notifications arriving.</p>
-<h3>Upgrade an installation</h3>
+<h3 id="upgrade-an-installation">Upgrade an installation</h3>
 <pre><code>docker load &lt; takt-image.tar.gz
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
-<h3>Close registration</h3>
+<h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-28-gd2ca236-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-30-gcea8844-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

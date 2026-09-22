@@ -119,7 +119,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>What a corporate security review asks for, in one place: what gets installed, what crosses the perimeter, what holds the boundaries, and what is checked automatically. Next to every claim stands the thing that enforces it — a file, a test, a command — so it can be verified instead of believed.</p>
 <p>Two things this page is not. It is <strong>not a certificate</strong>: the product is not a certified information-security tool and does not pretend to be one. And it is <strong>not a review of your installation</strong>: half of what a reviewer cares about — TLS, network segmentation, backups, who can reach the database — is decided by whoever installs it. That half is marked «yours» below rather than quietly claimed.</p>
 <p>Everything here describes the version named in the footer of this page.</p>
-<h2>What gets installed</h2>
+<h2 id="what-gets-installed">What gets installed</h2>
 <p>One process and one PostgreSQL database. No message broker, no cache, no object storage, no agents on other machines.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Artefact</th><th>What it is</th><th>Integrity</th></tr></thead>
@@ -132,7 +132,7 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>The version is compiled into the binary from <code>git describe</code>, not read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. <code>takt version</code> answers even when the database is unreachable; <code>takt doctor</code> prints it first.</p>
-<h2>What crosses the perimeter</h2>
+<h2 id="what-crosses-the-perimeter">What crosses the perimeter</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Direction</th><th>What</th><th>When</th></tr></thead>
 <tbody>
@@ -145,7 +145,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>That is the whole list. The product opens <strong>no other outbound connection</strong>: no telemetry, no update check, no licence server, no crash reporting, no CDN. The client bundle and the documentation are served by the same process from its own files — which is why the installation works in a network with no route to the internet at all, and why the documentation pages carry no external reference either.</p>
 <p>What answers without authentication: <code>GET /healthz</code> and <code>GET /readyz</code> (a status word and nothing else), the static client, and the contract — <code>/api/v1/openapi.json</code> with its page at <code>/api/v1/docs</code>, which describes the server rather than anyone&#39;s data; requiring a key to read how to obtain a key would be a closed circle. Sign-in, invitation lookup and the OIDC callback accept anonymous requests by necessity. Everything else requires a session cookie or a bearer key.</p>
 <p><strong>In the browser.</strong> Every answer — a successful one, a refusal and an unknown address alike — carries a content security policy (<code>default-src &#39;self&#39;</code>, <code>frame-ancestors &#39;none&#39;</code>, <code>object-src &#39;none&#39;</code>, <code>base-uri &#39;none&#39;</code>), <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code>, a same-origin referrer policy, and, where <code>BASE_URL</code> is https, HSTS for a year. The application sets them itself instead of leaving them to your proxy: a promise that holds only where somebody else configured it is not a promise. There is one relaxation and it is written down rather than hidden — <code>style-src</code> allows inline, because four places in the client set a style attribute; the page at <code>/api/v1/docs</code> keeps its own stricter policy.</p>
-<h2>Data</h2>
+<h2 id="data">Data</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Data</th><th>Where</th><th>How long</th></tr></thead>
 <tbody>
@@ -162,7 +162,7 @@ color:var(--ink-3);font-size:.85rem}
 <p><strong>Personal data.</strong> Only what your own people type: a name, a work e-mail, and whatever they write on cards. The installation is yours, the database is yours, and the vendor receives nothing — there is no telemetry channel to receive it through. Under 152-ФЗ that makes you the operator and leaves no processor on our side; under GDPR the same shape means there is no transfer to a third party to legitimise.</p>
 <p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> («Удалить данные» for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
 <p><strong>Retention of the log.</strong> The audit log is never cleaned up automatically. A log kept for a month answers «who granted this access in March?» with silence, and that question is the reason the log exists. If your policy demands a limit, set it on your side of the database.</p>
-<h2>Identity</h2>
+<h2 id="identity">Identity</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Way in</th><th>How it is held</th></tr></thead>
 <tbody>
@@ -176,13 +176,13 @@ color:var(--ink-3);font-size:.85rem}
 <p>Eight characters and no rules about digits or capitals is a deliberate position rather than an oversight: composition rules push people towards <code>Parol123!</code> and towards writing it down, while the thing that actually stops guessing — a limit on attempts — is below. Where your policy demands more, put people behind the corporate provider: then the policy is the provider&#39;s, which is where you can enforce it anyway.</p>
 <p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
 <p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
-<h2>Access control and isolation between organisations</h2>
+<h2 id="access-control-and-isolation-between-organisations">Access control and isolation between organisations</h2>
 <p>Three roles — «Владелец» (owner), «Участник» (member), «Наблюдатель» (viewer) — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
 <p>Isolation between organisations is held by <strong>database policies, not by checks in the code</strong>. Every tenant table has row-level security forced on; the application connects with a role that has no <code>SUPERUSER</code>, no <code>BYPASSRLS</code> and no <code>CREATEDB</code>, and every transaction carries the tenant context. The consequence worth spelling out to a reviewer: even a mistake in the application cannot return another organisation&#39;s row, because the row never leaves the database. The consequence worth spelling out to an administrator: if the application is pointed at a superuser role, policies stop applying and the separation quietly disappears — which is why the installation guide creates the role explicitly and <code>takt doctor</code> checks that the policies really do apply to the role the application connects with, naming the fix when they do not.</p>
-<h2>Audit and logs</h2>
+<h2 id="audit-and-logs">Audit and logs</h2>
 <p>The audit log is written by <strong>database triggers</strong>, not by application code: membership, invitations, subdivisions, board membership, observers, and the creation, deletion and visibility changes of boards. A code path cannot forget to write it, and a policy prevents an actor from signing someone else&#39;s name. It is read by an owner and by an observer of the whole organisation; to anyone else the log looks empty rather than forbidden.</p>
 <p>The application log goes to standard output as JSON, one line per request: method, path, status, milliseconds. No bodies, no headers, no tokens, no names — collect it with whatever your platform already collects stdout with. Health checks are not logged, or the log would be mostly probes.</p>
-<h2>Cryptography</h2>
+<h2 id="cryptography">Cryptography</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Where</th><th>What</th></tr></thead>
 <tbody>
@@ -195,7 +195,7 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>Two things to decide on your side. Over a network, the database connection should be <code>sslmode=verify-full</code> — the example in the installation guide uses <code>disable</code> because it connects over a local socket, and copying that line to a remote database would be a downgrade. And there is <strong>no GOST cryptography</strong> in the product; if your regime requires it, terminate TLS with a proxy that speaks it — the application does not care what terminates it.</p>
-<h2>Supply chain</h2>
+<h2 id="supply-chain">Supply chain</h2>
 <p>The build is a Go binary with <code>CGO_ENABLED=0</code> and <code>-trimpath</code>, plus a client bundle built by Vite; nothing is fetched at run time. Images are published on two bases and two architectures from the same Dockerfile, and the running image is exercised before publication — <code>takt version</code> inside it — because a build that succeeds under emulation still says nothing about starting. A base of your own — Astra Linux, RED OS, your own hardened image — is built from that same Dockerfile on your side: <code>make image RUNTIME_BASE=your-image:tag</code>. It is not added to the release matrix, because publishing an image nobody but its requester installs means scanning and answering for it forever.</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Question</th><th>Answer</th><th>Artefact</th></tr></thead>
@@ -213,9 +213,9 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>Suppressions are explained rather than silent: a <code>gosec</code> exception reads <code>// #nosec G404 -- why</code>, a deliberate SQL concatenation reads <code>// #sql-склейка: why</code>, and a marker without an explanation is not accepted by our own check.</p>
-<h2>Vulnerability handling</h2>
+<h2 id="vulnerability-handling">Vulnerability handling</h2>
 <p>Reports go through GitHub&#39;s private reporting — <strong>Security</strong> → <strong>Report a vulnerability</strong> — and never through a public issue. The timelines are the honest ones rather than the impressive ones: five working days to acknowledge, ten to assess, then a release with an entry in <code>CHANGELOG.md</code>. The supported version is the latest one; there is nobody to backport into older ones. What counts as a vulnerability, and what deliberately does not, is written out in <a href="SECURITY.html"><code>SECURITY.md</code></a> — including the case a scanner report usually rests on: a vulnerability in a dependency we never call.</p>
-<h2>Hardening — the part that is yours</h2>
+<h2 id="hardening-the-part-that-is-yours">Hardening — the part that is yours</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Do this</th><th>Why</th></tr></thead>
 <tbody>
@@ -229,7 +229,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>set <code>SIGNUP=closed</code> where accounts come from the directory</td><td>otherwise the first anonymous visitor can create an organisation</td></tr>
 </tbody>
 </table></div>
-<h2>Threat model</h2>
+<h2 id="threat-model">Threat model</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Threat</th><th>What stops it</th><th>What keeps it stopped</th></tr></thead>
 <tbody>
@@ -248,7 +248,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>an owner acting against their own organisation</td><td>nothing, by definition of the role</td><td>the audit log records it</td></tr>
 </tbody>
 </table></div>
-<h2>What the product does not do</h2>
+<h2 id="what-the-product-does-not-do">What the product does not do</h2>
 <p>Said plainly, because a review that discovers it later reads it as concealment.</p>
 <ul>
 <li><strong>No multi-factor authentication of its own.</strong> With a corporate provider it is the provider&#39;s job, and that is the recommended configuration; with local passwords there is no second factor.</li>
@@ -259,7 +259,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>No SIEM connector.</strong> Logs are JSON on stdout, the audit log is a table and an API with the <code>audit:read</code> scope.</li>
 <li><strong>No certification.</strong> The product is not a certified means of protecting information, and the artefacts above are evidence, not a certificate.</li>
 </ul>
-<h2>Where this maps in your paperwork</h2>
+<h2 id="where-this-maps-in-your-paperwork">Where this maps in your paperwork</h2>
 <p>The mapping names what the product provides. Everything an organisational measure requires — orders, roles, models of threats to *your* system — stays with you; a product cannot supply those, and a table claiming otherwise would be worse than no table.</p>
 <p><strong>Russian regime</strong></p>
 <div class="tablewrap"><table>
@@ -291,7 +291,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>SOC 2 CC7 (operations)</td><td>health probes, drain on shutdown, migration as a pre-upgrade step, <code>takt doctor</code></td></tr>
 </tbody>
 </table></div>
-<h2>Verify it yourself</h2>
+<h2 id="verify-it-yourself">Verify it yourself</h2>
 <p>Nothing here needs to be taken on trust. Everything below runs on a clone of the repository.</p>
 <pre><code>GOOS=linux GOARCH=amd64 make binary   # rebuild the binary of a tag…
 sha256sum bin/takt                    # …and compare with SHA256SUMS
@@ -305,7 +305,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as «all fine».</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.3-28-gd2ca236-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-30-gcea8844-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
