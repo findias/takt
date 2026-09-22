@@ -931,7 +931,25 @@ func (f *filler) imported() error {
 			{Row: 5, Title: f.w("Перенести справочник поставщиков"), Column: work, ExternalID: "OLD-104", Created: ago(24),
 				Assignees: []string{f.email(People[1]), gone}},
 		}}
-	_, err := f.boards.Import(f.ctx, f.orgID, f.owner(), board.ImportTarget{BoardID: boardID}, plan, true)
+	if _, err := f.boards.Import(f.ctx, f.orgID, f.owner(), board.ImportTarget{BoardID: boardID}, plan, true); err != nil {
+		return err
+	}
+	// И одна задача из YouGile — с историей там и репликой (ROADMAP 23.7):
+	// без неё не на чем увидеть блок «До переноса» на вкладке «История».
+	at := func(days int) time.Time { return time.Now().AddDate(0, 0, -days) }
+	yougile := importer.Plan{Source: "yougile", SourceName: "YouGile", Rows: 1, HistoryCollected: true,
+		Cards: []importer.Card{{
+			Row: 1, Title: f.w("Согласовать график поставок"), Column: work, ExternalID: "yg-demo-1",
+			Number: f.w("ЛОГ-12"), Created: ago(40),
+			Assignees: []string{f.email(People[2])},
+			Comments: []importer.Comment{{AuthorName: f.w("Кирилл Лебедев"), At: at(30),
+				Text: f.w("Поставщик просит сдвинуть на неделю")}},
+			History: []importer.Comment{
+				{AuthorName: f.w("Кирилл Лебедев"), At: at(40), Text: f.w("Задача создана в колонке «Нужно сделать»")},
+				{AuthorName: f.w("Кирилл Лебедев"), At: at(35), Text: f.w("Задача перемещена в колонку «В работе»")},
+			},
+		}}}
+	_, err := f.boards.Import(f.ctx, f.orgID, f.owner(), board.ImportTarget{BoardID: boardID}, yougile, true)
 	return err
 }
 

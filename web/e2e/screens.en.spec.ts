@@ -49,6 +49,12 @@ test('английские снимки для документации', async 
   await page.screenshot({ path: `${SHOTS}/36-person-label.png` })
   await page.goto(boardUrl)
 
+  await page.getByRole('group', { name: /Agree the delivery schedule/ }).click()
+  await page.getByRole('tab', { name: 'History' }).click()
+  await page.getByText(/Before the import, in YouGile/).waitFor()
+  await page.screenshot({ path: `${SHOTS}/40-history-before-import.png` })
+  await page.goto(boardUrl)
+
   await page.getByRole('group', { name: /Ship the warehouse release/ }).click()
   await page.getByRole('tab', { name: 'Work' }).click()
   await page.waitForTimeout(400)

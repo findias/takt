@@ -66,7 +66,8 @@ type sticker struct {
 // переносят. Разница одна — чаты: по запросу на задачу, а человек
 // на экране ждёт ответа, поэтому здесь без них, и отчёт это называет.
 func (c *Client) Plan(ctx context.Context, boardID string) (importer.Plan, error) {
-	b, err := c.Board(ctx, boardID, FetchOptions{})
+	// Чаты и историю не ждём: их дотягивают фоном после переноса.
+	b, err := c.Board(ctx, boardID, FetchOptions{Later: true})
 	if err != nil {
 		return importer.Plan{}, err
 	}

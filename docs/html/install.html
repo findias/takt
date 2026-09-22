@@ -346,7 +346,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <pre><code>export YOUGILE_KEY=…                 # or YOUGILE_LOGIN (the password is asked for)
 takt-fetch yougile boards            # which boards there are, with their ids
 takt-fetch yougile fetch --board &lt;id&gt; --out warehouse.takt --collected-by &#34;Anna, warehouse move&#34;</code></pre>
-<p><code>--all</code> takes every board of the company, <code>--no-chats</code> skips task chats (much faster, but discussions do not come), <code>--url</code> points to a boxed YouGile. The key and the password are never written into the package.</p>
+<p><code>--all</code> takes every board of the company, <code>--no-chats</code> skips task chats (much faster, but discussions do not come), <code>--no-history</code> skips the task history (half the requests, but the card&#39;s «before the import» history stays empty), <code>--url</code> points to a boxed YouGile. The key and the password are never written into the package.</p>
 <p>Carried across, the package is imported inside. A package up to 50 MB is imported on the screen (<strong>Boards</strong> → <strong>Import tasks from a spreadsheet…</strong> → <strong>Import package</strong>). A bigger one, or many boards in a row, an administrator imports on the server:</p>
 <pre><code># on an ordinary machine
 sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import /srv/warehouse.takt --as anna@company.test&#39;
@@ -355,7 +355,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.2.3-61-gd882021-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-62-g22bef3f-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

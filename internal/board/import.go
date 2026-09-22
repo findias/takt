@@ -53,6 +53,11 @@ type ImportReport struct {
 	Parts    int `json:"parts"`
 	Links    int `json:"links"`
 	Comments int `json:"comments"`
+	// History — записей истории источника (пакет с историей).
+	History int `json:"history"`
+	// HistoryPending — скольким карточкам доски историю и обсуждение
+	// дотянут фоном после переноса (YouGile по API).
+	HistoryPending int `json:"historyPending"`
 	// Уже перенесённые прежним прогоном — по внешнему ключу.
 	Skipped []ImportSkip `json:"skipped"`
 	// AssignedLater — сколько исполнителей повтор дописал в уже
@@ -493,6 +498,35 @@ func (s *Service) Import(
 	}
 	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, people, &rep); err != nil {
 		return rep, err
+	}
+	// История источника (0065): пакет с историей несёт её сам, и карточки
+	// сразу помечены дотянутыми; без неё — её дотянут фоном (YouGile
+	// по API), и отчёт говорит, скольким карточкам.
+	var imported []string
+	for i, r := range todo {
+		if ids[i] == "" {
+			continue
+		}
+		imported = append(imported, ids[i])
+		if err := writeSourceHistory(ctx, tx, orgID, rep.BoardID, ids[i], r.card.History); err != nil {
+			return rep, err
+		}
+		rep.History += len(r.card.History)
+	}
+	if plan.HistoryCollected && len(imported) > 0 {
+		if _, err := tx.Exec(ctx,
+			`update cards set source_history_at = now() where id = any($1)`, imported); err != nil {
+			return rep, err
+		}
+	}
+	if plan.Source == "yougile" && !plan.HistoryCollected {
+		if err := tx.QueryRow(ctx, `
+			select count(*) from cards
+			 where board_id = $1 and external_source = $2
+			   and source_history_at is null and archived_at is null`,
+			rep.BoardID, plan.Source).Scan(&rep.HistoryPending); err != nil {
+			return rep, err
+		}
 	}
 	labelOf, err := personLabels(ctx, tx, orgID, actorID, rep.BoardID, names, found, absent, &rep)
 	if err != nil {

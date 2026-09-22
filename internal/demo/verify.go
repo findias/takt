@@ -189,6 +189,11 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			`select count(*) >= 1 from labels where org_id = $1 and kind = 'person' and archived_at is null`,
 		},
 		{
+			// История задачи в источнике — блок «До переноса» на карточке.
+			"история задачи из YouGile",
+			`select count(*) >= 1 from card_source_history where org_id = $1`,
+		},
+		{
 			// Без прошлого метрики потока считать не из чего: карточка,
 			// законченная секунду назад, даёт время цикла в ноль дней.
 			// Порог мягче обещанных трёх недель нарочно: проверка ловит

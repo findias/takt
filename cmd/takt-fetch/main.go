@@ -61,6 +61,8 @@ const usage = `takt-fetch — выгрузчик досок в пакет пер
   --board ID           доска; можно несколько раз; --all — все доски компании
   --out ФАЙЛ           куда записать пакет
   --no-chats           без чатов задач: быстрее, но обсуждение не переедет
+  --no-history         без истории задач (системных сообщений чата): вдвое
+                       меньше запросов, но история «до переноса» будет пуста
   --collected-by ТЕКСТ кто собрал и зачем — попадёт в пакет как есть
 `
 
@@ -83,6 +85,7 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	everything := fs.Bool("all", false, "")
 	file := fs.String("out", "", "")
 	noChats := fs.Bool("no-chats", false, "")
+	noHistory := fs.Bool("no-history", false, "")
 	collectedBy := fs.String("collected-by", "", "")
 	if err := fs.Parse(args[2:]); err != nil {
 		return err
@@ -124,6 +127,7 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 		fmt.Fprintf(errOut, "доска %d из %d…\n", i+1, len(boards))
 		b, err := client.Board(ctx, id, yougile.FetchOptions{
 			Chats:    !*noChats,
+			History:  !*noHistory,
 			Progress: func(s string) { fmt.Fprintln(errOut, "  "+s) },
 		})
 		if err != nil {

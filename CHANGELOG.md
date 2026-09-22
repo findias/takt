@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Thirteen migrations, all safe for the running version.** `0052` gives
+**Fourteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -25,7 +25,8 @@ an email a person set for themselves (see the next paragraph), `0062`
 gives labels a kind, so that an import can mark the cards of a person it
 did not find, `0063` adds one-time sign-in links and marks an account
 whose password has not been set yet, `0064` remembers what was chosen
-for each person of an import source. They
+for each person of an import source, `0065` keeps a card's history
+from the system it was imported from. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -178,6 +179,13 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **YouGile history and chats come across.** After an import over the
+  API, task chats and task history are fetched in the background
+  (YouGile allows 50 requests a minute; about half an hour for 800
+  tasks), with progress on the import screen. Replies become the card's
+  discussion, and YouGile's history shows on the card's «История» tab
+  under «До переноса», with its own dates. `takt-fetch` puts the history
+  into the package too (`--no-history` skips it).
 - **A «Tasks» tab.** A person's cards on every board you can see —
   yours by default, anyone's from the list or from «Tasks» next to their
   name under «Команда». A private board you cannot see stays hidden.

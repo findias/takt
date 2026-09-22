@@ -25,7 +25,7 @@ func samplePackage(t *testing.T, ownerEmail string) []byte {
 	t.Helper()
 	done := "done"
 	b := pack.Board{
-		ExternalID: "b-1", Title: "Склад",
+		ExternalID: "b-1", Title: "Склад", HistoryCollected: true,
 		Columns: []pack.Column{{ExternalID: "c-1", Title: "Нужно сделать"}, {ExternalID: "c-2", Title: "Сделано", Kind: &done}},
 		People: []pack.Person{
 			{ExternalID: "u-1", Email: strp(strings.ToUpper(ownerEmail)), Name: "Владелец"},
@@ -37,6 +37,9 @@ func samplePackage(t *testing.T, ownerEmail string) []byte {
 				Comments: []pack.Comment{
 					{Author: strp("u-1"), At: time.Date(2026, 9, 3, 9, 0, 0, 0, time.UTC), Text: "Беру"},
 					{Author: strp("u-2"), At: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC), Text: "Ряд первый сверен"},
+				},
+				History: []pack.Comment{
+					{Author: strp("u-2"), At: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), Text: "Задача создана"},
 				}},
 			{ExternalID: "t-2", Title: "Выгрузить остатки", Column: "c-1", Parent: strp("t-1")},
 			{ExternalID: "t-3", Title: "Отчёт", Column: "c-2", FinishedAt: ptrTime(time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC))},
@@ -139,6 +142,17 @@ func TestPackageMovesInPartsLinksAndDiscussion(t *testing.T) {
 	joined := strings.Join(bodies, " | ")
 	if !strings.Contains(joined, "Беру") || !strings.Contains(joined, "из YouGile: Иван Петров\n\nРяд первый сверен") {
 		t.Fatalf("обсуждение: %q", joined)
+	}
+	// История из пакета — сразу на карточке, и дотягивать её не нужно.
+	var detail2 struct {
+		SourceHistory struct {
+			Pending bool
+			Entries []struct{ Author, Text string }
+		} `json:"sourceHistory"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+done.BoardID+"/cards/"+ids["Сверить остатки"], nil, http.StatusOK), &detail2)
+	if h := detail2.SourceHistory; h.Pending || len(h.Entries) != 1 || h.Entries[0].Author != "Иван Петров" {
+		t.Fatalf("история из пакета: %+v", h)
 	}
 
 	// Повтор: всё уже здесь, связи и реплики не удваиваются.

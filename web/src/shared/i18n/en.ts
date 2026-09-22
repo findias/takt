@@ -883,6 +883,8 @@ export const en: typeof ru = {
     pickCard: 'Pick a card…',
     historyFailed: 'Could not read the history.',
     historyLoading: 'Loading history…',
+    historyBefore: (source: string) => `Before the import, in ${source}`,
+    historyPending: 'The history is still being fetched from the source — look again later.',
   },
   screen: {
     showFlow: 'Show flow',

@@ -82,6 +82,9 @@ type Board struct {
 	Labels     []Label  `json:"labels"`
 	Cards      []Card   `json:"cards"`
 	Lost       []string `json:"lost,omitempty"`
+	// HistoryCollected — выгрузчик собирал историю задач: у карточки без
+	// history её в источнике просто нет, и дотягивать нечего.
+	HistoryCollected bool `json:"historyCollected,omitempty"`
 }
 
 type Column struct {
@@ -120,6 +123,10 @@ type Card struct {
 	Parent      *string    `json:"parent,omitempty"`
 	Links       []Link     `json:"links,omitempty"`
 	Comments    []Comment  `json:"comments,omitempty"`
+	// History — история задачи в источнике: системные сообщения, «кто
+	// что сделал и когда», текстом. Необязательна; есть — карточка
+	// покажет её блоком «до переноса».
+	History []Comment `json:"history,omitempty"`
 }
 
 type Link struct {

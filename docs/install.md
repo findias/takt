@@ -521,7 +521,9 @@ takt-fetch yougile fetch --board <id> --out warehouse.takt --collected-by "Anna,
 ```
 
 `--all` takes every board of the company, `--no-chats` skips task chats
-(much faster, but discussions do not come), `--url` points to a boxed
+(much faster, but discussions do not come), `--no-history` skips the
+task history (half the requests, but the card's «before the import»
+history stays empty), `--url` points to a boxed
 YouGile. The key and the password are never written into the package.
 
 Carried across, the package is imported inside. A package up to 50 MB is

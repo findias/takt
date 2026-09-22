@@ -5,6 +5,7 @@ import { navigate, boardPath } from '../../shared/router/index.ts'
 import { ColumnValues } from './ColumnValues.tsx'
 import { ImportReport } from './ImportReport.tsx'
 import { CreatedPeople, People } from './People.tsx'
+import { HistoryProgress } from './HistoryProgress.tsx'
 
 /**
  * Есть ли что делать переносом. Не только новые карточки: повтор той же
@@ -14,7 +15,11 @@ import { CreatedPeople, People } from './People.tsx'
  */
 export function hasWork(r: Report): boolean {
   return (
-    r.created > 0 || r.assignedLater > 0 || (r.unlabeled ?? 0) > 0 || (r.createdPeople?.length ?? 0) > 0
+    r.created > 0 ||
+    r.assignedLater > 0 ||
+    (r.unlabeled ?? 0) > 0 ||
+    (r.createdPeople?.length ?? 0) > 0 ||
+    (r.historyPending ?? 0) > 0
   )
 }
 
@@ -100,6 +105,7 @@ export function Done({
   return (
     <>
       <ImportReport report={report} boardName={report.boardName} />
+      {report.boardId && (report.historyPending ?? 0) > 0 && <HistoryProgress boardId={report.boardId} />}
       <CreatedPeople report={report} />
       <div className="form-row">
         <button className="primary" onClick={() => report.boardId && navigate(boardPath(report.boardId))}>

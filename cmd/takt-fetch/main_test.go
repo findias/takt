@@ -73,10 +73,17 @@ func fakeYougile(t *testing.T) *httptest.Server {
 		case "tasks/t-3":
 			_ = json.NewEncoder(w).Encode(map[string]any{"id": "t-3", "title": "Часть без колонки"})
 		case "chats/t-1/messages":
-			page(map[string]any{"id": 1757000000000, "fromUserId": "u-2", "text": "Ряд первый сверен"},
+			human := []any{map[string]any{"id": 1757000000000, "fromUserId": "u-2", "text": "Ряд первый сверен"},
 				map[string]any{"id": 1757000060000, "fromUserId": "u-1", "textHtml": "<p>Принято</p>"},
 				map[string]any{"id": 1757000120000, "fromUserId": "u-1", "text": ""},
-				map[string]any{"id": 1757000180000, "fromUserId": "u-1", "text": "стёрто", "deleted": true})
+				map[string]any{"id": 1757000180000, "fromUserId": "u-1", "text": "стёрто", "deleted": true}}
+			// С includeSystem чат отдаёт и системные сообщения — историю
+			// задачи; отличить их можно только сравнением двух выборок.
+			if r.URL.Query().Get("includeSystem") == "true" {
+				human = append([]any{map[string]any{"id": 1756999000000, "fromUserId": "u-1",
+					"text": "Анна переместила задачу в колонку «Готово»"}}, human...)
+			}
+			page(human...)
 		default:
 			if strings.HasPrefix(path, "chats/") {
 				page()
@@ -154,6 +161,13 @@ func TestFetchWritesAPackageTaktReads(t *testing.T) {
 		if c.Parent != "t-1" || c.Column != "Нужно сделать" {
 			t.Fatalf("%s: родитель %q, колонка %q", title, c.Parent, c.Column)
 		}
+	}
+	if len(parent.History) != 1 || parent.History[0].Text != "Анна переместила задачу в колонку «Готово»" ||
+		parent.History[0].AuthorName != "Анна" {
+		t.Fatalf("история задачи — системным сообщением, не репликой: %+v", parent.History)
+	}
+	if !plan.HistoryCollected {
+		t.Fatal("пакет не говорит, что история собрана")
 	}
 	if !strings.Contains(strings.Join(plan.Lost, " | "), "вложения): 1") {
 		t.Fatalf("вложение не названо: %q", plan.Lost)

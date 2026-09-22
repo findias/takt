@@ -57,6 +57,16 @@ export const importApi = {
     apply: boolean
   }) =>
     request<{ report: ImportReport }>('POST', '/api/import/yougile', body, false, IMPORT_TIMEOUT_MS),
+  /** Ход дотягивания истории YouGile по доске; 404 — задания нет. */
+  yougileHistory: (boardId: string) =>
+    request<{
+      total: number
+      done: number
+      comments: number
+      history: number
+      finished: boolean
+      failed?: string
+    }>('GET', `/api/import/yougile/history/${boardId}`),
   /** Пакет переноса (docs/import-package.md): файл base64, доска с единицы. */
   importPackage: (body: {
     file: string

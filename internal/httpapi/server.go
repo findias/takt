@@ -50,6 +50,9 @@ type Server struct {
 	// принимать новые запросы, хотя текущие ещё дорабатывает.
 	draining atomic.Bool
 	log      *slog.Logger
+	// histories — дотягивание истории YouGile фоном, по доске
+	// (import_history.go).
+	histories historyJobs
 }
 
 func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub) *Server {

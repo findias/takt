@@ -12,11 +12,16 @@ package demo
 // (TestEnglishSandboxHasNoRussian).
 var english = map[string]string{
 	// Перенесённое из прежней системы.
-	"Сверить остатки за июль":          "Reconcile July stock",
-	"Продлить договор с перевозчиком":  "Renew the carrier contract",
-	"Описать упаковку для хрупкого":    "Specify packaging for fragile goods",
-	"Перенести справочник поставщиков": "Move the supplier directory",
-	"Кирилл Лебедев":                   "Kirill Lebedev",
+	"Сверить остатки за июль":                  "Reconcile July stock",
+	"Продлить договор с перевозчиком":          "Renew the carrier contract",
+	"Описать упаковку для хрупкого":            "Specify packaging for fragile goods",
+	"Перенести справочник поставщиков":         "Move the supplier directory",
+	"Кирилл Лебедев":                           "Kirill Lebedev",
+	"ЛОГ-12":                                   "LOG-12",
+	"Согласовать график поставок":              "Agree the delivery schedule",
+	"Поставщик просит сдвинуть на неделю":      "The supplier asks to move it by a week",
+	"Задача создана в колонке «Нужно сделать»": "Task created in the column “To do”",
+	"Задача перемещена в колонку «В работе»":   "Task moved to the column “In progress”",
 
 	// Люди, организация, служебное.
 	"Анна Королёва":        "Anna Clarke",

@@ -24,6 +24,8 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 		SourceName:  Systems[p.Manifest.Source.System],
 		Rows:        len(b.Cards),
 		ColumnKinds: map[string]string{},
+		// История собрана выгрузчиком — дотягивать её потом не нужно.
+		HistoryCollected: b.HistoryCollected,
 	}
 	plan.Lost = append(append(plan.Lost, p.Manifest.Lost...), b.Lost...)
 
@@ -134,24 +136,8 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 				card.Links = append(card.Links, importer.Link{Kind: l.Kind, To: l.To})
 			}
 		}
-		for _, cm := range c.Comments {
-			text := strings.TrimSpace(cm.Text)
-			if text == "" {
-				continue
-			}
-			comment := importer.Comment{At: cm.At, Text: text}
-			if cm.Author != nil {
-				if person, ok := people[*cm.Author]; ok {
-					comment.AuthorName = person.Name
-					comment.AuthorKey = "source:" + person.ExternalID
-					if person.Email != nil && strings.TrimSpace(*person.Email) != "" {
-						comment.AuthorEmail = strings.ToLower(strings.TrimSpace(*person.Email))
-						comment.AuthorKey = comment.AuthorEmail
-					}
-				}
-			}
-			card.Comments = append(card.Comments, comment)
-		}
+		card.Comments = comments(c.Comments, people)
+		card.History = comments(c.History, people)
 		plan.Cards = append(plan.Cards, card)
 	}
 	return plan, nil
@@ -181,6 +167,31 @@ func parentsWithoutCycles(cards []Card) map[string]string {
 		if at != child {
 			out[child] = p
 		}
+	}
+	return out
+}
+
+// comments — реплики или записи истории пакета в промежуточной модели:
+// автор называется по имени и ищется по почте или ключу источника.
+func comments(list []Comment, people map[string]Person) []importer.Comment {
+	var out []importer.Comment
+	for _, cm := range list {
+		text := strings.TrimSpace(cm.Text)
+		if text == "" {
+			continue
+		}
+		comment := importer.Comment{At: cm.At, Text: text}
+		if cm.Author != nil {
+			if person, ok := people[*cm.Author]; ok {
+				comment.AuthorName = person.Name
+				comment.AuthorKey = "source:" + person.ExternalID
+				if person.Email != nil && strings.TrimSpace(*person.Email) != "" {
+					comment.AuthorEmail = strings.ToLower(strings.TrimSpace(*person.Email))
+					comment.AuthorKey = comment.AuthorEmail
+				}
+			}
+		}
+		out = append(out, comment)
 	}
 	return out
 }

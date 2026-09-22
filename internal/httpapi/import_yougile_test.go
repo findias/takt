@@ -41,6 +41,7 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 	t.Helper()
 	f := &fakeYougile{}
 	ms := func(d time.Duration) int64 { return time.Now().Add(-d).UnixMilli() }
+	chatAt := ms(19 * 24 * time.Hour)
 	tasks := map[string][]map[string]any{
 		"c-todo": {
 			{"id": "t-1", "title": "Сверить остатки", "columnId": "c-todo", "timestamp": ms(20 * 24 * time.Hour),
@@ -130,6 +131,17 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 				map[string]any{"id": "s-area", "name": "Участок", "states": []map[string]any{{"id": "st-wh", "name": "Склад"}}})
 		case "tasks":
 			list(tasks[r.URL.Query().Get("columnId")]...)
+		case "chats/t-1/messages":
+			// Реплика человека и — только с includeSystem — системное
+			// сообщение: история задачи в YouGile.
+			// Номер сообщения — его время; у YouGile он постоянный, и
+			// выборки сравниваются по нему.
+			items := []map[string]any{{"id": chatAt, "fromUserId": "u-2", "text": "Начал сверку"}}
+			if r.URL.Query().Get("includeSystem") == "true" {
+				items = append(items, map[string]any{"id": chatAt + 60_000, "fromUserId": "u-1",
+					"text": "Задача перемещена в колонку «Нужно сделать»"})
+			}
+			list(items...)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -207,9 +219,10 @@ func TestYougileBoardMovesInWithWhatItLoses(t *testing.T) {
 	if preview == nil || preview.Applied || preview.Created != 2 {
 		t.Fatalf("предпросмотр: %+v", preview)
 	}
-	// Названо то, что не едет: архив, подзадачи, чат и файлы.
+	// Названо то, что не едет: архив, файлы, учёт времени; чаты — нет:
+	// их дотягивают фоном после переноса.
 	lost := strings.Join(preview.Lost, " | ")
-	for _, want := range []string{"архива YouGile: 1", "чаты задач", "учёт времени", "YouGile не отдал: 1"} {
+	for _, want := range []string{"архива YouGile: 1", "учёт времени", "YouGile не отдал: 1"} {
 		if !strings.Contains(lost, want) {
 			t.Fatalf("потери не названы (%q): %q", want, lost)
 		}
@@ -322,5 +335,73 @@ func TestYougileOddAnswerIsNamed(t *testing.T) {
 		map[string]any{"key": ygKey, "board": ygBoard, "newBoardName": "Склад"}, http.StatusBadGateway)
 	if field(t, raw, "code") != "yougile_failed" || !strings.Contains(string(raw), "500") {
 		t.Fatalf("неожиданный ответ YouGile: %s", raw)
+	}
+}
+
+// История и обсуждение YouGile дотягиваются фоном после переноса по API
+// (ROADMAP 23.7): реплика — в обсуждение, системное сообщение —
+// в историю «до переноса»; повтор той же доски ничего не дотягивает
+// заново.
+func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
+	fake := newFakeYougile(t)
+	a := newAPIWith(t, func(c *config.Config) { c.YougileURL = fake.URL })
+	owner := a.registerOrg("История YouGile")
+	fake.owner = owner.email
+
+	body := map[string]any{"key": ygKey, "board": ygBoard, "newBoardName": "Склад", "apply": true}
+	raw := owner.mustDo("POST", "/api/import/yougile", body, http.StatusOK)
+	boardID, _ := field(t, raw, "report", "boardId").(string)
+	if pending, _ := field(t, raw, "report", "historyPending").(float64); pending != 2 {
+		t.Fatalf("карточек ждут истории: %v", pending)
+	}
+
+	var job struct {
+		Total, Done, Comments, History int
+		Finished                       bool
+		Failed                         string
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		_ = json.Unmarshal(owner.mustDo("GET", "/api/import/yougile/history/"+boardID, nil, http.StatusOK), &job)
+		if job.Finished || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if !job.Finished || job.Failed != "" || job.Done != 2 || job.Comments != 1 || job.History != 1 {
+		t.Fatalf("задание: %+v", job)
+	}
+
+	var snap struct {
+		Cards []struct{ ID, Title string } `json:"cards"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap)
+	for _, c := range snap.Cards {
+		if c.Title != "Сверить остатки" {
+			continue
+		}
+		var detail struct {
+			Comments      int `json:"comments"`
+			SourceHistory struct {
+				Source  string
+				Pending bool
+				Entries []struct{ Author, Text string }
+			} `json:"sourceHistory"`
+		}
+		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID+"/cards/"+c.ID, nil, http.StatusOK), &detail)
+		h := detail.SourceHistory
+		if h.Source != "yougile" || h.Pending || len(h.Entries) != 1 ||
+			h.Entries[0].Text != "Задача перемещена в колонку «Нужно сделать»" || detail.Comments != 1 {
+			t.Fatalf("история карточки: %+v, реплик %d", h, detail.Comments)
+		}
+	}
+
+	// Повтор: всё уже дотянуто.
+	delete(body, "newBoardName")
+	body["boardId"] = boardID
+	body["apply"] = false
+	raw = owner.mustDo("POST", "/api/import/yougile", body, http.StatusOK)
+	if pending, _ := field(t, raw, "report", "historyPending").(float64); pending != 0 {
+		t.Fatalf("после дотягивания ждут истории ещё %v", pending)
 	}
 }

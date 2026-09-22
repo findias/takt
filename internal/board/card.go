@@ -33,6 +33,9 @@ type CardDetail struct {
 	// подзадачей она сама является. Названия связанных карточек сюда
 	// не едут — за ними идут этим же вызовом, по одной.
 	Links []Link `json:"links"`
+	// SourceHistory — история задачи там, откуда карточку перенесли
+	// (0065); у заведённой здесь и перенесённой из таблицы — пусто.
+	SourceHistory *SourceHistory `json:"sourceHistory,omitempty"`
 }
 
 // Card читает карточку доски. Недоступная доска и несуществующая
@@ -52,6 +55,9 @@ func (s *Service) Card(ctx context.Context, orgID, userID, boardID, cardID strin
 			return err
 		}
 		out.Card = card
+		if out.SourceHistory, err = readSourceHistory(ctx, tx, cardID); err != nil {
+			return err
+		}
 
 		if err := tx.QueryRow(ctx, `
 			select count(*) from card_comments where card_id = $1`, cardID).

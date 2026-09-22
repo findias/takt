@@ -424,6 +424,14 @@ export type ImportRequest = {
   apply: boolean
 }
 
+/** История задачи там, откуда карточку перенесли (ROADMAP 23.7). */
+export type SourceHistory = {
+  source: string
+  entries: { at: string; author: string; text: string }[]
+  /** Историю ещё дотягивают фоном или не успели дотянуть. */
+  pending: boolean
+}
+
 /** Карточка в списке задач человека (вкладка «Задачи»). */
 export type Task = {
   id: string
@@ -490,6 +498,10 @@ export type ImportReport = {
   /** Почта, которой нет в организации, или имя человека без почты. */
   /** `label` — метка человека, которую получат его карточки. */
   missingPeople: { email: string; name?: string; cards: number; label?: string }[]
+  /** Записей истории источника (пакет с историей) и скольким карточкам
+   *  историю дотянут фоном (YouGile по API). */
+  history?: number
+  historyPending?: number
   /** Люди источника и что с каждым будет (ROADMAP 23.6). `?` — старый
    *  сервер полей не знает. */
   people?: ImportPerson[]
@@ -1011,6 +1023,12 @@ export const api = {
   team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
   invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),
   revokeInvite: (id: string) => request<void>('DELETE', `/api/invites/${id}`),
+  /** История источника у карточки: приходит в полных данных карточки,
+   *  остальное оттуда панели не нужно — у неё есть снимок доски. */
+  sourceHistory: (boardId: string, cardId: string) =>
+    request<{ sourceHistory?: SourceHistory }>('GET', `/api/boards/${boardId}/cards/${cardId}`).then(
+      (r) => r.sourceHistory ?? null,
+    ),
   /** Задачи человека со всех досок, которые видит спрашивающий;
    *  без user — свои. */
   tasks: (user?: string, withDone?: boolean) =>

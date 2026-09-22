@@ -373,10 +373,20 @@ due date; the created and finished dates; stickers as labels named
 become the card's priority; checklists at the end of the description.
 Subtasks become parts of their card, including those that sit in no
 column (they go to the parent's column). What does not come, the
-preview lists under **Not imported**: tasks in YouGile's archive, task
-chats (an import package carries them), files, access rights and time
-tracking. Importing the same board again skips what
-has already come.
+preview lists under **Not imported**: tasks in YouGile's archive,
+files, access rights and time tracking. Importing the same board again
+skips what has already come.
+
+Task chats and task history come after the cards, in the background:
+YouGile answers at most 50 requests a minute and each task takes two,
+so a board of 800 tasks takes about half an hour. The preview says how
+long; after the import the screen shows how far it has got, and you
+can leave it — the work runs on the server. Replies become the card's
+discussion; YouGile's history (who moved the task, who was assigned)
+appears on the card's **History** tab under **Before the import, in
+YouGile**, with its own dates and authors, apart from what happened
+here. If the server restarts midway, import the same board into the
+same board again: it picks up the cards still waiting.
 
 The server has to reach YouGile. In a closed network it cannot: export
 a table in YouGile (Reports → Tables) and import it as a spreadsheet.

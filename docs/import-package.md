@@ -127,8 +127,14 @@ named in the report.
 preview shows it and a person can send any column to another one on an
 existing board, exactly as for a spreadsheet.
 
+A board with `"historyCollected": true` says the exporter collected
+task history: a card without `history` simply had none, and nothing is
+fetched later.
+
 **People** are matched by e-mail against the organisation, case
-insensitively, and nobody is created on the way. `email` is `null`
+insensitively; in the preview the owner can match anyone with a
+member, create an account or leave them out, and nobody is created
+without that choice. `email` is `null`
 when the source did not give it — Trello gives members' e-mails only to
 a workspace administrator, so a package collected by anyone else has
 no e-mails, and `takt-fetch` says so before it starts. A person without
@@ -156,6 +162,7 @@ name that already applies to the board is reused.
 | `parent` | no | the `externalId` of the parent card: the card becomes its part (subtask) |
 | `links` | no | `blocks` or `relates`, to a card `externalId` of this board |
 | `comments` | no | in time order; `author` is a person `externalId` or `null` |
+| `history` | no | the task's history in the source — who did what and when — in time order, the same shape as `comments`. The card shows it under «before the import», apart from its history here |
 
 The key of a second import is `source.system` with the card's
 `externalId`. For YouGile it is the same key as import over the API

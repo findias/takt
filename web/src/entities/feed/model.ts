@@ -292,5 +292,10 @@ const SOURCE_NAMES: Record<string, string> = {
 }
 
 function importedFrom(source: string): string {
-  return source === 'table' ? t.feed.fromTable : t.feed.fromSource(SOURCE_NAMES[source] ?? source)
+  return source === 'table' ? t.feed.fromTable : t.feed.fromSource(sourceName(source))
+}
+
+/** Имя системы, откуда перенесли: код источника — «YouGile». */
+export function sourceName(source: string): string {
+  return SOURCE_NAMES[source] ?? source
 }

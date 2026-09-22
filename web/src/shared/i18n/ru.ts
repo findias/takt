@@ -889,6 +889,8 @@ export const ru = {
     pickCard: 'Выбрать карточку…',
     historyFailed: 'Историю не удалось прочитать.',
     historyLoading: 'Загружаем историю…',
+    historyBefore: (source: string) => `До переноса, в ${source}`,
+    historyPending: 'Историю ещё дотягивают из источника — загляните позже.',
   },
   screen: {
     showFlow: 'Показать поток',

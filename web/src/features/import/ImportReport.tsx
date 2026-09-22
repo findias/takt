@@ -72,6 +72,12 @@ export function ImportReport({
       )}
 
       {report.assignedLater > 0 && <p>{s.assignedLater(report.assignedLater)}</p>}
+      {/* История и обсуждение YouGile — фоном после переноса: по два
+          запроса на задачу при пределе YouGile в 50 в минуту. */}
+      {!report.applied && (report.historyPending ?? 0) > 0 && (
+        <p>{s.historyLater(report.historyPending ?? 0)}</p>
+      )}
+      {(report.history ?? 0) > 0 && <p>{s.historyCarried(report.history ?? 0)}</p>}
       {(report.unlabeled ?? 0) > 0 && <p>{s.unlabeled(report.unlabeled ?? 0)}</p>}
       {report.skipped.length > 0 && (
         <p>

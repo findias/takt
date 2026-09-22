@@ -2650,10 +2650,12 @@ test('доска YouGile переезжает по API и называет, чт
   await page.getByLabel('Доска YouGile').selectOption({ label: 'Логистика · Склад' })
   await expect(page.getByText('Переедут 3 карточки из 3 строк.')).toBeVisible()
   await expect(page.getByText('задачи из архива YouGile: 1')).toBeVisible()
-  await expect(page.getByText(/чаты задач — собраны без них/)).toBeVisible()
+  // Чаты и история — не потеря: их дотянут фоном после переноса.
+  await expect(page.getByText(/История и обсуждение из YouGile дотянутся фоном/)).toBeVisible()
   await expect(page.getByRole('combobox', { name: /^Что сделать: .+/ }).first()).toBeVisible()
   await expect(page.getByText(/nikto@yougile\.test · 1 карточка/)).toBeVisible()
   await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
+  await expect(page.getByText(/История и обсуждение дотянуты/)).toBeVisible({ timeout: 15000 })
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'В работе', 'Заказать поддоны')).toBeVisible()
   await expect(cardIn(page, 'Нужно сделать', 'Сверить остатки')).toBeVisible()

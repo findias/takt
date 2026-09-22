@@ -16,8 +16,9 @@ import type {
   BoardLabel,
   LinkKind,
   Priority,
+  SourceHistory,
 } from '../../shared/api/index.ts'
-import { actorText, eventText, timeText } from '../../entities/feed/model.ts'
+import { actorText, eventText, sourceName, timeText } from '../../entities/feed/model.ts'
 import { Discussion } from './Discussion.tsx'
 import type { BaseState } from '../../entities/board/model.ts'
 import {
@@ -1352,6 +1353,7 @@ function History({
 }) {
   const [events, setEvents] = useState<BoardEvent[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [before, setBefore] = useState<SourceHistory | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -1359,6 +1361,12 @@ function History({
       .boardEvents(boardId, cardId)
       .then((feed) => alive && setEvents(feed.events))
       .catch(() => alive && setFailed(true))
+    // История там, откуда карточку перенесли, — своим запросом: у карточки,
+    // заведённой здесь, её нет, и отказ не мешает показать нашу.
+    api
+      .sourceHistory(boardId, cardId)
+      .then((h) => alive && setBefore(h))
+      .catch(() => alive && setBefore(null))
     return () => {
       alive = false
     }
@@ -1380,6 +1388,26 @@ function History({
           </li>
         ))}
       </ul>
+      {/* До переноса — отдельным блоком и по времени событий: это рассказ
+          о том, что было там, и смешивать его с нашим журналом значило бы
+          выдать чужие действия за сделанные здесь (ROADMAP 23.7). */}
+      {before && (before.entries.length > 0 || before.pending) && (
+        <>
+          <h3 className="section-title">{t.panel.historyBefore(sourceName(before.source))}</h3>
+          {before.pending && <p className="muted small">{t.panel.historyPending}</p>}
+          <ul className="feed">
+            {before.entries.map((e, i) => (
+              <li key={i}>
+                <span>{e.text}</span>
+                <span className="muted small">
+                  {e.author ? `${e.author} · ` : ''}
+                  {timeText(e.at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   )
 }

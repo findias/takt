@@ -94,6 +94,8 @@ type Card struct {
 	Parent   string
 	Links    []Link
 	Comments []Comment
+	// History — история задачи в источнике (системные сообщения), текстом.
+	History []Comment
 	// Unmatched — исполнители, у которых источник не дал почты: найти
 	// их нельзя, но назвать в отчёте нужно.
 	Unmatched []Unmatched
@@ -168,4 +170,7 @@ type Plan struct {
 	// не найденного по почте называют на карточке по имени, а почту
 	// таблица даёт без имени — тогда меткой служит сама почта.
 	Names map[string]string
+	// HistoryCollected — история задач собрана вместе с планом (пакет
+	// с историей): дотягивать её потом не нужно, даже пустую.
+	HistoryCollected bool
 }

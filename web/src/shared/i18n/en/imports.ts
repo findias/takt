@@ -135,6 +135,16 @@ export const imports: typeof ru = {
   applying: 'Importing…',
   nothing: 'Nothing to import',
   update: 'Update the imported cards',
+  historyLater: (n: number) =>
+    `History and discussion from YouGile will be fetched in the background after the import: ${cards(n)}. YouGile answers at most 50 times a minute, so this takes about ${Math.max(1, Math.ceil((n * 2) / 50))} min.`,
+  historyCarried: (n: number) => `History entries from the source: ${n}.`,
+  historyProgress: (done: number, total: number) => `Fetching history and discussion from YouGile: ${done} of ${total}.`,
+  historyDone: (comments: number, history: number) =>
+    `History and discussion fetched: ${comments} replies, ${history} history entries.`,
+  historyFailed: (reason: string) =>
+    `Fetching stopped: ${reason}. Import the same board again into the same board — it picks up where it stopped.`,
+  historyAway:
+    'You can leave this page: the work runs on the server, and the history appears on the cards’ «History» tab as it arrives. If the server restarts, import the board again — it picks up where it stopped.',
   open: 'Open the board',
   another: 'Import another file',
   failed: 'Could not import',

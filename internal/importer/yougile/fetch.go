@@ -5,12 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/findias/takt/internal/importer/pack"
 )
@@ -38,6 +36,12 @@ type FetchOptions struct {
 	// Chats — забирать ли чаты задач. Без них быстрее вдвое и больше:
 	// запрос на задачу.
 	Chats bool
+	// History — забирать ли историю задачи (системные сообщения чата):
+	// ещё запрос на задачу.
+	History bool
+	// Later — чаты и историю дотянут потом (перенос по API на экране,
+	// ROADMAP 23.7): о них не говорить как о непереносимом.
+	Later bool
 	// Progress — строка о ходе дела для человека; nil — молча.
 	Progress func(string)
 }
@@ -62,7 +66,7 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 	if title == "" {
 		return pack.Board{}, ErrNotFound
 	}
-	out := pack.Board{ExternalID: boardID, Title: title}
+	out := pack.Board{ExternalID: boardID, Title: title, HistoryCollected: opt.History}
 
 	type column struct {
 		ID      string `json:"id"`
@@ -86,26 +90,14 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		return pack.Board{}, ErrNotFound
 	}
 
-	type user struct {
-		ID       string `json:"id"`
-		Email    string `json:"email"`
-		RealName string `json:"realName"`
-	}
-	users, err := all[user](ctx, c, "users", nil)
+	people, err := c.People(ctx)
 	if err != nil {
 		return pack.Board{}, err
 	}
 	known := map[string]bool{}
-	for _, u := range users {
-		p := pack.Person{ExternalID: u.ID, Name: strings.TrimSpace(u.RealName)}
-		if e := strings.TrimSpace(u.Email); e != "" {
-			p.Email = &e
-		}
-		if p.Name == "" && p.Email != nil {
-			p.Name = *p.Email
-		}
+	for _, p := range people {
 		out.People = append(out.People, p)
-		known[u.ID] = true
+		known[p.ExternalID] = true
 	}
 
 	labelNames, priority, err := c.stickers(ctx)
@@ -220,44 +212,19 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 			}
 		}
 		sort.Strings(card.Labels)
-		if opt.Chats {
+		if opt.Chats || opt.History {
 			if (i+1)%25 == 0 {
 				progress("чаты: %d из %d задач", i+1, len(tasks))
 			}
-			msgs, err := all[message](ctx, c, "chats/"+url.PathEscape(t.ID)+"/messages", nil)
-			if err != nil && !errors.Is(err, ErrNotFound) {
+			chat, err := c.TaskChat(ctx, t.ID, known, opt.History)
+			if err != nil {
 				return pack.Board{}, err
 			}
-			for _, m := range msgs {
-				if m.Deleted {
-					continue
-				}
-				text := strings.TrimSpace(m.Text)
-				if text == "" && m.TextHTML != "" {
-					text = strings.TrimSpace(html.UnescapeString(tags.ReplaceAllString(breaks.ReplaceAllString(m.TextHTML, "\n"), "")))
-				}
-				if text == "" {
-					// Сообщение без текста — вложение: файлы в пакет не едут.
-					files++
-					continue
-				}
-				at := m.Timestamp
-				if at == 0 {
-					at = m.ID // у YouGile номер сообщения — его время в миллисекундах
-				}
-				comment := pack.Comment{Text: text}
-				if when := millis(at); when != nil {
-					comment.At = *when
-				} else {
-					comment.At = time.Now().UTC()
-				}
-				if known[m.FromUserID] {
-					author := m.FromUserID
-					comment.Author = &author
-				}
-				card.Comments = append(card.Comments, comment)
+			files += chat.Files
+			if opt.Chats {
+				card.Comments = chat.Comments
 			}
-			sort.SliceStable(card.Comments, func(a, b int) bool { return card.Comments[a].At.Before(card.Comments[b].At) })
+			card.History = chat.History
 		}
 		out.Cards = append(out.Cards, card)
 	}
@@ -271,9 +238,35 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 	if files > 0 {
 		out.Lost = append(out.Lost, fmt.Sprintf("сообщения чатов без текста (вложения): %d", files))
 	}
-	if !opt.Chats {
+	if !opt.Chats && !opt.Later {
 		out.Lost = append(out.Lost, "чаты задач — собраны без них: чаты переносит пакет переноса")
 	}
 	out.Lost = append(out.Lost, "файлы, права доступа и учёт времени — их в карточке нет")
+	return out, nil
+}
+
+// People — сотрудники компании YouGile в виде людей пакета: имя, почта,
+// если YouGile её отдал.
+func (c *Client) People(ctx context.Context) ([]pack.Person, error) {
+	type user struct {
+		ID       string `json:"id"`
+		Email    string `json:"email"`
+		RealName string `json:"realName"`
+	}
+	users, err := all[user](ctx, c, "users", nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]pack.Person, 0, len(users))
+	for _, u := range users {
+		p := pack.Person{ExternalID: u.ID, Name: strings.TrimSpace(u.RealName)}
+		if e := strings.TrimSpace(u.Email); e != "" {
+			p.Email = &e
+		}
+		if p.Name == "" && p.Email != nil {
+			p.Name = *p.Email
+		}
+		out = append(out, p)
+	}
 	return out, nil
 }

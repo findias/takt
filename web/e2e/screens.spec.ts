@@ -111,6 +111,13 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/36-метка-человека.png` })
   await page.goto(boardUrl)
 
+  // История задачи в YouGile — блоком «До переноса» (ROADMAP 23.7).
+  await page.getByRole('group', { name: /Согласовать график поставок/ }).click()
+  await page.getByRole('tab', { name: 'История' }).click()
+  await page.getByText(/До переноса, в YouGile/).waitFor()
+  await page.screenshot({ path: `${SHOTS}/40-история-до-переноса.png` })
+  await page.goto(boardUrl)
+
   // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
   // сказать об этом, а не притворяться пустыми.
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()

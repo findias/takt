@@ -24,6 +24,7 @@ func (s *Server) registerYougileRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/import/yougile/key", s.authed(s.handleYougileKey))
 	mux.HandleFunc("POST /api/import/yougile/boards", s.authed(s.handleYougileBoards))
 	mux.HandleFunc("POST /api/import/yougile", s.authed(s.handleYougileImport))
+	mux.HandleFunc("GET /api/import/yougile/history/{boardId}", s.authed(s.handleHistoryProgress))
 }
 
 type yougileRequest struct {
@@ -165,6 +166,11 @@ func (s *Server) handleYougileImport(w http.ResponseWriter, r *http.Request, p a
 	}, req.Apply)
 	if !ok {
 		return
+	}
+	// Историю и обсуждение — фоном: по два запроса на задачу при пределе
+	// YouGile в 50 в минуту (import_history.go).
+	if req.Apply && rep.HistoryPending > 0 {
+		s.startHistory(r.Context(), p, req.Key, rep.BoardID)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"report": rep})
 }
