@@ -14,6 +14,11 @@ internet access needed to install it or to run it.
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
 [Security review](docs/security-review.md)
 
+**[Try the demo](https://takt-demo-latest.onrender.com)** — your own
+organisation with sample boards for 24 hours, no sign-up. It runs on a
+free tier and falls asleep when idle, so the first visit can take up to
+a minute.
+
 Takt is named after *takt time* — the rhythm at which work leaves the
 flow. That is what separates this from a task list: columns are marked
 up for flow, and cycle time, throughput and the forecast are computed
@@ -21,10 +26,11 @@ from that markup rather than from fields someone filled in by hand.
 
 ![The kanban board: columns marked up for flow](docs/screenshots/доска.png)
 
-**The product interface is in Russian.** This file, and the English
-documentation under [`docs/`](docs/overview.md), are for the
-people who install and operate it. Everything a user clicks is quoted
-in Russian, the way it appears on screen, with a translation beside it.
+**The interface speaks Russian and English**; the language follows the
+browser and can be switched in the ◐ Appearance menu. The
+English documentation under [`docs/`](docs/overview.md) still quotes
+what a user clicks in Russian, the way it appears on the Russian
+screen, with a translation beside it.
 
 **To install it** — [`docs/install.md`](docs/install.md): what it
 requires, docker compose, a binary under systemd, a chart in

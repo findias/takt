@@ -20,8 +20,24 @@
    ```sql
    create role takt login password 'длинный-случайный-пароль'
        nosuperuser nocreaterole nocreatedb nobypassrls;
+   ```
+   ```sql
+   grant takt to current_user;
+   ```
+   ```sql
    create database takt owner takt;
    ```
+
+   Каждый запрос — отдельно и кнопкой **Run**, не **Explain**:
+   Explain оборачивает запрос в `EXPLAIN` и падает с «syntax error
+   at or near …». Отдельно — потому что `create database` не идёт
+   внутри транзакции, а редактор склеивает несколько запросов в одну.
+   `grant` нужен с PostgreSQL 16: владельцем базы можно назначить
+   только роль, от имени которой можешь действовать сам. На `takt`
+   он не влияет — BYPASSRLS у неё не появляется.
+
+   Neon заводит проект на самой свежей версии (на 22.09.2026 — 18),
+   а не на 16. Миграции на 18 проходят: первая выкладка шла на ней.
 
    **Роль — только SQL-ом, не через консоль.** Роли, заведённые
    в консоли или через API Neon, входят в `neon_superuser`, а у неё
@@ -49,6 +65,9 @@ Package settings → Change visibility → Public.** Делается один �
    не нужна.
 2. **New → Web Service → Existing Image**, образ
    `ghcr.io/findias/takt-demo:latest` (он уже есть после шага 2).
+   Имя сервиса Render предлагает из образа (`takt-demo-latest`),
+   и из имени же получается адрес. Адрес для `BASE_URL` и `DEMO_URL`
+   берите со страницы сервиса, а не угадывайте.
 3. Тариф **Free**, регион **Frankfurt**.
 4. Переменные окружения:
 
@@ -74,6 +93,11 @@ secret:**
 | `DEMO_DATABASE_URL` | строка из шага 1.3 (по ней workflow прогоняет миграции) |
 | `RENDER_DEPLOY_HOOK_URL` | Deploy Hook из шага 3.6 |
 | `DEMO_URL` | адрес сервиса без `/` в конце |
+
+Значение передавайте в самой команде:
+`gh secret set DEMO_URL --body 'https://…'`. Без `--body` команда
+спрашивает значение с клавиатуры, а там, где клавиатуры нет (скрипт,
+`!` в Claude Code), может молча записать пустой секрет.
 
 Затем **Actions → Демо → Run workflow**. Выкладка считается сделанной,
 когда живой адрес отвечает новой версией. Workflow проверяет это сам,
