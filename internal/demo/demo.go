@@ -252,6 +252,11 @@ func (f *filler) fill() error {
 	if err := f.backdate(); err != nil {
 		return fmt.Errorf("сдвиг отметок в прошлое: %w", err)
 	}
+	// Уведомления по времени — после сдвига в прошлое: карточка, которая
+	// идёт дольше обещанного, становится такой только теперь.
+	if _, err := f.boards.NotifyDueIn(f.ctx, f.orgID); err != nil {
+		return fmt.Errorf("уведомления по времени: %w", err)
+	}
 	if err := f.settleDeliveries(); err != nil {
 		return fmt.Errorf("доставки подписки: %w", err)
 	}
@@ -744,9 +749,18 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 	if err != nil {
 		return err
 	}
+	// Ответ зовёт владельца — того, под кем входят, — чтобы колокольчик
+	// в демо был не пустым (ROADMAP 29): уведомлений о своих действиях
+	// не бывает, а почти всё здесь делает владелец.
 	if _, err := f.boards.AddComment(f.ctx, f.orgID, f.people["boris@example.test"], b.ID,
 		ids["Выпустить релиз склада"],
-		f.w("Написал им ещё раз, приложил пример выгрузки."), &root.ID, nil); err != nil {
+		f.w("Написал им ещё раз, приложил пример выгрузки."), &root.ID,
+		[]string{f.owner()}); err != nil {
+		return err
+	}
+	// И назначает его на карточку — второй повод в колокольчике.
+	if _, err := f.applyAs(f.people["boris@example.test"], b.ID, "ASSIGN_CARD", map[string]any{
+		"cardId": ids["Согласовать смету с подрядчиком"], "userId": f.owner()}); err != nil {
 		return err
 	}
 
@@ -991,11 +1005,16 @@ func (f *filler) backdate() error {
 }
 
 func (f *filler) apply(boardID, kind string, payload map[string]any) (board.Result, error) {
+	return f.applyAs(f.owner(), boardID, kind, payload)
+}
+
+// applyAs — операция от имени другого человека организации.
+func (f *filler) applyAs(actorID, boardID, kind string, payload map[string]any) (board.Result, error) {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return board.Result{}, err
 	}
-	return f.boards.Apply(f.ctx, f.orgID, f.owner(), boardID, board.Request{
+	return f.boards.Apply(f.ctx, f.orgID, actorID, boardID, board.Request{
 		OperationID: uuid.NewString(), Type: kind, Payload: raw,
 	})
 }

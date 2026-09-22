@@ -111,7 +111,14 @@ export function AppearanceSettings() {
   )
 }
 
-const REASONS: NotificationReason[] = ['mentioned', 'assigned', 'blocked', 'block_expired']
+const REASONS: NotificationReason[] = [
+  'mentioned',
+  'assigned',
+  'blocked',
+  'block_ending',
+  'block_expired',
+  'over_promise',
+]
 
 /**
  * Какие поводы уведомлений присылать (ROADMAP 29.3). Без выбора

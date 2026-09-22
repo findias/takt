@@ -10,14 +10,16 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Seven migrations, all safe for the running version.** `0052` gives
+**Eight migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
 each person's interface language (empty until they choose), `0057`
 adds in-app notifications, each visible only to its recipient and only
 while they can see the board, `0058` stores which kinds of notification
-a person has switched off. They run in the
+a person has switched off, `0059` adds the two time-driven kinds
+(a block ending within a day, a card past the board's promise). They
+run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 
@@ -25,7 +27,10 @@ schema, and `helm rollback` of the pods needs nothing else.
 deadline has passed.** It runs inside `takt serve` once at start-up and
 then every minute; nothing to configure. With several replicas each one
 runs it, and that is safe: a block is closed once, at its deadline, not
-at the moment of the check.
+at the moment of the check. Every ten minutes the same loop also writes
+the time-driven notifications; with several replicas each is written
+once, because a notification about the same thing is not written
+twice.
 
 **Subscriptions: two new events, not switched on by themselves.**
 `card.block_until` (a block's deadline was set or changed) and
@@ -73,7 +78,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   no internet.
 - **Notifications.** A bell in the header counts what is unread: being
   called into a discussion (**@ Mention** under a reply), assigned to
-  a card, a block on your card, and that block lifting at its deadline.
+  a card, a block on your card, less than a day left on that block, the
+  block lifting at its deadline, and your card running longer than the
+  board's promise.
   An entry opens the card. Each kind can be switched off under your
   name. You see a notification only while you can see its board.
 - **A “?” next to concepts** — a column limit, the board's promise,

@@ -52,7 +52,13 @@ export type EstimateUnit = 'points' | 'hours' | 'days'
 
 /** Повод уведомления — те же строки, что в ограничении таблицы
  *  на сервере (0057_notifications.sql). */
-export type NotificationReason = 'mentioned' | 'assigned' | 'blocked' | 'block_expired'
+export type NotificationReason =
+  | 'mentioned'
+  | 'assigned'
+  | 'blocked'
+  | 'block_expired'
+  | 'block_ending'
+  | 'over_promise'
 
 export type AppNotification = {
   id: string

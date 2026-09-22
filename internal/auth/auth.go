@@ -250,7 +250,8 @@ func SetLang(ctx context.Context, pool *pgxpool.Pool, userID, lang string) error
 
 // NotificationReasons — поводы уведомлений, которые можно выключить.
 // Те же строки стоят в ограничении таблицы notifications (0057).
-var NotificationReasons = []string{"mentioned", "assigned", "blocked", "block_expired"}
+var NotificationReasons = []string{"mentioned", "assigned", "blocked", "block_expired",
+	"block_ending", "over_promise"}
 
 // ErrUnknownReason — выключают повод, которого нет.
 var ErrUnknownReason = errors.New("такого повода уведомлений нет")

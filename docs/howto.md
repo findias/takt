@@ -149,8 +149,9 @@ browser: on another device they can be different.
 
 The bell in the header counts what is unread. It rings when someone
 calls you into a discussion, assigns you to a card or blocks a card you
-work on, and when a block on your card lifts at its deadline — never
-about what you did yourself. Press the bell and pick an entry: the card
+work on, when a block on your card has less than a day to go or lifts
+at its deadline, and when your card runs longer than the board's
+promise — never about what you did yourself. Press the bell and pick an entry: the card
 opens and the entry counts as read. **Mark all as read** clears the
 counter.
 

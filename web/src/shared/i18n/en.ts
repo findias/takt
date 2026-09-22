@@ -44,6 +44,8 @@ export const en: typeof ru = {
       assigned: 'Someone assigns me to a card',
       blocked: 'Someone blocks my card',
       block_expired: 'The block on my card lifts at its deadline',
+      block_ending: 'The block on my card ends in less than a day',
+      over_promise: 'My card runs longer than promised',
     },
     langLegend: 'Interface language',
     langHint: 'Your choice is stored with your account and follows you to any device.',
@@ -66,6 +68,8 @@ export const en: typeof ru = {
     assigned: (who: string) => `${who} assigns you to a card`,
     blocked: (who: string) => `${who} blocks your card`,
     block_expired: () => 'The block on your card lifted at its deadline',
+    block_ending: () => 'The block on your card ends in less than a day',
+    over_promise: () => 'Your card is running longer than promised',
     someone: 'Someone',
   },
   hints: {

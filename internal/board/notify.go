@@ -24,6 +24,7 @@ const (
 	ReasonAssigned     = "assigned"
 	ReasonBlocked      = "blocked"
 	ReasonBlockExpired = "block_expired"
+	// block_ending и over_promise — в due.go: их замечает время.
 )
 
 // notify заводит уведомление каждому получателю, кроме действующего.

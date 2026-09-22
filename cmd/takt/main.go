@@ -295,6 +295,7 @@ func checkMigrated(ctx context.Context, db *store.Store, log *slog.Logger) error
 func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) {
 	tick := time.NewTicker(board.ExpireEvery)
 	defer tick.Stop()
+	var lastDue time.Time
 	for {
 		n, err := boards.ExpireBlocks(ctx)
 		if err != nil && ctx.Err() == nil {
@@ -302,6 +303,17 @@ func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) 
 		}
 		if n > 0 {
 			log.Info("блокировки сняты по сроку", "сколько", n)
+		}
+		// Тем же циклом — уведомления по времени: срок блокировки ближе
+		// суток, карточка перешагнула обещание. Реже: проход обходит все
+		// организации, а десять минут опоздания здесь ничего не меняют.
+		if time.Since(lastDue) >= board.DueEvery {
+			lastDue = time.Now()
+			if due, err := boards.NotifyDue(ctx); err != nil && ctx.Err() == nil {
+				log.Error("уведомления по времени", "err", err)
+			} else if due > 0 {
+				log.Info("уведомления по времени", "сколько", due)
+			}
 		}
 		select {
 		case <-ctx.Done():

@@ -313,3 +313,60 @@ func TestMutedReasonIsNotWritten(t *testing.T) {
 	boris.mustDo("PUT", "/api/me/notifications",
 		map[string]any{"muted": []string{"nonsense"}}, http.StatusBadRequest)
 }
+
+// Поводы по времени: срок блокировки ближе суток и карточка дольше
+// обещания доски. Задача проходит раз в минуту, а сказать надо один раз.
+func TestTimeNotificationsArriveOnce(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("По времени")
+	boris := a.member(owner, "member")
+	boardID := owner.board("Доска")
+	blocked := owner.cardOn(boardID, "Ждёт склад")
+	old := owner.cardOn(boardID, "Давно идёт")
+	for _, id := range []string{blocked, old} {
+		owner.op(boardID, uuid.NewString(), "ASSIGN_CARD", map[string]any{"cardId": id, "userId": boris.userID})
+	}
+
+	// Блокировка со сроком через два часа — меньше суток.
+	until := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
+	owner.op(boardID, uuid.NewString(), "BLOCK_CARD",
+		map[string]any{"cardId": blocked, "reason": "ждём склад", "until": until})
+
+	// Обещание доски — день, а вторая карточка начата три дня назад.
+	var orgID string
+	if err := a.impl.db.Pool.QueryRow(context.Background(),
+		`select org_id from memberships where user_id = $1`, owner.userID).Scan(&orgID); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.impl.db.InTenant(context.Background(), orgID, owner.userID, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(),
+			`update boards set sle_days = 1 where id = $1`, boardID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(),
+			`update cards set started_at = now() - interval '3 days' where id = $1`, old)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 2; i++ {
+		if _, err := a.impl.boards.NotifyDue(context.Background()); err != nil {
+			t.Fatalf("проход по времени: %v", err)
+		}
+	}
+
+	count := map[string]int{}
+	for _, n := range boris.notifications().Items {
+		count[n.Reason]++
+		if (n.Reason == "block_ending" || n.Reason == "over_promise") && n.ActorName != nil {
+			t.Errorf("у повода по времени автор %q", *n.ActorName)
+		}
+	}
+	if count["block_ending"] != 1 {
+		t.Errorf("«срок блокировки меньше суток»: %d, ожидалось одно за два прохода", count["block_ending"])
+	}
+	if count["over_promise"] != 1 {
+		t.Errorf("«дольше обещанного»: %d, ожидалось одно за два прохода", count["over_promise"])
+	}
+}
