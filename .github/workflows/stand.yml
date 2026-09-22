@@ -144,3 +144,34 @@ jobs:
           done
           echo "::error::за 20 минут стенд так и не ответил версией $VERSION"
           exit 1
+
+      # Сквозные сценарии против выложенного стенда: вход под каждой
+      # ролью, доска, карточка, «Поток», личные настройки, заметка
+      # (web/e2e-stand). Ветка, на которой они падают, не готова
+      # к master, даже если все проверки внутри процесса зелёные:
+      # здесь проверяется то, что увидит человек на стенде.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Зависимости клиента
+        run: cd web && npm ci
+
+      - name: Браузер
+        run: cd web && npx playwright install --with-deps chromium
+
+      - name: Сценарии против стенда
+        env:
+          STAND_URL: ${{ secrets.STAGING_URL }}
+          STAND_VERSION: ${{ env.VERSION }}
+        run: cd web && npx playwright test -c playwright.stand.config.ts
+
+      - name: Следы упавшего
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: следы-стенда
+          path: web/test-results
+          retention-days: 7

@@ -59,6 +59,14 @@ stand-notes: ## Записать заметку тестового стенда:
 	@git log --format='%H%x1f%cI%x1f%B%x1e' origin/master..HEAD > internal/stand/notes/log.txt
 	@echo "заметка стенда: ветка $(STAND_BRANCH), коммитов $$(git rev-list --count origin/master..HEAD)"
 
+# Сквозные сценарии против выложенного тестового стенда. Workflow
+# «Стенд» гоняет их сам после выкладки; руками — чтобы перепроверить
+# стенд, не выкладывая заново.
+.PHONY: stand-e2e
+stand-e2e: ## Сквозные сценарии против стенда: make stand-e2e STAND_URL=https://…
+	@test -n "$(STAND_URL)" || { echo "задайте STAND_URL=https://…"; exit 1; }
+	cd web && STAND_URL="$(STAND_URL)" npx playwright test -c playwright.stand.config.ts
+
 # Стенд с нуля одной командой: снести базу, поднять, мигрировать,
 # наполнить, собрать фронтенд. Дальше — make run.
 .PHONY: stand

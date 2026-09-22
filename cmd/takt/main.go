@@ -2,11 +2,11 @@
 //
 // Один образ, пять подкоманд:
 //
-//	board serve     — HTTP API, WebSocket, фоновые задачи (по умолчанию)
-//	board migrate   — применить миграции и выйти
-//	board demo      — наполнить пустую базу данными для работы над видом
-//	board doctor    — проверить, что установка сделана правильно
-//	board version   — какая это версия
+//	takt serve     — HTTP API, WebSocket, фоновые задачи (по умолчанию)
+//	takt migrate   — применить миграции и выйти
+//	takt demo      — наполнить пустую базу данными для работы над видом
+//	takt doctor    — проверить, что установка сделана правильно
+//	takt version   — какая это версия
 //
 // Миграции вынесены в отдельную подкоманду намеренно. Запуск их при старте
 // приложения работает на одной реплике и разносит базу на двух: обе стартуют
@@ -268,7 +268,7 @@ func checkMigrated(ctx context.Context, db *store.Store, log *slog.Logger) error
 		return err
 	}
 	if !exists {
-		return errors.New("таблицы не созданы, выполните `board migrate`")
+		return errors.New("таблицы не созданы, выполните `takt migrate`")
 	}
 	log.Info("схема базы на месте")
 	return nil
