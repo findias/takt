@@ -181,6 +181,11 @@ func FederatedLogin(ctx context.Context, pool *pgxpool.Pool,
 	return u, nil
 }
 
+// UnusablePassword — хеш пароля, которым не войти: для учётной записи,
+// заведённой за человека (SCIM, перенос). Колонка обязательная, а пароль
+// человек задаст сам — по ссылке или через провайдера.
+func UnusablePassword() (string, error) { return HashPassword(unguessable()) }
+
 func unguessable() string {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {

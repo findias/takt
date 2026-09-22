@@ -27,10 +27,12 @@ func (s *Server) registerYougileRoutes(mux *http.ServeMux) {
 }
 
 type yougileRequest struct {
-	Login     string `json:"login"`
-	Password  string `json:"password"`
-	CompanyID string `json:"companyId"`
-	Key       string `json:"key"`
+	// Выбор по людям источника: ключ человека → что с ним делать.
+	People    map[string]board.PersonChoice `json:"people"`
+	Login     string                        `json:"login"`
+	Password  string                        `json:"password"`
+	CompanyID string                        `json:"companyId"`
+	Key       string                        `json:"key"`
 	// Доска YouGile, откуда переносим.
 	Board string `json:"board"`
 	// Куда: как у переноса из таблицы.
@@ -154,6 +156,7 @@ func (s *Server) handleYougileImport(w http.ResponseWriter, r *http.Request, p a
 	}
 	rep, ok := s.importPlan(w, r, p, plan, board.ImportTarget{
 		BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap(req.Columns),
+		People: req.People,
 	}, req.Apply)
 	if !ok {
 		return

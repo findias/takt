@@ -2519,7 +2519,8 @@ test('таблица переезжает на доску: предпросмо�
   // и называет потери: строку без заголовка и почту, которой нет.
   await expect(page.getByRole('combobox', { name: 'Поле карточки для колонки «Срок»' })).toHaveValue('due')
   await expect(page.getByText('Переедут 2 карточки из 3 строк.')).toBeVisible()
-  await expect(page.getByText('nikto@example.test — 1 карточка')).toBeVisible()
+  // Ненайденный по почте назван в «Людях» и по умолчанию не переносится.
+  await expect(page.getByRole('combobox', { name: 'Что сделать: nikto@example.test' })).toHaveValue('skip')
   await expect(page.getByText(/Строка 4:.*нет заголовка/)).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Название новой доски' })).toHaveValue('Склад')
 
@@ -2635,7 +2636,8 @@ test('доска YouGile переезжает по API и называет, чт
   await expect(page.getByText('Переедут 3 карточки из 3 строк.')).toBeVisible()
   await expect(page.getByText('задачи из архива YouGile: 1')).toBeVisible()
   await expect(page.getByText(/чаты задач — собраны без них/)).toBeVisible()
-  await expect(page.getByText('nikto@yougile.test — 1 карточка')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: /^Что сделать: .+/ }).first()).toBeVisible()
+  await expect(page.getByText(/nikto@yougile\.test · 1 карточка/)).toBeVisible()
   await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'В работе', 'Заказать поддоны')).toBeVisible()
@@ -2643,7 +2645,7 @@ test('доска YouGile переезжает по API и называет, чт
 })
 
 test('пакет переноса: подзадачи, связи и обсуждение переезжают, доски — по одной', async ({ page }) => {
-  await register(page)
+  const who = await register(page)
   await page.goto('/import')
   await page.getByRole('radio', { name: 'Пакет переноса' }).check()
   await page.getByLabel('Файл пакета (.takt)').setInputFiles({
@@ -2679,8 +2681,13 @@ test('пакет переноса: подзадачи, связи и обсуж�
   await expect(page.getByLabel('Доска пакета')).toHaveValue('1')
   await expect(page.getByText('Переедут 3 карточки из 3 строк.')).toBeVisible()
   await expect(page.getByText('Подзадач: 1, связей: 1, реплик обсуждения: 1.')).toBeVisible()
-  await expect(page.getByText('Иван Петров (почты нет) — 1 карточка')).toBeVisible()
   await expect(page.getByText('файлы вложений')).toBeVisible()
+  // Человек без почты не найден и по умолчанию не переносится; а это
+  // сам переносящий — сопоставляем (ROADMAP 23.6).
+  const ivan = page.getByRole('combobox', { name: 'Что сделать: Иван Петров' })
+  await expect(ivan).toHaveValue('skip')
+  await ivan.selectOption({ label: `Проверяющий · ${who.email}` })
+  await expect(ivan).toHaveValue(/^match:/)
   await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
 
   // Следующая доска того же пакета — без повторного выбора файла.
@@ -2690,6 +2697,11 @@ test('пакет переноса: подзадачи, связи и обсуж�
   await page.getByRole('button', { name: 'Перенести 1 карточку' }).click()
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'Очередь', 'Поддоны')).toBeVisible()
+
+  // Сопоставленный стал исполнителем карточки Ивана.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Склад', exact: true }).click()
+  await expect(cardIn(page, 'Нужно сделать', 'Сверить остатки').getByTitle('Проверяющий', { exact: true })).toBeVisible()
 })
 
 // Ссылка «задать пароль» (ROADMAP 23.6): писем нет, поэтому владелец

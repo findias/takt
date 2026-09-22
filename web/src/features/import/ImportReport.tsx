@@ -9,7 +9,17 @@ import { t } from '../../shared/i18n/index.ts'
  * Потери называются списком, а не числом: «7 без исполнителя» ничего
  * не говорит о том, кого позвать в организацию, а почта — говорит.
  */
-export function ImportReport({ report, boardName }: { report: Report; boardName: string }) {
+export function ImportReport({
+  report,
+  boardName,
+  withMissing = true,
+}: {
+  report: Report
+  boardName: string
+  /** Показывать ли «Почты не найдены»: в предпросмотре их называет
+   *  выбор по людям, и второй список о том же спорил бы с ним. */
+  withMissing?: boolean
+}) {
   const s = t.imports
   const hidden = report.skipped.filter((x) => !x.number).length
   return (
@@ -46,7 +56,7 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
         </p>
       )}
 
-      {report.missingPeople.length > 0 && (
+      {withMissing && report.missingPeople.length > 0 && (
         <div>
           <h4>{s.missing}</h4>
           <p className="muted small">{s.missingHint}</p>

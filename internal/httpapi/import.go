@@ -28,7 +28,9 @@ func (s *Server) registerImportRoutes(mux *http.ServeMux) {
 }
 
 type importTableRequest struct {
-	File []byte `json:"file"`
+	// Выбор по людям источника: ключ человека → что с ним делать.
+	People map[string]board.PersonChoice `json:"people"`
+	File   []byte                        `json:"file"`
 	// Пусто — сопоставление предлагает сервер по заголовкам.
 	Mapping importer.Mapping `json:"mapping"`
 	BoardID string           `json:"boardId"`
@@ -121,6 +123,7 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 
 	rep, ok := s.importPlan(w, r, p, plan, board.ImportTarget{
 		BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap(req.Columns),
+		People: req.People,
 	}, req.Apply)
 	if !ok {
 		return
@@ -192,9 +195,13 @@ func (s *Server) importPlan(
 	w http.ResponseWriter, r *http.Request, p auth.Principal,
 	plan importer.Plan, target board.ImportTarget, apply bool,
 ) (*board.ImportReport, bool) {
+	target.CanCreatePeople = p.CanAdmin()
 	rep, err := s.boards.Import(r.Context(), p.OrgID, p.ID, target, plan, apply)
 	switch {
 	case err == nil:
+	case errors.Is(err, board.ErrPeopleOwner):
+		writeCoded(w, http.StatusForbidden, "import_people_owner", err.Error())
+		return nil, false
 	case errors.Is(err, board.ErrNotFound):
 		writeError(w, http.StatusNotFound, "доска не найдена")
 		return nil, false
@@ -215,6 +222,26 @@ func (s *Server) importPlan(
 	}
 	for i := range rep.Lost {
 		rep.Lost[i] = i18n.Name(r.Context(), rep.Lost[i])
+	}
+	for i := range rep.People {
+		if rep.People[i].Problem != "" {
+			rep.People[i].Problem = i18n.Name(r.Context(), rep.People[i].Problem)
+		}
+	}
+	// Заведённым переносом — ссылки «задать пароль» сразу: писем takt
+	// не шлёт, и без ссылки войти им нечем. При корпоративном входе
+	// ссылка не нужна: первый вход через провайдера привяжет запись
+	// по почте, которую вписал владелец.
+	if apply && !s.cfg.OIDC.Enabled() {
+		for i, m := range rep.CreatedPeople {
+			link, err := s.orgs.IssuePasswordLink(r.Context(), p.OrgID, p.ID, m.ID, s.cfg.BaseURL)
+			if err != nil {
+				// Перенос уже сделан; ссылку владелец выпустит в «Команде».
+				s.log.Error("ссылка для заведённого переносом", "err", err)
+				continue
+			}
+			rep.CreatedPeople[i].Link = link.Link
+		}
 	}
 	return &rep, true
 }

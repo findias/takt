@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardInfo, ImportReport as Report } from '../../shared/api/index.ts'
+import type { BoardInfo, PersonChoice, ImportReport as Report } from '../../shared/api/index.ts'
 import { t, locale } from '../../shared/i18n/index.ts'
 import { useHelpTopic } from '../../shared/lib/help.ts'
 import { FormError } from '../../shared/ui/Field.tsx'
 import { importApi } from './api.ts'
 import type { PackageSummary } from './api.ts'
 import { toBase64 } from './file.ts'
-import { Done, Preview } from './Preview.tsx'
+import { Done, Preview, hasWork } from './Preview.tsx'
 import { TargetPicker, boardIdOf } from './Target.tsx'
 import type { Target } from './Target.tsx'
 
@@ -27,6 +27,14 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
   const [board, setBoard] = useState(1)
   const [target, setTarget] = useState<Target>({ kind: 'new', name: '' })
   const [columnMap, setColumnMap] = useState<Record<string, string>>({})
+  // Выбор по людям источника (ROADMAP 23.6): ключ человека → что с ним делать.
+  const [people, setPeople] = useState<Record<string, PersonChoice>>({})
+  // Выбор по колонкам и людям — про доску и её людей: сменилась доска
+  // или файл — прежний выбор ни к чему.
+  const resetChoices = () => {
+    setColumnMap({})
+    setPeople({})
+  }
   const [report, setReport] = useState<Report | null>(null)
   const [busy, setBusy] = useState<'reading' | 'checking' | 'applying' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +52,7 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
       boardId: boardId || undefined,
       newBoardName: boardId ? undefined : name,
       columns: boardId ? columnMap : undefined,
+      people,
       apply,
     })
 
@@ -70,14 +79,14 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
       .finally(() => {
         if (n === asked.current) setBusy(null)
       })
-  }, [file, board, boardId, target.kind, columnMap])
+  }, [file, board, boardId, target.kind, columnMap, people])
 
   const choose = (picked: File | undefined) => {
     setDone(null)
     setSummary(null)
     setReport(null)
     setBoard(1)
-    setColumnMap({})
+    resetChoices()
     setTarget({ kind: 'new', name: '' })
     setError(null)
     if (!picked) {
@@ -100,7 +109,7 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
   }
 
   const canApply =
-    !!report && report.created > 0 && busy === null && (target.kind === 'existing' || boardName !== '')
+    !!report && hasWork(report) && busy === null && (target.kind === 'existing' || boardName !== '')
   const apply = () => {
     if (!canApply) return
     const n = ++asked.current
@@ -128,7 +137,7 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
           // Тот же пакет, следующая доска — переносят их обычно подряд.
           setDone(null)
           setReport(null)
-          setColumnMap({})
+          resetChoices()
           setTarget({ kind: 'new', name: '' })
           if (summary && board < summary.boards.length) setBoard(board + 1)
           else choose(undefined)
@@ -164,7 +173,7 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
             value={board}
             disabled={busy === 'applying'}
             onChange={(e) => {
-              setColumnMap({})
+              resetChoices()
               setTarget((was) => (was.kind === 'new' ? { kind: 'new', name: '' } : was))
               setBoard(Number(e.target.value))
             }}
@@ -186,7 +195,7 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
             fallbackName={summary.boards[board - 1]?.title ?? ''}
             disabled={busy === 'applying'}
             onChange={setTarget}
-            onBoardChange={() => setColumnMap({})}
+            onBoardChange={resetChoices}
           />
           <Preview
             report={report}
@@ -196,6 +205,8 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
             canApply={canApply}
             columnMap={columnMap}
             onColumnMap={setColumnMap}
+            people={people}
+            onPeople={setPeople}
             onApply={apply}
           />
         </>

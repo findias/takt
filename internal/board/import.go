@@ -31,6 +31,11 @@ type ImportTarget struct {
 	// колонкой, как и раньше. «In Review» из Jira и наша «В работе» —
 	// одно и то же, но угадать это по названию нельзя: решает человек.
 	ColumnMap map[string]string
+	// People — выбор по людям источника: ключ человека → что с ним
+	// делать (import_people.go). Нет записи — прежний выбор или почта.
+	People map[string]PersonChoice
+	// CanCreatePeople — спрашивающий владелец и вправе заводить людей.
+	CanCreatePeople bool
 }
 
 // ImportReport — что случилось или случится. Один и тот же ответ
@@ -66,10 +71,17 @@ type ImportReport struct {
 	// Метки, найденные только в архиве: вешать убранное молча нельзя.
 	ArchivedLabels []string `json:"archivedLabels"`
 	// Lost — что источник знает, а мы не переносим.
-	Lost          []string              `json:"lost"`
-	MissingPeople []MissingPerson       `json:"missingPeople"`
-	Problems      []importer.Problem    `json:"problems"`
-	Dates         []importer.DateFormat `json:"dates"`
+	Lost          []string        `json:"lost"`
+	MissingPeople []MissingPerson `json:"missingPeople"`
+	// People — все люди источника и что с каждым будет; Members —
+	// участники, из кого выбирать; CreatedPeople — кого завёл перенос.
+	People        []ImportPerson `json:"people"`
+	Members       []ImportMember `json:"members"`
+	CreatedPeople []ImportMember `json:"createdPeople"`
+	// CanCreatePeople — предлагать ли «Завести»: спрашивает владелец.
+	CanCreatePeople bool                  `json:"canCreatePeople"`
+	Problems        []importer.Problem    `json:"problems"`
+	Dates           []importer.DateFormat `json:"dates"`
 }
 
 // ImportSkip — строка, которая уже переехала раньше.
@@ -141,6 +153,7 @@ func (s *Service) Import(
 		Rows: plan.Rows, Problems: plan.Problems, Dates: plan.Dates,
 		Skipped: []ImportSkip{}, NewColumns: []ImportColumn{}, NewLabels: []string{},
 		ArchivedLabels: []string{}, MissingPeople: []MissingPerson{},
+		People: []ImportPerson{}, Members: []ImportMember{}, CreatedPeople: []ImportMember{},
 		ColumnValues: []ImportValue{}, BoardColumns: []ImportColumnRef{},
 		Lost: append([]string{}, plan.Lost...),
 	}
@@ -312,43 +325,11 @@ func (s *Service) Import(
 		return rep, err
 	}
 
-	// Люди — по почте, среди участников организации.
-	emails := map[string]bool{}
-	for _, c := range plan.Cards {
-		for _, e := range c.Assignees {
-			emails[e] = true
-		}
-		for _, cm := range c.Comments {
-			if cm.AuthorEmail != "" {
-				emails[cm.AuthorEmail] = true
-			}
-		}
-	}
-	people := map[string]string{}
-	if len(emails) > 0 {
-		list := make([]string, 0, len(emails))
-		for e := range emails {
-			list = append(list, e)
-		}
-		rows, err := tx.Query(ctx, `
-			select lower(u.email), u.id from users u
-			  join memberships m on m.user_id = u.id and m.org_id = $1
-			 where lower(u.email) = any($2)`, orgID, list)
-		if err != nil {
-			return rep, err
-		}
-		for rows.Next() {
-			var e, id string
-			if err := rows.Scan(&e, &id); err != nil {
-				rows.Close()
-				return rep, err
-			}
-			people[e] = id
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return rep, err
-		}
+	// Люди — по выбору в предпросмотре, иначе по почте среди участников
+	// (import_people.go). Ключ — почта или source:<идентификатор>.
+	people, err := resolvePeople(ctx, tx, orgID, actorID, plan, target, apply, &rep)
+	if err != nil {
+		return rep, err
 	}
 
 	labels, err := importLabels(ctx, tx, orgID, rep.BoardID, plan.Cards, &rep)
@@ -424,9 +405,15 @@ func (s *Service) Import(
 					}
 				}
 				for _, u := range c.Unmatched {
+					key := sourceKey(u.Key)
+					if uid, ok := people[key]; ok {
+						laterCards, laterPeople = append(laterCards, id), append(laterPeople, uid)
+						found.add(id, key)
+						continue
+					}
 					nameless[u.Name]++
-					absent.add(id, sourceKey(u.Key))
-					names[sourceKey(u.Key)] = u.Name
+					absent.add(id, key)
+					names[key] = u.Name
 				}
 			}
 			continue
@@ -465,9 +452,14 @@ func (s *Service) Import(
 			}
 		}
 		for _, u := range r.card.Unmatched {
+			key := sourceKey(u.Key)
+			if uid, ok := people[key]; ok {
+				links, assignees = append(links, id), append(assignees, uid)
+				continue
+			}
 			nameless[u.Name]++
-			absent.add(id, sourceKey(u.Key))
-			names[sourceKey(u.Key)] = u.Name
+			absent.add(id, key)
+			names[key] = u.Name
 		}
 	}
 	// Исполнители и метки — тоже одним запросом на вид. Назначение
@@ -1056,8 +1048,8 @@ func importRelations(
 			}
 		}
 		for _, cm := range c.Comments {
-			author, text := people[cm.AuthorEmail], cm.Text
-			if cm.AuthorEmail == "" || author == "" {
+			author, text := people[cmp.Or(cm.AuthorKey, cm.AuthorEmail)], cm.Text
+			if author == "" {
 				// Автора нет в организации: реплика от переносящего,
 				// а чья она — сказано в ней самой. Выдумывать человека
 				// нельзя, и приписать слова не тому — тоже.

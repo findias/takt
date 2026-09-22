@@ -278,18 +278,28 @@ import and throws it away, so it shows exactly what you will get.
 
 What the preview names, so that nothing is lost silently:
 
-- **Emails not found.** Assignees are matched by email among the
-  people of the organisation, and nobody is created on the way: the
-  card comes without that assignee, and the email is listed with the
-  number of cards. So that the work is not lost, each such person's
-  cards get a label with their name (their email, if the spreadsheet
-  gives no name). The label is technical: it is drawn as an outline,
-  it is not offered when labelling a card by hand, and the board filter
-  finds it. Two namesakes get two labels. People are added by an
-  administrator on the **Team** screen, not by the import: add them,
-  import again, and the second run adds them as assignees to the cards
+- **People.** Every assignee and author of the source is listed with
+  the number of their cards, and for each you choose what to do:
+  - **match with a member** — pick the person from the list. Someone
+    with the same email is picked already («found by email»);
+  - **create an account** — owner only. The email comes from the
+    source; when there is none, type it in. After the import each new
+    person gets a one-time sign-in link, shown once, to pass on
+    yourself; with corporate sign-in no link is needed, the first
+    sign-in links the account by email. An address that already belongs
+    to an account outside the organisation cannot be created — invite
+    that person instead;
+  - **leave out** — their cards get a label with their name (their
+    email, if the spreadsheet gives no name), so the work is not lost.
+    The label is technical: drawn as an outline, not offered when
+    labelling by hand, found by the board filter. Two namesakes get two
+    labels.
+
+  The choice is remembered for the next import of the same source
+  («chosen at the previous import»). Import the same board again after
+  adding people, and the second run adds them as assignees to the cards
   that already came — without bringing those cards twice — and removes
-  their labels.
+  their labels; the button then reads **Update the imported cards**.
 - **Row problems.** A row without a title is not imported; a value
   that cannot be read (an estimate that is not a number, an unknown
   priority, a date that is not a date) is dropped, and the rest of the

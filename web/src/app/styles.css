@@ -3949,6 +3949,53 @@ textarea.description {
   padding-left: var(--space-6);
 }
 
+/* Люди источника (ROADMAP 23.6): кто слева, что с ним — справа, как
+   в «Команде». Отказ по человеку — под строкой во всю ширину: он про
+   этого человека, а не про весь перенос. */
+.import-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.import-people li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+.import-person {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.import-people select,
+.import-person-email {
+  width: 100%;
+}
+.import-person-email {
+  grid-column: 2;
+}
+.import-person-problem {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--warn);
+}
+.import-person-link {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+}
+@media (max-width: 40rem) {
+  .import-people li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .import-person-email {
+    grid-column: 1;
+  }
+}
+
 /* «?» у понятия (ROADMAP 30.4). Кнопка — цель нажатия целиком
    (24×24 по WCAG 2.5.8), знак внутри мельче: крупный «?» спорил бы
    с подписью, к которой он приставлен. Тихая, пока её не трогают:

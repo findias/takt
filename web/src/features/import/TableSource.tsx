@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardInfo, ImportAnswer, ImportField, ImportReport as Report } from '../../shared/api/index.ts'
+import type { BoardInfo, PersonChoice, ImportAnswer, ImportField, ImportReport as Report } from '../../shared/api/index.ts'
 import { t } from '../../shared/i18n/index.ts'
 import { importApi } from './api.ts'
 import { FormError } from '../../shared/ui/Field.tsx'
 import { toBase64 } from './file.ts'
 import { Mapping } from './Mapping.tsx'
-import { Done, Preview } from './Preview.tsx'
+import { Done, Preview, hasWork } from './Preview.tsx'
 import { TargetPicker, boardIdOf } from './Target.tsx'
 import type { Target } from './Target.tsx'
 
@@ -32,6 +32,14 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
   const [sheet, setSheet] = useState('')
   // Куда ложатся значения колонки файла — только на существующей доске.
   const [columnMap, setColumnMap] = useState<Record<string, string>>({})
+  // Выбор по людям источника (ROADMAP 23.6): ключ человека → что с ним делать.
+  const [people, setPeople] = useState<Record<string, PersonChoice>>({})
+  // Выбор по колонкам и людям — про доску и её людей: сменилась доска
+  // или файл — прежний выбор ни к чему.
+  const resetChoices = () => {
+    setColumnMap({})
+    setPeople({})
+  }
   const [answer, setAnswer] = useState<ImportAnswer | null>(null)
   const [busy, setBusy] = useState<'reading' | 'checking' | 'applying' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +55,7 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
       mapping,
       sheet: sheet || undefined,
       columns: boardId ? columnMap : undefined,
+      people,
       boardId: boardId || undefined,
       newBoardName: boardId ? undefined : boardName,
       apply,
@@ -76,14 +85,14 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
         if (n === asked.current) setBusy(null)
       })
     // `request` собирается из тех же значений, что стоят в зависимостях.
-  }, [file, mapping, sheet, boardId, target.kind, columnMap])
+  }, [file, mapping, sheet, boardId, target.kind, columnMap, people])
 
   const choose = (picked: File | undefined) => {
     setDone(null)
     setAnswer(null)
     setMapping(null)
     setSheet('')
-    setColumnMap({})
+    resetChoices()
     setError(null)
     if (!picked) {
       setFile(null)
@@ -111,7 +120,7 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
   const report = answer?.report ?? null
   const boardName = target.kind === 'new' ? target.name.trim() : ''
   const canApply =
-    !!file && !!report && report.created > 0 && busy === null && (target.kind === 'existing' || boardName !== '')
+    !!file && !!report && hasWork(report) && busy === null && (target.kind === 'existing' || boardName !== '')
 
   const apply = () => {
     if (!canApply) return
@@ -164,7 +173,7 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
               // Другой лист — другие колонки: прежнее сопоставление
               // к ним не относится, сервер предложит новое.
               setMapping(null)
-              setColumnMap({})
+              resetChoices()
               setSheet(e.target.value)
             }}
           >
@@ -185,7 +194,7 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
             fallbackName={file?.name ?? ''}
             disabled={busy === 'applying'}
             onChange={setTarget}
-            onBoardChange={() => setColumnMap({})}
+            onBoardChange={resetChoices}
           />
 
           {answer.headers.length > 0 && (
@@ -211,6 +220,8 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
             canApply={canApply}
             columnMap={columnMap}
             onColumnMap={setColumnMap}
+            people={people}
+            onPeople={setPeople}
             onApply={apply}
           />
         </>

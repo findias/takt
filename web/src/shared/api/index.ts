@@ -419,8 +419,30 @@ export type ImportRequest = {
   /** Значение колонки файла (в нижнем регистре) → колонка доски. */
   columns?: Record<string, string>
   newBoardName?: string
+  /** Выбор по людям источника: ключ человека → что с ним делать. */
+  people?: Record<string, PersonChoice>
   apply: boolean
 }
+
+/** Выбор по человеку источника: сопоставить, завести, не переносить. */
+export type PersonChoice = {
+  action: 'match' | 'create' | 'skip'
+  userId?: string
+  email?: string
+}
+export type ImportPerson = {
+  key: string
+  name: string
+  email?: string
+  cards: number
+  action: 'match' | 'create' | 'skip'
+  userId?: string
+  userName?: string
+  /** auto — по почте, saved — прошлый перенос, chosen — сейчас, none — никак. */
+  origin: 'auto' | 'saved' | 'chosen' | 'none'
+  problem?: string
+}
+export type ImportMember = { id: string; name: string; email: string; link?: string }
 
 export type ImportReport = {
   applied: boolean
@@ -450,6 +472,12 @@ export type ImportReport = {
   /** Почта, которой нет в организации, или имя человека без почты. */
   /** `label` — метка человека, которую получат его карточки. */
   missingPeople: { email: string; name?: string; cards: number; label?: string }[]
+  /** Люди источника и что с каждым будет (ROADMAP 23.6). `?` — старый
+   *  сервер полей не знает. */
+  people?: ImportPerson[]
+  members?: ImportMember[]
+  createdPeople?: ImportMember[]
+  canCreatePeople?: boolean
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
   dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' | 'excel' }[]
 }

@@ -24,7 +24,9 @@ func (s *Server) registerPackageRoutes(mux *http.ServeMux) {
 }
 
 type packageRequest struct {
-	File []byte `json:"file"`
+	// Выбор по людям источника: ключ человека → что с ним делать.
+	People map[string]board.PersonChoice `json:"people"`
+	File   []byte                        `json:"file"`
 	// Какая доска пакета, с единицы; пусто — первая.
 	Board        int               `json:"board"`
 	BoardID      string            `json:"boardId"`
@@ -95,6 +97,7 @@ func (s *Server) handleImportPackage(w http.ResponseWriter, r *http.Request, p a
 
 	rep, ok := s.importPlan(w, r, p, plan, board.ImportTarget{
 		BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap(req.Columns),
+		People: req.People,
 	}, req.Apply)
 	if !ok {
 		return

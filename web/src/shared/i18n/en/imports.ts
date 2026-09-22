@@ -19,6 +19,26 @@ export const imports: typeof ru = {
   packageBoardOf: (title: string, n: number) => `${title} — ${cards(n)}`,
   relations: (parts: number, links: number, comments: number) =>
     `Subtasks: ${parts}, links: ${links}, discussion replies: ${comments}.`,
+  people: 'People',
+  peopleHint:
+    'Who to match with a member, who to create, who to leave out. The cards of someone left out get a label with their name. The choice is remembered for the next import of this board.',
+  peopleHintMember:
+    'Who to match with a member, who to leave out. Only the organisation owner can create people. The choice is remembered for the next import of this board.',
+  noEmailShort: 'no email',
+  cardsOf: (n: number) => cards(n),
+  foundByEmail: 'found by email',
+  savedChoice: 'chosen at the previous import',
+  personChoice: (name: string) => `What to do: ${name}`,
+  matchWith: 'Match with a member',
+  create: 'Create an account',
+  skip: 'Leave out — label with the name',
+  createEmail: (name: string) => `Email for ${name}`,
+  createEmailPlaceholder: 'Email to create them',
+  createdPeople: 'Accounts created',
+  createdLinksHint:
+    'takt sends no emails: pass each person their link — with it they set a password and sign in. The links are shown once; the owner can issue a new one under Team.',
+  createdOidcHint: 'They will sign in through corporate sign-in: the first sign-in links the account by email.',
+  createdLinkOf: (name: string) => `Sign-in link: ${name}`,
   noEmail: (name: string, n: number) => `${name} (no email) — ${cards(n)}`,
   ygIntro:
     'A YouGile board is imported whole through its API. The password is needed once, to get the company’s API key; we keep neither the password nor the key. If the server is in a closed network, export a table from YouGile (Reports → Tables) and import it as a spreadsheet.',
@@ -114,6 +134,7 @@ export const imports: typeof ru = {
   apply: (n: number) => `Import ${cards(n)}`,
   applying: 'Importing…',
   nothing: 'Nothing to import',
+  update: 'Update the imported cards',
   open: 'Open the board',
   another: 'Import another file',
   failed: 'Could not import',

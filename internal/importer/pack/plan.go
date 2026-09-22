@@ -143,8 +143,10 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 			if cm.Author != nil {
 				if person, ok := people[*cm.Author]; ok {
 					comment.AuthorName = person.Name
-					if person.Email != nil {
+					comment.AuthorKey = "source:" + person.ExternalID
+					if person.Email != nil && strings.TrimSpace(*person.Email) != "" {
 						comment.AuthorEmail = strings.ToLower(strings.TrimSpace(*person.Email))
+						comment.AuthorKey = comment.AuthorEmail
 					}
 				}
 			}

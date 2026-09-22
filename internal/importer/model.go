@@ -112,6 +112,9 @@ type Link struct {
 // Comment — реплика обсуждения. Автор ищется по почте; не найден —
 // реплика пишется от имени переносящего и начинается с имени автора.
 type Comment struct {
+	// AuthorKey — ключ автора, как у исполнителя: почта или
+	// source:<идентификатор>; по нему автора находит выбор по людям.
+	AuthorKey   string
 	AuthorEmail string
 	AuthorName  string
 	At          time.Time

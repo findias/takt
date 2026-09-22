@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardInfo, ImportReport as Report } from '../../shared/api/index.ts'
+import type { BoardInfo, PersonChoice, ImportReport as Report } from '../../shared/api/index.ts'
 import { t } from '../../shared/i18n/index.ts'
 import { importApi } from './api.ts'
 import { useHelpTopic } from '../../shared/lib/help.ts'
 import { FormError } from '../../shared/ui/Field.tsx'
-import { Done, Preview } from './Preview.tsx'
+import { Done, Preview, hasWork } from './Preview.tsx'
 import { TargetPicker, boardIdOf } from './Target.tsx'
 import { YougileLogin } from './YougileLogin.tsx'
 import type { Target } from './Target.tsx'
@@ -26,6 +26,14 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
   const [ygBoard, setYgBoard] = useState('')
   const [target, setTarget] = useState<Target>({ kind: 'new', name: '' })
   const [columnMap, setColumnMap] = useState<Record<string, string>>({})
+  // Выбор по людям источника (ROADMAP 23.6): ключ человека → что с ним делать.
+  const [people, setPeople] = useState<Record<string, PersonChoice>>({})
+  // Выбор по колонкам и людям — про доску и её людей: сменилась доска
+  // или файл — прежний выбор ни к чему.
+  const resetChoices = () => {
+    setColumnMap({})
+    setPeople({})
+  }
   const [report, setReport] = useState<Report | null>(null)
   const [busy, setBusy] = useState<'asking' | 'checking' | 'applying' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +73,7 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
       boardId: boardId || undefined,
       newBoardName: boardId ? undefined : name,
       columns: boardId ? columnMap : undefined,
+      people,
       apply,
     })
 
@@ -87,10 +96,10 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
       .finally(() => {
         if (n === asked.current) setBusy(null)
       })
-  }, [key, board, boardId, target.kind, columnMap])
+  }, [key, board, boardId, target.kind, columnMap, people])
 
   const canApply =
-    !!report && report.created > 0 && busy === null && (target.kind === 'existing' || boardName !== '')
+    !!report && hasWork(report) && busy === null && (target.kind === 'existing' || boardName !== '')
   const apply = () => {
     if (!canApply) return
     const n = ++asked.current
@@ -113,7 +122,7 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
     setYgBoards(null)
     setYgBoard('')
     setReport(null)
-    setColumnMap({})
+    resetChoices()
   }
 
   if (done)
@@ -124,7 +133,7 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
           setDone(null)
           setYgBoard('')
           setReport(null)
-          setColumnMap({})
+          resetChoices()
         }}
       />
     )
@@ -159,7 +168,7 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
                 disabled={busy === 'applying'}
                 onChange={(e) => {
                   setYgBoard(e.target.value)
-                  setColumnMap({})
+                  resetChoices()
                   const picked = ygBoards.find((b) => b.id === e.target.value)
                   setTarget((was) => (was.kind === 'new' ? { kind: 'new', name: picked?.title ?? '' } : was))
                 }}
@@ -186,7 +195,7 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
             fallbackName={board.title}
             disabled={busy === 'applying'}
             onChange={setTarget}
-            onBoardChange={() => setColumnMap({})}
+            onBoardChange={resetChoices}
           />
           <Preview
             report={report}
@@ -196,6 +205,8 @@ export function YougileSource({ boards }: { boards: BoardInfo[] }) {
             canApply={canApply}
             columnMap={columnMap}
             onColumnMap={setColumnMap}
+            people={people}
+            onPeople={setPeople}
             onApply={apply}
           />
         </>

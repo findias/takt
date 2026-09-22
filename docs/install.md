@@ -544,4 +544,7 @@ preview as the screen. The import runs on behalf of the person named in
 write to is refused. `--board 2` picks the second board of the
 package, `--into` an existing board, `--new-board` the name of a new
 one, `--org` the organisation when the person belongs to several.
+People are matched by email and by the choices made on the screen for
+the same source; the command creates nobody — make those choices on
+the screen with a small board first, or add the people under **Team**.
 

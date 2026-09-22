@@ -427,6 +427,13 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21ж-пакет-переноса.png`, fullPage: true })
 
+  // Выбор «завести» у человека без почты: поле для адреса и отказ,
+  // пока адреса нет (ROADMAP 23.6). Переносить не нажимаем.
+  await page.getByRole('combobox', { name: 'Что сделать: Иван Петров' }).selectOption('create')
+  await expect(page.getByText(/нет почты — впишите её/)).toBeVisible()
+  await page.getByRole('combobox', { name: 'Что сделать: Иван Петров' }).scrollIntoViewIfNeeded()
+  await page.screenshot({ path: `${SHOTS}/21з-перенос-завести-человека.png` })
+
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него
   // на этом экране можно всё, и разницы не видно. Борис отвечает

@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Twelve migrations, all safe for the running version.** `0052` gives
+**Thirteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -24,7 +24,8 @@ that importing the same file twice creates no duplicates, `0061` marks
 an email a person set for themselves (see the next paragraph), `0062`
 gives labels a kind, so that an import can mark the cards of a person it
 did not find, `0063` adds one-time sign-in links and marks an account
-whose password has not been set yet. They
+whose password has not been set yet, `0064` remembers what was chosen
+for each person of an import source. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -128,6 +129,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда» («Ссылка для входа»): the person opens it, chooses a
   password and is signed in. It works once and for a week; a new one
   cancels the old. This is also how a forgotten password is replaced.
+- **Import: a choice for every person.** The preview lists each
+  assignee and author of the source: match them with a member, create
+  an account (owner only; each new person gets a sign-in link), or leave
+  them out. The choice is remembered for the next import of the same
+  source, and a repeated import that only adds assignees can now be
+  applied («Update the imported cards»).
 - **Nobody disappears from imported cards.** An assignee the import did
   not find among the organisation's people leaves a label with their
   name on each of their cards. The label is drawn as an outline, is not

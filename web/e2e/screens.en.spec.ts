@@ -88,4 +88,8 @@ test('английские снимки для документации', async 
   await expect(page.getByText(/3 cards of 4 rows/)).toBeVisible()
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21-import.png`, fullPage: true })
+  await page.getByRole('combobox', { name: 'What to do: nobody@example.test' }).selectOption('create')
+  await page.getByRole('combobox', { name: 'What to do: nobody@example.test' }).scrollIntoViewIfNeeded()
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: `${SHOTS}/21b-import-create-person.png` })
 })

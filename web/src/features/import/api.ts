@@ -1,5 +1,5 @@
 import { request } from '../../shared/api/index.ts'
-import type { ImportAnswer, ImportReport, ImportRequest } from '../../shared/api/index.ts'
+import type { ImportAnswer, ImportReport, ImportRequest, PersonChoice } from '../../shared/api/index.ts'
 
 /** Что за пакет переноса — словами для экрана. */
 export type PackageSummary = {
@@ -53,6 +53,7 @@ export const importApi = {
     boardId?: string
     newBoardName?: string
     columns?: Record<string, string>
+    people?: Record<string, PersonChoice>
     apply: boolean
   }) =>
     request<{ report: ImportReport }>('POST', '/api/import/yougile', body, false, IMPORT_TIMEOUT_MS),
@@ -63,6 +64,7 @@ export const importApi = {
     boardId?: string
     newBoardName?: string
     columns?: Record<string, string>
+    people?: Record<string, PersonChoice>
     apply: boolean
   }) =>
     request<{ package: PackageSummary; board: number; report: ImportReport }>(
