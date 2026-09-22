@@ -5,6 +5,7 @@ import { t } from '../shared/i18n/index.ts'
 import { boardPath, navigate } from '../shared/router/index.ts'
 import { Mapping } from '../features/import/Mapping.tsx'
 import { ImportReport } from '../features/import/ImportReport.tsx'
+import { ColumnValues } from '../features/import/ColumnValues.tsx'
 import { FormError, ScreenError } from '../shared/ui/Field.tsx'
 
 const MAX_FILE = 5 << 20
@@ -31,6 +32,8 @@ export function ImportScreen() {
   const [mapping, setMapping] = useState<ImportField[] | null>(null)
   // Пусто — первый лист книги; у CSV листов нет вовсе.
   const [sheet, setSheet] = useState('')
+  // Куда ложатся значения колонки файла — только на существующей доске.
+  const [columnMap, setColumnMap] = useState<Record<string, string>>({})
   const [answer, setAnswer] = useState<ImportAnswer | null>(null)
   const [busy, setBusy] = useState<'reading' | 'checking' | 'applying' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +59,7 @@ export function ImportScreen() {
         file: file.data,
         mapping,
         sheet: sheet || undefined,
+        columns: boardId ? columnMap : undefined,
         boardId: boardId || undefined,
         // Название доски на предпросмотр не влияет, кроме подписи, —
         // поэтому и не перезапускает его: подпись берётся из поля.
@@ -78,13 +82,14 @@ export function ImportScreen() {
       .finally(() => {
         if (n === asked.current) setBusy(null)
       })
-  }, [file, mapping, sheet, boardId, target.kind])
+  }, [file, mapping, sheet, boardId, target.kind, columnMap])
 
   const choose = (picked: File | undefined) => {
     setDone(null)
     setAnswer(null)
     setMapping(null)
     setSheet('')
+    setColumnMap({})
     setError(null)
     if (!picked) {
       setFile(null)
@@ -123,6 +128,7 @@ export function ImportScreen() {
         file: file.data,
         mapping,
         sheet: sheet || undefined,
+        columns: boardId ? columnMap : undefined,
         boardId: boardId || undefined,
         newBoardName: boardId ? undefined : boardName,
         apply: true,
@@ -188,6 +194,7 @@ export function ImportScreen() {
               // Другой лист — другие колонки: прежнее сопоставление
               // к ним не относится, сервер предложит новое.
               setMapping(null)
+              setColumnMap({})
               setSheet(e.target.value)
             }}
           >
@@ -228,7 +235,11 @@ export function ImportScreen() {
                 name="import-target"
                 checked={target.kind === 'existing'}
                 disabled={boards.length === 0}
-                onChange={() => setTarget({ kind: 'existing', boardId: boards[0]?.id ?? '' })}
+                onChange={() => {
+                  // Другая доска — другие колонки: прежний выбор к ним не относится.
+                  setColumnMap({})
+                  setTarget({ kind: 'existing', boardId: boards[0]?.id ?? '' })
+                }}
               />
               {t.imports.existingBoard}
               {boards.length === 0 && <span className="muted small"> — {t.imports.noWritableBoards}</span>}
@@ -238,7 +249,10 @@ export function ImportScreen() {
                 className="import-indent"
                 aria-label={t.imports.board}
                 value={target.boardId}
-                onChange={(e) => setTarget({ kind: 'existing', boardId: e.target.value })}
+                onChange={(e) => {
+                  setColumnMap({})
+                  setTarget({ kind: 'existing', boardId: e.target.value })
+                }}
               >
                 {boards.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -258,6 +272,19 @@ export function ImportScreen() {
                 sample={answer.sample}
                 mapping={mapping ?? answer.mapping}
                 onChange={setMapping}
+                disabled={busy === 'applying'}
+              />
+            </div>
+          )}
+
+          {report && report.boardColumns.length > 0 && report.columnValues.length > 0 && (
+            <div className="stack stack--tight">
+              <h3 className="section-title">{t.imports.values}</h3>
+              <p className="muted small">{t.imports.valuesHint}</p>
+              <ColumnValues
+                report={report}
+                choice={columnMap}
+                onChange={setColumnMap}
                 disabled={busy === 'applying'}
               />
             </div>

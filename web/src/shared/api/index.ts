@@ -402,6 +402,8 @@ export type ImportRequest = {
   boardId?: string
   /** Лист книги Excel; пусто — первый. */
   sheet?: string
+  /** Значение колонки файла (в нижнем регистре) → колонка доски. */
+  columns?: Record<string, string>
   newBoardName?: string
   apply: boolean
 }
@@ -416,6 +418,10 @@ export type ImportReport = {
   skipped: { row: number; title: string; number?: string; board?: string }[]
   newColumns: { name: string; kind: ColumnKind }[]
   newLabels: string[]
+  /** Значения колонки файла и куда каждое ляжет. */
+  columnValues: { value: string; cards: number; column: string; columnId?: string; new: boolean }[]
+  /** Колонки существующей доски для выбора; у новой пусто. */
+  boardColumns: { id: string; name: string }[]
   archivedLabels: string[]
   missingPeople: { email: string; cards: number }[]
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]

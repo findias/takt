@@ -215,8 +215,8 @@ color:var(--ink-3);font-size:.85rem}
 <ol>
 <li><strong>Boards</strong> tab → <strong>Import tasks from a spreadsheet…</strong> under the form for a new board.</li>
 <li>Pick the file — CSV or <code>.xlsx</code>. For CSV the encoding and the separator are guessed: Excel saves CSV with semicolons and in Windows-1251, and that is fine. For a workbook the first sheet that holds a table is taken (a cover or summary sheet in front is skipped), and <strong>Workbook sheet</strong> picks another; a report title above the table is not taken for its headers.</li>
-<li>Check the file columns. The server suggests which card field each one goes to; change what is wrong. Only the title is required; the rest — board column, assignees, labels, estimate, priority, due date, created and finished dates, description, key in the old system — is optional. <strong>Don’t import</strong> leaves a column out.</li>
-<li>Choose where to: <strong>To a new board</strong> (named after the file; change the name if you like) or <strong>To an existing board</strong>.</li>
+<li>Check the file columns. The server suggests which card field each one goes to; change what is wrong. Only the title is required; the rest — board column, assignees, labels, estimate, priority, due date, created and finished dates, description, key in the old system — is optional. <strong>Don’t import</strong> leaves a column out. Any column of the file can be the <strong>Board column</strong>: a status, a section, a group — in a Notion export pick the property that holds the stage, in a monday one either the Status column or the group.</li>
+<li>Choose where to: <strong>To a new board</strong> (named after the file; change the name if you like) or <strong>To an existing board</strong>. For an existing board, <strong>Board columns</strong> lists every value of the file&#39;s board column and where it goes: same-named ones are found on their own, an unknown one creates a new column unless you pick one of ours — “In Review” from Jira and our “In progress” are the same thing, but no name tells that.</li>
 <li>Read <strong>What will happen</strong> and press the button under it: it names the number of cards that will come.</li>
 </ol>
 <p>Nothing is written until the last step: the preview does the whole import and throws it away, so it shows exactly what you will get.</p>
@@ -304,7 +304,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-43-g8706e99-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-44-g929fc16-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

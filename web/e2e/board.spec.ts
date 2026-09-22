@@ -2586,3 +2586,29 @@ test('книга Excel: лист выбирается, дата из ячейк�
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'В работе', 'Сверить остатки')).toBeVisible()
 })
+
+test('значение из файла ложится в выбранную колонку доски, а не заводит новую', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Разработка')
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
+    name: 'jira.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Summary,Status\nWrite spec,In Review\nPlan Q4,Icebox\n'),
+  })
+  await page.getByRole('radio', { name: 'На существующую доску' }).check()
+  await page.getByRole('combobox', { name: 'Доска' }).selectOption({ label: 'Разработка' })
+
+  // Без выбора незнакомое значение заводит свою колонку — и это видно.
+  const review = page.getByRole('combobox', { name: 'Колонка доски для «In Review»' })
+  await expect(review).toHaveValue('')
+  await expect(page.getByRole('listitem').filter({ hasText: /^In Review/ })).toBeVisible()
+
+  await review.selectOption({ label: 'В работе' })
+  await expect(page.getByRole('listitem').filter({ hasText: /^In Review/ })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Перенести 2 карточки' }).click()
+  await page.getByRole('button', { name: 'Открыть доску' }).click()
+  await expect(cardIn(page, 'В работе', 'Write spec')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'In Review' })).toHaveCount(0)
+  await expect(cardIn(page, 'Icebox', 'Plan Q4')).toBeVisible()
+})

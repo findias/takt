@@ -351,6 +351,23 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21в-перенос-книги-excel.png`, fullPage: true })
 
+  // На существующую доску: значения колонки файла сопоставляются нашим
+  // колонкам. «На проверке» на «Поставках» нет — по умолчанию она
+  // заведётся новой, пока человек не отдаст её в «В работе».
+  await page.goto('/import')
+  await page.getByLabel('Файл CSV или Excel').setInputFiles({
+    name: 'Выгрузка из Kaiten.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      'Название;Статус\nСверить акты;В работе\nСогласовать тариф;На проверке\nЗаказать поддоны;Бэклог\nЗакрыть квартал;Готово\n',
+    ),
+  })
+  await page.getByRole('radio', { name: 'На существующую доску' }).check()
+  await page.getByRole('combobox', { name: 'Доска' }).selectOption({ label: 'Поставки' })
+  await expect(page.getByRole('combobox', { name: 'Колонка доски для «На проверке»' })).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21г-перенос-на-существующую-доску.png`, fullPage: true })
+
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него
   // на этом экране можно всё, и разницы не видно. Борис отвечает

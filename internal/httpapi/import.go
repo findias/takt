@@ -31,6 +31,9 @@ type importTableRequest struct {
 	// Пусто — сопоставление предлагает сервер по заголовкам.
 	Mapping importer.Mapping `json:"mapping"`
 	BoardID string           `json:"boardId"`
+	// Куда ложатся значения колонки файла на существующей доске:
+	// значение → колонка доски. Пусто — по названию, иначе новая.
+	Columns map[string]string `json:"columns"`
 	// Лист книги Excel; пусто — первый. У CSV листов нет.
 	Sheet string `json:"sheet"`
 	// Название новой доски, если boardId пуст.
@@ -108,7 +111,11 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 
 	out.Sample = readableDates(out.Sample, table.Headers, plan.Dates)
 
-	target := board.ImportTarget{BoardID: req.BoardID, NewBoardName: req.NewBoardName}
+	columnMap := map[string]string{}
+	for v, id := range req.Columns {
+		columnMap[strings.ToLower(strings.TrimSpace(v))] = id
+	}
+	target := board.ImportTarget{BoardID: req.BoardID, NewBoardName: req.NewBoardName, ColumnMap: columnMap}
 	rep, err := s.boards.Import(r.Context(), p.OrgID, p.ID, target, plan, req.Apply)
 	switch {
 	case err == nil:

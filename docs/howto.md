@@ -249,8 +249,16 @@ one) become cards on a board.
    rest — board column, assignees, labels, estimate, priority, due
    date, created and finished dates, description, key in the old
    system — is optional. **Don’t import** leaves a column out.
+   Any column of the file can be the **Board column**: a status, a
+   section, a group — in a Notion export pick the property that holds
+   the stage, in a monday one either the Status column or the group.
 4. Choose where to: **To a new board** (named after the file; change
-   the name if you like) or **To an existing board**.
+   the name if you like) or **To an existing board**. For an existing
+   board, **Board columns** lists every value of the file's board column
+   and where it goes: same-named ones are found on their own, an
+   unknown one creates a new column unless you pick one of ours —
+   “In Review” from Jira and our “In progress” are the same thing, but
+   no name tells that.
 5. Read **What will happen** and press the button under it: it names
    the number of cards that will come.
 

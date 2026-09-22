@@ -3878,6 +3878,12 @@ textarea.description {
 .import-report p {
   margin: 0;
 }
+/* Число карточек — по правому краю и табличными цифрами: столбец
+   сравнивают глазами сверху вниз. */
+.import-mapping .import-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 /* На телефоне пример уступает место выбору: без примера сопоставлять
    можно по заголовку, а обрезанный выпадающий список не выбрать вовсе. */
 @media (max-width: 40rem) {

@@ -41,6 +41,14 @@ export const imports: typeof ru = {
     description: 'Description',
     external: 'Key in the old system',
   },
+  values: 'Board columns',
+  valuesHint:
+    'Where each value of the file’s column goes. Same-named ones are found on their own; an unknown one creates a new column by default — pick ours if it is the same thing.',
+  value: 'Value in the file',
+  cardsCol: 'Cards',
+  boardColumn: 'Board column',
+  columnFor: (value: string) => `Board column for “${value}”`,
+  newColumn: (value: string) => `New column “${value}”`,
   preview: 'What will happen',
   checking: 'Checking…',
   willCreate: (n: number, rows: number) => `${cards(n)} of ${rows} ${rows === 1 ? 'row' : 'rows'} will be imported.`,
@@ -64,7 +72,7 @@ export const imports: typeof ru = {
   dateOf: (header: string, how: string) => `“${header}” — ${how}`,
   dateFormats: { iso: 'year-month-day, 2026-09-22', dotted: 'day.month.year, 22.09.2026', jira: 'as in Jira, 22/Sep/26', excel: 'an Excel date cell' },
   history:
-    'Dates are imported, moves between columns are not: the old system had its own columns. Cycle time of finished cards counts right away, the cumulative flow diagram starts today.',
+    'Dates are imported, moves between columns are not: the old system had its own columns. The start of work there is unknown and taken as the created date; Flow marks imported cards and can leave them out.',
   apply: (n: number) => `Import ${cards(n)}`,
   applying: 'Importing…',
   nothing: 'Nothing to import',

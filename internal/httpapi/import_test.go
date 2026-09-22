@@ -31,9 +31,11 @@ type importAnswer struct {
 			Row    int
 			Number string
 		} `json:"skipped"`
-		NewColumns []struct{ Name, Kind string } `json:"newColumns"`
-		NewLabels  []string                      `json:"newLabels"`
-		Missing    []struct {
+		NewColumns   []struct{ Name, Kind string } `json:"newColumns"`
+		NewLabels    []string                      `json:"newLabels"`
+		ColumnValues []importValue                 `json:"columnValues"`
+		BoardColumns []struct{ ID, Name string }   `json:"boardColumns"`
+		Missing      []struct {
 			Email string `json:"email"`
 			Cards int    `json:"cards"`
 		} `json:"missingPeople"`
@@ -288,4 +290,75 @@ func TestFlowMetricsTellImportedFromLived(t *testing.T) {
 	if own.CycleTime == nil || own.CycleTime.Count != 1 || own.Imported != 2 || !own.WithoutImported {
 		t.Fatalf("без перенесённых: %+v", own)
 	}
+}
+
+// Значения колонки файла ложатся туда, куда сказал человек: «In Review»
+// из Jira и наша «В работе» — одно и то же, но по названию этого
+// не угадать. Несопоставленное по-прежнему ищется по названию
+// или заводится новой колонкой.
+func TestColumnValuesGoWhereThePersonSaid(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Значения колонок")
+	boardID := owner.board("Разработка")
+	var snap struct {
+		Columns []struct{ ID, Name string } `json:"columns"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap)
+	work := snap.Columns[1].ID
+
+	file := []byte("Title,Status\nWrite spec,In Review\nFix login,In Review\nPlan Q4,Icebox\nShip it,Готово\n")
+	body := map[string]any{"file": file, "boardId": boardID}
+	preview := owner.importTable(body, http.StatusOK)
+	if len(preview.Report.BoardColumns) != 3 {
+		t.Fatalf("колонки доски для выбора: %+v", preview.Report.BoardColumns)
+	}
+	byValue := map[string]importValue{}
+	for _, v := range preview.Report.ColumnValues {
+		byValue[v.Value] = v
+	}
+	if v := byValue["In Review"]; !v.New || v.Cards != 2 {
+		t.Fatalf("без выбора незнакомое значение — новая колонка: %+v", v)
+	}
+	if v := byValue["Готово"]; v.New || v.ColumnID != snap.Columns[2].ID {
+		t.Fatalf("знакомое по названию — в свою колонку: %+v", v)
+	}
+
+	body["columns"] = map[string]string{"in review": work}
+	body["apply"] = true
+	done := owner.importTable(body, http.StatusOK)
+	for _, c := range done.Report.NewColumns {
+		if c.Name == "In Review" {
+			t.Fatalf("значение, отданное в «В работе», завело свою колонку: %+v", done.Report.NewColumns)
+		}
+	}
+	var after struct {
+		Columns []struct{ ID, Name string } `json:"columns"`
+		Cards   []struct {
+			Title    string `json:"title"`
+			ColumnID string `json:"columnId"`
+		} `json:"cards"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &after)
+	for _, c := range after.Cards {
+		if (c.Title == "Write spec" || c.Title == "Fix login") && c.ColumnID != work {
+			t.Fatalf("«%s» не в «В работе»", c.Title)
+		}
+	}
+	if len(after.Columns) != 4 {
+		t.Fatalf("колонок %d: ожидалась одна новая — Icebox", len(after.Columns))
+	}
+
+	// Выбранную колонку убрали, пока человек смотрел, — отказ называет значение.
+	body["columns"] = map[string]string{"icebox": uuid.NewString()}
+	raw := owner.mustDo("POST", "/api/import/table", body, http.StatusBadRequest)
+	if !strings.Contains(string(raw), "Icebox") {
+		t.Fatalf("отказ не называет значение: %s", raw)
+	}
+}
+
+type importValue struct {
+	Value    string `json:"value"`
+	Cards    int    `json:"cards"`
+	ColumnID string `json:"columnId"`
+	New      bool   `json:"new"`
 }

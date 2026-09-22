@@ -317,5 +317,6 @@ var en = map[string]string{
 	"общие строки книги не читаются: %s":                                         "the workbook's shared strings cannot be read: %s",
 	"в книге нет %s":            "the workbook has no %s",
 	"лист «%s» не читается: %s": "sheet “%s” cannot be read: %s",
-	"лист «%s» не читается: строка %s за пределом Excel": "sheet “%s” cannot be read: row %s is beyond Excel's limit",
+	"лист «%s» не читается: строка %s за пределом Excel":              "sheet “%s” cannot be read: row %s is beyond Excel's limit",
+	"колонки, выбранной для «%s», на доске уже нет — выберите другую": "the column chosen for “%s” is no longer on the board — choose another",
 }

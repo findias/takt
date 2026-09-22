@@ -87,7 +87,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   shows what will happen before anything is written: how many cards,
   which emails were not found (nobody is created), which rows have
   problems, how dates were read. Cards go to a new board or an
-  existing one; importing the same file again skips what has already
+  existing one, where each value of the file's column can be sent to
+  one of the board's columns instead of creating a new one; importing the same file again skips what has already
   come. Dates come across, moves between columns do not. Imported cards
   are marked in their history and in «Поток», which can count without
   them.

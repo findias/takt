@@ -24,6 +24,12 @@ import (
 type ImportTarget struct {
 	BoardID      string
 	NewBoardName string
+	// ColumnMap — куда ложатся значения колонки файла на существующей
+	// доске: значение (без учёта регистра) → колонка доски. Значение
+	// без записи ищется по названию, а не найдено — заводится новой
+	// колонкой, как и раньше. «In Review» из Jira и наша «В работе» —
+	// одно и то же, но угадать это по названию нельзя: решает человек.
+	ColumnMap map[string]string
 }
 
 // ImportReport — что случилось или случится. Один и тот же ответ
@@ -40,6 +46,11 @@ type ImportReport struct {
 	Skipped    []ImportSkip   `json:"skipped"`
 	NewColumns []ImportColumn `json:"newColumns"`
 	NewLabels  []string       `json:"newLabels"`
+	// ColumnValues — значения колонки файла и куда каждое ляжет.
+	ColumnValues []ImportValue `json:"columnValues"`
+	// BoardColumns — колонки существующей доски, из которых выбирают,
+	// куда положить значение. У новой доски пусто: там выбирать не из чего.
+	BoardColumns []ImportColumnRef `json:"boardColumns"`
 	// Метки, найденные только в архиве: вешать убранное молча нельзя.
 	ArchivedLabels []string              `json:"archivedLabels"`
 	MissingPeople  []MissingPerson       `json:"missingPeople"`
@@ -55,6 +66,23 @@ type ImportSkip struct {
 	// спрашивающий не видит.
 	Number string `json:"number,omitempty"`
 	Board  string `json:"board,omitempty"`
+}
+
+// ImportValue — значение колонки файла и колонка доски, куда оно ляжет.
+type ImportValue struct {
+	Value  string `json:"value"`
+	Cards  int    `json:"cards"`
+	Column string `json:"column"`
+	// ColumnID — колонка существующей доски; у новой колонки пусто:
+	// до переноса её нет, и ссылаться не на что.
+	ColumnID string `json:"columnId,omitempty"`
+	New      bool   `json:"new"`
+}
+
+// ImportColumnRef — колонка доски в списке выбора.
+type ImportColumnRef struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // ImportColumn — колонка, которую импорт заведёт.
@@ -93,6 +121,7 @@ func (s *Service) Import(
 		Rows: plan.Rows, Problems: plan.Problems, Dates: plan.Dates,
 		Skipped: []ImportSkip{}, NewColumns: []ImportColumn{}, NewLabels: []string{},
 		ArchivedLabels: []string{}, MissingPeople: []MissingPerson{},
+		ColumnValues: []ImportValue{}, BoardColumns: []ImportColumnRef{},
 	}
 	if rep.Problems == nil {
 		rep.Problems = []importer.Problem{}
@@ -107,8 +136,9 @@ func (s *Service) Import(
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Доска и её колонки.
+	// Доска и её колонки. fresh — заведённые этим переносом.
 	var columns []Column
+	fresh := map[string]bool{}
 	if target.BoardID != "" {
 		err := tx.QueryRow(ctx, `
 			select name from boards
@@ -124,12 +154,30 @@ func (s *Service) Import(
 		if columns, err = boardColumns(ctx, tx, target.BoardID); err != nil {
 			return rep, err
 		}
-		added, err := addMissingColumns(ctx, tx, orgID, target.BoardID, columns, plan.Columns)
+		for _, c := range columns {
+			rep.BoardColumns = append(rep.BoardColumns, ImportColumnRef{ID: c.ID, Name: c.Name})
+		}
+		// Значение, отданное человеком в колонку доски, новой колонки
+		// не заводит. Колонку проверяем здесь: её могли убрать, пока
+		// человек смотрел на предпросмотр.
+		var unmapped []string
+		for _, v := range plan.Columns {
+			id, ok := target.ColumnMap[strings.ToLower(strings.TrimSpace(v))]
+			if !ok || id == "" {
+				unmapped = append(unmapped, v)
+				continue
+			}
+			if !slices.ContainsFunc(columns, func(c Column) bool { return c.ID == id }) {
+				return rep, badRequestf("колонки, выбранной для «%s», на доске уже нет — выберите другую", v)
+			}
+		}
+		added, err := addMissingColumns(ctx, tx, orgID, target.BoardID, columns, unmapped)
 		if err != nil {
 			return rep, err
 		}
 		for _, c := range added {
 			rep.NewColumns = append(rep.NewColumns, ImportColumn{Name: c.Name, Kind: c.Kind})
+			fresh[c.ID] = true
 		}
 		if columns, err = boardColumns(ctx, tx, target.BoardID); err != nil {
 			return rep, err
@@ -147,6 +195,7 @@ func (s *Service) Import(
 		rep.BoardID, rep.BoardName, rep.NewBoard = b.ID, b.Name, true
 		for _, c := range columns {
 			rep.NewColumns = append(rep.NewColumns, ImportColumn{Name: c.Name, Kind: c.Kind})
+			fresh[c.ID] = true
 		}
 	}
 
@@ -169,6 +218,35 @@ func (s *Service) Import(
 	}
 	if first == nil {
 		return rep, badRequestf("на доске нет ни одной колонки — заведите колонку и повторите")
+	}
+	byID := map[string]Column{}
+	for _, c := range columns {
+		byID[c.ID] = c
+	}
+	// columnFor — куда ляжет значение: выбор человека, затем название.
+	columnFor := func(value string) (Column, bool) {
+		key := strings.ToLower(strings.TrimSpace(value))
+		if id := target.ColumnMap[key]; id != "" && !rep.NewBoard {
+			if c, ok := byID[id]; ok {
+				return c, true
+			}
+		}
+		c, ok := byName[key]
+		return c, ok
+	}
+	counts := map[string]int{}
+	for _, c := range plan.Cards {
+		counts[strings.ToLower(c.Column)]++
+	}
+	for _, v := range plan.Columns {
+		iv := ImportValue{Value: v, Cards: counts[strings.ToLower(v)]}
+		if c, ok := columnFor(v); ok {
+			iv.Column, iv.New = c.Name, fresh[c.ID]
+			if !iv.New {
+				iv.ColumnID = c.ID
+			}
+		}
+		rep.ColumnValues = append(rep.ColumnValues, iv)
 	}
 	// Карточка начата, если стоит в колонке старта или правее: колонки
 	// упорядочены позицией, и сравнение позиций это и отвечает.
@@ -255,7 +333,7 @@ func (s *Service) Import(
 		col := *first
 		switch {
 		case c.Column != "":
-			if named, ok := byName[strings.ToLower(c.Column)]; ok {
+			if named, ok := columnFor(c.Column); ok {
 				col = named
 			}
 		case c.Done != nil && finish != nil:
