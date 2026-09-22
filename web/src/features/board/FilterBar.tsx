@@ -8,22 +8,17 @@ import type { Filters } from './filters.ts'
 import { t } from '../../shared/i18n/index.ts'
 
 /**
- * Полоса фильтров.
+ * Полоса отбора — основная панель над доской (решение владельца
+ * 22.09.2026: «Отбор сделать основной панелью»).
  *
- * Всегда на виду, а не за кнопкой «фильтры»: спрятанный фильтр —
- * это фильтр, о котором забывают, а забытый фильтр показывает доску
- * не целиком и об этом не сообщает. Отсюда же счётчик отсеянного:
- * человек обязан видеть, что часть карточек скрыта им самим.
+ * На широком экране всегда на виду: спрятанный фильтр забывают,
+ * а забытый показывает доску не целиком и об этом не сообщает. Кнопка
+ * «Отбор» там спрятана стилями. На узком полоса съела бы треть экрана,
+ * поэтому там она за кнопкой с числом включённых — забыть о них
+ * по-прежнему нельзя. Рядом — счётчик отсеянного: человек обязан
+ * видеть, что часть карточек скрыта им самим.
  *
- * На телефоне полоса съедала треть экрана — половину того, что осталось
- * от доски, — поэтому там на виду остаётся только поиск, а остальное
- * уходит под кнопку. Правило при этом не нарушено: число действующих
- * отборов стоит на самой кнопке, так что забыть о них по-прежнему
- * нельзя.
- *
- * Поиск с задержкой в четверть секунды: перерисовывать доску на каждую
- * букву при трёхстах карточках — заметная работа, а разницы между
- * «сразу» и «через 250 мс» на печати никто не чувствует.
+ * Поиск — не здесь, а своей строкой ниже (CardSearch).
  */
 export function FilterBar({
   filters,
@@ -48,7 +43,6 @@ export function FilterBar({
   hasBlockDeadlines: boolean
   onChange: (next: Filters) => void
 }) {
-  const [text, setText] = useState(filters.text)
   const [open, setOpen] = useState(false)
   const restId = useId()
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -66,38 +60,14 @@ export function FilterBar({
   }
   const active = activeCount(filters)
 
-  // Строка поиска — своё состояние: она печатается, а адрес меняется
-  // следом. Обратная синхронизация нужна для перехода по ссылке
-  // и кнопки «назад».
-  useEffect(() => setText(filters.text), [filters.text])
-
-  useEffect(() => {
-    if (text === filters.text) return
-    const timer = window.setTimeout(() => onChange({ ...filters, text }), 250)
-    return () => window.clearTimeout(timer)
-  }, [text, filters, onChange])
-
   return (
     <div className="filters row">
-      <label className="filters-search">
-        <SearchIcon />
-        <input
-          type="search"
-          value={text}
-          placeholder={t.filters.findCard}
-          aria-label={t.filters.findCard}
-          onChange={(e) => setText(e.target.value)}
-        />
-      </label>
-
-      {/* Отборы свёрнуты на любой ширине, не только на узкой. Развёрнутые,
-          они занимали над доской два ряда из пяти флажков и трёх списков
-          (разбор 21.09.2026) — а спрашивают их реже, чем смотрят на доску.
-          Число включённых стоит на кнопке, а «скрыто N» — рядом с ней:
-          свёрнутый отбор не должен прятать, что доска отфильтрована. */}
+      {/* Кнопка нужна только узкому экрану: на широком отбор открыт
+          всегда, и кнопку прячут стили (.filters-toggle). */}
       <Button
         ref={toggleRef}
         kind="quiet"
+        className="filters-toggle"
         onKeyDown={closeOnEscape}
         aria-expanded={open}
         aria-controls={restId}
@@ -119,7 +89,14 @@ export function FilterBar({
         </>
       )}
 
-      <div className="filters-rest row" id={restId} hidden={!open} onKeyDown={closeOnEscape}>
+      {/* Не атрибут hidden, а класс: `[hidden]` прячет безусловно
+          (правило с !important в стилях), а на широком экране отбор
+          открыт всегда — свёрнутым он бывает только на узком. */}
+      <div
+        className={`filters-rest row${open ? '' : ' filters-rest--closed'}`}
+        id={restId}
+        onKeyDown={closeOnEscape}
+      >
         <select
           value={filters.assignee ?? ''}
           aria-label={t.filters.assignee}
@@ -263,6 +240,44 @@ export function FilterBar({
 
       </div>
     </div>
+  )
+}
+
+/**
+ * Поиск по карточкам — своей строкой под панелью отбора.
+ *
+ * С задержкой в четверть секунды: перерисовывать доску на каждую букву
+ * при трёхстах карточках — заметная работа, а разницы между «сразу»
+ * и «через 250 мс» на печати никто не чувствует.
+ */
+export function CardSearch({
+  filters,
+  onChange,
+}: {
+  filters: Filters
+  onChange: (next: Filters) => void
+}) {
+  const [text, setText] = useState(filters.text)
+  // Строка поиска — своё состояние: она печатается, а адрес меняется
+  // следом. Обратная синхронизация нужна для перехода по ссылке
+  // и кнопки «назад».
+  useEffect(() => setText(filters.text), [filters.text])
+  useEffect(() => {
+    if (text === filters.text) return
+    const timer = window.setTimeout(() => onChange({ ...filters, text }), 250)
+    return () => window.clearTimeout(timer)
+  }, [text, filters, onChange])
+  return (
+    <label className="filters-search">
+      <SearchIcon />
+      <input
+        type="search"
+        value={text}
+        placeholder={t.filters.findCard}
+        aria-label={t.filters.findCard}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </label>
   )
 }
 

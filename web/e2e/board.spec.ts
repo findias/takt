@@ -108,11 +108,18 @@ async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
   await page.getByRole('menuitemcheckbox').first().click()
 }
 
-/** Раскрыть отборы, если свёрнуты. Они за кнопкой «Отбор» на любой
- *  ширине (разбор 21.09.2026); повторный вызов ничего не делает. */
+/** Раскрыть отборы, если свёрнуты. На широком экране они открыты всегда
+ *  (решение владельца 22.09.2026), кнопка «Отбор» есть только на узком;
+ *  повторный вызов ничего не делает. */
 async function openFilters(page: Page) {
   const toggle = page.getByRole('button', { name: /^Отбор/ })
+  if (!(await toggle.isVisible())) return
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+}
+
+/** Выбрать вид доски: он — выпадающим списком слева. */
+async function pickView(page: Page, name: 'Доска' | 'Таблица' | 'Изменения') {
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: name })
 }
 
 /** То же для метки: нажатие по ряду меток, пункт по названию. Имя
@@ -189,7 +196,7 @@ test('таблицу можно листать, не теряя ни шапки,
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await addCard(page, 'Очередь', `Задача ${n}`)
   await page.setViewportSize({ width: 1200, height: 400 })
 
-  await page.getByRole('button', { name: 'Таблица', exact: true }).click()
+  await pickView(page, 'Таблица')
   const таблица = page.locator('.board-table')
   await expect(таблица).toBeVisible()
 
@@ -1892,7 +1899,7 @@ test('таблица — второй вид на те же данные, и о�
   await addCard(page, 'Очередь', 'Согласовать смету')
   await addCard(page, 'Очередь', 'Обновить регламент')
 
-  await page.getByRole('button', { name: 'Таблица' }).click()
+  await pickView(page, 'Таблица')
   const rows = page.locator('.board-table tbody tr')
   await expect(rows).toHaveCount(2)
   // Колонок на экране больше нет: прятать их стилями значило бы держать
@@ -1919,7 +1926,7 @@ test('таблица — второй вид на те же данные, и о�
   await expect(page.locator('.board-table tbody tr td', { hasText: 'Готово' })).toHaveCount(1)
 
   // Возврат к доске — тем же переключателем.
-  await page.getByRole('button', { name: 'Доска' }).click()
+  await pickView(page, 'Доска')
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 })
 
@@ -1933,7 +1940,7 @@ test('изменения — третий вид, с отбором «тольк
   const mine = cardIn(page, 'Очередь', 'Согласовать смету')
   await toggleAssignee(page, mine)
 
-  await page.getByRole('button', { name: 'Изменения' }).click()
+  await pickView(page, 'Изменения')
   const feed = page.locator('.feed li')
   await expect(feed.first()).toBeVisible()
   const all = await feed.count()
@@ -2318,14 +2325,20 @@ test('шапка доски не съедает экран', async ({ page }) =>
 
   await page.setViewportSize({ width: 1440, height: 900 })
   const wide = await above()
-  expect(wide.columns, 'доска на 1440 начинается ниже, чем надо').toBeLessThanOrEqual(200)
+  // 200 → 210: поиск ушёл строкой под отбор (решение владельца
+  // 22.09.2026), замер — 205.
+  expect(wide.columns, 'доска на 1440 начинается ниже, чем надо').toBeLessThanOrEqual(210)
   // До переделки — 18: отборы, тема и плотность стояли каждый своим
   // органом. После — 13: назад, видимость, оформление, три вида, поиск,
   // «Отбор», группировка, палитра, «Поток», «Архив», «+ итерация».
   // 14 — с колокольчиком уведомлений (этап 29, 22.09.2026): строки он
   // не добавляет, стоит в хвосте шапки рядом с именем, а «Справка» —
   // ссылка и в счёт не идёт. Высоту шапки держит проверка выше.
-  expect(wide.controls, 'органов над доской на 1440').toBeLessThanOrEqual(14)
+  // 16 — отбор стал основной панелью и открыт на широком экране
+  // (решение владельца 22.09.2026: «Отбор сделать основной панелью»):
+  // исполнитель и четыре флажка на виду, кнопки «Отбор» и трёх кнопок
+  // вида нет — вид стал одним списком. Замер — 16.
+  expect(wide.controls, 'органов над доской на 1440').toBeLessThanOrEqual(16)
 
   await page.setViewportSize({ width: 360, height: 760 })
   const first = cardIn(page, 'Очередь', 'Первая')
@@ -2343,6 +2356,8 @@ test('шапка доски не съедает экран', async ({ page }) =>
 // (найдено на подготовке показа 21.09.2026). Флажок берётся фокусом,
 // а не щелчком — щелчок включил бы отбор и поменял доску.
 test('Escape сворачивает «Отбор» и возвращает фокус на кнопку', async ({ page }) => {
+  // Кнопка «Отбор» — только на узком экране: на широком отбор открыт.
+  await page.setViewportSize({ width: 390, height: 844 })
   await register(page)
   await createBoard(page, 'Доска с отбором')
 

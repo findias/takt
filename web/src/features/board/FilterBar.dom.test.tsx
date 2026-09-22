@@ -1,7 +1,8 @@
 // «Отбор» раскрывается кнопкой и обязан закрываться Escape.
 //
-// Панель свёрнута на любой ширине (разбор 21.09.2026), и раскрытая
-// она сдвигает доску вниз на ряд. Закрыть её можно было только тем же
+// На узком экране панель свёрнута за кнопкой, и раскрытая она сдвигает
+// доску вниз на ряд (на широком она открыта всегда, а кнопку прячут
+// стили — jsdom стилей не считает, и кнопка здесь видна). Закрыть её можно было только тем же
 // нажатием на кнопку: Escape из флажка или списка не делал ничего,
 // хотя всякое другое раскрытое на этом экране — меню, выбор метки,
 // панель карточки — им закрывается. Найдено на подготовке показа.
@@ -9,7 +10,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
-import { FilterBar } from './FilterBar.tsx'
+import { CardSearch, FilterBar } from './FilterBar.tsx'
 import { EMPTY } from './filters.ts'
 
 function show() {
@@ -25,6 +26,7 @@ function show() {
         hasBlockDeadlines={false}
         onChange={() => {}}
       />
+      <CardSearch filters={EMPTY} onChange={() => {}} />
     </div>,
   )
   return { onOuterKey }

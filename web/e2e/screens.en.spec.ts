@@ -56,10 +56,10 @@ test('английские снимки для документации', async 
   await page.goto(boardUrl)
   await onBoard(page)
 
-  await page.getByRole('button', { name: 'Table' }).click()
+  await page.getByRole('combobox', { name: 'Board view' }).selectOption({ label: 'Table' })
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/12-table.png` })
-  await page.getByRole('button', { name: 'Board', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Board view' }).selectOption({ label: 'Board' })
 
   await page.getByRole('button', { name: 'Flow' }).click()
   await page.waitForTimeout(600)

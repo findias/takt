@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-59-gcaf65cd-dirty.</p>
+<p>Every section in one file. Version v0.2.3-60-g3894487-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -214,7 +214,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
 <h3 id="filter">Filter down to what you need</h3>
 <ol>
-<li>Above the board press <strong>Filter</strong> and pick your conditions: assignee, labels, <strong>Urgent</strong>, <strong>Due soon</strong>, <strong>Blocked</strong>, <strong>Longer than promised</strong>, iteration. The button shows how many are on, and next to it you see how many cards are hidden and <strong>Show all</strong>.</li>
+<li>Pick your conditions in the filter row above the board: assignee, labels, <strong>Urgent</strong>, <strong>Due soon</strong>, <strong>Blocked</strong>, **Longer than promised**, iteration. Next to them you see how many cards are hidden and <strong>Show all</strong>. On a narrow screen the row is folded under <strong>Filter</strong>, which shows how many conditions are on. <strong>Find a card</strong>, below the row, searches by title and number.</li>
 <li>To share the result, copy the page address — the filter lives in it.</li>
 <li>To come back to a filter later, press <strong>Save view</strong> and give it a name.</li>
 </ol>
@@ -223,7 +223,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>In the <strong>No grouping</strong> list, choose what to slice by: assignee, label, iteration or priority.</p>
 <p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
 <h3 id="table">Compare cards against each other</h3>
-<p>Press <strong>Table</strong> in the board header. Same set of cards as a flat list: age, due date and estimate side by side.</p>
+<p>Pick <strong>Table</strong> in the list at the left of the board&#39;s toolbar. Same set of cards as a flat list: age, due date and estimate side by side.</p>
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
 <h3 id="put-a-label-on-a-card">Put a label on a card</h3>
 <ol>
@@ -604,7 +604,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><strong>Boards</strong></td><td>boards of the organisation and the archive</td></tr>
 <tr><td><strong>Team</strong></td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
 <tr><td><strong>Structure</strong></td><td>subdivisions as a tree</td></tr>
-<tr><td>Board header</td><td><strong>Board</strong>, <strong>Table</strong>, <strong>Changes</strong> — three views of one set; <strong>Flow</strong> — metrics; <strong>Archive</strong> — the archive</td></tr>
+<tr><td>Board header</td><td>a list at the left: <strong>Board</strong>, <strong>Table</strong>, <strong>Changes</strong> — three views of one set; the filter row next to it; <strong>Flow</strong> — metrics; <strong>Archive</strong> — the archive</td></tr>
 </tbody>
 </table></div>
 <h2 id="keys">Keys</h2>
@@ -624,7 +624,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong>Create a board</strong> — on the main screen: name, key, <strong>Create</strong>.</li>
 <li><strong>Create a card</strong> — at the bottom of a column, then <code>Enter</code>.</li>
 <li><strong>Move a card</strong> — drag it, or press <code>Ctrl</code> with an arrow.</li>
-<li><strong>Filter</strong> — <strong>Filter</strong> above the board; it lives in the address bar, and <strong>Save view</strong> saves it as a named view.</li>
+<li><strong>Filter</strong> — the row above the board; it lives in the address bar, and <strong>Save view</strong> saves it as a named view.</li>
 <li><strong>Archive</strong> — the <strong>…</strong> menu on a card, <strong>Archive</strong>; <strong>Restore</strong> is offered next to the message.</li>
 </ol>
 <h2 id="when-something-looks-wrong">When something looks wrong</h2>
@@ -1550,6 +1550,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <li><strong>A “?” next to concepts</strong> — a column limit, the board&#39;s promise, a block, label scopes, the flow metrics, roles, key scopes: two or three sentences on what it is, and a link to the help section.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Changing an email.</strong> Your own — behind your name, on the «Вход» tab, with your password. A member&#39;s — by the owner, «Почта…» under «Команда», for someone who belongs to no other organisation. Both show in the audit log as «email: old → new». An email managed by the identity provider or directory is changed there.</li>
+<li><strong>The board&#39;s toolbar is rebuilt.</strong> The view (Board, Table, Changes) is a list at the left; the filter is the main panel and stays open on a wide screen (on a narrow one it is folded under «Отбор» as before); the card search is a row below.</li>
 <li><strong>Labels are named on the card.</strong> Under the title, as text — three of them and «+N»; they used to be coloured dots with the name only in a tooltip. Pressing them edits the card&#39;s labels.</li>
 <li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
 <li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
@@ -1681,6 +1682,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <li><strong>«?» у понятий</strong> — лимита колонки, обещания доски, блокировки, области метки, метрик потока, ролей, разрешений ключа: две-три фразы о том, что это, и ссылка на раздел справки.</li>
 <li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Смена почты.</strong> Свою — за именем, вкладка «Вход», с паролем. Участнику — владелец, «Почта…» в «Команде», если человек не состоит в других организациях. Обе видны в журнале как «почта: старая → новая». Почту, которую ведёт провайдер или каталог, меняют там.</li>
+<li><strong>Строка инструментов доски пересобрана.</strong> Вид (Доска, Таблица, Изменения) — списком слева; отбор — основная панель и на широком экране открыт всегда (на узком, как прежде, свёрнут под «Отбор»); поиск карточки — строкой ниже.</li>
 <li><strong>Метки подписаны на карточке.</strong> Под названием, текстом — три и «+N»; прежде стояли цветные точки, а название было только в подсказке. Нажатие по ним правит метки карточки.</li>
 <li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
 <li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>

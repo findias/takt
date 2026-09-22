@@ -9,7 +9,7 @@ One A4 sheet for day one. Labels are named as in the English interface.
 | **Boards** | boards of the organisation and the archive |
 | **Team** | people, invitations, labels, keys, subscriptions, export |
 | **Structure** | subdivisions as a tree |
-| Board header | **Board**, **Table**, **Changes** — three views of one set; **Flow** — metrics; **Archive** — the archive |
+| Board header | a list at the left: **Board**, **Table**, **Changes** — three views of one set; the filter row next to it; **Flow** — metrics; **Archive** — the archive |
 
 ## Keys
 
@@ -27,7 +27,7 @@ One A4 sheet for day one. Labels are named as in the English interface.
 1. **Create a board** — on the main screen: name, key, **Create**.
 2. **Create a card** — at the bottom of a column, then `Enter`.
 3. **Move a card** — drag it, or press `Ctrl` with an arrow.
-4. **Filter** — **Filter** above the board; it lives in the address bar,
+4. **Filter** — the row above the board; it lives in the address bar,
    and **Save view** saves it as a named view.
 5. **Archive** — the **…** menu on a card, **Archive**; **Restore** is offered
    next to the message.

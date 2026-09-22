@@ -599,7 +599,7 @@ test('при двойном размере текста название зад�
   const длинное = 'Разобрать обращения службы поддержки за прошлую неделю и ответить всем'
   await очередь.getByPlaceholder('Что нужно сделать?').fill(длинное)
   await очередь.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
-  await page.getByRole('button', { name: 'Таблица', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Таблица' })
   await expect(page.locator('.board-table')).toBeVisible()
 
   await page.evaluate(() => (document.documentElement.style.fontSize = '32px'))
@@ -978,9 +978,9 @@ test('в режиме высокой контрастности состояни
       ].join(' | ')
     }, селектор)
 
-  const выбранныйВид = await признаки('.segment-item--on')
-  const прочийВид = await признаки('.segment-item:not(.segment-item--on)')
-  expect(выбранныйВид, 'выбранный вид неотличим от невыбранного').not.toBe(прочийВид)
+  // Вид доски — выпадающим списком (решение владельца 22.09.2026):
+  // выбранное в нём показывает сам список, системными средствами,
+  // и сливаться ему не с чем.
 
   // Выбранная карточка: выбор ставится нажатием, а признак у неё
   // в обычном режиме — подложка и цвет рамки, то есть только цвет.
@@ -1086,7 +1086,7 @@ test('на бумагу уходит документ, а не снимок эк
   // Вид переключается до печати: на бумаге переключателя нет, и это
   // как раз то, что проверяется абзацем выше.
   await page.emulateMedia({ media: 'screen' })
-  await page.getByRole('button', { name: 'Таблица' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Таблица' })
   await expect(page.locator('.table-title').first()).toBeVisible()
   await page.emulateMedia({ media: 'print' })
   await expect(page.locator('.table-title').first()).toBeVisible()
@@ -1104,7 +1104,7 @@ test('на бумагу уходит документ, а не снимок эк
 
   // Открытая панель — то, ради чего печатают: доска за ней лишняя.
   await page.emulateMedia({ media: 'screen' })
-  await page.getByRole('button', { name: 'Доска', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
   await page.getByRole('button', { name: /Неделя 32/ }).first().click()
   await expect(page.locator('.panel-card')).toBeVisible()
   await page.emulateMedia({ media: 'print' })

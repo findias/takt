@@ -178,6 +178,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **The board's toolbar is rebuilt.** The view (Board, Table, Changes)
+  is a list at the left; the filter is the main panel and stays open
+  on a wide screen (on a narrow one it is folded under «Отбор» as
+  before); the card search is a row below.
 - **Labels are named on the card.** Under the title, as text — three
   of them and «+N»; they used to be coloured dots with the name only in
   a tooltip. Pressing them edits the card's labels.

@@ -113,12 +113,10 @@ test('снимки экранов', async ({ page, browser }) => {
 
   // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
   // сказать об этом, а не притворяться пустыми.
-  await page.getByRole('button', { name: /^Отбор/ }).click()
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
   await expect(page.getByText(/Под отбор ничего не подошло/).first()).toBeVisible()
   await page.screenshot({ path: `${SHOTS}/03б-колонка-под-отбором.png` })
   await page.getByRole('button', { name: 'Показать все' }).click()
-  await page.getByRole('button', { name: /^Отбор/ }).click()
 
   // Тёмная тема — системная.
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -234,7 +232,7 @@ test('снимки экранов', async ({ page, browser }) => {
   await backToBoard(page, boardUrl)
 
   // Таблица — тот же набор данных плоским списком.
-  await page.getByRole('button', { name: 'Таблица' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Таблица' })
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/12-таблица.png` })
 
@@ -250,10 +248,10 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/12б-таблица-узкая-прокручена.png` })
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  await page.getByRole('button', { name: 'Изменения' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Изменения' })
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${SHOTS}/13-изменения.png` })
-  await page.getByRole('button', { name: 'Доска' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
 
   // Поток: обещание, время цикла, возраст работы, пропускная способность.
   await page.getByRole('button', { name: 'Поток' }).click()
@@ -502,10 +500,10 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/24-карточка-тёмная.png` })
   await backToBoard(page, boardUrl)
 
-  await page.getByRole('button', { name: 'Таблица' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Таблица' })
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/25-таблица-тёмная.png` })
-  await page.getByRole('button', { name: 'Доска' }).click()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
 
   await page.getByRole('button', { name: 'Поток' }).click()
   await page.waitForTimeout(600)

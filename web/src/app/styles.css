@@ -3449,8 +3449,35 @@ textarea.description {
   flex-wrap: wrap;
   row-gap: var(--space-2);
 }
-.filters-rest[hidden] {
+.filters-rest--closed {
   display: none;
+}
+/* Отбор — основная панель (решение владельца 22.09.2026): на широком
+   экране открыт всегда и стоит в строке, а не под ней; кнопка «Отбор»
+   нужна только узкому экрану, где полоса съела бы треть доски. */
+@media (min-width: 48rem) {
+  .filters-toggle {
+    display: none;
+  }
+  /* Без своей коробки: части отбора текут в общую строку по одной
+     и переносятся по одной, а не всем блоком на новую строку. */
+  .filters-rest,
+  .filters-rest--closed {
+    display: contents;
+  }
+  /* Список меток растягивается по самому длинному названию, а после
+     переноса их десятки: ширину держим. */
+  .filters-rest select {
+    max-inline-size: 14rem;
+  }
+}
+/* Поиск — строкой под отбором. */
+.board-search-line {
+  display: flex;
+  padding-bottom: var(--space-2);
+}
+.board-search-line .filters-search {
+  flex: 0 1 28rem;
 }
 /* Сколько отборов включено — плашкой на кнопке: видно и тогда, когда
    сама подпись «Отбор» на телефоне спрятана в значок. */

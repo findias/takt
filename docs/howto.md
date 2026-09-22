@@ -24,10 +24,12 @@ shows less than everything, and says so in the column.
 <!-- anchor: filter -->
 ### Filter down to what you need
 
-1. Above the board press **Filter** and pick your conditions:
-   assignee, labels, **Urgent**, **Due soon**, **Blocked**,
-   **Longer than promised**, iteration. The button shows how many are on, and next
-   to it you see how many cards are hidden and **Show all**.
+1. Pick your conditions in the filter row above the board: assignee,
+   labels, **Urgent**, **Due soon**, **Blocked**, **Longer than
+   promised**, iteration. Next to them you see how many cards are hidden
+   and **Show all**. On a narrow screen the row is folded under
+   **Filter**, which shows how many conditions are on. **Find a card**,
+   below the row, searches by title and number.
 2. To share the result, copy the page address — the filter lives in it.
 3. To come back to a filter later, press **Save view** and give it a name.
 
@@ -47,7 +49,7 @@ To change the lane, change the property.
 <!-- anchor: table -->
 ### Compare cards against each other
 
-Press **Table** in the board header. Same set of cards as a
+Pick **Table** in the list at the left of the board's toolbar. Same set of cards as a
 flat list: age, due date and estimate side by side.
 
 Click a column heading to sort. The order lives in the address, so a

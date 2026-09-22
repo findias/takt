@@ -26,7 +26,7 @@ import { CardPanel } from '../features/board/CardPanel.tsx'
 import { BoardSkeleton, EmptyState, ErrorState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
-import { FilterBar } from '../features/board/FilterBar.tsx'
+import { CardSearch, FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
 import { withViewTransition } from '../shared/lib/withViewTransition.ts'
@@ -1009,40 +1009,32 @@ export function Board({
         </div>
       </header>
 
-      {/* Одна строка инструментов, а не четыре-пять рядов (разбор
-          21.09.2026). Слева — как смотреть: вид, поиск и отбор,
-          группировка, сохранённые виды; справа — куда уйти с доски:
-          палитра, «Поток», «Архив». Переключатель видов стоит первым:
-          он меняет всё, что ниже, и искать его у правого края,
-          далеко от того, что он переключает, было неудобно. */}
+      {/* Строка инструментов (решение владельца 22.09.2026): слева вид
+          списком, дальше открытый отбор — основная панель, — группировка
+          и сохранённые виды; справа — куда уйти с доски: палитра,
+          «Поток», «Архив». Поиск — строкой ниже. */}
       <div className="board-toolbar board-tools-line">
-        {/* Переключатель видов: одна доска, разные раскладки. Сегмент,
-            а не выпадающий список, — вариантов три, и выбранный должен
-            быть виден без нажатия. */}
-        <div className="segment" role="group" aria-label={t.screen.viewGroup}>
-          {[
-            { key: 'board', name: t.screen.viewBoard },
-            { key: 'table', name: t.screen.viewTable },
-            { key: 'changes', name: t.screen.viewChanges },
-          ].map((item) => (
-            <button
-              key={item.key}
-              className={item.key === view ? 'segment-item segment-item--on' : 'segment-item'}
-              aria-pressed={item.key === view}
-              onClick={() => {
-                const next = new URLSearchParams(query)
-                if (item.key === 'board') next.delete('view')
-                else next.set('view', item.key)
-                // Смена раскладки показывается движением: это те же
-                // карточки, а не другой экран. Довод и замер —
-                // в `withViewTransition`.
-                withViewTransition(() => setQuery(next))
-              }}
-            >
-              {item.name}
-            </button>
-          ))}
-        </div>
+        {/* Вид — выпадающим списком слева (решение владельца 22.09.2026):
+            основную строку занимает отбор, а вид меняют реже, чем
+            отбирают. */}
+        <select
+          className="view-select"
+          value={view}
+          aria-label={t.screen.viewGroup}
+          onChange={(e) => {
+            const next = new URLSearchParams(query)
+            if (e.target.value === 'board') next.delete('view')
+            else next.set('view', e.target.value)
+            // Смена раскладки показывается движением: это те же
+            // карточки, а не другой экран. Довод и замер —
+            // в `withViewTransition`.
+            withViewTransition(() => setQuery(next))
+          }}
+        >
+          <option value="board">{t.screen.viewBoard}</option>
+          <option value="table">{t.screen.viewTable}</option>
+          <option value="changes">{t.screen.viewChanges}</option>
+        </select>
         {asTable && (
           <select
             value={sort}
@@ -1119,6 +1111,11 @@ export function Board({
             <span className="tool-label">{t.screen.archive}</span>
           </button>
         </div>
+      </div>
+      {/* Поиск — строкой под отбором: он нужен реже отбора и не должен
+          спорить с ним за основную строку. */}
+      <div className="board-toolbar board-search-line">
+        <CardSearch filters={filters} onChange={setFilters} />
       </div>
 
       {/* Про доску целиком — тихой полосой: кто сколько несёт, итерации,
