@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-33-g54c4a63-dirty.</p>
+<p>Every section in one file. Version v0.2.3-34-g0f5718b-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -162,7 +162,7 @@ color:var(--ink-3);font-size:.85rem}
 <figcaption>The list of boards</figcaption></figure>
 <h2 id="create-board">1. Create a board</h2>
 <ol>
-<li>On the main screen, type a name into <strong>New board name</strong> (name of the new board).</li>
+<li>On the main screen, type a name into <strong>New board name</strong>.</li>
 <li>Next to it, in <strong>Key</strong>, type a short word — <code>ПОСТ</code>, say. It becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty and we derive it from the name.</li>
 <li>Press <strong>Create</strong>.</li>
 </ol>
@@ -187,7 +187,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>If work has stalled, press <strong>Block</strong> and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all. If you know when the wait ends, fill in <strong>Lifts itself (optional)</strong> — the block lifts itself at that moment.</p>
 <p>To mark what kind of work it is, add a label: press <strong>+ label</strong> on the card and type. A label that does not exist yet is created right there — for this board, a subdivision, or the whole organisation.</p>
 <h2 id="5-carry-it-to-the-end">5. Carry it to the end</h2>
-<p>Move the card into <strong>Done</strong>. After a few such cards, open <strong>Flow</strong> (flow) in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
+<p>Move the card into <strong>Done</strong>. After a few such cards, open <strong>Flow</strong> in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
 <h2 id="6-invite-a-colleague">6. Invite a colleague</h2>
 <ol>
 <li>Open the <strong>Team</strong> tab.</li>
@@ -211,14 +211,14 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="find-a-card">Find a card</h3>
 <p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
 <p>If the card is not found, check the filter: under a filter the board shows less than everything, and says so in the column.</p>
-<h3 id="filter-down-to-what-you-need">Filter down to what you need</h3>
+<h3 id="filter">Filter down to what you need</h3>
 <ol>
 <li>Above the board press <strong>Filter</strong> and pick your conditions: assignee, labels, <strong>Urgent</strong>, <strong>Due soon</strong>, <strong>Blocked</strong>, <strong>Longer than promised</strong>, iteration. The button shows how many are on, and next to it you see how many cards are hidden and <strong>Show all</strong>.</li>
 <li>To share the result, copy the page address — the filter lives in it.</li>
 <li>To come back to a filter later, press <strong>Save view</strong> and give it a name.</li>
 </ol>
 <p>Labels combine with AND: pick “Urgent” and “External” and you get cards carrying both.</p>
-<h3 id="slice-the-board-into-swimlanes">Slice the board into swimlanes</h3>
+<h3 id="swimlanes">Slice the board into swimlanes</h3>
 <p>In the <strong>No grouping</strong> list, choose what to slice by: assignee, label, iteration or priority.</p>
 <p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
 <h3 id="table">Compare cards against each other</h3>
@@ -231,7 +231,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Pick one, or press <code>Enter</code>.</li>
 </ol>
 <p>To label several cards at once, select them and use the bar that appears at the bottom of the screen.</p>
-<h3 id="create-a-label-that-does-not-exist-yet">Create a label that does not exist yet</h3>
+<h3 id="label-scope">Create a label that does not exist yet</h3>
 <p>Right from the card: type the new name into the label picker. Under the list the picker offers where the label should apply:</p>
 <ul>
 <li><strong>this board only</strong> — nobody else will see it offered;</li>
@@ -240,19 +240,29 @@ color:var(--ink-3);font-size:.85rem}
 </ul>
 <p>Pick one and the label is created and hung in one go, with a colour chosen for you. You are only offered the places you are allowed to create labels in: a board you can edit, a subdivision you belong to or run, and the organisation.</p>
 <p>If a label with that name already exists where the places overlap, the picker offers that label instead of a second one, and an archived one is offered back from the archive. Colours, archiving and the full list live on <strong>Team</strong>, in the <strong>Labels</strong> section.</p>
-<h3 id="block-work-until-a-date">Block work until a date</h3>
+<h3 id="block">Block work until a date</h3>
 <ol>
 <li>Open the card&#39;s <strong>…</strong> menu and choose <strong>Block…</strong>, or press <strong>Block…</strong> in the card panel.</li>
 <li>Write what you are waiting for.</li>
-<li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong> (lifts itself, optional): a date and a time.</li>
+<li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong>: a date and a time.</li>
 </ol>
 <p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>.</p>
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
+<h3 id="columns">Mark up a column and set its limit</h3>
+<ol>
+<li>In the column header press <strong>Markup</strong>.</li>
+<li>Tick <strong>Work starts here</strong> on the first column where work is really under way, and <strong>Work ends here</strong> on the column where it counts as finished. Cycle time, throughput and the forecast are counted from these two marks, not from dates typed in by hand.</li>
+<li>Type a <strong>Limit</strong> — how many cards the column should hold at once.</li>
+<li>Tick <strong>Hard limit</strong> if a full column must refuse another card.</li>
+</ol>
+<p>Over an ordinary limit the counter in the header turns amber, and a card can still be moved in: the limit is there to make overload visible. A hard limit refuses the move and says to make room first. The field below the limit holds the column&#39;s entry rule — what must be done before a card comes here.</p>
+<h3 id="promise">Promise how long work takes</h3>
+<p>Open <strong>Flow</strong> and find <strong>Board promise</strong>. Press <strong>Take from history</strong>: the promise becomes the number of days in which most of the board&#39;s finished work passed it. From then on, a card running longer than the promise is marked right on the board, and the <strong>Longer than promised</strong> filter gathers such cards. <strong>Drop the promise</strong> removes it.</p>
 <h3 id="appearance">Switch to the dark theme or a denser board</h3>
 <ol>
-<li>Click your name in the header — it opens <strong>Personal settings</strong> (personal settings).</li>
+<li>Click your name in the header — it opens <strong>Personal settings</strong>.</li>
 <li><strong>Appearance</strong> tab: <strong>System</strong>, <strong>Light</strong>, <strong>Dark</strong>; below them <strong>Compact</strong>.</li>
 </ol>
 <p>The change applies at once. Theme and density are remembered in this browser: on another device they can be different.</p>
@@ -261,6 +271,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>The choice is stored with your account: the next time you sign in on another computer or phone, the interface opens in the same language. Until you choose, the language follows the browser.</p>
 <h3 id="get-help-on-the-screen-you-are-on">Get help on the screen you are on</h3>
 <p>Press <strong>Help</strong> in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, <strong>Flow</strong>, the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application. The search field above the contents finds a section by any word in it, and <strong>What’s new</strong> lists what changed for people using the board in this version.</p>
+<p>Next to some concepts — a column limit, the board&#39;s promise, a block, the flow metrics, roles, key scopes — there is a round <strong>?</strong>. Press it for two or three sentences on what the concept is, with a link to the section of help that explains it in full. <code>Escape</code> closes it.</p>
 <h3 id="change-your-password-or-sign-out">Change your password or sign out</h3>
 <p>Both live behind your name as well. <strong>Sign-in</strong> tab: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
@@ -289,7 +300,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Send the link to the person.</li>
 </ol>
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
-<h3 id="close-a-board-to-outsiders">Close a board to outsiders</h3>
+<h3 id="visibility">Close a board to outsiders</h3>
 <ol>
 <li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
 <li>Choose the visibility: - <strong>Whole organisation</strong> — everyone in the organisation; - <strong>Own subdivision</strong> — people in the subdivision that owns it; - <strong>Listed people only</strong> — only those listed by name.</li>
@@ -308,7 +319,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>The <strong>Structure</strong> tab.</li>
 <li>Press <strong>New subdivision</strong>, enter a name.</li>
 <li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>Create a department…</strong>, <strong>Rename…</strong>, <strong>Move…</strong>, <strong>Remove subdivision</strong>. A question opens a field right under the row.</li>
-<li>Appoint a subdivision administrator in <strong>Who runs what</strong> (who runs what) — they will run their own subtree.</li>
+<li>Appoint a subdivision administrator in <strong>Who runs what</strong> — they will run their own subtree.</li>
 </ol>
 <p>A removed subdivision is not gone: it waits under <strong>Removed subdivisions</strong> and comes back with <strong>Restore</strong>.</p>
 <h2 id="integrations">Integrations</h2>
@@ -320,13 +331,13 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <p>For the directory (SCIM), issue a <strong>separate</strong> key: such a key works only against <code>/scim/v2</code> and gives no access to boards.</p>
 <p><strong>Revoke key</strong> asks first: the key stops working at once, and nothing brings it back — you issue a new one.</p>
-<h3 id="receive-events-in-your-own-system">Receive events in your own system</h3>
+<h3 id="subscriptions">Receive events in your own system</h3>
 <ol>
 <li><strong>Team</strong> tab → <strong>Event subscriptions</strong>.</li>
 <li>Enter a name and the receiver&#39;s address, tick the events.</li>
 <li>Press <strong>Create</strong> and keep the signing key — we sign every delivery with it.</li>
 </ol>
-<p>If the receiver goes down for maintenance, press <strong>Pause</strong> (pause): while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
+<p>If the receiver goes down for maintenance, press <strong>Pause</strong>: while paused, events do not pile up, so resuming does not turn into an avalanche.</p>
 <h3 id="work-out-why-an-event-did-not-arrive">Work out why an event did not arrive</h3>
 <ol>
 <li>On the subscription press <strong>Deliveries</strong>.</li>
@@ -334,8 +345,8 @@ color:var(--ink-3);font-size:.85rem}
 <li>Once the receiver is fixed, press <strong>Retry</strong> on what did not arrive.</li>
 </ol>
 <p>A retry also re-enables the subscription if we disabled it after a long run of failures.</p>
-<h3 id="take-all-the-organisation-s-data">Take all the organisation&#39;s data</h3>
-<p><strong>Team</strong> tab → <strong>Export</strong> → <strong>Download file</strong> (download).</p>
+<h3 id="export">Take all the organisation&#39;s data</h3>
+<p><strong>Team</strong> tab → <strong>Export</strong> → <strong>Download file</strong>.</p>
 <p>Tick <strong>Include the audit log</strong> if you need it too: the log is usually larger than everything else combined.</p>
 <h2 id="installing-and-operating">Installing and operating</h2>
 <p>Details are in the <a href="install.html">installation guide</a>.</p>
@@ -354,7 +365,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <h1>Reference</h1>
 <p>Lists and tables: what lives where, what things are called, what equals what. Not read in order — read when needed.</p>
 <p><strong>The interface speaks English and Russian;</strong> the language is chosen behind your name in the header. Buttons are named here as they appear in the English interface. Screenshots still show the Russian one.</p>
-<h2 id="roles-in-the-organisation">Roles in the organisation</h2>
+<h2 id="roles">Roles in the organisation</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Role</th><th>Reads</th><th>Changes work</th><th>Runs the organisation</th></tr></thead>
 <tbody>
@@ -462,7 +473,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td>Discarded</td><td>how much was taken off the board unfinished</td></tr>
 </tbody>
 </table></div>
-<h2 id="integration-key-scopes">Integration key scopes</h2>
+<h2 id="key-scopes">Integration key scopes</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Scope</th><th>What it opens</th></tr></thead>
 <tbody>
@@ -943,7 +954,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><strong>Password guessing.</strong> Ten failed attempts, then one a minute. Counted per e-mail address rather than per source: the application lives behind a proxy, every request arrives from the same address, and a bucket on that address would lock out the whole organisation because of one guesser. The limitation is stated rather than hidden: one password tried against many addresses is not caught by this, and catching it requires a trusted-proxy configuration you would have to set up.</p>
 <p><strong>Request rate.</strong> 120 requests of burst and 2 per second per key, with <code>RateLimit-*</code> headers on every answer; SCIM gets its own bucket — 600 and 20 — so that synchronising a directory of employees does not run into the interactive limit. Any request body over 1 MiB is refused before it is read.</p>
 <h2 id="access-control-and-isolation-between-organisations">Access control and isolation between organisations</h2>
-<p>Three roles — <strong>Owner</strong>, <strong>Member</strong>, <strong>Viewer</strong> (viewer) — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
+<p>Three roles — <strong>Owner</strong>, <strong>Member</strong>, <strong>Viewer</strong> — plus two appointments an owner makes: an administrator of a subdivision, who runs their own subtree, and an observer of an area, who reads it. Boards are visible to the whole organisation, to one subdivision, or to named people only.</p>
 <p>Isolation between organisations is held by <strong>database policies, not by checks in the code</strong>. Every tenant table has row-level security forced on; the application connects with a role that has no <code>SUPERUSER</code>, no <code>BYPASSRLS</code> and no <code>CREATEDB</code>, and every transaction carries the tenant context. The consequence worth spelling out to a reviewer: even a mistake in the application cannot return another organisation&#39;s row, because the row never leaves the database. The consequence worth spelling out to an administrator: if the application is pointed at a superuser role, policies stop applying and the separation quietly disappears — which is why the installation guide creates the role explicitly and <code>takt doctor</code> checks that the policies really do apply to the role the application connects with, naming the fix when they do not.</p>
 <h2 id="audit-and-logs">Audit and logs</h2>
 <p>The audit log is written by <strong>database triggers</strong>, not by application code: membership, invitations, subdivisions, board membership, observers, and the creation, deletion and visibility changes of boards. A code path cannot forget to write it, and a policy prevents an actor from signing someone else&#39;s name. It is read by an owner and by an observer of the whole organisation; to anyone else the log looks empty rather than forbidden.</p>
@@ -1310,6 +1321,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <ul>
 <li><strong>The interface speaks English as well as Russian.</strong> It follows the browser until the person chooses; the choice is stored with the account and follows them to any device.</li>
 <li><strong>Help inside the application.</strong> «Справка» in the header, <code>F1</code> or <code>?</code> opens the documentation at the section about the screen you are on, in the interface language, with a search over every section and a «Что нового» (what&#39;s new) page for this version and a glossary. It is served by the server itself, built from the same version, and needs no internet.</li>
+<li><strong>A “?” next to concepts</strong> — a column limit, the board&#39;s promise, a block, label scopes, the flow metrics, roles, key scopes: two or three sentences on what it is, and a link to the help section.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
 <li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
@@ -1427,6 +1439,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <ul>
 <li><strong>Интерфейс говорит и по-английски.</strong> Пока человек не выбрал язык, он берётся из браузера; выбор хранится в учётной записи и встречает его на любом устройстве.</li>
 <li><strong>Справка внутри приложения.</strong> «Справка» в шапке, <code>F1</code> или <code>?</code> открывают документацию на разделе про тот экран, где вы сейчас, на языке интерфейса, с поиском по всем разделам, страницей «Что нового» этой версии и словарём терминов. Её отдаёт сам сервер, собрана она из той же версии, и интернет ей не нужен.</li>
+<li><strong>«?» у понятий</strong> — лимита колонки, обещания доски, блокировки, области метки, метрик потока, ролей, разрешений ключа: две-три фразы о том, что это, и ссылка на раздел справки.</li>
 <li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
 <li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>

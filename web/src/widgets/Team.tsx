@@ -27,6 +27,7 @@ import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { locale, t } from '../shared/i18n/index.ts'
+import { Hint } from '../shared/ui/Hint.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -89,7 +90,10 @@ export function Team({ principal }: { principal: Principal }) {
       </ConfirmDialog>
 
       <section className="stack">
-        <h2 className="section-title">{t.team.inOrg}</h2>
+        <div className="section-head">
+          <h2 className="section-title">{t.team.inOrg}</h2>
+          <Hint topic="roles" />
+        </div>
         {members === null && <Skeleton lines={2} />}
         <ul className="member-list">
           {members?.map((m) => (
@@ -290,7 +294,10 @@ function Clients() {
         <p>{t.team.revokeKeyBody(toRevoke?.name ?? '')}</p>
         <p className="muted small">{t.team.revokeKeyFinal}</p>
       </ConfirmDialog>
-      <h2 className="section-title">{t.team.keys}</h2>
+      <div className="section-head">
+        <h2 className="section-title">{t.team.keys}</h2>
+        <Hint topic="keyScopes" />
+      </div>
       <ScreenError>{error}</ScreenError>
       <p className="muted small">{t.team.keysExplain}</p>
 
@@ -615,7 +622,10 @@ function Export() {
 
   return (
     <section className="stack">
-      <h2 className="section-title">{t.team.export}</h2>
+      <div className="section-head">
+        <h2 className="section-title">{t.team.export}</h2>
+        <Hint topic="export" />
+      </div>
       <p className="muted small">{t.team.exportExplain}</p>
       <label className="row row--tight">
         <input

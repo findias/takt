@@ -21,6 +21,7 @@ import { ColumnResizer } from './ColumnResizer.tsx'
 import type { ColumnPatch } from './useBoard.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
 import { t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
@@ -578,14 +579,19 @@ function ColumnSettings({
         </select>
       </label>
 
-      <label className="row row--tight">
-        <input
-          type="checkbox"
-          checked={column.isStartedPoint}
-          onChange={(e) => onUpdate({ isStartedPoint: e.target.checked })}
-        />
-        <span className="small">{t.column.startsHere}</span>
-      </label>
+      {/* «?» — рядом с подписью, а не внутри неё: кнопка внутри
+          `label` делила бы нажатие с флажком. */}
+      <div className="row row--tight">
+        <label className="row row--tight">
+          <input
+            type="checkbox"
+            checked={column.isStartedPoint}
+            onChange={(e) => onUpdate({ isStartedPoint: e.target.checked })}
+          />
+          <span className="small">{t.column.startsHere}</span>
+        </label>
+        <Hint topic="markup" />
+      </div>
       <label className="row row--tight">
         <input
           type="checkbox"
@@ -598,23 +604,26 @@ function ColumnSettings({
           сказано «сначала задайте лимит», а задать его отсюда было
           нечем — правился он нажатием по счётчику в шапке колонки,
           и про это не было сказано нигде. */}
-      <label className="row row--tight">
-        <span className="muted small">{t.column.limit}</span>
-        <input
-          type="number"
-          min={1}
-          className="count-edit"
-          value={limit}
-          placeholder={t.column.noLimit}
-          aria-label={t.column.limitOf(column.name)}
-          onChange={(e) => setLimit(e.target.value)}
-          onBlur={commitLimit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitLimit()
-            if (e.key === 'Escape') setLimit(column.wipLimit === null ? '' : String(column.wipLimit))
-          }}
-        />
-      </label>
+      <div className="row row--tight">
+        <label className="row row--tight">
+          <span className="muted small">{t.column.limit}</span>
+          <input
+            type="number"
+            min={1}
+            className="count-edit"
+            value={limit}
+            placeholder={t.column.noLimit}
+            aria-label={t.column.limitOf(column.name)}
+            onChange={(e) => setLimit(e.target.value)}
+            onBlur={commitLimit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitLimit()
+              if (e.key === 'Escape') setLimit(column.wipLimit === null ? '' : String(column.wipLimit))
+            }}
+          />
+        </label>
+        <Hint topic="limit" />
+      </div>
       <label className="row row--tight">
         <input
           type="checkbox"

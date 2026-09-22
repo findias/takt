@@ -3,6 +3,7 @@ import { VISIBILITY_NAMES, api } from '../../shared/api/index.ts'
 import type { BoardAccess as Access, Member, Team, Visibility } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Кому видна доска.
@@ -90,6 +91,7 @@ export function BoardAccess({
             </option>
           ))}
         </select>
+        <Hint topic="visibility" />
 
         {/* Подразделение выбирается при любой видимости: «чья доска»
             и «кому видно» — разные вопросы, и доска остаётся доской

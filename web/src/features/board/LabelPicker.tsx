@@ -7,6 +7,7 @@ import type { PickerItem } from '../../entities/label/model.ts'
 import { CheckIcon } from '../../shared/ui/icons.tsx'
 import { topLayer, useAnchored } from '../../shared/ui/anchored.ts'
 import { t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Выбор метки: поиск по существующим и заведение новой в том же поле.
@@ -198,6 +199,15 @@ export function LabelCombobox({
       <p className="form-error" id={errorId} aria-live="polite">
         {error}
       </p>
+      {/* Где будет действовать новая метка — вопрос, который возникает
+          ровно тогда, когда её предлагают завести, и не раньше. «?» —
+          над списком, а не в нём: в списке вариантов кнопке не место. */}
+      {items.some((item) => item.kind === 'create') && (
+        <div className="row row--tight muted small">
+          {t.hint.labelScope.term}
+          <Hint topic="labelScope" />
+        </div>
+      )}
       <ul className="palette-list label-options" id={listId} role="listbox" aria-label={t.parts.labels}>
         {items.map((item, i) => (
           <li key={item.key} role="presentation">

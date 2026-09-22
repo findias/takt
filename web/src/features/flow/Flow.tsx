@@ -6,6 +6,7 @@ import { dateWords } from '../../entities/card/model.ts'
 import type { FlowReport } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Метрики потока.
@@ -84,7 +85,10 @@ export function Flow({
       />
 
       <section className="stack">
-        <h3 className="section-title">{t.flow.cycleTime}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{t.flow.cycleTime}</h3>
+          <Hint topic="cycleTime" />
+        </div>
         {report.cycleTime === null ? (
           <p className="muted small">{t.flow.noCycle}</p>
         ) : (
@@ -103,7 +107,10 @@ export function Flow({
       </section>
 
       <section className="stack">
-        <h3 className="section-title">{t.flow.now}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{t.flow.now}</h3>
+          <Hint topic="age" />
+        </div>
         <p className="muted small">{t.flow.wip(report.wip)}</p>
         {report.aging.length === 0 ? (
           <p className="muted small">{t.flow.nothingStarted}</p>
@@ -139,13 +146,19 @@ export function Flow({
 
       {report.flow.length > 1 && (
         <section className="stack">
-          <h3 className="section-title">{t.flow.cfd}</h3>
+          <div className="section-head">
+            <h3 className="section-title">{t.flow.cfd}</h3>
+            <Hint topic="accumulation" />
+          </div>
           <CumulativeFlow flow={report.flow} />
         </section>
       )}
 
       <section className="stack">
-        <h3 className="section-title">{t.flow.throughput}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{t.flow.throughput}</h3>
+          <Hint topic="throughput" />
+        </div>
         {/* Пустая сетка столбиков читается как поломка графика, а не как
             «нечего показывать». Пока ни одна карточка не доведена
             до конца, честнее сказать это словами. */}
@@ -170,7 +183,10 @@ export function Flow({
 
       {report.forecast && (
         <section className="stack">
-          <h3 className="section-title">{t.flow.forecast}</h3>
+          <div className="section-head">
+            <h3 className="section-title">{t.flow.forecast}</h3>
+            <Hint topic="forecast" />
+          </div>
           <table className="figures">
             <thead>
               <tr>
@@ -284,7 +300,10 @@ function Promise_({
 
   return (
     <section className="stack">
-      <h3 className="section-title">{t.flow.promise}</h3>
+      <div className="section-head">
+        <h3 className="section-title">{t.flow.promise}</h3>
+        <Hint topic="promise" />
+      </div>
       <ScreenError>{error}</ScreenError>
       {days === null ? (
         <p className="muted small">{t.flow.noPromise}</p>

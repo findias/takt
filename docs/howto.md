@@ -21,6 +21,7 @@ board commands.
 If the card is not found, check the filter: under a filter the board
 shows less than everything, and says so in the column.
 
+<!-- anchor: filter -->
 ### Filter down to what you need
 
 1. Above the board press **Filter** and pick your conditions:
@@ -33,6 +34,7 @@ shows less than everything, and says so in the column.
 Labels combine with AND: pick “Urgent” and “External” and you get cards
 carrying both.
 
+<!-- anchor: swimlanes -->
 ### Slice the board into swimlanes
 
 In the **No grouping** list, choose what to slice
@@ -63,6 +65,7 @@ sorted list can be sent to someone.
 To label several cards at once, select them and use the bar that
 appears at the bottom of the screen.
 
+<!-- anchor: label-scope -->
 ### Create a label that does not exist yet
 
 Right from the card: type the new name into the label picker. Under
@@ -82,13 +85,13 @@ picker offers that label instead of a second one, and an archived one
 is offered back from the archive. Colours, archiving and the full list
 live on **Team**, in the **Labels** section.
 
+<!-- anchor: block -->
 ### Block work until a date
 
 1. Open the card's **…** menu and choose **Block…**,
    or press **Block…** in the card panel.
 2. Write what you are waiting for.
-3. If you know when it ends, fill in **Lifts itself (optional)**
-   (lifts itself, optional): a date and a time.
+3. If you know when it ends, fill in **Lifts itself (optional)**: a date and a time.
 
 At that moment the block lifts itself: nobody has to come back to the
 card. The day before, the line under the card becomes bold, and the
@@ -105,11 +108,36 @@ to the usual width.
 The width is remembered in this browser, for you only: a colleague's
 board stays as it was.
 
+<!-- anchor: columns -->
+### Mark up a column and set its limit
+
+1. In the column header press **Markup**.
+2. Tick **Work starts here** on the first column where work is really
+   under way, and **Work ends here** on the column where it counts as
+   finished. Cycle time, throughput and the forecast are counted from
+   these two marks, not from dates typed in by hand.
+3. Type a **Limit** — how many cards the column should hold at once.
+4. Tick **Hard limit** if a full column must refuse another card.
+
+Over an ordinary limit the counter in the header turns amber, and a card
+can still be moved in: the limit is there to make overload visible.
+A hard limit refuses the move and says to make room first. The field
+below the limit holds the column's entry rule — what must be done before
+a card comes here.
+
+<!-- anchor: promise -->
+### Promise how long work takes
+
+Open **Flow** and find **Board promise**. Press **Take from history**:
+the promise becomes the number of days in which most of the board's
+finished work passed it. From then on, a card running longer than the
+promise is marked right on the board, and the **Longer than promised**
+filter gathers such cards. **Drop the promise** removes it.
+
 <!-- anchor: appearance -->
 ### Switch to the dark theme or a denser board
 
-1. Click your name in the header — it opens **Personal settings**
-   (personal settings).
+1. Click your name in the header — it opens **Personal settings**.
 2. **Appearance** tab: **System**, **Light**, **Dark**; below them
    **Compact**.
 
@@ -136,6 +164,11 @@ same version as the application. The search field above the contents
 finds a section by any word in it, and **What’s new** lists
 what changed for people using the board in this version.
 
+
+Next to some concepts — a column limit, the board's promise, a block,
+the flow metrics, roles, key scopes — there is a round **?**. Press it
+for two or three sentences on what the concept is, with a link to the
+section of help that explains it in full. `Escape` closes it.
 ### Change your password or sign out
 
 Both live behind your name as well. **Sign-in** tab: the
@@ -189,6 +222,7 @@ Deleting for good asks for confirmation and cannot be undone.
 The link lasts a week, is bound to that address, and is shown once. If
 it gets lost, revoke the invitation and create a new one.
 
+<!-- anchor: visibility -->
 ### Close a board to outsiders
 
 1. Open the board and press the visibility button in the header — it
@@ -223,8 +257,7 @@ If someone left but the work must stay traceable, the first is enough.
    of its row: **Create a department…**,
    **Rename…**, **Move…**, **Remove subdivision**. A question opens a
    field right under the row.
-4. Appoint a subdivision administrator in **Who runs what**
-   (who runs what) — they will run their own subtree.
+4. Appoint a subdivision administrator in **Who runs what** — they will run their own subtree.
 
 A removed subdivision is not gone: it waits under **Removed subdivisions** and comes back with
 **Restore**.
@@ -243,6 +276,7 @@ only against `/scim/v2` and gives no access to boards.
 **Revoke key** asks first: the key stops working at once,
 and nothing brings it back — you issue a new one.
 
+<!-- anchor: subscriptions -->
 ### Receive events in your own system
 
 1. **Team** tab → **Event subscriptions**.
@@ -250,8 +284,7 @@ and nothing brings it back — you issue a new one.
 3. Press **Create** and keep the signing key — we sign every
    delivery with it.
 
-If the receiver goes down for maintenance, press **Pause**
-(pause): while paused, events do not pile up, so resuming does not turn
+If the receiver goes down for maintenance, press **Pause**: while paused, events do not pile up, so resuming does not turn
 into an avalanche.
 
 ### Work out why an event did not arrive
@@ -264,10 +297,10 @@ into an avalanche.
 A retry also re-enables the subscription if we disabled it after a long
 run of failures.
 
+<!-- anchor: export -->
 ### Take all the organisation's data
 
-**Team** tab → **Export** → **Download file**
-(download).
+**Team** tab → **Export** → **Download file**.
 
 Tick **Include the audit log** if you need
 it too: the log is usually larger than everything else combined.

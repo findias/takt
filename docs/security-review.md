@@ -149,8 +149,7 @@ before it is read.
 
 ## Access control and isolation between organisations
 
-Three roles — **Owner**, **Member**, **Viewer**
-(viewer) — plus two appointments an owner makes: an administrator of a
+Three roles — **Owner**, **Member**, **Viewer** — plus two appointments an owner makes: an administrator of a
 subdivision, who runs their own subtree, and an observer of an area, who
 reads it. Boards are visible to the whole organisation, to one
 subdivision, or to named people only.

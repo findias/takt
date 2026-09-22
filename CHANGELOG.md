@@ -67,6 +67,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   a «Что нового» (what's new) page for this version and a glossary. It is
   served by the server itself, built from the same version, and needs
   no internet.
+- **A “?” next to concepts** — a column limit, the board's promise,
+  a block, label scopes, the flow metrics, roles, key scopes: two or
+  three sentences on what it is, and a link to the help section.
 - **Personal settings live behind your name.** Clicking your name in
   the header opens «Личные настройки»: language, theme and density,
   password. «Выйти» is there too; the half-circle button is gone. Theme

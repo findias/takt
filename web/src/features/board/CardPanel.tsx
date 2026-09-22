@@ -37,6 +37,7 @@ import { labelOrigin } from '../../entities/label/model.ts'
 import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
 import { locale, t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -877,6 +878,7 @@ function BlockForm({
         <span>{t.panel.liftsItself}</span>
         <input type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)} />
       </label>
+      <Hint topic="block" />
       {/* Глагол называет то, что произойдёт. «Отметить» не отвечает
           на вопрос «что отметить» и в ряду с «Отмена» читается как её
           пара — два похожих слова, из которых первое ещё и приглушено,

@@ -22,6 +22,26 @@ export const HELP_TOPICS = {
   team: 'howto#team',
   structure: 'howto#structure',
   account: 'howto#language',
+  // Понятия с «?» (ROADMAP 30.4): «Подробнее в справке» ведёт сюда.
+  markup: 'howto#columns',
+  limit: 'howto#columns',
+  promise: 'howto#promise',
+  block: 'howto#block',
+  labelScope: 'howto#label-scope',
+  visibility: 'howto#visibility',
+  iteration: 'howto#iterations',
+  cycleTime: 'reference#flow',
+  age: 'reference#flow',
+  accumulation: 'reference#flow',
+  throughput: 'reference#flow',
+  forecast: 'reference#flow',
+  roles: 'reference#roles',
+  subdivisionAdmin: 'reference#roles',
+  keyScopes: 'reference#key-scopes',
+  subscription: 'howto#subscriptions',
+  export: 'howto#export',
+  savedView: 'howto#filter',
+  grouping: 'howto#swimlanes',
 } as const
 
 export type HelpTopic = keyof typeof HELP_TOPICS

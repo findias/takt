@@ -7,6 +7,7 @@ what. Not read in order — read when needed.
 behind your name in the header. Buttons are named here as they appear
 in the English interface. Screenshots still show the Russian one.
 
+<!-- anchor: roles -->
 ## Roles in the organisation
 
 | Role | Reads | Changes work | Runs the organisation |
@@ -143,6 +144,7 @@ hung. Every list that offers a label also says where it comes from.
 | Forecast | how many days to finish a given number of cards |
 | Discarded | how much was taken off the board unfinished |
 
+<!-- anchor: key-scopes -->
 ## Integration key scopes
 
 | Scope | What it opens |

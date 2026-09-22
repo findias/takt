@@ -6,6 +6,7 @@ import { CopyButton } from '../../shared/ui/CopyButton.tsx'
 import { Field, useFormErrors } from '../../shared/ui/Field.tsx'
 import { ScreenError } from '../../shared/ui/Field'
 import { locale, t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Срок словами и с той точностью, какая тут есть.
@@ -69,7 +70,10 @@ export function Webhooks() {
 
   return (
     <section className="stack">
-      <h2 className="section-title">{t.hooks.title}</h2>
+      <div className="section-head">
+        <h2 className="section-title">{t.hooks.title}</h2>
+        <Hint topic="subscription" />
+      </div>
       <ScreenError>{error}</ScreenError>
       <p className="muted small">{t.hooks.intro}</p>
       {/* Что доставка делает сама — целиком и числами. Прежде здесь

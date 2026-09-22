@@ -23,6 +23,7 @@ import { ScreenError } from '../shared/ui/Field'
 import { Menu } from '../shared/ui/Menu.tsx'
 import { ArchiveIcon, EditIcon, MoreIcon, MoveIcon, PlusIcon } from '../shared/ui/icons.tsx'
 import { t } from '../shared/i18n/index.ts'
+import { Hint } from '../shared/ui/Hint.tsx'
 
 /**
  * Структура организации: дерево подразделений, их состав и наблюдение.
@@ -721,7 +722,10 @@ function Administration({
 
   return (
     <section className="stack">
-      <h2 className="section-title">{t.structure.whoRuns}</h2>
+      <div className="section-head">
+        <h2 className="section-title">{t.structure.whoRuns}</h2>
+        <Hint topic="subdivisionAdmin" />
+      </div>
       <p className="muted small">{t.structure.whoRunsExplain}</p>
 
       {admins.length === 0 ? (

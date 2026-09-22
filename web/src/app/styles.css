@@ -1412,6 +1412,11 @@ select:disabled {
   font-size: var(--text-sm);
   width: 3.5rem;
 }
+/* В настройках колонки у пустого поля лимита подпись «без лимита» /
+   «no limit», и в ширину числа она не влезала: читалось «без» и «no l». */
+.column-settings .count-edit {
+  width: 6.5rem;
+}
 .inline-edit {
   border: none;
   background: none;
@@ -3787,6 +3792,82 @@ textarea.description {
 .account-foot {
   border-top: 1px solid var(--rule);
   padding-top: var(--space-3);
+}
+
+/* «?» у понятия (ROADMAP 30.4). Кнопка — цель нажатия целиком
+   (24×24 по WCAG 2.5.8), знак внутри мельче: крупный «?» спорил бы
+   с подписью, к которой он приставлен. Тихая, пока её не трогают:
+   «?» у каждого понятия на экране не должен кричать. */
+.hint {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.hint-button {
+  inline-size: var(--target);
+  block-size: var(--target);
+  min-inline-size: var(--target);
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+.hint-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hint-button:active {
+  background: var(--surface-2);
+}
+.hint-button[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.hint-bubble {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  translate: 0 var(--space-1);
+  z-index: var(--layer-control);
+  inline-size: min(20rem, calc(100vw - 2 * var(--space-2)));
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-drag);
+  font-size: var(--text-sm);
+  text-align: start;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.hint-bubble p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.hint-bubble a {
+  color: var(--accent);
+  align-self: flex-start;
+}
+
+/* Заголовок раздела и его «?» — рядом, а не друг в друге: кнопка
+   внутри заголовка читалась бы диктором как часть названия. */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* «Справка» — ссылка в виде тихой кнопки: без подчёркивания, как её

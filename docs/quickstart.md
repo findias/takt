@@ -15,8 +15,7 @@ in the English interface. Screenshots still show the Russian one.
 <!-- anchor: create-board -->
 ## 1. Create a board
 
-1. On the main screen, type a name into **New board name**
-   (name of the new board).
+1. On the main screen, type a name into **New board name**.
 2. Next to it, in **Key**, type a short word — `ПОСТ`, say. It
    becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty
    and we derive it from the name.
@@ -63,7 +62,7 @@ for this board, a subdivision, or the whole organisation.
 ## 5. Carry it to the end
 
 Move the card into **Done**. After a few such cards, open **Flow**
-(flow) in the board header: cycle time, throughput and a forecast
+in the board header: cycle time, throughput and a forecast
 appear there. The metrics are computed from what you have already
 done — nothing to invent.
 

@@ -5,6 +5,7 @@ import { Button } from '../../shared/ui/Button.tsx'
 import { CloseIcon } from '../../shared/ui/icons.tsx'
 import { IconButton } from '../../shared/ui/Button.tsx'
 import { t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Сохранённые виды.
@@ -92,6 +93,7 @@ export function Views({
           <Button kind="quiet" onClick={() => setNaming(false)}>
             {t.common.cancel}
           </Button>
+          <Hint topic="savedView" />
         </form>
       ) : (
         // Предлагаем сохранить только то, что настроено: кнопка «сохранить

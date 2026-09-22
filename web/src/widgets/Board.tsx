@@ -69,6 +69,7 @@ import { ScreenError } from '../shared/ui/Field'
 import { locale, t, withSections } from '../shared/i18n/index.ts'
 import { useHelpTopic } from '../shared/lib/help.ts'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
+import { Hint } from '../shared/ui/Hint.tsx'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
 // по которому вынесены экраны организации: доска открывается всегда,
@@ -1074,6 +1075,11 @@ export function Board({
             </option>
           ))}
         </select>
+        {/* «?» — когда доска уже разложена дорожками: в строке инструментов
+            он виден всегда и становился бы шумом, а вопрос «почему
+            карточку не перетащить между дорожками» появляется, только
+            когда они есть. */}
+        {grouping !== 'none' && <Hint topic="grouping" />}
         <Views
           boardId={boardId}
           query={query.toString()}
@@ -1569,6 +1575,7 @@ function Iterations({
           <Button kind="quiet" type="button" onClick={() => setAdding(false)}>
             {t.common.cancel}
           </Button>
+          <Hint topic="iteration" />
         </form>
       )}
     </div>
