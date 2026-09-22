@@ -21,6 +21,9 @@ func (s *Server) registerHelpRoutes(mux *http.ServeMux) {
 
 // Корень справки — обзор на языке того, кто пришёл.
 func (s *Server) handleHelpRoot(w http.ResponseWriter, r *http.Request) {
+	// #nosec G710 -- язык не берётся из запроса как есть: FromRequest
+	// отвечает одним из двух своих значений, ru или en, и переход ведёт
+	// только внутрь справки этого же сервера.
 	http.Redirect(w, r, "/help/"+string(i18n.FromRequest(r))+"/overview", http.StatusFound)
 }
 
@@ -37,6 +40,8 @@ func (s *Server) handleHelpPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// #nosec G705 -- страница собрана из вшитой документации; язык
+	// и адрес раздела сверены со списком, прежде чем попасть в разметку.
 	_, _ = w.Write([]byte(страница))
 }
 
@@ -50,6 +55,8 @@ func (s *Server) handleHelpScreenshot(w http.ResponseWriter, r *http.Request) {
 	// Снимки вшиты и меняются только с версией — кэшировать их можно
 	// до следующей выкладки, но не навсегда.
 	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// #nosec G705 -- вшитый PNG из docs/, отдаётся как image/png при nosniff;
+	// имя файла без косых черт, а вшитая файловая система не знает «..».
 	_, _ = w.Write(raw)
 }
 
@@ -64,5 +71,8 @@ func (s *Server) handleHelpSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// #nosec G705 -- запрос попадает в разметку только через
+	// html.EscapeString; враждебный запрос проверяет
+	// TestSearchPageSaysWhatToDoWhenNothingIsFound.
 	_, _ = w.Write([]byte(страница))
 }
