@@ -127,6 +127,11 @@ func (s *Service) AddComment(ctx context.Context, orgID, actorID, boardID, cardI
 			nil, nil, map[string]any{"commentId": c.ID}); err != nil {
 			return err
 		}
+		// Упомянутых зовут: ради этого их и упоминают.
+		if err := notify(ctx, tx, orgID, boardID, cardID, actorID, ReasonMentioned,
+			"comment:"+c.ID, c.Mentions); err != nil {
+			return err
+		}
 		return touchBoard(ctx, tx, boardID, actorID)
 	})
 	return c, translateComment(err)

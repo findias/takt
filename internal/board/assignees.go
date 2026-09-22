@@ -3,6 +3,8 @@ package board
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -65,17 +67,27 @@ func assignCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 
 	// Карточка проверяется тем же запросом, что и вставка: раздельная
 	// проверка дала бы окно, в котором карточку успевают убрать.
-	tag, err := tx.Exec(ctx, `
+	var addedAt time.Time
+	err = tx.QueryRow(ctx, `
 		insert into card_assignees (org_id, card_id, user_id, added_by)
 		select $1, $2, $3, $4
 		 where exists (select 1 from cards
 		                where id = $2 and board_id = $5 and archived_at is null)
-		on conflict (card_id, user_id) do nothing`,
-		orgID, p.CardID, p.UserID, actorID, boardID)
-	if err != nil {
+		on conflict (card_id, user_id) do nothing
+		returning added_at`,
+		orgID, p.CardID, p.UserID, actorID, boardID).Scan(&addedAt)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return Patch{}, err
 	}
-	if tag.RowsAffected() == 0 {
+	if err == nil {
+		// Назначили — назначенный узнаёт. Источник — само назначение
+		// с его моментом: сняли и назначили снова — это новое известие.
+		if err := notify(ctx, tx, orgID, boardID, p.CardID, actorID, ReasonAssigned,
+			"assign:"+p.CardID+":"+p.UserID+":"+addedAt.UTC().Format(time.RFC3339Nano),
+			[]string{p.UserID}); err != nil {
+			return Patch{}, err
+		}
+	} else {
 		// Либо человек уже назначен — повтор безобиден, — либо карточки
 		// нет. Второе от первого отличает отдельная проверка: молчать
 		// в ответ на «назначил на несуществующее» нельзя.

@@ -37,6 +37,10 @@ const (
 	// то, что и так обязан стереть, — и расходиться этим двум местам
 	// нельзя.
 	inviteTTL = 30 * 24 * time.Hour
+	// Прочитанное уведомление держим девяносто дней: «кто меня звал
+	// в прошлом месяце» ещё спрашивают, а старше — уже нет. Тот же срок
+	// стоит в политике cleanup_reads на notifications (0057).
+	notificationTTL = 90 * 24 * time.Hour
 	// Раз в час: уборка не срочна, а лишний проход по таблицам стоит
 	// дороже, чем лишний день хранения.
 	interval = time.Hour
@@ -144,6 +148,17 @@ func (w *Worker) Once(ctx context.Context) error {
 			return err
 		}
 
+		// Прочитанные уведомления: колокольчик — не архив, а непрочитанное
+		// не трогаем вовсе, сколько бы оно ни ждало. Тот же срок стоит
+		// в политике cleanup_reads (0057).
+		notices, err := tx.Exec(ctx, `
+			delete from notifications
+			 where read_at < now() - make_interval(days => $1)`,
+			int(notificationTTL.Hours()/24))
+		if err != nil {
+			return err
+		}
+
 		// Журнал убирается только там, где организация назвала срок.
 		audit, err := tx.Exec(ctx, `
 			delete from audit_events a
@@ -156,14 +171,15 @@ func (w *Worker) Once(ctx context.Context) error {
 		}
 
 		total := keys.RowsAffected() + deliveries.RowsAffected() + audit.RowsAffected() +
-			sessions.RowsAffected() + invites.RowsAffected()
+			sessions.RowsAffected() + invites.RowsAffected() + notices.RowsAffected()
 		if total > 0 {
 			w.log.Info("убрано",
 				"ключи повтора", keys.RowsAffected(),
 				"доставки", deliveries.RowsAffected(),
 				"журнал", audit.RowsAffected(),
 				"сессии", sessions.RowsAffected(),
-				"приглашения", invites.RowsAffected())
+				"приглашения", invites.RowsAffected(),
+				"уведомления", notices.RowsAffected())
 		}
 		return nil
 	})

@@ -156,6 +156,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerDemoRoutes(mux)
 	s.registerStandRoutes(mux)
 	s.registerHelpRoutes(mux)
+	s.registerNotificationRoutes(mux)
 	s.registerSCIMRoutes(mux)
 
 	mux.HandleFunc("GET /api/boards", s.scoped(apiclient.ScopeBoardsRead, s.handleListBoards))

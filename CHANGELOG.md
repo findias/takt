@@ -10,11 +10,13 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Five migrations, all safe for the running version.** `0052` gives
+**Six migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
-each person's interface language (empty until they choose). They run in the
+each person's interface language (empty until they choose), `0057`
+adds in-app notifications, each visible only to its recipient and only
+while they can see the board. They run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 

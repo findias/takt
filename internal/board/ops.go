@@ -1171,12 +1171,19 @@ func columnFact(c Column) map[string]any {
 }
 
 func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, kind string, from, to *string, payload map[string]any) error {
+	_, err := logEventID(ctx, tx, orgID, boardID, cardID, actorID, kind, from, to, payload)
+	return err
+}
+
+// logEventID — то же, с номером записанного события: по нему
+// уведомление ссылается на то, что его вызвало, и не заводится дважды.
+func logEventID(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, kind string, from, to *string, payload map[string]any) (int64, error) {
 	body := []byte("{}")
 	if payload != nil {
 		var err error
 		body, err = json.Marshal(payload)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	// Без автора — служебная задача: снятие по сроку. Пустая строка
@@ -1186,11 +1193,13 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 	if actorID == "" {
 		actor = nil
 	}
-	if _, err := tx.Exec(ctx, `
+	var id int64
+	if err := tx.QueryRow(ctx, `
 		insert into card_events (org_id, board_id, card_id, actor_id, type, from_column, to_column, payload)
-		values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-		orgID, boardID, cardID, actor, kind, from, to, string(body)); err != nil {
-		return err
+		values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+		returning id`,
+		orgID, boardID, cardID, actor, kind, from, to, string(body)).Scan(&id); err != nil {
+		return 0, err
 	}
 
 	// Подписчики узнают о событии из той же транзакции, в которой оно
@@ -1205,5 +1214,5 @@ func logEvent(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, k
 		"payload": json.RawMessage(body),
 		"at":      time.Now().UTC(),
 	})
-	return err
+	return id, err
 }

@@ -649,8 +649,17 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	if until != nil {
 		payload["until"] = until.UTC()
 	}
-	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "blocked", nil, nil,
-		payload); err != nil {
+	eventID, err := logEventID(ctx, tx, orgID, boardID, p.CardID, actorID, "blocked", nil, nil, payload)
+	if err != nil {
+		return Patch{}, err
+	}
+	// Твою работу остановили — это надо знать тому, кто её делает.
+	working, err := assigneesOf(ctx, tx, p.CardID)
+	if err != nil {
+		return Patch{}, err
+	}
+	if err := notify(ctx, tx, orgID, boardID, p.CardID, actorID, ReasonBlocked,
+		eventSource(eventID), working); err != nil {
 		return Patch{}, err
 	}
 	c, err := readCard(ctx, tx, boardID, p.CardID)

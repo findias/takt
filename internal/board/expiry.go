@@ -111,8 +111,19 @@ func (s *Service) expireIn(ctx context.Context, orgID string) (int, error) {
 
 		boards := map[string]bool{}
 		for _, e := range done {
-			if err := logEvent(ctx, tx, orgID, e.boardID, e.cardID, "", "block_expired", nil, nil,
-				map[string]any{"reason": e.reason, "until": e.until.UTC()}); err != nil {
+			eventID, err := logEventID(ctx, tx, orgID, e.boardID, e.cardID, "", "block_expired", nil, nil,
+				map[string]any{"reason": e.reason, "until": e.until.UTC()})
+			if err != nil {
+				return err
+			}
+			// Снялась сама — исполнитель узнаёт, что можно продолжать,
+			// не дожидаясь, пока откроет доску.
+			working, err := assigneesOf(ctx, tx, e.cardID)
+			if err != nil {
+				return err
+			}
+			if err := notify(ctx, tx, orgID, e.boardID, e.cardID, "", ReasonBlockExpired,
+				eventSource(eventID), working); err != nil {
 				return err
 			}
 			boards[e.boardID] = true

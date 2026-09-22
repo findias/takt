@@ -238,7 +238,9 @@ func codesWritten(t *testing.T) []string {
 	return out
 }
 
-// loggedEventKinds — виды, с которыми на самом деле зовут logEvent.
+// loggedEventKinds — виды, с которыми на самом деле зовут logEvent
+// и logEventID (тот же вызов, возвращающий номер события: по нему
+// ссылается уведомление).
 // Вид приходит либо строкой, либо переменной, которой в той же функции
 // присвоены строки; третьего вида записи в пакете нет, и появись он —
 // проверка остановится, а не промолчит.
@@ -249,7 +251,7 @@ func loggedEventKinds(t *testing.T) []string {
 	for _, path := range goFiles(t, "../board") {
 		ast.Inspect(parseGo(t, path), func(node ast.Node) bool {
 			fn, ok := node.(*ast.FuncDecl)
-			if !ok || fn.Name.Name == "logEvent" {
+			if !ok || fn.Name.Name == "logEvent" || fn.Name.Name == "logEventID" {
 				return true
 			}
 			ast.Inspect(fn, func(node ast.Node) bool {
@@ -258,10 +260,10 @@ func loggedEventKinds(t *testing.T) []string {
 					return true
 				}
 				name, ok := call.Fun.(*ast.Ident)
-				if !ok || name.Name != "logEvent" || len(call.Args) <= kindArg {
+				if !ok || (name.Name != "logEvent" && name.Name != "logEventID") || len(call.Args) <= kindArg {
 					return true
 				}
-				where := path + ": logEvent"
+				where := path + ": " + name.Name
 				if ident, ok := call.Args[kindArg].(*ast.Ident); ok {
 					out = append(out, assignedStrings(t, where, fn, ident.Name)...)
 					return true
