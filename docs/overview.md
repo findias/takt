@@ -6,8 +6,8 @@ subdivisions, integrations. It runs inside your own perimeter — no
 cloud and no external services required.
 
 **The interface speaks English and Russian.** These pages name every
-button as it appears in the English interface; the screenshots still
-show the Russian one. The Russian version of this page is
+button as it appears in the English interface. The Russian version of
+this page is
 [here](ru/индекс.md).
 
 ![The board](screenshots/доска.png)

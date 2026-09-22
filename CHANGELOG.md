@@ -60,7 +60,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
 
 - **The interface speaks English as well as Russian.** It follows the
   browser until the person chooses; the choice is stored with the
-  account and follows them to any device.
+  account and follows them to any device. The English documentation
+  names the English buttons and shows English screenshots.
 - **Help inside the application.** «Справка» in the header, `F1` or `?`
   opens the documentation at the section about the screen you are on,
   in the interface language, with a search over every section and

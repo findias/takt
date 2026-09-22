@@ -41,3 +41,20 @@ func TestDemoDataKeepsItsPromises(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 }
+
+// Английская организация стенда — по ней снимают английские снимки
+// для README и документации (ROADMAP 30.5). Обещания те же, что
+// у русской: снимок, на котором нет блокировки или закрытой итерации,
+// показывал бы продукт беднее, чем он есть. Что в ней не осталось
+// русского, проверяет английская песочница — наполнение то же.
+func TestEnglishStandKeepsItsPromises(t *testing.T) {
+	ctx := context.Background()
+	db := testdb.Open(t)
+	err := FillEnglish(ctx, db)
+	if err != nil && !errors.Is(err, ErrAlreadyFilled) {
+		t.Fatalf("наполнение: %v", err)
+	}
+	if err := VerifyEnglish(ctx, db); err != nil {
+		t.Errorf("%v", err)
+	}
+}

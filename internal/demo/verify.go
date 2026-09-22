@@ -50,6 +50,22 @@ func Verify(ctx context.Context, db *store.Store) error {
 	return VerifyOrg(ctx, db, orgID, ownerID)
 }
 
+// VerifyEnglish — те же обещания для английской организации стенда.
+func VerifyEnglish(ctx context.Context, db *store.Store) error {
+	var orgID, ownerID string
+	err := db.Pool.QueryRow(ctx, `
+		select m.org_id, u.id from users u
+		  join memberships m on m.user_id = u.id
+		 where lower(u.email) = $1 limit 1`, EnglishEmail(People[0])).Scan(&orgID, &ownerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("английской организации стенда нет: наполните базу (make demo)")
+	}
+	if err != nil {
+		return err
+	}
+	return VerifyOrg(ctx, db, orgID, ownerID)
+}
+
 // VerifyOrg — те же обещания для любой демонстрационной организации:
 // песочница посетителя обязана показывать то же, что стенд.
 func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error {

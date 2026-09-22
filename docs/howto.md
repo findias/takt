@@ -8,7 +8,7 @@ minutes](quickstart.md) first; the rest will make more sense.
 
 **The interface speaks English and Russian;** the language is chosen
 behind your name in the header. Buttons are named here as they appear
-in the English interface. Screenshots still show the Russian one.
+in the English interface.
 
 <!-- anchor: board -->
 ## Working on the board

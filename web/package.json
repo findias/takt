@@ -8,7 +8,7 @@
     "test": "node --experimental-strip-types --import ./src/shared/i18n/node-setup.ts --test 'src/**/*.test.ts' && vitest run",
     "test:dom": "vitest run",
     "test:e2e": "npm run build && playwright test e2e/board.spec.ts e2e/a11y.spec.ts e2e/perf.spec.ts",
-    "screens": "npm run build && playwright test e2e/screens.spec.ts",
+    "screens": "npm run build && playwright test e2e/screens.spec.ts e2e/screens.en.spec.ts",
     "preview": "vite preview"
   },
   "dependencies": {

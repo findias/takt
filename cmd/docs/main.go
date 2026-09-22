@@ -74,14 +74,21 @@ var русские = []источник{
 // Снимки, на которые ссылается документация. Копируются в сборку:
 // страница обязана открываться из папки на диске, а картинка,
 // оставшаяся в web/screenshots, там не откроется.
-var снимки = map[string]string{
-	"список-досок.png": "web/screenshots/02-список-досок.png",
-	"доска.png":        "web/screenshots/03-доска.png",
-	"карточка.png":     "web/screenshots/09-карточка-работа.png",
-	"таблица.png":      "web/screenshots/12-таблица.png",
-	"поток.png":        "web/screenshots/14-поток.png",
-	"команда.png":      "web/screenshots/19-команда.png",
+//
+// Каждый — на двух языках (ROADMAP 30.5): английские страницы и README
+// показывают английский интерфейс на английских данных, русские —
+// русский. Имя файла одно, каталоги разные: `docs/screenshots/`
+// английский, `docs/ru/screenshots/` русский.
+var снимки = map[string]источникСнимка{
+	"список-досок.png": {"web/screenshots/02-список-досок.png", "web/screenshots/en/02-boards.png"},
+	"доска.png":        {"web/screenshots/03-доска.png", "web/screenshots/en/03-board.png"},
+	"карточка.png":     {"web/screenshots/09-карточка-работа.png", "web/screenshots/en/09-card-work.png"},
+	"таблица.png":      {"web/screenshots/12-таблица.png", "web/screenshots/en/12-table.png"},
+	"поток.png":        {"web/screenshots/14-поток.png", "web/screenshots/en/14-flow.png"},
+	"команда.png":      {"web/screenshots/19-команда.png", "web/screenshots/en/19-team.png"},
 }
+
+type источникСнимка struct{ ru, en string }
 
 func main() {
 	корень, err := os.Getwd()
@@ -113,26 +120,28 @@ func main() {
 
 	// Снимки кладутся дважды: рядом с исходниками — чтобы картинки
 	// работали и в markdown, который читают в репозитории, — и в сборку,
-	// чтобы страница открывалась из папки на диске.
+	// чтобы страница открывалась из папки на диске. Английские — рядом
+	// с английскими страницами, русские — с русскими.
 	//
 	// Свежие берутся из `web/screenshots`, куда их кладёт `make screens`.
 	// Каталог этот в поставку не входит, и на чистом клоне его нет —
-	// поэтому источник запасной: снимки, уже лежащие в `docs/screenshots`.
+	// поэтому источник запасной: снимки, уже лежащие рядом с исходниками.
 	// Без запасного сборка документации требовала бы браузера и стенда,
 	// то есть `make check` не проходил бы там, где ничего этого нет, —
 	// в закрытом контуре и в CI. Ровно на этом проверка и падала.
-	назначения := []string{
-		filepath.Join(корень, "docs", "screenshots"),
-		filepath.Join(корень, "docs", "ru", "screenshots"),
-		filepath.Join(вывод, "screenshots"),
-	}
-	for _, куда := range назначения {
-		если(os.MkdirAll(куда, 0o755))
-	}
-	for имя := range снимки {
-		raw := прочестьСнимок(корень, имя)
-		for _, куда := range назначения {
-			если(os.WriteFile(filepath.Join(куда, имя), raw, 0o644))
+	for _, язык := range []string{"en", "ru"} {
+		куда := []string{filepath.Join(корень, "docs", "screenshots"), filepath.Join(вывод, "screenshots")}
+		if язык == "ru" {
+			куда = []string{filepath.Join(корень, "docs", "ru", "screenshots"), filepath.Join(вывод, "ru", "screenshots")}
+		}
+		for _, каталог := range куда {
+			если(os.MkdirAll(каталог, 0o755))
+		}
+		for имя := range снимки {
+			raw := прочестьСнимок(корень, имя, язык)
+			for _, каталог := range куда {
+				если(os.WriteFile(filepath.Join(каталог, имя), raw, 0o644))
+			}
 		}
 	}
 
@@ -157,11 +166,6 @@ func main() {
 	// Английские страницы — своим каталогом и со своим оглавлением.
 	каталогRu := filepath.Join(вывод, "ru")
 	если(os.MkdirAll(каталогRu, 0o755))
-	если(os.MkdirAll(filepath.Join(каталогRu, "screenshots"), 0o755))
-	for имя := range снимки {
-		если(os.WriteFile(filepath.Join(каталогRu, "screenshots", имя),
-			прочестьСнимок(корень, имя), 0o644))
-	}
 	for _, и := range русские {
 		raw, err := os.ReadFile(filepath.Join(корень, и.путь))
 		если(err)
@@ -206,19 +210,24 @@ func версияСборки() string {
 }
 
 // прочестьСнимок берёт снимок там, где он есть: сперва свежий
-// из `web/screenshots`, потом уже лежащий в `docs/снимки`.
+// из `web/screenshots`, потом уже лежащий рядом с исходниками
+// документации того же языка.
 //
 // Порядок именно такой: `make screens` кладёт свежие, и сборка обязана
 // брать их, а не молча оставлять вчерашние. Но каталога `web/screenshots`
 // в поставке нет, и требовать его — значит требовать браузера и стенда
 // от всякого, кто собирает документацию.
-func прочестьСнимок(корень, имя string) []byte {
-	raw, err := os.ReadFile(filepath.Join(корень, снимки[имя]))
+func прочестьСнимок(корень, имя, язык string) []byte {
+	источник, запасной := снимки[имя].en, filepath.Join("docs", "screenshots", имя)
+	if язык == "ru" {
+		источник, запасной = снимки[имя].ru, filepath.Join("docs", "ru", "screenshots", имя)
+	}
+	raw, err := os.ReadFile(filepath.Join(корень, источник))
 	if os.IsNotExist(err) {
-		raw, err = os.ReadFile(filepath.Join(корень, "docs", "screenshots", имя))
+		raw, err = os.ReadFile(filepath.Join(корень, запасной))
 		if os.IsNotExist(err) {
-			если(fmt.Errorf("снимка %s нет ни в %s, ни в docs/screenshots: "+
-				"снимите заново — `make screens`", имя, снимки[имя]))
+			если(fmt.Errorf("снимка %s нет ни в %s, ни в %s: "+
+				"снимите заново — `make screens`", имя, источник, запасной))
 		}
 	}
 	если(err)

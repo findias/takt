@@ -30,9 +30,8 @@ from that markup rather than from fields someone filled in by hand.
 browser until the person picks one behind their name in the header;
 the choice is stored with the account and follows them to any device. The
 English documentation under [`docs/`](docs/overview.md) names every
-button as the English interface shows it; its screenshots still show
-the Russian one. The same documentation opens inside the application
-as help (`F1`).
+button as the English interface shows it, with English screenshots. The
+same documentation opens inside the application as help (`F1`).
 
 **To install it** — [`docs/install.md`](docs/install.md): what it
 requires, docker compose, a binary under systemd, a chart in
@@ -59,7 +58,9 @@ Sign in as `anna@example.test` / `parol12345`. The demo fills a whole
 organisation — a three-level tree of subdivisions, three boards with
 all three visibilities, cards with every property, iterations, an
 archive and three weeks of history. An empty interface shows neither
-layout problems nor metrics, which is the point.
+layout problems nor metrics, which is the point. The same organisation
+in English, for the English screenshots, is under
+`anna@en.example.test` with the same password.
 
 ## What it does
 

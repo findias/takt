@@ -108,6 +108,21 @@ func main() {
 			log.Error("стенд неполон", "err", err)
 			os.Exit(1)
 		}
+		// Английская копия — по ней снимают английские снимки для README
+		// и документации (ROADMAP 30.5).
+		switch err := demo.FillEnglish(ctx, db); {
+		case errors.Is(err, demo.ErrAlreadyFilled):
+		case err != nil:
+			log.Error("английские демонстрационные данные не завелись", "err", err)
+			os.Exit(1)
+		default:
+			log.Info("английская организация стенда готова",
+				"вход", demo.EnglishEmail(demo.People[0]), "пароль", demo.Password)
+		}
+		if err := demo.VerifyEnglish(ctx, db); err != nil {
+			log.Error("английский стенд неполон", "err", err)
+			os.Exit(1)
+		}
 		log.Info("стенд сверен с обещанным")
 
 	case "serve":

@@ -62,6 +62,19 @@ var People = []Person{
 // OrgName — название демонстрационной организации.
 const OrgName = "Северный проект"
 
+// EnglishDomain — почтовый домен людей английской организации стенда
+// (ROADMAP 30.5). Английская — копия русской на английском: по ней
+// снимают английские снимки для README и документации. Люди свои,
+// с тем же паролем: у русских уже есть организация, а один человек
+// в двух организациях показывал бы на снимках переключатель организаций.
+const EnglishDomain = "en.example.test"
+
+// EnglishEmail — почта человека в английской организации стенда.
+func EnglishEmail(p Person) string {
+	local, _, _ := strings.Cut(p.Email, "@")
+	return local + "@" + EnglishDomain
+}
+
 type filler struct {
 	ctx     context.Context
 	db      *store.Store
@@ -76,6 +89,9 @@ type filler struct {
 	// никто, люди привязаны к организации и уходят вместе с ней.
 	// Пусто — стенд разработки с почтами и паролем из People.
 	sandbox *sandboxOpts
+
+	// english — английская организация стенда, со своими людьми.
+	english bool
 
 	// lang — язык посетителя: песочница заводится на нём целиком,
 	// от имён людей до реплик в обсуждении. Английскому посетителю
@@ -138,6 +154,24 @@ func (f *filler) w(ru string) string {
 	return ru
 }
 
+// FillEnglish заводит рядом с русской английскую организацию стенда —
+// те же данные на английском, как у английской песочницы, но со
+// стендовыми почтами и паролем. Уже заведена — ErrAlreadyFilled.
+func FillEnglish(ctx context.Context, db *store.Store) error {
+	f := newFiller(i18n.WithLang(ctx, i18n.EN), db)
+	f.english = true
+	var taken bool
+	if err := db.Pool.QueryRow(ctx,
+		`select exists (select 1 from users where lower(email) = $1)`,
+		EnglishEmail(People[0])).Scan(&taken); err != nil {
+		return err
+	}
+	if taken {
+		return ErrAlreadyFilled
+	}
+	return f.fill()
+}
+
 // Sandbox — организация, заведённая посетителю публичного демо.
 type Sandbox struct {
 	OrgID     string
@@ -185,6 +219,9 @@ func (f *filler) discard() {
 // своя, чтобы сотня песочниц не спорила за одну. Домен `.invalid`
 // зарезервирован (RFC 2606): письмо на него не уйдёт никуда.
 func (f *filler) email(p Person) string {
+	if f.english {
+		return EnglishEmail(p)
+	}
 	if f.sandbox == nil {
 		return p.Email
 	}

@@ -5,7 +5,7 @@ what. Not read in order — read when needed.
 
 **The interface speaks English and Russian;** the language is chosen
 behind your name in the header. Buttons are named here as they appear
-in the English interface. Screenshots still show the Russian one.
+in the English interface.
 
 <!-- anchor: roles -->
 ## Roles in the organisation
