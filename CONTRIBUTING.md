@@ -62,10 +62,13 @@ distinguishes cases by code, never by text.
 
 ## Language
 
-**Code, comments, error messages and the interface are in Russian.**
-Not a preference but a consequence: the product is Russian-language,
+**Code, comments and error messages are in Russian.** Not a
+preference but a consequence: the product is Russian-language first,
 and an error written in English will be read by someone who does not
-read English.
+read English. The interface speaks Russian and English: labels live in
+the catalogues under `web/src/shared/i18n/`, server refusals are
+translated in `internal/i18n/en.go`, and a new one without its English
+twin fails a check.
 
 A comment explains **why**, not what the line does.
 
@@ -74,7 +77,36 @@ translation, and editing an English page obliges you to edit the Russian
 one: `internal/translation` keeps a fingerprint of the English source
 inside the Russian page and fails when the original has moved ahead.
 
-The two rules point in opposite directions on purpose, and neither is
+**Commit messages are in English, with a Russian translation in the
+same message.** The history is read by anyone who finds the repository,
+and a test stand shows it, commit by commit, in the language of its
+interface. The shape:
+
+```
+Personal settings behind the name
+
+What changed and why, in English.
+
+How to check:
+1. Click your name in the header.
+2. …
+
+--- ru ---
+Личные настройки за именем
+
+Что изменилось и почему — по-русски.
+
+Как проверить:
+1. Нажмите на своё имя в шапке.
+2. …
+```
+
+«How to check» are the steps by which someone without context finds the
+change on screen. A change with nothing to look at says so and why:
+`How to check: nothing to see — the build only` /
+`Как проверить: смотреть нечего — только сборка`.
+
+The rules point in opposite directions on purpose, and neither is
 about taste. The interface is read by the people who use the product,
 and they are Russian-speaking; the repository is read by anyone who
 finds it. A refusal written in English would be read by someone who
@@ -165,9 +197,12 @@ make load       # поведение под нагрузкой, идёт мин�
 
 ## Язык
 
-**Код, комментарии, сообщения об ошибках и интерфейс — по-русски.**
-Это не предпочтение, а следствие: продукт русскоязычный, и отказ,
-написанный по-английски, увидит тот, кто на нём не читает.
+**Код, комментарии и сообщения об ошибках — по-русски.** Это
+не предпочтение, а следствие: продукт прежде всего русскоязычный,
+и отказ, написанный по-английски, увидит тот, кто на нём не читает.
+Интерфейс — на русском и английском: подписи живут в каталогах
+`web/src/shared/i18n/`, отказы сервера переводятся в
+`internal/i18n/en.go`, и новый без английской пары роняет проверку.
 
 Комментарий объясняет **почему** так, а не что делает строка: что
 делает, видно из неё самой.
@@ -177,7 +212,15 @@ make load       # поведение под нагрузкой, идёт мин�
 `internal/translation` держит отпечаток английского исходника в самой
 русской странице и падает, когда оригинал ушёл вперёд.
 
-Два правила смотрят в разные стороны намеренно, и ни одно из них
+**Сообщения коммитов — по-английски, с русским переводом в том же
+сообщении.** Историю читает всякий, кто нашёл репозиторий, а тестовый
+стенд показывает её покоммитно на языке своего интерфейса. Вид —
+как в английской половине выше: английский заголовок, тело и «How to
+check», затем строка `--- ru ---` и то же по-русски. «Как проверить» —
+шаги, по которым человек без контекста найдёт изменение на экране;
+если смотреть нечего, так и сказано, с причиной.
+
+Правила смотрят в разные стороны намеренно, и ни одно из них
 не про вкус. Интерфейс читают те, кто продуктом пользуется, а они
 говорят по-русски; репозиторий читает всякий, кто его нашёл. Отказ
 по-английски увидит тот, кто на нём не читает, — а README только
