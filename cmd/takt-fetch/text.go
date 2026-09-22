@@ -62,6 +62,7 @@ func langOf(env func(string) string) i18n.Lang {
 	return i18n.RU
 }
 
+// #nosec G101 -- тексты справки и подсказок, а не учётные данные: «пароль» в них — подпись вопроса, а не значение
 var ru = texts{
 	usage: `takt-fetch — выгрузчик досок в пакет переноса takt
 
@@ -141,6 +142,7 @@ takt-fetch yougile fetch --board ID --out ФАЙЛ.takt [флаги]
 	progress: func(s string) string { return s },
 }
 
+// #nosec G101 -- тексты справки и подсказок, а не учётные данные: «password» в них — подпись вопроса, а не значение
 var en = texts{
 	usage: `takt-fetch — exports boards into a takt import package
 
