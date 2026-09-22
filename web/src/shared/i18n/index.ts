@@ -91,14 +91,21 @@ export let lang: Lang = 'ru'
 
 /** Язык по умолчанию: выбранный раньше, иначе язык браузера. Русский
  *  браузер получает русский, всякий другой — английский: человек,
- *  не читающий по-русски, не найдёт на русском экране и переключателя. */
+ *  не читающий по-русски, не найдёт на русском экране и переключателя.
+ *
+ *  После хранилища — cookie: её ставит и сервер при входе, если язык
+ *  выбран у человека. Там, где хранилище закрыто, без неё язык
+ *  учётной записи не удержался бы, и переключение по «кто я»
+ *  перезагружало бы страницу по кругу. */
 export function preferredLang(): Lang {
   try {
     const saved = localStorage.getItem('lang')
     if (saved === 'ru' || saved === 'en') return saved
   } catch {
-    // Хранилище закрыто (частное окно) — решает браузер.
+    // Хранилище закрыто (частное окно) — дальше cookie и браузер.
   }
+  const cookie = typeof document === 'undefined' ? null : /(?:^|; )lang=(ru|en)(?:;|$)/.exec(document.cookie)
+  if (cookie) return cookie[1] as Lang
   const wanted = typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]
   return wanted.some((l) => l?.toLowerCase().startsWith('ru')) ? 'ru' : 'en'
 }
@@ -124,9 +131,23 @@ export function switchLang(next: Lang) {
   try {
     localStorage.setItem('lang', next)
   } catch {
-    // Не запомнится — но на эту страницу язык всё равно сменится.
+    // Не запомнится в хранилище — запомнит cookie ниже.
   }
+  document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`
   location.reload()
+}
+
+/**
+ * Перейти на язык учётной записи, если он выбран и отличается от того,
+ * на котором страница открыта. Так выбор, сделанный на работе, встречает
+ * человека и дома — один раз, при первом входе на новом устройстве.
+ * Возвращает, ушла ли страница на перезагрузку: рисовать под ней
+ * незачем.
+ */
+export function followAccountLang(account: Lang | null | undefined): boolean {
+  if (!account || account === lang) return false
+  switchLang(account)
+  return true
 }
 
 /** Язык для `Intl` и `toLocaleString`. Английский — британский: сутки

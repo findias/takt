@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -80,7 +81,11 @@ type Membership struct {
 type Principal struct {
 	Identity
 	Membership
-	SessionID string `json:"-"`
+	// Lang — язык интерфейса, выбранный человеком; пусто — не выбирал,
+	// решает браузер. Едет в «кто я», чтобы клиент на новом устройстве
+	// переключился сам: переключатель на незнакомом языке не найти.
+	Lang      *string `json:"lang"`
+	SessionID string  `json:"-"`
 }
 
 func (p Principal) CanEdit() bool  { return p.Role == RoleOwner || p.Role == RoleMember }
@@ -223,6 +228,31 @@ func ChangePassword(ctx context.Context, pool *pgxpool.Pool,
 // Отдельно от смены пароля: сессия утекает и без пароля — чужой
 // компьютер, забытая вкладка, — и в этом случае менять пароль незачем,
 // а закрыть чужой вход надо.
+// Языки интерфейса, которые можно выбрать. Проверяются и здесь,
+// и ограничением в базе: здесь — ради внятного отказа, в базе — ради
+// того, чтобы в колонку не попало ничего другого мимо этого кода.
+var Langs = []string{"ru", "en"}
+
+// ErrUnknownLang — выбран язык, которого интерфейс не знает.
+var ErrUnknownLang = errors.New("такого языка нет: выберите ru или en")
+
+// SetLang запоминает язык интерфейса у человека. Личная настройка:
+// организация здесь не участвует, как и в пароле.
+func SetLang(ctx context.Context, pool *pgxpool.Pool, userID, lang string) error {
+	if !slices.Contains(Langs, lang) {
+		return ErrUnknownLang
+	}
+	_, err := pool.Exec(ctx, `update users set lang = $2 where id = $1`, userID, lang)
+	return err
+}
+
+// UserLang — выбранный человеком язык; пусто — не выбирал.
+func UserLang(ctx context.Context, pool *pgxpool.Pool, userID string) (*string, error) {
+	var lang *string
+	err := pool.QueryRow(ctx, `select lang from users where id = $1`, userID).Scan(&lang)
+	return lang, err
+}
+
 func RevokeOtherSessions(ctx context.Context, pool *pgxpool.Pool, userID, keep string) error {
 	_, err := pool.Exec(ctx,
 		`delete from sessions where user_id = $1 and id <> $2`, userID, keep)
@@ -259,14 +289,14 @@ func PrincipalBySession(ctx context.Context, pool *pgxpool.Pool, sessionID strin
 	p.SessionID = sessionID
 	err := pool.QueryRow(ctx, `
 		select u.id, u.email, u.name, o.id, o.name, o.slug, m.role, o.estimate_unit,
-		       o.sandbox_expires_at
+		       o.sandbox_expires_at, u.lang
 		  from sessions s
 		  join users u on u.id = s.user_id
 		  join memberships m on m.user_id = u.id and m.org_id = s.active_org_id
 		  join orgs o on o.id = m.org_id
 		 where s.id = $1 and s.expires_at > now()`, sessionID).
 		Scan(&p.ID, &p.Email, &p.Name, &p.OrgID, &p.OrgName, &p.OrgSlug, &p.Role,
-			&p.EstimateUnit, &p.SandboxExpiresAt)
+			&p.EstimateUnit, &p.SandboxExpiresAt, &p.Lang)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Либо сессии нет, либо человека исключили из активной организации,
 		// пока он работал. Второй случай чиним подбором любой другой.

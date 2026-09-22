@@ -33,6 +33,8 @@ var en = map[string]string{
 	"вас исключили из всех организаций — попросите новое приглашение":    "you have been removed from every organisation — ask for a new invite",
 	"ключом пароль не меняют: это действие человека":                     "a key cannot change a password: only a person can",
 	"новый пароль совпадает с текущим":                                   "the new password is the same as the current one",
+	"ключом язык не выбирают: это настройка человека":                    "a key cannot choose a language: it is a person's setting",
+	"такого языка нет: выберите ru или en":                               "no such language: choose ru or en",
 	"у ключа нет сессий: ключ отзывают в разделе «Ключи для интеграций»": "a key has no sessions: revoke the key under “Integration keys”",
 	"Вход через провайдера сейчас недоступен":                            "Signing in through the provider is unavailable right now",
 	"Провайдер не пустил":                                                "The provider refused the sign-in",

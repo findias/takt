@@ -18,17 +18,29 @@ export const ru = {
     reading: 'Читаем…',
   },
   lang: {
-    menu: 'Язык',
     ru: 'Русский',
     en: 'English',
   },
   appearance: {
-    label: (theme: string, compact: boolean) =>
-      `Оформление: ${theme.toLowerCase()}${compact ? ', плотнее' : ''}`,
     system: 'Как в системе',
     light: 'Светлая',
     dark: 'Тёмная',
     compact: 'Плотнее',
+  },
+  account: {
+    open: (name: string) => `Личные настройки: ${name}`,
+    title: 'Личные настройки',
+    tabs: 'Разделы личных настроек',
+    tabLang: 'Язык',
+    tabAppearance: 'Оформление',
+    tabSignIn: 'Вход',
+    langLegend: 'Язык интерфейса',
+    langHint: 'Выбор хранится в учётной записи и встретит вас на любом устройстве.',
+    langFromBrowser: 'Сейчас язык выбран по браузеру.',
+    langFailed: 'Не удалось сохранить язык',
+    themeLegend: 'Тема',
+    densityLegend: 'Плотность',
+    appearanceHint: 'Тема и плотность запоминаются в этом браузере: на другом устройстве они могут быть свои.',
   },
   demo: {
     note: (when: string) => `Демо · исчезнет ${when}`,

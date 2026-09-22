@@ -27,7 +27,8 @@ from that markup rather than from fields someone filled in by hand.
 ![The kanban board: columns marked up for flow](docs/screenshots/доска.png)
 
 **The interface speaks Russian and English**; the language follows the
-browser and can be switched in the ◐ Appearance menu. The
+browser until the person picks one behind their name in the header;
+the choice is stored with the account and follows them to any device. The
 English documentation under [`docs/`](docs/overview.md) still quotes
 what a user clicks in Russian, the way it appears on the Russian
 screen, with a translation beside it.

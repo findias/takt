@@ -231,10 +231,12 @@ test('размеры текста ложатся в целые пиксели', 
  * в тёмной вместо трёх.
  */
 async function lowContrast(page: Page, тема: 'Светлая' | 'Тёмная') {
-  // Тема — в меню «Оформление» (разбор 21.09.2026): одна кнопка вместо
-  // списка и флажка в каждой шапке.
-  await page.getByRole('button', { name: /^Оформление/ }).click()
-  await page.getByRole('menuitemradio', { name: тема }).click()
+  // Тема — в личных настройках за именем (ROADMAP 30.6). Диалог
+  // закрывается до замера: мерить нужно экран, а не его затемнение.
+  await page.getByRole('button', { name: /^Личные настройки/ }).click()
+  await page.getByRole('tab', { name: 'Оформление' }).click()
+  await page.getByRole('radio', { name: тема }).click()
+  await page.keyboard.press('Escape')
   return await page.evaluate(() => {
     const числа = (s: string) => (s.match(/[\d.]+/g) ?? []).map(Number)
     const яркость = (c: number[]) => {
@@ -1052,7 +1054,7 @@ test('на бумагу уходит документ, а не снимок эк
   expect(await скрыто('.board-toolbar'), 'панель управления доской').toBe(true)
   // Шапки организации на экране доски нет вовсе — доска занимает окно
   // целиком. Проверяется там, где она есть.
-  expect(await скрыто('.appearance'), 'тема и плотность').toBe(true)
+  expect(await скрыто('.account'), 'личные настройки').toBe(true)
   // «Разметка» — тоже кнопка, и она попалась дважды: сперва её вовсе
   // не прятали, потом спрятали, а следующее правило вернуло её
   // обратно вместе со всеми `.link` — названия карточек тоже `.link`.

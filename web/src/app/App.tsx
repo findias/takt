@@ -1,7 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import {
-  ApiError,
-  MIN_PASSWORD,
   ROLE_NAMES,
   api,
   onConnectionChange,
@@ -11,17 +9,15 @@ import type { Principal } from '../shared/api/index.ts'
 import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
-import { Appearance } from '../shared/ui/Appearance.tsx'
+import { Account } from '../features/account/Account.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
-import { ToastHost, useToast } from '../shared/ui/Toast.tsx'
+import { ToastHost } from '../shared/ui/Toast.tsx'
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary.tsx'
-import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
-import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { SandboxNote } from '../features/demo/SandboxNote.tsx'
 import { ScreenError } from '../shared/ui/Field'
-import { t, withSections } from '../shared/i18n/index.ts'
+import { followAccountLang, t, withSections } from '../shared/i18n/index.ts'
 
 // Экраны организации едут отдельным куском. Работают на доске, а сюда
 // заходят раз в месяц — за приглашением, ключом, подпиской, — и грузить
@@ -115,6 +111,14 @@ function Screens() {
   // Что открыто — состояние адреса, а не компонента: иначе ссылку
   // на доску прислать нельзя, а перезагрузка возвращает в список.
   const route = useRoute()
+
+  // Язык, выбранный человеком на другом устройстве, встречает его
+  // и здесь: переключатель на незнакомом языке не найти. Один раз —
+  // при первом входе на новом устройстве; дальше язык страницы и так
+  // совпадает с выбранным.
+  useEffect(() => {
+    followAccountLang(principal?.lang)
+  }, [principal?.lang])
 
   useEffect(() => {
     api
@@ -217,6 +221,13 @@ function Screens() {
         }}
       />
     )
+  const signOut = () => {
+    void api.logout().finally(() => {
+      setEnded(false)
+      setPrincipal(null)
+    })
+  }
+
   if (route.name === 'board')
     return (
       <Board
@@ -229,6 +240,7 @@ function Screens() {
         isOwner={principal.role === 'owner'}
         canEdit={principal.role !== 'viewer'}
         sandboxExpiresAt={principal.sandboxExpiresAt}
+        account={<Account principal={principal} onSignOut={signOut} />}
         onBack={() => navigate('/')}
       />
     )
@@ -246,12 +258,7 @@ function Screens() {
             setPrincipal(p)
             navigate('/')
           }}
-          onSignOut={() => {
-            void api.logout().finally(() => {
-              setEnded(false)
-              setPrincipal(null)
-            })
-          }}
+          onSignOut={signOut}
         />
 
         <nav className="tabs" aria-label={t.app.sections}>
@@ -316,9 +323,6 @@ function OrgHeader({
   }, [])
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [changing, setChanging] = useState(false)
-  const [leaving, setLeaving] = useState(false)
-  const sandbox = Boolean(principal.sandboxExpiresAt)
 
   const load = useCallback(() => {
     api
@@ -361,7 +365,7 @@ function OrgHeader({
       </div>
 
       <div className="org-row muted small">
-        <span>{principal.name}</span>
+        <Account principal={principal} onSignOut={onSignOut} />
         {/* На закрытой установке организации заводит владелец: правило
             то же, что на экране входа, и место, где его можно обойти,
             должно быть закрыто там же. Иначе «регистрация закрыта»
@@ -371,37 +375,6 @@ function OrgHeader({
             {creating ? t.common.cancel : t.app.newOrg}
           </button>
         )}
-        {/* В песочнице пароля не знает никто, в том числе посетитель:
-            менять нечего. */}
-        {!sandbox && (
-          <button
-            className="link"
-            onClick={() => {
-              setChanging((v) => !v)
-              setError(null)
-            }}
-          >
-            {changing ? t.common.cancel : t.app.password}
-          </button>
-        )}
-        {/* Из песочницы выходят насовсем: пароля нет, и вернуться в неё
-            нечем. Необратимое спрашивает. */}
-        <button className="link" onClick={sandbox ? () => setLeaving(true) : onSignOut}>
-          {t.app.signOut}
-        </button>
-        <ConfirmDialog
-          open={leaving}
-          title={t.app.leaveDemoTitle}
-          confirmLabel={t.app.leaveDemo}
-          onCancel={() => setLeaving(false)}
-          onConfirm={() => {
-            setLeaving(false)
-            onSignOut()
-          }}
-        >
-          <p>{t.app.leaveDemoBody}</p>
-        </ConfirmDialog>
-        <Appearance />
       </div>
 
       {creating && (
@@ -440,131 +413,7 @@ function OrgHeader({
         </form>
       )}
 
-      {changing && <PasswordForm onDone={() => setChanging(false)} />}
-
       <ScreenError>{error}</ScreenError>
     </header>
-  )
-}
-
-/**
- * Смена пароля и обрыв чужих сессий.
- *
- * Текущий пароль спрашивается не для порядка: сессию могли украсть,
- * и смена пароля из украденной сессии заперла бы хозяина снаружи.
- * Об успехе говорит тост, а не строка в форме: форма закрывается, а
- * сказать надо о втором действии — что остальные устройства вышли, —
- * о котором никто не просил и иначе не узнает.
- */
-function PasswordForm({ onDone }: { onDone: () => void }) {
-  const [current, setCurrent] = useState('')
-  const [next, setNext] = useState('')
-  const [busy, setBusy] = useState(false)
-  const form = useFormErrors()
-  const notify = useToast()
-
-  return (
-    <form
-      className="password-form"
-      ref={form.ref}
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (busy) return
-        const found = form.check(e.currentTarget)
-        if (Object.keys(found).length > 0) {
-          form.report(found)
-          return
-        }
-        setBusy(true)
-        form.clear()
-        api
-          .changePassword(current, next)
-          .then(() => {
-            setCurrent('')
-            setNext('')
-            notify({ text: t.app.passwordChanged, tone: 'info' })
-            onDone()
-          })
-          .catch((e) => {
-            const text = e instanceof Error ? e.message : t.app.changeFailed
-            // Оба отказа сервера здесь адресные, и адрес у них разный:
-            // «текущий неверен» — про первое поле, «совпадает
-            // с текущим» — про второе. Общая плашка внизу заставляла бы
-            // человека гадать, какое из двух полей переписывать.
-            const code = e instanceof ApiError ? e.body?.code : undefined
-            if (code === 'password_wrong') form.report({ current: text })
-            else if (code === 'password_same') form.report({ next: text })
-            else form.reportForm(text)
-          })
-          .finally(() => setBusy(false))
-      }}
-    >
-      <Field label={t.app.currentPassword} {...form.field('current')}>
-        {(bind) => (
-          <input
-            {...bind}
-            autoFocus
-            name="current"
-            type="password"
-            autoComplete="current-password"
-            value={current}
-            required
-            onChange={(e) => setCurrent(e.target.value)}
-          />
-        )}
-      </Field>
-      {/* Правило названо до ввода, а не после: придумывать пароль
-          и узнавать требование по отказу — значит придумывать дважды. */}
-      <Field
-        label={t.app.newPassword}
-        hint={t.auth.passwordRule(MIN_PASSWORD)}
-        {...form.field('next')}
-      >
-        {(bind) => (
-          <input
-            {...bind}
-            name="next"
-            type="password"
-            autoComplete="new-password"
-            value={next}
-            required
-            minLength={MIN_PASSWORD}
-            onChange={(e) => setNext(e.target.value)}
-          />
-        )}
-      </Field>
-      <div className="row">
-        {/* Кнопка не гаснет на незаполненной форме: погашенная кнопка
-            не объясняет, чего не хватает, а отказ у поля — объясняет. */}
-        <button type="submit" aria-label={t.app.changePassword} disabled={busy}>
-          {t.app.change}
-        </button>
-        {/* Отдельным действием, потому что и повод отдельный: сессия
-            утекает и без пароля — чужой компьютер, забытая вкладка. */}
-        <button
-          type="button"
-          className="link"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true)
-            form.clear()
-            api
-              .signOutElsewhere()
-              .then(() => {
-                notify({ text: t.app.signedOutElsewhere, tone: 'info' })
-                onDone()
-              })
-              .catch((e) =>
-                form.reportForm(e instanceof Error ? e.message : t.common.notDone),
-              )
-              .finally(() => setBusy(false))
-          }}
-        >
-          {t.app.signOutEverywhere}
-        </button>
-      </div>
-      <FormError>{form.formError}</FormError>
-    </form>
   )
 }

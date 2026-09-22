@@ -19,17 +19,29 @@ export const en: typeof ru = {
     reading: 'Loading…',
   },
   lang: {
-    menu: 'Language',
     ru: 'Русский',
     en: 'English',
   },
   appearance: {
-    label: (theme: string, compact: boolean) =>
-      `Appearance: ${theme.toLowerCase()}${compact ? ', compact' : ''}`,
     system: 'System',
     light: 'Light',
     dark: 'Dark',
     compact: 'Compact',
+  },
+  account: {
+    open: (name: string) => `Personal settings: ${name}`,
+    title: 'Personal settings',
+    tabs: 'Personal settings sections',
+    tabLang: 'Language',
+    tabAppearance: 'Appearance',
+    tabSignIn: 'Sign-in',
+    langLegend: 'Interface language',
+    langHint: 'Your choice is stored with your account and follows you to any device.',
+    langFromBrowser: 'The language is currently taken from your browser.',
+    langFailed: 'Could not save the language',
+    themeLegend: 'Theme',
+    densityLegend: 'Density',
+    appearanceHint: 'Theme and density are remembered in this browser: another device can have its own.',
   },
   demo: {
     note: (when: string) => `Demo · disappears ${when}`,

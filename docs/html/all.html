@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-22-g670cc79-dirty.</p>
+<p>Every section in one file. Version v0.2.3-26-g6d489c4-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -265,7 +265,17 @@ color:var(--ink-3);font-size:.85rem}
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
 <h3>Switch to the dark theme or a denser board</h3>
-<p>The <strong>«Оформление»</strong> (appearance) button with the half-circle icon, in the header, opens a menu: <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark), <strong>«Как в системе»</strong> (as the system), and <strong>«Плотнее»</strong> (denser). The choice is remembered in this browser.</p>
+<ol>
+<li>Click your name in the header — it opens <strong>«Личные настройки»</strong> (personal settings).</li>
+<li><strong>«Оформление»</strong> (appearance) tab: <strong>«Как в системе»</strong> (as the system), <strong>«Светлая»</strong> (light), <strong>«Тёмная»</strong> (dark); below them <strong>«Плотнее»</strong> (denser).</li>
+</ol>
+<p>The change applies at once. Theme and density are remembered in this browser: on another device they can be different.</p>
+<h3>Switch the interface language</h3>
+<p>Click your name, <strong>«Язык»</strong> (language) tab, and choose <strong>Русский</strong> or <strong>English</strong>. The page reloads in the chosen language.</p>
+<p>The choice is stored with your account: the next time you sign in on another computer or phone, the interface opens in the same language. Until you choose, the language follows the browser.</p>
+<h3>Change your password or sign out</h3>
+<p>Both live behind your name as well. <strong>«Вход»</strong> (sign-in) tab: the current password, the new one, <strong>«Сменить»</strong> (change). Changing the password signs out every other device; to sign them out without changing it, press <strong>«Выйти на всех устройствах»</strong> (sign out on all devices). <strong>«Выйти»</strong> (sign out) is at the bottom of the window.</p>
+<p>Someone who signs in through the company identity provider changes the password there, not here.</p>
 <h3>Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>«Работа»</strong> (work) tab.</li>
@@ -1241,20 +1251,23 @@ sha256sum -c SHA256SUMS</code></pre>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
 <h2>v0.3.0 — 21 September 2026</h2>
-<p><strong>Four migrations, all safe for the running version.</strong> <code>0052</code> gives labels a scope, <code>0053</code> gives blocks a deadline, <code>0054</code> rewrites the helper functions behind the access policies, <code>0055</code> marks demo sandboxes and lets an organisation be deleted as a whole. They run in the <code>pre-upgrade</code> hook as usual; pods of v0.2.3 keep working on the new schema, and <code>helm rollback</code> of the pods needs nothing else.</p>
+<p><strong>Five migrations, all safe for the running version.</strong> <code>0052</code> gives labels a scope, <code>0053</code> gives blocks a deadline, <code>0054</code> rewrites the helper functions behind the access policies, <code>0055</code> marks demo sandboxes and lets an organisation be deleted as a whole, <code>0056</code> stores each person&#39;s interface language (empty until they choose). They run in the <code>pre-upgrade</code> hook as usual; pods of v0.2.3 keep working on the new schema, and <code>helm rollback</code> of the pods needs nothing else.</p>
 <p><strong>The server now does one job on its own: it lifts blocks whose deadline has passed.</strong> It runs inside <code>takt serve</code> once at start-up and then every minute; nothing to configure. With several replicas each one runs it, and that is safe: a block is closed once, at its deadline, not at the moment of the check.</p>
 <p><strong>Subscriptions: two new events, not switched on by themselves.</strong> <code>card.block_until</code> (a block&#39;s deadline was set or changed) and <code>card.block_expired</code> (a block lifted itself, without an author). A subscription receives only the events ticked on it, so existing ones stay as they were; tick the new events to receive them. A receiver that rejects event types it does not know should learn these two.</p>
 <p><strong>The integration contract grows, nothing is taken away.</strong> <code>BLOCK_CARD</code> accepts an optional <code>until</code> (ISO 8601 with a zone, in the future); <code>SET_BLOCK_UNTIL</code> moves or clears it. A label created without a scope is an organisation label, exactly as before.</p>
 <p><strong>Operations and the board snapshot are about five times faster.</strong> The access-policy helpers were planned anew on every call; now the plan is kept. On the demo board an operation went from 71 to 18 ms and the snapshot from 71 to 13 ms. Nothing to do: it comes with <code>0054</code>.</p>
+<p><strong>The server answers in the language of the request.</strong> Refusals and the names the server creates itself (default columns, «Моя команда») come in English when the <code>lang</code> cookie or <code>Accept-Language</code> asks for it. Without either the answer is Russian, as before, so integrations see no change.</p>
 <p><strong>A new setting, <code>DEMO</code>, and it must stay off on your installation.</strong> <code>DEMO=on</code> is for the public demo only: the sign-in screen offers anyone a sandbox organisation with sample data for 24 hours. It refuses to start unless <code>SIGNUP=closed</code>. Unset, nothing changes.</p>
 <h3>For people using the board</h3>
 <ul>
+<li><strong>The interface speaks English as well as Russian.</strong> It follows the browser until the person chooses; the choice is stored with the account and follows them to any device.</li>
+<li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
 <li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
 <li><strong>Blocks with a deadline.</strong> «Снимется само» when blocking; a day before, the card says so, and the filter «Блокировка истекает» gathers such cards. The time blocked stays honest in the flow metrics.</li>
 <li><strong>Column width is dragged with the mouse</strong> or set from the keyboard, and remembered in the browser. Neighbouring columns no longer merge into one surface.</li>
 <li><strong>The side panel makes room</strong> instead of covering the board&#39;s controls.</li>
-<li><strong>The board header is one line</strong>: views, search, «Отбор» with the number of active conditions, grouping, saved views; theme and density moved to the «Оформление» menu.</li>
+<li><strong>The board header is one line</strong>: views, search, «Отбор» with the number of active conditions, grouping, saved views; theme and density moved out of it, behind your name.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1353,20 +1366,23 @@ sha256sum -c SHA256SUMS</code></pre>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
 <h2>v0.3.0 — 21 сентября 2026</h2>
-<p><strong>Четыре миграции, все безопасны для работающей версии.</strong> <code>0052</code> даёт меткам область, <code>0053</code> — срок блокировке, <code>0054</code> переписывает служебные функции, на которых стоят политики доступа, <code>0055</code> помечает песочницы демо и позволяет удалить организацию целиком. Идут хуком <code>pre-upgrade</code>, как обычно; поды v0.2.3 продолжают работать на новой схеме, и откат подов через <code>helm rollback</code> ничего сверх этого не требует.</p>
+<p><strong>Пять миграций, все безопасны для работающей версии.</strong> <code>0052</code> даёт меткам область, <code>0053</code> — срок блокировке, <code>0054</code> переписывает служебные функции, на которых стоят политики доступа, <code>0055</code> помечает песочницы демо и позволяет удалить организацию целиком, <code>0056</code> хранит язык интерфейса у каждого человека (пусто, пока он не выбрал). Идут хуком <code>pre-upgrade</code>, как обычно; поды v0.2.3 продолжают работать на новой схеме, и откат подов через <code>helm rollback</code> ничего сверх этого не требует.</p>
 <p><strong>Сервер теперь делает одну работу сам: снимает блокировки с вышедшим сроком.</strong> Работает внутри <code>takt serve</code> — при запуске и дальше раз в минуту; настраивать нечего. При нескольких репликах её делает каждая, и это безопасно: блокировка закрывается один раз и моментом срока, а не моментом проверки.</p>
 <p><strong>Подписки: два новых события, сами не включаются.</strong> <code>card.block_until</code> (срок блокировки поставлен или изменён) и <code>card.block_expired</code> (блокировка снялась сама, без автора). Подписка получает только отмеченные на ней события, поэтому существующие остаются как были; чтобы получать новые, отметьте их. Приёмник, который отвергает незнакомые виды событий, должен узнать об этих двух.</p>
 <p><strong>Контракт для интеграций растёт, ничего не отнято.</strong> <code>BLOCK_CARD</code> принимает необязательный <code>until</code> (ISO 8601 с зоной, в будущем); <code>SET_BLOCK_UNTIL</code> сдвигает или убирает его. Метка, заведённая без области, — метка организации, как и прежде.</p>
 <p><strong>Операции и снимок доски примерно впятеро быстрее.</strong> Служебные функции политик доступа планировались заново на каждом вызове; теперь план сохраняется. На демонстрационной доске операция — с 71 до 18 мс, снимок — с 71 до 13 мс. Делать ничего не нужно: приходит с <code>0054</code>.</p>
+<p><strong>Сервер отвечает на языке запроса.</strong> Отказы и названия, которые сервер заводит сам (колонки новой доски, «Моя команда»), приходят по-английски, если об этом просит cookie <code>lang</code> или <code>Accept-Language</code>. Без них ответ русский, как прежде, — интеграции ничего не замечают.</p>
 <p><strong>Новая настройка <code>DEMO</code> — у вас она должна остаться выключенной.</strong> <code>DEMO=on</code> — только для публичного демо: экран входа предлагает любому песочницу с примерами на сутки. Без <code>SIGNUP=closed</code> сервер не стартует. Не задана — ничего не меняется.</p>
 <h3>Для тех, кто работает на доске</h3>
 <ul>
+<li><strong>Интерфейс говорит и по-английски.</strong> Пока человек не выбрал язык, он берётся из браузера; выбор хранится в учётной записи и встречает его на любом устройстве.</li>
+<li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
 <li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>
 <li><strong>Блокировка со сроком.</strong> «Снимется само» при блокировке; за сутки карточка об этом говорит, а отбор «Блокировка истекает» собирает такие карточки. Время в блоке честно попадает в метрики потока.</li>
 <li><strong>Ширину колонки тянут мышью</strong> или задают с клавиатуры, и браузер её запоминает. Соседние колонки больше не сливаются в одну поверхность.</li>
 <li><strong>Боковая панель уступает место</strong>, а не закрывает управление доской.</li>
-<li><strong>Шапка доски — одна строка</strong>: виды, поиск, «Отбор» с числом включённых условий, группировка, сохранённые виды; тема и плотность переехали в меню «Оформление».</li>
+<li><strong>Шапка доски — одна строка</strong>: виды, поиск, «Отбор» с числом включённых условий, группировка, сохранённые виды; тема и плотность ушли из неё за имя.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

@@ -85,7 +85,13 @@ beforeEach(() => {
   )
 })
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  // Выбор языка в проверках запоминается, но страница не перезагружается —
+  // следующей проверке он не нужен.
+  localStorage.removeItem('lang')
+  document.cookie = 'lang=; path=/; max-age=0'
+})
 
 it('отказ «нужно войти» на любом запросе возвращает на вход и объясняет, почему', async () => {
   render(<App />)
@@ -131,7 +137,9 @@ it('смена пароля объявляет и то, о чём не прос�
   render(<App />)
   await screen.findByText(ANNA.orgName)
 
-  await userEvent.click(screen.getByRole('button', { name: 'Пароль' }))
+  // Пароль — в личных настройках за именем, на вкладке «Вход».
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  await userEvent.click(screen.getByRole('tab', { name: 'Вход' }))
   // По подписи, а не по подсказке в поле: подпись — это то, чем поле
   // названо, а подсказка исчезает с первым набранным символом.
   await userEvent.type(screen.getByLabelText('Текущий пароль'), 'parol12345')
@@ -140,6 +148,64 @@ it('смена пароля объявляет и то, о чём не прос�
 
   await waitFor(() => expect(asked('/api/me/password')).toBe(1))
   expect(await screen.findByText(/остальные устройства вышли/i)).toBeTruthy()
+})
+
+// Личные настройки (ROADMAP 30.6): всё личное — за именем, а не в трёх
+// местах шапки. Язык хранится у человека и встречает его на любом
+// устройстве; тема и плотность — в браузере.
+it('имя открывает личные настройки: язык, оформление, вход и выход', async () => {
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  // Прежних путей в шапке нет: второй путь к тому же самому
+  // разъезжается с первым.
+  expect(screen.queryByRole('button', { name: 'Пароль' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Оформление/ })).toBeNull()
+
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  const dialog = screen.getByRole('dialog', { name: 'Личные настройки' })
+  expect(
+    Array.from(dialog.querySelectorAll('[role="tab"]')).map((tab) => tab.textContent),
+  ).toEqual(['Язык', 'Оформление', 'Вход'])
+  expect(screen.getByRole('radio', { name: 'Русский' })).toHaveProperty('checked', true)
+  // Пока человек не выбирал, язык решает браузер, и об этом сказано.
+  expect(dialog.textContent).toMatch(/выбран по браузеру/)
+  expect(screen.getByRole('button', { name: 'Выйти' })).toBeTruthy()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+})
+
+it('в песочнице вкладки «Вход» нет: пароля не знает никто', async () => {
+  signedIn = { ...ANNA, sandboxExpiresAt: new Date(Date.now() + 86400000).toISOString() }
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  expect(screen.queryByRole('tab', { name: 'Вход' })).toBeNull()
+  // Выдуманная почта песочницы посетителю ничего не говорит.
+  expect(screen.getByRole('dialog').textContent).not.toMatch(/@/)
+})
+
+it('выбранный язык уходит на сервер, а не только в этот браузер', async () => {
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  await userEvent.click(screen.getByRole('radio', { name: 'English' }))
+
+  await waitFor(() => expect(asked('/api/me/lang')).toBe(1))
+  const call = (fetch as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls.find(
+    (c) => String(c[0]) === '/api/me/lang',
+  )
+  expect(JSON.parse(String(call?.[1]?.body))).toEqual({ lang: 'en' })
+  await waitFor(() => expect(localStorage.getItem('lang')).toBe('en'))
+})
+
+it('язык, выбранный на другом устройстве, встречает человека и здесь', async () => {
+  signedIn = { ...ANNA, lang: 'en' }
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  // Страница уходит на перезагрузку с выбранным языком: jsdom
+  // перезагружать не умеет, поэтому смотрим, что язык запомнен.
+  await waitFor(() => expect(localStorage.getItem('lang')).toBe('en'))
 })
 
 it('«назад» после смены человека показывает нового, а не прежнего', async () => {

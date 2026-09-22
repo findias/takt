@@ -1216,6 +1216,9 @@ select:disabled {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* Сжимается, а не уезжает за край: на узком экране имя в конце шапки
+     обрезается многоточием (снимок 21, ширина 360). */
+  min-width: 0;
 }
 /* Заголовок-сортировка выглядит подписью, а не ссылкой: столбцов
    девять, и девять цветных подписей превращают шапку в набор кнопок.
@@ -3724,6 +3727,68 @@ textarea.description {
   margin-top: var(--space-4);
 }
 
+/* Личные настройки (ROADMAP 30.6). Имя в шапке — кнопка: длинное имя
+   обрезается, а не выталкивает остальную шапку на узком экране. */
+.account {
+  display: flex;
+  min-width: 0;
+}
+.account-name {
+  min-width: 0;
+  max-width: 16rem;
+}
+.account-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+}
+.account-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.account-who {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.account-dialog .panel-body {
+  padding-top: var(--space-3);
+  min-height: 12rem;
+}
+/* Группа выбора без рамки: рамка вокруг двух переключателей внутри
+   диалога — третья вложенная граница, и читается она шумом. */
+.account-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.account-group legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+.account-group p {
+  margin: 0;
+}
+/* Между группами — шаг больше, чем между пунктами одной группы:
+   иначе «Плотнее» читается четвёртой темой. */
+.account-group--spaced {
+  gap: var(--space-4);
+}
+.account-foot {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+
 /* Диаграммы потока. Рисуются вручную в SVG — библиотека ради полусотни
    кружков принесла бы свою палитру и свой размер сборки. */
 .chart {
@@ -4085,7 +4150,7 @@ textarea.description {
   .column-settings-toggle,
   .btn,
   .icon-button,
-  .appearance,
+  .account,
   .board-header-tail,
   input[type='checkbox'],
   select {

@@ -142,12 +142,16 @@ test('доска в пятьсот карточек открывается и о
   await search.fill('')
   await page.evaluate(() => ((window as unknown as { __slowest: number }).__slowest = 0))
 
-  // Плотность — в меню «Оформление»; меряется само переключение.
-  await page.getByRole('button', { name: /^Оформление/ }).click()
-  await page.getByRole('menuitemcheckbox', { name: 'Плотнее' }).click()
+  // Плотность — в личных настройках за именем, на вкладке «Оформление»;
+  // меряется само переключение, а не открытие диалога.
+  await page.getByRole('button', { name: /^Личные настройки/ }).click()
+  await page.getByRole('tab', { name: 'Оформление' }).click()
+  await page.evaluate(() => ((window as unknown as { __slowest: number }).__slowest = 0))
+  await page.getByRole('checkbox', { name: 'Плотнее' }).click()
   const onDensity = await page.evaluate(
     () => (window as unknown as { __slowest: number }).__slowest,
   )
+  await page.keyboard.press('Escape')
   console.log(`переключение плотности: ${Math.round(onDensity)} мс`)
   expect(onDensity).toBeLessThan(200)
 

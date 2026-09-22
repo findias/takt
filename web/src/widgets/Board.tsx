@@ -23,7 +23,6 @@ import type {
   Priority,
 } from '../shared/api/index.ts'
 import { CardPanel } from '../features/board/CardPanel.tsx'
-import { Appearance } from '../shared/ui/Appearance.tsx'
 import { BoardSkeleton, EmptyState, ErrorState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
@@ -123,6 +122,7 @@ export function Board({
   isOwner,
   canEdit,
   sandboxExpiresAt,
+  account,
   onBack,
 }: {
   boardId: string
@@ -144,6 +144,10 @@ export function Board({
   isOwner: boolean
   /** Песочница публичного демо: когда исчезнет. */
   sandboxExpiresAt?: string
+  /** Имя смотрящего с личными настройками. Приходит готовым от
+   *  приложения: выйти из сессии умеет только оно, а доске знать
+   *  об этом незачем. */
+  account?: React.ReactNode
   onBack: () => void
 }) {
   const notify = useToast()
@@ -963,9 +967,9 @@ export function Board({
             {t.screen.saving(board.pending)}
           </span>
         )}
-        {/* Тема и плотность живут и здесь. Плотность нужна ровно там, где
-            много карточек, то есть на доске, — а переключатель до сих пор
-            стоял только в списке досок, где он бесполезен. */}
+        {/* Личные настройки — и здесь: плотность нужна ровно там, где
+            много карточек, то есть на доске, а уходить за ней в список
+            досок незачем. */}
         <div className="board-header-tail">
           <button
             className="btn btn--quiet"
@@ -979,7 +983,7 @@ export function Board({
             <PeopleIcon />
             {visibilityLabel(access)}
           </button>
-          <Appearance />
+          {account}
         </div>
       </header>
 

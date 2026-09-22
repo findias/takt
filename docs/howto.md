@@ -108,10 +108,34 @@ board stays as it was.
 
 ### Switch to the dark theme or a denser board
 
-The **«Оформление»** (appearance) button with the half-circle icon, in
-the header, opens a menu: **«Светлая»** (light), **«Тёмная»** (dark),
-**«Как в системе»** (as the system), and **«Плотнее»** (denser). The
-choice is remembered in this browser.
+1. Click your name in the header — it opens **«Личные настройки»**
+   (personal settings).
+2. **«Оформление»** (appearance) tab: **«Как в системе»** (as the
+   system), **«Светлая»** (light), **«Тёмная»** (dark); below them
+   **«Плотнее»** (denser).
+
+The change applies at once. Theme and density are remembered in this
+browser: on another device they can be different.
+
+### Switch the interface language
+
+Click your name, **«Язык»** (language) tab, and choose **Русский** or
+**English**. The page reloads in the chosen language.
+
+The choice is stored with your account: the next time you sign in on
+another computer or phone, the interface opens in the same language.
+Until you choose, the language follows the browser.
+
+### Change your password or sign out
+
+Both live behind your name as well. **«Вход»** (sign-in) tab: the
+current password, the new one, **«Сменить»** (change). Changing the
+password signs out every other device; to sign them out without
+changing it, press **«Выйти на всех устройствах»** (sign out on all
+devices). **«Выйти»** (sign out) is at the bottom of the window.
+
+Someone who signs in through the company identity provider changes the
+password there, not here.
 
 ### Split work into parts
 

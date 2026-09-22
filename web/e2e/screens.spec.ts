@@ -132,10 +132,12 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.emulateMedia({ forcedColors: 'none' })
 
   // Плотный режим — тот самый множитель.
-  // Плотность — в меню «Оформление».
+  // Плотность — в личных настройках за именем, вкладка «Оформление».
   const density = async () => {
-    await page.getByRole('button', { name: /^Оформление/ }).click()
-    await page.getByRole('menuitemcheckbox', { name: 'Плотнее' }).click()
+    await page.getByRole('button', { name: /^Личные настройки/ }).click()
+    await page.getByRole('tab', { name: 'Оформление' }).click()
+    await page.getByRole('checkbox', { name: 'Плотнее' }).click()
+    await page.keyboard.press('Escape')
   }
   await density()
   await page.waitForTimeout(200)
@@ -405,4 +407,44 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/21-узкий-экран.png` })
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.screenshot({ path: `${SHOTS}/21б-узкий-экран-тёмный.png` })
+  await page.emulateMedia({ colorScheme: 'light' })
+
+  // Личные настройки за именем (ROADMAP 30.6). Шапка на 360: имя —
+  // кнопка и не должно выталкивать остальное; дальше сам диалог на обоих
+  // языках — английские подписи длиннее и ломают вёрстку там, где
+  // русские помещались.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/30-шапка-узкая.png` })
+  await page.getByRole('button', { name: /^Личные настройки/ }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/31-личные-настройки-узкие.png` })
+  await page.keyboard.press('Escape')
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.getByRole('button', { name: /^Личные настройки/ }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/32-личные-настройки-язык.png` })
+  await page.getByRole('tab', { name: 'Вход' }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/33-личные-настройки-вход.png` })
+  await page.keyboard.press('Escape')
+
+  // Английский: браузер с английским языком системы, человек язык
+  // не выбирал — значит, решает браузер.
+  const english = await browser.newContext({ locale: 'en-GB' })
+  const en = await english.newPage()
+  await en.setViewportSize({ width: 1440, height: 900 })
+  await en.goto('/')
+  await en.getByLabel('E-mail').fill(OWNER)
+  await en.getByLabel('Password').fill(PASSWORD)
+  await en.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await en.getByRole('button', { name: /^Personal settings/ }).click()
+  await en.getByRole('tab', { name: 'Appearance' }).click()
+  await en.waitForTimeout(300)
+  await en.screenshot({ path: `${SHOTS}/34-личные-настройки-en.png` })
+  await en.getByRole('tab', { name: 'Language' }).click()
+  await en.waitForTimeout(300)
+  await en.screenshot({ path: `${SHOTS}/34б-личные-настройки-en-язык.png` })
+  await english.close()
 })

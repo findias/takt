@@ -10,10 +10,11 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Four migrations, all safe for the running version.** `0052` gives
+**Five migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
-sandboxes and lets an organisation be deleted as a whole. They run in the
+sandboxes and lets an organisation be deleted as a whole, `0056` stores
+each person's interface language (empty until they choose). They run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 
@@ -40,6 +41,12 @@ access-policy helpers were planned anew on every call; now the plan is
 kept. On the demo board an operation went from 71 to 18 ms and the
 snapshot from 71 to 13 ms. Nothing to do: it comes with `0054`.
 
+**The server answers in the language of the request.** Refusals and
+the names the server creates itself (default columns, «Моя команда»)
+come in English when the `lang` cookie or `Accept-Language` asks for
+it. Without either the answer is Russian, as before, so integrations
+see no change.
+
 **A new setting, `DEMO`, and it must stay off on your installation.**
 `DEMO=on` is for the public demo only: the sign-in screen offers anyone
 a sandbox organisation with sample data for 24 hours. It refuses to
@@ -47,6 +54,14 @@ start unless `SIGNUP=closed`. Unset, nothing changes.
 
 ### For people using the board
 
+- **The interface speaks English as well as Russian.** It follows the
+  browser until the person chooses; the choice is stored with the
+  account and follows them to any device.
+- **Personal settings live behind your name.** Clicking your name in
+  the header opens «Личные настройки»: language, theme and density,
+  password. «Выйти» is there too; the half-circle button is gone. Theme
+  and density stay in the browser, since they often differ between
+  devices.
 - **Labels in three scopes.** A label belongs to the organisation, a
   subdivision (and everything inside it) or a single board, and every
   list says where it comes from. The same name cannot be used twice
@@ -64,7 +79,7 @@ start unless `SIGNUP=closed`. Unset, nothing changes.
   controls.
 - **The board header is one line**: views, search, «Отбор» with the
   number of active conditions, grouping, saved views; theme and density
-  moved to the «Оформление» menu.
+  moved out of it, behind your name.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

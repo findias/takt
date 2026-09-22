@@ -182,6 +182,11 @@ func (s *Server) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.SetCookie(w, sessionID, expires, s.cfg.SecureCookies())
+	// Язык — не повод отказать во входе: не прочёлся — останется тот,
+	// что выбрал браузер, а клиент переключится сам по «кто я».
+	if lang, err := auth.UserLang(r.Context(), s.db.Pool, user.ID); err == nil {
+		s.rememberLang(w, lang)
+	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

@@ -55,3 +55,26 @@ func langOf(w http.ResponseWriter) i18n.Lang {
 func say(w http.ResponseWriter, msg string) string {
 	return i18n.Say(langOf(w), msg)
 }
+
+// rememberLang ставит cookie языка, выбранного человеком.
+//
+// Её же ставит и клиент, но только в том браузере, где выбирали.
+// Сервер ставит её при входе, чтобы с чужого устройства отказы
+// и названия, которые он заводит, шли на выбранном языке с первого
+// же ответа, а не после того, как клиент прочтёт «кто я» и переключится.
+func (s *Server) rememberLang(w http.ResponseWriter, lang *string) {
+	if lang == nil {
+		return
+	}
+	// #nosec G124 -- без HttpOnly намеренно: язык читает клиент, чтобы
+	// выбрать каталог подписей до первой отрисовки; секрета в ней нет.
+	// Secure — из схемы BASE_URL, как у cookie сессии.
+	http.SetCookie(w, &http.Cookie{
+		Name:     "lang",
+		Value:    *lang,
+		Path:     "/",
+		MaxAge:   365 * 24 * 60 * 60,
+		Secure:   s.cfg.SecureCookies(),
+		SameSite: http.SameSiteLaxMode,
+	})
+}

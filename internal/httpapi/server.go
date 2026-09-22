@@ -106,6 +106,9 @@ func (s *Server) Handler() http.Handler {
 	// единственное, чем сегодня отвечают на «пароль утёк».
 	mux.HandleFunc("PUT /api/me/password", s.authed(s.handleChangePassword))
 	mux.HandleFunc("DELETE /api/me/sessions", s.authed(s.handleRevokeSessions))
+	// Язык интерфейса — тоже свой у каждого и переезжает между
+	// устройствами вместе с учётной записью (ROADMAP 30.6).
+	mux.HandleFunc("PUT /api/me/lang", s.authed(s.handleSetLang))
 
 	// Организации: список своих, создание новой, переключение активной.
 	mux.HandleFunc("GET /api/orgs", s.authed(s.handleListOrgs))
@@ -493,6 +496,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID str
 		s.fail(w, "чтение профиля", err)
 		return
 	}
+	s.rememberLang(w, principal.Lang)
 	writeJSON(w, http.StatusOK, principal)
 }
 
@@ -567,6 +571,31 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request, p 
 	case err != nil:
 		s.fail(w, "смена пароля", err)
 	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// Язык интерфейса у человека. Отвечает cookie тут же: следующий ответ
+// сервера должен прийти уже на выбранном языке.
+func (s *Server) handleSetLang(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if _, byKey := scopesOf(r); byKey {
+		writeError(w, http.StatusForbidden, "ключом язык не выбирают: это настройка человека")
+		return
+	}
+	var req struct {
+		Lang string `json:"lang"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := auth.SetLang(r.Context(), s.db.Pool, p.ID, req.Lang)
+	switch {
+	case errors.Is(err, auth.ErrUnknownLang):
+		writeError(w, http.StatusBadRequest, auth.ErrUnknownLang.Error())
+	case err != nil:
+		s.fail(w, "выбор языка", err)
+	default:
+		s.rememberLang(w, &req.Lang)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

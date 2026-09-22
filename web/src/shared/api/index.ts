@@ -39,6 +39,10 @@ export type Principal = {
   /** Песочница публичного демо: когда она исчезнет. У настоящей
    *  организации поля нет. */
   sandboxExpiresAt?: string
+  /** Язык интерфейса, выбранный человеком; пусто — не выбирал, решает
+   *  браузер. `?`, а не только `null`: сервер прежней версии поля
+   *  не знает, и в окне выкладки его может не быть вовсе. */
+  lang?: 'ru' | 'en' | null
 }
 
 export type EstimateUnit = 'points' | 'hours' | 'days'
@@ -778,6 +782,9 @@ export const api = {
     request<void>('PUT', '/api/me/password', { current, next }),
   /** «Выйти на всех устройствах»: этот браузер остаётся, остальные — нет. */
   signOutElsewhere: () => request<void>('DELETE', '/api/me/sessions'),
+  /** Язык интерфейса — у человека, а не у браузера: выбранный на работе
+   *  приезжает и домой. */
+  setLang: (lang: 'ru' | 'en') => request<void>('PUT', '/api/me/lang', { lang }),
 
   listOrgs: () => request<{ orgs: Membership[]; activeOrgId: string }>('GET', '/api/orgs'),
   createOrg: (name: string) => request<Membership>('POST', '/api/orgs', { name }),

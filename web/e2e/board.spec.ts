@@ -301,8 +301,8 @@ test('от входа до переставленной карточки', async
   expect(page.url()).toBe(boardUrl)
 
   // И переживает выход с повторным входом — то есть лежит не в браузере.
-  // Выход живёт в шапке списка досок: на самой доске в шапке только доска.
-  await page.getByRole('button', { name: 'Все доски' }).click()
+  // Выход — в личных настройках за именем.
+  await page.getByRole('button', { name: /^Личные настройки/ }).click()
   await page.getByRole('button', { name: 'Выйти' }).click()
   await signIn(page, who)
   await openBoard(page, 'Первая доска')
@@ -2392,4 +2392,41 @@ test('отзыв ключа и удаление реплики спрашива�
   await panel.getByRole('button', { name: 'Удалить', exact: true }).click()
   await ask.getByRole('button', { name: 'Удалить реплику' }).click()
   await expect(panel.getByText('Реплика удалена', { exact: true })).toBeVisible()
+})
+
+// Личные настройки (ROADMAP 30.6): имя открывает их с клавиатуры, Escape
+// возвращает фокус на имя, а выбранный язык живёт у человека и встречает
+// его в другом браузере — там, где он ещё ничего не выбирал.
+test('имя открывает личные настройки, а язык переезжает в другой браузер', async ({
+  page,
+  browser,
+}) => {
+  const who = await register(page)
+  const name = page.getByRole('button', { name: /^Личные настройки/ })
+
+  await name.focus()
+  await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Личные настройки' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('tab', { name: 'Язык' })).toHaveAttribute('aria-selected', 'true')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(name).toBeFocused()
+
+  await name.click()
+  await page.getByRole('radio', { name: 'English' }).click()
+  // Язык применяется перезагрузкой: экран приходит уже английским.
+  await expect(page.getByPlaceholder('New board name')).toBeVisible()
+
+  // Второй браузер с русским языком системы: до входа — русский экран,
+  // после входа — язык, выбранный человеком.
+  const other = await browser.newContext({ locale: 'ru-RU' })
+  const second = await other.newPage()
+  await second.goto('/')
+  await second.getByLabel('Почта').fill(who.email)
+  await second.getByLabel('Пароль').fill(who.password)
+  await second.getByRole('button', { name: 'Войти', exact: true }).click()
+  await expect(second.getByPlaceholder('New board name')).toBeVisible()
+  await expect(second.getByRole('button', { name: /^Personal settings/ })).toBeVisible()
+  await other.close()
 })
