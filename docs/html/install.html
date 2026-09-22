@@ -355,7 +355,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several.</p>
-<footer>Takt, version v0.2.3-48-g8aa1426-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-52-g290ff1e-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

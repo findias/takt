@@ -270,7 +270,10 @@ What the preview names, so that nothing is lost silently:
 - **Emails not found.** Assignees are matched by email among the
   people of the organisation, and nobody is created on the way: the
   card comes without that assignee, and the email is listed with the
-  number of cards. Invite the person and import the file again.
+  number of cards. People are added by an administrator on the **Team**
+  screen, not by the import: add them, import again, and the second run
+  adds them as assignees to the cards that already came — without
+  bringing those cards twice.
 - **Row problems.** A row without a title is not imported; a value
   that cannot be read (an estimate that is not a number, an unknown
   priority, a date that is not a date) is dropped, and the rest of the
@@ -338,9 +341,11 @@ the column of the same name; assignees by email; the deadline as the
 due date; the created and finished dates; stickers as labels named
 “Sticker: value”, except a sticker called Priority, whose values
 become the card's priority; checklists at the end of the description.
-What does not, and the preview lists it under **Not imported**: tasks
-in YouGile's archive, subtasks (for now), task chats, files, access
-rights and time tracking. Importing the same board again skips what
+Subtasks become parts of their card, including those that sit in no
+column (they go to the parent's column). What does not come, the
+preview lists under **Not imported**: tasks in YouGile's archive, task
+chats (an import package carries them), files, access rights and time
+tracking. Importing the same board again skips what
 has already come.
 
 The server has to reach YouGile. In a closed network it cannot: export

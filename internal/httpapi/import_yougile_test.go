@@ -197,7 +197,7 @@ func TestYougileBoardMovesInWithWhatItLoses(t *testing.T) {
 	}
 	// Названо то, что не едет: архив, подзадачи, чат и файлы.
 	lost := strings.Join(preview.Lost, " | ")
-	for _, want := range []string{"архива YouGile: 1", "задач с ними: 1", "чат задач"} {
+	for _, want := range []string{"архива YouGile: 1", "чаты задач", "учёт времени"} {
 		if !strings.Contains(lost, want) {
 			t.Fatalf("потери не названы (%q): %q", want, lost)
 		}

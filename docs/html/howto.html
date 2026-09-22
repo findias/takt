@@ -223,7 +223,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Nothing is written until the last step: the preview does the whole import and throws it away, so it shows exactly what you will get.</p>
 <p>What the preview names, so that nothing is lost silently:</p>
 <ul>
-<li><strong>Emails not found.</strong> Assignees are matched by email among the people of the organisation, and nobody is created on the way: the card comes without that assignee, and the email is listed with the number of cards. Invite the person and import the file again.</li>
+<li><strong>Emails not found.</strong> Assignees are matched by email among the people of the organisation, and nobody is created on the way: the card comes without that assignee, and the email is listed with the number of cards. People are added by an administrator on the <strong>Team</strong> screen, not by the import: add them, import again, and the second run adds them as assignees to the cards that already came — without bringing those cards twice.</li>
 <li><strong>Row problems.</strong> A row without a title is not imported; a value that cannot be read (an estimate that is not a number, an unknown priority, a date that is not a date) is dropped, and the rest of the row comes. Rows are numbered as in the file, the way Excel shows them, empty rows included.</li>
 <li><strong>How dates were read.</strong> A date column is read as a whole in one of four forms: <code>2026-09-22</code>, <code>22.09.2026</code>, Jira&#39;s <code>22/Sep/26</code>, or an Excel date cell.</li>
 <li><strong>Columns.</strong> A new board gets the columns from the file, put in order of meaning: queue, work, unrecognised stages, done. “In progress” becomes the start of work and “Done” the finish; if there is no done column, one is added. On an existing board missing columns are added before the done column, and its markup is left alone.</li>
@@ -244,7 +244,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Enter the email and password you sign in to YouGile with, press <strong>Find companies</strong>, pick the company and press <strong>Get the key</strong>. The password is used once, to get the company&#39;s API key; if the company has no key yet, one is created in YouGile and the screen says so — delete it there once the import is done. If you already have a key, <strong>I have an API key</strong> takes it instead. Neither the password nor the key is stored.</li>
 <li>Pick the <strong>YouGile board</strong>, then where to — a new board or an existing one, exactly as for a spreadsheet — and read **What will happen**.</li>
 </ol>
-<p>What comes across: every task that is not in YouGile&#39;s archive, into the column of the same name; assignees by email; the deadline as the due date; the created and finished dates; stickers as labels named “Sticker: value”, except a sticker called Priority, whose values become the card&#39;s priority; checklists at the end of the description. What does not, and the preview lists it under <strong>Not imported</strong>: tasks in YouGile&#39;s archive, subtasks (for now), task chats, files, access rights and time tracking. Importing the same board again skips what has already come.</p>
+<p>What comes across: every task that is not in YouGile&#39;s archive, into the column of the same name; assignees by email; the deadline as the due date; the created and finished dates; stickers as labels named “Sticker: value”, except a sticker called Priority, whose values become the card&#39;s priority; checklists at the end of the description. Subtasks become parts of their card, including those that sit in no column (they go to the parent&#39;s column). What does not come, the preview lists under <strong>Not imported</strong>: tasks in YouGile&#39;s archive, task chats (an import package carries them), files, access rights and time tracking. Importing the same board again skips what has already come.</p>
 <p>The server has to reach YouGile. In a closed network it cannot: export a table in YouGile (Reports → Tables) and import it as a spreadsheet. An administrator can switch import over the API off altogether with <code>YOUGILE_URL=off</code>; for a boxed YouGile, <code>YOUGILE_URL</code> holds its address.</p>
 <h3 id="import-package">Import a package from a closed network</h3>
 <p>A package (<code>.takt</code>) carries boards from YouGile, Jira, Trello and other trackers into a closed network, together with what a spreadsheet loses: subtasks, links between cards and discussions. It is built outside, where there is internet, and carried in as a file.</p>
@@ -323,7 +323,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-48-g8aa1426-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-52-g290ff1e-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

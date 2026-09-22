@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"html"
-	"net/url"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/findias/takt/internal/importer"
+	"github.com/findias/takt/internal/importer/pack"
 )
 
 // ErrTooBig — задач больше, чем переносим за раз.
@@ -56,135 +55,23 @@ type sticker struct {
 	} `json:"states"`
 }
 
-// Plan собирает доску YouGile в промежуточную модель.
+// Plan собирает доску YouGile в промежуточную модель — для переноса
+// по API с экрана.
 //
-// Переносим: колонки, задачи, исполнителей по почте, дедлайн как срок,
-// даты заведения и завершения, стикеры как метки («Стикер: значение»;
-// стикер приоритета — приоритетом), чек-листы — в описание.
-// Не переносим осознанно, и отчёт называет это списком: задачи
-// из архива YouGile, подзадачи, чат, файлы, права доступа, учёт
-// времени. Молчаливая потеря хуже названной.
+// Тем же путём, что и выгрузчик (Board), и тем же разбором, что пакет
+// переноса: два пути к одной доске не должны расходиться в том, что
+// переносят. Разница одна — чаты: по запросу на задачу, а человек
+// на экране ждёт ответа, поэтому здесь без них, и отчёт это называет.
 func (c *Client) Plan(ctx context.Context, boardID string) (importer.Plan, error) {
-	type column struct {
-		ID      string `json:"id"`
-		Title   string `json:"title"`
-		BoardID string `json:"boardId"`
-		Deleted bool   `json:"deleted"`
-	}
-	cols, err := all[column](ctx, c, "columns", url.Values{"boardId": {boardID}})
+	b, err := c.Board(ctx, boardID, FetchOptions{})
 	if err != nil {
 		return importer.Plan{}, err
 	}
-	// Фильтр по доске перепроверяем сами: пропусти YouGile параметр —
-	// на доску приехали бы колонки всей компании.
-	var live []column
-	for _, col := range cols {
-		if col.BoardID == boardID && !col.Deleted {
-			live = append(live, col)
-		}
+	if len(b.Cards) > importer.MaxRows {
+		return importer.Plan{}, ErrTooBig
 	}
-	if len(live) == 0 {
-		return importer.Plan{}, ErrNotFound
-	}
-
-	type user struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-	}
-	users, err := all[user](ctx, c, "users", nil)
-	if err != nil {
-		return importer.Plan{}, err
-	}
-	emails := map[string]string{}
-	for _, u := range users {
-		emails[u.ID] = strings.ToLower(strings.TrimSpace(u.Email))
-	}
-
-	labels, priority, err := c.stickers(ctx)
-	if err != nil {
-		return importer.Plan{}, err
-	}
-
-	plan := importer.Plan{Source: Source}
-	var archived, withSubtasks int
-	for _, col := range live {
-		tasks, err := all[task](ctx, c, "tasks", url.Values{"columnId": {col.ID}})
-		if err != nil {
-			return importer.Plan{}, err
-		}
-		for _, t := range tasks {
-			if t.ColumnID != col.ID || t.Deleted {
-				continue
-			}
-			plan.Rows++
-			if plan.Rows > importer.MaxRows {
-				return importer.Plan{}, ErrTooBig
-			}
-			if t.Archived {
-				archived++
-				continue
-			}
-			if len(t.Subtasks) > 0 {
-				withSubtasks++
-			}
-			card := importer.Card{
-				Row:         plan.Rows,
-				Title:       strings.TrimSpace(t.Title),
-				Column:      strings.TrimSpace(col.Title),
-				Description: description(t),
-				ExternalID:  t.ID,
-				Created:     millis(t.Timestamp),
-			}
-			if card.Title == "" {
-				plan.Problems = append(plan.Problems, importer.Problem{Row: plan.Rows, Field: importer.FieldTitle, Skipped: true,
-					Message: "задача без названия — не переносится"})
-				continue
-			}
-			if t.Completed {
-				card.Done = millis(t.CompletedTimestamp)
-			}
-			if t.Deadline != nil {
-				card.Due = millis(t.Deadline.Deadline)
-			}
-			for _, id := range t.Assigned {
-				if e := emails[id]; e != "" {
-					card.Assignees = append(card.Assignees, e)
-				}
-			}
-			for sid, state := range t.Stickers {
-				if p := priority[sid][state]; p != "" {
-					card.Priority = p
-				} else if l := labels[sid][state]; l != "" {
-					card.Labels = append(card.Labels, l)
-				}
-			}
-			// Порядок стикеров у YouGile — порядок ключей словаря, то есть
-			// никакой; метки ставим по алфавиту, чтобы два прогона
-			// одного и того же давали одно и то же.
-			sort.Strings(card.Labels)
-			plan.Cards = append(plan.Cards, card)
-		}
-	}
-	// Одноимённые колонки у YouGile бывают; у нас колонка ищется
-	// по названию, и две «Готово» слились бы в одну — так и заводим.
-	seen := map[string]bool{}
-	for _, col := range live {
-		name := strings.TrimSpace(col.Title)
-		if !seen[strings.ToLower(name)] {
-			seen[strings.ToLower(name)] = true
-			plan.Columns = append(plan.Columns, name)
-		}
-	}
-
-	// Список того, что не едет, — всегда, а числа — где они есть.
-	if archived > 0 {
-		plan.Lost = append(plan.Lost, fmt.Sprintf("задачи из архива YouGile: %d", archived))
-	}
-	if withSubtasks > 0 {
-		plan.Lost = append(plan.Lost, fmt.Sprintf("подзадачи (задач с ними: %d) — части переносятся следующим срезом", withSubtasks))
-	}
-	plan.Lost = append(plan.Lost, "чат задач, файлы, права доступа и учёт времени — их в карточке нет")
-	return plan, nil
+	pkg := &pack.Package{Manifest: pack.Manifest{Source: pack.Source{System: Source}}, Boards: []pack.Board{b}}
+	return pkg.Plan(1)
 }
 
 // stickers — стикеры компании так, как их переносим: стикер
@@ -213,7 +100,14 @@ func (c *Client) stickers(ctx context.Context) (labels, priority map[string]map[
 				priority[s.ID][st.ID] = p
 				continue
 			}
-			labels[s.ID][st.ID] = strings.TrimSpace(s.Name) + ": " + strings.TrimSpace(st.Name)
+			// «Бизнес: Бизнес» — стикер-флажок, у которого значение
+			// повторяет имя: метка тогда одно слово, а не два одинаковых.
+			name, value := strings.TrimSpace(s.Name), strings.TrimSpace(st.Name)
+			if strings.EqualFold(name, value) || value == "" {
+				labels[s.ID][st.ID] = name
+			} else {
+				labels[s.ID][st.ID] = name + ": " + value
+			}
 		}
 	}
 	return labels, priority, nil

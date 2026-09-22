@@ -423,6 +423,8 @@ export type ImportReport = {
   links: number
   comments: number
   skipped: { row: number; title: string; number?: string; board?: string }[]
+  /** Исполнители, дописанные повтором в уже перенесённые карточки. */
+  assignedLater: number
   newColumns: { name: string; kind: ColumnKind }[]
   newLabels: string[]
   /** Значения колонки файла и куда каждое ляжет. */

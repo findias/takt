@@ -49,6 +49,7 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
       {report.missingPeople.length > 0 && (
         <div>
           <h4>{s.missing}</h4>
+          <p className="muted small">{s.missingHint}</p>
           <ul className="import-list">
             {report.missingPeople.map((p) => (
               <li key={p.email || p.name}>
@@ -59,6 +60,7 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
         </div>
       )}
 
+      {report.assignedLater > 0 && <p>{s.assignedLater(report.assignedLater)}</p>}
       {report.skipped.length > 0 && (
         <p>
           {s.skipped(report.skipped.length)}

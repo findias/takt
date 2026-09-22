@@ -362,3 +362,52 @@ type importValue struct {
 	ColumnID string `json:"columnId"`
 	New      bool   `json:"new"`
 }
+
+// Людей заводит администратор, перенос их только находит по почте.
+// Заведённого после первого переноса повтор дописывает исполнителем
+// в уже переехавшие карточки — карточки при этом не удваиваются.
+func TestPersonAddedAfterImportIsAssignedOnRerun(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Люди потом")
+	later := "potom-" + uuid.NewString()[:8] + "@example.test"
+	file := []byte("Title,Assignee,Key\nСверить остатки," + later + ",K-1\n")
+	first := owner.importTable(map[string]any{"file": file, "newBoardName": "Склад", "apply": true}, http.StatusOK)
+	if len(first.Report.Missing) != 1 || first.Report.Missing[0].Email != later {
+		t.Fatalf("почта не найдена и названа: %+v", first.Report.Missing)
+	}
+
+	// Администратор заводит человека.
+	inv := owner.mustDo("POST", "/api/invites", map[string]any{"email": later, "role": "member"}, http.StatusCreated)
+	link, _ := field(t, inv, "link").(string)
+	parts := strings.Split(strings.TrimSuffix(link, "/"), "/")
+	person := a.session()
+	person.mustDo("POST", "/api/invites/accept", map[string]any{
+		"token": parts[len(parts)-1], "name": "Потом", "password": "parol12345",
+	}, http.StatusOK)
+
+	var again struct {
+		Report struct {
+			Created       int   `json:"created"`
+			Skipped       []any `json:"skipped"`
+			AssignedLater int   `json:"assignedLater"`
+			Missing       []any `json:"missingPeople"`
+		} `json:"report"`
+	}
+	raw := owner.mustDo("POST", "/api/import/table",
+		map[string]any{"file": file, "boardId": first.Report.BoardID, "apply": true}, http.StatusOK)
+	_ = json.Unmarshal(raw, &again)
+	if again.Report.Created != 0 || len(again.Report.Skipped) != 1 || again.Report.AssignedLater != 1 || len(again.Report.Missing) != 0 {
+		t.Fatalf("повтор: %+v", again.Report)
+	}
+	var snap struct {
+		Assignees map[string][]string `json:"cardAssignees"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+first.Report.BoardID, nil, http.StatusOK), &snap)
+	total := 0
+	for _, ids := range snap.Assignees {
+		total += len(ids)
+	}
+	if total != 1 {
+		t.Fatalf("исполнителей на доске %d, ожидался один: %v", total, snap.Assignees)
+	}
+}

@@ -94,6 +94,10 @@ export const imports: typeof ru = {
   archivedLabels: 'Labels in the archive — not attached; restore them on the Team screen',
   missing: 'Emails not found — the cards are imported without these assignees',
   missingPerson: (email: string, n: number) => `${email} — ${cards(n)}`,
+  missingHint:
+    'Import does not create people — it only finds them by email. Add them on the Team screen and import again: cards will not double, assignees will be added.',
+  assignedLater: (n: number) =>
+    `Assignees added to already imported cards: ${n} — these people were added after the previous import.`,
   skipped: (n: number) =>
     `Already imported before and skipped: ${cards(n)}. Importing the same file again creates no duplicates.`,
   skippedHidden: 'on a board you cannot see',

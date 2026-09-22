@@ -49,9 +49,12 @@ type ImportReport struct {
 	Links    int `json:"links"`
 	Comments int `json:"comments"`
 	// Уже перенесённые прежним прогоном — по внешнему ключу.
-	Skipped    []ImportSkip   `json:"skipped"`
-	NewColumns []ImportColumn `json:"newColumns"`
-	NewLabels  []string       `json:"newLabels"`
+	Skipped []ImportSkip `json:"skipped"`
+	// AssignedLater — сколько исполнителей повтор дописал в уже
+	// переехавшие карточки: людей завели после первого переноса.
+	AssignedLater int            `json:"assignedLater"`
+	NewColumns    []ImportColumn `json:"newColumns"`
+	NewLabels     []string       `json:"newLabels"`
 	// ColumnValues — значения колонки файла и куда каждое ляжет.
 	ColumnValues []ImportValue `json:"columnValues"`
 	// BoardColumns — колонки существующей доски, из которых выбирают,
@@ -275,22 +278,27 @@ func (s *Service) Import(
 	// Идентификаторы уже перенесённого — чтобы новая подзадача нашла
 	// родителя, переехавшего прошлым прогоном.
 	alreadyID := map[string]string{}
+	// Уже переехавшие на эту самую доску: им повтор дописывает
+	// исполнителей, которых в прошлый раз не нашли по почте.
+	alreadyHere := map[string]bool{}
 	rows, err := tx.Query(ctx, `
-		select c.external_id, c.id, c.number, b.name
+		select c.external_id, c.id, c.number, b.name, c.board_id = $3::uuid
 		  from cards c join boards b on b.id = c.board_id
-		 where c.external_source = $1 and c.external_id = any($2)`, plan.Source, keys)
+		 where c.external_source = $1 and c.external_id = any($2)`, plan.Source, keys, rep.BoardID)
 	if err != nil {
 		return rep, err
 	}
 	for rows.Next() {
 		var k, id string
 		var sk ImportSkip
-		if err := rows.Scan(&k, &id, &sk.Number, &sk.Board); err != nil {
+		var here bool
+		if err := rows.Scan(&k, &id, &sk.Number, &sk.Board, &here); err != nil {
 			rows.Close()
 			return rep, err
 		}
 		already[k] = sk
 		alreadyID[k] = id
+		alreadyHere[k] = here
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -378,10 +386,29 @@ func (s *Service) Import(
 	}
 
 	var todo []importRow
+	var laterCards, laterPeople []string
+	nameless := map[string]int{}
 	for i, c := range plan.Cards {
 		if sk, ok := already[c.ExternalID]; ok {
 			sk.Row, sk.Title = c.Row, c.Title
 			rep.Skipped = append(rep.Skipped, sk)
+			// Людей заводит администратор, а перенос их только находит
+			// по почте. Заведённых после первого переноса повтор
+			// дописывает в уже переехавшие карточки этой доски — иначе
+			// порядок «сперва люди, потом перенос» был бы единственным
+			// рабочим, и узнавали бы об этом, когда поздно.
+			if alreadyHere[c.ExternalID] {
+				for _, e := range c.Assignees {
+					if uid, ok := people[e]; ok {
+						laterCards, laterPeople = append(laterCards, alreadyID[c.ExternalID]), append(laterPeople, uid)
+					} else {
+						missing[e]++
+					}
+				}
+				for _, name := range c.Unmatched {
+					nameless[name]++
+				}
+			}
 			continue
 		}
 		col := placeOf[i]
@@ -394,7 +421,6 @@ func (s *Service) Import(
 	}
 
 	var links, assignees, labelCards, labelIDs []string
-	nameless := map[string]int{}
 	for i, r := range todo {
 		id := ids[i]
 		if id == "" {
@@ -439,6 +465,16 @@ func (s *Service) Import(
 			on conflict (card_id, label_id) do nothing`, orgID, labelCards, labelIDs, actorID); err != nil {
 			return rep, err
 		}
+	}
+	if len(laterCards) > 0 {
+		tag, err := tx.Exec(ctx, `
+			insert into card_assignees (org_id, card_id, user_id, added_by)
+			select $1, c, u, $4 from unnest($2::uuid[], $3::uuid[]) as t(c, u)
+			on conflict (card_id, user_id) do nothing`, orgID, laterCards, laterPeople, actorID)
+		if err != nil {
+			return rep, err
+		}
+		rep.AssignedLater = int(tag.RowsAffected())
 	}
 	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, people, &rep); err != nil {
 		return rep, err

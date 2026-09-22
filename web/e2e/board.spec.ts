@@ -2632,9 +2632,9 @@ test('доска YouGile переезжает по API и называет, чт
   await expect(page.getByLabel('Пароль в YouGile')).toHaveCount(0)
 
   await page.getByLabel('Доска YouGile').selectOption({ label: 'Логистика · Склад' })
-  await expect(page.getByText('Переедут 3 карточки из 4 строк.')).toBeVisible()
+  await expect(page.getByText('Переедут 3 карточки из 3 строк.')).toBeVisible()
   await expect(page.getByText('задачи из архива YouGile: 1')).toBeVisible()
-  await expect(page.getByText(/подзадачи \(задач с ними: 1\)/)).toBeVisible()
+  await expect(page.getByText(/чаты задач — собраны без них/)).toBeVisible()
   await expect(page.getByText('nikto@yougile.test — 1 карточка')).toBeVisible()
   await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
   await page.getByRole('button', { name: 'Открыть доску' }).click()

@@ -258,7 +258,7 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		out.Lost = append(out.Lost, fmt.Sprintf("сообщения чатов без текста (вложения): %d", files))
 	}
 	if !opt.Chats {
-		out.Lost = append(out.Lost, "чаты задач — выгружены без них (--no-chats)")
+		out.Lost = append(out.Lost, "чаты задач — собраны без них: чаты переносит пакет переноса")
 	}
 	out.Lost = append(out.Lost, "файлы, права доступа и учёт времени — их в карточке нет")
 	return out, nil

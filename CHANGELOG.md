@@ -113,10 +113,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   them.
 - **Import from YouGile.** The same screen takes a YouGile board over
   its API: sign in once to get the company's API key, pick the board,
-  see what will happen. Tasks, columns, assignees by email, deadlines,
-  dates, stickers as labels and checklists come across; what does not —
-  YouGile's archive, subtasks for now, chats, files, rights, time
-  tracking — is listed before the import.
+  see what will happen. Tasks, columns, subtasks as parts, assignees by
+  email, deadlines, dates, stickers as labels (a priority sticker as the
+  priority) and checklists come across; what does not — YouGile's
+  archive, chats, files, rights, time tracking — is listed before the
+  import. People are not created: an administrator adds them, and
+  importing again assigns them to cards that already came.
 - **Import packages.** The import screen reads a `.takt` package — boards
   from another tracker built outside a closed network and carried in —
   with subtasks, links and discussions, one board at a time with the
