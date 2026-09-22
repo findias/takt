@@ -4510,6 +4510,12 @@ textarea.description {
   gap: var(--space-1);
   color: var(--ink-2);
   white-space: nowrap;
+  padding-inline: var(--space-1);
+}
+/* Отобранный человек — подложкой: доска сейчас показывает его. */
+.workload-item[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--ink);
 }
 /* У человека есть работа дольше обещанного — янтарём, а не красным:
    загрузка — повод спросить, а не тревога. */

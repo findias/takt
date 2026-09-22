@@ -993,10 +993,6 @@ export const api = {
    *  утечь, а к этому времени он мог стать чужой сессией. */
   changePassword: (current: string, next: string) =>
     request<void>('PUT', '/api/me/password', { current, next }),
-  /** Своя почта — с текущим паролем: из украденной сессии её сменили бы,
-   *  и хозяин больше не вошёл бы своим адресом. */
-  changeEmail: (current: string, email: string) =>
-    request<{ email: string }>('PUT', '/api/me/email', { current, email }),
   /** «Выйти на всех устройствах»: этот браузер остаётся, остальные — нет. */
   signOutElsewhere: () => request<void>('DELETE', '/api/me/sessions'),
   /** Язык интерфейса — у человека, а не у браузера: выбранный на работе
@@ -1029,17 +1025,6 @@ export const api = {
     request<{ sourceHistory?: SourceHistory }>('GET', `/api/boards/${boardId}/cards/${cardId}`).then(
       (r) => r.sourceHistory ?? null,
     ),
-  /** Задачи человека со всех досок, которые видит спрашивающий;
-   *  без user — свои. */
-  tasks: (user?: string, withDone?: boolean) =>
-    request<{ tasks: Task[]; truncated: boolean }>(
-      'GET',
-      '/api/tasks?' +
-        new URLSearchParams({ ...(user ? { user } : {}), ...(withDone ? { done: '1' } : {}) }).toString(),
-    ),
-  /** Владелец правит почту участника — тому, кто состоит только здесь. */
-  setMemberEmail: (userId: string, email: string) =>
-    request<{ email: string }>('PUT', `/api/members/${userId}/email`, { email }),
   setRole: (userId: string, role: Role) =>
     request<void>('PUT', `/api/members/${userId}/role`, { role }),
   removeMember: (userId: string) => request<void>('DELETE', `/api/members/${userId}`),
@@ -1051,13 +1036,6 @@ export const api = {
   /** Токен приглашения едет в теле, а не в адресе: адреса попадают
    *  в логи прокси и в историю браузера, а этот токен даёт членство
    *  в организации. Чтение через POST — плата за это. */
-  /** Ссылка «задать пароль»: владелец выпускает, человек открывает. */
-  issuePasswordLink: (userId: string) =>
-    request<{ link: string; expiresAt: string }>('POST', `/api/members/${userId}/password-link`),
-  passwordLinkInfo: (token: string) =>
-    request<PasswordLinkInfo>('POST', '/api/password-links/lookup', { token }),
-  usePasswordLink: (token: string, password: string) =>
-    request<Principal>('POST', '/api/password-links/use', { token, password }),
   inviteInfo: (token: string) => request<InviteInfo>('POST', '/api/invites/lookup', { token }),
   acceptInvite: (token: string, account?: { name: string; password: string }) =>
     request<Principal>('POST', '/api/invites/accept', { token, ...account }),

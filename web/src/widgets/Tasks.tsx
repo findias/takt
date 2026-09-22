@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../shared/api/index.ts'
+import { api, request } from '../shared/api/index.ts'
 import type { Member, Principal, Task } from '../shared/api/index.ts'
 import { chipClass, labelTitle } from '../entities/label/model.ts'
 import { PRIORITY_NAMES, dateWords } from '../entities/card/model.ts'
@@ -9,6 +9,16 @@ import { Skeleton } from '../shared/ui/states.tsx'
 import { t } from '../shared/i18n/index.ts'
 
 const DAY = 24 * 60 * 60 * 1000
+
+// Вызов — здесь, а не в общем клиенте `api`: общий клиент едет в первую
+// загрузку каждого экрана, а этот экран грузится отдельно (порог размера
+// первой загрузки — web/e2e/perf.spec.ts).
+const loadTasks = (user?: string, withDone?: boolean) =>
+  request<{ tasks: Task[]; truncated: boolean }>(
+    'GET',
+    '/api/tasks?' +
+      new URLSearchParams({ ...(user ? { user } : {}), ...(withDone ? { done: '1' } : {}) }).toString(),
+  )
 
 /**
  * Задачи человека со всех досок (решение владельца 22.09.2026: «вывод
@@ -40,8 +50,7 @@ export function Tasks({ principal }: { principal: Principal }) {
     let current = true
     setList(null)
     setError(null)
-    api
-      .tasks(user === principal.id ? undefined : user, withDone)
+    loadTasks(user === principal.id ? undefined : user, withDone)
       .then((r) => current && setList(r))
       .catch((e) => current && setError(e instanceof Error ? e.message : s.loadFailed))
     return () => {

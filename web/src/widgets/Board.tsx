@@ -1124,7 +1124,13 @@ export function Board({
           по показанному: рядом «скрыто N» от отбора, и числа по всей
           доске спорили бы с экраном. */}
       <div className="board-toolbar board-context">
-        <Workload base={base} order={order} unit={unit} />
+        <Workload
+          base={base}
+          order={order}
+          unit={unit}
+          picked={filters.assignee}
+          onPick={(assignee) => setFilters({ ...filters, assignee })}
+        />
         <FlowHint columns={columnList} />
         <Iterations
           boardId={boardId}

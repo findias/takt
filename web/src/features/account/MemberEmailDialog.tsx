@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../../shared/api/index.ts'
+import { ApiError, request } from '../../shared/api/index.ts'
 import type { Member } from '../../shared/api/index.ts'
 import { Button } from '../../shared/ui/Button.tsx'
 import { Field, FormError, useFormErrors } from '../../shared/ui/Field.tsx'
@@ -56,8 +56,7 @@ export function MemberEmailDialog({
           }
           setBusy(true)
           form.clear()
-          api
-            .setMemberEmail(member.userId, email)
+          request<{ email: string }>('PUT', `/api/members/${member.userId}/email`, { email })
             .then((r) => {
               // Сначала закрыть, потом доложить: диалог в верхнем слое
               // спрятал бы тост под собой.

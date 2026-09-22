@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ROLE_NAMES, api } from '../shared/api/index.ts'
+import { ROLE_NAMES, api, request } from '../shared/api/index.ts'
 import { UNIT_NAMES } from '../entities/card/model.ts'
 import { CopyButton } from '../shared/ui/CopyButton.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
@@ -192,8 +192,7 @@ export function Team({ principal }: { principal: Principal }) {
                       className="link"
                       onClick={() => {
                         setError(null)
-                        api
-                          .issuePasswordLink(m.userId)
+                        request<{ link: string }>('POST', `/api/members/${m.userId}/password-link`)
                           .then((r) => setLoginLink({ name: m.name, link: r.link }))
                           .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
                       }}

@@ -495,6 +495,8 @@ export const ru = {
   },
   board: {
     workloadLabel: 'Сколько на ком висит',
+    workloadCaption: 'В работе:',
+    workloadPick: (what: string) => `Показать только его карточки — ${what}`,
     workloadInWork: (name: string, n: number) => `${name}: ${n} в работе`,
     workloadUnestimated: (n: number) => `${n} без оценки`,
     workloadOverdue: 'есть карточка дольше обещанного',

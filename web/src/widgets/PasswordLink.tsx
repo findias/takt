@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react'
-import { ApiError, MIN_PASSWORD, api } from '../shared/api/index.ts'
+import { ApiError, MIN_PASSWORD, request } from '../shared/api/index.ts'
 import type { PasswordLinkInfo, Principal } from '../shared/api/index.ts'
 import { Field, FormError, ScreenError, useFormErrors } from '../shared/ui/Field.tsx'
 import { locale, t } from '../shared/i18n/index.ts'
+
+// Вызов — здесь, а не в общем клиенте `api`: общий клиент едет в первую
+// загрузку каждого экрана, а этот экран грузится отдельно (порог размера
+// первой загрузки — web/e2e/perf.spec.ts).
+const linkApi = {
+  info: (token: string) => request<PasswordLinkInfo>('POST', '/api/password-links/lookup', { token }),
+  use: (token: string, password: string) =>
+    request<Principal>('POST', '/api/password-links/use', { token, password }),
+}
 
 /**
  * Ссылка «задать пароль» (ROADMAP 23.6).
@@ -29,8 +38,8 @@ export function PasswordLinkScreen({
   const form = useFormErrors()
 
   useEffect(() => {
-    api
-      .passwordLinkInfo(token)
+    linkApi
+      .info(token)
       .then(setInfo)
       .catch((e) => setError(e instanceof Error ? e.message : s.failed))
   }, [token, s])
@@ -63,8 +72,8 @@ export function PasswordLinkScreen({
           }
           setBusy(true)
           form.clear()
-          api
-            .usePasswordLink(token, password)
+          linkApi
+            .use(token, password)
             .then(onSignedIn)
             .catch((e) => {
               const text = e instanceof Error ? e.message : t.common.notDone

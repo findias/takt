@@ -1980,6 +1980,18 @@ test('видно, сколько на ком висит', async ({ page }) => {
   await done.getByRole('button', { name: /Действия карточки/ }).click()
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(load).toContainText('1')
+
+  // Человек назван именем, и нажатие по нему отбирает доску по нему;
+  // повторное — снимает отбор.
+  await expect(load).toContainText('В работе:')
+  const me = load.getByRole('button', { name: /^Показать только его карточки — Проверяющий/ })
+  await expect(me).toContainText('Проверяющий')
+  await me.click()
+  await expect(me).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/assignee=/)
+  await me.click()
+  await expect(me).toHaveAttribute('aria-pressed', 'false')
+  await expect(page).not.toHaveURL(/assignee=/)
 })
 
 /**

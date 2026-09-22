@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError, api } from '../../shared/api/index.ts'
+import { ApiError, request } from '../../shared/api/index.ts'
 import { useToast } from '../../shared/ui/Toast.tsx'
 import { Field, FormError, useFormErrors } from '../../shared/ui/Field.tsx'
 import { t } from '../../shared/i18n/index.ts'
@@ -42,8 +42,7 @@ export function EmailForm({
         }
         setBusy(true)
         form.clear()
-        api
-          .changeEmail(current, email)
+        request<{ email: string }>('PUT', '/api/me/email', { current, email })
           .then((r) => {
             setEmail('')
             setCurrent('')

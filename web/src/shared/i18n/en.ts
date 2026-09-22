@@ -489,6 +489,8 @@ export const en: typeof ru = {
   },
   board: {
     workloadLabel: 'Who carries how much',
+    workloadCaption: 'In progress:',
+    workloadPick: (what: string) => `Show only their cards — ${what}`,
     workloadInWork: (name: string, n: number) => `${name}: ${n} in progress`,
     workloadUnestimated: (n: number) => `${n} without an estimate`,
     workloadOverdue: 'has a card running longer than promised',
