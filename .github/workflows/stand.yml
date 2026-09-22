@@ -1,0 +1,146 @@
+# Тестовый стенд ветки (ROADMAP 30.7): показать и проверить фичу
+# до того, как она попала в master и в демо, которое видят клиенты.
+#
+# Запускается руками: Actions → Стенд → Run workflow, ветка на выбор.
+# Стенд один, и выложенная ветка сменяет предыдущую.
+#
+# Площадки — те же, что у демо (deploy/stand/README.md): на Render
+# свой сервис с STAND=staging, в Neon ветка базы `staging` — копия
+# основной, которую сбрасывают к ней кнопкой, если миграция ветки
+# оказалась неудачной.
+#
+# Секреты (Settings → Secrets and variables → Actions):
+#   STAGING_DATABASE_URL     — прямая строка ветки Neon (без -pooler), роль takt
+#   STAGING_DEPLOY_HOOK_URL  — Deploy Hook сервиса Render
+#   STAGING_URL              — адрес стенда, https://….onrender.com
+# Запуск ручной, поэтому без секретов прогон падает, а не пропускает
+# шаги: выкладку попросили, и молчаливый пропуск выглядел бы успехом.
+#
+# Идентификаторы работ — латиницей: кириллица в них делает весь файл
+# негодным без единого шага (найдено на этапе 21).
+name: Стенд
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Ветка, которую выложить на стенд
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: stand
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BRANCH: ${{ inputs.branch }}
+      IMAGE: ghcr.io/${{ github.repository }}-demo
+    steps:
+      - name: Секреты на месте
+        env:
+          DB: ${{ secrets.STAGING_DATABASE_URL }}
+          HOOK: ${{ secrets.STAGING_DEPLOY_HOOK_URL }}
+          URL: ${{ secrets.STAGING_URL }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$HOOK" ] || [ -z "$URL" ]; then
+            echo "::error::Стенд не настроен: нужны STAGING_DATABASE_URL, STAGING_DEPLOY_HOOK_URL и STAGING_URL (deploy/stand/README.md)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          # Вся история: версии нужны теги, заметке — master рядом с веткой.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Версия — до заметки: файлы заметки в .gitignore и версию
+      # не портят, но порядок убирает и сам вопрос.
+      - name: Версия
+        run: |
+          echo "VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_ENV"
+          echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      # Заметка покоммитно. Коммит без русской половины или без «как
+      # проверить» не роняет выкладку — правке сборки смотреть на экране
+      # нечего, — но виден здесь и на самом стенде с пометкой.
+      - name: Заметка стенда
+        run: |
+          make stand-notes STAND_BRANCH="$BRANCH"
+          for c in $(git rev-list origin/master..HEAD); do
+            msg=$(git log -1 --format=%B "$c")
+            subject=$(git log -1 --format=%s "$c")
+            if ! grep -qx -- '--- ru ---' <<<"$msg"; then
+              echo "::warning::${c:0:7} «$subject»: нет русской половины (--- ru ---)"
+            fi
+            if ! grep -q '^How to check:' <<<"$msg"; then
+              echo "::warning::${c:0:7} «$subject»: нет «How to check:»"
+            fi
+          done
+
+      - name: Миграции
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: go run ./cmd/takt migrate
+
+      # Люди стенда — те же, что у локального стенда (make demo): их пароль
+      # напечатан в заметке. Уже заведены — команда так и скажет и сверит,
+      # что данные целы.
+      - name: Наполнение
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: go run ./cmd/takt demo
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Вход в ghcr
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Пакет демо, но своя метка: `latest` остаётся за демо, и выкладка
+      # стенда не может подменить то, что видят клиенты.
+      - name: Образ
+        run: |
+          docker buildx build --platform linux/amd64 \
+            --build-arg VERSION="$VERSION" \
+            --tag "$IMAGE:stand-$SHA" \
+            --push .
+
+      - name: Выкладка
+        env:
+          HOOK: ${{ secrets.STAGING_DEPLOY_HOOK_URL }}
+        run: |
+          img=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMAGE:stand-$SHA")
+          curl -fsS -X POST "$HOOK&imgURL=$img" > /dev/null
+
+      # Выкладка сделана, когда заметка стенда отвечает версией ветки:
+      # заметка отдаётся без входа, и тем же ответом проверено, что
+      # стенд включён.
+      - name: Живой адрес отвечает версией ветки
+        env:
+          URL: ${{ secrets.STAGING_URL }}
+        run: |
+          for i in $(seq 1 60); do
+            got=$(curl -fsS "$URL/api/stand" 2>/dev/null \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("version", ""))' 2>/dev/null || true)
+            if [ "$got" = "$VERSION" ]; then
+              echo "стенд отвечает версией $got: $URL"
+              exit 0
+            fi
+            echo "пока отвечает «$got», ждём $VERSION"
+            sleep 20
+          done
+          echo "::error::за 20 минут стенд так и не ответил версией $VERSION"
+          exit 1

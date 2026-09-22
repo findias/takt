@@ -10,6 +10,7 @@ import { Board } from '../widgets/Board.tsx'
 import { Auth } from '../widgets/Auth.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Account } from '../features/account/Account.tsx'
+import { StandBar } from '../features/stand/StandBar.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
@@ -57,6 +58,7 @@ export function App() {
     // оставлять на странице слова и кнопку, а не белое поле.
     <ErrorBoundary>
       <ToastHost>
+        <StandBar />
         <Offline />
         <Screens />
       </ToastHost>

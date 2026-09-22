@@ -47,6 +47,19 @@ export type Principal = {
 
 export type EstimateUnit = 'points' | 'hours' | 'days'
 
+/** Одна языковая половина сообщения коммита. Пустой `check` — «как
+ *  проверить» не написано. */
+export type StandHalf = { title: string; body: string; check: string }
+
+/** Заметка тестового стенда ветки (ROADMAP 30.7). */
+export type StandNote = {
+  branch: string
+  version: string
+  commits: { hash: string; date: string; en: StandHalf; ru: StandHalf | null }[]
+  email: string
+  password: string
+}
+
 export type Membership = {
   orgId: string
   orgName: string
@@ -771,6 +784,9 @@ export const api = {
   me: () => request<Principal>('GET', '/api/me'),
   authMethods: () => request<AuthMethods>('GET', '/api/auth/methods'),
   sandbox: () => request<Principal>('POST', '/api/demo/sandbox'),
+  /** Что на тестовом стенде. Не стенд — ручки нет вовсе, и ответ 404
+   *  значит «полосы стенда не показывать». */
+  stand: () => request<StandNote>('GET', '/api/stand'),
   login: (email: string, password: string) =>
     request<Principal>('POST', '/api/auth/login', { email, password }),
   register: (org: string, name: string, email: string, password: string) =>

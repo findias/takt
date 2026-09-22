@@ -24,7 +24,9 @@ var quiet = map[string]bool{
 	"apiclient": true, "ci": true, "config": true, "demo": true,
 	"docs": true, "doctor": true, "i18n": true, "requirements": true,
 	"retention": true, "security": true, "store": true,
-	"translation": true, "version": true,
+	// Заметка стенда (stand): кириллица там — метка, которую ищут
+	// в сообщениях коммитов, а не слова, сказанные человеку.
+	"stand": true, "translation": true, "version": true,
 	// Порядок карточек: его отказы — нарушенные инварианты, до человека
 	// они доезжают «внутренней ошибкой».
 	"rank": true,

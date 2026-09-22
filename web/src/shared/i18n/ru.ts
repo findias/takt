@@ -42,6 +42,18 @@ export const ru = {
     densityLegend: 'Плотность',
     appearanceHint: 'Тема и плотность запоминаются в этом браузере: на другом устройстве они могут быть свои.',
   },
+  stand: {
+    bar: (branch: string, version: string) => `Тестовый стенд: ветка ${branch}, ${version}`,
+    open: 'Что на стенде',
+    title: 'Что на стенде',
+    signIn: (email: string, password: string) =>
+      `Вход: ${email}, пароль ${password}. Так же входят boris@, vera@ и gleb@ — с тем же паролем.`,
+    empty: 'На ветке нет коммитов поверх master: стенд показывает то же, что демо.',
+    check: 'Как проверить',
+    noCheck: 'Как проверить — не написано',
+    noTranslation: 'Перевода в коммите нет — показан английский текст.',
+    commit: (hash: string) => `Коммит ${hash} на GitHub`,
+  },
   demo: {
     note: (when: string) => `Демо · исчезнет ${when}`,
     noteTitle: 'Песочница публичного демо: своя у каждого посетителя, никто другой её не видит',

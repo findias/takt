@@ -189,11 +189,14 @@ func serve(ctx context.Context, cfg config.Config, db *store.Store, log *slog.Lo
 	//
 	// В публичном демо не запускается: доставка ходила бы по адресам,
 	// которые вписал прохожий (подписки там и не заводятся — см.
-	// handleCreateWebhook, но у демо-данных одна своя есть).
-	if !cfg.Demo {
-		go webhook.NewWorker(db, log).Run(ctx)
-	} else {
+	// handleCreateWebhook, но у демо-данных одна своя есть). На тестовом
+	// стенде — по той же причине: пароль входа там напечатан в самой
+	// заметке стенда, и войти может любой.
+	switch {
+	case cfg.Demo:
 		go sweepSandboxes(ctx, db, log)
+	case !cfg.Stand:
+		go webhook.NewWorker(db, log).Run(ctx)
 	}
 
 	// Уборщик: служебные таблицы растут без предела, и ключи повтора

@@ -3789,6 +3789,64 @@ textarea.description {
   padding-top: var(--space-3);
 }
 
+/* Тестовый стенд ветки (ROADMAP 30.7): полоса на каждом экране, чтобы
+   снимок со стенда не спутали с продуктом. Цвет «обратите внимание»,
+   а не отказа: стенд — не поломка. */
+.stand-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  background: var(--caution-soft);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--rule);
+}
+.stand-dialog {
+  width: min(40rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+.stand-commits {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.stand-commit {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+.stand-commit p {
+  margin: var(--space-1) 0 0;
+}
+.stand-commit-title {
+  font-size: var(--text);
+  margin: 0;
+}
+.stand-check-title {
+  font-size: var(--text-sm);
+  margin: var(--space-2) 0 0;
+}
+/* Тело и шаги — как написаны: нумерация и абзацы коммита значимы. */
+.stand-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.stand-missing {
+  color: var(--caution);
+}
+.stand-link {
+  color: var(--accent);
+}
+.stand-link:hover {
+  text-decoration: none;
+}
+
 /* Диаграммы потока. Рисуются вручную в SVG — библиотека ради полусотни
    кружков принесла бы свою палитру и свой размер сборки. */
 .chart {

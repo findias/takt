@@ -47,6 +47,18 @@ migrate: db ## Применить миграции к локальной баз�
 demo: migrate ## Наполнить базу данными для работы над видом
 	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/takt demo
 
+# Заметка тестового стенда (ROADMAP 30.7): коммиты ветки поверх master,
+# вшиваются в бинарник при сборке. Файлы в .gitignore, поэтому версия
+# не становится «-dirty», а сборка выпуска получает пустую заметку.
+# Разделители — управляющие символы: в сообщении коммита может быть
+# что угодно, кроме них.
+STAND_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+.PHONY: stand-notes
+stand-notes: ## Записать заметку тестового стенда: коммиты ветки поверх master
+	@printf '%s\n' "$(STAND_BRANCH)" > internal/stand/notes/branch.txt
+	@git log --format='%H%x1f%cI%x1f%B%x1e' origin/master..HEAD > internal/stand/notes/log.txt
+	@echo "заметка стенда: ветка $(STAND_BRANCH), коммитов $$(git rev-list --count origin/master..HEAD)"
+
 # Стенд с нуля одной командой: снести базу, поднять, мигрировать,
 # наполнить, собрать фронтенд. Дальше — make run.
 .PHONY: stand

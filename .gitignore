@@ -34,3 +34,7 @@
 # PDF документации: собирается `make docs-pdf`, едет в комплекте,
 # в репозитории ему делать нечего — он двоичный и пересобирается.
 /docs/html/takt.pdf
+
+# Заметка тестового стенда пишется при сборке (internal/stand/notes/README.md).
+internal/stand/notes/branch.txt
+internal/stand/notes/log.txt

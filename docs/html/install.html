@@ -184,6 +184,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
 <tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
+<tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
 </tbody>
 </table></div>
 <p><strong>Migrations are a separate command,</strong> <code>takt migrate</code>, not part of startup. On one replica it makes no difference; on two, a simultaneous start tears the database apart.</p>
@@ -337,7 +338,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Takt, version v0.2.3-26-g6d489c4-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-28-gd2ca236-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

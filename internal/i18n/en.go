@@ -45,9 +45,10 @@ var en = map[string]string{
 	"Вход не удался, обратитесь к администратору":                        "Signing in failed, contact your administrator",
 
 	// --- Демо ---
-	"демо сейчас заполнено — попробуйте через час, освободится место":                         "the demo is full right now — try again in an hour, when a place frees up",
-	"слишком много новых песочниц подряд — попробуйте через %s":                               "too many new sandboxes in a row — try again in %s",
-	"в демо подписки на события выключены: доставка ходила бы по любому адресу от имени демо": "event subscriptions are off in the demo: delivery would call any address on the demo's behalf",
+	"демо сейчас заполнено — попробуйте через час, освободится место":                                                    "the demo is full right now — try again in an hour, when a place frees up",
+	"слишком много новых песочниц подряд — попробуйте через %s":                                                          "too many new sandboxes in a row — try again in %s",
+	"в демо подписки на события выключены: доставка ходила бы по любому адресу от имени демо":                            "event subscriptions are off in the demo: delivery would call any address on the demo's behalf",
+	"на тестовом стенде подписки на события выключены: войти на него может любой, а доставка ходила бы по любому адресу": "event subscriptions are off on the test stand: anyone can sign in there, and delivery would call any address",
 
 	// --- Организация, люди, приглашения ---
 	"это может только владелец организации": "only the organisation owner can do this",

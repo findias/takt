@@ -43,6 +43,18 @@ export const en: typeof ru = {
     densityLegend: 'Density',
     appearanceHint: 'Theme and density are remembered in this browser: another device can have its own.',
   },
+  stand: {
+    bar: (branch: string, version: string) => `Test stand: branch ${branch}, ${version}`,
+    open: 'What is on the stand',
+    title: 'What is on the stand',
+    signIn: (email: string, password: string) =>
+      `Sign in: ${email}, password ${password}. boris@, vera@ and gleb@ sign in the same way, with the same password.`,
+    empty: 'The branch has no commits on top of master: the stand shows the same as the demo.',
+    check: 'How to check',
+    noCheck: 'How to check — not written',
+    noTranslation: 'The commit has no translation — the English text is shown.',
+    commit: (hash: string) => `Commit ${hash} on GitHub`,
+  },
   demo: {
     note: (when: string) => `Demo · disappears ${when}`,
     noteTitle: 'A public demo sandbox: each visitor gets their own, nobody else can see it',

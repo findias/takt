@@ -174,6 +174,7 @@ mark removed, archived, restored to the board.
 | `OIDC_ORG` | the organisation a first-time arrival joins |
 | `OIDC_LABEL` | the caption on the sign-in button |
 | `DEMO` | `on` only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours; requires `SIGNUP=closed`, event subscriptions are switched off. Off by default |
+| `STAND` | `staging` only for our own test stand of a branch: a strip on every screen and a note of the branch's commits; event subscriptions are switched off. Cannot be combined with `DEMO=on`. Off by default |
 
 ## Subcommands
 

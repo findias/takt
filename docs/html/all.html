@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-26-g6d489c4-dirty.</p>
+<p>Every section in one file. Version v0.2.3-28-gd2ca236-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -500,6 +500,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
 <tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
 <tr><td><code>DEMO</code></td><td><code>on</code> only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours; requires <code>SIGNUP=closed</code>, event subscriptions are switched off. Off by default</td></tr>
+<tr><td><code>STAND</code></td><td><code>staging</code> only for our own test stand of a branch: a strip on every screen and a note of the branch&#39;s commits; event subscriptions are switched off. Cannot be combined with <code>DEMO=on</code>. Off by default</td></tr>
 </tbody>
 </table></div>
 <h2>Subcommands</h2>
@@ -679,6 +680,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
 <tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
+<tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
 </tbody>
 </table></div>
 <p><strong>Migrations are a separate command,</strong> <code>takt migrate</code>, not part of startup. On one replica it makes no difference; on two, a simultaneous start tears the database apart.</p>
@@ -1258,6 +1260,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><strong>Operations and the board snapshot are about five times faster.</strong> The access-policy helpers were planned anew on every call; now the plan is kept. On the demo board an operation went from 71 to 18 ms and the snapshot from 71 to 13 ms. Nothing to do: it comes with <code>0054</code>.</p>
 <p><strong>The server answers in the language of the request.</strong> Refusals and the names the server creates itself (default columns, «Моя команда») come in English when the <code>lang</code> cookie or <code>Accept-Language</code> asks for it. Without either the answer is Russian, as before, so integrations see no change.</p>
 <p><strong>A new setting, <code>DEMO</code>, and it must stay off on your installation.</strong> <code>DEMO=on</code> is for the public demo only: the sign-in screen offers anyone a sandbox organisation with sample data for 24 hours. It refuses to start unless <code>SIGNUP=closed</code>. Unset, nothing changes.</p>
+<p><strong>Another setting to leave unset: <code>STAND</code>.</strong> <code>STAND=staging</code> is for our own test stand of a branch — a strip on every screen and a note of what the branch adds. It cannot be combined with <code>DEMO=on</code>.</p>
 <h3>For people using the board</h3>
 <ul>
 <li><strong>The interface speaks English as well as Russian.</strong> It follows the browser until the person chooses; the choice is stored with the account and follows them to any device.</li>
@@ -1373,6 +1376,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><strong>Операции и снимок доски примерно впятеро быстрее.</strong> Служебные функции политик доступа планировались заново на каждом вызове; теперь план сохраняется. На демонстрационной доске операция — с 71 до 18 мс, снимок — с 71 до 13 мс. Делать ничего не нужно: приходит с <code>0054</code>.</p>
 <p><strong>Сервер отвечает на языке запроса.</strong> Отказы и названия, которые сервер заводит сам (колонки новой доски, «Моя команда»), приходят по-английски, если об этом просит cookie <code>lang</code> или <code>Accept-Language</code>. Без них ответ русский, как прежде, — интеграции ничего не замечают.</p>
 <p><strong>Новая настройка <code>DEMO</code> — у вас она должна остаться выключенной.</strong> <code>DEMO=on</code> — только для публичного демо: экран входа предлагает любому песочницу с примерами на сутки. Без <code>SIGNUP=closed</code> сервер не стартует. Не задана — ничего не меняется.</p>
+<p><strong>Ещё одна настройка, которую не задавать: <code>STAND</code>.</strong> <code>STAND=staging</code> — для нашего тестового стенда ветки: полоса на каждом экране и заметка о том, что ветка добавляет. С <code>DEMO=on</code> не совмещается.</p>
 <h3>Для тех, кто работает на доске</h3>
 <ul>
 <li><strong>Интерфейс говорит и по-английски.</strong> Пока человек не выбрал язык, он берётся из браузера; выбор хранится в учётной записи и встречает его на любом устройстве.</li>

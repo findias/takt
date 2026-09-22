@@ -55,6 +55,12 @@ type Config struct {
 	// явным DEMO=on: установка заказчика, где песочницы заводит любой
 	// прохожий, — это не настройка, а дыра.
 	Demo bool
+
+	// Stand — тестовый стенд ветки (ROADMAP 30.7): полоса «Тестовый
+	// стенд» на каждом экране и заметка «что на стенде» покоммитно.
+	// Включается только явным STAND=staging; с демо не совмещается —
+	// стенд показывает недопринятое, а демо видят клиенты.
+	Stand bool
 }
 
 type OIDCConfig struct {
@@ -105,6 +111,7 @@ func Load() (Config, error) {
 		WebDir:      env("WEB_DIR", "./web/dist"),
 		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
 		Demo:        env("DEMO", "") == "on",
+		Stand:       env("STAND", "") == "staging",
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
 			ClientID:     env("OIDC_CLIENT_ID", ""),
@@ -138,6 +145,17 @@ func Load() (Config, error) {
 	// уборщик не тронет и которые копятся в бесплатной базе.
 	if c.Demo && c.Signup != SignupClosed {
 		return c, fmt.Errorf("DEMO=on требует SIGNUP=closed: в демо организации заводятся только песочницами")
+	}
+
+	switch env("STAND", "") {
+	case "", "off", "staging":
+	default:
+		return c, fmt.Errorf("STAND=%q: бывает staging (тестовый стенд ветки) или off", env("STAND", ""))
+	}
+	// Один процесс — одна роль. Стенд с песочницами показал бы клиенту
+	// код, который ещё не принят, под видом демо.
+	if c.Demo && c.Stand {
+		return c, fmt.Errorf("DEMO=on и STAND=staging вместе не бывают: демо показывает принятое, стенд — ветку")
 	}
 
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")

@@ -52,6 +52,10 @@ see no change.
 a sandbox organisation with sample data for 24 hours. It refuses to
 start unless `SIGNUP=closed`. Unset, nothing changes.
 
+**Another setting to leave unset: `STAND`.** `STAND=staging` is for our
+own test stand of a branch — a strip on every screen and a note of what
+the branch adds. It cannot be combined with `DEMO=on`.
+
 ### For people using the board
 
 - **The interface speaks English as well as Russian.** It follows the

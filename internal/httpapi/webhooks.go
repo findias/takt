@@ -75,6 +75,12 @@ func (s *Server) handleCreateWebhook(w http.ResponseWriter, r *http.Request, p a
 			"в демо подписки на события выключены: доставка ходила бы по любому адресу от имени демо")
 		return
 	}
+	// Стенд — по той же причине: пароль входа напечатан в его заметке.
+	if s.cfg.Stand {
+		writeCoded(w, http.StatusForbidden, "demo_disabled",
+			"на тестовом стенде подписки на события выключены: войти на него может любой, а доставка ходила бы по любому адресу")
+		return
+	}
 	hook, err := s.hooks.Create(r.Context(), p.OrgID, p.ID, req.Name, req.URL, req.Events)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

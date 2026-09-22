@@ -64,6 +64,8 @@ beforeEach(() => {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const path = String(input)
+      // Не тестовый стенд: ручки нет, как у установки заказчика.
+      if (path === '/api/stand') return reply({ error: 'not found' }, 404)
       if (path === '/api/auth/methods')
         return reply({
           password: { enabled: true },
