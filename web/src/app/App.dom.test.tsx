@@ -141,7 +141,7 @@ it('смена пароля объявляет и то, о чём не прос�
 
   // Пароль — в личных настройках за именем, на вкладке «Вход».
   await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
-  await userEvent.click(screen.getByRole('tab', { name: 'Вход' }))
+  await userEvent.click(await screen.findByRole('tab', { name: 'Вход' }))
   // По подписи, а не по подсказке в поле: подпись — это то, чем поле
   // названо, а подсказка исчезает с первым набранным символом.
   await userEvent.type(screen.getByLabelText('Текущий пароль'), 'parol12345')
@@ -150,6 +150,41 @@ it('смена пароля объявляет и то, о чём не прос�
 
   await waitFor(() => expect(asked('/api/me/password')).toBe(1))
   expect(await screen.findByText(/остальные устройства вышли/i)).toBeTruthy()
+})
+
+// Смена почты (ROADMAP 23.6): отказ «адрес занят» — под полем адреса,
+// «пароль не тот» — под полем пароля; после смены диалог показывает
+// новый адрес, хотя профиль грузился со старым.
+it('смена почты кладёт отказ под своё поле и показывает новый адрес', async () => {
+  const base = fetch as unknown as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  let attempt = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) !== '/api/me/email') return base(input, init)
+      attempt++
+      if (attempt === 1)
+        return reply({ error: 'эта почта уже у другой учётной записи', code: 'email_taken' }, 409)
+      return reply({ email: 'anna.new@example.test' })
+    }),
+  )
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  await userEvent.click(await screen.findByRole('tab', { name: 'Вход' }))
+
+  const address = screen.getByLabelText('Новая почта')
+  await userEvent.type(address, 'boris@example.test')
+  await userEvent.type(screen.getByLabelText('Ваш пароль'), 'parol12345')
+  await userEvent.click(screen.getByRole('button', { name: 'Сменить почту' }))
+  await waitFor(() => expect(address.getAttribute('aria-invalid')).toBe('true'))
+  expect(screen.getByLabelText('Ваш пароль').getAttribute('aria-invalid')).not.toBe('true')
+
+  await userEvent.clear(address)
+  await userEvent.type(address, 'anna.new@example.test')
+  await userEvent.click(screen.getByRole('button', { name: 'Сменить почту' }))
+  const dialog = screen.getByRole('dialog', { name: 'Личные настройки' })
+  await waitFor(() => expect(dialog.textContent).toMatch(/anna\.new@example\.test/))
 })
 
 // Личные настройки (ROADMAP 30.6): всё личное — за именем, а не в трёх

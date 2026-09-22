@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
-import type { NotificationReason, Principal } from '../../shared/api/index.ts'
-import { Button, IconButton } from '../../shared/ui/Button.tsx'
-import { ChevronDownIcon, CloseIcon } from '../../shared/ui/icons.tsx'
+import { Suspense, lazy, useState } from 'react'
+import type { Principal } from '../../shared/api/index.ts'
+import { ChevronDownIcon } from '../../shared/ui/icons.tsx'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
-import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { t } from '../../shared/i18n/index.ts'
-import { AppearanceSettings, LanguageSettings, NotificationSettings } from './Settings.tsx'
-import { PasswordForm } from './PasswordForm.tsx'
 
-type Tab = 'lang' | 'appearance' | 'notifications' | 'signin'
+// Сам диалог — отдельным куском: его открывают щелчком по имени, а
+// в первой загрузке он со своими формами стоил больше, чем в ней
+// оставалось места (web/e2e/perf.spec.ts).
+const AccountDialog = lazy(() =>
+  import('./AccountDialog.tsx').then((m) => ({ default: m.AccountDialog })),
+)
 
 /**
  * Личные настройки: имя в шапке открывает язык, оформление и вход
@@ -37,6 +38,9 @@ export function Account({
   // не знает — открыв настройки второй раз, человек увидел бы прежний.
   const [muted, setMuted] = useState(principal.mutedNotifications ?? [])
   const sandbox = Boolean(principal.sandboxExpiresAt)
+  // Почта — тоже здесь, по той же причине, что выбор поводов: сменённую
+  // в диалоге профиль, загруженный при входе, не знает.
+  const [email, setEmail] = useState(principal.email)
 
   return (
     // Имя классу нужно и печати: личные настройки на бумаге не значат
@@ -58,20 +62,23 @@ export function Account({
         <ChevronDownIcon />
       </button>
       {open && (
-        <AccountDialog
-          principal={principal}
-          sandbox={sandbox}
-          muted={muted}
-          onMuted={setMuted}
-          onClose={() => setOpen(false)}
-          onSignOut={() => {
-            // Диалог закрывается до следующего шага: подтверждение выхода
-            // из демо и тост о нём иначе встали бы под него.
-            setOpen(false)
-            if (sandbox) setLeaving(true)
-            else onSignOut()
-          }}
-        />
+        <Suspense fallback={null}>
+          <AccountDialog
+            principal={{ ...principal, email }}
+            sandbox={sandbox}
+            onEmail={setEmail}
+            muted={muted}
+            onMuted={setMuted}
+            onClose={() => setOpen(false)}
+            onSignOut={() => {
+              // Диалог закрывается до следующего шага: подтверждение выхода
+              // из демо и тост о нём иначе встали бы под него.
+              setOpen(false)
+              if (sandbox) setLeaving(true)
+              else onSignOut()
+            }}
+          />
+        </Suspense>
       )}
       {/* Из песочницы выходят насовсем: пароля нет, и вернуться в неё
           нечем. Необратимое спрашивает. */}
@@ -91,96 +98,3 @@ export function Account({
   )
 }
 
-function AccountDialog({
-  principal,
-  sandbox,
-  muted,
-  onMuted,
-  onClose,
-  onSignOut,
-}: {
-  principal: Principal
-  sandbox: boolean
-  muted: NotificationReason[]
-  onMuted: (muted: NotificationReason[]) => void
-  onClose: () => void
-  onSignOut: () => void
-}) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const [tab, setTab] = useState<Tab>('lang')
-  const base = useTabIds()
-
-  // Открывается при монтировании и закрывается размонтированием: так
-  // состояние «открыт» живёт в одном месте — у кнопки с именем.
-  // Фокус — на выбранную вкладку, а не на крестик, куда его ставит
-  // браузер: оттуда стрелки сразу ходят по разделам, а первое нажатие
-  // Enter не закрывает только что открытое.
-  useEffect(() => {
-    const dialog = ref.current
-    if (dialog && !dialog.open) dialog.showModal()
-    dialog?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
-  }, [])
-
-  // Закрывается всегда через `close()` — и крестиком, и после смены
-  // пароля: тогда браузер сам возвращает фокус на имя. Размонтированный
-  // открытым диалог роняет фокус на `body`. Escape делает то же самое
-  // силами браузера; обо всех трёх случаях узнаём по событию `close`.
-  const close = () => ref.current?.close()
-  useEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    dialog.addEventListener('close', onClose)
-    return () => dialog.removeEventListener('close', onClose)
-  }, [onClose])
-
-  // В песочнице вкладки «Вход» нет: пароля не знает никто, в том числе
-  // посетитель, — менять нечего.
-  const tabs = [
-    { id: 'lang', label: t.account.tabLang },
-    { id: 'appearance', label: t.account.tabAppearance },
-    { id: 'notifications', label: t.account.tabNotifications },
-    ...(sandbox ? [] : [{ id: 'signin', label: t.account.tabSignIn }]),
-  ]
-
-  return (
-    <dialog className="dialog account-dialog" ref={ref} aria-labelledby={`${base}title`}>
-      <div className="account-head">
-        <div>
-          <h2 className="dialog-title" id={`${base}title`}>
-            {t.account.title}
-          </h2>
-          {/* Почта песочницы выдумана (`…@demo.invalid`) и посетителю
-              ничего не говорит. */}
-          <p className="muted small account-who">
-            {sandbox ? principal.name : `${principal.name} · ${principal.email}`}
-          </p>
-        </div>
-        <IconButton label={t.common.close} onClick={close}>
-          <CloseIcon />
-        </IconButton>
-      </div>
-
-      <Tabs
-        base={base}
-        tabs={tabs}
-        active={tab}
-        onSelect={(id) => setTab(id as Tab)}
-        label={t.account.tabs}
-      />
-      <TabPanel base={base} id={tab}>
-        {tab === 'lang' && <LanguageSettings account={principal.lang ?? null} />}
-        {tab === 'appearance' && <AppearanceSettings />}
-        {tab === 'notifications' && (
-          <NotificationSettings muted={muted} onMuted={onMuted} />
-        )}
-        {tab === 'signin' && <PasswordForm onDone={close} />}
-      </TabPanel>
-
-      <div className="row dialog-actions account-foot">
-        <Button kind="quiet" onClick={onSignOut}>
-          {t.app.signOut}
-        </Button>
-      </div>
-    </dialog>
-  )
-}

@@ -170,6 +170,11 @@ func (s *Server) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 		s.backToLogin(w, r, "Провайдер не подтвердил вашу почту")
 		return
 	}
+	if errors.Is(err, auth.ErrEmailHeld) {
+		s.log.Info("почта пришедшего занята несвязываемой записью", "sub", claims.Subject)
+		s.backToLogin(w, r, "Ваша почта занята другой учётной записью — обратитесь к администратору")
+		return
+	}
 	if err != nil {
 		s.log.Error("зачисление пришедшего от провайдера", "err", err)
 		s.backToLogin(w, r, "Вход не удался, обратитесь к администратору")

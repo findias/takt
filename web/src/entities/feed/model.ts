@@ -220,6 +220,8 @@ const NOISE = new Set(['id', 'org_id', 'version', 'created_at', 'updated_at', 'c
 const VALUES: Record<string, (value: unknown) => string> = {
   role: (v) => sideValue(ROLE_NAMES, v),
   visibility: (v) => sideValue(VISIBILITY_NAMES, v),
+  // Почта — сама себе имя: смену входа владелец должен видеть целиком.
+  email: (v) => (typeof v === 'string' ? v : t.feed.unset),
 }
 
 function sideValue(names: Record<string, string>, value: unknown): string {

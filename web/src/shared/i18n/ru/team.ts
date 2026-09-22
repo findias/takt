@@ -14,6 +14,13 @@ export const team = {
     removeOf: (name: string) => `Исключить ${name}`,
     remove: 'Исключить',
     eraseOf: (name: string) => `Удалить данные: ${name}`,
+    email: 'Почта…',
+    emailOf: (name: string) => `Сменить почту: ${name}`,
+    emailTitle: (name: string) => `Почта: ${name}`,
+    emailNew: 'Новая почта',
+    emailHint: 'Этим адресом человек будет входить. Писем takt не шлёт — скажите ему сами.',
+    emailSave: 'Сменить почту',
+    emailChanged: (name: string, email: string) => `${name} теперь входит как ${email}`,
     invite: 'Пригласить',
     linkCreated:
       'Ссылка создана. Она показывается один раз — в базе хранится только её отпечаток. Перешлите её приглашённому.',

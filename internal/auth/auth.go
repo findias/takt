@@ -87,7 +87,10 @@ type Principal struct {
 	Lang *string `json:"lang"`
 	// MutedNotifications — какие поводы уведомлений человек выключил.
 	MutedNotifications []string `json:"mutedNotifications"`
-	SessionID          string   `json:"-"`
+	// EmailManaged — почту ведёт провайдер или каталог, и в профиле она
+	// только для чтения (EmailManaged в email.go).
+	EmailManaged bool   `json:"emailManaged"`
+	SessionID    string `json:"-"`
 }
 
 func (p Principal) CanEdit() bool  { return p.Role == RoleOwner || p.Role == RoleMember }
@@ -313,14 +316,17 @@ func PrincipalBySession(ctx context.Context, pool *pgxpool.Pool, sessionID strin
 	p.SessionID = sessionID
 	err := pool.QueryRow(ctx, `
 		select u.id, u.email, u.name, o.id, o.name, o.slug, m.role, o.estimate_unit,
-		       o.sandbox_expires_at, u.lang, u.muted_notifications
+		       o.sandbox_expires_at, u.lang, u.muted_notifications,
+		       u.oidc_subject is not null
+		       or exists (select 1 from memberships x
+		                   where x.user_id = u.id and x.external_id is not null)
 		  from sessions s
 		  join users u on u.id = s.user_id
 		  join memberships m on m.user_id = u.id and m.org_id = s.active_org_id
 		  join orgs o on o.id = m.org_id
 		 where s.id = $1 and s.expires_at > now()`, sessionID).
 		Scan(&p.ID, &p.Email, &p.Name, &p.OrgID, &p.OrgName, &p.OrgSlug, &p.Role,
-			&p.EstimateUnit, &p.SandboxExpiresAt, &p.Lang, &p.MutedNotifications)
+			&p.EstimateUnit, &p.SandboxExpiresAt, &p.Lang, &p.MutedNotifications, &p.EmailManaged)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Либо сессии нет, либо человека исключили из активной организации,
 		// пока он работал. Второй случай чиним подбором любой другой.

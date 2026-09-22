@@ -190,8 +190,10 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="get-help-on-the-screen-you-are-on">Get help on the screen you are on</h3>
 <p>Press <strong>Help</strong> in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, <strong>Flow</strong>, the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application. The search field above the contents finds a section by any word in it, and <strong>What’s new</strong> lists what changed for people using the board in this version.</p>
 <p>Next to some concepts — a column limit, the board&#39;s promise, a block, the flow metrics, roles, key scopes — there is a round <strong>?</strong>. Press it for two or three sentences on what the concept is, with a link to the section of help that explains it in full. <code>Escape</code> closes it.</p>
-<h3 id="change-your-password-or-sign-out">Change your password or sign out</h3>
-<p>Both live behind your name as well. <strong>Sign-in</strong> tab: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
+<h3 id="change-your-email-your-password-or-sign-out">Change your email, your password, or sign out</h3>
+<p>All of it lives behind your name as well, on the <strong>Sign-in</strong> tab.</p>
+<p>Your email is the name you sign in with. Under <strong>Email</strong>, enter the new address and your password and press <strong>Change</strong>; from then on you sign in with the new address. takt sends no emails, so the new address is not confirmed by a letter. For that reason it does not link a company identity provider sign-in to your account; if your organisation signs in that way, ask the owner to set the address instead. When the email is managed by the identity provider or the company directory, the tab says so, and the address is changed there.</p>
+<p>Under <strong>Password</strong>: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
 <h3 id="split-work-into-parts">Split work into parts</h3>
 <ol>
@@ -263,6 +265,9 @@ color:var(--ink-3);font-size:.85rem}
 <li>Send the link to the person.</li>
 </ol>
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
+<h3 id="correct-someone-s-email">Correct someone&#39;s email</h3>
+<p>An owner can change a member&#39;s email: a typo, an old address, someone added under the wrong one. <strong>Team</strong> tab → <strong>Email…</strong> next to the person → the new address → <strong>Change email</strong>. They sign in with the new address from then on; takt sends no emails, so tell them yourself.</p>
+<p><strong>Email…</strong> is offered only where the owner may use it. Your own email is changed behind your name. Someone who is also a member of another organisation changes their email themselves: it is their sign-in name in both. When the email is managed by the company identity provider or directory, it is changed there. The change shows in the audit log as «email: old → new».</p>
 <h3 id="visibility">Close a board to outsiders</h3>
 <ol>
 <li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
@@ -323,7 +328,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-52-g290ff1e-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-53-ge0226d1-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

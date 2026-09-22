@@ -355,7 +355,10 @@ What happens on sign-in:
   otherwise lose their boards;
 - a first-time arrival is linked to an existing account by a
   **verified** e-mail — an unverified address would let someone claim
-  another person's account;
+  another person's account. Verified on both sides: an address a person
+  typed into their own profile is not confirmed by anything (takt sends
+  no letters), so it links nothing, and the newcomer is told the address
+  is taken. The owner then sets that account's email under «Команда»;
 - if nobody matches, a new account is created and joined to `OIDC_ORG`.
   Anyone already in at least one organisation is added nowhere: signing
   in must not quietly change who you belong to.

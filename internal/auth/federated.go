@@ -29,6 +29,12 @@ import (
 
 var ErrUnverifiedEmail = errors.New("провайдер не подтвердил почту")
 
+// ErrEmailHeld — адрес пришедшего занят учётной записью, с которой его
+// связать нельзя: почту там вписали самому себе, или запись уже связана
+// с другим человеком провайдера. Решает владелец — сменив почту той
+// записи, — а не вход молча.
+var ErrEmailHeld = errors.New("эта почта занята другой учётной записью — обратитесь к администратору")
+
 // FederatedLogin находит или заводит человека по ответу провайдера
 // и, если он пришёл впервые, зачисляет его в указанную организацию.
 //
@@ -85,13 +91,25 @@ func FederatedLogin(ctx context.Context, pool *pgxpool.Pool,
 			return Identity{}, errors.New("провайдер не назвал почту")
 		}
 		// Связывание с уже заведённой учётной записью — один раз и только
-		// по подтверждённой почте.
+		// по подтверждённой почте. С обеих сторон: провайдер свою
+		// подтвердил, а у нас адрес не вписан человеком самому себе
+		// (0061) — иначе чужой адрес, вписанный заранее, отдал бы
+		// вписавшему того, кто придёт с ним позже.
 		err = tx.QueryRow(ctx, `
 			update users set oidc_issuer = $1, oidc_subject = $2
 			 where lower(email) = lower($3) and oidc_subject is null
+			   and not email_unconfirmed
 			 returning id, email, name`, issuer, subject, email).
 			Scan(&u.ID, &u.Email, &u.Name)
 		if errors.Is(err, pgx.ErrNoRows) {
+			var held bool
+			if err := tx.QueryRow(ctx,
+				`select exists (select 1 from users where lower(email) = lower($1))`, email).Scan(&held); err != nil {
+				return Identity{}, err
+			}
+			if held {
+				return Identity{}, ErrEmailHeld
+			}
 			// Никого не нашлось — заводим.
 			//
 			// Пароль ставится случайный и никому не сообщается: у записи

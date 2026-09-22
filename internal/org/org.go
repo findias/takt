@@ -68,6 +68,9 @@ type Member struct {
 	// исключение и удаление данных незачем — потому вид и называется.
 	Kind     string    `json:"kind"`
 	JoinedAt time.Time `json:"joinedAt"`
+	// EmailEditable — может ли владелец сменить почту (SetMemberEmail):
+	// человек состоит только здесь, и почту не ведёт провайдер или каталог.
+	EmailEditable bool `json:"emailEditable"`
 }
 
 // KindService — личность, за которой стоит ключ интеграции, а не человек.
@@ -152,7 +155,11 @@ func (s *Service) create(ctx context.Context, name, ownerUserID string) (auth.Me
 // Members возвращает состав организации.
 func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 	rows, err := s.db.Pool.Query(ctx, `
-		select u.id, u.name, u.email, m.role, u.kind, m.created_at
+		select u.id, u.name, u.email, m.role, u.kind, m.created_at,
+		       u.kind = 'person' and u.oidc_subject is null and u.anonymized_at is null
+		       and not exists (select 1 from memberships o
+		                        where o.user_id = u.id
+		                          and (o.org_id <> m.org_id or o.external_id is not null))
 		  from memberships m
 		  join users u on u.id = m.user_id
 		 where m.org_id = $1
@@ -164,7 +171,7 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 	out := []Member{}
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt, &m.EmailEditable); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -330,6 +337,72 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			orgID, userID)
 		return err
 	})
+}
+
+// ErrEmailElsewhere — владелец меняет почту человеку, который состоит
+// и в других организациях. Почта — имя для входа во все его организации
+// сразу, и распоряжаться ею из одной нельзя: её меняет сам человек.
+var ErrEmailElsewhere = errors.New(
+	"этот человек состоит и в других организациях — почту он меняет сам, в своём профиле")
+
+// ErrEmailOwn — владелец меняет почту себе через «Команду». Свою почту
+// меняют в профиле, с паролем: там она помечается неподтверждённой,
+// а здесь стала бы подтверждённой словом того, кто её вписал.
+var ErrEmailOwn = errors.New("свою почту меняют в профиле — там спросят пароль")
+
+// SetMemberEmail — владелец меняет почту участнику (ROADMAP 23.6):
+// опечатка при переносе, заведённый не на тот адрес. Можно только тому,
+// кто состоит лишь здесь и чью почту не ведёт провайдер или каталог.
+//
+// Почта, вписанная владельцем, считается подтверждённой: владелец
+// отвечает за состав организации, и корпоративный вход по ней запись
+// привяжет — ради этого её обычно и правят.
+func (s *Service) SetMemberEmail(ctx context.Context, orgID, actorID, userID, raw string) (string, error) {
+	if userID == actorID {
+		return "", ErrEmailOwn
+	}
+	email, err := auth.NormalizeEmail(raw)
+	if err != nil {
+		return "", err
+	}
+	err = s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var was string
+		err := tx.QueryRow(ctx, `
+			select u.email from users u
+			  join memberships m on m.user_id = u.id and m.org_id = $1
+			 where u.id = $2 and u.anonymized_at is null
+			   for update of u`, orgID, userID).Scan(&was)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := ensureNotService(ctx, tx, userID); err != nil {
+			return err
+		}
+		var elsewhere bool
+		if err := tx.QueryRow(ctx,
+			`select exists (select 1 from memberships where user_id = $1 and org_id <> $2)`,
+			userID, orgID).Scan(&elsewhere); err != nil {
+			return err
+		}
+		if elsewhere {
+			return ErrEmailElsewhere
+		}
+		managed, err := auth.EmailManaged(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+		if managed {
+			return auth.ErrEmailManaged
+		}
+		if strings.EqualFold(was, email) {
+			return auth.ErrEmailSame
+		}
+		return auth.SetEmail(ctx, tx, userID, was, email, false)
+	})
+	return email, err
 }
 
 // ensureNotService отличает ключ от человека.

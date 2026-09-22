@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Nine migrations, all safe for the running version.** `0052` gives
+**Ten migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -20,7 +20,8 @@ while they can see the board, `0058` stores which kinds of notification
 a person has switched off, `0059` adds the two time-driven kinds
 (a block ending within a day, a card past the board's promise), `0060`
 gives a card an optional key in the system it was imported from, so
-that importing the same file twice creates no duplicates. They
+that importing the same file twice creates no duplicates, `0061` marks
+an email a person set for themselves (see the next paragraph). They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -78,6 +79,15 @@ while someone does so. Unset, that is the cloud `https://ru.yougile.com`;
 a boxed YouGile has its own address; `off` switches import over the API
 off. In a closed network set `off` and keep importing spreadsheets.
 The Helm chart takes it as `yougile.url`.
+
+**Corporate sign-in no longer links by an email a person typed in
+themselves.** People can now change their own email, and takt sends no
+letters to confirm it. Such an address is marked, and the first sign-in
+through the identity provider does not attach to that account: whoever
+typed someone else's address in advance would otherwise receive that
+person's sign-in. The newcomer is told the address is taken and to ask
+the administrator; the owner corrects the other account's email under
+«Команда». Accounts that existed before the upgrade link as before.
 
 **A new setting, `DEMO`, and it must stay off on your installation.**
 `DEMO=on` is for the public demo only: the sign-in screen offers anyone
@@ -139,6 +149,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   password. «Выйти» is there too; the half-circle button is gone. Theme
   and density stay in the browser, since they often differ between
   devices.
+- **Changing an email.** Your own — behind your name, on the
+  «Вход» tab, with your password. A member's — by the owner, «Почта…»
+  under «Команда», for someone who belongs to no other organisation.
+  Both show in the audit log as «email: old → new». An email managed by
+  the identity provider or directory is changed there.
 - **Labels in three scopes.** A label belongs to the organisation, a
   subdivision (and everything inside it) or a single board, and every
   list says where it comes from. The same name cannot be used twice

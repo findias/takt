@@ -15,6 +15,13 @@ export const team: typeof ru = {
     removeOf: (name: string) => `Remove ${name}`,
     remove: 'Remove',
     eraseOf: (name: string) => `Erase data: ${name}`,
+    email: 'Email…',
+    emailOf: (name: string) => `Change email: ${name}`,
+    emailTitle: (name: string) => `Email: ${name}`,
+    emailNew: 'New email',
+    emailHint: 'This is the address they will sign in with. takt sends no emails — tell them yourself.',
+    emailSave: 'Change email',
+    emailChanged: (name: string, email: string) => `${name} now signs in as ${email}`,
     invite: 'Invite',
     linkCreated:
       'Link created. It is shown once — only its fingerprint is stored. Send it to the person you invite.',

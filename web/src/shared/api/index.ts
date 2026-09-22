@@ -46,6 +46,9 @@ export type Principal = {
   /** Какие поводы уведомлений человек выключил. `?` — старый сервер
    *  поля не знает. */
   mutedNotifications?: NotificationReason[]
+  /** Почту ведёт провайдер входа или каталог — в профиле она только
+   *  для чтения. */
+  emailManaged?: boolean
 }
 
 export type EstimateUnit = 'points' | 'hours' | 'days'
@@ -107,6 +110,9 @@ export type Member = {
    *  и данных у него нет: он убирается отзывом самого ключа. */
   kind: 'person' | 'service'
   joinedAt: string
+  /** Может ли владелец сменить почту: человек состоит только здесь,
+   *  и почту не ведёт провайдер или каталог. */
+  emailEditable?: boolean
 }
 
 export type Invite = {
@@ -917,6 +923,10 @@ export const api = {
    *  утечь, а к этому времени он мог стать чужой сессией. */
   changePassword: (current: string, next: string) =>
     request<void>('PUT', '/api/me/password', { current, next }),
+  /** Своя почта — с текущим паролем: из украденной сессии её сменили бы,
+   *  и хозяин больше не вошёл бы своим адресом. */
+  changeEmail: (current: string, email: string) =>
+    request<{ email: string }>('PUT', '/api/me/email', { current, email }),
   /** «Выйти на всех устройствах»: этот браузер остаётся, остальные — нет. */
   signOutElsewhere: () => request<void>('DELETE', '/api/me/sessions'),
   /** Язык интерфейса — у человека, а не у браузера: выбранный на работе
@@ -943,6 +953,9 @@ export const api = {
   team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
   invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),
   revokeInvite: (id: string) => request<void>('DELETE', `/api/invites/${id}`),
+  /** Владелец правит почту участника — тому, кто состоит только здесь. */
+  setMemberEmail: (userId: string, email: string) =>
+    request<{ email: string }>('PUT', `/api/members/${userId}/email`, { email }),
   setRole: (userId: string, role: Role) =>
     request<void>('PUT', `/api/members/${userId}/role`, { role }),
   removeMember: (userId: string) => request<void>('DELETE', `/api/members/${userId}`),

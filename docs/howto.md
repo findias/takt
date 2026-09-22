@@ -186,9 +186,20 @@ Next to some concepts — a column limit, the board's promise, a block,
 the flow metrics, roles, key scopes — there is a round **?**. Press it
 for two or three sentences on what the concept is, with a link to the
 section of help that explains it in full. `Escape` closes it.
-### Change your password or sign out
+### Change your email, your password, or sign out
 
-Both live behind your name as well. **Sign-in** tab: the
+All of it lives behind your name as well, on the **Sign-in** tab.
+
+Your email is the name you sign in with. Under **Email**, enter the
+new address and your password and press **Change**; from then on you
+sign in with the new address. takt sends no emails, so the new address
+is not confirmed by a letter. For that reason it does not link a
+company identity provider sign-in to your account; if your organisation
+signs in that way, ask the owner to set the address instead. When the
+email is managed by the identity provider or the company directory, the
+tab says so, and the address is changed there.
+
+Under **Password**: the
 current password, the new one, **Change**. Changing the
 password signs out every other device; to sign them out without
 changing it, press **Sign out on all devices**. **Sign out** is at the bottom of the window.
@@ -391,6 +402,20 @@ administrator on the server; the format is described in
 
 The link lasts a week, is bound to that address, and is shown once. If
 it gets lost, revoke the invitation and create a new one.
+
+### Correct someone's email
+
+An owner can change a member's email: a typo, an old address, someone
+added under the wrong one. **Team** tab → **Email…** next to the
+person → the new address → **Change email**. They sign in with the new
+address from then on; takt sends no emails, so tell them yourself.
+
+**Email…** is offered only where the owner may use it. Your own email
+is changed behind your name. Someone who is also a member of another
+organisation changes their email themselves: it is their sign-in name
+in both. When the email is managed by the company identity provider or
+directory, it is changed there. The change shows in the audit log as
+«email: old → new».
 
 <!-- anchor: visibility -->
 ### Close a board to outsiders

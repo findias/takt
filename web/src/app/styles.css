@@ -3811,6 +3811,16 @@ textarea.description {
 .account-group--spaced {
   gap: var(--space-4);
 }
+.account-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.account-sections h3 {
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+}
 .account-foot {
   border-top: 1px solid var(--rule);
   padding-top: var(--space-3);

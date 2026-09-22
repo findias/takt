@@ -63,7 +63,6 @@ export function PasswordForm({ onDone }: { onDone: () => void }) {
         {(bind) => (
           <input
             {...bind}
-            autoFocus
             name="current"
             type="password"
             autoComplete="current-password"

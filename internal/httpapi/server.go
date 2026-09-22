@@ -105,6 +105,7 @@ func (s *Server) Handler() http.Handler {
 	// и не под владельцем: отобрать вход у себя может каждый, и это
 	// единственное, чем сегодня отвечают на «пароль утёк».
 	mux.HandleFunc("PUT /api/me/password", s.authed(s.handleChangePassword))
+	mux.HandleFunc("PUT /api/me/email", s.authed(s.handleChangeEmail))
 	mux.HandleFunc("DELETE /api/me/sessions", s.authed(s.handleRevokeSessions))
 	// Язык интерфейса — тоже свой у каждого и переезжает между
 	// устройствами вместе с учётной записью (ROADMAP 30.6).
@@ -125,6 +126,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
+	mux.HandleFunc("PUT /api/members/{userId}/email", s.owner(s.handleSetMemberEmail))
 	// В чём организация оценивает работу. Владелец: единица общая
 	// на все доски, и менять её из карточки было бы правкой всего
 	// исподтишка.

@@ -31,6 +31,11 @@ func TestStrangerFromAnotherOrgIsRefused(t *testing.T) {
 		t.Errorf("обезличивание постороннего: %v, ожидалось %v", err, ErrNotFound)
 	}
 
+	// Почта — имя для входа: сменённая чужому, она заперла бы его снаружи.
+	if _, err := f.svc.SetMemberEmail(f.ctx, mine.OrgID, myOwner, stranger, "zahvat@example.test"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("смена почты постороннему: %v, ожидалось %v", err, ErrNotFound)
+	}
+
 	// Обезличивание необратимо, поэтому отдельно: чужая личность цела.
 	// Ошибка здесь стирает человека в соседней организации навсегда.
 	var name string

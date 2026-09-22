@@ -290,7 +290,7 @@ helm install takt deploy/helm/takt \
 <p>What happens on sign-in:</p>
 <ul>
 <li>a returning person is recognised by the pair &#34;issuer + <code>sub</code>&#34;, not by e-mail: e-mail changes, and someone with a new address would otherwise lose their boards;</li>
-<li>a first-time arrival is linked to an existing account by a <strong>verified</strong> e-mail — an unverified address would let someone claim another person&#39;s account;</li>
+<li>a first-time arrival is linked to an existing account by a <strong>verified</strong> e-mail — an unverified address would let someone claim another person&#39;s account. Verified on both sides: an address a person typed into their own profile is not confirmed by anything (takt sends no letters), so it links nothing, and the newcomer is told the address is taken. The owner then sets that account&#39;s email under «Команда»;</li>
 <li>if nobody matches, a new account is created and joined to <code>OIDC_ORG</code>. Anyone already in at least one organisation is added nowhere: signing in must not quietly change who you belong to.</li>
 </ul>
 <p>The <code>id_token</code> signature is not verified, and that is deliberate: in the code flow the token comes to us directly from the provider&#39;s endpoint over TLS, which the specification explicitly considers sufficient (OIDC Core, 3.1.3.7). A hand-written JWT check — base64 parsing, key selection from JWKS, <code>alg</code> comparison — is exactly the code people get wrong, and getting it wrong costs the whole of authentication. Claims about the person are read from <code>userinfo</code> over the same connection.</p>
@@ -355,7 +355,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several.</p>
-<footer>Takt, version v0.2.3-52-g290ff1e-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-53-ge0226d1-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

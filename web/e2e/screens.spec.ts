@@ -549,6 +549,14 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/33-личные-настройки-вход.png` })
   await page.keyboard.press('Escape')
 
+  // Смена почты участнику (ROADMAP 23.6): диалог с подсказкой, что
+  // сказать человеку о новом адресе придётся самому.
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByRole('button', { name: /^Сменить почту: / }).first().click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/35-почта-участника.png` })
+  await page.keyboard.press('Escape')
+
   // Английский: браузер с английским языком системы, человек язык
   // не выбирал — значит, решает браузер.
   const english = await browser.newContext({ locale: 'en-GB' })
@@ -565,5 +573,13 @@ test('снимки экранов', async ({ page, browser }) => {
   await en.getByRole('tab', { name: 'Language' }).click()
   await en.waitForTimeout(300)
   await en.screenshot({ path: `${SHOTS}/34б-личные-настройки-en-язык.png` })
+  await en.getByRole('tab', { name: 'Sign-in' }).click()
+  await en.waitForTimeout(300)
+  await en.screenshot({ path: `${SHOTS}/34в-личные-настройки-en-вход.png` })
+  await en.keyboard.press('Escape')
+  await en.getByRole('button', { name: 'Team', exact: true }).click()
+  await en.getByRole('button', { name: /^Change email: / }).first().click()
+  await en.waitForTimeout(300)
+  await en.screenshot({ path: `${SHOTS}/35б-почта-участника-en.png` })
   await english.close()
 })

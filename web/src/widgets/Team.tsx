@@ -27,6 +27,7 @@ import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { locale, t } from '../shared/i18n/index.ts'
+import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -50,6 +51,9 @@ export function Team({ principal }: { principal: Principal }) {
 
   // Кого спрашивают обезличить.
   const [toErase, setToErase] = useState<Member | null>(null)
+  // Кому правят почту.
+  const [toReaddress, setToReaddress] = useState<Member | null>(null)
+  const closeReaddress = useCallback(() => setToReaddress(null), [])
   const notify = useToast()
 
   // Сделанное называется словами: строка просто исчезает из списка,
@@ -88,6 +92,17 @@ export function Team({ principal }: { principal: Principal }) {
         <p>{t.team.eraseBody(toErase?.name ?? '')}</p>
         <p className="muted small">{t.team.eraseKeeps}</p>
       </ConfirmDialog>
+
+      {toReaddress && (
+        <MemberEmailDialog
+          member={toReaddress}
+          onClose={closeReaddress}
+          onChanged={(email) => {
+            load()
+            notify({ text: t.team.emailChanged(toReaddress.name, email), tone: 'info' })
+          }}
+        />
+      )}
 
       <section className="stack">
         <div className="section-head">
@@ -135,6 +150,17 @@ export function Team({ principal }: { principal: Principal }) {
                   >
                     {t.team.remove}
                   </button>
+                  {/* Только тем, чью почту владелец вправе менять: сервер
+                      сказал это полем, и отказа по нажатию не будет. */}
+                  {m.emailEditable && (
+                    <button
+                      className="link"
+                      onClick={() => setToReaddress(m)}
+                      aria-label={t.team.emailOf(m.name)}
+                    >
+                      {t.team.email}
+                    </button>
+                  )}
                   {/* Исключение обратимо приглашением, обезличивание
                       не обратимо ничем — и потому спрашивает. */}
                   <button
