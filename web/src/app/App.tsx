@@ -36,6 +36,7 @@ const Team = lazy(
     'team',
     'hooks',
     'labelsAdmin',
+    'passwordLink',
   ),
 )
 const Structure = lazy(
@@ -55,6 +56,14 @@ const ImportScreen = lazy(
 // экран в куске доски ни к чему.
 const InviteScreen = lazy(() =>
   import('../widgets/Invite.tsx').then((m) => ({ default: m.InviteScreen })),
+)
+
+// Ссылка «задать пароль» — тоже раз в жизни и тоже по ссылке.
+const PasswordLinkScreen = lazy(
+  withSections(
+    () => import('../widgets/PasswordLink.tsx').then((m) => ({ default: m.PasswordLinkScreen })),
+    'passwordLink',
+  ),
 )
 
 const TABS = ['boards', 'team', 'structure'] as const
@@ -194,6 +203,8 @@ function Screens() {
       ? null
       : route.name === 'invite'
         ? t.app.invitation
+        : route.name === 'password'
+          ? t.app.passwordLink
         : route.name === 'import'
           ? t.app.import
           : (TABS.find((name) => name === route.name) ? tabTitle(route.name as (typeof TABS)[number]) : null),
@@ -228,6 +239,23 @@ function Screens() {
   // Принятое приглашение заменяет адрес, а не добавляет в историю:
   // возвращаться по «назад» к уже использованной ссылке некуда.
   const leaveInvite = useCallback(() => navigate('/', { replace: true }), [])
+
+  // Ссылка «задать пароль» открывается и поверх чужой сессии в этом
+  // браузере: вход по ней заменяет прежний, как вход под другой почтой.
+  if (route.name === 'password') {
+    return (
+      <Suspense fallback={<div className="centered">{t.app.checkingSession}</div>}>
+        <PasswordLinkScreen
+          token={route.token}
+          onSignedIn={(p) => {
+            setPrincipal(p)
+            leaveInvite()
+          }}
+          onCancel={leaveInvite}
+        />
+      </Suspense>
+    )
+  }
 
   if (route.name === 'invite') {
     return (

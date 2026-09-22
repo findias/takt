@@ -268,6 +268,14 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="correct-someone-s-email">Correct someone&#39;s email</h3>
 <p>An owner can change a member&#39;s email: a typo, an old address, someone added under the wrong one. <strong>Team</strong> tab → <strong>Email…</strong> next to the person → the new address → <strong>Change email</strong>. They sign in with the new address from then on; takt sends no emails, so tell them yourself.</p>
 <p><strong>Email…</strong> is offered only where the owner may use it. Your own email is changed behind your name. Someone who is also a member of another organisation changes their email themselves: it is their sign-in name in both. When the email is managed by the company identity provider or directory, it is changed there. The change shows in the audit log as «email: old → new».</p>
+<h3 id="give-someone-a-sign-in-link">Give someone a sign-in link</h3>
+<p>takt sends no emails, so there is no «forgot password» letter and no «your account is ready» letter. Instead the owner issues a link.</p>
+<ol>
+<li><strong>Team</strong> tab → <strong>Sign-in link</strong> next to the person.</li>
+<li>Copy the link shown under the list and pass it on yourself.</li>
+<li>The person opens it, chooses a password and is signed in at once.</li>
+</ol>
+<p>The link works once and for a week, and is shown once. A new link cancels the previous one; using it signs the person out everywhere else, as a password change does. Someone the import created has not set a password yet and is marked <strong>not signed in yet</strong> under <strong>Team</strong> — they need such a link. It is offered for the same people as <strong>Email…</strong>: not yourself, not someone who is also a member of another organisation, not someone who signs in through the company identity provider.</p>
 <h3 id="visibility">Close a board to outsiders</h3>
 <ol>
 <li>Open the board and press the visibility button in the header — it starts with <code>Видна:</code> (visible to).</li>
@@ -328,7 +336,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-54-g4409400-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-55-g21374b1-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

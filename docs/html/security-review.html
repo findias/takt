@@ -156,6 +156,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>e-mail, display name, password hash, OIDC issuer and subject</td><td><code>users</code></td><td>until the person is erased</td></tr>
 <tr><td>boards, cards, comments, labels, estimates, subdivisions</td><td>work tables</td><td>until deleted by a person</td></tr>
 <tr><td>sessions (identifier, expiry)</td><td><code>sessions</code></td><td>30 days, or until sign-out</td></tr>
+<tr><td>sign-in links (hash of the token, whom for, expiry)</td><td><code>password_links</code></td><td>30 days after they stop working</td></tr>
 <tr><td>audit log</td><td><code>audit_events</code></td><td>indefinitely — see below</td></tr>
 <tr><td>webhook deliveries</td><td><code>webhook_deliveries</code></td><td>30 days</td></tr>
 <tr><td>invitations</td><td><code>invites</code></td><td>30 days after they stop working</td></tr>
@@ -164,7 +165,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <p>There are no file uploads anywhere in the product, so no user-supplied binary is ever stored, served or executed — which also means there is nothing here for a malware scanner to scan.</p>
 <p><strong>Personal data.</strong> Only what your own people type: a name, a work e-mail, and whatever they write on cards. The installation is yours, the database is yours, and the vendor receives nothing — there is no telemetry channel to receive it through. Under 152-ФЗ that makes you the operator and leaves no processor on our side; under GDPR the same shape means there is no transfer to a third party to legitimise.</p>
-<p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> (<strong>Erase data</strong> for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
+<p><strong>Erasure.</strong> <code>DELETE /api/members/{userId}/identity</code> (<strong>Erase data</strong> for an owner) anonymises a person: the name becomes <code>Удалённый участник</code>, the e-mail becomes an address in the reserved <code>.invalid</code> domain, the password hash and the OIDC binding are emptied, sessions, sign-in links and invitations addressed to them are deleted, and the fact itself is written to the audit log. What the person wrote stays: comments and card history are the work of the organisation, and deleting them would rewrite its record. Two limits are stated in the code and worth repeating: a person who belongs to more than one organisation cannot be anonymised from one of them, and an unaccepted invitation issued in someone else&#39;s organisation is beyond reach — it goes away with its retention period.</p>
 <p><strong>Retention of the log.</strong> The audit log is never cleaned up automatically. A log kept for a month answers “who granted this access in March?” with silence, and that question is the reason the log exists. If your policy demands a limit, set it on your side of the database.</p>
 <h2 id="identity">Identity</h2>
 <div class="tablewrap"><table>
@@ -310,7 +311,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as “all fine”.</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.3-54-g4409400-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-55-g21374b1-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

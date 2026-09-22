@@ -36,6 +36,11 @@ func TestStrangerFromAnotherOrgIsRefused(t *testing.T) {
 		t.Errorf("смена почты постороннему: %v, ожидалось %v", err, ErrNotFound)
 	}
 
+	// Ссылка «задать пароль» чужому — это вход в его учётную запись.
+	if _, err := f.svc.IssuePasswordLink(f.ctx, mine.OrgID, myOwner, stranger, "https://takt.test"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("ссылка для входа постороннему: %v, ожидалось %v", err, ErrNotFound)
+	}
+
 	// Обезличивание необратимо, поэтому отдельно: чужая личность цела.
 	// Ошибка здесь стирает человека в соседней организации навсегда.
 	var name string

@@ -337,6 +337,7 @@ export const en: typeof ru = {
       discarded_at: 'deletion',
       accepted_at: 'accepted',
       revoked_at: 'revoked',
+      used_at: 'used',
       expires_at: 'expiry',
       sle_days: 'expected time',
       sle_probability: 'share on time',
@@ -352,6 +353,7 @@ export const en: typeof ru = {
       boards: 'Board',
       cards: 'Card',
       users: 'Identity',
+      password_links: 'Sign-in link',
       export: 'Data export',
     } as Record<string, string>,
     noActor: 'unsigned',
@@ -413,6 +415,7 @@ export const en: typeof ru = {
     offline:
       'No connection to the server. Nothing is lost: once the connection is back, repeat the action.',
     invitation: 'Invitation',
+    passwordLink: 'Sign-in password',
     checkingSession: 'Checking your session…',
     switchFailed: 'Could not switch',
     organisation: 'Organisation',

@@ -29,7 +29,9 @@ func TestEveryTenantTableIsUnderForcedRLS(t *testing.T) {
 	// ограничены конкретным user_id, и эта граница проверяется в коде.
 	// Список исключений короткий и закрытый: новая строка здесь —
 	// это решение, а не недосмотр.
-	exceptions := []string{"memberships", "orgs", "sessions", "users", "schema_migrations"}
+	// password_links — того же рода, что sessions: открывается токеном
+	// до входа и всегда ограничена одним человеком (0063).
+	exceptions := []string{"memberships", "orgs", "sessions", "users", "password_links", "schema_migrations"}
 
 	db := isolationStore(t)
 	var bare []string

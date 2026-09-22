@@ -88,6 +88,7 @@ stricter policy.
 | e-mail, display name, password hash, OIDC issuer and subject | `users` | until the person is erased |
 | boards, cards, comments, labels, estimates, subdivisions | work tables | until deleted by a person |
 | sessions (identifier, expiry) | `sessions` | 30 days, or until sign-out |
+| sign-in links (hash of the token, whom for, expiry) | `password_links` | 30 days after they stop working |
 | audit log | `audit_events` | indefinitely — see below |
 | webhook deliveries | `webhook_deliveries` | 30 days |
 | invitations | `invites` | 30 days after they stop working |
@@ -107,8 +108,8 @@ means there is no transfer to a third party to legitimise.
 **Erasure.** `DELETE /api/members/{userId}/identity` (**Erase data**
 for an owner) anonymises a person: the name becomes `Удалённый
 участник`, the e-mail becomes an address in the reserved `.invalid`
-domain, the password hash and the OIDC binding are emptied, sessions and
-invitations addressed to them are deleted, and the fact itself is
+domain, the password hash and the OIDC binding are emptied, sessions, sign-in
+links and invitations addressed to them are deleted, and the fact itself is
 written to the audit log. What the person wrote stays: comments and card
 history are the work of the organisation, and deleting them would
 rewrite its record. Two limits are stated in the code and worth

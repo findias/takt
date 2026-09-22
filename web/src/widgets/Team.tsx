@@ -53,6 +53,8 @@ export function Team({ principal }: { principal: Principal }) {
   const [toErase, setToErase] = useState<Member | null>(null)
   // Кому правят почту.
   const [toReaddress, setToReaddress] = useState<Member | null>(null)
+  // Только что выпущенная ссылка для входа: показывается один раз.
+  const [loginLink, setLoginLink] = useState<{ name: string; link: string } | null>(null)
   const closeReaddress = useCallback(() => setToReaddress(null), [])
   const notify = useToast()
 
@@ -121,6 +123,14 @@ export function Team({ principal }: { principal: Principal }) {
                     значит показывать устройство вместо смысла. */}
                 <span className="muted small">
                   {m.kind === 'service' ? t.team.integrationKey : m.email}
+                  {/* Кому ещё передать ссылку — без отметки этого не видно:
+                      заведённый переносом выглядит как любой участник. */}
+                  {m.awaitingPassword && (
+                    <>
+                      {' · '}
+                      <span title={t.passwordLink.awaitingHint}>{t.passwordLink.awaiting}</span>
+                    </>
+                  )}
                 </span>
               </div>
               {/* Ключу не предлагают ни роли, ни исключения, ни удаления
@@ -161,6 +171,25 @@ export function Team({ principal }: { principal: Principal }) {
                       {t.team.email}
                     </button>
                   )}
+                  {/* Тем же, кому владелец меняет почту: выпуск ссылки —
+                      смена пароля чужими руками, и права у неё те же.
+                      Без многоточия: ничего не спрашивает, ссылка
+                      выпускается сразу и показывается ниже. */}
+                  {m.emailEditable && (
+                    <button
+                      className="link"
+                      onClick={() => {
+                        setError(null)
+                        api
+                          .issuePasswordLink(m.userId)
+                          .then((r) => setLoginLink({ name: m.name, link: r.link }))
+                          .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
+                      }}
+                      aria-label={t.passwordLink.issueOf(m.name)}
+                    >
+                      {t.passwordLink.issue}
+                    </button>
+                  )}
                   {/* Исключение обратимо приглашением, обезличивание
                       не обратимо ничем — и потому спрашивает. */}
                   <button
@@ -177,6 +206,20 @@ export function Team({ principal }: { principal: Principal }) {
             </li>
           ))}
         </ul>
+        {loginLink && (
+          <div className="note">
+            <p className="small">{t.passwordLink.issued(loginLink.name)}</p>
+            <div className="row">
+              <input
+                readOnly
+                value={loginLink.link}
+                aria-label={t.passwordLink.link}
+                onFocus={(e) => e.target.select()}
+              />
+              <CopyButton value={loginLink.link} what={t.passwordLink.linkWhat} />
+            </div>
+          </div>
+        )}
       </section>
 
       {isOwner && (

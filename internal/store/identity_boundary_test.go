@@ -37,16 +37,17 @@ import (
 // в подписи. Эти места проверяются `board.TestStrangerFromAnotherOrgIsRefused`,
 // но добавить туда четвёртое так же молча по-прежнему можно.
 var actionsOnAPerson = map[string]string{
-	"board.AddMember":    "TestStrangerFromAnotherOrgIsRefused",
-	"board.RemoveMember": "TestStrangerFromAnotherOrgIsRefused",
-	"org.SetRole":        "TestStrangerFromAnotherOrgIsRefused",
-	"org.Remove":         "TestStrangerFromAnotherOrgIsRefused",
-	"org.Erase":          "TestStrangerFromAnotherOrgIsRefused",
-	"org.SetMemberEmail": "TestStrangerFromAnotherOrgIsRefused",
-	"team.AddMember":     "TestStrangerFromAnotherOrgIsRefused",
-	"team.RemoveMember":  "TestStrangerFromAnotherOrgIsRefused",
-	"team.Grant":         "TestStrangerFromAnotherOrgIsRefused",
-	"team.GrantAdmin":    "TestStrangerFromAnotherOrgIsRefused",
+	"board.AddMember":       "TestStrangerFromAnotherOrgIsRefused",
+	"board.RemoveMember":    "TestStrangerFromAnotherOrgIsRefused",
+	"org.SetRole":           "TestStrangerFromAnotherOrgIsRefused",
+	"org.Remove":            "TestStrangerFromAnotherOrgIsRefused",
+	"org.Erase":             "TestStrangerFromAnotherOrgIsRefused",
+	"org.SetMemberEmail":    "TestStrangerFromAnotherOrgIsRefused",
+	"org.IssuePasswordLink": "TestStrangerFromAnotherOrgIsRefused",
+	"team.AddMember":        "TestStrangerFromAnotherOrgIsRefused",
+	"team.RemoveMember":     "TestStrangerFromAnotherOrgIsRefused",
+	"team.Grant":            "TestStrangerFromAnotherOrgIsRefused",
+	"team.GrantAdmin":       "TestStrangerFromAnotherOrgIsRefused",
 }
 
 func TestEveryActionOnAPersonIsProbedWithAStranger(t *testing.T) {

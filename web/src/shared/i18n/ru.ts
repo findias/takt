@@ -342,6 +342,7 @@ export const ru = {
       discarded_at: 'удаление',
       accepted_at: 'принято',
       revoked_at: 'отозвано',
+      used_at: 'использована',
       expires_at: 'срок действия',
       sle_days: 'ожидаемый срок',
       sle_probability: 'доля в срок',
@@ -357,6 +358,7 @@ export const ru = {
       boards: 'Доска',
       cards: 'Карточка',
       users: 'Личность',
+      password_links: 'Ссылка для входа',
       export: 'Выгрузка данных',
     } as Record<string, string>,
     noActor: 'без подписи',
@@ -419,6 +421,7 @@ export const ru = {
     offline:
       'Связи с сервером нет. Сделанное не потеряется: как только связь вернётся, повторите действие.',
     invitation: 'Приглашение',
+    passwordLink: 'Пароль для входа',
     checkingSession: 'Проверяем сессию…',
     switchFailed: 'Не удалось переключиться',
     organisation: 'Организация',

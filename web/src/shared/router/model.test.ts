@@ -30,6 +30,7 @@ test('вкладки и приглашение', () => {
   assert.deepEqual(parseRoute('/team'), { name: 'team' })
   assert.deepEqual(parseRoute('/structure'), { name: 'structure' })
   assert.deepEqual(parseRoute('/invite/секрет-123'), { name: 'invite', token: 'секрет-123' })
+  assert.deepEqual(parseRoute('/password/abc_DEF-1'), { name: 'password', token: 'abc_DEF-1' })
 })
 
 test('непонятный адрес ведёт к списку досок, а не к пустому экрану', () => {

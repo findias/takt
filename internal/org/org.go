@@ -71,6 +71,10 @@ type Member struct {
 	// EmailEditable — может ли владелец сменить почту (SetMemberEmail):
 	// человек состоит только здесь, и почту не ведёт провайдер или каталог.
 	EmailEditable bool `json:"emailEditable"`
+	// AwaitingPassword — учётную запись завели за человека (перенос),
+	// а пароль он ещё не задал: ему нужна ссылка (IssuePasswordLink).
+	// Выпустить её можно тем же, кому можно сменить почту.
+	AwaitingPassword bool `json:"awaitingPassword"`
 }
 
 // KindService — личность, за которой стоит ключ интеграции, а не человек.
@@ -159,7 +163,8 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 		       u.kind = 'person' and u.oidc_subject is null and u.anonymized_at is null
 		       and not exists (select 1 from memberships o
 		                        where o.user_id = u.id
-		                          and (o.org_id <> m.org_id or o.external_id is not null))
+		                          and (o.org_id <> m.org_id or o.external_id is not null)),
+		       u.awaiting_password
 		  from memberships m
 		  join users u on u.id = m.user_id
 		 where m.org_id = $1
@@ -171,7 +176,7 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 	out := []Member{}
 	for rows.Next() {
 		var m Member
-		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt, &m.EmailEditable); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt, &m.EmailEditable, &m.AwaitingPassword); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -303,6 +308,10 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			return err
 		}
 		if _, err := tx.Exec(ctx, `delete from sessions where user_id = $1`, userID); err != nil {
+			return err
+		}
+		// Ссылка «задать пароль» — тоже вход, и обезличенному он ни к чему.
+		if _, err := tx.Exec(ctx, `delete from password_links where user_id = $1`, userID); err != nil {
 			return err
 		}
 

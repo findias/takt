@@ -22,12 +22,14 @@ export type Route =
   | { name: 'import' }
   | { name: 'board'; boardId: string; cardId: string | null }
   | { name: 'invite'; token: string }
+  | { name: 'password'; token: string }
 
 /** Неизвестный адрес — это список досок, а не пустой экран. */
 export function parseRoute(pathname: string): Route {
   const parts = pathname.split('/').filter(Boolean)
 
   if (parts[0] === 'invite' && parts[1]) return { name: 'invite', token: parts.slice(1).join('/') }
+  if (parts[0] === 'password' && parts[1]) return { name: 'password', token: parts.slice(1).join('/') }
   if (parts[0] === 'team') return { name: 'team' }
   if (parts[0] === 'structure') return { name: 'structure' }
   if (parts[0] === 'import') return { name: 'import' }
@@ -50,6 +52,8 @@ export function routePath(route: Route): string {
       return '/import'
     case 'invite':
       return `/invite/${route.token}`
+    case 'password':
+      return `/password/${route.token}`
     case 'board':
       return route.cardId
         ? `/board/${route.boardId}/card/${route.cardId}`

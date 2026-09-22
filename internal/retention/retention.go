@@ -148,6 +148,17 @@ func (w *Worker) Once(ctx context.Context) error {
 			return err
 		}
 
+		// Ссылки «задать пароль»: отработавшая или истёкшая не пускает,
+		// а токен в ней — пусть и отпечатком — всё же вход. Как сессии,
+		// под RLS не попадает.
+		links, err := tx.Exec(ctx, `
+			delete from password_links
+			 where coalesce(used_at, expires_at) < now() - make_interval(days => $1)`,
+			int(inviteTTL.Hours()/24))
+		if err != nil {
+			return err
+		}
+
 		// Прочитанные уведомления: колокольчик — не архив, а непрочитанное
 		// не трогаем вовсе, сколько бы оно ни ждало. Тот же срок стоит
 		// в политике cleanup_reads (0057).
@@ -171,7 +182,8 @@ func (w *Worker) Once(ctx context.Context) error {
 		}
 
 		total := keys.RowsAffected() + deliveries.RowsAffected() + audit.RowsAffected() +
-			sessions.RowsAffected() + invites.RowsAffected() + notices.RowsAffected()
+			sessions.RowsAffected() + invites.RowsAffected() + notices.RowsAffected() +
+			links.RowsAffected()
 		if total > 0 {
 			w.log.Info("убрано",
 				"ключи повтора", keys.RowsAffected(),
@@ -179,6 +191,7 @@ func (w *Worker) Once(ctx context.Context) error {
 				"журнал", audit.RowsAffected(),
 				"сессии", sessions.RowsAffected(),
 				"приглашения", invites.RowsAffected(),
+				"ссылки для входа", links.RowsAffected(),
 				"уведомления", notices.RowsAffected())
 		}
 		return nil

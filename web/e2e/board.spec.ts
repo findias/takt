@@ -2691,3 +2691,46 @@ test('пакет переноса: подзадачи, связи и обсуж�
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'Очередь', 'Поддоны')).toBeVisible()
 })
+
+// Ссылка «задать пароль» (ROADMAP 23.6): писем нет, поэтому владелец
+// выпускает ссылку сам. Человек открывает её в своём браузере, задаёт
+// пароль и оказывается внутри — второй раз ссылка не пускает.
+test('ссылка для входа задаёт пароль один раз и сразу впускает', async ({ page, browser }) => {
+  await register(page)
+  await page.getByRole('button', { name: 'Команда' }).click()
+  const email = `zabyl-${Math.random().toString(36).slice(2, 8)}@example.test`
+  await page.getByRole('textbox', { name: 'Почта коллеги' }).fill(email)
+  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  const invite = await page.locator('input[readonly]').first().inputValue()
+
+  const second = await browser.newContext()
+  const guest = await second.newPage()
+  await guest.goto(invite.trim())
+  await guest.getByLabel('Как вас зовут').fill('Забывчивый')
+  await guest.getByLabel('Пароль').fill('parol12345')
+  await guest.getByRole('button', { name: /Принять|Присоединиться/ }).click()
+  await expect(guest.getByPlaceholder('Название новой доски')).toBeVisible()
+  await second.close()
+
+  // Пароль забыт — владелец выпускает ссылку.
+  await page.reload()
+  await page.getByRole('button', { name: 'Выпустить ссылку для входа: Забывчивый' }).click()
+  const link = page.getByRole('textbox', { name: 'Ссылка для входа' })
+  await expect(link).toBeVisible()
+  const url = (await link.inputValue()).trim()
+  expect(url).toContain('/password/')
+
+  const third = await browser.newContext()
+  const person = await third.newPage()
+  await person.goto(url)
+  await expect(person.getByText(email, { exact: false })).toBeVisible()
+  await person.getByLabel('Придумайте пароль').fill('novyy-parol-12345')
+  await person.getByRole('button', { name: 'Задать пароль и войти' }).click()
+  await expect(person.getByPlaceholder('Название новой доски')).toBeVisible()
+  await expect(person).toHaveURL(/\/$/)
+
+  // Второй раз — отказ со словами, что делать.
+  await person.goto(url)
+  await expect(person.getByText(/попросите у администратора новую/)).toBeVisible()
+  await third.close()
+})

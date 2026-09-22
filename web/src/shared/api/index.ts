@@ -113,6 +113,8 @@ export type Member = {
   /** Может ли владелец сменить почту: человек состоит только здесь,
    *  и почту не ведёт провайдер или каталог. */
   emailEditable?: boolean
+  /** Учётную запись завели за человека, пароль он ещё не задал. */
+  awaitingPassword?: boolean
 }
 
 export type Invite = {
@@ -124,6 +126,9 @@ export type Invite = {
   /** Приходит только в ответе на создание: в базе лежит лишь хеш токена. */
   link?: string
 }
+
+/** Для кого ссылка «задать пароль». */
+export type PasswordLinkInfo = { name: string; email: string; orgName: string; expiresAt: string }
 
 export type InviteInfo = {
   orgName: string
@@ -974,6 +979,13 @@ export const api = {
   /** Токен приглашения едет в теле, а не в адресе: адреса попадают
    *  в логи прокси и в историю браузера, а этот токен даёт членство
    *  в организации. Чтение через POST — плата за это. */
+  /** Ссылка «задать пароль»: владелец выпускает, человек открывает. */
+  issuePasswordLink: (userId: string) =>
+    request<{ link: string; expiresAt: string }>('POST', `/api/members/${userId}/password-link`),
+  passwordLinkInfo: (token: string) =>
+    request<PasswordLinkInfo>('POST', '/api/password-links/lookup', { token }),
+  usePasswordLink: (token: string, password: string) =>
+    request<Principal>('POST', '/api/password-links/use', { token, password }),
   inviteInfo: (token: string) => request<InviteInfo>('POST', '/api/invites/lookup', { token }),
   acceptInvite: (token: string, account?: { name: string; password: string }) =>
     request<Principal>('POST', '/api/invites/accept', { token, ...account }),

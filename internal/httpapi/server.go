@@ -127,6 +127,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
 	mux.HandleFunc("PUT /api/members/{userId}/email", s.owner(s.handleSetMemberEmail))
+	mux.HandleFunc("POST /api/members/{userId}/password-link", s.owner(s.handleIssuePasswordLink))
 	// В чём организация оценивает работу. Владелец: единица общая
 	// на все доски, и менять её из карточки было бы правкой всего
 	// исподтишка.
@@ -145,6 +146,9 @@ func (s *Server) Handler() http.Handler {
 	// плата за это: тело у GET не ходит.
 	mux.HandleFunc("POST /api/invites/lookup", s.handleInviteInfo)
 	mux.HandleFunc("POST /api/invites/accept", s.handleAcceptInvite)
+	// Ссылка «задать пароль» — тоже до входа и тоже с токеном в теле.
+	mux.HandleFunc("POST /api/password-links/lookup", s.handlePasswordLinkInfo)
+	mux.HandleFunc("POST /api/password-links/use", s.handleUsePasswordLink)
 
 	s.registerTeamRoutes(mux)
 	s.registerAccessRoutes(mux)

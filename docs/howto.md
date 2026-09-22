@@ -422,6 +422,23 @@ in both. When the email is managed by the company identity provider or
 directory, it is changed there. The change shows in the audit log as
 «email: old → new».
 
+### Give someone a sign-in link
+
+takt sends no emails, so there is no «forgot password» letter and no
+«your account is ready» letter. Instead the owner issues a link.
+
+1. **Team** tab → **Sign-in link** next to the person.
+2. Copy the link shown under the list and pass it on yourself.
+3. The person opens it, chooses a password and is signed in at once.
+
+The link works once and for a week, and is shown once. A new link
+cancels the previous one; using it signs the person out everywhere else,
+as a password change does. Someone the import created has not set a
+password yet and is marked **not signed in yet** under **Team** — they
+need such a link. It is offered for the same people as **Email…**: not
+yourself, not someone who is also a member of another organisation,
+not someone who signs in through the company identity provider.
+
 <!-- anchor: visibility -->
 ### Close a board to outsiders
 

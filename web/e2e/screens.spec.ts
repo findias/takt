@@ -565,6 +565,21 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/35-почта-участника.png` })
   await page.keyboard.press('Escape')
 
+  // Ссылка для входа (ROADMAP 23.6): выпуск в «Команде» и страница,
+  // которую откроет человек. Пароль по ней не задаём — Борис стенда
+  // должен входить прежним.
+  await page.getByRole('button', { name: /^Выпустить ссылку для входа: / }).first().click()
+  const loginLink = page.getByRole('textbox', { name: 'Ссылка для входа' })
+  await loginLink.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/37-ссылка-для-входа.png` })
+  const passwordPage = await browser.newPage()
+  await passwordPage.setViewportSize({ width: 1440, height: 900 })
+  await passwordPage.goto(await loginLink.inputValue())
+  await passwordPage.getByLabel('Придумайте пароль').waitFor()
+  await passwordPage.screenshot({ path: `${SHOTS}/38-пароль-по-ссылке.png` })
+  await passwordPage.close()
+
   // Английский: браузер с английским языком системы, человек язык
   // не выбирал — значит, решает браузер.
   const english = await browser.newContext({ locale: 'en-GB' })
@@ -589,5 +604,16 @@ test('снимки экранов', async ({ page, browser }) => {
   await en.getByRole('button', { name: /^Change email: / }).first().click()
   await en.waitForTimeout(300)
   await en.screenshot({ path: `${SHOTS}/35б-почта-участника-en.png` })
+  await en.keyboard.press('Escape')
+  await en.getByRole('button', { name: /^Issue a sign-in link: / }).first().click()
+  const enLink = en.getByRole('textbox', { name: 'Sign-in link' })
+  await enLink.scrollIntoViewIfNeeded()
+  await en.waitForTimeout(300)
+  await en.screenshot({ path: `${SHOTS}/37б-ссылка-для-входа-en.png` })
+  const enPassword = await english.newPage()
+  await enPassword.setViewportSize({ width: 1440, height: 900 })
+  await enPassword.goto(await enLink.inputValue())
+  await enPassword.getByLabel('Choose a password').waitFor()
+  await enPassword.screenshot({ path: `${SHOTS}/38б-пароль-по-ссылке-en.png` })
   await english.close()
 })
