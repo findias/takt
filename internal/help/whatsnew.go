@@ -1,0 +1,104 @@
+package help
+
+import (
+	"fmt"
+	"io/fs"
+	"regexp"
+	"strings"
+
+	takt "github.com/findias/takt"
+	"github.com/findias/takt/internal/docs"
+)
+
+// «Что нового» (ROADMAP 30.3) — часть списка изменений для тех, кто
+// работает на доске, у той версии, что открыта. Источник — сам
+// CHANGELOG, вшитый в бинарник: второй текст «для людей» разошёлся бы
+// со списком изменений на первом же выпуске.
+
+const адресНового = "whats-new"
+
+var (
+	разделВерсии = regexp.MustCompile(`(?m)^## (v\d+\.\d+\.\d+) — (.+)$`)
+	точнаяВерсия = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+)
+
+var словаНового = map[string]struct {
+	файл, подраздел, заголовок, имя, нечего, всё, разработка string
+}{
+	"ru": {"CHANGELOG.ru.md", "### Для тех, кто работает на доске", "Что нового в %s",
+		"Что нового",
+		"В этой версии для тех, кто работает на доске, ничего не менялось: изменения касались установки.",
+		"Все изменения, в том числе для тех, кто ставит, — в [полном списке](%s).",
+		"Эта сборка новее последнего выпуска: здесь то, что войдёт в %s."},
+	"en": {"CHANGELOG.md", "### For people using the board", "What’s new in %s",
+		"What’s new",
+		"Nothing changed in this version for people using the board: the changes were about installing it.",
+		"Every change, including those for whoever installs it, is in [the full list](%s).",
+		"This build is newer than the last release: here is what goes into %s."},
+}
+
+// разделДляВерсии — какой раздел списка показывать. Выпуск — свой,
+// сборка между выпусками (`v0.2.3-30-g…`) и сборка без версии — самый
+// новый: он и описывает то, что сейчас в коде.
+func разделДляВерсии(список, версия string) (номер, дата, текст string, разработка bool) {
+	места := разделВерсии.FindAllStringSubmatchIndex(список, -1)
+	if len(места) == 0 {
+		return "", "", "", false
+	}
+	выбран := 0
+	разработка = true
+	if точнаяВерсия.MatchString(версия) {
+		for i, м := range места {
+			if список[м[2]:м[3]] == версия {
+				выбран, разработка = i, false
+				break
+			}
+		}
+	}
+	м := места[выбран]
+	конец := len(список)
+	if выбран+1 < len(места) {
+		конец = места[выбран+1][0]
+	}
+	return список[м[2]:м[3]], список[м[4]:м[5]], список[м[1]:конец], разработка
+}
+
+// пользовательское — подраздел для тех, кто работает на доске: от его
+// заголовка до следующего заголовка того же или старшего уровня.
+func пользовательское(раздел, подраздел string) string {
+	i := strings.Index(раздел, подраздел+"\n")
+	if i < 0 {
+		return ""
+	}
+	тело := раздел[i+len(подраздел)+1:]
+	if j := strings.Index(тело, "\n### "); j >= 0 {
+		тело = тело[:j]
+	}
+	return strings.TrimSpace(тело)
+}
+
+// СобратьНовое — страница «Что нового» в оболочке справки.
+func СобратьНовое(язык, версия string) (string, bool, error) {
+	w, ok := словаНового[язык]
+	if !ok {
+		return "", false, nil
+	}
+	raw, err := fs.ReadFile(takt.Changelog, w.файл)
+	if err != nil {
+		return "", false, err
+	}
+	номер, дата, раздел, разработка := разделДляВерсии(string(raw), версия)
+	var md strings.Builder
+	fmt.Fprintf(&md, "# %s\n\n%s\n\n", fmt.Sprintf(w.заголовок, номер), дата)
+	if разработка {
+		fmt.Fprintf(&md, "%s\n\n", fmt.Sprintf(w.разработка, номер))
+	}
+	if текст := пользовательское(раздел, w.подраздел); текст != "" {
+		md.WriteString(текст + "\n\n")
+	} else {
+		md.WriteString(w.нечего + "\n\n")
+	}
+	fmt.Fprintf(&md, "%s\n", fmt.Sprintf(w.всё, репозиторий+w.файл))
+	заголовок, тело := docs.Отрисовать(md.String())
+	return оболочка(Страница{Адрес: адресНового}, язык, собранная{заголовок: заголовок, тело: тело}, версия, ""), true, nil
+}

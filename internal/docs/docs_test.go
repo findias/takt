@@ -101,6 +101,25 @@ func клиент(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Справка внутри приложения — тоже интерфейс, но её подписи
+	// («Что нового», «Для администратора установки») живут на сервере,
+	// в internal/help, а не в клиенте.
+	справка, err := filepath.Glob(filepath.Join(корень(t), "internal", "help", "*.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, путь := range справка {
+		if strings.HasSuffix(путь, "_test.go") {
+			continue
+		}
+		raw, err := os.ReadFile(путь)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range литерал.FindAllStringSubmatch(string(raw), -1) {
+			b.WriteString(m[1] + m[2] + m[3] + "\n")
+		}
+	}
 	return b.String()
 }
 

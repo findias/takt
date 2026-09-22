@@ -63,7 +63,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   account and follows them to any device.
 - **Help inside the application.** «Справка» in the header, `F1` or `?`
   opens the documentation at the section about the screen you are on,
-  in the interface language, with a search over every section. It is
+  in the interface language, with a search over every section and
+  a «Что нового» (what's new) page for this version. It is
   served by the server itself, built from the same version, and needs
   no internet.
 - **Personal settings live behind your name.** Clicking your name in
