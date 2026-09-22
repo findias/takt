@@ -3993,6 +3993,25 @@ textarea.description {
   padding-left: var(--space-6);
 }
 
+/* Задачи человека со всех досок: выбор человека и флажок — одной
+   строкой, числа в таблице — по правому краю. */
+.tasks-head {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.tasks-mark {
+  display: inline-block;
+  margin-left: var(--space-2);
+}
+.board-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.member-tasks {
+  align-self: flex-start;
+}
+
 /* Люди источника (ROADMAP 23.6): кто слева, что с ним — справа, как
    в «Команде». Отказ по человеку — под строкой во всю ширину: он про
    этого человека, а не про весь перенос. */

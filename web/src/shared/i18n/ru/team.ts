@@ -14,6 +14,8 @@ export const team = {
     removeOf: (name: string) => `Исключить ${name}`,
     remove: 'Исключить',
     eraseOf: (name: string) => `Удалить данные: ${name}`,
+    tasks: 'Задачи',
+    tasksOf: (name: string) => `Задачи: ${name}`,
     email: 'Почта…',
     emailOf: (name: string) => `Сменить почту: ${name}`,
     emailTitle: (name: string) => `Почта: ${name}`,

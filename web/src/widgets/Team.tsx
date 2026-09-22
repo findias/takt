@@ -28,6 +28,7 @@ import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { locale, t } from '../shared/i18n/index.ts'
 import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
+import { navigate } from '../shared/router/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
 
 export function Team({ principal }: { principal: Principal }) {
@@ -121,6 +122,17 @@ export function Team({ principal }: { principal: Principal }) {
                     у него есть только потому, что личность требует
                     уникальной почты, и показывать «…@clients.invalid»
                     значит показывать устройство вместо смысла. */}
+                {/* Задачи человека со всех досок — отсюда, где его ищут
+                    по имени (решение владельца 22.09.2026). */}
+                {m.kind === 'person' && (
+                  <button
+                    className="link small member-tasks"
+                    aria-label={t.team.tasksOf(m.name)}
+                    onClick={() => navigate(m.userId === principal.id ? '/tasks' : `/tasks?user=${m.userId}`)}
+                  >
+                    {t.team.tasks}
+                  </button>
+                )}
                 <span className="muted small">
                   {m.kind === 'service' ? t.team.integrationKey : m.email}
                   {/* Кому ещё передать ссылку — без отметки этого не видно:

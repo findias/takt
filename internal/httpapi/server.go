@@ -123,6 +123,9 @@ func (s *Server) Handler() http.Handler {
 	// дерево подразделений, где почт нет вовсе, и то требует разрешения,
 	// а команду выгружал любой ключ, включая заведённый ради одной доски.
 	mux.HandleFunc("GET /api/team", s.human(s.handleTeam))
+	// Задачи человека со всех видимых досок — тоже про людей, ключу
+	// не открыты.
+	mux.HandleFunc("GET /api/tasks", s.human(s.handleTasks))
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))

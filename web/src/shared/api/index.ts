@@ -424,6 +424,24 @@ export type ImportRequest = {
   apply: boolean
 }
 
+/** Карточка в списке задач человека (вкладка «Задачи»). */
+export type Task = {
+  id: string
+  number: string
+  title: string
+  boardId: string
+  boardName: string
+  column: string
+  columnKind: string
+  priority: Priority
+  dueOn: string | null
+  startedAt: string | null
+  columnEnteredAt: string
+  outcome: string | null
+  blocked: boolean
+  labels: Label[]
+}
+
 /** Выбор по человеку источника: сопоставить, завести, не переносить. */
 export type PersonChoice = {
   action: 'match' | 'create' | 'skip'
@@ -993,6 +1011,14 @@ export const api = {
   team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
   invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),
   revokeInvite: (id: string) => request<void>('DELETE', `/api/invites/${id}`),
+  /** Задачи человека со всех досок, которые видит спрашивающий;
+   *  без user — свои. */
+  tasks: (user?: string, withDone?: boolean) =>
+    request<{ tasks: Task[]; truncated: boolean }>(
+      'GET',
+      '/api/tasks?' +
+        new URLSearchParams({ ...(user ? { user } : {}), ...(withDone ? { done: '1' } : {}) }).toString(),
+    ),
   /** Владелец правит почту участника — тому, кто состоит только здесь. */
   setMemberEmail: (userId: string, email: string) =>
     request<{ email: string }>('PUT', `/api/members/${userId}/email`, { email }),

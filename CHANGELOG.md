@@ -178,6 +178,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **A «Tasks» tab.** A person's cards on every board you can see —
+  yours by default, anyone's from the list or from «Tasks» next to their
+  name under «Команда». A private board you cannot see stays hidden.
 - **The board's toolbar is rebuilt.** The view (Board, Table, Changes)
   is a list at the left; the filter is the main panel and stays open
   on a wide screen (on a narrow one it is folded under «Отбор» as

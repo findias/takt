@@ -18,6 +18,7 @@
 export type Route =
   | { name: 'boards' }
   | { name: 'team' }
+  | { name: 'tasks' }
   | { name: 'structure' }
   | { name: 'import' }
   | { name: 'board'; boardId: string; cardId: string | null }
@@ -31,6 +32,7 @@ export function parseRoute(pathname: string): Route {
   if (parts[0] === 'invite' && parts[1]) return { name: 'invite', token: parts.slice(1).join('/') }
   if (parts[0] === 'password' && parts[1]) return { name: 'password', token: parts.slice(1).join('/') }
   if (parts[0] === 'team') return { name: 'team' }
+  if (parts[0] === 'tasks') return { name: 'tasks' }
   if (parts[0] === 'structure') return { name: 'structure' }
   if (parts[0] === 'import') return { name: 'import' }
   if (parts[0] === 'board' && parts[1]) {
@@ -46,6 +48,8 @@ export function routePath(route: Route): string {
       return '/'
     case 'team':
       return '/team'
+    case 'tasks':
+      return '/tasks'
     case 'structure':
       return '/structure'
     case 'import':

@@ -30,6 +30,7 @@ import type { hintText } from './ru/hintText.ts'
 import type { imports } from './ru/imports.ts'
 import type { stand } from './ru/stand.ts'
 import type { passwordLink } from './ru/passwordLink.ts'
+import type { tasks } from './ru/tasks.ts'
 
 /**
  * Разделы, которые едут со своим экраном, а не при открытии.
@@ -52,6 +53,7 @@ type Lazy = {
   imports: typeof imports
   stand: typeof stand
   passwordLink: typeof passwordLink
+  tasks: typeof tasks
 }
 export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
@@ -76,6 +78,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
     ru: () => import('./ru/passwordLink.ts'),
     en: () => import('./en/passwordLink.ts'),
   },
+  tasks: { ru: () => import('./ru/tasks.ts'), en: () => import('./en/tasks.ts') },
 }
 
 /** Подгрузить разделы на выбранном языке. Повторная загрузка ничего

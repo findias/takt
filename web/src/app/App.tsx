@@ -39,6 +39,10 @@ const Team = lazy(
     'passwordLink',
   ),
 )
+// Задачи человека со всех досок (решение владельца 22.09.2026).
+const Tasks = lazy(
+  withSections(() => import('../widgets/Tasks.tsx').then((m) => ({ default: m.Tasks })), 'tasks'),
+)
 const Structure = lazy(
   withSections(
     () => import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
@@ -66,7 +70,7 @@ const PasswordLinkScreen = lazy(
   ),
 )
 
-const TABS = ['boards', 'team', 'structure'] as const
+const TABS = ['boards', 'tasks', 'team', 'structure'] as const
 const tabTitle = (name: (typeof TABS)[number]) => t.app[name]
 
 /** Сообщения общие на всё приложение: их очередь и время жизни —
@@ -221,7 +225,9 @@ function Screens() {
           ? 'boards'
           : route.name === 'import'
             ? 'import'
-            : null,
+            : route.name === 'tasks'
+              ? 'tasks'
+              : null,
   )
   // F1 и «?» — справка по тому экрану, где человек сейчас. Слушатель
   // один на приложение: экраны о клавише не знают, они знают свою тему.
@@ -352,8 +358,12 @@ function Screens() {
           {/* Заглушка в форме списка, а не слово «загружаем»: кусок
               приезжает за десятки миллисекунд, и мигать словом дольше,
               чем показывать раскладку. */}
-          {(route.name === 'team' || route.name === 'structure' || route.name === 'import') && (
+          {(route.name === 'team' ||
+            route.name === 'structure' ||
+            route.name === 'import' ||
+            route.name === 'tasks') && (
             <Suspense fallback={<Skeleton lines={3} />}>
+              {route.name === 'tasks' && <Tasks principal={principal} />}
               {route.name === 'team' && <Team principal={principal} />}
               {route.name === 'import' && <ImportScreen />}
               {route.name === 'structure' && (

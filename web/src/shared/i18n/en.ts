@@ -410,6 +410,7 @@ export const en: typeof ru = {
   },
   app: {
     boards: 'Boards',
+    tasks: 'Tasks',
     team: 'Team',
     structure: 'Structure',
     import: 'Import tasks',

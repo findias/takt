@@ -2761,3 +2761,26 @@ test('ссылка для входа задаёт пароль один раз �
   await expect(person.getByText(/попросите у администратора новую/)).toBeVisible()
   await third.close()
 })
+
+// Задачи человека со всех досок (решение владельца 22.09.2026): своя
+// карточка находится во вкладке «Задачи» и открывается на своей доске.
+test('вкладка «Задачи» собирает карточки человека со всех досок', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Первая доска')
+  await addCard(page, 'Очередь', 'Моя задача')
+  await toggleAssignee(page, cardIn(page, 'Очередь', 'Моя задача'))
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Вторая доска')
+  await addCard(page, 'Очередь', 'Не моя задача')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Задачи', exact: true }).click()
+  const table = page.getByRole('table', { name: /^Задачи:/ })
+  await expect(table.getByRole('button', { name: 'Моя задача' })).toBeVisible()
+  await expect(table.getByText('Не моя задача')).toHaveCount(0)
+  await expect(table.getByRole('button', { name: 'Первая доска' })).toBeVisible()
+
+  await table.getByRole('button', { name: 'Моя задача' }).click()
+  await expect(page).toHaveURL(/\/board\/.+\/card\//)
+  await expect(page.getByRole('heading', { name: 'Моя задача' })).toBeVisible()
+})

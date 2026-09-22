@@ -15,6 +15,8 @@ export const team: typeof ru = {
     removeOf: (name: string) => `Remove ${name}`,
     remove: 'Remove',
     eraseOf: (name: string) => `Erase data: ${name}`,
+    tasks: 'Tasks',
+    tasksOf: (name: string) => `Tasks: ${name}`,
     email: 'Email…',
     emailOf: (name: string) => `Change email: ${name}`,
     emailTitle: (name: string) => `Email: ${name}`,

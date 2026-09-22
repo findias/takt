@@ -585,6 +585,11 @@ test('снимки экранов', async ({ page, browser }) => {
   await passwordPage.screenshot({ path: `${SHOTS}/38-пароль-по-ссылке.png` })
   await passwordPage.close()
 
+  // Задачи человека со всех досок (решение владельца 22.09.2026).
+  await page.getByRole('button', { name: 'Задачи', exact: true }).click()
+  await page.getByRole('table', { name: /^Задачи:/ }).waitFor()
+  await page.screenshot({ path: `${SHOTS}/39-задачи.png`, fullPage: true })
+
   // Английский: браузер с английским языком системы, человек язык
   // не выбирал — значит, решает браузер.
   const english = await browser.newContext({ locale: 'en-GB' })
@@ -620,5 +625,8 @@ test('снимки экранов', async ({ page, browser }) => {
   await enPassword.goto(await enLink.inputValue())
   await enPassword.getByLabel('Choose a password').waitFor()
   await enPassword.screenshot({ path: `${SHOTS}/38б-пароль-по-ссылке-en.png` })
+  await en.getByRole('button', { name: 'Tasks', exact: true }).click()
+  await en.getByRole('table', { name: /^Tasks:/ }).waitFor()
+  await en.screenshot({ path: `${SHOTS}/39б-задачи-en.png`, fullPage: true })
   await english.close()
 })

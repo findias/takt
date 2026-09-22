@@ -20,6 +20,7 @@ export const HELP_TOPICS = {
   archive: 'howto#archive',
   iterations: 'howto#iterations',
   team: 'howto#team',
+  tasks: 'howto#tasks',
   structure: 'howto#structure',
   account: 'howto#language',
   import: 'howto#import',

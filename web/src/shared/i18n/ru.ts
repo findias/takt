@@ -416,6 +416,7 @@ export const ru = {
   },
   app: {
     boards: 'Доски',
+    tasks: 'Задачи',
     team: 'Команда',
     structure: 'Структура',
     import: 'Перенос задач',
