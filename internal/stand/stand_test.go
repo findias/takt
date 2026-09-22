@@ -67,3 +67,21 @@ func TestEmptyLogIsAnEmptyList(t *testing.T) {
 		t.Errorf("пустой журнал: %#v", got)
 	}
 }
+
+// Коммит до правила «по-английски с переводом» — только русский:
+// он русская половина, а не английская, иначе русскому экрану
+// пришлось бы писать над русским текстом «показан английский».
+func TestRussianOnlyCommitIsNotTakenForEnglish(t *testing.T) {
+	log := "abc\x1f2026-09-20T10:00:00+03:00\x1fМетку заводят прямо с карточки\n\nТело.\n\x1e" +
+		"def\x1f2026-09-22T10:00:00+03:00\x1fAn English title\n\nBody.\n\x1e"
+	c := Parse(log)
+	if len(c) != 2 {
+		t.Fatalf("коммитов %d", len(c))
+	}
+	if !c[0].OnlyRu || c[0].Ru == nil || c[0].Ru.Title != "Метку заводят прямо с карточки" {
+		t.Fatalf("русский коммит: %+v", c[0])
+	}
+	if c[1].OnlyRu || c[1].Ru != nil {
+		t.Fatalf("английский без перевода остаётся английским: %+v", c[1])
+	}
+}

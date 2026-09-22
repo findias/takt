@@ -18,7 +18,8 @@ func (s *Server) registerStandRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/stand", s.handleStand)
 }
 
-// Что на стенде: ветка, версия, коммиты поверх master и как войти.
+// Что на стенде: ветка, версия, коммиты поверх master (у master —
+// с последнего выпуска) и как войти.
 //
 // Без входа: заметку читают и на экране входа — там же, где нужен
 // пароль. Скрывать нечего: коммиты лежат в открытом репозитории,
@@ -27,6 +28,7 @@ func (s *Server) handleStand(w http.ResponseWriter, r *http.Request) {
 	note := stand.Read()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"branch":   note.Branch,
+		"since":    note.Since,
 		"version":  version.Строка(),
 		"commits":  note.Commits,
 		"email":    demo.People[0].Email,

@@ -17,15 +17,20 @@ const REPO = 'https://github.com/findias/takt'
 export function reflow(text: string): string {
   return text
     .split(/\n\s*\n/)
-    .map((para) =>
-      para
-        .split('\n')
+    .map((para) => {
+      const lines = para.split('\n').filter((l) => l.trim() !== '')
+      // Абзац, набранный целиком с отступом, — команды и примеры:
+      // склеенные в строку, они перестают читаться как команды.
+      if (lines.length > 0 && lines.every((l) => /^(\s{2,}|\t)\S/.test(l))) {
+        return lines.map((l) => l.trim()).join('\n')
+      }
+      return lines
         .map((line) => line.trim())
         .reduce((out, line) => {
           if (!out) return line
           return /^(\d+[.)]|[-*•])\s/.test(line) ? `${out}\n${line}` : `${out} ${line}`
-        }, ''),
-    )
+        }, '')
+    })
     .join('\n\n')
 }
 
@@ -98,14 +103,22 @@ function StandDialog({ note, onClose }: { note: StandNote; onClose: () => void }
         </IconButton>
       </div>
       <p className="small">{t.stand.signIn(note.email, note.password)}</p>
+      {/* От чего считали — сказано: у ветки это «поверх master», а у
+          выложенного master — «после выпуска», иначе заметка master
+          была бы пустой при десятках сделанного. */}
       {note.commits.length === 0 ? (
-        <p className="muted small">{t.stand.empty}</p>
+        <p className="muted small">
+          {note.since && note.since !== 'master' ? t.stand.emptySince(note.since) : t.stand.empty}
+        </p>
       ) : (
-        <ol className="stand-commits">
-          {note.commits.map((c) => (
-            <StandCommit key={c.hash} commit={c} />
-          ))}
-        </ol>
+        <>
+          {note.since && <p className="muted small">{t.stand.since(note.since, note.commits.length)}</p>}
+          <ol className="stand-commits">
+            {note.commits.map((c) => (
+              <StandCommit key={c.hash} commit={c} />
+            ))}
+          </ol>
+        </>
       )}
       <div className="row dialog-actions">
         <Button kind="quiet" onClick={close}>
@@ -138,6 +151,7 @@ function StandCommit({ commit }: { commit: StandNote['commits'][number] }) {
           ` · ${when.toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })}`}
       </p>
       {fallback && <p className="muted small">{t.stand.noTranslation}</p>}
+      {lang === 'en' && commit.onlyRu && <p className="muted small">{t.stand.onlyRussian}</p>}
       {half.body && <p className="stand-text">{reflow(half.body)}</p>}
       {half.check ? (
         <>

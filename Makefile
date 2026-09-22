@@ -53,11 +53,17 @@ demo: migrate ## Наполнить базу данными для работы 
 # Разделители — управляющие символы: в сообщении коммита может быть
 # что угодно, кроме них.
 STAND_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+# От чего считать: у ветки — от master, у самого master — от последнего
+# выпуска. Иначе выложенный master показывал пустую заметку: коммитов
+# поверх себя у него нет, а сделанного с выпуска — десятки.
+STAND_BASE = $(if $(filter master,$(STAND_BRANCH)),$(shell git describe --tags --abbrev=0 2>/dev/null),origin/master)
+
 .PHONY: stand-notes
-stand-notes: ## Записать заметку тестового стенда: коммиты ветки поверх master
+stand-notes: ## Записать заметку тестового стенда: коммиты ветки поверх master, у master — с выпуска
 	@printf '%s\n' "$(STAND_BRANCH)" > internal/stand/notes/branch.txt
-	@git log --format='%H%x1f%cI%x1f%B%x1e' origin/master..HEAD > internal/stand/notes/log.txt
-	@echo "заметка стенда: ветка $(STAND_BRANCH), коммитов $$(git rev-list --count origin/master..HEAD)"
+	@printf '%s\n' "$(patsubst origin/%,%,$(STAND_BASE))" > internal/stand/notes/base.txt
+	@git log --format='%H%x1f%cI%x1f%B%x1e' $(STAND_BASE)..HEAD > internal/stand/notes/log.txt
+	@echo "заметка стенда: ветка $(STAND_BRANCH), от $(STAND_BASE), коммитов $$(git rev-list --count $(STAND_BASE)..HEAD)"
 
 # Сквозные сценарии против выложенного тестового стенда. Workflow
 # «Стенд» гоняет их сам после выкладки; руками — чтобы перепроверить

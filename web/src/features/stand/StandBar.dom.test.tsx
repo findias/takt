@@ -80,3 +80,10 @@ it('ручные переносы склеиваются, а пункты спи
     'Первая строка абзаца и её продолжение.\n\n1. Шаг первый с переносом.\n2. Шаг второй.',
   )
 })
+
+it('абзац с отступом — команды — остаётся построчным', () => {
+  const text = 'Как собрать:\n\n    takt-fetch yougile boards\n    takt-fetch yougile fetch --out склад.takt\n\nГотово.'
+  expect(reflow(text)).toBe(
+    'Как собрать:\n\ntakt-fetch yougile boards\ntakt-fetch yougile fetch --out склад.takt\n\nГотово.',
+  )
+})

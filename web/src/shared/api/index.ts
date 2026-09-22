@@ -81,8 +81,11 @@ export type StandHalf = { title: string; body: string; check: string }
 /** Заметка тестового стенда ветки (ROADMAP 30.7). */
 export type StandNote = {
   branch: string
+  /** От чего посчитаны коммиты: master у ветки, тег выпуска у master. */
+  since?: string
   version: string
-  commits: { hash: string; date: string; en: StandHalf; ru: StandHalf | null }[]
+  /** onlyRu — коммит до правила «по-английски с переводом», только по-русски. */
+  commits: { hash: string; date: string; en: StandHalf; ru: StandHalf | null; onlyRu?: boolean }[]
   email: string
   password: string
 }

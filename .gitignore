@@ -38,3 +38,4 @@
 # Заметка тестового стенда пишется при сборке (internal/stand/notes/README.md).
 internal/stand/notes/branch.txt
 internal/stand/notes/log.txt
+internal/stand/notes/base.txt
