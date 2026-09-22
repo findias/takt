@@ -350,16 +350,19 @@ describe('поток изменений', () => {
     show()
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
-    expect(FakeEventSource.открытые).toHaveLength(1)
-    FakeEventSource.открытые[0].оборвать()
+    // Потоки доски — без колокольчика в шапке: у него свой поток,
+    // по человеку, и к переоткрытию доски он отношения не имеет.
+    const доски = () => FakeEventSource.открытые.filter((s) => s.url.startsWith('/api/boards/'))
+    expect(доски()).toHaveLength(1)
+    доски()[0].оборвать()
 
     // Пауза перед новой попыткой: долбить поднимающийся сервер незачем.
-    expect(FakeEventSource.открытые).toHaveLength(1)
+    expect(доски()).toHaveLength(1)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3100)
     })
 
-    expect(FakeEventSource.открытые).toHaveLength(2)
+    expect(доски()).toHaveLength(2)
     expect(changes).toHaveBeenCalled()
   })
 })

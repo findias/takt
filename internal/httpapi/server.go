@@ -109,6 +109,7 @@ func (s *Server) Handler() http.Handler {
 	// Язык интерфейса — тоже свой у каждого и переезжает между
 	// устройствами вместе с учётной записью (ROADMAP 30.6).
 	mux.HandleFunc("PUT /api/me/lang", s.authed(s.handleSetLang))
+	mux.HandleFunc("PUT /api/me/notifications", s.human(s.handleMuteNotifications))
 
 	// Организации: список своих, создание новой, переключение активной.
 	mux.HandleFunc("GET /api/orgs", s.authed(s.handleListOrgs))

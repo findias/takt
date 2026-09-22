@@ -12,6 +12,7 @@ import { BoardList } from '../widgets/BoardList.tsx'
 import { Account } from '../features/account/Account.tsx'
 import { StandBar } from '../features/stand/StandBar.tsx'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
+import { Bell } from '../features/notifications/Bell.tsx'
 import { isHelpKey, openHelp, useHelpTopic } from '../shared/lib/help.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { boardPath, navigate, useRoute } from '../shared/router/index.ts'
@@ -394,6 +395,7 @@ function OrgHeader({
 
       <div className="org-row muted small">
         <Account principal={principal} onSignOut={onSignOut} />
+        <Bell />
         <HelpButton />
         {/* На закрытой установке организации заводит владелец: правило
             то же, что на экране входа, и место, где его можно обойти,

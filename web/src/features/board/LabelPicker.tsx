@@ -204,7 +204,7 @@ export function LabelCombobox({
           над списком, а не в нём: в списке вариантов кнопке не место. */}
       {items.some((item) => item.kind === 'create') && (
         <div className="row row--tight muted small">
-          {t.hint.labelScope.term}
+          {t.hint.labelScope}
           <Hint topic="labelScope" />
         </div>
       )}

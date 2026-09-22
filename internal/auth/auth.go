@@ -84,8 +84,10 @@ type Principal struct {
 	// Lang — язык интерфейса, выбранный человеком; пусто — не выбирал,
 	// решает браузер. Едет в «кто я», чтобы клиент на новом устройстве
 	// переключился сам: переключатель на незнакомом языке не найти.
-	Lang      *string `json:"lang"`
-	SessionID string  `json:"-"`
+	Lang *string `json:"lang"`
+	// MutedNotifications — какие поводы уведомлений человек выключил.
+	MutedNotifications []string `json:"mutedNotifications"`
+	SessionID          string   `json:"-"`
 }
 
 func (p Principal) CanEdit() bool  { return p.Role == RoleOwner || p.Role == RoleMember }
@@ -246,6 +248,27 @@ func SetLang(ctx context.Context, pool *pgxpool.Pool, userID, lang string) error
 	return err
 }
 
+// NotificationReasons — поводы уведомлений, которые можно выключить.
+// Те же строки стоят в ограничении таблицы notifications (0057).
+var NotificationReasons = []string{"mentioned", "assigned", "blocked", "block_expired"}
+
+// ErrUnknownReason — выключают повод, которого нет.
+var ErrUnknownReason = errors.New("такого повода уведомлений нет")
+
+// SetMutedNotifications запоминает, какие поводы человек выключил.
+func SetMutedNotifications(ctx context.Context, pool *pgxpool.Pool, userID string, muted []string) error {
+	for _, r := range muted {
+		if !slices.Contains(NotificationReasons, r) {
+			return ErrUnknownReason
+		}
+	}
+	if muted == nil {
+		muted = []string{}
+	}
+	_, err := pool.Exec(ctx, `update users set muted_notifications = $2 where id = $1`, userID, muted)
+	return err
+}
+
 // UserLang — выбранный человеком язык; пусто — не выбирал.
 func UserLang(ctx context.Context, pool *pgxpool.Pool, userID string) (*string, error) {
 	var lang *string
@@ -289,14 +312,14 @@ func PrincipalBySession(ctx context.Context, pool *pgxpool.Pool, sessionID strin
 	p.SessionID = sessionID
 	err := pool.QueryRow(ctx, `
 		select u.id, u.email, u.name, o.id, o.name, o.slug, m.role, o.estimate_unit,
-		       o.sandbox_expires_at, u.lang
+		       o.sandbox_expires_at, u.lang, u.muted_notifications
 		  from sessions s
 		  join users u on u.id = s.user_id
 		  join memberships m on m.user_id = u.id and m.org_id = s.active_org_id
 		  join orgs o on o.id = m.org_id
 		 where s.id = $1 and s.expires_at > now()`, sessionID).
 		Scan(&p.ID, &p.Email, &p.Name, &p.OrgID, &p.OrgName, &p.OrgSlug, &p.Role,
-			&p.EstimateUnit, &p.SandboxExpiresAt, &p.Lang)
+			&p.EstimateUnit, &p.SandboxExpiresAt, &p.Lang, &p.MutedNotifications)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Либо сессии нет, либо человека исключили из активной организации,
 		// пока он работал. Второй случай чиним подбором любой другой.

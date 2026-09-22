@@ -43,9 +43,30 @@ export type Principal = {
    *  браузер. `?`, а не только `null`: сервер прежней версии поля
    *  не знает, и в окне выкладки его может не быть вовсе. */
   lang?: 'ru' | 'en' | null
+  /** Какие поводы уведомлений человек выключил. `?` — старый сервер
+   *  поля не знает. */
+  mutedNotifications?: NotificationReason[]
 }
 
 export type EstimateUnit = 'points' | 'hours' | 'days'
+
+/** Повод уведомления — те же строки, что в ограничении таблицы
+ *  на сервере (0057_notifications.sql). */
+export type NotificationReason = 'mentioned' | 'assigned' | 'blocked' | 'block_expired'
+
+export type AppNotification = {
+  id: string
+  reason: NotificationReason
+  boardId: string
+  boardName: string
+  cardId: string
+  cardNumber: string
+  cardTitle: string
+  /** Кто это сделал; пусто — служебная задача (снятие по сроку). */
+  actorName: string | null
+  createdAt: string
+  read: boolean
+}
 
 /** Одна языковая половина сообщения коммита. Пустой `check` — «как
  *  проверить» не написано. */
@@ -801,6 +822,15 @@ export const api = {
   /** Язык интерфейса — у человека, а не у браузера: выбранный на работе
    *  приезжает и домой. */
   setLang: (lang: 'ru' | 'en') => request<void>('PUT', '/api/me/lang', { lang }),
+  /** Какие поводы уведомлений выключены — весь список разом. */
+  muteNotifications: (muted: NotificationReason[]) =>
+    request<void>('PUT', '/api/me/notifications', { muted }),
+  /** Свои уведомления, свежие сверху, и сколько непрочитанных. */
+  notifications: () =>
+    request<{ items: AppNotification[]; unread: number }>('GET', '/api/notifications'),
+  /** Прочитано: перечисленные — или все, если список пуст. */
+  readNotifications: (ids: string[] = []) =>
+    request<void>('POST', '/api/notifications/read', { ids }),
 
   listOrgs: () => request<{ orgs: Membership[]; activeOrgId: string }>('GET', '/api/orgs'),
   createOrg: (name: string) => request<Membership>('POST', '/api/orgs', { name }),

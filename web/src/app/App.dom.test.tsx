@@ -167,7 +167,7 @@ it('имя открывает личные настройки: язык, офо�
   const dialog = screen.getByRole('dialog', { name: 'Личные настройки' })
   expect(
     Array.from(dialog.querySelectorAll('[role="tab"]')).map((tab) => tab.textContent),
-  ).toEqual(['Язык', 'Оформление', 'Вход'])
+  ).toEqual(['Язык', 'Оформление', 'Уведомления', 'Вход'])
   expect(screen.getByRole('radio', { name: 'Русский' })).toHaveProperty('checked', true)
   // Пока человек не выбирал, язык решает браузер, и об этом сказано.
   expect(dialog.textContent).toMatch(/выбран по браузеру/)

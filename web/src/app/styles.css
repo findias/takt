@@ -2395,7 +2395,7 @@ textarea.description {
 .bars {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-1);
   height: 4rem;
 }
 .bar {
@@ -3868,6 +3868,92 @@ textarea.description {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Колокольчик уведомлений (ROADMAP 29.3). Счётчик — кружок в углу
+   значка; число прячем от диктора, у кнопки имя с числом словами. */
+.bell {
+  position: relative;
+  display: inline-flex;
+}
+.bell-button {
+  position: relative;
+}
+.bell-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-inline-size: 1.1rem;
+  padding: 0 var(--space-1);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--surface);
+  font-size: var(--text-sm);
+  line-height: 1.1rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  translate: 25% -25%;
+}
+.bell-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  translate: 0 var(--space-1);
+  z-index: var(--layer-control);
+  inline-size: min(24rem, calc(100vw - 2 * var(--space-2)));
+  max-block-size: min(32rem, calc(100dvh - 2 * var(--space-4)));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-drag);
+}
+.bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.bell-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bell-item a {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none;
+}
+.bell-item a:hover {
+  background: var(--surface-2);
+}
+.bell-item a:active {
+  background: var(--accent-soft);
+}
+/* Непрочитанное — полосой и насыщенностью, а не только цветом:
+   полоса видна и там, где цвета не различают. */
+.bell-item--unread a {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.bell-item--unread .bell-what {
+  font-weight: 650;
+}
+.bell-card {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+.bell-number {
+  font-family: var(--font-mono);
+  color: var(--ink-2);
 }
 
 /* «Справка» — ссылка в виде тихой кнопки: без подчёркивания, как её

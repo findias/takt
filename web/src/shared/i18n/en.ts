@@ -35,6 +35,16 @@ export const en: typeof ru = {
     tabLang: 'Language',
     tabAppearance: 'Appearance',
     tabSignIn: 'Sign-in',
+    tabNotifications: 'Notifications',
+    notifyLegend: 'Tell me when',
+    notifyHint: 'What is switched off never arrives — not now, not later. The choice is stored with your account.',
+    notifyFailed: 'Could not save the choice',
+    notifyReason: {
+      mentioned: 'Someone calls me into a discussion',
+      assigned: 'Someone assigns me to a card',
+      blocked: 'Someone blocks my card',
+      block_expired: 'The block on my card lifts at its deadline',
+    },
     langLegend: 'Interface language',
     langHint: 'Your choice is stored with your account and follows you to any device.',
     langFromBrowser: 'The language is currently taken from your browser.',
@@ -43,87 +53,47 @@ export const en: typeof ru = {
     densityLegend: 'Density',
     appearanceHint: 'Theme and density are remembered in this browser: another device can have its own.',
   },
+  notifications: {
+    button: (unread: number) =>
+      unread === 0 ? 'Notifications' : `Notifications: ${unread} unread`,
+    title: 'Notifications',
+    readAll: 'Mark all as read',
+    empty: 'This is where you hear when someone mentions you in a discussion, assigns you to a card or blocks your work.',
+    failed: 'Could not read notifications',
+    arrived: 'New notification',
+    unreadMark: 'unread',
+    mentioned: (who: string) => `${who} mentions you in a discussion`,
+    assigned: (who: string) => `${who} assigns you to a card`,
+    blocked: (who: string) => `${who} blocks your card`,
+    block_expired: () => 'The block on your card lifted at its deadline',
+    someone: 'Someone',
+  },
   hints: {
     whatIs: (term: string) => `What is “${term}”?`,
     more: 'More in help',
   },
+  // Понятия с «?»: название — здесь, из него имя кнопки; сами
+  // пояснения едут отдельным разделом (hintText) по первому нажатию.
   hint: {
-    markup: {
-      term: 'Column markup',
-      text: 'Two marks on the columns: where work starts and where it ends. Cycle time, throughput and the forecast are counted from them, not from dates typed in by hand.',
-    },
-    limit: {
-      term: 'Column limit',
-      text: 'How many cards the column should hold at once. Over the limit the counter turns amber, but moving in is still allowed: the limit makes overload visible. A hard limit refuses a move into a full column.',
-    },
-    promise: {
-      term: 'Board promise',
-      text: 'How many days finished work usually takes to cross the board. A card running longer is marked on the board, and the “Longer than promised” filter gathers such cards.',
-    },
-    block: {
-      term: 'Block',
-      text: 'The card is waiting for something, and the reason is visible right on the board. If you know when the wait ends, set a deadline — the block will lift itself.',
-    },
-    labelScope: {
-      term: 'Label scope',
-      text: 'A label belongs to the organisation, to a subdivision with everything inside it, or to one board, and is offered only there. The same name cannot be used twice where scopes overlap.',
-    },
-    visibility: {
-      term: 'Board visibility',
-      text: 'Who sees the board: the whole organisation, its own subdivision, or listed people only. Nobody else sees it anywhere.',
-    },
-    iteration: {
-      term: 'Iteration',
-      text: 'A sprint or a release: a name and dates that cards are attached to. Closing it freezes what it contains for good and produces a report.',
-    },
-    cycleTime: {
-      term: 'Cycle time',
-      text: 'How many days work takes from the column where it starts to the column where it ends. Shown as percentiles: an average would hide the long tail.',
-    },
-    age: {
-      term: 'Work age',
-      text: 'How many days each started card has been going. Age speaks not about the past but about what is stuck right now.',
-    },
-    accumulation: {
-      term: 'Accumulation',
-      text: 'Three bands by day: not started, in progress, done. An in-progress band that keeps growing means more is started than finished.',
-    },
-    throughput: {
-      term: 'Throughput',
-      text: 'How many cards a week reach the column where work ends. Cards taken off the board unfinished do not count.',
-    },
-    forecast: {
-      term: 'Forecast',
-      text: 'How many days finishing so many cards may take. It samples random weeks from the past and says one thing: what happens if it goes on as it went.',
-    },
-    roles: {
-      term: 'Roles',
-      text: 'An owner reads, changes work and runs the organisation. A member reads and changes work. A viewer only reads.',
-    },
-    subdivisionAdmin: {
-      term: 'Subdivision administrator',
-      text: 'Runs their own subtree: who is in it, nested subdivisions and their boards. Appointed by the organisation owner.',
-    },
-    keyScopes: {
-      term: 'Key scopes',
-      text: 'What another system may do with this key: read boards, change them, read the structure or the log. Grant what the integration needs: a leaked key can do no more.',
-    },
-    subscription: {
-      term: 'Event subscription',
-      text: 'An address in your system where Takt sends an event every time something happens to cards. If one does not arrive, Takt retries, and after a long run of failures switches the subscription off.',
-    },
-    export: {
-      term: 'Export',
-      text: 'All the organisation’s data in one file — to take it home or to move. The audit log is optional: it is usually larger than everything else.',
-    },
-    savedView: {
-      term: 'Saved view',
-      text: 'A filter, a grouping and a layout under a name. All of it lives in the page address, so a view can be opened again or sent as a link.',
-    },
-    grouping: {
-      term: 'Swimlanes',
-      text: 'The board sliced into rows by assignee, label, iteration or priority. A slice of the same board: to move a card to another lane, change its property.',
-    },
+    markup: 'Column markup',
+    limit: 'Column limit',
+    promise: 'Board promise',
+    block: 'Block',
+    labelScope: 'Label scope',
+    visibility: 'Board visibility',
+    iteration: 'Iteration',
+    cycleTime: 'Cycle time',
+    age: 'Work age',
+    accumulation: 'Accumulation',
+    throughput: 'Throughput',
+    forecast: 'Forecast',
+    roles: 'Roles',
+    subdivisionAdmin: 'Subdivision administrator',
+    keyScopes: 'Key scopes',
+    subscription: 'Event subscription',
+    export: 'Export',
+    savedView: 'Saved view',
+    grouping: 'Swimlanes',
   },
   help: {
     button: 'Help',
@@ -631,6 +601,8 @@ export const en: typeof ru = {
     hide: 'hide',
     previous: 'what it was',
     send: 'Send',
+    mention: 'Call someone into the discussion',
+    mentionButton: '@ Mention',
     tableEmpty: 'Not a single card — nothing to show.',
     tableCaption: (sort: string) => `Board cards as a list, ${sort}`,
     colKey: 'Key',

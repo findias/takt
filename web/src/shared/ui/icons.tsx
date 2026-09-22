@@ -238,3 +238,13 @@ export function HelpIcon(props: IconProps) {
     </Icon>
   )
 }
+
+/** Уведомления: колокольчик — знак, который узнают без подписи. */
+export function BellIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </Icon>
+  )
+}

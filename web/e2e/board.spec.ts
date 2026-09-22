@@ -2320,7 +2320,10 @@ test('шапка доски не съедает экран', async ({ page }) =>
   // До переделки — 18: отборы, тема и плотность стояли каждый своим
   // органом. После — 13: назад, видимость, оформление, три вида, поиск,
   // «Отбор», группировка, палитра, «Поток», «Архив», «+ итерация».
-  expect(wide.controls, 'органов над доской на 1440').toBeLessThanOrEqual(13)
+  // 14 — с колокольчиком уведомлений (этап 29, 22.09.2026): строки он
+  // не добавляет, стоит в хвосте шапки рядом с именем, а «Справка» —
+  // ссылка и в счёт не идёт. Высоту шапки держит проверка выше.
+  expect(wide.controls, 'органов над доской на 1440').toBeLessThanOrEqual(14)
 
   await page.setViewportSize({ width: 360, height: 760 })
   const first = cardIn(page, 'Очередь', 'Первая')
@@ -2450,4 +2453,47 @@ test('справка открывается на разделе текущего
   expect(new URL(tab.url()).pathname + new URL(tab.url()).hash).toBe('/help/ru/reference#flow')
   await expect(tab.locator('#flow')).toBeVisible()
   await expect(tab.getByRole('link', { name: '← Вернуться в Takt' })).toBeVisible()
+})
+
+// Уведомления (ROADMAP 29): упомянули — счётчик вырос — открыл —
+// карточка на экране — счётчик ноль.
+test('упоминание доходит колокольчиком и ведёт на карточку', async ({ page, browser }) => {
+  await register(page)
+  await createBoard(page, 'Доска с обсуждением')
+  await addCard(page, 'Очередь', 'Обсудить смету')
+
+  // Второй человек в организации — тот, кого позовут.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page
+    .getByRole('textbox', { name: 'Почта коллеги' })
+    .fill(`zovut-${Math.random().toString(36).slice(2, 8)}@example.test`)
+  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  const invite = await page.locator('input[readonly]').first().inputValue()
+  const second = await browser.newContext()
+  const him = await second.newPage()
+  await him.goto(invite.trim())
+  await him.getByLabel('Как вас зовут').fill('Иван Петров')
+  await him.getByLabel('Пароль').fill('parol12345')
+  await him.getByRole('button', { name: /Принять|Присоединиться/ }).click()
+  const bell = him.getByRole('button', { name: /^Уведомления/ })
+  await expect(bell).toHaveAccessibleName('Уведомления')
+
+  // Владелец зовёт его в обсуждение карточки.
+  await page.goto('/')
+  await openBoard(page, 'Доска с обсуждением')
+  await cardIn(page, 'Очередь', 'Обсудить смету').click()
+  await page.getByRole('tab', { name: 'Обсуждение' }).click()
+  await page.getByRole('textbox', { name: 'Написать в обсуждение' }).fill('Посмотри, пожалуйста,')
+  await page.getByRole('button', { name: 'Позвать в обсуждение' }).click()
+  await page.getByRole('menuitem', { name: 'Иван Петров' }).click()
+  await page.getByRole('button', { name: 'Отправить' }).click()
+
+  // У него счётчик вырос сам, без перезагрузки — потоком по человеку.
+  await expect(bell).toHaveAccessibleName('Уведомления: непрочитанных 1')
+  await bell.click()
+  await him.getByRole('link', { name: /упоминает вас в обсуждении/ }).click()
+  await expect(him.getByRole('heading', { name: 'Обсудить смету' })).toBeVisible()
+  await expect(him.getByRole('button', { name: /^Уведомления/ })).toHaveAccessibleName('Уведомления')
+  await second.close()
 })

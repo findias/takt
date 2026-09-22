@@ -10,13 +10,14 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Six migrations, all safe for the running version.** `0052` gives
+**Seven migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
 each person's interface language (empty until they choose), `0057`
 adds in-app notifications, each visible only to its recipient and only
-while they can see the board. They run in the
+while they can see the board, `0058` stores which kinds of notification
+a person has switched off. They run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 
@@ -70,6 +71,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   a «Что нового» (what's new) page for this version and a glossary. It is
   served by the server itself, built from the same version, and needs
   no internet.
+- **Notifications.** A bell in the header counts what is unread: being
+  called into a discussion (**@ Mention** under a reply), assigned to
+  a card, a block on your card, and that block lifting at its deadline.
+  An entry opens the card. Each kind can be switched off under your
+  name. You see a notification only while you can see its board.
 - **A “?” next to concepts** — a column limit, the board's promise,
   a block, label scopes, the flow metrics, roles, key scopes: two or
   three sentences on what it is, and a link to the help section.

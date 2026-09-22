@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { api } from '../../shared/api/index.ts'
 import type { Comment } from '../../shared/api/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
 import { Button } from '../../shared/ui/Button.tsx'
+import { Menu } from '../../shared/ui/Menu.tsx'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
 
@@ -20,12 +21,18 @@ export function Discussion({
   cardId,
   meId,
   canEdit,
+  people,
 }: {
   boardId: string
   cardId: string
   meId: string
   canEdit: boolean
+  /** Кого можно позвать в обсуждение: люди доски, имя по идентификатору. */
+  people: Record<string, string>
 }) {
+  // Себя не зовут: уведомления о своём действии не бывает, и пункт
+  // в меню обещал бы то, чего не случится.
+  const callable = Object.entries(people).filter(([id]) => id !== meId)
   const [comments, setComments] = useState<Comment[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
@@ -97,8 +104,9 @@ export function Discussion({
             {replyTo === c.id && canEdit && (
               <NewComment
                 placeholder={t.talk.reply}
-                onSend={(body) => {
-                  act(api.addComment(boardId, cardId, body, c.id, []))
+                people={callable}
+                onSend={(body, mentions) => {
+                  act(api.addComment(boardId, cardId, body, c.id, mentions))
                   setReplyTo(null)
                 }}
               />
@@ -110,7 +118,8 @@ export function Discussion({
       {canEdit && (
         <NewComment
           placeholder={t.talk.write}
-          onSend={(body) => act(api.addComment(boardId, cardId, body, null, []))}
+          people={callable}
+          onSend={(body, mentions) => act(api.addComment(boardId, cardId, body, null, mentions))}
         />
       )}
     </section>
@@ -232,25 +241,45 @@ function CommentRow({
   )
 }
 
+/**
+ * Новая реплика с упоминаниями (ROADMAP 29.1).
+ *
+ * Позвать — кнопкой «@» с меню людей доски, а не угадыванием по тексту:
+ * меню доступно с клавиатуры и диктору, а имя в тексте набирают как
+ * угодно — с отчеством, без, в падеже. Выбор вставляет «@Имя» и помечает
+ * человека упомянутым; стёр имя из текста — упоминание снимается само:
+ * позвать того, о ком в реплике не осталось ни слова, было бы странно.
+ */
 function NewComment({
   placeholder,
+  people,
   onSend,
 }: {
   placeholder: string
-  onSend: (body: string) => void
+  people: [string, string][]
+  onSend: (body: string, mentions: string[]) => void
 }) {
   const [body, setBody] = useState('')
+  const [called, setCalled] = useState<string[]>([])
+  const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const nameOf = (id: string) => people.find(([pid]) => pid === id)?.[1] ?? ''
   return (
     <form
       className="stack"
       onSubmit={(e) => {
         e.preventDefault()
-        if (!body.trim()) return
-        onSend(body.trim())
+        const text = body.trim()
+        if (!text) return
+        onSend(
+          text,
+          called.filter((id) => text.includes('@' + nameOf(id))),
+        )
         setBody('')
+        setCalled([])
       }}
     >
       <textarea
+        ref={fieldRef}
         className="description"
         rows={2}
         value={body}
@@ -258,9 +287,31 @@ function NewComment({
         aria-label={placeholder}
         onChange={(e) => setBody(e.target.value)}
       />
-      <button type="submit" disabled={!body.trim()}>
-        {t.talk.send}
-      </button>
+      <div className="row row--tight">
+        <button type="submit" disabled={!body.trim()}>
+          {t.talk.send}
+        </button>
+        {people.length > 0 && (
+          <Menu
+            label={t.talk.mention}
+            className="btn btn--quiet"
+            align="left"
+            items={people.map(([id, name]) => ({
+              id,
+              label: name,
+              onSelect: () => {
+                setBody((b) => `${b}${b && !b.endsWith(' ') ? ' ' : ''}@${name} `)
+                setCalled((list) => (list.includes(id) ? list : [...list, id]))
+                // Меню вернёт фокус на свою кнопку; писать дальше удобнее
+                // из поля — после вставленного имени.
+                requestAnimationFrame(() => fieldRef.current?.focus())
+              },
+            }))}
+          >
+            {t.talk.mentionButton}
+          </Menu>
+        )}
+      </div>
     </form>
   )
 }

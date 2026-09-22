@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -223,4 +225,91 @@ func TestBlockAndItsExpiryReachTheAssignee(t *testing.T) {
 	if actor != nil {
 		t.Errorf("у снятия по сроку автор %q, а снимала служебная задача", *actor)
 	}
+}
+
+// listen открывает поток своих уведомлений и отдаёт канал вестей.
+func (s *session) listen() chan string {
+	s.api.t.Helper()
+	req, err := http.NewRequest("GET", s.api.server.URL+"/api/notifications/stream", nil)
+	if err != nil {
+		s.api.t.Fatal(err)
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		s.api.t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		s.api.t.Fatalf("поток уведомлений не открылся: код %d", resp.StatusCode)
+	}
+	s.api.t.Cleanup(func() { resp.Body.Close() })
+	events := make(chan string, 8)
+	go func() {
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			if line := scanner.Text(); strings.HasPrefix(line, "event: ") {
+				events <- strings.TrimPrefix(line, "event: ")
+			}
+		}
+	}()
+	return events
+}
+
+// Колокольчик живёт потоком по человеку: весть приходит тому, кого
+// уведомили, где бы он ни был, и не приходит остальным.
+func TestNotificationStreamReachesTheRecipientOnly(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Поток уведомлений")
+	boris := a.member(owner, "member")
+	vera := a.member(owner, "member")
+	boardID := owner.board("Доска")
+	cardID := owner.cardOn(boardID, "Задача")
+
+	toBoris := boris.listen()
+	toVera := vera.listen()
+	// Подписка регистрируется, когда поток уже открыт, но хаб узнаёт
+	// о ней чуть позже; дать ему время дешевле, чем ловить гонку.
+	time.Sleep(100 * time.Millisecond)
+
+	owner.op(boardID, uuid.NewString(), "ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": boris.userID})
+
+	select {
+	case ev := <-toBoris:
+		if ev != "notifications" {
+			t.Errorf("Борису пришло %q, ожидалось notifications", ev)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("весть о назначении не дошла до Бориса")
+	}
+	select {
+	case ev := <-toVera:
+		t.Errorf("Вере пришла чужая весть: %q", ev)
+	case <-time.After(300 * time.Millisecond):
+	}
+}
+
+// Выключенный повод не пишется вовсе, остальные — как прежде.
+func TestMutedReasonIsNotWritten(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Тишина")
+	boris := a.member(owner, "member")
+	boardID := owner.board("Доска")
+	cardID := owner.cardOn(boardID, "Задача")
+
+	boris.mustDo("PUT", "/api/me/notifications",
+		map[string]any{"muted": []string{"assigned"}}, http.StatusNoContent)
+	if muted, _ := field(t, boris.mustDo("GET", "/api/me", nil, http.StatusOK), "mutedNotifications").([]any); len(muted) != 1 {
+		t.Errorf("выключенные поводы в «кто я»: %v", muted)
+	}
+
+	owner.op(boardID, uuid.NewString(), "ASSIGN_CARD", map[string]any{"cardId": cardID, "userId": boris.userID})
+	owner.mustDo("POST", "/api/boards/"+boardID+"/cards/"+cardID+"/comments",
+		map[string]any{"body": "Борис", "mentions": []string{boris.userID}}, http.StatusCreated)
+
+	got := boris.notifications()
+	if len(got.Items) != 1 || got.Items[0].Reason != "mentioned" {
+		t.Errorf("при выключенном «назначили»: %+v, ожидалось одно — упоминание", got.Items)
+	}
+
+	boris.mustDo("PUT", "/api/me/notifications",
+		map[string]any{"muted": []string{"nonsense"}}, http.StatusBadRequest)
 }

@@ -70,6 +70,7 @@ import { locale, t, withSections } from '../shared/i18n/index.ts'
 import { useHelpTopic } from '../shared/lib/help.ts'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
+import { Bell } from '../features/notifications/Bell.tsx'
 
 // Вторичные экраны доски едут отдельными кусками — по тому же доводу,
 // по которому вынесены экраны организации: доска открывается всегда,
@@ -1002,6 +1003,7 @@ export function Board({
             <PeopleIcon />
             {visibilityLabel(access)}
           </button>
+          <Bell />
           <HelpButton />
           {account}
         </div>

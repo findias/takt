@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../../shared/api/index.ts'
+import type { NotificationReason } from '../../shared/api/index.ts'
 import { LANGS, lang, switchLang, t } from '../../shared/i18n/index.ts'
 import type { Lang } from '../../shared/i18n/index.ts'
 import { FormError } from '../../shared/ui/Field.tsx'
@@ -107,5 +108,54 @@ export function AppearanceSettings() {
       </fieldset>
       <p className="muted small">{t.account.appearanceHint}</p>
     </div>
+  )
+}
+
+const REASONS: NotificationReason[] = ['mentioned', 'assigned', 'blocked', 'block_expired']
+
+/**
+ * Какие поводы уведомлений присылать (ROADMAP 29.3). Без выбора
+ * уведомления отключают целиком: одного лишнего повода хватает, чтобы
+ * колокольчик перестали открывать. Хранится у человека, как язык,
+ * и применяется сразу — отменить можно тем же флажком.
+ */
+export function NotificationSettings({
+  muted,
+  onMuted,
+}: {
+  muted: NotificationReason[]
+  onMuted: (muted: NotificationReason[]) => void
+}) {
+  const setMuted = onMuted
+  const [error, setError] = useState<string | null>(null)
+
+  const toggle = (reason: NotificationReason, on: boolean) => {
+    const next = on ? muted.filter((r) => r !== reason) : [...muted, reason]
+    const before = muted
+    setMuted(next)
+    setError(null)
+    api.muteNotifications(next).catch((e) => {
+      // Не сохранилось — флажок возвращается туда, где он на самом деле.
+      setMuted(before)
+      setError(e instanceof Error ? e.message : t.account.notifyFailed)
+    })
+  }
+
+  return (
+    <fieldset className="account-group">
+      <legend>{t.account.notifyLegend}</legend>
+      {REASONS.map((reason) => (
+        <label key={reason}>
+          <input
+            type="checkbox"
+            checked={!muted.includes(reason)}
+            onChange={(e) => toggle(reason, e.target.checked)}
+          />
+          {t.account.notifyReason[reason]}
+        </label>
+      ))}
+      <p className="muted small">{t.account.notifyHint}</p>
+      <FormError>{error}</FormError>
+    </fieldset>
   )
 }

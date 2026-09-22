@@ -2,10 +2,10 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { topLayer, useAnchored } from './anchored.ts'
 import { helpUrl } from '../lib/help.ts'
 import type { HelpTopic } from '../lib/help.ts'
-import { t } from '../i18n/index.ts'
+import { loadSections, t } from '../i18n/index.ts'
 import type { Catalog } from '../i18n/index.ts'
 
-export type HintTopic = keyof Catalog['hint'] & HelpTopic
+export type HintTopic = keyof Catalog['hint'] & keyof Catalog['hintText'] & HelpTopic
 
 /**
  * «?» у понятия (ROADMAP 30.4) — раскрывашка, а не всплывающая
@@ -31,7 +31,7 @@ export function Hint({ topic }: { topic: HintTopic }) {
   const bubbleRef = useRef<HTMLDivElement>(null)
   const id = useId()
   const box = useAnchored(open, buttonRef, bubbleRef, 'left', 'down')
-  const hint = t.hint[topic]
+  const term = t.hint[topic]
 
   // Щелчок вне закрывает, как у меню; фокус при этом не трогаем —
   // человек уже щёлкнул туда, куда хотел.
@@ -59,15 +59,24 @@ export function Hint({ topic }: { topic: HintTopic }) {
         type="button"
         className="hint-button"
         ref={buttonRef}
-        aria-label={t.hints.whatIs(hint.term)}
+        aria-label={t.hints.whatIs(term)}
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (open) {
+            setOpen(false)
+            return
+          }
+          // Тексты пояснений — отдельный раздел каталога: в первую
+          // загрузку он не едет (порог сборки, perf.spec.ts), а догружается
+          // по первому нажатию и дальше лежит в памяти.
+          loadSections('hintText').then(() => setOpen(true))
+        }}
       >
         ?
       </button>
       <span className="sr-only" role="status">
-        {open ? hint.text : ''}
+        {open ? t.hintText[topic] : ''}
       </span>
       {open && (
         <div
@@ -77,8 +86,8 @@ export function Hint({ topic }: { topic: HintTopic }) {
           popover={topLayer ? 'manual' : undefined}
           style={box ? { top: box.top, left: box.left } : { opacity: 0 }}
         >
-          <strong className="hint-term">{hint.term}</strong>
-          <p>{hint.text}</p>
+          <strong className="hint-term">{term}</strong>
+          <p>{t.hintText[topic]}</p>
           <a href={helpUrl(topic)} target="_blank" rel="noopener">
             {t.hints.more}
           </a>

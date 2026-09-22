@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Principal } from '../../shared/api/index.ts'
+import type { NotificationReason, Principal } from '../../shared/api/index.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { ChevronDownIcon, CloseIcon } from '../../shared/ui/icons.tsx'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { t } from '../../shared/i18n/index.ts'
-import { AppearanceSettings, LanguageSettings } from './Settings.tsx'
+import { AppearanceSettings, LanguageSettings, NotificationSettings } from './Settings.tsx'
 import { PasswordForm } from './PasswordForm.tsx'
 
-type Tab = 'lang' | 'appearance' | 'signin'
+type Tab = 'lang' | 'appearance' | 'notifications' | 'signin'
 
 /**
  * Личные настройки: имя в шапке открывает язык, оформление и вход
@@ -32,6 +32,10 @@ export function Account({
 }) {
   const [open, setOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  // Выбор поводов живёт здесь, а не в диалоге: диалог при закрытии
+  // разбирается, а профиль, загруженный при входе, о новом выборе
+  // не знает — открыв настройки второй раз, человек увидел бы прежний.
+  const [muted, setMuted] = useState(principal.mutedNotifications ?? [])
   const sandbox = Boolean(principal.sandboxExpiresAt)
 
   return (
@@ -57,6 +61,8 @@ export function Account({
         <AccountDialog
           principal={principal}
           sandbox={sandbox}
+          muted={muted}
+          onMuted={setMuted}
           onClose={() => setOpen(false)}
           onSignOut={() => {
             // Диалог закрывается до следующего шага: подтверждение выхода
@@ -88,11 +94,15 @@ export function Account({
 function AccountDialog({
   principal,
   sandbox,
+  muted,
+  onMuted,
   onClose,
   onSignOut,
 }: {
   principal: Principal
   sandbox: boolean
+  muted: NotificationReason[]
+  onMuted: (muted: NotificationReason[]) => void
   onClose: () => void
   onSignOut: () => void
 }) {
@@ -128,6 +138,7 @@ function AccountDialog({
   const tabs = [
     { id: 'lang', label: t.account.tabLang },
     { id: 'appearance', label: t.account.tabAppearance },
+    { id: 'notifications', label: t.account.tabNotifications },
     ...(sandbox ? [] : [{ id: 'signin', label: t.account.tabSignIn }]),
   ]
 
@@ -159,6 +170,9 @@ function AccountDialog({
       <TabPanel base={base} id={tab}>
         {tab === 'lang' && <LanguageSettings account={principal.lang ?? null} />}
         {tab === 'appearance' && <AppearanceSettings />}
+        {tab === 'notifications' && (
+          <NotificationSettings muted={muted} onMuted={onMuted} />
+        )}
         {tab === 'signin' && <PasswordForm onDone={close} />}
       </TabPanel>
 

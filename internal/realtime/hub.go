@@ -37,6 +37,11 @@ type Change struct {
 	// ActorID — кто изменил. Клиент своего же изменения уже ждёт и может
 	// не дёргаться: оно придёт ответом на операцию.
 	ActorID string `json:"actorId"`
+	// Notified — у кого появились или прочитаны уведомления (этап 29).
+	// Непустое — оповещение не о доске, а о людях: их колокольчики
+	// перечитывают счётчик. Тот же канал, а не второй: слушатель в базе
+	// один, и второй канал значил бы второе соединение на реплику.
+	Notified []string `json:"notified,omitempty"`
 }
 
 // Notify сообщает об изменении доски. Вызывается изнутри транзакции
@@ -53,6 +58,8 @@ func Notify(ctx context.Context, tx pgx.Tx, change Change) error {
 
 type subscriber struct {
 	boardID string
+	// userID — подписка человека на свои уведомления, а не на доску.
+	userID  string
 	changes chan Change
 }
 
@@ -77,7 +84,16 @@ func NewHub(db *store.Store, log *slog.Logger) *Hub {
 // не страшна — клиент всё равно перечитывает снимок целиком, а очередное
 // изменение придёт следом.
 func (h *Hub) Subscribe(boardID string) (<-chan Change, func()) {
-	s := &subscriber{boardID: boardID, changes: make(chan Change, 8)}
+	return h.subscribe(&subscriber{boardID: boardID, changes: make(chan Change, 8)})
+}
+
+// SubscribeUser — свои уведомления человека: колокольчик в шапке живёт
+// потоком по человеку, а не по открытой доске.
+func (h *Hub) SubscribeUser(userID string) (<-chan Change, func()) {
+	return h.subscribe(&subscriber{userID: userID, changes: make(chan Change, 8)})
+}
+
+func (h *Hub) subscribe(s *subscriber) (<-chan Change, func()) {
 	h.mu.Lock()
 	h.subs[s] = struct{}{}
 	h.mu.Unlock()
@@ -135,7 +151,7 @@ func (h *Hub) dispatch(change Change) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for s := range h.subs {
-		if s.boardID != change.BoardID {
+		if !s.wants(change) {
 			continue
 		}
 		select {
@@ -145,4 +161,18 @@ func (h *Hub) dispatch(change Change) {
 			// принесёт ту же новость, а задерживать остальных нельзя.
 		}
 	}
+}
+
+// wants — касается ли оповещение подписчика: доски — по доске,
+// человека — по списку уведомлённых.
+func (s *subscriber) wants(change Change) bool {
+	if s.userID == "" {
+		return change.BoardID != "" && s.boardID == change.BoardID
+	}
+	for _, id := range change.Notified {
+		if id == s.userID {
+			return true
+		}
+	}
+	return false
 }

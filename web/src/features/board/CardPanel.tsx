@@ -436,7 +436,13 @@ export function CardPanel({
             свитке, открытие любой карточки стоило двух запросов,
             из которых чаще всего не нужен был ни один. */}
         {tab === 'talk' && (
-          <Discussion boardId={boardId} cardId={card.id} meId={meId} canEdit={canEdit} />
+          <Discussion
+            boardId={boardId}
+            cardId={card.id}
+            meId={meId}
+            canEdit={canEdit}
+            people={base.people}
+          />
         )}
 
         {tab === 'history' && (

@@ -26,6 +26,7 @@ import type { labelsAdmin } from './ru/labelsAdmin.ts'
 import type { structure } from './ru/structure.ts'
 import type { flow } from './ru/flow.ts'
 import type { flowReport } from './ru/flowReport.ts'
+import type { hintText } from './ru/hintText.ts'
 
 /**
  * Разделы, которые едут со своим экраном, а не при открытии.
@@ -44,6 +45,7 @@ type Lazy = {
   structure: typeof structure
   flow: typeof flow
   flowReport: typeof flowReport
+  hintText: typeof hintText
 }
 export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
@@ -61,6 +63,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
     ru: () => import('./ru/flowReport.ts'),
     en: () => import('./en/flowReport.ts'),
   },
+  hintText: { ru: () => import('./ru/hintText.ts'), en: () => import('./en/hintText.ts') },
 }
 
 /** Подгрузить разделы на выбранном языке. Повторная загрузка ничего

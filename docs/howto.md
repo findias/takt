@@ -144,6 +144,22 @@ filter gathers such cards. **Drop the promise** removes it.
 The change applies at once. Theme and density are remembered in this
 browser: on another device they can be different.
 
+<!-- anchor: notifications -->
+### Hear when you are needed
+
+The bell in the header counts what is unread. It rings when someone
+calls you into a discussion, assigns you to a card or blocks a card you
+work on, and when a block on your card lifts at its deadline — never
+about what you did yourself. Press the bell and pick an entry: the card
+opens and the entry counts as read. **Mark all as read** clears the
+counter.
+
+To call someone into a discussion, press **@ Mention** under the reply
+and pick the person. Only people who can see the board are offered.
+
+To stop a kind of notification, click your name, **Notifications** tab,
+and untick it. What is switched off never arrives.
+
 <!-- anchor: language -->
 ### Switch the interface language
 

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/findias/takt/internal/realtime"
 )
 
 // Уведомления внутри приложения (ROADMAP, этап 29).
@@ -44,13 +46,31 @@ func notify(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID, actorID, rea
 	if actorID == "" {
 		actor = nil
 	}
-	_, err := tx.Exec(ctx, `
+	// Без `returning`: под политиками он тоже требует права прочитать
+	// вставленную строку. Кого уведомили, известно и так.
+	// Выключившим этот повод не пишем вовсе: копить у них то, чего они
+	// не хотят видеть, значило бы однажды показать всё разом.
+	rows, err := tx.Query(ctx, `
+		select u.id from users u
+		 where u.id = any($1::uuid[]) and u.id is distinct from $2::uuid
+		   and not ($3 = any(u.muted_notifications))`,
+		recipients, actor, reason)
+	if err != nil {
+		return err
+	}
+	notified, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil || len(notified) == 0 {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
 		insert into notifications (org_id, recipient_id, board_id, card_id, actor_id, reason, source)
-		select $1, r, $2, $3, $4, $5, $6
-		  from unnest($7::uuid[]) r
-		 where r is distinct from $4::uuid`,
-		orgID, boardID, cardID, actor, reason, source, recipients)
-	return err
+		select $1, r, $2, $3, $4, $5, $6 from unnest($7::uuid[]) r`,
+		orgID, boardID, cardID, actor, reason, source, notified); err != nil {
+		return err
+	}
+	// Колокольчики получателей узнают из той же транзакции: оповещение
+	// уходит при фиксации, вместе с самим уведомлением.
+	return realtime.Notify(ctx, tx, realtime.Change{Notified: notified})
 }
 
 // eventSource — источник уведомления, вызванного событием журнала.
@@ -124,15 +144,20 @@ func (s *Service) Notifications(ctx context.Context, orgID, userID string) (Noti
 // если список пуст. Чужие и невидимые политика не даст тронуть.
 func (s *Service) MarkNotificationsRead(ctx context.Context, orgID, userID string, ids []string) error {
 	return s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		var err error
 		if len(ids) == 0 {
-			_, err := tx.Exec(ctx, `
+			_, err = tx.Exec(ctx, `
 				update notifications set read_at = now()
 				 where recipient_id = $1 and read_at is null`, userID)
+		} else {
+			_, err = tx.Exec(ctx, `
+				update notifications set read_at = now()
+				 where recipient_id = $1 and read_at is null and id = any($2::uuid[])`, userID, ids)
+		}
+		if err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `
-			update notifications set read_at = now()
-			 where recipient_id = $1 and read_at is null and id = any($2::uuid[])`, userID, ids)
-		return err
+		// Прочитал в одной вкладке — счётчик сходит и в остальных.
+		return realtime.Notify(ctx, tx, realtime.Change{Notified: []string{userID}})
 	})
 }
