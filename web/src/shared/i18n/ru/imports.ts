@@ -143,6 +143,8 @@ export const imports = {
   historyProgress: (done: number, total: number) => `Дотягиваем историю и обсуждение из YouGile: ${done} из ${total}.`,
   historyDone: (comments: number, history: number) =>
     `История и обсуждение дотянуты: реплик ${comments}, записей истории ${history}.`,
+  historySkipped: (n: number) =>
+    `Чаты ${карточек(n)} YouGile не отдал — перенесите эту доску ещё раз, и их дотянут.`,
   historyFailed: (reason: string) =>
     `Дотягивание прервалось: ${reason}. Перенесите ту же доску ещё раз на неё же — продолжится с того места.`,
   historyAway:

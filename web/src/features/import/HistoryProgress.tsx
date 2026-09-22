@@ -41,7 +41,10 @@ export function HistoryProgress({ boardId }: { boardId: string }) {
       {job?.failed ? (
         <p className="small">{s.historyFailed(job.failed)}</p>
       ) : job?.finished ? (
-        <p className="small">{s.historyDone(job.comments, job.history)}</p>
+        <>
+          <p className="small">{s.historyDone(job.comments, job.history)}</p>
+          {job.skipped > 0 && <p className="small">{s.historySkipped(job.skipped)}</p>}
+        </>
       ) : (
         <>
           <p className="small">{s.historyProgress(job?.done ?? 0, job?.total ?? 0)}</p>

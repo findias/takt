@@ -131,6 +131,10 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 				map[string]any{"id": "s-area", "name": "Участок", "states": []map[string]any{{"id": "st-wh", "name": "Склад"}}})
 		case "tasks":
 			list(tasks[r.URL.Query().Get("columnId")]...)
+		// Этот чат YouGile не отдаёт: карточка остаётся ждать, доска
+		// и задание не падают.
+		case "chats/t-4/messages":
+			w.WriteHeader(http.StatusBadRequest)
 		case "chats/t-1/messages":
 			// Реплика человека и — только с includeSystem — системное
 			// сообщение: история задачи в YouGile.
@@ -356,9 +360,9 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 	}
 
 	var job struct {
-		Total, Done, Comments, History int
-		Finished                       bool
-		Failed                         string
+		Total, Done, Comments, History, Skipped int
+		Finished                                bool
+		Failed                                  string
 	}
 	deadline := time.Now().Add(10 * time.Second)
 	for {
@@ -368,7 +372,8 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if !job.Finished || job.Failed != "" || job.Done != 2 || job.Comments != 1 || job.History != 1 {
+	if !job.Finished || job.Failed != "" || job.Done != 1 || job.Skipped != 1 ||
+		job.Comments != 1 || job.History != 1 {
 		t.Fatalf("задание: %+v", job)
 	}
 
@@ -401,7 +406,8 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 	body["boardId"] = boardID
 	body["apply"] = false
 	raw = owner.mustDo("POST", "/api/import/yougile", body, http.StatusOK)
-	if pending, _ := field(t, raw, "report", "historyPending").(float64); pending != 0 {
-		t.Fatalf("после дотягивания ждут истории ещё %v", pending)
+	// Карточка, чей чат не отдали, осталась ждать следующего переноса.
+	if pending, _ := field(t, raw, "report", "historyPending").(float64); pending != 1 {
+		t.Fatalf("после дотягивания ждут истории %v, ожидалась одна", pending)
 	}
 }

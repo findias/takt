@@ -117,4 +117,9 @@ Russian, as the server does.
 | no board named | add `--board ID` (from `takt-fetch yougile boards`) or `--all` |
 | the board … has N cards — takt imports up to 10000 | split the board in YouGile |
 | YouGile does not answer | check the internet connection or `--url` |
+| YouGile asks to wait: too many requests | the exporter waits by itself; this means it waited out its two minutes — run it again |
 | YouGile answered 500 to … | a problem on YouGile's side; run it again later |
+
+A chat YouGile does not return does not stop the board: the card comes
+without it, and the package says how many such chats there were. A
+«502», «503» or «504» is waited out, not treated as a failure.

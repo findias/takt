@@ -29,13 +29,25 @@ const fakeKey = "fetch-secret-key-42"
 
 func fakeYougile(t *testing.T) *httptest.Server {
 	t.Helper()
-	var throttled atomic.Bool
+	var throttled, tired atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+fakeKey {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		path := strings.TrimPrefix(r.URL.Path, "/api-v2/")
+		// Один раз YouGile отвечает «мне тяжело» — выгрузчик обязан
+		// переждать и это, а не только 429.
+		if path == "chats/t-1/messages" && tired.CompareAndSwap(false, true) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		// А этот чат он не отдаёт вовсе: карточка едет без него, доска
+		// не падает, потеря названа.
+		if path == "chats/t-2/messages" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		// Один раз YouGile просит подождать — выгрузчик обязан переждать.
 		if path == "columns" && throttled.CompareAndSwap(false, true) {
 			w.Header().Set("Retry-After", "1")
@@ -169,6 +181,9 @@ func TestFetchWritesAPackageTaktReads(t *testing.T) {
 	}
 	if !plan.HistoryCollected {
 		t.Fatal("пакет не говорит, что история собрана")
+	}
+	if !strings.Contains(strings.Join(plan.Lost, " | "), "не отдал: 1") {
+		t.Fatalf("непрочитанный чат не назван: %q", plan.Lost)
 	}
 	if !strings.Contains(strings.Join(plan.Lost, " | "), "вложения): 1") {
 		t.Fatalf("вложение не названо: %q", plan.Lost)

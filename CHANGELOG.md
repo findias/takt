@@ -181,6 +181,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **A busy YouGile is waited out, not treated as a failure.** «502»,
+  «503» and «504» are retried like «too many requests»; a chat YouGile
+  will not return no longer stops the board — the card comes without it
+  and the number of such chats is named, and in the background fetch
+  that card simply waits for the next import of the board.
 - **YouGile history and chats come across.** After an import over the
   API, task chats and task history are fetched in the background
   (YouGile allows 50 requests a minute; about half an hour for 800

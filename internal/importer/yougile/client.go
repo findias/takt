@@ -35,7 +35,10 @@ var (
 	ErrUnreachable = errors.New("YouGile не отвечает — если сервер в закрытом контуре, выгрузите таблицу в YouGile («Отчёты → Таблицы») и перенесите её файлом")
 	ErrDenied      = errors.New("YouGile не принял вход или ключ — проверьте почту, пароль и компанию")
 	ErrBusy        = errors.New("YouGile просит подождать: слишком много запросов — повторите через минуту")
-	ErrNotFound    = errors.New("в YouGile нет такой доски — выберите доску из списка")
+	// ErrOverloaded — YouGile ответил 502/503/504 и не перестал за время
+	// терпения: он занят, а не сломан, и повторить стоит позже.
+	ErrOverloaded = errors.New("YouGile сейчас не справляется — повторите через несколько минут")
+	ErrNotFound   = errors.New("в YouGile нет такой доски — выберите доску из списка")
 )
 
 // Предел на одну страницу у YouGile — тысяча; ответ одной страницы
@@ -102,7 +105,12 @@ func (c *Client) try(ctx context.Context, method, path string, query url.Values,
 		return ErrUnreachable
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusTooManyRequests && c.Patient && attempt < patience {
+	// Переждать стоит не только «слишком много запросов»: YouGile
+	// отвечает и 502/503/504, когда ему тяжело, — на доске в восемьсот
+	// задач это случается посреди работы, и считать такой ответ
+	// поломкой значит бросить полчаса выгрузки (найдено владельцем
+	// 22.09.2026 на ARCHTEAM: «YouGile ответил 503 на chats/…»).
+	if переждать(resp.StatusCode) && c.Patient && attempt < patience {
 		pause := time.Duration(1<<attempt) * time.Second
 		if s, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && s > 0 && s <= 120 {
 			pause = time.Duration(s) * time.Second
@@ -115,6 +123,10 @@ func (c *Client) try(ctx context.Context, method, path string, query url.Values,
 		return c.try(ctx, method, path, query, body, out, attempt+1)
 	}
 	switch {
+	case переждать(resp.StatusCode) && resp.StatusCode != http.StatusTooManyRequests:
+		// Терпение кончилось (или клиент нетерпелив): это не поломка
+		// формата, а занятость — и отказ говорит именно это.
+		return ErrOverloaded
 	case resp.StatusCode == http.StatusUnauthorized, resp.StatusCode == http.StatusForbidden:
 		return ErrDenied
 	case resp.StatusCode == http.StatusTooManyRequests:
@@ -250,4 +262,15 @@ func (c *Client) Boards(ctx context.Context) ([]Board, error) {
 		out = append(out, Board{ID: b.ID, Title: b.Title, Project: project})
 	}
 	return out, nil
+}
+
+// переждать — ответ, после которого имеет смысл повторить: YouGile
+// просит подождать или ему временно нехорошо.
+func переждать(код int) bool {
+	switch код {
+	case http.StatusTooManyRequests, http.StatusBadGateway,
+		http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return true
+	}
+	return false
 }

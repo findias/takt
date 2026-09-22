@@ -166,7 +166,7 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 		}
 	}
 
-	var archived, files int
+	var archived, files, unreadChats int
 	for i, t := range tasks {
 		if t.Deleted {
 			continue
@@ -217,18 +217,29 @@ func (c *Client) Board(ctx context.Context, boardID string, opt FetchOptions) (p
 				progress("чаты: %d из %d задач", i+1, len(tasks))
 			}
 			chat, err := c.TaskChat(ctx, t.ID, known, opt.History)
-			if err != nil {
+			switch {
+			// Один непрочитанный чат не должен ронять доску: за ним
+			// полчаса уже сделанной работы, и карточка едет без него.
+			// Про весь перенос — только пропавшая связь и отменённый
+			// запрос.
+			case errors.Is(err, ErrUnreachable) || ctx.Err() != nil:
 				return pack.Board{}, err
+			case err != nil:
+				unreadChats++
+			default:
+				files += chat.Files
+				if opt.Chats {
+					card.Comments = chat.Comments
+				}
+				card.History = chat.History
 			}
-			files += chat.Files
-			if opt.Chats {
-				card.Comments = chat.Comments
-			}
-			card.History = chat.History
 		}
 		out.Cards = append(out.Cards, card)
 	}
 
+	if unreadChats > 0 {
+		out.Lost = append(out.Lost, fmt.Sprintf("чаты задач, которые YouGile не отдал: %d", unreadChats))
+	}
 	if unread > 0 {
 		out.Lost = append(out.Lost, fmt.Sprintf("подзадачи, которые YouGile не отдал: %d", unread))
 	}

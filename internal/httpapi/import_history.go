@@ -41,11 +41,14 @@ type historyJobs struct {
 
 // historyJob — ход дела по одной доске.
 type historyJob struct {
-	OrgID    string    `json:"-"`
-	Total    int       `json:"total"`
-	Done     int       `json:"done"`
-	Comments int       `json:"comments"`
-	History  int       `json:"history"`
+	OrgID    string `json:"-"`
+	Total    int    `json:"total"`
+	Done     int    `json:"done"`
+	Comments int    `json:"comments"`
+	History  int    `json:"history"`
+	// Skipped — карточки, чей чат YouGile не отдал: они остались ждать
+	// следующего переноса этой доски.
+	Skipped  int       `json:"skipped"`
 	Failed   string    `json:"failed,omitempty"`
 	Finished bool      `json:"finished"`
 	Started  time.Time `json:"started"`
@@ -133,8 +136,16 @@ func (s *Server) pullHistory(ctx context.Context, p auth.Principal, key, boardID
 	}
 	for _, t := range targets {
 		chat, err := client.TaskChat(ctx, t.ExternalID, known, true)
-		if err != nil {
+		switch {
+		// Пропавшая связь и отменённое задание — про всё дотягивание;
+		// один непрочитанный чат — только про свою карточку: она
+		// останется ждущей, и её возьмёт следующий перенос этой доски.
+		case errors.Is(err, yougile.ErrUnreachable) || ctx.Err() != nil:
 			return err
+		case err != nil:
+			s.log.Info("чат задачи не прочитан", "board", boardID, "task", t.ExternalID, "err", err)
+			s.histories.update(boardID, func(j *historyJob) { j.Skipped++ })
+			continue
 		}
 		comments := toImporter(chat.Comments, byID)
 		history := toImporter(chat.History, byID)

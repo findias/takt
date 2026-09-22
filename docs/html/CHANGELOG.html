@@ -148,6 +148,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>A “?” next to concepts</strong> — a column limit, the board&#39;s promise, a block, label scopes, the flow metrics, roles, key scopes: two or three sentences on what it is, and a link to the help section.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Changing an email.</strong> Your own — behind your name, on the «Вход» tab, with your password. A member&#39;s — by the owner, «Почта…» under «Команда», for someone who belongs to no other organisation. Both show in the audit log as «email: old → new». An email managed by the identity provider or directory is changed there.</li>
+<li><strong>A busy YouGile is waited out, not treated as a failure.</strong> «502», «503» and «504» are retried like «too many requests»; a chat YouGile will not return no longer stops the board — the card comes without it and the number of such chats is named, and in the background fetch that card simply waits for the next import of the board.</li>
 <li><strong>YouGile history and chats come across.</strong> After an import over the API, task chats and task history are fetched in the background (YouGile allows 50 requests a minute; about half an hour for 800 tasks), with progress on the import screen. Replies become the card&#39;s discussion, and YouGile&#39;s history shows on the card&#39;s «История» tab under «До переноса», with its own dates. <code>takt-fetch</code> puts the history into the package too (<code>--no-history</code> skips it).</li>
 <li><strong>A «Tasks» tab.</strong> A person&#39;s cards on every board you can see — yours by default, anyone&#39;s from the list or from «Tasks» next to their name under «Команда». A private board you cannot see stays hidden.</li>
 <li><strong>The board&#39;s toolbar is rebuilt.</strong> The view (Board, Table, Changes) is a list at the left; the filter is the main panel and stays open on a wide screen (on a narrow one it is folded under «Отбор» as before); the card search is a row below.</li>
@@ -250,7 +251,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-64-gb3393d4-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-67-g1d0f1de-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

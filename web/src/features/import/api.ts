@@ -64,6 +64,7 @@ export const importApi = {
       done: number
       comments: number
       history: number
+      skipped: number
       finished: boolean
       failed?: string
     }>('GET', `/api/import/yougile/history/${boardId}`),

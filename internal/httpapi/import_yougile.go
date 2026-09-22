@@ -71,7 +71,7 @@ func (s *Server) yougileFailed(w http.ResponseWriter, err error) {
 		writeCoded(w, http.StatusBadRequest, "yougile_denied", err.Error())
 	case errors.Is(err, yougile.ErrUnreachable):
 		writeCoded(w, http.StatusBadGateway, "yougile_unreachable", err.Error())
-	case errors.Is(err, yougile.ErrBusy):
+	case errors.Is(err, yougile.ErrBusy), errors.Is(err, yougile.ErrOverloaded):
 		writeCoded(w, http.StatusServiceUnavailable, "yougile_busy", err.Error())
 	case errors.Is(err, yougile.ErrNotFound):
 		writeCoded(w, http.StatusNotFound, "yougile_not_found", err.Error())

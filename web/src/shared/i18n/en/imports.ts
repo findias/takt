@@ -141,6 +141,8 @@ export const imports: typeof ru = {
   historyProgress: (done: number, total: number) => `Fetching history and discussion from YouGile: ${done} of ${total}.`,
   historyDone: (comments: number, history: number) =>
     `History and discussion fetched: ${comments} replies, ${history} history entries.`,
+  historySkipped: (n: number) =>
+    `YouGile would not return the chats of ${cards(n)} — import this board again and they will be fetched.`,
   historyFailed: (reason: string) =>
     `Fetching stopped: ${reason}. Import the same board again into the same board — it picks up where it stopped.`,
   historyAway:
