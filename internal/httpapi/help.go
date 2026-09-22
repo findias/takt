@@ -15,6 +15,7 @@ func (s *Server) registerHelpRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /help", s.handleHelpRoot)
 	mux.HandleFunc("GET /help/", s.handleHelpRoot)
 	mux.HandleFunc("GET /help/{lang}/{page}", s.handleHelpPage)
+	mux.HandleFunc("GET /help/{lang}/search", s.handleHelpSearch)
 	mux.HandleFunc("GET /help/{lang}/screenshots/{file}", s.handleHelpScreenshot)
 }
 
@@ -50,4 +51,18 @@ func (s *Server) handleHelpScreenshot(w http.ResponseWriter, r *http.Request) {
 	// до следующей выкладки, но не навсегда.
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(raw)
+}
+
+func (s *Server) handleHelpSearch(w http.ResponseWriter, r *http.Request) {
+	страница, ok, err := help.СобратьПоиск(r.PathValue("lang"), r.URL.Query().Get("q"), version.Строка())
+	if err != nil {
+		s.fail(w, "поиск по справке", err)
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusNotFound, "такой страницы справки нет — начните с /help/")
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(страница))
 }

@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"html"
 	"io/fs"
+	"net/url"
 	"path"
 	"regexp"
 	"strings"
@@ -153,7 +154,7 @@ func Собрать(язык, адрес, версия string) (string, bool, er
 	if err != nil {
 		return "", false, err
 	}
-	return оболочка(с, язык, готово, версия), true, nil
+	return оболочка(с, язык, готово, версия, ""), true, nil
 }
 
 // Снимок экрана со страницы справки. Имя берётся только из вшитого
@@ -187,7 +188,7 @@ var словарь = map[string]слова{
 // на узком экране — сверху.
 const стильСправки = `
 .help{display:grid;grid-template-columns:16rem minmax(0,1fr);min-height:100vh}
-.help-side{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;
+.help-side{position:sticky;top:0;align-self:start;max-height:100vh;min-height:100vh;overflow:auto;
 padding:1.5rem 1rem;border-right:1px solid var(--rule);background:var(--surface)}
 .help-side nav{display:block;border:0;padding:0;margin:0 0 1.25rem}
 .help-side nav a{display:block;margin:.1rem 0}
@@ -208,11 +209,25 @@ h2[id],h3[id]{scroll-margin-top:1rem}
 :target{background:var(--accent-soft);border-radius:var(--radius);
 box-shadow:0 0 0 .4rem var(--accent-soft)}
 @media (max-width:52rem){.help{display:block}
-.help-side{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule)}}
+.help-side{position:static;max-height:none;min-height:0;border-right:0;border-bottom:1px solid var(--rule)}}
+.help-search{display:flex;gap:.4rem;margin:0 0 1.25rem}
+.help-search input{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:.35rem .5rem;
+border:1px solid var(--ink-3);border-radius:var(--radius);background:var(--paper);color:var(--ink)}
+.help-search button{font:inherit;font-size:.9rem;padding:.35rem .7rem;cursor:pointer;
+border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent);color:var(--surface)}
+.help-search button:hover{filter:brightness(1.1)}
+.help-results{padding-left:1.25rem}
+.help-results li{margin:0 0 1.1rem}
+.help-results p{margin:.2rem 0 0;color:var(--ink-2)}
+.help-where{color:var(--ink-3);font-size:.85rem;margin-left:.35rem}
+.help-count{color:var(--ink-3)}
+/* Выделение без отступов: отступ внутри слова разрывает его надвое —
+   «За блокиров ать». */
+mark{background:var(--accent-soft);color:inherit}
 @media print{.help{display:block}.help-side{display:none}}
 `
 
-func оболочка(с Страница, язык string, готово собранная, версия string) string {
+func оболочка(с Страница, язык string, готово собранная, версия, запрос string) string {
 	w := словарь[язык]
 	имяСтраницы := func(x Страница) string {
 		if язык == "ru" {
@@ -228,8 +243,15 @@ func оболочка(с Страница, язык string, готово соб�
 
 	fmt.Fprintf(&b, "<aside class=\"help-side\" aria-label=%q>\n", w.разделы)
 	fmt.Fprintf(&b, "<a class=\"help-back\" href=\"/\">%s</a>\n", w.назад)
+	// Переход на другой язык ведёт туда же — и с тем же запросом, если
+	// открыт поиск.
+	туда := с.Адрес
+	if с.Адрес == "search" {
+		туда += "?q=" + url.QueryEscape(запрос)
+	}
 	fmt.Fprintf(&b, "<p class=\"help-lang\">%s: <a href=\"/help/%s/%s\" lang=%q hreflang=%q>%s</a></p>\n",
-		w.язык, w.другойКод, с.Адрес, w.другойКод, w.другойКод, w.другой)
+		w.язык, w.другойКод, html.EscapeString(туда), w.другойКод, w.другойКод, w.другой)
+	b.WriteString(формаПоиска(язык, запрос))
 
 	группа := func(админ bool) {
 		fmt.Fprintf(&b, "<nav aria-label=%q>\n", map[bool]string{false: w.справка, true: w.админ}[админ])

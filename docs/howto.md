@@ -136,7 +136,8 @@ Press **«Справка»** (help) in the header, `F1` or `?`. Help opens in a
 new tab, at the section about the screen you are on — the board, a card,
 the table, «Поток», the archive, the team or the structure — and in the
 language of the interface. It is this same documentation, built from the
-same version as the application.
+same version as the application. The search field above the contents
+finds a section by any word in it.
 
 ### Change your password or sign out
 
