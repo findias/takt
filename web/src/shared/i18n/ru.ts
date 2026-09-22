@@ -102,24 +102,6 @@ export const ru = {
     button: 'Справка',
     keys: 'Справка по этому экрану — F1 или «?»',
   },
-  stand: {
-    bar: (branch: string, version: string) => `Тестовый стенд: ветка ${branch}, ${version}`,
-    open: 'Что на стенде',
-    title: 'Что на стенде',
-    signIn: (email: string, password: string) =>
-      `Вход: ${email}, пароль ${password}. Так же входят boris@, vera@ и gleb@ — с тем же паролем.`,
-    empty: 'На ветке нет коммитов поверх master: стенд показывает то же, что демо.',
-    since: (base: string, n: number) =>
-      base === 'master'
-        ? `Поверх master: ${n} ${plural(n, 'коммит', 'коммита', 'коммитов')}, новые сверху.`
-        : `Сделано после выпуска ${base}: ${n} ${plural(n, 'коммит', 'коммита', 'коммитов')}, новые сверху.`,
-    emptySince: (base: string) => `После выпуска ${base} коммитов нет.`,
-    onlyRussian: 'Коммит написан до английских сообщений — показан по-русски.',
-    check: 'Как проверить',
-    noCheck: 'Как проверить — не написано',
-    noTranslation: 'Перевода в коммите нет — показан английский текст.',
-    commit: (hash: string) => `Коммит ${hash} на GitHub`,
-  },
   demo: {
     note: (when: string) => `Демо · исчезнет ${when}`,
     noteTitle: 'Песочница публичного демо: своя у каждого посетителя, никто другой её не видит',

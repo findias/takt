@@ -3,7 +3,7 @@ import { api } from '../../shared/api/index.ts'
 import type { StandHalf, StandNote } from '../../shared/api/index.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { CloseIcon } from '../../shared/ui/icons.tsx'
-import { lang, locale, t } from '../../shared/i18n/index.ts'
+import { lang, loadSections, locale, t } from '../../shared/i18n/index.ts'
 
 const REPO = 'https://github.com/findias/takt'
 
@@ -47,9 +47,11 @@ export function StandBar() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    // Тексты стенда — отдельным разделом: установке заказчика, где
+    // стенда нет, они в первой загрузке ни к чему (порог — perf.spec.ts).
     api
       .stand()
-      .then(setNote)
+      .then((n) => loadSections('stand').then(() => setNote(n)))
       // Отказ — обычный ответ установки, которая не стенд: молчим.
       .catch(() => setNote(null))
   }, [])

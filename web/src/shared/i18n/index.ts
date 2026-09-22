@@ -28,6 +28,7 @@ import type { flow } from './ru/flow.ts'
 import type { flowReport } from './ru/flowReport.ts'
 import type { hintText } from './ru/hintText.ts'
 import type { imports } from './ru/imports.ts'
+import type { stand } from './ru/stand.ts'
 
 /**
  * Разделы, которые едут со своим экраном, а не при открытии.
@@ -48,6 +49,7 @@ type Lazy = {
   flowReport: typeof flowReport
   hintText: typeof hintText
   imports: typeof imports
+  stand: typeof stand
 }
 export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
@@ -67,6 +69,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
   },
   hintText: { ru: () => import('./ru/hintText.ts'), en: () => import('./en/hintText.ts') },
   imports: { ru: () => import('./ru/imports.ts'), en: () => import('./en/imports.ts') },
+  stand: { ru: () => import('./ru/stand.ts'), en: () => import('./en/stand.ts') },
 }
 
 /** Подгрузить разделы на выбранном языке. Повторная загрузка ничего
