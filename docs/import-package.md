@@ -1,7 +1,7 @@
 # Import package
 
 **Format version 1.** takt reads it — on the import screen and with
-`takt import` on the server. `takt-fetch` from the same release writes
+`takt import` on the server. [`takt-fetch`](takt-fetch.md) from the same release writes
 it; so far from YouGile, the other trackers listed below come next.
 
 ## What it is for

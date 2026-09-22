@@ -68,9 +68,11 @@ see no change.
 
 **A new release file, `takt-fetch`, that is not installed.** The
 exporter for moving into a closed network: run where there is internet,
-it collects YouGile boards — with subtasks and task chats — into a
-`.takt` package. Built for linux, macOS and Windows, with its own SBOM
-and sum; it is not in the image, the chart or the bundle.
+it collects YouGile boards — with subtasks, task chats and task
+history — into a `.takt` package. Built for linux, macOS and Windows,
+with its own SBOM and sum; it is not in the image, the chart or the
+bundle. How to use it is on its own page, `docs/takt-fetch.md`, and in
+`takt-fetch help`, in Russian or English by `TAKT_LANG` / `LANG`.
 
 **A new command, `takt import`, for boards coming into a closed
 network.** It imports an import package (`.takt`, see

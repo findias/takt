@@ -50,6 +50,7 @@ var Страницы = []Страница{
 	{"install", "install.md", "ru/установка.md", "Installation", "Установка", true},
 	{"security-review", "security-review.md", "ru/проверка-иб.md", "Security review", "Проверка ИБ", true},
 	{"import-package", "import-package.md", "ru/пакет-переноса.md", "Import package", "Пакет переноса", true},
+	{"takt-fetch", "takt-fetch.md", "ru/выгрузчик.md", "takt-fetch", "Выгрузчик", true},
 }
 
 // Исходники, которых в справке нет (требования, список изменений, README),

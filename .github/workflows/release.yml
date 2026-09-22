@@ -398,6 +398,7 @@ jobs:
             dist/*.bin
             dist/*.bin.sha256
             dist/*.tgz
+            dist/takt-fetch-*
             dist/SHA256SUMS
             dist/*.cdx.json
             dist/*.sarif

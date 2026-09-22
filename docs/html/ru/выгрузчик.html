@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>takt-fetch: выгрузчик для закрытого контура</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Разделы документации">
+<a href="индекс.html">О продукте</a>
+<a href="старт.html">Первые 15 минут</a>
+<a href="как.html">Как сделать</a>
+<a href="справочник.html">Справочник</a>
+<a href="памятка.html">Памятка</a>
+<a href="словарь.html">Словарь</a>
+<a href="устройство.html">Устройство</a>
+<a href="установка.html">Установка</a>
+<a href="проверка-иб.html">Проверка ИБ</a>
+<a href="пакет-переноса.html">Пакет переноса</a>
+<a href="выгрузчик.html" aria-current="page">Выгрузчик</a>
+<a href="../overview.html">In English</a>
+</nav>
+<h1>takt-fetch: выгрузчик для закрытого контура</h1>
+<p><code>takt-fetch</code> забирает доски из облачного трекера и пишет их в <a href="пакет-переноса.html">пакет переноса</a> — один файл <code>.takt</code>, который несут в закрытый контур и там переносят в takt. Пока он знает YouGile; Jira, Kaiten, Weeek и Trello — следующими.</p>
+<p>Отдельная программа намеренно. Её запускают там, где есть интернет, — обычно на ноутбуке, — а в takt, установленном в закрытом контуре, её нет: сервер, на котором лежат ваши доски, ни в чьё облако ходить не умеет, и проверяющий из ИБ видит это по одному списку файлов.</p>
+<h2 id="где-взять">Где взять</h2>
+<p>Каждый выпуск несёт <code>takt-fetch</code> отдельными файлами, по одному на систему:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Система</th><th>Файл</th></tr></thead>
+<tbody>
+<tr><td>Linux, x86-64 / ARM</td><td><code>takt-fetch-&lt;версия&gt;-linux-amd64</code>, <code>…-linux-arm64</code></td></tr>
+<tr><td>macOS, Intel / Apple</td><td><code>takt-fetch-&lt;версия&gt;-darwin-amd64</code>, <code>…-darwin-arm64</code></td></tr>
+<tr><td>Windows, x86-64 / ARM</td><td><code>takt-fetch-&lt;версия&gt;-windows-amd64.exe</code>, <code>…-windows-arm64.exe</code></td></tr>
+</tbody>
+</table></div>
+<p>Сверьте файл с <code>SHA256SUMS</code> того же выпуска (<code>sha256sum -c SHA256SUMS --ignore-missing</code>), на Linux и macOS сделайте его исполняемым (<code>chmod +x</code>) и запускайте. Состав поставки — <code>takt-fetch.cdx.json</code> в том же выпуске. Из исходников: <code>make fetch</code> собирает его для этой машины в <code>bin/takt-fetch</code>, <code>make fetch-release</code> — под все системы в <code>dist/</code>.</p>
+<p><code>takt-fetch version</code> печатает версию, <code>takt-fetch help</code> — встроенную справку.</p>
+<h2 id="войти-в-yougile">Войти в YouGile</h2>
+<p>Учётные данные — из окружения, никогда флагами: флаги видны в списке процессов и остаются в истории оболочки. В пакет они не пишутся никогда.</p>
+<pre><code>export YOUGILE_KEY=…                # ключ API компании
+# или почта и пароль:
+export YOUGILE_LOGIN=anna@company.ru
+export YOUGILE_PASSWORD=…           # без него пароль спросят с клавиатуры</code></pre>
+<p>С почтой и паролем выгрузчик сам получает ключ API компании. Если ключа у компании ещё нет, он заводит его в YouGile и говорит об этом — по окончании удалите его там. Если у почты несколько компаний, назовите одну флагом <code>--company</code>. В Windows — <code>set YOUGILE_KEY=…</code> в <code>cmd</code> или <code>$env:YOUGILE_KEY=&#34;…&#34;</code> в PowerShell.</p>
+<h2 id="найти-доску">Найти доску</h2>
+<pre><code>takt-fetch yougile boards</code></pre>
+<p>Печатает по доске на строку: идентификатор, проект и название. Идентификатор и принимает <code>--board</code>.</p>
+<h2 id="собрать-пакет">Собрать пакет</h2>
+<pre><code>takt-fetch yougile fetch --board &lt;id&gt; --out склад.takt --collected-by &#34;Анна, переезд склада&#34;</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>Флаг</th><th>Что делает</th></tr></thead>
+<tbody>
+<tr><td><code>--board ID</code></td><td>доска; для нескольких — повторить; <code>--all</code> берёт все доски компании</td></tr>
+<tr><td><code>--out ФАЙЛ</code></td><td>куда записать пакет. Пишется целиком в конце: прерванный запуск не оставит полупакета под этим именем</td></tr>
+<tr><td><code>--no-chats</code></td><td>без чатов задач: быстрее, но обсуждение не переедет</td></tr>
+<tr><td><code>--no-history</code></td><td>без истории задач: вдвое меньше запросов, но история «до переноса» у карточек будет пуста</td></tr>
+<tr><td><code>--collected-by ТЕКСТ</code></td><td>кто собрал и зачем; попадает в пакет как есть и показывается при переносе</td></tr>
+<tr><td><code>--company ИМЯ</code></td><td>компания, если у почты их несколько</td></tr>
+<tr><td><code>--url АДРЕС</code></td><td>коробочный YouGile; по умолчанию <code>https://ru.yougile.com</code></td></tr>
+</tbody>
+</table></div>
+<p>Что попадает в пакет: колонки, задачи с описаниями и чек-листами, подзадачи (и те, что не стоят ни в одной колонке), исполнители, стикеры, дедлайны, даты, чаты и история задач. Что не попадает: файлы, права доступа и учёт времени — пакет их называет, а предпросмотр переноса показывает под <strong>«Не переносится»</strong>.</p>
+<p><strong>Сколько ждать.</strong> YouGile отвечает не чаще 50 запросов в минуту на компанию; выгрузчик ждёт всякий раз, когда YouGile об этом просит, и печатает, сколько сделано. Чат задачи и её история — два запроса, поэтому доска в 800 задач собирается около получаса; <code>--no-history</code> сокращает это вдвое, вместе с <code>--no-chats</code> остаются минуты.</p>
+<h2 id="перенести-и-загрузить">Перенести и загрузить</h2>
+<p>Файл пакета читает только его владелец. Пронесите его через периметр так, как велят ваши правила, а дальше:</p>
+<ul>
+<li>до 50 МБ — экраном: <strong>«Доски»</strong> → <strong>«Перенести задачи из таблицы…»</strong> → <strong>«Пакет переноса»</strong>. Тот же предпросмотр, что у таблицы, с выбором по каждому человеку;</li>
+<li>больше или много досок подряд — на сервере командой <code>takt import</code> (см. <a href="установка.md#перенос-досок-в-закрытый-контур">установку</a>).</li>
+</ul>
+<p>Пакет проверяется при чтении целиком: часть, у которой не сошлась сумма, отвергается и называется.</p>
+<h2 id="язык">Язык</h2>
+<p>Справка и сообщения следуют <code>TAKT_LANG</code>, затем <code>LC_ALL</code>, <code>LC_MESSAGES</code>, <code>LANG</code> — <code>ru</code> или <code>en</code>. Если не задано ничего, выгрузчик говорит по-русски, как и сервер.</p>
+<h2 id="если-отказал">Если отказал</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Сообщение</th><th>Что делать</th></tr></thead>
+<tbody>
+<tr><td>нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN</td><td>задайте одно из них — см. раздел о входе выше</td></tr>
+<tr><td>YouGile не принял вход или ключ</td><td>проверьте ключ или пароль; ключ принадлежит одной компании</td></tr>
+<tr><td>у … несколько компаний — назовите одну</td><td>добавьте <code>--company &#34;Название&#34;</code></td></tr>
+<tr><td>не названа ни одна доска</td><td>добавьте <code>--board ID</code> (из <code>takt-fetch yougile boards</code>) или <code>--all</code></td></tr>
+<tr><td>на доске … N карточек — takt переносит до 10000</td><td>разделите доску в YouGile</td></tr>
+<tr><td>YouGile не отвечает</td><td>проверьте связь с интернетом или <code>--url</code></td></tr>
+<tr><td>YouGile ответил 500 на …</td><td>неполадка на стороне YouGile; повторите позже</td></tr>
+</tbody>
+</table></div>
+<footer>Takt, версия v0.2.3-64-gb3393d4-dirty. Страница собрана из выгрузчик.md — правьте исходник, а не её.</footer>
+</main>
+</body>
+</html>

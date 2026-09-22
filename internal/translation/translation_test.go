@@ -49,6 +49,7 @@ var пары = map[string]string{
 	"docs/install.md":         "docs/ru/установка.md",
 	"docs/security-review.md": "docs/ru/проверка-иб.md",
 	"docs/import-package.md":  "docs/ru/пакет-переноса.md",
+	"docs/takt-fetch.md":      "docs/ru/выгрузчик.md",
 	"README.md":               "README.ru.md",
 	"CHANGELOG.md":            "CHANGELOG.ru.md",
 }

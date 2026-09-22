@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/importer/pack"
 	"github.com/findias/takt/internal/importer/yougile"
 	"github.com/findias/takt/internal/version"
@@ -39,45 +40,41 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Getenv, os.Stdin, os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintln(os.Stderr, "takt-fetch:", err)
+		// Отказы YouGile и пакета — из общего каталога сервера, свои
+		// выгрузчик уже сказал на нужном языке.
+		fmt.Fprintln(os.Stderr, "takt-fetch:", i18n.Say(langOf(os.Getenv), err.Error()))
 		os.Exit(1)
 	}
 }
 
-const usage = `takt-fetch — выгрузчик досок в пакет переноса takt
-
-  takt-fetch yougile boards [флаги]
-  takt-fetch yougile fetch --board ID [--board ID …] --out ФАЙЛ.takt [флаги]
-  takt-fetch version
-
-Вход в YouGile — одно из двух:
-  YOUGILE_KEY=ключ                          ключ API компании
-  YOUGILE_LOGIN=почта [YOUGILE_PASSWORD=…]  почта и пароль; пароль, если не задан,
-                                            спросят с клавиатуры
-
-Флаги:
-  --url АДРЕС          адрес YouGile (по умолчанию https://ru.yougile.com)
-  --company ИМЯ        компания, если их у почты несколько
-  --board ID           доска; можно несколько раз; --all — все доски компании
-  --out ФАЙЛ           куда записать пакет
-  --no-chats           без чатов задач: быстрее, но обсуждение не переедет
-  --no-history         без истории задач (системных сообщений чата): вдвое
-                       меньше запросов, но история «до переноса» будет пуста
-  --collected-by ТЕКСТ кто собрал и зачем — попадёт в пакет как есть
-`
-
 func run(ctx context.Context, args []string, env func(string) string, in io.Reader, out, errOut io.Writer) error {
+	lang := langOf(env)
+	tx := textsFor(lang)
+	// Справка — в стандартный вывод и без отказа: её просят, а не
+	// получают за ошибку.
+	if len(args) == 0 || isHelp(args[0]) {
+		fmt.Fprint(out, tx.usage)
+		return nil
+	}
 	if len(args) == 1 && args[0] == "version" {
 		fmt.Fprintln(out, version.Строка())
 		return nil
 	}
-	if len(args) < 2 || args[0] != "yougile" || (args[1] != "boards" && args[1] != "fetch") {
-		fmt.Fprint(errOut, usage)
-		return errors.New("источник пока один — yougile; остальные придут следующими")
+	if args[0] != "yougile" {
+		fmt.Fprint(errOut, tx.usage)
+		return errors.New(tx.unknownSource)
+	}
+	if len(args) < 2 || isHelp(args[1]) {
+		fmt.Fprint(out, tx.usageYougile)
+		return nil
+	}
+	if args[1] != "boards" && args[1] != "fetch" {
+		fmt.Fprint(errOut, tx.usageYougile)
+		return errors.New(tx.unknownCommand(args[1]))
 	}
 	fs := flag.NewFlagSet("takt-fetch", flag.ContinueOnError)
 	fs.SetOutput(errOut)
-	fs.Usage = func() { fmt.Fprint(errOut, usage) }
+	fs.Usage = func() { fmt.Fprint(out, tx.usage) }
 	base := fs.String("url", "https://ru.yougile.com", "")
 	company := fs.String("company", "", "")
 	var boards multi
@@ -88,10 +85,14 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	noHistory := fs.Bool("no-history", false, "")
 	collectedBy := fs.String("collected-by", "", "")
 	if err := fs.Parse(args[2:]); err != nil {
+		// --help у команды — та же справка, и тоже не отказ.
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 
-	key, err := yougileKey(ctx, *base, *company, env, in, errOut)
+	key, err := yougileKey(ctx, tx, *base, *company, env, in, errOut)
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	}
 
 	if *file == "" {
-		return errors.New("не назван файл пакета: --out склад.takt")
+		return errors.New(tx.noOut)
 	}
 	if *everything {
 		boards = nil
@@ -119,22 +120,23 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 		}
 	}
 	if len(boards) == 0 {
-		return errors.New("не названа ни одна доска: --board ID (список — takt-fetch yougile boards) или --all")
+		return errors.New(tx.noBoard)
 	}
 	var collected []pack.Board
 	var cards int
 	for i, id := range boards {
-		fmt.Fprintf(errOut, "доска %d из %d…\n", i+1, len(boards))
+		fmt.Fprintln(errOut, tx.boardOf(i+1, len(boards)))
 		b, err := client.Board(ctx, id, yougile.FetchOptions{
 			Chats:    !*noChats,
 			History:  !*noHistory,
-			Progress: func(s string) { fmt.Fprintln(errOut, "  "+s) },
+			Progress: func(s string) { fmt.Fprintln(errOut, "  "+tx.progress(s)) },
 		})
 		if err != nil {
-			return fmt.Errorf("доска %s: %w", id, err)
+			// Отказ YouGile — из каталога сервера, на языке выгрузчика.
+			return fmt.Errorf("%s: %s", tx.board(id), i18n.Say(lang, err.Error()))
 		}
 		if len(b.Cards) > pack.MaxCards {
-			return fmt.Errorf("на доске «%s» %d карточек — takt переносит до %d за раз; разделите её в YouGile", b.Title, len(b.Cards), pack.MaxCards)
+			return errors.New(tx.tooBig(b.Title, len(b.Cards), pack.MaxCards))
 		}
 		cards += len(b.Cards)
 		collected = append(collected, b)
@@ -149,28 +151,32 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	if err := writeAtomically(*file, func(w io.Writer) error { return pack.Write(w, m, collected) }); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Пакет записан: %s — досок %d, карточек %d.\n", *file, len(collected), cards)
-	fmt.Fprintln(out, "Перенесите его в закрытый контур и откройте в takt: «Перенос задач» → «Пакет переноса».")
+	fmt.Fprintln(out, tx.written(*file, len(collected), cards))
+	fmt.Fprintln(out, tx.carry)
 	return nil
 }
 
+func isHelp(arg string) bool {
+	return arg == "help" || arg == "-h" || arg == "--help" || arg == "-help"
+}
+
 // yougileKey — ключ API: из окружения, либо по почте и паролю.
-func yougileKey(ctx context.Context, base, company string, env func(string) string, in io.Reader, errOut io.Writer) (string, error) {
+func yougileKey(ctx context.Context, tx texts, base, company string, env func(string) string, in io.Reader, errOut io.Writer) (string, error) {
 	if key := strings.TrimSpace(env("YOUGILE_KEY")); key != "" {
 		return key, nil
 	}
 	login := strings.TrimSpace(env("YOUGILE_LOGIN"))
 	if login == "" {
-		return "", errors.New("нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN (и пароль)")
+		return "", errors.New(tx.needLogin)
 	}
 	password := env("YOUGILE_PASSWORD")
 	if password == "" {
 		// Пароль видно при наборе: без сторонней библиотеки скрыть ввод
 		// нечем. Кому это важно — задайте YOUGILE_PASSWORD или ключ.
-		fmt.Fprint(errOut, "Пароль YouGile для "+login+" (виден при наборе; YOUGILE_PASSWORD его заменяет): ")
+		fmt.Fprint(errOut, tx.passwordPrompt(login))
 		line, err := bufio.NewReader(in).ReadString('\n')
 		if err != nil && line == "" {
-			return "", errors.New("пароль не введён")
+			return "", errors.New(tx.noPassword)
 		}
 		password = strings.TrimRight(line, "\r\n")
 	}
@@ -186,20 +192,20 @@ func yougileKey(ctx context.Context, base, company string, env func(string) stri
 	}
 	switch {
 	case len(chosen) == 0:
-		return "", fmt.Errorf("компании %q у %s нет", company, login)
+		return "", errors.New(tx.noCompany(company, login))
 	case len(chosen) > 1:
 		names := make([]string, len(chosen))
 		for i, c := range chosen {
 			names[i] = c.Name
 		}
-		return "", fmt.Errorf("у %s несколько компаний — назовите одну: --company «%s»", login, strings.Join(names, "» | «"))
+		return "", errors.New(tx.manyCompanies(login, names))
 	}
 	key, created, err := yougile.Key(ctx, base, login, password, chosen[0].ID)
 	if err != nil {
 		return "", err
 	}
 	if created {
-		fmt.Fprintln(errOut, "В YouGile заведён ключ API для выгрузки; когда закончите, его можно удалить там.")
+		fmt.Fprintln(errOut, tx.keyCreated)
 	}
 	return key, nil
 }

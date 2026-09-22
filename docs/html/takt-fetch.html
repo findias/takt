@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>takt-fetch: the exporter for a closed network</title>
+<style>
+:root{--paper:#F4F6F4;--surface:#FFFFFF;--surface-2:#EAEEEB;--ink:#141D1B;
+--ink-2:#3D4B47;--ink-3:#6E7C77;--rule:#D3DAD6;--accent:#0E6F5C;
+--accent-soft:#DCEBE5;--radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#0D1312;--surface:#161E1C;--surface-2:#1E2826;--ink:#E6EDEA;
+--ink-2:#CCD5D1;--ink-3:#B3BDBA;--rule:#27322F;--accent:#6DCBB2;
+--accent-soft:#122C25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font:16px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:44rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+nav{display:flex;flex-wrap:wrap;gap:.75rem;padding:.75rem 0 1.5rem;
+border-bottom:1px solid var(--rule);margin-bottom:2rem}
+nav a{color:var(--ink-2);text-decoration:none;padding:.25rem .5rem;
+border-radius:var(--radius)}
+nav a:hover{background:var(--surface-2);color:var(--ink)}
+nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+h1{font-size:1.75rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.3rem;margin:2.5rem 0 .75rem;padding-top:.75rem;
+border-top:1px solid var(--rule)}
+h3{font-size:1.05rem;margin:1.75rem 0 .5rem}
+p{margin:0 0 1rem}
+ul,ol{margin:0 0 1rem;padding-left:1.5rem}
+li{margin:.35rem 0}
+strong{font-weight:650}
+a{color:var(--accent)}
+/* Боковой отступ у кода мал намеренно: с большим знак препинания
+   после кода отрывается от него, и «(README.md, ...)» читается
+   как «( README.md , ...)». Видно это только на собранной странице. */
+code{font:0.9em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+background:var(--surface-2);padding:.08em .2em;border-radius:4px}
+pre{background:var(--surface);border:1px solid var(--rule);
+border-radius:var(--radius);padding:.75rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0}
+/* Таблица шире текста: колонка в 44rem удобна для чтения абзацами,
+   а таблице требований в трёх столбцах в ней тесно — она переносит
+   каждую ячейку по два слова. На узком экране всё возвращается
+   к ширине текста и листается вбок. */
+.tablewrap{overflow-x:auto;margin:0 0 1.25rem;
+width:min(60rem,92vw);margin-left:calc((100% - min(60rem,92vw))/2)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;vertical-align:top;padding:.45rem .6rem;
+border-bottom:1px solid var(--rule)}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;
+color:var(--ink-3);white-space:nowrap}
+/* Снимок вписывается в колонку: в исходнике он шириной с монитор,
+   и без ограничения страница листается вбок — на узком экране это
+   первое, что ломается. */
+figure{margin:1.5rem 0;padding:0}
+img{max-width:100%;height:auto;display:block;border:1px solid var(--rule);
+border-radius:var(--radius)}
+figcaption{margin-top:.4rem;color:var(--ink-3);font-size:.85rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule);
+color:var(--ink-3);font-size:.85rem}
+/* Печать. Страницу печатают на бумагу и в PDF, и там другое всё:
+   тёмная тема стоит краски, оглавление ведёт в никуда, а разрыв
+   посреди таблицы делает вторую половину нечитаемой.
+
+   Цвета задаются явно, а не наследуются из темы: у читающего может
+   стоять тёмная, и «печать» тогда означает лист, залитый чёрным. */
+@media print{
+  :root{--paper:#fff;--surface:#fff;--surface-2:#f2f2f2;--ink:#111;
+  --ink-2:#333;--ink-3:#555;--rule:#bbb;--accent:#0a5c4c;--accent-soft:#eef5f2}
+  body{font-size:10pt;line-height:1.45;background:#fff;color:#111}
+  .sheet{max-width:none;padding:0}
+  /* На бумаге воздух дороже: лист кончается, а прокрутки нет. */
+  h1{font-size:16pt;margin:0 0 .5rem}
+  h2{font-size:12pt;margin:1rem 0 .4rem;padding-top:.4rem}
+  h3{font-size:10.5pt;margin:.7rem 0 .3rem}
+  p,ul,ol,.tablewrap{margin-bottom:.6rem}
+  li{margin:.15rem 0}
+  th,td{padding:.25rem .5rem}
+  nav{display:none}
+  h1{page-break-before:always;page-break-after:avoid}
+  h1:first-of-type{page-break-before:avoid}
+  h2,h3{page-break-after:avoid}
+  table,figure,pre,li{page-break-inside:avoid}
+  .tablewrap{width:auto;margin-left:0;overflow:visible}
+  a{color:inherit;text-decoration:underline}
+  /* Ссылка на бумаге бесполезна, если не видно, куда она ведёт;
+     но только внешняя — внутренние ведут на соседний раздел того же
+     файла, и их адрес читателю не нужен. */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em;color:#555}
+  figure{page-break-inside:avoid}
+  img{border-color:#ccc}
+  /* Подпись при печати скромнее: на экране она отделена воздухом,
+     на бумаге тот же воздух отправляет её на второй лист. */
+  footer{page-break-before:avoid;margin-top:1rem;padding-top:.4rem;font-size:8pt}
+}
+:where(a,button):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main class="sheet">
+<nav aria-label="Documentation sections">
+<a href="overview.html">Overview</a>
+<a href="quickstart.html">First 15 minutes</a>
+<a href="howto.html">How to</a>
+<a href="reference.html">Reference</a>
+<a href="cheatsheet.html">Cheat sheet</a>
+<a href="glossary.html">Glossary</a>
+<a href="architecture.html">Design decisions</a>
+<a href="install.html">Installation</a>
+<a href="security-review.html">Security review</a>
+<a href="import-package.html">Import package</a>
+<a href="takt-fetch.html" aria-current="page">takt-fetch</a>
+<a href="SECURITY.html">Security policy</a>
+<a href="REQUIREMENTS.html">Требования</a>
+<a href="CHANGELOG.html">What changed</a>
+<a href="CHANGELOG.ru.html">Что менялось</a>
+<a href="ru/индекс.html">По-русски</a>
+</nav>
+<h1>takt-fetch: the exporter for a closed network</h1>
+<p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile; Jira, Kaiten, Weeek and Trello come next.</p>
+<p>It is a separate program on purpose. It runs where there is internet — usually on a laptop — and the takt installed inside the closed network does not contain it: the server that holds your boards cannot reach out to anyone&#39;s cloud, and a security review can check that by the list of files alone.</p>
+<h2 id="get-it">Get it</h2>
+<p>Every release carries <code>takt-fetch</code> as separate files, one per system:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>System</th><th>File</th></tr></thead>
+<tbody>
+<tr><td>Linux, x86-64 / ARM</td><td><code>takt-fetch-&lt;version&gt;-linux-amd64</code>, <code>…-linux-arm64</code></td></tr>
+<tr><td>macOS, Intel / Apple</td><td><code>takt-fetch-&lt;version&gt;-darwin-amd64</code>, <code>…-darwin-arm64</code></td></tr>
+<tr><td>Windows, x86-64 / ARM</td><td><code>takt-fetch-&lt;version&gt;-windows-amd64.exe</code>, <code>…-windows-arm64.exe</code></td></tr>
+</tbody>
+</table></div>
+<p>Check the file against <code>SHA256SUMS</code> of the same release (<code>sha256sum -c SHA256SUMS --ignore-missing</code>), make it executable on Linux and macOS (<code>chmod +x</code>), and run it. Its bill of materials is <code>takt-fetch.cdx.json</code> in the same release. From the source code: <code>make fetch</code> builds it for this machine into <code>bin/takt-fetch</code>, <code>make fetch-release</code> — for every system into <code>dist/</code>.</p>
+<p><code>takt-fetch version</code> prints its version; <code>takt-fetch help</code> prints the built-in help.</p>
+<h2 id="sign-in-to-yougile">Sign in to YouGile</h2>
+<p>Credentials come from the environment, never from flags: flags are visible in the process list and stay in the shell history. They are never written into the package.</p>
+<pre><code>export YOUGILE_KEY=…                # the company&#39;s API key
+# or an email and a password:
+export YOUGILE_LOGIN=anna@company.ru
+export YOUGILE_PASSWORD=…           # without it, the password is asked for</code></pre>
+<p>With an email and a password the exporter gets the company&#39;s API key itself. If the company has no key yet, it creates one in YouGile and says so — delete it there when you are done. If the email belongs to several companies, name one with <code>--company</code>. On Windows use <code>set YOUGILE_KEY=…</code> in <code>cmd</code> or <code>$env:YOUGILE_KEY=&#34;…&#34;</code> in PowerShell.</p>
+<h2 id="find-the-board">Find the board</h2>
+<pre><code>takt-fetch yougile boards</code></pre>
+<p>Prints one board per line: its id, the project and the title. The id is what <code>--board</code> takes.</p>
+<h2 id="build-the-package">Build the package</h2>
+<pre><code>takt-fetch yougile fetch --board &lt;id&gt; --out warehouse.takt --collected-by &#34;Anna, the warehouse move&#34;</code></pre>
+<div class="tablewrap"><table>
+<thead><tr><th>Flag</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>--board ID</code></td><td>the board; repeat it for several; <code>--all</code> takes every board of the company</td></tr>
+<tr><td><code>--out FILE</code></td><td>where to write the package. It is written whole at the end: an interrupted run leaves no half package under that name</td></tr>
+<tr><td><code>--no-chats</code></td><td>without task chats: faster, but the discussion does not come</td></tr>
+<tr><td><code>--no-history</code></td><td>without task history: half the requests, but the cards&#39; «before the import» history stays empty</td></tr>
+<tr><td><code>--collected-by TEXT</code></td><td>who collected it and why; goes into the package as is and is shown on import</td></tr>
+<tr><td><code>--company NAME</code></td><td>the company, if the email has several</td></tr>
+<tr><td><code>--url ADDRESS</code></td><td>a boxed YouGile; the default is <code>https://ru.yougile.com</code></td></tr>
+</tbody>
+</table></div>
+<p>What goes in: columns, tasks with descriptions and checklists, subtasks (those in no column too), assignees, stickers, deadlines, dates, task chats and task history. What does not: files, access rights and time tracking — the package names them, and the import preview shows them under <strong>Not imported</strong>.</p>
+<p><strong>How long it takes.</strong> YouGile answers at most 50 requests a minute per company; the exporter waits whenever YouGile asks it to, and prints how far it has got. A task&#39;s chat and its history are two requests, so a board of 800 tasks takes about half an hour; <code>--no-history</code> halves that, <code>--no-chats</code> with it leaves a few minutes.</p>
+<h2 id="carry-it-in-and-import">Carry it in and import</h2>
+<p>The package file is readable only by its owner. Carry it across the perimeter the way your rules say, then:</p>
+<ul>
+<li>up to 50 MB — on the screen: <strong>Boards</strong> → **Import tasks from a spreadsheet…<strong> → </strong>Import package**. The same preview as for a spreadsheet, with a choice for every person;</li>
+<li>bigger, or many boards in a row — on the server with <code>takt import</code> (see <a href="install.md#moving-boards-into-a-closed-network">Installation</a>).</li>
+</ul>
+<p>The package is checked whole on reading: a part whose checksum does not match is refused and named.</p>
+<h2 id="language">Language</h2>
+<p>The help and the messages follow <code>TAKT_LANG</code>, then <code>LC_ALL</code>, <code>LC_MESSAGES</code>, <code>LANG</code> — <code>ru</code> or <code>en</code>. With none of them set it speaks Russian, as the server does.</p>
+<h2 id="when-it-refuses">When it refuses</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Message</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td>signing in to YouGile needs YOUGILE_KEY or YOUGILE_LOGIN</td><td>set one of them — see the section on signing in above</td></tr>
+<tr><td>YouGile did not accept the sign-in or the key</td><td>check the key or the password; a key belongs to one company</td></tr>
+<tr><td>… has several companies — name one</td><td>add <code>--company &#34;Name&#34;</code></td></tr>
+<tr><td>no board named</td><td>add <code>--board ID</code> (from <code>takt-fetch yougile boards</code>) or <code>--all</code></td></tr>
+<tr><td>the board … has N cards — takt imports up to 10000</td><td>split the board in YouGile</td></tr>
+<tr><td>YouGile does not answer</td><td>check the internet connection or <code>--url</code></td></tr>
+<tr><td>YouGile answered 500 to …</td><td>a problem on YouGile&#39;s side; run it again later</td></tr>
+</tbody>
+</table></div>
+<footer>Takt, version v0.2.3-64-gb3393d4-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
+</main>
+</body>
+</html>

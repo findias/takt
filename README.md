@@ -98,6 +98,10 @@ test file backing each promise, is in
 - **Integrations.** An API with the version in the path, codes instead
   of text and safe retries; event subscriptions with a signature and
   retries; a full export of an organisation's data in one file.
+- **Moving in.** From a spreadsheet (CSV, Excel), from YouGile over its
+  API, or — into a closed network — from an import package that the
+  separate exporter [`takt-fetch`](docs/takt-fetch.md) builds outside:
+  subtasks, discussions, task history, and a choice for every person.
 - **Accessibility.** Everything works from the keyboard; contrast holds
   WCAG 2.2 AA in both themes; the page does not scroll sideways and
   does not lose content at double text size.
