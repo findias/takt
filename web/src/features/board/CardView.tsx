@@ -24,7 +24,7 @@ import {
   unitLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
-import { labelTitle, dotClass } from '../../entities/label/model.ts'
+import { labelTitle, chipClass } from '../../entities/label/model.ts'
 import { LabelPickerButton } from './LabelPicker.tsx'
 import type { BoardLabel, Card, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
@@ -240,6 +240,15 @@ function CardViewInner({
   const shownAssignees = assignees.slice(0, 3)
   const hiddenAssignees = assignees.length - shownAssignees.length
   const own = labels.filter((l) => cardLabels.includes(l.id))
+  // Первая метка переносит выбор из верхней строки в строку меток:
+  // кнопка «+ метка» исчезает, а фокус обязан вернуться туда, откуда
+  // открывали, — на новую кнопку, а не на `body`.
+  const labelsFrom = useRef(false)
+  useEffect(() => {
+    if (!labelsFrom.current || own.length === 0) return
+    labelsFrom.current = false
+    ref.current?.querySelector<HTMLElement>('.field.card-labels')?.focus()
+  }, [own.length])
 
   /**
    * Одна тревога на карточку.
@@ -437,47 +446,25 @@ function CardViewInner({
               </span>
             )}
 
-            {/* Метки на доске — точками, а чипами они стоят в панели.
-                Это не «компактный вид», а разные вопросы: чип отвечает
-                «что это за метка», точка — «одна ли это группа», и на
-                доске в триста карточек глаз читает только цвет. Три чипа
-                занимали строку целиком в каждой карточке.
-                Правятся нажатием по самим точкам: путь к метке должен
-                быть короче, чем поход в меню мимо людей и колонок. */}
-            {/* Выбор с поиском, а не список: в нём же заводят новую
-                метку, если нужной нет, — не уходя с доски. Поэтому
-                он стоит и тогда, когда меток на доске ещё нет. */}
-            {canEdit && (
+            {/* Метки, которых ещё нет, заводятся отсюда же: «+ метка»
+                в верхней строке. Висящие — своей строкой под названием,
+                текстом (ниже). Выбор с поиском, а не список: в нём же
+                заводят новую метку, не уходя с доски. */}
+            {canEdit && own.length === 0 && (
               <LabelPickerButton
-                label={
-                  own.length > 0
-                    ? t.cardView.labelsOf(own.map((l) => l.name).join(', '))
-                    : t.cardView.noLabels
-                }
-                className={`field label-field${own.length === 0 ? ' field--empty' : ''}`}
+                label={t.cardView.noLabels}
+                className="field label-field field--empty"
                 align="right"
                 boardId={boardId}
                 labels={labels}
                 hung={cardLabels}
                 canEdit={canEdit}
-                onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
+                onToggle={(labelId, on) => {
+                  labelsFrom.current = on
+                  onLabel(cardId, labelId, on)
+                }}
               >
-                {own.length === 0 ? (
-                  t.cardView.addLabel
-                ) : (
-                  <span className="label-dots">
-                    {/* Больше четырёх точек не показываем: пятая уже
-                        не различается глазом, а полный список есть
-                        в подсказке кнопки и в панели. */}
-                    {own.slice(0, 4).map((label) => (
-                      <span
-                        key={label.id}
-                        className={dotClass(label)}
-                        title={labelTitle(label)}
-                      />
-                    ))}
-                  </span>
-                )}
+                {t.cardView.addLabel}
               </LabelPickerButton>
             )}
             {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
@@ -636,6 +623,30 @@ function CardViewInner({
             </Menu>
             )}
           </div>
+          {/* Метки — текстом (просьба владельца 22.09.2026: «текст меток
+              должен отображаться»). Прежде стояли точки: цвет читается
+              быстрее, но что за метка, по точке не узнать, а на доске
+              после переноса меток десятки. Три — и «+N»: строка чипов
+              не должна вырастать в абзац. Нажатие правит метки. */}
+          {own.length > 0 &&
+            (canEdit ? (
+              <LabelPickerButton
+                label={t.cardView.labelsOf(own.map((l) => l.name).join(', '))}
+                className="field card-labels"
+                align="left"
+                boardId={boardId}
+                labels={labels}
+                hung={cardLabels}
+                canEdit={canEdit}
+                onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
+              >
+                <LabelChips labels={own} />
+              </LabelPickerButton>
+            ) : (
+              <div className="card-labels">
+                <LabelChips labels={own} />
+              </div>
+            ))}
           {card &&
             (alarm ||
               iteration ||
@@ -933,3 +944,23 @@ function Dependency({
  * чего и только добавляет сравнение.
  */
 export const CardView = memo(CardViewInner)
+
+/** Чипы меток карточки: до трёх и «+N». */
+function LabelChips({ labels }: { labels: BoardLabel[] }) {
+  const shown = labels.slice(0, 3)
+  const more = labels.length - shown.length
+  return (
+    <>
+      {shown.map((label) => (
+        <span key={label.id} className={`${chipClass(label)} chip--card`} title={labelTitle(label)}>
+          {label.name}
+        </span>
+      ))}
+      {more > 0 && (
+        <span className="chip chip--more chip--card" title={labels.slice(3).map((l) => l.name).join(', ')}>
+          +{more}
+        </span>
+      )}
+    </>
+  )
+}

@@ -55,8 +55,10 @@ sorted list can be sent to someone.
 
 ### Put a label on a card
 
-1. On the card press **+ label**, or open the card and find **Labels** on
-   the **Work** tab.
+1. On the card press **+ label** (or the labels themselves, shown by
+   name under the title, when it has some), or open the card and find
+   **Labels** on the **Work** tab. A card shows three labels and the number
+   of the rest.
 2. Start typing. The list offers the labels that apply on this board;
    next to each one it says where it comes from — this board, a
    subdivision, or the whole organisation.

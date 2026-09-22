@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-58-geaf1c3f-dirty.</p>
+<p>Every section in one file. Version v0.2.3-59-gcaf65cd-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -227,7 +227,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Click a column heading to sort. The order lives in the address, so a sorted list can be sent to someone.</p>
 <h3 id="put-a-label-on-a-card">Put a label on a card</h3>
 <ol>
-<li>On the card press <strong>+ label</strong>, or open the card and find <strong>Labels</strong> on the <strong>Work</strong> tab.</li>
+<li>On the card press <strong>+ label</strong> (or the labels themselves, shown by name under the title, when it has some), or open the card and find <strong>Labels</strong> on the <strong>Work</strong> tab. A card shows three labels and the number of the rest.</li>
 <li>Start typing. The list offers the labels that apply on this board; next to each one it says where it comes from — this board, a subdivision, or the whole organisation.</li>
 <li>Pick one, or press <code>Enter</code>.</li>
 </ol>
@@ -1550,6 +1550,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <li><strong>A “?” next to concepts</strong> — a column limit, the board&#39;s promise, a block, label scopes, the flow metrics, roles, key scopes: two or three sentences on what it is, and a link to the help section.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Changing an email.</strong> Your own — behind your name, on the «Вход» tab, with your password. A member&#39;s — by the owner, «Почта…» under «Команда», for someone who belongs to no other organisation. Both show in the audit log as «email: old → new». An email managed by the identity provider or directory is changed there.</li>
+<li><strong>Labels are named on the card.</strong> Under the title, as text — three of them and «+N»; they used to be coloured dots with the name only in a tooltip. Pressing them edits the card&#39;s labels.</li>
 <li><strong>Labels in three scopes.</strong> A label belongs to the organisation, a subdivision (and everything inside it) or a single board, and every list says where it comes from. The same name cannot be used twice where scopes overlap; a board label is seen only by those who see the board.</li>
 <li><strong>A label is created right from the card.</strong> Type a name that does not exist, pick where it applies, and it is created and hung in one go.</li>
 <li><strong>Blocks with a deadline.</strong> «Снимется само» when blocking; a day before, the card says so, and the filter «Блокировка истекает» gathers such cards. The time blocked stays honest in the flow metrics.</li>
@@ -1680,6 +1681,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <li><strong>«?» у понятий</strong> — лимита колонки, обещания доски, блокировки, области метки, метрик потока, ролей, разрешений ключа: две-три фразы о том, что это, и ссылка на раздел справки.</li>
 <li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Смена почты.</strong> Свою — за именем, вкладка «Вход», с паролем. Участнику — владелец, «Почта…» в «Команде», если человек не состоит в других организациях. Обе видны в журнале как «почта: старая → новая». Почту, которую ведёт провайдер или каталог, меняют там.</li>
+<li><strong>Метки подписаны на карточке.</strong> Под названием, текстом — три и «+N»; прежде стояли цветные точки, а название было только в подсказке. Нажатие по ним правит метки карточки.</li>
 <li><strong>Метки трёх областей.</strong> Метка принадлежит организации, подразделению (и всему, что в него вложено) или одной доске, и всякий список говорит, откуда она. Одно название дважды там, где области пересекаются, не заводится; метку доски видят только те, кто видит доску.</li>
 <li><strong>Метку заводят прямо с карточки.</strong> Наберите название, которого нет, выберите, где метка действует, — и она заведена и повешена за один раз.</li>
 <li><strong>Блокировка со сроком.</strong> «Снимется само» при блокировке; за сутки карточка об этом говорит, а отбор «Блокировка истекает» собирает такие карточки. Время в блоке честно попадает в метрики потока.</li>

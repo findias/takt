@@ -3356,6 +3356,7 @@ textarea.description {
 }
 .column--collapsed .add,
 .column--collapsed .column-policy,
+.column--collapsed .card-labels,
 .column--collapsed .card-marks {
   display: none;
 }
@@ -3514,6 +3515,22 @@ textarea.description {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+}
+/* На карточке доски метки — своей строкой под названием. Кнопкой она
+   сжимается по содержимому: рамка наведения вокруг трёх чипов, а не
+   во всю ширину карточки. */
+.card .card-labels {
+  margin-top: var(--space-1);
+  max-inline-size: 100%;
+}
+.field.card-labels {
+  inline-size: fit-content;
+  justify-content: flex-start;
+  padding: 0;
+}
+/* Длинное название метки обрывается: чип не должен распирать колонку. */
+.chip--card {
+  max-inline-size: 12rem;
 }
 .chip {
   /* Значение собирается из рецепта и тона: сменить рецепт — сменить

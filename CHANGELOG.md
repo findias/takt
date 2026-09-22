@@ -178,6 +178,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **Labels are named on the card.** Under the title, as text — three
+  of them and «+N»; they used to be coloured dots with the name only in
+  a tooltip. Pressing them edits the card's labels.
 - **Labels in three scopes.** A label belongs to the organisation, a
   subdivision (and everything inside it) or a single board, and every
   list says where it comes from. The same name cannot be used twice
