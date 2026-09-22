@@ -56,7 +56,7 @@ function esc(s: string): string {
 }
 
 /** Zip без сжатия: заголовок каждого файла, данные, оглавление, конец. */
-function zip(files: [string, Buffer][]): Buffer {
+export function zip(files: [string, Buffer][]): Buffer {
   const parts: Buffer[] = []
   const central: Buffer[] = []
   let offset = 0

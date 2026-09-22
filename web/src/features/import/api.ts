@@ -1,6 +1,17 @@
 import { request } from '../../shared/api/index.ts'
 import type { ImportAnswer, ImportReport, ImportRequest } from '../../shared/api/index.ts'
 
+/** Что за пакет переноса — словами для экрана. */
+export type PackageSummary = {
+  source: string
+  url?: string
+  account?: string
+  createdAt: string
+  createdBy: string
+  collectedBy?: string
+  boards: { title: string; cards: number }[]
+}
+
 /**
  * Клиент API переноса. Отдельно от общего `api`: экран переноса
  * открывают раз в жизни организации, а общий клиент едет в первую
@@ -45,4 +56,20 @@ export const importApi = {
     apply: boolean
   }) =>
     request<{ report: ImportReport }>('POST', '/api/import/yougile', body, false, IMPORT_TIMEOUT_MS),
+  /** Пакет переноса (docs/import-package.md): файл base64, доска с единицы. */
+  importPackage: (body: {
+    file: string
+    board: number
+    boardId?: string
+    newBoardName?: string
+    columns?: Record<string, string>
+    apply: boolean
+  }) =>
+    request<{ package: PackageSummary; board: number; report: ImportReport }>(
+      'POST',
+      '/api/import/package',
+      body,
+      false,
+      IMPORT_TIMEOUT_MS,
+    ),
 }

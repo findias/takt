@@ -246,6 +246,15 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <p>What comes across: every task that is not in YouGile&#39;s archive, into the column of the same name; assignees by email; the deadline as the due date; the created and finished dates; stickers as labels named “Sticker: value”, except a sticker called Priority, whose values become the card&#39;s priority; checklists at the end of the description. What does not, and the preview lists it under <strong>Not imported</strong>: tasks in YouGile&#39;s archive, subtasks (for now), task chats, files, access rights and time tracking. Importing the same board again skips what has already come.</p>
 <p>The server has to reach YouGile. In a closed network it cannot: export a table in YouGile (Reports → Tables) and import it as a spreadsheet. An administrator can switch import over the API off altogether with <code>YOUGILE_URL=off</code>; for a boxed YouGile, <code>YOUGILE_URL</code> holds its address.</p>
+<h3 id="import-package">Import a package from a closed network</h3>
+<p>A package (<code>.takt</code>) carries boards from YouGile, Jira, Trello and other trackers into a closed network, together with what a spreadsheet loses: subtasks, links between cards and discussions. It is built outside, where there is internet, and carried in as a file.</p>
+<ol>
+<li><strong>Boards</strong> tab → <strong>Import tasks from a spreadsheet…</strong> → **Import package**, and pick the file.</li>
+<li>The screen says where the package came from and who built it. If it carries several boards, pick one in <strong>Package board</strong>: boards are imported one at a time, each with its own preview.</li>
+<li>Choose where to and read <strong>What will happen</strong>: besides cards it counts subtasks, links and discussion replies. A person the source gave no e-mail for (Trello gives e-mails only to an administrator) is listed by name.</li>
+<li>Import. <strong>Import the next board of the package</strong> takes the same file to its next board.</li>
+</ol>
+<p>A reply by someone who is not in the organisation comes on behalf of the person importing and starts with the author&#39;s name — “from YouGile: Ivan Petrov”. A damaged package is refused as a whole and says which part did not match. Packages over 50 MB are imported by an administrator on the server; the format is described in <a href="import-package.html">Import package</a>.</p>
 <h2 id="team">The organisation</h2>
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
@@ -314,7 +323,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-46-ga163dda-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-47-g8d55e92-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

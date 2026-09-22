@@ -503,3 +503,29 @@ application, and that is checked on our side
 (`migration_compat_test.go`). A database backup before the upgrade is
 still required: we verify the rule, you own the data. If a migration
 was declared breaking, `CHANGELOG.md` says so in its own line.
+
+## Moving boards into a closed network
+
+Boards from YouGile, Jira, Trello and other trackers come into a closed
+network as an [import package](import-package.md) — a `.takt` file
+built outside, where there is internet. A package up to 50 MB is
+imported on the screen (**Boards** → **Import tasks from a
+spreadsheet…** → **Import package**). A bigger one, or many boards in a
+row, an administrator imports on the server:
+
+```sh
+# on an ordinary machine
+sudo -u takt bash -c 'set -a; . /etc/takt.env; set +a; /opt/takt/takt import /srv/warehouse.takt --as anna@company.test'
+
+# in Kubernetes: the root filesystem is read-only, so the package goes
+# through standard input
+kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test < warehouse.takt
+```
+
+Without `--apply` the command only shows what will happen — the same
+preview as the screen. The import runs on behalf of the person named in
+`--as`, with their rights: a viewer imports nothing, a board they cannot
+write to is refused. `--board 2` picks the second board of the
+package, `--into` an existing board, `--new-board` the name of a new
+one, `--org` the organisation when the person belongs to several.
+

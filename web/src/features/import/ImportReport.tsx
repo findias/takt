@@ -18,6 +18,9 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
         <strong>{report.applied ? s.created(report.created) : s.willCreate(report.created, report.rows)}</strong>{' '}
         {report.newBoard && !report.applied ? s.toNewBoard(boardName) : s.toBoard(report.boardName)}
       </p>
+      {report.parts + report.links + report.comments > 0 && (
+        <p>{s.relations(report.parts, report.links, report.comments)}</p>
+      )}
 
       {report.newColumns.length > 0 && (
         <div>
@@ -48,7 +51,9 @@ export function ImportReport({ report, boardName }: { report: Report; boardName:
           <h4>{s.missing}</h4>
           <ul className="import-list">
             {report.missingPeople.map((p) => (
-              <li key={p.email}>{s.missingPerson(p.email, p.cards)}</li>
+              <li key={p.email || p.name}>
+                {p.email ? s.missingPerson(p.email, p.cards) : s.noEmail(p.name ?? '', p.cards)}
+              </li>
             ))}
           </ul>
         </div>

@@ -159,6 +159,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerHelpRoutes(mux)
 	s.registerImportRoutes(mux)
 	s.registerYougileRoutes(mux)
+	s.registerPackageRoutes(mux)
 	s.registerNotificationRoutes(mux)
 	s.registerSCIMRoutes(mux)
 

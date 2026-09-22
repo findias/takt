@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -42,6 +43,11 @@ type ImportReport struct {
 	NewBoard  bool   `json:"newBoard"`
 	Rows      int    `json:"rows"`
 	Created   int    `json:"created"`
+	// Что переезжает сверх карточек — из пакета переноса: подзадачи,
+	// связи, реплики обсуждения.
+	Parts    int `json:"parts"`
+	Links    int `json:"links"`
+	Comments int `json:"comments"`
 	// Уже перенесённые прежним прогоном — по внешнему ключу.
 	Skipped    []ImportSkip   `json:"skipped"`
 	NewColumns []ImportColumn `json:"newColumns"`
@@ -93,9 +99,11 @@ type ImportColumn struct {
 	Kind string `json:"kind"`
 }
 
-// MissingPerson — почта из файла, которой нет в организации.
+// MissingPerson — почта из файла, которой нет в организации, или имя
+// человека, чью почту источник не отдал (Trello — не администратору).
 type MissingPerson struct {
 	Email string `json:"email"`
+	Name  string `json:"name,omitempty"`
 	Cards int    `json:"cards"`
 }
 
@@ -190,7 +198,7 @@ func (s *Service) Import(
 		if name == "" {
 			return rep, badRequestf("у доски должно быть название")
 		}
-		wanted := newBoardColumns(ctx, plan.Columns)
+		wanted := newBoardColumns(ctx, plan.Columns, plan.ColumnKinds)
 		var b Info
 		if b, columns, err = createBoard(ctx, tx, orgID, name, "", wanted); err != nil {
 			return rep, err
@@ -264,21 +272,25 @@ func (s *Service) Import(
 		keys[i] = c.ExternalID
 	}
 	already := map[string]ImportSkip{}
+	// Идентификаторы уже перенесённого — чтобы новая подзадача нашла
+	// родителя, переехавшего прошлым прогоном.
+	alreadyID := map[string]string{}
 	rows, err := tx.Query(ctx, `
-		select c.external_id, c.number, b.name
+		select c.external_id, c.id, c.number, b.name
 		  from cards c join boards b on b.id = c.board_id
 		 where c.external_source = $1 and c.external_id = any($2)`, plan.Source, keys)
 	if err != nil {
 		return rep, err
 	}
 	for rows.Next() {
-		var k string
+		var k, id string
 		var sk ImportSkip
-		if err := rows.Scan(&k, &sk.Number, &sk.Board); err != nil {
+		if err := rows.Scan(&k, &id, &sk.Number, &sk.Board); err != nil {
 			rows.Close()
 			return rep, err
 		}
 		already[k] = sk
+		alreadyID[k] = id
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -290,6 +302,11 @@ func (s *Service) Import(
 	for _, c := range plan.Cards {
 		for _, e := range c.Assignees {
 			emails[e] = true
+		}
+		for _, cm := range c.Comments {
+			if cm.AuthorEmail != "" {
+				emails[cm.AuthorEmail] = true
+			}
 		}
 	}
 	people := map[string]string{}
@@ -377,6 +394,7 @@ func (s *Service) Import(
 	}
 
 	var links, assignees, labelCards, labelIDs []string
+	nameless := map[string]int{}
 	for i, r := range todo {
 		id := ids[i]
 		if id == "" {
@@ -399,6 +417,9 @@ func (s *Service) Import(
 				labelCards, labelIDs = append(labelCards, id), append(labelIDs, lid)
 			}
 		}
+		for _, name := range r.card.Unmatched {
+			nameless[name]++
+		}
 	}
 	// Исполнители и метки — тоже одним запросом на вид. Назначение
 	// через перенос уведомлений не шлёт (см. выше), поэтому здесь нет
@@ -419,8 +440,14 @@ func (s *Service) Import(
 			return rep, err
 		}
 	}
+	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, people, &rep); err != nil {
+		return rep, err
+	}
 	for e, n := range missing {
 		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Email: e, Cards: n})
+	}
+	for name, n := range nameless {
+		rep.MissingPeople = append(rep.MissingPeople, MissingPerson{Name: name, Cards: n})
 	}
 	sortMissing(rep.MissingPeople)
 
@@ -647,7 +674,10 @@ func boardColumns(ctx context.Context, tx pgx.Tx, boardID string) ([]Column, err
 // разметка ставится сразу: стартом — первая колонка работы, финишем —
 // первая готовая. Готовой в файле нет — в конец добавляется «Готово».
 // Ошиблись — переразметить колонку на доске можно одной кнопкой.
-func newBoardColumns(ctx context.Context, names []string) []Column {
+func newBoardColumns(ctx context.Context, names []string, kinds map[string]string) []Column {
+	if hinted(names, kinds) {
+		return keptColumns(ctx, names, kinds)
+	}
 	if len(names) == 0 {
 		return []Column{
 			{Name: i18n.Name(ctx, "Очередь"), Kind: KindQueue},
@@ -833,6 +863,170 @@ func sortMissing(list []MissingPerson) {
 		if c := cmp.Compare(b.Cards, a.Cards); c != 0 {
 			return c
 		}
-		return cmp.Compare(a.Email, b.Email)
+		if c := cmp.Compare(a.Email, b.Email); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Name, b.Name)
 	})
+}
+
+// hinted — знает ли источник разметку своих колонок сам. Пакет
+// переноса знает: у колонки есть вид, и порядок у неё тот, что был
+// на доске, — угадывать по названию тогда незачем.
+func hinted(names []string, kinds map[string]string) bool {
+	for _, n := range names {
+		if kinds[strings.ToLower(n)] != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// keptColumns — колонки в порядке источника с его разметкой. Вид,
+// которого источник не назвал, угадывается по названию; стартом
+// становится первая колонка работы, финишем — первая готовая, а без
+// готовой в конец добавляется «Готово».
+func keptColumns(ctx context.Context, names []string, kinds map[string]string) []Column {
+	out := make([]Column, 0, len(names)+1)
+	for i, n := range names {
+		kind := kinds[strings.ToLower(n)]
+		if kind != KindQueue && kind != KindInProgress && kind != KindDone {
+			kind = importer.ColumnKind(n)
+		}
+		if kind == "" {
+			kind = KindInProgress
+			if i == 0 {
+				kind = KindQueue
+			}
+		}
+		out = append(out, Column{Name: n, Kind: kind})
+	}
+	var started, finished bool
+	for i := range out {
+		if out[i].Kind == KindInProgress && !started {
+			out[i].IsStartedPoint, started = true, true
+		}
+		if out[i].Kind == KindDone && !finished {
+			out[i].IsFinishedPoint, finished = true, true
+		}
+	}
+	if !finished {
+		out = append(out, Column{Name: i18n.Name(ctx, "Готово"), Kind: KindDone, IsFinishedPoint: true})
+	}
+	if !started {
+		for i := range out {
+			if out[i].IsFinishedPoint {
+				out[i].IsStartedPoint = true
+			}
+		}
+	}
+	return out
+}
+
+// importRelations переносит то, что связывает карточки и что сказано
+// о них: подзадачи, связи, обсуждение. Только у карточек, заведённых
+// этим прогоном: у переехавших раньше всё это уже было перенесено.
+//
+// Родитель ищется и среди заведённых сейчас, и среди переехавших
+// прошлым прогоном: пакет могли собрать заново, дописав подзадачи
+// к уже перенесённой задаче.
+func importRelations(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, plan importer.Plan,
+	todo []importRow, ids []string, alreadyID, people map[string]string, rep *ImportReport,
+) error {
+	byKey := map[string]string{}
+	for k, id := range alreadyID {
+		byKey[k] = id
+	}
+	parentOf := map[string]string{}
+	for i, r := range todo {
+		if ids[i] != "" {
+			byKey[r.card.ExternalID] = ids[i]
+		}
+		if r.card.Parent != "" {
+			parentOf[r.card.ExternalID] = r.card.Parent
+		}
+	}
+	// Глубина дерева — тем же пределом, что у операции связывания:
+	// дерево глубже не заводится руками и не должно приезжать извне.
+	depth := func(key string) int {
+		n := 1
+		for at := parentOf[key]; at != "" && n <= MaxSubtaskDepth; at = parentOf[at] {
+			n++
+		}
+		return n
+	}
+
+	// Отдельным выражением, а не внутри склейки: проверка переводов
+	// видит слово только так, и английская реплика начиналась бы с «из».
+	fromWord := i18n.Name(ctx, "из")
+
+	var from, to, kinds []string
+	var cCards []string
+	var cAuthors []string
+	var cTexts []string
+	var cAt []time.Time
+	for i, r := range todo {
+		id := ids[i]
+		if id == "" {
+			continue
+		}
+		c := r.card
+		if c.Parent != "" {
+			parent := byKey[c.Parent]
+			switch {
+			case parent == "":
+				rep.Problems = append(rep.Problems, importer.Problem{Row: c.Row, Value: c.Parent,
+					Message: fmt.Sprintf("родитель «%s» не переехал — карточка переедет без него", c.Parent)})
+			case depth(c.ExternalID) > MaxSubtaskDepth:
+				rep.Problems = append(rep.Problems, importer.Problem{Row: c.Row, Value: c.Parent,
+					Message: fmt.Sprintf("дерево подзадач глубже %d уровней — связь с родителем не переносится", MaxSubtaskDepth)})
+			default:
+				from, to, kinds = append(from, parent), append(to, id), append(kinds, "subtask")
+				rep.Parts++
+			}
+		}
+		for _, l := range c.Links {
+			if target := byKey[l.To]; target != "" && target != id {
+				from, to, kinds = append(from, id), append(to, target), append(kinds, l.Kind)
+				rep.Links++
+			}
+		}
+		for _, cm := range c.Comments {
+			author, text := people[cm.AuthorEmail], cm.Text
+			if cm.AuthorEmail == "" || author == "" {
+				// Автора нет в организации: реплика от переносящего,
+				// а чья она — сказано в ней самой. Выдумывать человека
+				// нельзя, и приписать слова не тому — тоже.
+				author = actorID
+				if cm.AuthorName != "" {
+					text = fromWord + " " + plan.SourceName + ": " + cm.AuthorName + "\n\n" + text
+				}
+			}
+			at := cm.At
+			if at.IsZero() {
+				at = time.Now()
+			}
+			cCards, cAuthors, cTexts, cAt = append(cCards, id), append(cAuthors, author), append(cTexts, text), append(cAt, at)
+			rep.Comments++
+		}
+	}
+	if len(from) > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into card_links (org_id, from_card, to_card, kind, created_by)
+			select $1, f, t, k, $5 from unnest($2::uuid[], $3::uuid[], $4::text[]) as x(f, t, k)
+			on conflict do nothing`, orgID, from, to, kinds, actorID); err != nil {
+			return err
+		}
+	}
+	if len(cCards) > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into card_comments (org_id, board_id, card_id, author_id, body, created_at)
+			select $1, $2, c, a, b, t
+			  from unnest($3::uuid[], $4::uuid[], $5::text[], $6::timestamptz[]) as x(c, a, b, t)`,
+			orgID, boardID, cCards, cAuthors, cTexts, cAt); err != nil {
+			return err
+		}
+	}
+	return nil
 }

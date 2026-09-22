@@ -60,6 +60,12 @@ come in English when the `lang` cookie or `Accept-Language` asks for
 it. Without either the answer is Russian, as before, so integrations
 see no change.
 
+**A new command, `takt import`, for boards coming into a closed
+network.** It imports an import package (`.takt`, see
+`docs/import-package.md`) on the server, on behalf of the person named
+in `--as` and with their rights; without `--apply` it only previews.
+Packages up to 50 MB can also be imported on the screen.
+
 **A new setting, `YOUGILE_URL`, and a new outbound connection.**
 Importing a board from YouGile makes the server call YouGile, only
 while someone does so. Unset, that is the cloud `https://ru.yougile.com`;
@@ -105,6 +111,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   dates, stickers as labels and checklists come across; what does not —
   YouGile's archive, subtasks for now, chats, files, rights, time
   tracking — is listed before the import.
+- **Import packages.** The import screen reads a `.takt` package — boards
+  from another tracker built outside a closed network and carried in —
+  with subtasks, links and discussions, one board at a time with the
+  same preview. A damaged package is refused and names the part that
+  did not match.
 - **Notifications.** A bell in the header counts what is unread: being
   called into a discussion (**@ Mention** under a reply), assigned to
   a card, a block on your card, less than a day left on that block, the

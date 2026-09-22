@@ -348,6 +348,33 @@ a table in YouGile (Reports → Tables) and import it as a spreadsheet.
 An administrator can switch import over the API off altogether with
 `YOUGILE_URL=off`; for a boxed YouGile, `YOUGILE_URL` holds its address.
 
+<!-- anchor: import-package -->
+### Import a package from a closed network
+
+A package (`.takt`) carries boards from YouGile, Jira, Trello and other
+trackers into a closed network, together with what a spreadsheet
+loses: subtasks, links between cards and discussions. It is built
+outside, where there is internet, and carried in as a file.
+
+1. **Boards** tab → **Import tasks from a spreadsheet…** → **Import
+   package**, and pick the file.
+2. The screen says where the package came from and who built it. If it
+   carries several boards, pick one in **Package board**: boards are
+   imported one at a time, each with its own preview.
+3. Choose where to and read **What will happen**: besides cards it
+   counts subtasks, links and discussion replies. A person the source
+   gave no e-mail for (Trello gives e-mails only to an administrator)
+   is listed by name.
+4. Import. **Import the next board of the package** takes the same file
+   to its next board.
+
+A reply by someone who is not in the organisation comes on behalf of
+the person importing and starts with the author's name — “from YouGile:
+Ivan Petrov”. A damaged package is refused as a whole and says which
+part did not match. Packages over 50 MB are imported by an
+administrator on the server; the format is described in
+[Import package](import-package.md).
+
 <!-- anchor: team -->
 ## The organisation
 

@@ -24,6 +24,7 @@ export const HELP_TOPICS = {
   account: 'howto#language',
   import: 'howto#import',
   importYougile: 'howto#import-yougile',
+  importPackage: 'howto#import-package',
   // Понятия с «?» (ROADMAP 30.4): «Подробнее в справке» ведёт сюда.
   markup: 'howto#columns',
   limit: 'howto#columns',

@@ -7,6 +7,19 @@ export const imports: typeof ru = {
   source: 'From',
   fromFile: 'A spreadsheet',
   fromYougile: 'YouGile',
+  fromPackage: 'Import package',
+  packageIntro:
+    'An import package is a .takt file built by the takt-fetch exporter where there is internet: boards from YouGile, Jira, Trello and other trackers together with subtasks, links and discussions. A package larger than 50 MB is imported by an administrator with takt import on the server.',
+  packageFile: 'Package file (.takt)',
+  packageTooBig: 'The package is larger than 50 MB — an administrator imports such a package with takt import on the server',
+  packageFrom: (source: string, account: string, by: string, date: string) =>
+    `From ${source}${account ? ` (${account})` : ''}, built by ${by} on ${date}.`,
+  packageBoard: 'Package board',
+  nextPackageBoard: 'Import the next board of the package',
+  packageBoardOf: (title: string, n: number) => `${title} — ${cards(n)}`,
+  relations: (parts: number, links: number, comments: number) =>
+    `Subtasks: ${parts}, links: ${links}, discussion replies: ${comments}.`,
+  noEmail: (name: string, n: number) => `${name} (no email) — ${cards(n)}`,
   ygIntro:
     'A YouGile board is imported whole through its API. The password is needed once, to get the company’s API key; we keep neither the password nor the key. If the server is in a closed network, export a table from YouGile (Reports → Tables) and import it as a spreadsheet.',
   ygLogin: 'YouGile email',
@@ -24,7 +37,7 @@ export const imports: typeof ru = {
   ygChangeKey: 'Another company or key',
   lost: 'Not imported',
   intro:
-    'Tasks from Excel, Google Sheets, another tracker’s export or straight from YouGile — onto a board. We show what will happen first and import only after that.',
+    'Tasks from Excel, Google Sheets, another tracker’s export, straight from YouGile or from an import package — onto a board. We show what will happen first and import only after that.',
   sample: 'Download a sample spreadsheet',
   sampleHint:
     'The sample’s columns are recognised on their own. We guess the encoding and the separator: Excel saves CSV its own way, and that is fine.',

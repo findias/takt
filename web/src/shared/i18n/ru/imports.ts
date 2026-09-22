@@ -7,6 +7,19 @@ export const imports = {
   source: 'Откуда',
   fromFile: 'Из таблицы',
   fromYougile: 'Из YouGile',
+  fromPackage: 'Пакет переноса',
+  packageIntro:
+    'Пакет переноса — файл .takt, который собирает выгрузчик takt-fetch там, где есть интернет: доски YouGile, Jira, Trello и других трекеров вместе с подзадачами, связями и обсуждением. Пакет больше 50 МБ переносит администратор командой takt import на сервере.',
+  packageFile: 'Файл пакета (.takt)',
+  packageTooBig: 'Пакет больше 50 МБ — такой переносит администратор командой takt import на сервере',
+  packageFrom: (source: string, account: string, by: string, date: string) =>
+    `Из ${source}${account ? ` (${account})` : ''}, собран ${by} ${date}.`,
+  packageBoard: 'Доска пакета',
+  nextPackageBoard: 'Перенести следующую доску пакета',
+  packageBoardOf: (title: string, cards: number) => `${title} — ${карточек(cards)}`,
+  relations: (parts: number, links: number, comments: number) =>
+    `Подзадач: ${parts}, связей: ${links}, реплик обсуждения: ${comments}.`,
+  noEmail: (name: string, n: number) => `${name} (почты нет) — ${карточек(n)}`,
   ygIntro:
     'Доска YouGile переносится целиком по его API. Пароль нужен один раз — получить ключ API компании; ни пароль, ни ключ мы не храним. Если сервер в закрытом контуре, выгрузите таблицу в YouGile («Отчёты → Таблицы») и перенесите её из таблицы.',
   ygLogin: 'Почта в YouGile',
@@ -24,7 +37,7 @@ export const imports = {
   ygChangeKey: 'Другая компания или ключ',
   lost: 'Не переносится',
   intro:
-    'Задачи из Excel, Google Таблиц, выгрузки другого трекера или прямо из YouGile — на доску. Сначала покажем, что получится, переносить будем после.',
+    'Задачи из Excel, Google Таблиц, выгрузки другого трекера, прямо из YouGile или пакетом переноса — на доску. Сначала покажем, что получится, переносить будем после.',
   sample: 'Скачать образец таблицы',
   sampleHint:
     'Колонки образца узнаются сами. Кодировку и разделитель мы угадаем: Excel сохраняет CSV по-своему, и это нормально.',

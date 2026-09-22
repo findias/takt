@@ -85,6 +85,30 @@ type Card struct {
 	Due      *time.Time
 	Created  *time.Time
 	Done     *time.Time
+
+	// То, чего в таблице нет, а в пакете переноса есть (docs/import-package.md).
+	// Parent — внешний ключ родителя: карточка станет его частью.
+	Parent   string
+	Links    []Link
+	Comments []Comment
+	// Unmatched — исполнители, у которых источник не дал почты: найти
+	// их нельзя, но назвать в отчёте нужно.
+	Unmatched []string
+}
+
+// Link — связь с другой карточкой того же переноса: blocks или relates.
+type Link struct {
+	Kind string
+	To   string
+}
+
+// Comment — реплика обсуждения. Автор ищется по почте; не найден —
+// реплика пишется от имени переносящего и начинается с имени автора.
+type Comment struct {
+	AuthorEmail string
+	AuthorName  string
+	At          time.Time
+	Text        string
 }
 
 // Problem — что в строке не так. Плохая строка не роняет импорт:
@@ -118,6 +142,11 @@ type Plan struct {
 	Columns  []string
 	Dates    []DateFormat
 	Rows     int
+	// SourceName — как источник назвать человеку: «из YouGile: Иван Петров».
+	SourceName string
+	// ColumnKinds — разметка колонок, которую источник знает сам
+	// (пакет переноса); пусто — угадывается по названию.
+	ColumnKinds map[string]string
 	// Lost — что источник знает, а мы не переносим, словами для отчёта.
 	// Молчаливая потеря хуже названной: «чат и файлы остались в YouGile»
 	// человек должен прочитать до переноса, а не обнаружить после.

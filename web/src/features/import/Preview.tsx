@@ -60,7 +60,16 @@ export function Preview({
 }
 
 /** Итог: что перенесено, и куда идти дальше. */
-export function Done({ report, onAnother }: { report: Report; onAnother: () => void }) {
+export function Done({
+  report,
+  onAnother,
+  anotherLabel = t.imports.another,
+}: {
+  report: Report
+  onAnother: () => void
+  /** У пакета «ещё» — следующая доска того же файла, а не новый файл. */
+  anotherLabel?: string
+}) {
   return (
     <>
       <ImportReport report={report} boardName={report.boardName} />
@@ -68,7 +77,7 @@ export function Done({ report, onAnother }: { report: Report; onAnother: () => v
         <button className="primary" onClick={() => report.boardId && navigate(boardPath(report.boardId))}>
           {t.imports.open}
         </button>
-        <button onClick={onAnother}>{t.imports.another}</button>
+        <button onClick={onAnother}>{anotherLabel}</button>
       </div>
     </>
   )

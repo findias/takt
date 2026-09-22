@@ -49,6 +49,7 @@ var Страницы = []Страница{
 	{"architecture", "architecture.md", "ru/устройство.md", "Design decisions", "Устройство", true},
 	{"install", "install.md", "ru/установка.md", "Installation", "Установка", true},
 	{"security-review", "security-review.md", "ru/проверка-иб.md", "Security review", "Проверка ИБ", true},
+	{"import-package", "import-package.md", "ru/пакет-переноса.md", "Import package", "Пакет переноса", true},
 }
 
 // Исходники, которых в справке нет (требования, список изменений, README),

@@ -153,6 +153,9 @@ test('на всех экранах цели нажатия не мельче 24 
   await page.getByRole('radio', { name: 'Из YouGile' }).check()
   await expect(page.getByRole('button', { name: 'Найти компании' })).toBeVisible()
   expect(await tinyTargets(page), 'перенос из YouGile').toEqual([])
+  await page.getByRole('radio', { name: 'Пакет переноса' }).check()
+  await expect(page.getByLabel('Файл пакета (.takt)')).toBeVisible()
+  expect(await tinyTargets(page), 'пакет переноса').toEqual([])
   await page.goto('/team')
   await expect(page.getByRole('heading', { name: 'В организации' })).toBeVisible()
 

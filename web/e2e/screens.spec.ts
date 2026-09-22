@@ -1,4 +1,5 @@
 import { workbook } from './xlsx.ts'
+import { taktPackage } from './takt-package.ts'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -382,6 +383,41 @@ test('снимки экранов', async ({ page, browser }) => {
   await expect(page.getByText(/Переедут 3 карточки/)).toBeVisible()
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/21е-перенос-из-yougile.png`, fullPage: true })
+
+  // Пакет переноса: откуда он, какая доска, подзадачи, связи, реплики
+  // и человек без почты — предпросмотр, без переноса.
+  await page.goto('/import')
+  await page.getByRole('radio', { name: 'Пакет переноса' }).check()
+  await page.getByLabel('Файл пакета (.takt)').setInputFiles({
+    name: 'склад.takt',
+    mimeType: 'application/zip',
+    buffer: taktPackage([
+      {
+        externalId: 'b-1',
+        title: 'Склад',
+        columns: [
+          { externalId: 'c-1', title: 'Нужно сделать', kind: 'queue' },
+          { externalId: 'c-2', title: 'В работе', kind: 'in_progress' },
+          { externalId: 'c-3', title: 'Сделано', kind: 'done' },
+        ],
+        people: [
+          { externalId: 'u-1', email: 'anna@example.test', name: 'Анна Королёва' },
+          { externalId: 'u-2', email: null, name: 'Иван Петров' },
+        ],
+        labels: [{ externalId: 'l-1', name: 'Участок: Склад №2' }],
+        cards: [
+          { externalId: 't-1', title: 'Сверить остатки', column: 'c-2', assignees: ['u-1', 'u-2'], labels: ['l-1'],
+            comments: [{ author: 'u-2', at: '2026-09-03T09:00:00Z', text: 'Ряд первый сверен' }] },
+          { externalId: 't-2', title: 'Выгрузить остатки', column: 'c-1', parent: 't-1' },
+          { externalId: 't-3', title: 'Отчёт за август', column: 'c-3', finishedAt: '2026-09-05T00:00:00Z', links: [{ kind: 'relates', to: 't-1' }] },
+        ],
+      },
+      { externalId: 'b-2', title: 'Закупки', columns: [{ externalId: 'c-9', title: 'Очередь' }], people: [], labels: [], cards: [{ externalId: 'z-1', title: 'Поддоны', column: 'c-9' }] },
+    ]),
+  })
+  await expect(page.getByText(/Подзадач: 1/)).toBeVisible()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/21ж-пакет-переноса.png`, fullPage: true })
 
   // Структура глазами администратора области. Вид, которого в наборе
   // не было: все снимки организации снимались владельцем, а у него

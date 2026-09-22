@@ -415,6 +415,10 @@ export type ImportReport = {
   newBoard: boolean
   rows: number
   created: number
+  /** Из пакета переноса: подзадачи, связи, реплики обсуждения. */
+  parts: number
+  links: number
+  comments: number
   skipped: { row: number; title: string; number?: string; board?: string }[]
   newColumns: { name: string; kind: ColumnKind }[]
   newLabels: string[]
@@ -425,7 +429,8 @@ export type ImportReport = {
   archivedLabels: string[]
   /** Что источник знает, а мы не переносим, — словами. */
   lost: string[]
-  missingPeople: { email: string; cards: number }[]
+  /** Почта, которой нет в организации, или имя человека без почты. */
+  missingPeople: { email: string; name?: string; cards: number }[]
   problems: { row: number; field?: ImportField; value?: string; message: string; skipped: boolean }[]
   dates: { field: ImportField; header: string; format: 'iso' | 'dotted' | 'jira' | 'excel' }[]
 }

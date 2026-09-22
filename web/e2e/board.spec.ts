@@ -1,4 +1,5 @@
 import { workbook } from './xlsx.ts'
+import { taktPackage } from './takt-package.ts'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
@@ -2639,4 +2640,54 @@ test('доска YouGile переезжает по API и называет, чт
   await page.getByRole('button', { name: 'Открыть доску' }).click()
   await expect(cardIn(page, 'В работе', 'Заказать поддоны')).toBeVisible()
   await expect(cardIn(page, 'Нужно сделать', 'Сверить остатки')).toBeVisible()
+})
+
+test('пакет переноса: подзадачи, связи и обсуждение переезжают, доски — по одной', async ({ page }) => {
+  await register(page)
+  await page.goto('/import')
+  await page.getByRole('radio', { name: 'Пакет переноса' }).check()
+  await page.getByLabel('Файл пакета (.takt)').setInputFiles({
+    name: 'склад.takt',
+    mimeType: 'application/zip',
+    buffer: taktPackage([
+      {
+        externalId: 'b-1',
+        title: 'Склад',
+        columns: [
+          { externalId: 'c-1', title: 'Нужно сделать', kind: 'queue' },
+          { externalId: 'c-2', title: 'Сделано', kind: 'done' },
+        ],
+        people: [{ externalId: 'u-2', email: null, name: 'Иван Петров' }],
+        labels: [],
+        cards: [
+          {
+            externalId: 't-1',
+            title: 'Сверить остатки',
+            column: 'c-1',
+            assignees: ['u-2'],
+            comments: [{ author: 'u-2', at: '2026-09-03T09:00:00Z', text: 'Ряд первый сверен' }],
+          },
+          { externalId: 't-2', title: 'Выгрузить остатки', column: 'c-1', parent: 't-1' },
+          { externalId: 't-3', title: 'Отчёт', column: 'c-2', links: [{ kind: 'relates', to: 't-1' }] },
+        ],
+      },
+      { externalId: 'b-2', title: 'Закупки', columns: [{ externalId: 'c-9', title: 'Очередь' }], people: [], labels: [], cards: [{ externalId: 'z-1', title: 'Поддоны', column: 'c-9' }] },
+    ]),
+  })
+
+  await expect(page.getByText(/Из YouGile \(Северная логистика\), собран takt-fetch e2e/)).toBeVisible()
+  await expect(page.getByLabel('Доска пакета')).toHaveValue('1')
+  await expect(page.getByText('Переедут 3 карточки из 3 строк.')).toBeVisible()
+  await expect(page.getByText('Подзадач: 1, связей: 1, реплик обсуждения: 1.')).toBeVisible()
+  await expect(page.getByText('Иван Петров (почты нет) — 1 карточка')).toBeVisible()
+  await expect(page.getByText('файлы вложений')).toBeVisible()
+  await page.getByRole('button', { name: 'Перенести 3 карточки' }).click()
+
+  // Следующая доска того же пакета — без повторного выбора файла.
+  await page.getByRole('button', { name: 'Перенести следующую доску пакета' }).click()
+  await expect(page.getByLabel('Доска пакета')).toHaveValue('2')
+  await expect(page.getByText('Переедет 1 карточка из 1 строки.')).toBeVisible()
+  await page.getByRole('button', { name: 'Перенести 1 карточку' }).click()
+  await page.getByRole('button', { name: 'Открыть доску' }).click()
+  await expect(cardIn(page, 'Очередь', 'Поддоны')).toBeVisible()
 })

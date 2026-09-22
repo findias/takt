@@ -341,7 +341,16 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
-<footer>Takt, version v0.2.3-46-ga163dda-dirty. Built from install.md — edit the source, not this page.</footer>
+<h2 id="moving-boards-into-a-closed-network">Moving boards into a closed network</h2>
+<p>Boards from YouGile, Jira, Trello and other trackers come into a closed network as an <a href="import-package.html">import package</a> — a <code>.takt</code> file built outside, where there is internet. A package up to 50 MB is imported on the screen (<strong>Boards</strong> → <strong>Import tasks from a spreadsheet…</strong> → <strong>Import package</strong>). A bigger one, or many boards in a row, an administrator imports on the server:</p>
+<pre><code># on an ordinary machine
+sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import /srv/warehouse.takt --as anna@company.test&#39;
+
+# in Kubernetes: the root filesystem is read-only, so the package goes
+# through standard input
+kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
+<p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several.</p>
+<footer>Takt, version v0.2.3-47-g8d55e92-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

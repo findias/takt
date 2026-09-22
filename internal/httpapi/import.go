@@ -10,6 +10,7 @@ import (
 	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/importer"
+	"github.com/findias/takt/internal/importer/pack"
 )
 
 // Файл едет в теле запроса base64: 5 МБ таблицы — это десятки тысяч
@@ -75,6 +76,13 @@ func (s *Server) handleImportTable(w http.ResponseWriter, r *http.Request, p aut
 	}
 	if len(req.File) > maxImportFile {
 		writeError(w, http.StatusRequestEntityTooLarge, "файл больше 5 МБ — перенесите его по частям")
+		return
+	}
+	// Пакет переноса — тоже zip, и без этой проверки ответом было бы
+	// «не похоже на книгу Excel»: верно, но не говорит, куда его нести.
+	if pack.IsPackage(req.File) {
+		writeCoded(w, http.StatusBadRequest, "import_unreadable",
+			"это пакет переноса takt — выберите источник «Пакет переноса»")
 		return
 	}
 	table, sheets, sheet, err := importer.Read(req.File, req.Sheet)

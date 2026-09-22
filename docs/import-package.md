@@ -1,9 +1,9 @@
 # Import package
 
-**Status: specification, version 1.** Nothing reads or writes this
-format yet. This page is the promise the exporter (`takt-fetch`) and
-the import inside takt will both be checked against; once they exist,
-the page stops being a plan and becomes their description.
+**Format version 1.** takt reads it — on the import screen and with
+`takt import` on the server. The exporter that writes it, `takt-fetch`,
+is not built yet; until then this page is also the promise it will be
+checked against.
 
 ## What it is for
 
