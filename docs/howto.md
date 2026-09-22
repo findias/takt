@@ -293,7 +293,8 @@ Assignment by import sends no notifications.
 
 A sample spreadsheet is on the same screen (**Download a sample
 spreadsheet**); its columns are recognised without any changes. One
-import takes up to 5,000 rows and 5 MB; split a bigger file.
+import takes up to 10,000 rows and 5 MB and runs in seconds; split
+a bigger file.
 
 <!-- anchor: team -->
 ## The organisation

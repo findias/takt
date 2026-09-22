@@ -3,9 +3,11 @@ package board
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/findias/takt/internal/importer"
 	"github.com/findias/takt/internal/rank"
 	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // ImportTarget — куда переносим: в новую доску (имя) или в существующую.
@@ -276,6 +279,7 @@ func (s *Service) Import(
 		}
 	}
 
+	var todo []importRow
 	for i, c := range plan.Cards {
 		if sk, ok := already[c.ExternalID]; ok {
 			sk.Row, sk.Title = c.Row, c.Title
@@ -283,46 +287,55 @@ func (s *Service) Import(
 			continue
 		}
 		col := placeOf[i]
-		pos := positions[col.ID][0]
+		todo = append(todo, importRow{card: c, col: col, pos: positions[col.ID][0], started: started(col)})
 		positions[col.ID] = positions[col.ID][1:]
+	}
+	ids, err := insertImported(ctx, tx, orgID, actorID, rep.BoardID, plan.Source, todo)
+	if err != nil {
+		return rep, err
+	}
 
-		created, err := insertImported(ctx, tx, orgID, actorID, rep.BoardID, col, pos, c, plan.Source, started(col))
-		if err != nil {
-			return rep, err
-		}
-		if created == "" {
+	var links, assignees, labelCards, labelIDs []string
+	for i, r := range todo {
+		id := ids[i]
+		if id == "" {
 			// Двойник на доске, которой спрашивающий не видит: индекс
 			// его нашёл, а мы — нет. Назвать доску нельзя, но сказать,
 			// что строка уже переехала, — можно и нужно.
-			rep.Skipped = append(rep.Skipped, ImportSkip{Row: c.Row, Title: c.Title})
+			rep.Skipped = append(rep.Skipped, ImportSkip{Row: r.card.Row, Title: r.card.Title})
 			continue
 		}
 		rep.Created++
-
-		for _, e := range c.Assignees {
-			id, ok := people[e]
-			if !ok {
+		for _, e := range r.card.Assignees {
+			if uid, ok := people[e]; ok {
+				links, assignees = append(links, id), append(assignees, uid)
+			} else {
 				missing[e]++
-				continue
-			}
-			if _, err := tx.Exec(ctx, `
-				insert into card_assignees (org_id, card_id, user_id, added_by)
-				values ($1, $2, $3, $4)
-				on conflict (card_id, user_id) do nothing`, orgID, created, id, actorID); err != nil {
-				return rep, err
 			}
 		}
-		for _, name := range c.Labels {
-			id, ok := labels[strings.ToLower(name)]
-			if !ok {
-				continue
+		for _, name := range r.card.Labels {
+			if lid, ok := labels[strings.ToLower(name)]; ok {
+				labelCards, labelIDs = append(labelCards, id), append(labelIDs, lid)
 			}
-			if _, err := tx.Exec(ctx, `
-				insert into card_labels (org_id, card_id, label_id, added_by)
-				values ($1, $2, $3, $4)
-				on conflict (card_id, label_id) do nothing`, orgID, created, id, actorID); err != nil {
-				return rep, err
-			}
+		}
+	}
+	// Исполнители и метки — тоже одним запросом на вид. Назначение
+	// через перенос уведомлений не шлёт (см. выше), поэтому здесь нет
+	// ничего, кроме вставки.
+	if len(links) > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into card_assignees (org_id, card_id, user_id, added_by)
+			select $1, c, u, $4 from unnest($2::uuid[], $3::uuid[]) as t(c, u)
+			on conflict (card_id, user_id) do nothing`, orgID, links, assignees, actorID); err != nil {
+			return rep, err
+		}
+	}
+	if len(labelIDs) > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into card_labels (org_id, card_id, label_id, added_by)
+			select $1, c, l, $4 from unnest($2::uuid[], $3::uuid[]) as t(c, l)
+			on conflict (card_id, label_id) do nothing`, orgID, labelCards, labelIDs, actorID); err != nil {
+			return rep, err
 		}
 	}
 	for e, n := range missing {
@@ -353,82 +366,165 @@ func (s *Service) Import(
 	return rep, nil
 }
 
-// insertImported заводит одну карточку. Пустой идентификатор — такой
-// ключ уже есть в организации.
+// importRow — карточка, готовая к вставке: колонка и место в ней
+// уже выбраны.
+type importRow struct {
+	card    importer.Card
+	col     Column
+	pos     string
+	started bool
+}
+
+// insertImported заводит карточки пачкой и возвращает их
+// идентификаторы в том же порядке; пустой — такой ключ уже есть
+// в организации.
+//
+// Пачкой, а не по одной: по запросу на номер, карточку, событие
+// и доставку перенос пяти тысяч строк шёл сорок секунд (замер
+// 22.09.2026), и столько же — предпросмотр. Запросов теперь столько
+// же, сколько видов строк, а не сколько карточек.
 func insertImported(
-	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
-	col Column, pos string, c importer.Card, source string, started bool,
-) (string, error) {
-	var number string
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, source string, rows []importRow,
+) ([]string, error) {
+	ids := make([]string, len(rows))
+	if len(rows) == 0 {
+		return ids, nil
+	}
+
+	// Номера — одним сдвигом счётчика доски. Строка, отсеянная потом
+	// индексом как двойник, свой номер сжигает: выданное не
+	// возвращается, как и при обычном заведении.
+	var key string
+	var last int64
 	if err := tx.QueryRow(ctx, `
-		update boards set card_seq = card_seq + 1
+		update boards set card_seq = card_seq + $2
 		 where id = $1
-		returning key || '-' || card_seq`, boardID).Scan(&number); err != nil {
-		return "", err
+		returning key, card_seq`, boardID, len(rows)).Scan(&key, &last); err != nil {
+		return nil, err
 	}
+	first := last - int64(len(rows)) + 1
 
-	created := time.Now()
-	if c.Created != nil {
-		created = *c.Created
-	}
-	// Сделанной считается карточка в колонке финиша — как и у заведённой
-	// руками. Дата завершения из файла ставится моментом финиша;
-	// карточка в другой колонке с датой завершения получает отметку
-	// «сделано», а поток о ней не знает — как у подзадачи.
-	var finishedAt, doneAt, startedAt *time.Time
-	if col.IsFinishedPoint {
-		at := time.Now()
-		if c.Done != nil {
-			at = *c.Done
+	now := time.Now()
+	n := len(rows)
+	var (
+		numbers, columns, positions, titles, descriptions = make([]string, n), make([]string, n), make([]string, n), make([]string, n), make([]string, n)
+		priorities, externals                             = make([]string, n), make([]string, n)
+		created                                           = make([]time.Time, n)
+		startedAt, finishedAt, doneAt                     = make([]*time.Time, n), make([]*time.Time, n), make([]*time.Time, n)
+		estimates                                         = make([]*float64, n)
+		dues                                              = make([]*string, n)
+	)
+	for i, r := range rows {
+		c := r.card
+		numbers[i] = key + "-" + strconv.FormatInt(first+int64(i), 10)
+		columns[i], positions[i], titles[i], descriptions[i] = r.col.ID, r.pos, c.Title, c.Description
+		externals[i], estimates[i] = c.ExternalID, c.Estimate
+		priorities[i] = c.Priority
+		if priorities[i] == "" {
+			priorities[i] = "medium"
 		}
-		finishedAt = &at
-	} else if c.Done != nil {
-		doneAt = c.Done
-	}
-	// Начало работы в чужой системе неизвестно — считаем его моментом
-	// заведения. Время цикла у перенесённых поэтому ближе ко времени
-	// выполнения заказа, и это сказано в справке.
-	if started || col.IsFinishedPoint {
-		startedAt = &created
-	}
-	priority := c.Priority
-	if priority == "" {
-		priority = "medium"
-	}
-	var due *string
-	if c.Due != nil {
-		d := c.Due.Format("2006-01-02")
-		due = &d
+		created[i] = now
+		if c.Created != nil {
+			created[i] = *c.Created
+		}
+		// Сделанной считается карточка в колонке финиша — как и у
+		// заведённой руками. Дата завершения из файла ставится моментом
+		// финиша; карточка в другой колонке с датой завершения получает
+		// отметку «сделано», а поток о ней не знает — как у подзадачи.
+		if r.col.IsFinishedPoint {
+			at := now
+			if c.Done != nil {
+				at = *c.Done
+			}
+			finishedAt[i] = &at
+		} else if c.Done != nil {
+			doneAt[i] = c.Done
+		}
+		// Начало работы в чужой системе неизвестно — считаем его моментом
+		// заведения. Время цикла у перенесённых поэтому ближе ко времени
+		// выполнения заказа, и это сказано в справке.
+		if r.started || r.col.IsFinishedPoint {
+			startedAt[i] = &created[i]
+		}
+		if c.Due != nil {
+			d := c.Due.Format("2006-01-02")
+			dues[i] = &d
+		}
 	}
 
-	var id string
-	err := tx.QueryRow(ctx, `
+	got, err := tx.Query(ctx, `
 		insert into cards (org_id, board_id, number, column_id, position, title, description,
 		                   created_at, started_at, finished_at, outcome, done_at,
 		                   estimate, priority, due_on, external_source, external_id)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-		        case when $10::timestamptz is not null then 'done' end,
-		        $11, $12, $13, $14::date, $15, $16)
+		select $1, $2, t.number, t.col, t.pos, t.title, t.descr,
+		       t.created, t.started, t.finished,
+		       case when t.finished is not null then 'done' end,
+		       t.done, t.estimate::numeric, t.priority, t.due::date, $3, t.ext
+		  from unnest($4::text[], $5::uuid[], $6::text[], $7::text[], $8::text[],
+		              $9::timestamptz[], $10::timestamptz[], $11::timestamptz[], $12::timestamptz[],
+		              $13::float8[], $14::text[], $15::text[], $16::text[])
+		    as t(number, col, pos, title, descr, created, started, finished, done,
+		         estimate, priority, due, ext)
 		on conflict (org_id, external_source, external_id) where external_id is not null
 		do nothing
-		returning id`,
-		orgID, boardID, number, col.ID, pos, c.Title, c.Description,
-		created, startedAt, finishedAt, doneAt, c.Estimate, priority, due,
-		source, c.ExternalID).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
+		returning id, external_id`,
+		orgID, boardID, source,
+		numbers, columns, positions, titles, descriptions,
+		created, startedAt, finishedAt, doneAt,
+		estimates, priorities, dues, externals)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	byKey := map[string]string{}
+	for got.Next() {
+		var id, ext string
+		if err := got.Scan(&id, &ext); err != nil {
+			got.Close()
+			return nil, err
+		}
+		byKey[ext] = id
+	}
+	got.Close()
+	if err := got.Err(); err != nil {
+		return nil, err
+	}
+
 	// Событие заведения — с отметкой переезда: журнал честно говорит,
 	// что карточка появилась здесь сегодня, а не тогда, когда её
-	// завели в чужой системе.
-	if err := logEvent(ctx, tx, orgID, boardID, id, actorID, "created", nil, &col.ID,
-		map[string]any{"to": columnFact(col), "imported": source}); err != nil {
-		return "", err
+	// завели в чужой системе. Подписчики получают card.created, как
+	// и за карточку, заведённую руками.
+	var cardIDs, toColumns, payloads []string
+	var hooks []any
+	for i, r := range rows {
+		id := byKey[r.card.ExternalID]
+		ids[i] = id
+		if id == "" {
+			continue
+		}
+		body, err := json.Marshal(map[string]any{"to": columnFact(r.col), "imported": source})
+		if err != nil {
+			return nil, err
+		}
+		cardIDs, toColumns, payloads = append(cardIDs, id), append(toColumns, r.col.ID), append(payloads, string(body))
+		hooks = append(hooks, map[string]any{
+			"event": EventPrefix + "created", "boardId": boardID, "cardId": id,
+			"actorId": actorID, "payload": json.RawMessage(body), "at": now.UTC(),
+		})
 	}
-	return id, nil
+	if len(cardIDs) > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into card_events (org_id, board_id, card_id, actor_id, type, to_column, payload)
+			select $1, $2, t.card, $3, 'created', t.col, t.body::jsonb
+			  from unnest($4::uuid[], $5::uuid[], $6::text[]) with ordinality as t(card, col, body, n)
+			 order by t.n`,
+			orgID, boardID, actorID, cardIDs, toColumns, payloads); err != nil {
+			return nil, err
+		}
+	}
+	if err := webhook.EnqueueMany(ctx, tx, orgID, EventPrefix+"created", hooks); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
 
 func boardColumns(ctx context.Context, tx pgx.Tx, boardID string) ([]Column, error) {

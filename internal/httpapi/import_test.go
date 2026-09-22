@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Импорт из таблицы (ROADMAP 23.1–23.2). Проверяются обещания этапа:
@@ -194,5 +196,41 @@ func TestViewerCannotImportAndMappingErrorExplains(t *testing.T) {
 	_ = json.NewDecoder(resp.Body).Decode(&ans)
 	if ans.Report != nil || !strings.Contains(ans.MappingError, "title") {
 		t.Fatalf("без заголовка: %+v", ans)
+	}
+}
+
+// Перенос пачкой, а не по карточке. По запросу на номер, карточку,
+// событие и доставку пять тысяч строк шли сорок секунд — и столько же
+// предпросмотр, на который человек смотрит, выбирая колонки. Порог
+// взят с запасом вчетверо от нынешнего и вдесятеро ниже прежнего:
+// сорвётся он, только если вставка снова пойдёт по одной.
+func TestLargeTableImportsInSeconds(t *testing.T) {
+	if testing.Short() {
+		t.Skip("перенос двух тысяч строк")
+	}
+	a := newAPI(t)
+	owner := a.registerOrg("Большой файл")
+	var b strings.Builder
+	b.WriteString("Title,Status,Assignee,Labels,Estimate,Created,Key\n")
+	for i := 0; i < 2000; i++ {
+		fmt.Fprintf(&b, "Задача %d,%s,%s,m%d,%d,2026-08-%02d,K-%d\n",
+			i, []string{"To Do", "In Progress", "Done"}[i%3], owner.email, i%10, i%5+1, i%28+1, i)
+	}
+	start := time.Now()
+	r := owner.importTable(map[string]any{"file": []byte(b.String()), "newBoardName": "Большой", "apply": true}, http.StatusOK)
+	took := time.Since(start)
+	if r.Report.Created != 2000 {
+		t.Fatalf("заведено %d из 2000", r.Report.Created)
+	}
+	if took > 4*time.Second {
+		t.Fatalf("перенос двух тысяч строк занял %v — вставка снова идёт по одной карточке?", took)
+	}
+	var snap struct {
+		Cards     []struct{ ID string } `json:"cards"`
+		Assignees map[string][]string   `json:"assignees"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+r.Report.BoardID, nil, http.StatusOK), &snap)
+	if len(snap.Cards) != 2000 {
+		t.Fatalf("на доске %d карточек", len(snap.Cards))
 	}
 }

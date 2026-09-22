@@ -311,3 +311,30 @@ func newSecret() (string, error) {
 	}
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
+
+// EnqueueMany — то же, что Enqueue, для многих событий одного вида
+// одним запросом: перенос тысячи карточек заводит тысячу событий,
+// и по запросу на каждое он шёл бы минуту.
+func EnqueueMany(ctx context.Context, tx pgx.Tx, orgID, event string, payloads []any) error {
+	if len(payloads) == 0 {
+		return nil
+	}
+	bodies := make([]string, len(payloads))
+	for i, p := range payloads {
+		b, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
+		bodies[i] = string(b)
+	}
+	_, err := tx.Exec(ctx, `
+		insert into webhook_deliveries (org_id, webhook_id, event, payload)
+		select $1, w.id, $2, p.body::jsonb
+		  from webhooks w
+		 cross join unnest($3::text[]) with ordinality as p(body, n)
+		 where w.org_id = $1 and w.disabled_at is null and w.paused_at is null
+		   and $2 = any (w.events)
+		 order by p.n`,
+		orgID, event, bodies)
+	return err
+}
