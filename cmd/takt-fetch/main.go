@@ -66,6 +66,8 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	case "yougile":
 	case "jira":
 		return runJira(ctx, tx, lang, args[1:], env, out, errOut)
+	case "kaiten":
+		return runKaiten(ctx, tx, lang, args[1:], env, out, errOut)
 	default:
 		fmt.Fprint(errOut, tx.usage)
 		return errors.New(tx.unknownSource)

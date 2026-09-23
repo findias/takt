@@ -513,8 +513,8 @@ Boards from YouGile, Jira, Trello and other trackers come into a closed
 network as an [import package](import-package.md) — a `.takt` file
 built outside, where there is internet, by `takt-fetch` from the same
 release (its own page: [takt-fetch](takt-fetch.md)). So far it knows
-YouGile and Jira (the cloud and your own installation; for Jira see its
-page). For YouGile:
+YouGile, Jira (the cloud and your own installation) and Kaiten (the cloud
+and on-premises); for Jira and Kaiten see its page. For YouGile:
 
 ```sh
 export YOUGILE_KEY=…                 # or YOUGILE_LOGIN (the password is asked for)

@@ -119,7 +119,7 @@ color:var(--ink-3);font-size:.85rem}
 <a href="ru/индекс.html">По-русски</a>
 </nav>
 <h1>takt-fetch: the exporter for a closed network</h1>
-<p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile and Jira — the cloud one and your own installation (Data Center, Server); Kaiten, Weeek and Trello come next.</p>
+<p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile, Jira — the cloud one and your own installation (Data Center, Server) — and Kaiten, cloud or on-premises; Weeek and Trello come next.</p>
 <p>It is a separate program on purpose. It runs where there is internet — usually on a laptop — and the takt installed inside the closed network does not contain it: the server that holds your boards cannot reach out to anyone&#39;s cloud, and a security review can check that by the list of files alone.</p>
 <h2 id="get-it">Get it</h2>
 <p>Every release carries <code>takt-fetch</code> as separate files, one per system:</p>
@@ -171,6 +171,19 @@ takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.t
 <p>What does not, and is named under <strong>Not imported</strong>: attachments, time tracking, sprints, versions and the change history; issues whose status is mapped to no column of the board (Jira does not show them on the board either) — as a number. In the cloud a person may hide their email in their profile, and no administrator can undo that; such people come by name, the package says how many there are, and you match them in the preview.</p>
 <p><strong>Your own Jira inside the closed network.</strong> Then carrying anything across the perimeter is not needed at all: run <code>takt-fetch</code> on a machine inside the same network, next to Jira, with <code>--url</code> set to its address. If its certificate is signed by your company&#39;s own authority, point <code>SSL_CERT_FILE</code> at that authority&#39;s certificate — the exporter does not switch checking off.</p>
 <p><strong>How long.</strong> Issues come a hundred per request; comments that did not fit into the search answer take one more request per issue. When Jira asks to wait (429, 503), the exporter waits and carries on.</p>
+<h2 id="kaiten">Kaiten</h2>
+<p>The same package from a Kaiten board, in the cloud (<code>company.kaiten.ru</code>) or on your own server — the API is the same.</p>
+<p><strong>Sign in.</strong> With the API key from your Kaiten profile, through the environment, as with Jira:</p>
+<pre><code>export KAITEN_TOKEN=…
+takt-fetch kaiten boards --url https://company.kaiten.ru
+takt-fetch kaiten fetch --url https://company.kaiten.ru --board 345 --out warehouse.takt</code></pre>
+<p><code>boards</code> prints the id, the space and the title of every board the key can see; a space the key has no access to is skipped, as Kaiten itself does. <code>--url</code> is required, <code>--board</code> may be repeated, <code>--no-comments</code> leaves the comments out — comments are one request per card.</p>
+<p>What goes in: the board&#39;s columns in their order. A column with subcolumns becomes one column per subcolumn, named <code>Column: subcolumn</code>, so that three &#34;In progress&#34; of different columns do not merge; a card lying in such a column itself goes into its first subcolumn. The column type in Kaiten — queue, in progress, done — becomes the column&#39;s hint. Then the title, the description, every card member as an assignee, tags as labels, the size as the estimate, the ASAP flag as the highest priority, the due date, the created date, the finish date of a card that is done, the parent, blocks by another card of the board as <strong>blocks</strong> links, and comments (HTML comments as plain text).</p>
+<p><strong>Lanes are not columns.</strong> In Kaiten they are rows across the board; takt builds rows by grouping. So when a board has more than one lane, each card gets a label <code>Lane: name</code>, and after the import the grouping <strong>By label</strong> lays the board out the same way.</p>
+<p><strong>A card with several parents</strong> — Kaiten allows it, takt keeps a tree — moves under the first parent on the board; the package says how many such cards there were.</p>
+<p>What does not come, and is named under <strong>Not imported</strong>: archived cards, the reasons of blocks, attachments, checklists, time tracking and the history of moves. People whose email Kaiten did not return come by name; you match them in the preview.</p>
+<p><strong>Kaiten inside the closed network.</strong> As with Jira: run <code>takt-fetch</code> next to it, with <code>--url</code> set to its address, and <code>SSL_CERT_FILE</code> if its certificate is signed by your own authority.</p>
+<p><strong>How long.</strong> Cards come a hundred per request, plus one request per card for comments. When Kaiten asks to wait (429), the exporter waits until the moment Kaiten names and carries on.</p>
 <h2 id="carry-it-in-and-import">Carry it in and import</h2>
 <p>The package file is readable only by its owner. Carry it across the perimeter the way your rules say, then:</p>
 <ul>
@@ -198,10 +211,16 @@ takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.t
 <tr><td>Jira will not let you see this board</td><td>the account has no permission to browse the board&#39;s project</td></tr>
 <tr><td>the address answers, but it is not Jira</td><td><code>--url</code> points to something else, a login page or a proxy</td></tr>
 <tr><td>the board … has more than 10000 issues</td><td>narrow the board&#39;s filter in Jira, or collect the board in parts</td></tr>
+<tr><td>no Kaiten address named</td><td>add <code>--url https://company.kaiten.ru</code> or your own server&#39;s address</td></tr>
+<tr><td>signing in to Kaiten needs KAITEN_TOKEN</td><td>set the API key from your Kaiten profile</td></tr>
+<tr><td>Kaiten did not accept the token</td><td>the key was revoked or belongs to another Kaiten</td></tr>
+<tr><td>Kaiten will not let you see this board</td><td>the account has no access to the board&#39;s space</td></tr>
+<tr><td>the address answers, but it is not Kaiten</td><td><code>--url</code> points to something else, a login page or a proxy</td></tr>
+<tr><td>the board … has more than 10000 cards</td><td>split the board in Kaiten</td></tr>
 </tbody>
 </table></div>
 <p>A chat YouGile does not return does not stop the board: the card comes without it, and the package says how many such chats there were. A «502», «503» or «504» is waited out, not treated as a failure.</p>
-<footer>Takt, version v0.2.3-74-g8966f8b-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-75-g1064161-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

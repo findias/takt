@@ -3,8 +3,9 @@
 `takt-fetch` takes boards out of a cloud tracker and writes them into an
 [import package](import-package.md) — a single `.takt` file that is
 carried into a closed network and imported into takt there. So far it
-knows YouGile and Jira — the cloud one and your own installation (Data
-Center, Server); Kaiten, Weeek and Trello come next.
+knows YouGile, Jira — the cloud one and your own installation (Data
+Center, Server) — and Kaiten, cloud or on-premises; Weeek and Trello
+come next.
 
 It is a separate program on purpose. It runs where there is internet —
 usually on a laptop — and the takt installed inside the closed network
@@ -142,6 +143,58 @@ switch checking off.
 fit into the search answer take one more request per issue. When Jira
 asks to wait (429, 503), the exporter waits and carries on.
 
+## Kaiten
+
+The same package from a Kaiten board, in the cloud (`company.kaiten.ru`)
+or on your own server — the API is the same.
+
+**Sign in.** With the API key from your Kaiten profile, through the
+environment, as with Jira:
+
+```sh
+export KAITEN_TOKEN=…
+takt-fetch kaiten boards --url https://company.kaiten.ru
+takt-fetch kaiten fetch --url https://company.kaiten.ru --board 345 --out warehouse.takt
+```
+
+`boards` prints the id, the space and the title of every board the key
+can see; a space the key has no access to is skipped, as Kaiten itself
+does. `--url` is required, `--board` may be repeated, `--no-comments`
+leaves the comments out — comments are one request per card.
+
+What goes in: the board's columns in their order. A column with
+subcolumns becomes one column per subcolumn, named `Column: subcolumn`,
+so that three "In progress" of different columns do not merge; a card
+lying in such a column itself goes into its first subcolumn. The column
+type in Kaiten — queue, in progress, done — becomes the column's hint.
+Then the title, the description, every card member as an assignee, tags
+as labels, the size as the estimate, the ASAP flag as the highest
+priority, the due date, the created date, the finish date of a card
+that is done, the parent, blocks by another card of the board as
+**blocks** links, and comments (HTML comments as plain text).
+
+**Lanes are not columns.** In Kaiten they are rows across the board;
+takt builds rows by grouping. So when a board has more than one lane,
+each card gets a label `Lane: name`, and after the import the grouping
+**By label** lays the board out the same way.
+
+**A card with several parents** — Kaiten allows it, takt keeps a tree —
+moves under the first parent on the board; the package says how many
+such cards there were.
+
+What does not come, and is named under **Not imported**: archived cards,
+the reasons of blocks, attachments, checklists, time tracking and the
+history of moves. People whose email Kaiten did not return come by name;
+you match them in the preview.
+
+**Kaiten inside the closed network.** As with Jira: run `takt-fetch` next
+to it, with `--url` set to its address, and `SSL_CERT_FILE` if its
+certificate is signed by your own authority.
+
+**How long.** Cards come a hundred per request, plus one request per
+card for comments. When Kaiten asks to wait (429), the exporter waits
+until the moment Kaiten names and carries on.
+
 ## Carry it in and import
 
 The package file is readable only by its owner. Carry it across the
@@ -180,6 +233,12 @@ Russian, as the server does.
 | Jira will not let you see this board | the account has no permission to browse the board's project |
 | the address answers, but it is not Jira | `--url` points to something else, a login page or a proxy |
 | the board … has more than 10000 issues | narrow the board's filter in Jira, or collect the board in parts |
+| no Kaiten address named | add `--url https://company.kaiten.ru` or your own server's address |
+| signing in to Kaiten needs KAITEN_TOKEN | set the API key from your Kaiten profile |
+| Kaiten did not accept the token | the key was revoked or belongs to another Kaiten |
+| Kaiten will not let you see this board | the account has no access to the board's space |
+| the address answers, but it is not Kaiten | `--url` points to something else, a login page or a proxy |
+| the board … has more than 10000 cards | split the board in Kaiten |
 
 A chat YouGile does not return does not stop the board: the card comes
 without it, and the package says how many such chats there were. A

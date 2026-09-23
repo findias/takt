@@ -76,9 +76,11 @@ set yourself is shown as you wrote it.
 exporter for moving into a closed network: run where there is internet,
 it collects YouGile boards — with subtasks, task chats and task
 history — and Jira Software boards, cloud or your own Data Center —
-with subtasks, links, estimates and comments — into a `.takt` package.
-A Jira that already lives inside the closed network is collected from
-a machine next to it, and nothing crosses the perimeter. Built for
+with subtasks, links, estimates and comments — and Kaiten boards,
+cloud or on-premises — with subcolumns, lanes as labels, subtasks,
+blocks and comments — into a `.takt` package. A Jira or Kaiten that
+already lives inside the closed network is collected from a machine
+next to it, and nothing crosses the perimeter. Built for
 linux, macOS and Windows,
 with its own SBOM and sum; it is not in the image, the chart or the
 bundle. How to use it is on its own page, `docs/takt-fetch.md`, and in
