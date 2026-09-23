@@ -39,6 +39,12 @@ if (!window.matchMedia) {
 // честно: дорисовка проверяется в браузере.
 if (!window.IntersectionObserver) {
   class Stub {
+    // Сигнатура настоящего конструктора: код создаёт наблюдателя
+    // с обратным вызовом и настройками, и заглушка обязана их принять.
+    constructor(
+      readonly callback?: IntersectionObserverCallback,
+      readonly options?: IntersectionObserverInit,
+    ) {}
     observe() {}
     unobserve() {}
     disconnect() {}

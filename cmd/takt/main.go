@@ -39,6 +39,10 @@ import (
 )
 
 func main() {
+	// Журнал — JSON, и это держит подделку строк журнала: перевод строки
+	// в пути запроса или в тексте ошибки экранируется внутри значения,
+	// а не начинает новую запись. Поэтому находки CodeQL go/log-injection
+	// закрыты как ложные; обработчик без экранирования вернёт их в силу.
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	command := "serve"
