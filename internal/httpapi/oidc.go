@@ -62,8 +62,10 @@ func (s *Server) handleAuthMethods(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]method{
 		"password": {Enabled: true},
-		"oidc":     {Enabled: s.oidc != nil, Label: s.cfg.OIDC.Label},
-		"signup":   {Enabled: allowed},
+		// Подпись по умолчанию переводится; заданная администратором
+		// перевода не имеет и уходит как есть — так её и назвали.
+		"oidc":   {Enabled: s.oidc != nil, Label: say(w, s.cfg.OIDC.Label)},
+		"signup": {Enabled: allowed},
 		// Публичное демо: экран входа предлагает «Попробовать».
 		"demo": {Enabled: s.cfg.Demo},
 	})

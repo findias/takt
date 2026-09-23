@@ -17,6 +17,11 @@ var en = map[string]string{
 	"провайдер не подтвердил почту":                                     "the provider did not confirm the email",
 	"провайдер не назвал, кто пришёл":                                   "the provider did not say who is signing in",
 	"Без имени": "No name",
+	// Слова из «тихих» пакетов, которые всё же доезжают до экрана:
+	// версия сборки мимо make и подпись входа через провайдера
+	// по умолчанию (см. spokenQuiet в extract_test.go).
+	"не задана (сборка мимо make)":   "not set (built outside make)",
+	"Корпоративный аккаунт":          "Company account",
 	"провайдер не назвал почту":      "the provider did not give an email",
 	"организация %s не найдена":      "organisation %s not found",
 	"нужно войти":                    "please sign in",

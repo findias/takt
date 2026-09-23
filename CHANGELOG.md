@@ -68,7 +68,9 @@ snapshot from 71 to 13 ms. Nothing to do: it comes with `0054`.
 the names the server creates itself (default columns, «Моя команда»)
 come in English when the `lang` cookie or `Accept-Language` asks for
 it. Without either the answer is Russian, as before, so integrations
-see no change.
+see no change. The sign-in button of a company provider follows the
+same rule when `OIDC_LABEL` is unset ("Company account"); a caption you
+set yourself is shown as you wrote it.
 
 **A new release file, `takt-fetch`, that is not installed.** The
 exporter for moving into a closed network: run where there is internet,

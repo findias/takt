@@ -181,7 +181,7 @@ make images                   # оба разом, с таблицей разм�
 <tr><td><code>OIDC_ISSUER</code></td><td>адрес провайдера входа; пусто — вход только по паролю</td></tr>
 <tr><td><code>OIDC_CLIENT_ID</code> / <code>OIDC_CLIENT_SECRET</code></td><td>учётные данные приложения у провайдера</td></tr>
 <tr><td><code>OIDC_ORG</code></td><td>слаг организации, куда зачисляются пришедшие впервые</td></tr>
-<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа; не задана — <code>Корпоративный аккаунт</code> или, по-английски, <code>Company account</code>, по языку посетителя</td></tr>
 <tr><td><code>DEMO</code></td><td>не задавать: <code>on</code> превращает установку в публичное демо, где песочницу заводит любой</td></tr>
 <tr><td><code>STAND</code></td><td>не задавать: <code>staging</code> — для нашего тестового стенда ветки</td></tr>
 <tr><td><code>YOUGILE_URL</code></td><td>куда ходит перенос из YouGile: не задан — облачный <code>https://ru.yougile.com</code>, у коробочного YouGile свой адрес, <code>off</code> выключает перенос по API (перенос таблицей работает всегда)</td></tr>
@@ -358,7 +358,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # пакет идёт через стандартный ввод
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; склад.takt</code></pre>
 <p>Без <code>--apply</code> команда только показывает, что будет, — тот же предпросмотр, что на экране. Перенос идёт от имени человека из <code>--as</code> и с его правами: наблюдатель ничего не переносит, доска, в которую он не пишет, отказывает. <code>--board 2</code> выбирает вторую доску пакета, <code>--into</code> — существующую доску, <code>--new-board</code> — название новой, <code>--org</code> — организацию, если человек состоит в нескольких. Люди сопоставляются по почте и по выбору, сделанному на экране для того же источника; команда никого не заводит — сделайте выбор на экране или заведите людей в «Команде».</p>
-<footer>Takt, версия v0.2.3-73-ga0fd05c-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
+<footer>Takt, версия v0.2.3-74-g8966f8b-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

@@ -28,7 +28,7 @@ func (s *Server) handleHelpRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHelpPage(w http.ResponseWriter, r *http.Request) {
-	страница, ok, err := help.Собрать(r.PathValue("lang"), r.PathValue("page"), version.Строка())
+	страница, ok, err := help.Собрать(r.PathValue("lang"), r.PathValue("page"), i18n.Say(i18n.Lang(r.PathValue("lang")), version.Строка()))
 	if err != nil {
 		s.fail(w, "сборка справки", err)
 		return
@@ -61,7 +61,7 @@ func (s *Server) handleHelpScreenshot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHelpSearch(w http.ResponseWriter, r *http.Request) {
-	страница, ok, err := help.СобратьПоиск(r.PathValue("lang"), r.URL.Query().Get("q"), version.Строка())
+	страница, ok, err := help.СобратьПоиск(r.PathValue("lang"), r.URL.Query().Get("q"), i18n.Say(i18n.Lang(r.PathValue("lang")), version.Строка()))
 	if err != nil {
 		s.fail(w, "поиск по справке", err)
 		return

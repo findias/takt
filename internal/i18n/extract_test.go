@@ -283,6 +283,15 @@ var fragments = map[string]bool{
 	"организации":        true,
 }
 
+// spokenQuiet — строки «тихих» пакетов (version, config), которые
+// ответ сервера всё же переводит: версия на экране «Команда» и подпись
+// входа через провайдера. Пакеты целиком остаются тихими — остальное
+// в них говорит с тем, кто держит установку.
+var spokenQuiet = map[string]bool{
+	"не задана (сборка мимо make)": true,
+	"Корпоративный аккаунт":        true,
+}
+
 // TestNoStaleTranslations — перевода без сообщения не бывает. Лишний
 // ключ означает, что формулировку в коде поправили, а перевод остался
 // у старой: английский посетитель снова видит русский.
@@ -292,7 +301,7 @@ func TestNoStaleTranslations(t *testing.T) {
 		said[m.key] = true
 	}
 	for key := range en {
-		if !said[key] && !fragments[key] {
+		if !said[key] && !fragments[key] && !spokenQuiet[key] {
 			t.Errorf("перевод есть, сообщения нет: %q", key)
 		}
 	}

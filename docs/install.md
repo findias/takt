@@ -139,7 +139,7 @@ on installing without internet access, below, covers it.
 | `OIDC_ISSUER` | identity provider address; empty means password only |
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | the application's credentials at the provider |
 | `OIDC_ORG` | the organisation a first-time arrival joins |
-| `OIDC_LABEL` | the caption on the sign-in button |
+| `OIDC_LABEL` | the caption on the sign-in button; unset, it reads `Company account` or, in Russian, `Корпоративный аккаунт`, by the visitor's language |
 | `DEMO` | leave unset: `on` turns the installation into a public demo where anyone creates a sandbox |
 | `STAND` | leave unset: `staging` is for our own test stand of a branch |
 | `YOUGILE_URL` | where import from YouGile goes: unset is the cloud `https://ru.yougile.com`, a boxed YouGile has its own address, `off` switches import over the API off (importing a spreadsheet always works) |

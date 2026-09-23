@@ -545,7 +545,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request, p auth.Princip
 		auth.Principal
 		Scopes  []string `json:"scopes,omitempty"`
 		Version string   `json:"version"`
-	}{Principal: p, Version: version.Строка()}
+	}{Principal: p, Version: say(w, version.Строка())}
 	if granted, ok := scopesOf(r); ok {
 		ответ.Scopes = granted
 	}

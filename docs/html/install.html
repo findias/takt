@@ -185,7 +185,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>OIDC_ISSUER</code></td><td>identity provider address; empty means password only</td></tr>
 <tr><td><code>OIDC_CLIENT_ID</code> / <code>OIDC_CLIENT_SECRET</code></td><td>the application&#39;s credentials at the provider</td></tr>
 <tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
-<tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button; unset, it reads <code>Company account</code> or, in Russian, <code>Корпоративный аккаунт</code>, by the visitor&#39;s language</td></tr>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
 <tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
 <tr><td><code>YOUGILE_URL</code></td><td>where import from YouGile goes: unset is the cloud <code>https://ru.yougile.com</code>, a boxed YouGile has its own address, <code>off</code> switches import over the API off (importing a spreadsheet always works)</td></tr>
@@ -356,7 +356,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.2.3-73-ga0fd05c-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-74-g8966f8b-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

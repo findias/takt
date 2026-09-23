@@ -29,7 +29,7 @@ func (s *Server) handleStand(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"branch":   note.Branch,
 		"since":    note.Since,
-		"version":  version.Строка(),
+		"version":  say(w, version.Строка()),
 		"commits":  note.Commits,
 		"email":    demo.People[0].Email,
 		"password": demo.Password,

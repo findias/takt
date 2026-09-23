@@ -249,7 +249,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><code>OIDC_ISSUER</code></td><td>адрес провайдера входа; пусто — только пароль</td></tr>
 <tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td>учётные данные у провайдера</td></tr>
 <tr><td><code>OIDC_ORG</code></td><td>организация, куда попадает пришедший впервые</td></tr>
-<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа</td></tr>
+<tr><td><code>OIDC_LABEL</code></td><td>надпись на кнопке входа; не задана — <code>Корпоративный аккаунт</code> или, по-английски, <code>Company account</code>, по языку посетителя</td></tr>
 <tr><td><code>DEMO</code></td><td><code>on</code> — только для публичного демо: вход предлагает песочницу с примерами на сутки; требует <code>SIGNUP=closed</code>, подписки на события выключены. По умолчанию выключено</td></tr>
 <tr><td><code>STAND</code></td><td><code>staging</code> — только для нашего тестового стенда ветки: полоса на каждом экране и заметка о коммитах ветки; подписки на события выключены. С <code>DEMO=on</code> не совмещается. По умолчанию выключено</td></tr>
 </tbody>
@@ -278,7 +278,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="интеграционное-api">Интеграционное API</h2>
 <p>Описание контракта — на странице <code>/api/v1/docs</code> работающей установки; машиночитаемое — <code>/api/v1/openapi.json</code>. Версия стоит в адресе, причина отказа приходит кодом, повтор с тем же ключом идемпотентности безопасен.</p>
-<footer>Takt, версия v0.2.3-73-ga0fd05c-dirty. Страница собрана из справочник.md — правьте исходник, а не её.</footer>
+<footer>Takt, версия v0.2.3-74-g8966f8b-dirty. Страница собрана из справочник.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

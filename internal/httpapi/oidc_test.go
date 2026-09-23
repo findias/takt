@@ -418,4 +418,23 @@ func TestAuthMethodsTellTheClientWhatToShow(t *testing.T) {
 	if !out["oidc"].Enabled || out["oidc"].Label != "Корпоративный аккаунт" {
 		t.Errorf("способы входа: %+v", out)
 	}
+
+	// Подпись по умолчанию — на языке посетителя: английский экран
+	// входа с русской кнопкой выглядит недоделанным. Заданная
+	// администратором подпись перевода не имеет и уходит как есть —
+	// это держит i18n.Say, незнакомое он не трогает.
+	req, _ := http.NewRequest(http.MethodGet, f.server.URL+"/api/auth/methods", nil)
+	req.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	resp, err = f.browser.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ = io.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatalf("разбор ответа: %v; тело %s", err, body)
+	}
+	if out["oidc"].Label != "Company account" {
+		t.Errorf("подпись входа по-английски: %q", out["oidc"].Label)
+	}
 }

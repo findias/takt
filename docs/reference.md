@@ -176,7 +176,7 @@ mark removed, archived, restored to the board.
 | `OIDC_ISSUER` | identity provider address; empty means password only |
 | `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | credentials at the provider |
 | `OIDC_ORG` | the organisation a first-time arrival joins |
-| `OIDC_LABEL` | the caption on the sign-in button |
+| `OIDC_LABEL` | the caption on the sign-in button; unset, it reads `Company account` or, in Russian, `Корпоративный аккаунт`, by the visitor's language |
 | `DEMO` | `on` only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours; requires `SIGNUP=closed`, event subscriptions are switched off. Off by default |
 | `STAND` | `staging` only for our own test stand of a branch: a strip on every screen and a note of the branch's commits; event subscriptions are switched off. Cannot be combined with `DEMO=on`. Off by default |
 
