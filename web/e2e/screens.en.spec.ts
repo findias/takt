@@ -55,6 +55,12 @@ test('английские снимки для документации', async 
   await page.screenshot({ path: `${SHOTS}/40-history-before-import.png` })
   await page.goto(boardUrl)
 
+  await page.getByRole('group', { name: /Go through this week's requests/ }).click()
+  await page.getByRole('tab', { name: 'Tasks' }).click()
+  await page.getByText('SR-10492').waitFor()
+  await page.screenshot({ path: `${SHOTS}/41-card-tickets.png` })
+  await page.goto(boardUrl)
+
   await page.getByRole('group', { name: /Ship the warehouse release/ }).click()
   await page.getByRole('tab', { name: 'Work' }).click()
   await page.waitForTimeout(400)

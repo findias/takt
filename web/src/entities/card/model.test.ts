@@ -79,6 +79,7 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: {},
     labels: [],
     cardLabels: {},

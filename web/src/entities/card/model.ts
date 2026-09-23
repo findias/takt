@@ -346,6 +346,14 @@ export function priorityLabel(priority: Priority): string {
   return PRIORITY_NAMES[priority] ?? String(priority)
 }
 
+/** Название вида заявки. Неизвестный вид — как есть, по той же
+ *  причине, что и у приоритета: разошедшиеся клиент и сервер не должны
+ *  ронять строку. */
+export function refKindName(kind: unknown): string {
+  if (typeof kind !== 'string') return ''
+  return (t.panel.refKinds as Record<string, string>)[kind] ?? kind
+}
+
 /**
  * Тот же уровень, но для доски.
  *

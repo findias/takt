@@ -87,6 +87,7 @@ function board(cards: Card[], columns = [column(COL_A, 'Очередь', 'a0'), 
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: [],
     labels: [],
     cardLabels: {},
@@ -780,9 +781,11 @@ describe('часть работы держит саму задачу', () => {
     const user = userEvent.setup()
     show('родитель')
 
-    // Карточка открывается на обсуждении: работа — вторая вкладка.
-    await user.click(await screen.findByRole('tab', { name: 'Работа' }))
+    // Части лежат на «Задачах», а причину пишут на «Работе»: нажатие
+    // «Держит» само переводит туда, где форма.
+    await user.click(await screen.findByRole('tab', { name: 'Задачи' }))
     await user.click(await screen.findByRole('button', { name: 'Держит' }))
+    expect(screen.getByRole('tab', { name: 'Работа' }).getAttribute('aria-selected')).toBe('true')
     await user.type(screen.getByLabelText('Причина блокировки'), 'ждём смету от подрядчика')
     await user.click(screen.getByRole('button', { name: 'Заблокировать' }))
 
@@ -825,5 +828,50 @@ describe('часть работы держит саму задачу', () => {
     expect(holders.some((b) => b.className.includes('link'))).toBe(true)
     // Предлагать вторую блокировку поверх открытой нечего: она отказала бы.
     expect(screen.queryByRole('button', { name: 'Держит' })).toBeNull()
+  })
+})
+
+describe('заявки внешних систем на вкладке «Задачи»', () => {
+  function withRefs(): Snapshot {
+    const snap = board([card('карточка', COL_A, 'a0', 'Разобрать обращения')])
+    return {
+      ...snap,
+      cardRefs: {
+        карточка: [
+          { id: 'r2', kind: 'zni', ref: 'https://sd.example.test/change/2231' },
+          { id: 'r1', kind: 'zno', ref: 'ЗНО-10492' },
+        ],
+      },
+    }
+  }
+
+  it('номер виден текстом, адрес — ссылкой, по порядку видов', async () => {
+    snapshot.mockResolvedValue(withRefs())
+    const user = userEvent.setup()
+    show('карточка')
+
+    await user.click(await screen.findByRole('tab', { name: 'Задачи' }))
+    const link = screen.getByRole('link', { name: 'https://sd.example.test/change/2231' })
+    expect(link.getAttribute('rel')).toContain('noopener')
+    const zno = screen.getByText('ЗНО-10492')
+    expect(zno.closest('a')).toBeNull()
+    // ЗНО стоит раньше ЗНИ, хотя добавлен позже: порядок — по видам.
+    expect(zno.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('добавление уходит операцией с видом и номером', async () => {
+    snapshot.mockResolvedValue(withRefs())
+    const user = userEvent.setup()
+    show('карточка')
+
+    await user.click(await screen.findByRole('tab', { name: 'Задачи' }))
+    await user.selectOptions(screen.getByLabelText('Вид заявки'), 'problem')
+    await user.type(screen.getByLabelText('Номер или адрес заявки'), '  ПРБ-58 ')
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+
+    await waitFor(() => expect(operation).toHaveBeenCalled())
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('ADD_CARD_REF')
+    expect(payload).toEqual({ cardId: 'карточка', kind: 'problem', ref: 'ПРБ-58' })
   })
 })

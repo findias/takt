@@ -14,6 +14,7 @@ import type {
   BoardInfo,
   Card,
   CardField,
+  CardRef,
   Column,
   FieldValue,
   Iteration,
@@ -42,6 +43,7 @@ export type BaseState = {
   cardIterations: Record<string, string>
   fields: CardField[]
   fieldValues: Record<string, FieldValue[]>
+  cardRefs: Record<string, CardRef[]>
   /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
   /** Словарь меток и то, что чем помечено. */
@@ -98,6 +100,7 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     cardIterations: snap.cardIterations,
     fields: snap.fields,
     fieldValues: snap.fieldValues,
+    cardRefs: snap.cardRefs,
   }
 }
 

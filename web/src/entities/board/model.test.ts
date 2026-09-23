@@ -72,6 +72,7 @@ function snapshot(cards: Card[]): Snapshot {
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: [],
     labels: [],
     cardLabels: {},

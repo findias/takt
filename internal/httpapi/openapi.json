@@ -140,6 +140,8 @@
           "card.commented",
           "card.field_set",
           "card.field_cleared",
+          "card.ref_added",
+          "card.ref_removed",
           "card.iteration_added",
           "card.iteration_removed",
           "card.done",
@@ -199,6 +201,8 @@
               "UNBLOCK_CARD",
               "SET_BLOCK_UNTIL",
               "SET_CARD_FIELD",
+              "ADD_CARD_REF",
+              "REMOVE_CARD_REF",
               "ADD_TO_ITERATION",
               "REMOVE_FROM_ITERATION"
             ]

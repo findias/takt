@@ -77,6 +77,7 @@ function board(version = 1): Snapshot {
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: [],
     labels: [],
     cardLabels: {},

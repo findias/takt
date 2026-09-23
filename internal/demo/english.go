@@ -56,6 +56,9 @@ var english = map[string]string{
 	"Ждём склад":      "Waiting on warehouse",
 	"Заказчик":        "Customer",
 	"Северстрой":      "Northbuild",
+	"ЗНО-10492":       "SR-10492",
+	"ЗНО-10517":       "SR-10517",
+	"ПРБ-58":          "PRB-58",
 	"Есть постановка, известен исполнитель и срок": "Has a brief, a known assignee and a due date",
 	"Мои срочные": "My urgent",
 

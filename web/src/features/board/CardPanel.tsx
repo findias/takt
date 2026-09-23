@@ -5,7 +5,7 @@ import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { PlusIcon } from '../../shared/ui/icons.tsx'
-import { LINK_KIND_NAMES, api } from '../../shared/api/index.ts'
+import { LINK_KIND_NAMES, REF_KINDS, api } from '../../shared/api/index.ts'
 import type {
   BoardEvent,
   BoardInfo,
@@ -14,8 +14,10 @@ import type {
   FieldValue,
   Iteration,
   BoardLabel,
+  CardRef,
   LinkKind,
   Priority,
+  RefKind,
   SourceHistory,
 } from '../../shared/api/index.ts'
 import { actorText, eventText, sourceName, timeText } from '../../entities/feed/model.ts'
@@ -32,6 +34,7 @@ import {
   cardDetails,
   progressLabel,
   progressRatio,
+  refKindName,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { labelOrigin, chipClass } from '../../entities/label/model.ts'
@@ -62,9 +65,12 @@ import { Hint } from '../../shared/ui/Hint.tsx'
  * оценку: у поля и метки есть свой путь с доски, а у разговора — нет,
  * его читают только отсюда.
  */
-type TabId = 'talk' | 'work' | 'history'
+type TabId = 'talk' | 'work' | 'history' | 'tasks'
 
-const TAB_IDS: TabId[] = ['talk', 'work', 'history']
+// «Задачи» собирают в одно место всё, с чем эта работа связана: заявки
+// сервис-деска, родителя, подзадачи и связи. Пока они стояли в хвосте
+// «Работы», под метками и полями, до них листали весь свиток.
+const TAB_IDS: TabId[] = ['talk', 'work', 'history', 'tasks']
 const tabs = () => TAB_IDS.map((id) => ({ id, label: t.panel[id] }))
 
 /** С чего открывается карточка. Первая вкладка — она же умолчание:
@@ -96,6 +102,8 @@ export function CardPanel({
   onMarkDone,
   onIteration,
   onField,
+  onAddRef,
+  onRemoveRef,
 }: {
   base: BaseState
   boardId: string
@@ -135,6 +143,8 @@ export function CardPanel({
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
   onField: (cardId: string, fieldId: string, value: string | number | boolean | null) => void
+  onAddRef: (cardId: string, kind: RefKind, ref: string) => void
+  onRemoveRef: (cardId: string, refId: string) => void
 }) {
   const [mode, setMode] = usePanelMode()
   const [tab, setTab] = useState<TabId>(FIRST_TAB)
@@ -336,6 +346,41 @@ export function CardPanel({
               onSet={(fieldId, value) => onField(card.id, fieldId, value)}
             />
 
+          </>
+        )}
+
+        {/* Обсуждение и история заводятся только на своей вкладке.
+            Это не только про место на экране: пока они лежали в общем
+            свитке, открытие любой карточки стоило двух запросов,
+            из которых чаще всего не нужен был ни один. */}
+        {tab === 'talk' && (
+          <Discussion
+            boardId={boardId}
+            cardId={card.id}
+            meId={meId}
+            canEdit={canEdit}
+            people={base.people}
+          />
+        )}
+
+        {tab === 'history' && (
+          <History
+            boardId={boardId}
+            cardId={card.id}
+            version={card.version}
+            fields={base.fields}
+          />
+        )}
+
+        {tab === 'tasks' && (
+          <>
+            <Refs
+              refs={base.cardRefs[card.id] ?? []}
+              canEdit={canEdit}
+              onAdd={(kind, ref) => onAddRef(card.id, kind, ref)}
+              onRemove={(refId) => onRemoveRef(card.id, refId)}
+            />
+
             {details.parent && (
               <section className="stack">
                 {/* Одно понятие — одно слово: связь называется парой
@@ -388,7 +433,16 @@ export function CardPanel({
                   // отсюда: у родителя, где видно и остальные части.
                   // У заблокированной задачи предлагать нечего — вторая
                   // блокировка поверх открытой отказала бы.
-                  onHold={canEdit && !card.blocked && !s.done ? () => setHolder(s) : undefined}
+                  onHold={
+                    canEdit && !card.blocked && !s.done
+                      ? () => {
+                          // Причину пишут в форме блокировки, а она
+                          // на «Работе»: туда и переходим.
+                          setHolder(s)
+                          setTab('work')
+                        }
+                      : undefined
+                  }
                 />
               ))}
 
@@ -430,29 +484,6 @@ export function CardPanel({
               </section>
             )}
           </>
-        )}
-
-        {/* Обсуждение и история заводятся только на своей вкладке.
-            Это не только про место на экране: пока они лежали в общем
-            свитке, открытие любой карточки стоило двух запросов,
-            из которых чаще всего не нужен был ни один. */}
-        {tab === 'talk' && (
-          <Discussion
-            boardId={boardId}
-            cardId={card.id}
-            meId={meId}
-            canEdit={canEdit}
-            people={base.people}
-          />
-        )}
-
-        {tab === 'history' && (
-          <History
-            boardId={boardId}
-            cardId={card.id}
-            version={card.version}
-            fields={base.fields}
-          />
         )}
       </TabPanel>
     </Panel>
@@ -1277,6 +1308,100 @@ function NewSubtask({
         <p className="muted small">{t.panel.goesTo(target.name)}</p>
       )}
     </form>
+  )
+}
+
+/**
+ * Заявки внешних систем, по которым идёт работа: RDS, ЗНО, ЗНИ, проблемы.
+ *
+ * Одно поле на все четыре вида, а не четыре поля: вид выбирают рядом,
+ * и у работы с тремя ЗНО и одним ЗНИ не бывает пустых полей для
+ * остального. Список — в порядке видов, внутри вида — как добавляли.
+ *
+ * Адрес открывается ссылкой, номер остаётся текстом: угадывать адрес
+ * по номеру значило бы зашить сюда чужую систему.
+ */
+function Refs({
+  refs,
+  canEdit,
+  onAdd,
+  onRemove,
+}: {
+  refs: CardRef[]
+  canEdit: boolean
+  onAdd: (kind: RefKind, ref: string) => void
+  onRemove: (refId: string) => void
+}) {
+  const [kind, setKind] = useState<RefKind>(REF_KINDS[0])
+  const [draft, setDraft] = useState('')
+  const ordered = [...refs].sort((a, b) => REF_KINDS.indexOf(a.kind) - REF_KINDS.indexOf(b.kind))
+
+  return (
+    <section className="stack">
+      <h3 className="section-title">{t.panel.refs}</h3>
+
+      {refs.length === 0 && <p className="muted small">{t.panel.noRefs}</p>}
+
+      {ordered.map((r) => (
+        <div className="related" key={r.id}>
+          <div className="member-who">
+            <span className="wrap-title">
+              {/^https?:\/\//i.test(r.ref) ? (
+                <a href={r.ref} target="_blank" rel="noopener noreferrer">
+                  {r.ref}
+                </a>
+              ) : (
+                r.ref
+              )}
+            </span>
+            <span className="muted small">{refKindName(r.kind)}</span>
+          </div>
+          {canEdit && (
+            <button
+              className="link link--remove"
+              aria-label={t.panel.removeRef(refKindName(r.kind), r.ref)}
+              onClick={() => onRemove(r.id)}
+            >
+              {t.panel.remove}
+            </button>
+          )}
+        </div>
+      ))}
+
+      {canEdit && (
+        <form
+          className="row row--tight"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!draft.trim()) return
+            onAdd(kind, draft.trim())
+            setDraft('')
+          }}
+        >
+          <select
+            value={kind}
+            aria-label={t.panel.refKind}
+            onChange={(e) => setKind(e.target.value as RefKind)}
+          >
+            {REF_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {refKindName(k)}
+              </option>
+            ))}
+          </select>
+          <input
+            value={draft}
+            placeholder={t.panel.refPlaceholder}
+            aria-label={t.panel.refPlaceholder}
+            maxLength={500}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <Button kind="primary" type="submit" icon={<PlusIcon />} disabled={!draft.trim()}>
+            {t.panel.refAdd}
+          </Button>
+        </form>
+      )}
+    </section>
   )
 }
 

@@ -213,7 +213,7 @@ password there, not here.
 
 ### Split work into parts
 
-1. Open the card, **Work** tab.
+1. Open the card, **Tasks** tab.
 2. In the subtasks section, type the name of the part into
    **What needs doing?**
 3. Press **Subtask**. To give the part to another team, pick their board
@@ -222,6 +222,21 @@ password there, not here.
 A part is an ordinary card: it can live on a different board if a
 different team does the work. The parent card grows a "so many of so
 many" bar.
+
+### Tie a card to service-desk tickets
+
+1. Open the card, **Tasks** tab.
+2. Under **Tickets**, pick the kind — **RDS**, **Service request**,
+   **Change request** or **Problem** — and type the ticket number or
+   paste its address.
+3. Press **Add**.
+
+A card holds as many tickets as it needs: work often answers three
+service requests and ships with one change request. The list is
+ordered by kind; an address opens in a new browser tab, a number stays
+text. **Remove** takes a ticket off. Both show on the card's
+**History** tab. Below the tickets, **Tasks** holds the parent, the
+subtasks and the links to other cards.
 
 <!-- anchor: archive -->
 ### Take a card off the board

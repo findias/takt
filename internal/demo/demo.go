@@ -618,6 +618,22 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"value": f.w("Северстрой")}); err != nil {
 		return err
 	}
+	// Ссылки на заявки сервис-деска — всех четырёх видов и одна адресом:
+	// номер и адрес выглядят в списке по-разному, и без обоих не увидеть
+	// ни длинной строки, ни того, что адрес открывается.
+	for _, r := range []struct{ kind, ref string }{
+		{"zno", "ЗНО-10492"},
+		{"zno", "ЗНО-10517"},
+		{"zni", "https://sd.example.test/change/2231"},
+		{"problem", "ПРБ-58"},
+		{"rds", "RDS-0412"},
+	} {
+		if _, err := f.apply(b.ID, "ADD_CARD_REF", map[string]any{
+			"cardId": ids["Разобрать обращения за неделю"], "kind": r.kind,
+			"ref": f.w(r.ref)}); err != nil {
+			return err
+		}
+	}
 	// Уровни приоритета видно только на тех карточках, где он не
 	// средний, — а на доске из одних средних не увидеть, чем верх
 	// шкалы отличается от низа.

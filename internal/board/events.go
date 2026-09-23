@@ -65,6 +65,8 @@ var EventKinds = []string{
 	"commented",
 	"field_set",
 	"field_cleared",
+	"ref_added",
+	"ref_removed",
 	"iteration_added",
 	"iteration_removed",
 	"done",

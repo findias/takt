@@ -4,7 +4,7 @@
 // и снимок затронутого. Читают его люди, и разбирать jsonb глазами
 // им незачем.
 
-import { blockUntilWords, dateWords, priorityLabel } from '../card/model.ts'
+import { blockUntilWords, dateWords, priorityLabel, refKindName } from '../card/model.ts'
 import { ROLE_NAMES, VISIBILITY_NAMES } from '../../shared/api/names.ts'
 import type { AuditEntry, BoardEvent, CardField, Priority } from '../../shared/api/index.ts'
 import { locale, t } from '../../shared/i18n/index.ts'
@@ -106,6 +106,12 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
     case 'field_cleared': {
       const field = fields.find((f) => f.id === p.fieldId)
       return field ? t.feed.fieldClearedNamed(field.name) : t.feed.fieldCleared
+    }
+    case 'ref_added':
+    case 'ref_removed': {
+      const kind = refKindName(p.kind)
+      const ref = typeof p.ref === 'string' ? p.ref : ''
+      return event.type === 'ref_added' ? t.feed.refAdded(kind, ref) : t.feed.refRemoved(kind, ref)
     }
     default:
       // Неизвестный тип показываем как есть. Событие уже случилось,

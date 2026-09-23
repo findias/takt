@@ -118,6 +118,14 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/40-история-до-переноса.png` })
   await page.goto(boardUrl)
 
+  // Заявки сервис-деска на вкладке «Задачи»: номер текстом, адрес
+  // ссылкой, все четыре вида — и длинный адрес не должен распирать панель.
+  await page.getByRole('group', { name: /Разобрать обращения за неделю/ }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByText('ЗНО-10492').waitFor()
+  await page.screenshot({ path: `${SHOTS}/41-заявки-карточки.png` })
+  await page.goto(boardUrl)
+
   // Доска под отбором: колонки, из которых отбор убрал всё, обязаны
   // сказать об этом, а не притворяться пустыми.
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
@@ -218,7 +226,7 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/07г-выделение-и-массовые-действия.png` })
   await page.getByRole('button', { name: 'Снять выделение' }).click()
 
-  // Карточка тремя вкладками. Открывается обсуждением.
+  // Карточка четырьмя вкладками. Открывается обсуждением.
   await parent.click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/08-карточка-обсуждение.png` })
@@ -228,6 +236,9 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByRole('tab', { name: 'История' }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/10-карточка-история.png` })
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/10а-карточка-задачи.png` })
 
   const mode = page.getByLabel('Как показывать панель')
   if (await mode.isVisible()) {

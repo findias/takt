@@ -732,6 +732,14 @@ export type CardField = {
 
 export type FieldValue = { fieldId: string; value: string | number | boolean }
 
+/** Вид заявки внешней системы. Перечень закрыт — его держит база. */
+export type RefKind = 'rds' | 'zno' | 'zni' | 'problem'
+
+export const REF_KINDS: RefKind[] = ['rds', 'zno', 'zni', 'problem']
+
+/** Ссылка карточки на заявку: номер или адрес, как его дали. */
+export type CardRef = { id: string; kind: RefKind; ref: string }
+
 export type Snapshot = {
   board: BoardInfo
   columns: Column[]
@@ -744,6 +752,8 @@ export type Snapshot = {
   fields: CardField[]
   /** cardId → значения его полей. */
   fieldValues: Record<string, FieldValue[]>
+  /** cardId → ссылки на заявки внешних систем, в порядке появления. */
+  cardRefs: Record<string, CardRef[]>
   /** Кого можно назначить. Приезжает со снимком: иначе исполнитель
    *  на карточке остался бы идентификатором. */
   people: Person[]

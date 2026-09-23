@@ -7,6 +7,7 @@ import type {
   LinkKind,
   Placement,
   Priority,
+  RefKind,
 } from '../../shared/api/index.ts'
 
 /** Подмножество свойств колонки, которое меняет одна операция. */
@@ -868,6 +869,19 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [runAndReload],
   )
 
+  // Ссылки на заявки: снимок перечитывается, как после поля, — список
+  // ссылок живёт в снимке, а не в патче.
+  const addCardRef = useCallback(
+    (cardId: string, kind: RefKind, ref: string) =>
+      runAndReload('ADD_CARD_REF', { cardId, kind, ref }, t.ops.refAdd),
+    [runAndReload],
+  )
+  const removeCardRef = useCallback(
+    (cardId: string, refId: string) =>
+      runAndReload('REMOVE_CARD_REF', { cardId, refId }, t.ops.refRemove),
+    [runAndReload],
+  )
+
   const addToIteration = useCallback(
     (cardId: string, iterationId: string) =>
       runAndReload('ADD_TO_ITERATION', { cardId, iterationId }, t.ops.iterationAdd),
@@ -1006,6 +1020,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
     setBlockUntil,
     unblockCard,
     setCardField,
+    addCardRef,
+    removeCardRef,
     addToIteration,
     removeFromIteration,
     createColumn,

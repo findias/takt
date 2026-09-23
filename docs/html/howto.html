@@ -198,11 +198,18 @@ color:var(--ink-3);font-size:.85rem}
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
 <h3 id="split-work-into-parts">Split work into parts</h3>
 <ol>
-<li>Open the card, <strong>Work</strong> tab.</li>
+<li>Open the card, <strong>Tasks</strong> tab.</li>
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
 <li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
 <p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
+<h3 id="tie-a-card-to-service-desk-tickets">Tie a card to service-desk tickets</h3>
+<ol>
+<li>Open the card, <strong>Tasks</strong> tab.</li>
+<li>Under <strong>Tickets</strong>, pick the kind — <strong>RDS</strong>, <strong>Service request</strong>, <strong>Change request</strong> or <strong>Problem</strong> — and type the ticket number or paste its address.</li>
+<li>Press <strong>Add</strong>.</li>
+</ol>
+<p>A card holds as many tickets as it needs: work often answers three service requests and ships with one change request. The list is ordered by kind; an address opens in a new browser tab, a number stays text. <strong>Remove</strong> takes a ticket off. Both show on the card&#39;s <strong>History</strong> tab. Below the tickets, <strong>Tasks</strong> holds the parent, the subtasks and the links to other cards.</p>
 <h3 id="archive">Take a card off the board</h3>
 <p>Hover the card, open the <strong>…</strong> menu and choose <strong>Archive</strong>. A message appears with a <strong>Restore</strong> button, in case that was the wrong card.</p>
 <p>Archived cards sit in <strong>Archive</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
@@ -343,7 +350,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-71-g2e9e5fe-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-72-g6875f0f-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Fourteen migrations, all safe for the running version.** `0052` gives
+**Fifteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -26,7 +26,9 @@ gives labels a kind, so that an import can mark the cards of a person it
 did not find, `0063` adds one-time sign-in links and marks an account
 whose password has not been set yet, `0064` remembers what was chosen
 for each person of an import source, `0065` keeps a card's history
-from the system it was imported from. They
+from the system it was imported from, `0066` adds a card's references
+to service-desk tickets (RDS, service requests, change requests,
+problems). They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -40,12 +42,14 @@ the time-driven notifications; with several replicas each is written
 once, because a notification about the same thing is not written
 twice.
 
-**Subscriptions: two new events, not switched on by themselves.**
-`card.block_until` (a block's deadline was set or changed) and
-`card.block_expired` (a block lifted itself, without an author). A
+**Subscriptions: four new events, not switched on by themselves.**
+`card.block_until` (a block's deadline was set or changed),
+`card.block_expired` (a block lifted itself, without an author),
+`card.ref_added` and `card.ref_removed` (a ticket reference was added
+to a card or removed; the payload names its kind and number). A
 subscription receives only the events ticked on it, so existing ones
 stay as they were; tick the new events to receive them. A receiver
-that rejects event types it does not know should learn these two.
+that rejects event types it does not know should learn these four.
 
 **The integration contract grows, nothing is taken away.** The metrics
 report (`GET /api/v1/boards/{id}/metrics`) gains `imported`,
@@ -201,6 +205,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.
+- **A card's «Задачи» (Tasks) tab.** Everything the work is tied to, in
+  one place: references to RDS, service requests (ЗНО), change requests
+  (ЗНИ) and problems — a number or an address, as many as needed, an
+  address opens in a new tab — then the parent, subtasks and links,
+  which used to sit at the end of «Работа». Adding and removing
+  a reference shows in the card's history.
 - **A «Tasks» tab.** A person's cards on every board you can see —
   yours by default, anyone's from the list or from «Tasks» next to their
   name under «Команда». A private board you cannot see stays hidden.

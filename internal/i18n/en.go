@@ -166,6 +166,8 @@ var en = map[string]string{
 	"разбор RENAME_COLUMN: %s":        "parsing RENAME_COLUMN: %s",
 	"разбор UPDATE_COLUMN: %s":        "parsing UPDATE_COLUMN: %s",
 	"разбор SET_CARD_FIELD: %s":       "parsing SET_CARD_FIELD: %s",
+	"разбор ADD_CARD_REF: %s":         "parsing ADD_CARD_REF: %s",
+	"разбор REMOVE_CARD_REF: %s":      "parsing REMOVE_CARD_REF: %s",
 	"разбор LINK_CARDS: %s":           "parsing LINK_CARDS: %s",
 	"разбор UNLINK_CARDS: %s":         "parsing UNLINK_CARDS: %s",
 	"разбор CREATE_SUBTASK: %s":       "parsing CREATE_SUBTASK: %s",
@@ -244,6 +246,14 @@ var en = map[string]string{
 	"%s: дата пишется как ГГГГ-ММ-ДД":       "%s: write the date as YYYY-MM-DD",
 	"вид с таким названием уже есть":        "a view with this name already exists",
 	"у вида должно быть название":           "the view needs a name",
+
+	// --- Ссылки на заявки ---
+	"нужна карточка": "a card is required",
+	"неизвестный вид ссылки %s: бывают rds, zno, zni, problem":  "unknown reference kind %s: use rds, zno, zni or problem",
+	"впишите номер заявки или её адрес":                         "enter the ticket number or its address",
+	"ссылка длиннее 500 знаков — похоже, вставлен не тот текст": "the reference is longer than 500 characters — it looks like the wrong text was pasted",
+	"эта заявка уже есть на карточке":                           "this ticket is already on the card",
+	"нужны карточка и ссылка":                                   "a card and a reference are required",
 
 	// --- Итерации ---
 	"итерация закрыта":                                 "the iteration is closed",

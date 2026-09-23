@@ -48,6 +48,7 @@ function state(cards: Card[], over: Partial<BaseState> = {}): BaseState {
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: { 'u-1': 'Мария Кузнецова' },
     labels: [
       { id: 'l-1', name: 'Срочно', tone: 'rose' },

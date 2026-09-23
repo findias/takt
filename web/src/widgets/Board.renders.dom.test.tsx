@@ -99,6 +99,7 @@ function board(): Snapshot {
     cardIterations: {},
     fields: [],
     fieldValues: {},
+    cardRefs: {},
     people: [],
     labels: [],
     cardLabels: {},

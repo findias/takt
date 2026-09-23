@@ -1370,6 +1370,8 @@ export function Board({
           onUnblock={unblockCard}
           onMarkDone={markDone}
           onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
+          onAddRef={(id, kind, ref) => void board.addCardRef(id, kind, ref)}
+          onRemoveRef={(id, refId) => void board.removeCardRef(id, refId)}
           onIteration={(id, iterationId) => {
             const current = base.cardIterations[id]
             // Перенос — это выход из одного и вход в другой, и оба факта
