@@ -73,7 +73,11 @@ see no change.
 **A new release file, `takt-fetch`, that is not installed.** The
 exporter for moving into a closed network: run where there is internet,
 it collects YouGile boards — with subtasks, task chats and task
-history — into a `.takt` package. Built for linux, macOS and Windows,
+history — and Jira Software boards, cloud or your own Data Center —
+with subtasks, links, estimates and comments — into a `.takt` package.
+A Jira that already lives inside the closed network is collected from
+a machine next to it, and nothing crosses the perimeter. Built for
+linux, macOS and Windows,
 with its own SBOM and sum; it is not in the image, the chart or the
 bundle. How to use it is on its own page, `docs/takt-fetch.md`, and in
 `takt-fetch help`, in Russian or English by `TAKT_LANG` / `LANG`.

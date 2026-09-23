@@ -100,7 +100,8 @@ test file backing each promise, is in
   retries; a full export of an organisation's data in one file.
 - **Moving in.** From a spreadsheet (CSV, Excel), from YouGile over its
   API, or — into a closed network — from an import package that the
-  separate exporter [`takt-fetch`](docs/takt-fetch.md) builds outside:
+  separate exporter [`takt-fetch`](docs/takt-fetch.md) builds outside
+  from YouGile or Jira:
   subtasks, discussions, task history, and a choice for every person.
 - **Accessibility.** Everything works from the keyboard; contrast holds
   WCAG 2.2 AA in both themes; the page does not scroll sideways and

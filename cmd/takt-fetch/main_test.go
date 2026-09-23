@@ -193,9 +193,17 @@ func TestFetchWritesAPackageTaktReads(t *testing.T) {
 func TestFetchSaysWhatIsMissing(t *testing.T) {
 	var out, errOut bytes.Buffer
 	none := func(string) string { return "" }
-	if err := run(context.Background(), []string{"jira", "fetch"}, none, nil, &out, &errOut); err == nil ||
-		!strings.Contains(err.Error(), "пока один") {
+	if err := run(context.Background(), []string{"trello", "fetch"}, none, nil, &out, &errOut); err == nil ||
+		!strings.Contains(err.Error(), "есть yougile и jira") {
 		t.Fatalf("незнакомый источник: %v", err)
+	}
+	if err := run(context.Background(), []string{"jira", "fetch"}, none, nil, &out, &errOut); err == nil ||
+		!strings.Contains(err.Error(), "--url") {
+		t.Fatalf("Jira без адреса: %v", err)
+	}
+	if err := run(context.Background(), []string{"jira", "boards", "--url", "https://x.atlassian.net"}, none, nil, &out, &errOut); err == nil ||
+		!strings.Contains(err.Error(), "JIRA_TOKEN") {
+		t.Fatalf("Jira без входа: %v", err)
 	}
 	if err := run(context.Background(), []string{"yougile", "boards"}, none, nil, &out, &errOut); err == nil ||
 		!strings.Contains(err.Error(), "YOUGILE_KEY") {
@@ -220,6 +228,9 @@ func TestHelpIsAskedNotAnError(t *testing.T) {
 		{[]string{"-h"}, map[string]string{"LANG": "ru_RU.UTF-8", "TAKT_LANG": "en"}, "Signing in to YouGile"},
 		{[]string{"yougile", "fetch", "--help"}, nil, "--no-history"},
 		{[]string{"yougile"}, map[string]string{"LC_ALL": "en_GB.UTF-8"}, "takt-fetch help"},
+		{[]string{"help"}, nil, "JIRA_EMAIL=почта"},
+		{[]string{"jira"}, map[string]string{"LANG": "en_US.UTF-8"}, "takt-fetch jira fetch --url ADDRESS"},
+		{[]string{"jira", "fetch", "--help"}, nil, "--no-comments"},
 	}
 	for _, c := range cases {
 		var out, errOut bytes.Buffer
@@ -268,12 +279,17 @@ func TestProgressSpeaksTheLanguageOfTheEnvironment(t *testing.T) {
 // страницах документации. Флаг, добавленный без описания, находят
 // по отказу, а не по справке, — этого проверка и не даёт.
 func TestEveryFlagIsDescribed(t *testing.T) {
-	src, err := os.ReadFile("main.go")
-	if err != nil {
-		t.Fatal(err)
+	// Флаги у каждого источника свои, в своём файле.
+	var src []byte
+	for _, name := range []string{"main.go", "jira.go"} {
+		raw, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		src = append(src, raw...)
 	}
 	flags := regexp.MustCompile(`fs\.(?:String|Bool|Var)\((?:&\w+, )?"([a-z-]+)"`).FindAllStringSubmatch(string(src), -1)
-	if len(flags) < 7 {
+	if len(flags) < 12 {
 		t.Fatalf("флагов нашлось %d — разбор main.go разошёлся с кодом", len(flags))
 	}
 	pages := map[string]string{"справка ru": ru.usage, "справка en": en.usage}

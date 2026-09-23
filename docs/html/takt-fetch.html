@@ -119,7 +119,7 @@ color:var(--ink-3);font-size:.85rem}
 <a href="ru/индекс.html">По-русски</a>
 </nav>
 <h1>takt-fetch: the exporter for a closed network</h1>
-<p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile; Jira, Kaiten, Weeek and Trello come next.</p>
+<p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile and Jira — the cloud one and your own installation (Data Center, Server); Kaiten, Weeek and Trello come next.</p>
 <p>It is a separate program on purpose. It runs where there is internet — usually on a laptop — and the takt installed inside the closed network does not contain it: the server that holds your boards cannot reach out to anyone&#39;s cloud, and a security review can check that by the list of files alone.</p>
 <h2 id="get-it">Get it</h2>
 <p>Every release carries <code>takt-fetch</code> as separate files, one per system:</p>
@@ -159,6 +159,18 @@ export YOUGILE_PASSWORD=…           # without it, the password is asked for</c
 </table></div>
 <p>What goes in: columns, tasks with descriptions and checklists, subtasks (those in no column too), assignees, stickers, deadlines, dates, task chats and task history. What does not: files, access rights and time tracking — the package names them, and the import preview shows them under <strong>Not imported</strong>.</p>
 <p><strong>How long it takes.</strong> YouGile answers at most 50 requests a minute per company; the exporter waits whenever YouGile asks it to, and prints how far it has got. A task&#39;s chat and its history are two requests, so a board of 800 tasks takes about half an hour; <code>--no-history</code> halves that, <code>--no-chats</code> with it leaves a few minutes.</p>
+<h2 id="jira">Jira</h2>
+<p>The same package from a Jira Software board. A board, not a project: a board has columns and a filter, and a project has neither.</p>
+<p><strong>Sign in.</strong> Through the environment again. The cloud (<code>…atlassian.net</code>) takes an email and an API token — create the token at id.atlassian.com → <strong>Security</strong> → <strong>API tokens</strong>. Your own installation (Data Center, Server) takes a personal access token from your profile, without an email. There is no password option: the cloud does not accept one over the API, and a person&#39;s password in a migration tool is exactly what tokens are for avoiding.</p>
+<pre><code>export JIRA_EMAIL=anna@company.com   # the cloud only
+export JIRA_TOKEN=…
+takt-fetch jira boards --url https://company.atlassian.net
+takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.takt</code></pre>
+<p><code>boards</code> prints the id, the project, the title and the board type (<code>kanban</code> or <code>scrum</code>). <code>--board</code> may be repeated. <code>--url</code> is required — there is no default Jira. <code>--no-comments</code> leaves the comments out: fewer requests, but the discussion does not come.</p>
+<p>What goes in: the board&#39;s columns in their order, each issue into the column of its status; the summary, the description as plain text (checklists as <code>- [x]</code> lines, mentions as names), the assignee, labels, priority, due date, the estimate from the field the board estimates by (usually Story Points), the created and resolved dates, subtasks whose parent is on the same board, <strong>Blocks</strong> links as blocks and all other links as relates, and comments. Columns get a hint from their statuses&#39; category — *To Do*, *In Progress*, *Done* — which the preview lets you change.</p>
+<p>What does not, and is named under <strong>Not imported</strong>: attachments, time tracking, sprints, versions and the change history; issues whose status is mapped to no column of the board (Jira does not show them on the board either) — as a number. In the cloud a person may hide their email in their profile, and no administrator can undo that; such people come by name, the package says how many there are, and you match them in the preview.</p>
+<p><strong>Your own Jira inside the closed network.</strong> Then carrying anything across the perimeter is not needed at all: run <code>takt-fetch</code> on a machine inside the same network, next to Jira, with <code>--url</code> set to its address. If its certificate is signed by your company&#39;s own authority, point <code>SSL_CERT_FILE</code> at that authority&#39;s certificate — the exporter does not switch checking off.</p>
+<p><strong>How long.</strong> Issues come a hundred per request; comments that did not fit into the search answer take one more request per issue. When Jira asks to wait (429, 503), the exporter waits and carries on.</p>
 <h2 id="carry-it-in-and-import">Carry it in and import</h2>
 <p>The package file is readable only by its owner. Carry it across the perimeter the way your rules say, then:</p>
 <ul>
@@ -180,10 +192,16 @@ export YOUGILE_PASSWORD=…           # without it, the password is asked for</c
 <tr><td>YouGile does not answer</td><td>check the internet connection or <code>--url</code></td></tr>
 <tr><td>YouGile asks to wait: too many requests</td><td>the exporter waits by itself; this means it waited out its two minutes — run it again</td></tr>
 <tr><td>YouGile answered 500 to …</td><td>a problem on YouGile&#39;s side; run it again later</td></tr>
+<tr><td>no Jira address named</td><td>add <code>--url https://company.atlassian.net</code> or your installation&#39;s address</td></tr>
+<tr><td>signing in to Jira needs JIRA_EMAIL and JIRA_TOKEN</td><td>set both for the cloud, <code>JIRA_TOKEN</code> alone for your own installation</td></tr>
+<tr><td>Jira did not accept the sign-in</td><td>check the email and the token; a cloud token is paired with its email</td></tr>
+<tr><td>Jira will not let you see this board</td><td>the account has no permission to browse the board&#39;s project</td></tr>
+<tr><td>the address answers, but it is not Jira</td><td><code>--url</code> points to something else, a login page or a proxy</td></tr>
+<tr><td>the board … has more than 10000 issues</td><td>narrow the board&#39;s filter in Jira, or collect the board in parts</td></tr>
 </tbody>
 </table></div>
 <p>A chat YouGile does not return does not stop the board: the card comes without it, and the package says how many such chats there were. A «502», «503» or «504» is waited out, not treated as a failure.</p>
-<footer>Takt, version v0.2.3-72-g6875f0f-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-73-ga0fd05c-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

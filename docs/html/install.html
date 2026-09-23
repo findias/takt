@@ -343,7 +343,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </ol>
 <p><strong>Rollback.</strong> <code>helm rollback takt</code> brings back the previous pods but <strong>not</strong> the previous schema. What makes that safe is that migrations are written to be compatible with the previous version of the application, and that is checked on our side (<code>migration_compat_test.go</code>). A database backup before the upgrade is still required: we verify the rule, you own the data. If a migration was declared breaking, <code>CHANGELOG.md</code> says so in its own line.</p>
 <h2 id="moving-boards-into-a-closed-network">Moving boards into a closed network</h2>
-<p>Boards from YouGile, Jira, Trello and other trackers come into a closed network as an <a href="import-package.html">import package</a> — a <code>.takt</code> file built outside, where there is internet, by <code>takt-fetch</code> from the same release (its own page: <a href="takt-fetch.html">takt-fetch</a>). So far it knows YouGile:</p>
+<p>Boards from YouGile, Jira, Trello and other trackers come into a closed network as an <a href="import-package.html">import package</a> — a <code>.takt</code> file built outside, where there is internet, by <code>takt-fetch</code> from the same release (its own page: <a href="takt-fetch.html">takt-fetch</a>). So far it knows YouGile and Jira (the cloud and your own installation; for Jira see its page). For YouGile:</p>
 <pre><code>export YOUGILE_KEY=…                 # or YOUGILE_LOGIN (the password is asked for)
 takt-fetch yougile boards            # which boards there are, with their ids
 takt-fetch yougile fetch --board &lt;id&gt; --out warehouse.takt --collected-by &#34;Anna, warehouse move&#34;</code></pre>
@@ -356,7 +356,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.2.3-72-g6875f0f-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-73-ga0fd05c-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

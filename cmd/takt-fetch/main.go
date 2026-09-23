@@ -11,6 +11,8 @@
 //
 //	takt-fetch yougile boards                     — какие доски есть
 //	takt-fetch yougile fetch --board ID --out F   — собрать пакет
+//	takt-fetch jira boards --url …                — то же для Jira
+//	takt-fetch jira fetch --url … --board ID --out F
 //
 // Учётные данные — только из окружения или с клавиатуры, не флагами:
 // флаги видны в списке процессов и остаются в истории оболочки.
@@ -60,7 +62,11 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 		fmt.Fprintln(out, version.Строка())
 		return nil
 	}
-	if args[0] != "yougile" {
+	switch args[0] {
+	case "yougile":
+	case "jira":
+		return runJira(ctx, tx, lang, args[1:], env, out, errOut)
+	default:
 		fmt.Fprint(errOut, tx.usage)
 		return errors.New(tx.unknownSource)
 	}
@@ -70,7 +76,7 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 	}
 	if args[1] != "boards" && args[1] != "fetch" {
 		fmt.Fprint(errOut, tx.usageYougile)
-		return errors.New(tx.unknownCommand(args[1]))
+		return errors.New(tx.unknownCommand("yougile", args[1]))
 	}
 	fs := flag.NewFlagSet("takt-fetch", flag.ContinueOnError)
 	fs.SetOutput(errOut)
@@ -142,16 +148,21 @@ func run(ctx context.Context, args []string, env func(string) string, in io.Read
 		collected = append(collected, b)
 	}
 
+	return save(tx, out, *file, pack.Source{System: yougile.Source, URL: *base}, *collectedBy, collected, cards)
+}
+
+// save пишет собранные доски пакетом — одинаково для всех источников.
+func save(tx texts, out io.Writer, file string, src pack.Source, collectedBy string, boards []pack.Board, cards int) error {
 	m := pack.Manifest{
 		CreatedAt:   time.Now().UTC().Truncate(time.Second),
 		CreatedBy:   "takt-fetch " + version.Строка(),
-		CollectedBy: *collectedBy,
-		Source:      pack.Source{System: yougile.Source, URL: *base},
+		CollectedBy: collectedBy,
+		Source:      src,
 	}
-	if err := writeAtomically(*file, func(w io.Writer) error { return pack.Write(w, m, collected) }); err != nil {
+	if err := writeAtomically(file, func(w io.Writer) error { return pack.Write(w, m, boards) }); err != nil {
 		return err
 	}
-	fmt.Fprintln(out, tx.written(*file, len(collected), cards))
+	fmt.Fprintln(out, tx.written(file, len(boards), cards))
 	fmt.Fprintln(out, tx.carry)
 	return nil
 }

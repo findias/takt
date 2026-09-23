@@ -20,8 +20,12 @@ import (
 type texts struct {
 	usage          string
 	usageYougile   string
+	usageJira      string
 	unknownSource  string
-	unknownCommand func(cmd string) string
+	unknownCommand func(source, cmd string) string
+	jiraNoURL      string
+	jiraNeedLogin  string
+	jiraNoBoard    string
 	noOut          string
 	noBoard        string
 	needLogin      string
@@ -66,15 +70,19 @@ func langOf(env func(string) string) i18n.Lang {
 var ru = texts{
 	usage: `takt-fetch — выгрузчик досок в пакет переноса takt
 
-Запускают там, где есть интернет: выгрузчик заходит в YouGile, собирает
-доски вместе с подзадачами, чатами и историей задач и пишет файл-пакет
-(.takt). Пакет несут в закрытый контур и переносят в takt: экраном
-«Перенос задач» → «Пакет переноса» или командой takt import на сервере.
+Запускают там, где есть интернет (или рядом со своей Jira в том же
+контуре): выгрузчик заходит в YouGile или Jira, собирает доски вместе
+с подзадачами, связями и обсуждением и пишет файл-пакет (.takt). Пакет
+несут в закрытый контур и переносят в takt: экраном «Перенос задач» →
+«Пакет переноса» или командой takt import на сервере.
 
 Команды:
   takt-fetch yougile boards [флаги]            какие доски есть: id, проект, название
   takt-fetch yougile fetch --board ID --out ФАЙЛ.takt [флаги]
                                                собрать пакет
+  takt-fetch jira boards --url АДРЕС           доски Jira: id, проект, название, вид
+  takt-fetch jira fetch --url АДРЕС --board ID --out ФАЙЛ.takt [флаги]
+                                               собрать пакет из Jira
   takt-fetch version                           версия выгрузчика
   takt-fetch help                              эта справка
 
@@ -85,14 +93,23 @@ var ru = texts{
                                             спросят с клавиатуры. Нет ключа у компании —
                                             его заведут в YouGile и скажут об этом
 
+Вход в Jira — тоже через окружение:
+  JIRA_EMAIL=почта JIRA_TOKEN=токен         облако (…atlassian.net): почта и токен API
+                                            (id.atlassian.com → Security → API tokens)
+  JIRA_TOKEN=токен                          своя установка (Data Center, Server):
+                                            личный токен из профиля
+
 Флаги:
-  --url АДРЕС          адрес YouGile (по умолчанию https://ru.yougile.com)
+  --url АДРЕС          адрес YouGile (по умолчанию https://ru.yougile.com);
+                       у Jira обязателен: https://компания.atlassian.net
   --company ИМЯ        компания, если их у почты несколько
   --board ID           доска; можно несколько раз; --all — все доски компании
   --out ФАЙЛ           куда записать пакет (перезаписывается целиком)
   --no-chats           без чатов задач: быстрее, но обсуждение не переедет
   --no-history         без истории задач: вдвое меньше запросов, но история
                        «до переноса» у карточек будет пуста
+  --no-comments        Jira: без комментариев — меньше запросов, обсуждение
+                       не переедет
   --collected-by ТЕКСТ кто собрал и зачем — попадёт в пакет как есть
 
 Сколько ждать: YouGile пускает 50 запросов в минуту на компанию, и выгрузчик
@@ -104,6 +121,10 @@ var ru = texts{
   takt-fetch yougile boards
   takt-fetch yougile fetch --board 5c2e… --out склад.takt --collected-by "Анна, переезд"
 
+  export JIRA_EMAIL=anna@company.ru JIRA_TOKEN=…
+  takt-fetch jira boards --url https://company.atlassian.net
+  takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.takt
+
 Язык справки и сообщений — из TAKT_LANG или LANG (ru, en).
 Подробно: https://github.com/findias/takt/blob/master/docs/ru/выгрузчик.md
 `,
@@ -112,13 +133,21 @@ takt-fetch yougile fetch --board ID --out ФАЙЛ.takt [флаги]
 
 Всё о командах, входе и флагах — takt-fetch help.
 `,
-	unknownSource: "источник пока один — yougile; остальные придут следующими (справка: takt-fetch help)",
-	unknownCommand: func(cmd string) string {
-		return fmt.Sprintf("у yougile нет команды «%s» — есть boards и fetch (справка: takt-fetch help)", cmd)
+	usageJira: `takt-fetch jira boards --url АДРЕС
+takt-fetch jira fetch --url АДРЕС --board ID --out ФАЙЛ.takt [флаги]
+
+Всё о командах, входе и флагах — takt-fetch help.
+`,
+	unknownSource: "такого источника нет — есть yougile и jira (справка: takt-fetch help)",
+	unknownCommand: func(source, cmd string) string {
+		return fmt.Sprintf("у %s нет команды «%s» — есть boards и fetch (справка: takt-fetch help)", source, cmd)
 	},
-	noOut:     "не назван файл пакета: --out склад.takt",
-	noBoard:   "не названа ни одна доска: --board ID (список — takt-fetch yougile boards) или --all",
-	needLogin: "нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN (и пароль)",
+	jiraNoURL:     "не назван адрес Jira: --url https://компания.atlassian.net (или адрес своей установки)",
+	jiraNeedLogin: "нужен вход в Jira: JIRA_EMAIL и JIRA_TOKEN для облака или один JIRA_TOKEN (личный токен) для своей установки",
+	jiraNoBoard:   "не названа ни одна доска: --board ID (список — takt-fetch jira boards --url …)",
+	noOut:         "не назван файл пакета: --out склад.takt",
+	noBoard:       "не названа ни одна доска: --board ID (список — takt-fetch yougile boards) или --all",
+	needLogin:     "нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN (и пароль)",
 	passwordPrompt: func(login string) string {
 		return "Пароль YouGile для " + login + " (виден при наборе; YOUGILE_PASSWORD его заменяет): "
 	},
@@ -146,16 +175,20 @@ takt-fetch yougile fetch --board ID --out ФАЙЛ.takt [флаги]
 var en = texts{
 	usage: `takt-fetch — exports boards into a takt import package
 
-Run it where there is internet: the exporter signs in to YouGile, collects
-boards with their subtasks, task chats and task history, and writes a
-package file (.takt). The package is carried into the closed network and
-imported into takt: on the «Import tasks» screen → «Import package», or
-with takt import on the server.
+Run it where there is internet (or next to your own Jira inside the same
+network): the exporter signs in to YouGile or Jira, collects boards with
+their subtasks, links and discussion, and writes a package file (.takt).
+The package is carried into the closed network and imported into takt:
+on the «Import tasks» screen → «Import package», or with takt import on
+the server.
 
 Commands:
   takt-fetch yougile boards [flags]            which boards there are: id, project, title
   takt-fetch yougile fetch --board ID --out FILE.takt [flags]
                                                build the package
+  takt-fetch jira boards --url ADDRESS         Jira boards: id, project, title, type
+  takt-fetch jira fetch --url ADDRESS --board ID --out FILE.takt [flags]
+                                               build the package from Jira
   takt-fetch version                           the exporter's version
   takt-fetch help                              this help
 
@@ -167,14 +200,23 @@ the process list and stay in the shell history):
                                             company has no key, one is created in
                                             YouGile and you are told so
 
+Signing in to Jira — through the environment too:
+  JIRA_EMAIL=email JIRA_TOKEN=token         cloud (…atlassian.net): email and API token
+                                            (id.atlassian.com → Security → API tokens)
+  JIRA_TOKEN=token                          your own installation (Data Center, Server):
+                                            a personal access token from the profile
+
 Flags:
-  --url ADDRESS        YouGile address (default https://ru.yougile.com)
+  --url ADDRESS        YouGile address (default https://ru.yougile.com);
+                       required for Jira: https://company.atlassian.net
   --company NAME       the company, if the email has several
   --board ID           a board; may be repeated; --all takes every board
   --out FILE           where to write the package (overwritten whole)
   --no-chats           without task chats: faster, but discussions do not come
   --no-history         without task history: half the requests, but the cards'
                        «before the import» history stays empty
+  --no-comments        Jira: without comments — fewer requests, but the
+                       discussion does not come
   --collected-by TEXT  who collected it and why — goes into the package as is
 
 How long: YouGile allows 50 requests a minute per company, and the exporter
@@ -186,6 +228,10 @@ Example:
   takt-fetch yougile boards
   takt-fetch yougile fetch --board 5c2e… --out warehouse.takt --collected-by "Anna, the move"
 
+  export JIRA_EMAIL=anna@company.com JIRA_TOKEN=…
+  takt-fetch jira boards --url https://company.atlassian.net
+  takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.takt
+
 Help and messages follow TAKT_LANG or LANG (ru, en).
 More: https://github.com/findias/takt/blob/master/docs/takt-fetch.md
 `,
@@ -194,13 +240,21 @@ takt-fetch yougile fetch --board ID --out FILE.takt [flags]
 
 Everything about commands, signing in and flags — takt-fetch help.
 `,
-	unknownSource: "there is only one source so far — yougile; the others come next (help: takt-fetch help)",
-	unknownCommand: func(cmd string) string {
-		return fmt.Sprintf("yougile has no command «%s» — there are boards and fetch (help: takt-fetch help)", cmd)
+	usageJira: `takt-fetch jira boards --url ADDRESS
+takt-fetch jira fetch --url ADDRESS --board ID --out FILE.takt [flags]
+
+Everything about commands, signing in and flags — takt-fetch help.
+`,
+	unknownSource: "there is no such source — there are yougile and jira (help: takt-fetch help)",
+	unknownCommand: func(source, cmd string) string {
+		return fmt.Sprintf("%s has no command «%s» — there are boards and fetch (help: takt-fetch help)", source, cmd)
 	},
-	noOut:     "no package file named: --out warehouse.takt",
-	noBoard:   "no board named: --board ID (list them with takt-fetch yougile boards) or --all",
-	needLogin: "signing in to YouGile needs YOUGILE_KEY or YOUGILE_LOGIN (and a password)",
+	jiraNoURL:     "no Jira address named: --url https://company.atlassian.net (or your own installation's address)",
+	jiraNeedLogin: "signing in to Jira needs JIRA_EMAIL and JIRA_TOKEN for the cloud, or JIRA_TOKEN alone (a personal access token) for your own installation",
+	jiraNoBoard:   "no board named: --board ID (list them with takt-fetch jira boards --url …)",
+	noOut:         "no package file named: --out warehouse.takt",
+	noBoard:       "no board named: --board ID (list them with takt-fetch yougile boards) or --all",
+	needLogin:     "signing in to YouGile needs YOUGILE_KEY or YOUGILE_LOGIN (and a password)",
 	passwordPrompt: func(login string) string {
 		return "YouGile password for " + login + " (visible as you type; YOUGILE_PASSWORD replaces it): "
 	},
@@ -229,6 +283,12 @@ Everything about commands, signing in and flags — takt-fetch help.
 		if m := chatsLine.FindStringSubmatch(s); m != nil {
 			return fmt.Sprintf("chats: %s of %s tasks", m[1], m[2])
 		}
+		if m := issuesLine.FindStringSubmatch(s); m != nil {
+			return "issues: " + m[1]
+		}
+		if m := commentsLine.FindStringSubmatch(s); m != nil {
+			return fmt.Sprintf("comments: %s of %s issues", m[1], m[2])
+		}
 		return s
 	},
 }
@@ -236,4 +296,7 @@ Everything about commands, signing in and flags — takt-fetch help.
 var (
 	columnLine = regexp.MustCompile(`^колонка (\d+) из (\d+): (.*)$`)
 	chatsLine  = regexp.MustCompile(`^чаты: (\d+) из (\d+) задач$`)
+	// Строки хода дела клиента Jira.
+	issuesLine   = regexp.MustCompile(`^задачи: (\d+)$`)
+	commentsLine = regexp.MustCompile(`^комментарии: (\d+) из (\d+) задач$`)
 )

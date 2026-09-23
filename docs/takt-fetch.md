@@ -3,7 +3,8 @@
 `takt-fetch` takes boards out of a cloud tracker and writes them into an
 [import package](import-package.md) — a single `.takt` file that is
 carried into a closed network and imported into takt there. So far it
-knows YouGile; Jira, Kaiten, Weeek and Trello come next.
+knows YouGile and Jira — the cloud one and your own installation (Data
+Center, Server); Kaiten, Weeek and Trello come next.
 
 It is a separate program on purpose. It runs where there is internet —
 usually on a laptop — and the takt installed inside the closed network
@@ -87,6 +88,60 @@ how far it has got. A task's chat and its history are two requests, so
 a board of 800 tasks takes about half an hour; `--no-history` halves
 that, `--no-chats` with it leaves a few minutes.
 
+## Jira
+
+The same package from a Jira Software board. A board, not a project:
+a board has columns and a filter, and a project has neither.
+
+**Sign in.** Through the environment again. The cloud
+(`…atlassian.net`) takes an email and an API token — create the token at
+id.atlassian.com → **Security** → **API tokens**. Your own installation
+(Data Center, Server) takes a personal access token from your profile,
+without an email. There is no password option: the cloud does not accept
+one over the API, and a person's password in a migration tool is exactly
+what tokens are for avoiding.
+
+```sh
+export JIRA_EMAIL=anna@company.com   # the cloud only
+export JIRA_TOKEN=…
+takt-fetch jira boards --url https://company.atlassian.net
+takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.takt
+```
+
+`boards` prints the id, the project, the title and the board type
+(`kanban` or `scrum`). `--board` may be repeated. `--url` is required —
+there is no default Jira. `--no-comments` leaves the comments out:
+fewer requests, but the discussion does not come.
+
+What goes in: the board's columns in their order, each issue into the
+column of its status; the summary, the description as plain text
+(checklists as `- [x]` lines, mentions as names), the assignee, labels,
+priority, due date, the estimate from the field the board estimates by
+(usually Story Points), the created and resolved dates, subtasks whose
+parent is on the same board, **Blocks** links as blocks and all other
+links as relates, and comments. Columns get a hint from their statuses'
+category — *To Do*, *In Progress*, *Done* — which the preview lets you
+change.
+
+What does not, and is named under **Not imported**: attachments, time
+tracking, sprints, versions and the change history; issues whose status
+is mapped to no column of the board (Jira does not show them on the
+board either) — as a number. In the cloud a person may hide their email
+in their profile, and no administrator can undo that; such people come
+by name, the package says how many there are, and you match them in
+the preview.
+
+**Your own Jira inside the closed network.** Then carrying anything
+across the perimeter is not needed at all: run `takt-fetch` on a machine
+inside the same network, next to Jira, with `--url` set to its address.
+If its certificate is signed by your company's own authority, point
+`SSL_CERT_FILE` at that authority's certificate — the exporter does not
+switch checking off.
+
+**How long.** Issues come a hundred per request; comments that did not
+fit into the search answer take one more request per issue. When Jira
+asks to wait (429, 503), the exporter waits and carries on.
+
 ## Carry it in and import
 
 The package file is readable only by its owner. Carry it across the
@@ -119,6 +174,12 @@ Russian, as the server does.
 | YouGile does not answer | check the internet connection or `--url` |
 | YouGile asks to wait: too many requests | the exporter waits by itself; this means it waited out its two minutes — run it again |
 | YouGile answered 500 to … | a problem on YouGile's side; run it again later |
+| no Jira address named | add `--url https://company.atlassian.net` or your installation's address |
+| signing in to Jira needs JIRA_EMAIL and JIRA_TOKEN | set both for the cloud, `JIRA_TOKEN` alone for your own installation |
+| Jira did not accept the sign-in | check the email and the token; a cloud token is paired with its email |
+| Jira will not let you see this board | the account has no permission to browse the board's project |
+| the address answers, but it is not Jira | `--url` points to something else, a login page or a proxy |
+| the board … has more than 10000 issues | narrow the board's filter in Jira, or collect the board in parts |
 
 A chat YouGile does not return does not stop the board: the card comes
 without it, and the package says how many such chats there were. A
