@@ -265,6 +265,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
 ### Dependencies
 
 `golang.org/x/crypto` 0.57.0, `pgx` 5.11.0, `vitest` updated.
+`@atlaskit/pragmatic-drag-and-drop` 3.1 and its `hitbox` 2.2: the
+auto-scroll package already needed 3.x, so the client carried two
+copies of the drag-and-drop core; now it carries one.
 `golang.org/x/text` (already in the build through `x/net`) is now used
 directly: it reads CSV saved by Excel in Windows-1251.
 

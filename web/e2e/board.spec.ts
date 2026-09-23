@@ -1046,7 +1046,7 @@ test('зависимость видна с обеих сторон и прохо
 
   // Связь заводится из панели той карточки, которая держит.
   await cardIn(page, 'Очередь', 'Держит других').click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   const panel = page.getByLabel(/Карточка .* «Держит других»/)
   await panel.getByText('Связать с существующей карточкой').click()
   await panel.getByLabel('Вид связи').selectOption('blocks')
@@ -1376,7 +1376,7 @@ test('подзадачи раскрываются прямо с доски', asy
 
   const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
   await parent.getByRole('button', { name: 'Собрать отчёт' }).click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Свести цифры')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Свести цифры' }).first()).toBeVisible()
@@ -1429,7 +1429,7 @@ test('заблокированная часть останавливает и р
 
   const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
   await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Прогнать нагрузочные' }).first()).toBeVisible()
@@ -1548,7 +1548,7 @@ test('история спрятана за вкладкой, карточка о
   await expect(page.getByRole('heading', { name: 'История' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Подзадачи' })).toHaveCount(0)
 
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await expect(page.getByRole('heading', { name: 'Подзадачи' })).toBeVisible()
 
   await page.getByRole('tab', { name: 'История' }).click()
@@ -1592,8 +1592,8 @@ test('подзадача заводится из карточки одним п�
 
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
-  // Карточка открывается обсуждением; подзадачи живут на «Работе».
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  // Карточка открывается обсуждением; подзадачи живут на «Задачах».
+  await page.getByRole('tab', { name: 'Задачи' }).click()
 
   // Название — всё, что спрашивают: подзадача это обычная карточка,
   // и заводится она тем же движением, что и карточка в колонке.
@@ -1617,7 +1617,7 @@ test('подзадача заводится из карточки одним п�
   // в память вкладки.
   await page.reload()
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await expect(page.getByRole('progressbar', { name: 'Готово 0 из 1', exact: true })).toBeVisible()
 
   // Связь проходится в обе стороны: из родителя — в подзадачу,
@@ -1625,7 +1625,7 @@ test('подзадача заводится из карточки одним п�
   // можно было только поиском по доске.
   await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты' }).click()
   await expect(page.getByRole('heading', { name: 'Прогнать тесты' })).toBeVisible()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByRole('complementary').getByRole('button', { name: 'Выпустить релиз' }).click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
@@ -1742,7 +1742,7 @@ test('работу можно поставить на доску соседей,
   await addCard(page, 'Очередь', 'Выпустить релиз')
 
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
 
   // Постановка работы соседям — то же одно поле плюс выбор доски.
   // Отдельной «заявки» нет: запрос это карточка на их доске.
@@ -1781,7 +1781,7 @@ test('работу можно поставить на доску соседей,
   await page.getByRole('button', { name: 'Все доски' }).click()
   await openBoard(page, 'Поставки')
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await expect(page.getByText('Работу не взяли')).toBeVisible()
   await expect(page.getByText(/которого вам не видно/)).toHaveCount(0)
 })

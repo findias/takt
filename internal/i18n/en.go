@@ -7,6 +7,7 @@ package i18n
 // В переводе %s стоят в том же порядке; переставить можно явным
 // номером, %[2]s. Слова те же, что у клиента (web/src/shared/i18n/en.ts):
 // organisation, subdivision, integration key.
+// #nosec G101 -- каталог сообщений, а не учётные данные: KAITEN_TOKEN и MONDAY_TOKEN в нём — имена переменных окружения в подсказке, значений нет
 var en = map[string]string{
 	// --- Вход и сессия ---
 	"неверная почта или пароль":          "wrong email or password",

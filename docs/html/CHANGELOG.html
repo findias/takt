@@ -168,7 +168,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
 </ul>
 <h3 id="dependencies">Dependencies</h3>
-<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, <code>vitest</code> updated. <code>golang.org/x/text</code> (already in the build through <code>x/net</code>) is now used directly: it reads CSV saved by Excel in Windows-1251.</p>
+<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, <code>vitest</code> updated. <code>@atlaskit/pragmatic-drag-and-drop</code> 3.1 and its <code>hitbox</code> 2.2: the auto-scroll package already needed 3.x, so the client carried two copies of the drag-and-drop core; now it carries one. <code>golang.org/x/text</code> (already in the build through <code>x/net</code>) is now used directly: it reads CSV saved by Excel in Windows-1251.</p>
 <h2 id="v0-2-3-27-august-2026">v0.2.3 — 27 August 2026</h2>
 <p><strong>The binary is released as a file of its own, and you can obtain its sum yourself.</strong> Next to the archive there is now <code>takt-vX.Y.Z-linux-amd64.bin</code> (and <code>-arm64</code>) with its own sum: that is what gets checked in place — an installation from the archive leaves <code>/opt/takt/takt</code> on disk, and the sum of the archive does not answer that question. The build is reproducible, and the release proves it: it rebuilds the binary from the same tag and compares byte for byte before publishing. So the sum need not be taken on our word — <code>GOOS=linux GOARCH=amd64 make binary</code> produces the same bytes.</p>
 <p><strong>The sums of a release verify for whoever downloaded it.</strong> Assets in a release lie flat — GitHub keeps no directories for them — while the sums were computed with paths (<code>sbom/takt-server.cdx.json</code>). For anyone who downloaded v0.2.2 and ran <code>sha256sum -c SHA256SUMS</code>, seven lines out of thirteen did not check out. The SBOM and the reports are now flattened before the sums are computed.</p>
@@ -255,7 +255,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-77-g76a1d46-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-78-gec7e2b4-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

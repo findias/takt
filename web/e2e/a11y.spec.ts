@@ -428,7 +428,7 @@ test('на узком экране страница не листается вб
     .getByRole('group', { name: /Карточка «Карточка»/ })
     .getByRole('button', { name: 'Карточка', exact: true })
     .click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Часть работы')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Часть работы' }).first()).toBeVisible()
@@ -722,7 +722,7 @@ test('флажок не мельче цели нажатия, подпись н�
   // и тесно не становится.
   const parent = queue.getByRole('group', { name: /Карточка «Собрать отчёт/ })
   await parent.getByRole('button', { name: /Собрать отчёт/ }).click()
-  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Свести цифры за весь квартал')
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await expect(page.getByRole('button', { name: 'Свести цифры за весь квартал' }).first()).toBeVisible()

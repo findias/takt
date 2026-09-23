@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-77-g76a1d46-dirty.</p>
+<p>Every section in one file. Version v0.2.3-78-gec7e2b4-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1702,7 +1702,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
 </ul>
 <h3 id="dependencies">Dependencies</h3>
-<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, <code>vitest</code> updated. <code>golang.org/x/text</code> (already in the build through <code>x/net</code>) is now used directly: it reads CSV saved by Excel in Windows-1251.</p>
+<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, <code>vitest</code> updated. <code>@atlaskit/pragmatic-drag-and-drop</code> 3.1 and its <code>hitbox</code> 2.2: the auto-scroll package already needed 3.x, so the client carried two copies of the drag-and-drop core; now it carries one. <code>golang.org/x/text</code> (already in the build through <code>x/net</code>) is now used directly: it reads CSV saved by Excel in Windows-1251.</p>
 <h2 id="v0-2-3-27-august-2026">v0.2.3 — 27 August 2026</h2>
 <p><strong>The binary is released as a file of its own, and you can obtain its sum yourself.</strong> Next to the archive there is now <code>takt-vX.Y.Z-linux-amd64.bin</code> (and <code>-arm64</code>) with its own sum: that is what gets checked in place — an installation from the archive leaves <code>/opt/takt/takt</code> on disk, and the sum of the archive does not answer that question. The build is reproducible, and the release proves it: it rebuilds the binary from the same tag and compares byte for byte before publishing. So the sum need not be taken on our word — <code>GOOS=linux GOARCH=amd64 make binary</code> produces the same bytes.</p>
 <p><strong>The sums of a release verify for whoever downloaded it.</strong> Assets in a release lie flat — GitHub keeps no directories for them — while the sums were computed with paths (<code>sbom/takt-server.cdx.json</code>). For anyone who downloaded v0.2.2 and ran <code>sha256sum -c SHA256SUMS</code>, seven lines out of thirteen did not check out. The SBOM and the reports are now flattened before the sums are computed.</p>
@@ -1841,7 +1841,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>
 </ul>
 <h3 id="зависимости">Зависимости</h3>
-<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, обновлён <code>vitest</code>. <code>golang.org/x/text</code> (он и так был в сборке через <code>x/net</code>) теперь используется напрямую: им читается CSV, сохранённый Excel в Windows-1251.</p>
+<p><code>golang.org/x/crypto</code> 0.57.0, <code>pgx</code> 5.11.0, обновлён <code>vitest</code>. <code>@atlaskit/pragmatic-drag-and-drop</code> 3.1 и его <code>hitbox</code> 2.2: пакету автопрокрутки уже нужна была 3.x, и клиент возил две копии ядра перетаскивания; теперь одну. <code>golang.org/x/text</code> (он и так был в сборке через <code>x/net</code>) теперь используется напрямую: им читается CSV, сохранённый Excel в Windows-1251.</p>
 <h2 id="v0-2-3-27-августа-2026">v0.2.3 — 27 августа 2026</h2>
 <p><strong>Бинарник выпускается отдельным файлом, и его сумму можно получить самому.</strong> Рядом с архивом теперь лежит <code>takt-vX.Y.Z-linux-amd64.bin</code> (и <code>-arm64</code>) со своей суммой: сверяют на месте именно его — у поставленного из архива на диске лежит <code>/opt/takt/takt</code>, а сумма архива на этот вопрос не отвечает. Сборка воспроизводима, и выпуск это проверяет: пересобирает бинарник тем же тегом и сверяет побайтово до публикации. Значит, сумму не обязательно брать у нас — <code>GOOS=linux GOARCH=amd64 make binary</code> даёт те же байты.</p>
 <p><strong>Суммы выпуска сходятся у того, кто его скачал.</strong> В выпуске файлы лежат плоско — каталогов у вложений GitHub не хранит, — а суммы считались с путями (<code>sbom/takt-server.cdx.json</code>). У всякого, кто скачал v0.2.2 и выполнил <code>sha256sum -c SHA256SUMS</code>, не сходились семь строк из тринадцати. Теперь состав и отчёты складываются в один уровень до подсчёта.</p>
