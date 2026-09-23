@@ -6,7 +6,9 @@ import { PRIORITY_NAMES, dateWords } from '../entities/card/model.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { ScreenError } from '../shared/ui/Field.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
+import { Button } from '../shared/ui/Button.tsx'
 import { t } from '../shared/i18n/index.ts'
+import { DUES, STATUSES, filterTasks, isFiltered, labelsOf, parseTaskFilter } from './tasksFilter.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -33,6 +35,7 @@ export function Tasks({ principal }: { principal: Principal }) {
   const query = useQuery()
   const user = query.get('user') ?? principal.id
   const withDone = query.get('done') === '1'
+  const filter = parseTaskFilter(query)
   const s = t.tasks
 
   const [people, setPeople] = useState<Member[]>([])
@@ -58,12 +61,16 @@ export function Tasks({ principal }: { principal: Principal }) {
     }
   }, [user, withDone, principal.id, s])
 
-  const set = (key: string, value: string | null) => {
+  const set = (key: string, value: string | null, also: Record<string, null> = {}) => {
     const next = new URLSearchParams(query)
-    if (value === null) next.delete(key)
-    else next.set(key, value)
+    for (const [k, v] of Object.entries({ ...also, [key]: value })) {
+      if (v === null || v === '') next.delete(k)
+      else next.set(k, v)
+    }
     setQuery(next, { replace: true })
   }
+  const shown = list ? filterTasks(list.tasks, filter) : []
+  const labels = list ? labelsOf(list.tasks) : []
   const who = user === principal.id ? principal.name : (people.find((p) => p.userId === user)?.name ?? '')
   const now = Date.now()
 
@@ -72,7 +79,11 @@ export function Tasks({ principal }: { principal: Principal }) {
       <div className="row tasks-head">
         <label className="row row--tight">
           <span className="small">{s.whose}</span>
-          <select value={user} onChange={(e) => set('user', e.target.value === principal.id ? null : e.target.value)}>
+          <select value={user} onChange={(e) =>
+              // Метка отбора — из задач прежнего человека; у другого её может
+              // не быть, и список молча показал бы пустоту.
+              set('user', e.target.value === principal.id ? null : e.target.value, { label: null })
+            }>
             <option value={principal.id}>{s.mine}</option>
             {people
               .filter((p) => p.userId !== principal.id)
@@ -87,13 +98,58 @@ export function Tasks({ principal }: { principal: Principal }) {
           <input type="checkbox" checked={withDone} onChange={(e) => set('done', e.target.checked ? '1' : null)} />
           <span>{s.withDone}</span>
         </label>
-        {list && <span className="muted small">{s.count(list.tasks.length)}</span>}
+      </div>
+      <div className="row tasks-head tasks-filter">
+        <label className="row row--tight">
+          <span className="small">{s.status}</span>
+          <select value={filter.status} onChange={(e) => set('status', e.target.value)}>
+            <option value="">{s.statusAny}</option>
+            {STATUSES.map((v) => (
+              <option key={v} value={v}>
+                {s.statuses[v]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="row row--tight">
+          <span className="small">{s.due}</span>
+          <select value={filter.due} onChange={(e) => set('due', e.target.value)}>
+            <option value="">{s.dueAny}</option>
+            {DUES.map((v) => (
+              <option key={v} value={v}>
+                {s.dues[v]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="row row--tight">
+          <span className="small">{s.label}</span>
+          <select value={filter.label} onChange={(e) => set('label', e.target.value)}>
+            <option value="">{s.labelAny}</option>
+            {labels.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isFiltered(filter) && (
+          <Button kind="quiet" onClick={() => set('status', null, { due: null, label: null })}>
+            {s.reset}
+          </Button>
+        )}
+        {list && (
+          <span className="muted small">
+            {isFiltered(filter) ? s.shownOf(shown.length, list.tasks.length) : s.count(list.tasks.length)}
+          </span>
+        )}
       </div>
       <p className="muted small">{s.hint}</p>
       <ScreenError>{error}</ScreenError>
       {!list && !error && <Skeleton lines={4} />}
       {list && list.tasks.length === 0 && <p className="muted">{s.empty}</p>}
-      {list && list.tasks.length > 0 && (
+      {list && list.tasks.length > 0 && shown.length === 0 && <p className="muted">{s.emptyFiltered}</p>}
+      {shown.length > 0 && (
         <div className="table-wrap">
           <table className="board-table">
             <caption className="sr-only">{s.caption(who)}</caption>
@@ -112,7 +168,7 @@ export function Tasks({ principal }: { principal: Principal }) {
               </tr>
             </thead>
             <tbody>
-              {list.tasks.map((task) => (
+              {shown.map((task) => (
                 <tr key={task.id}>
                   <td className="mono muted small">{task.number}</td>
                   <td>

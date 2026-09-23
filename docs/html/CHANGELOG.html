@@ -151,6 +151,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>**A reply by someone YouGile no longer lists is no longer passed off as the importer&#39;s.** YouGile does not return people removed from the company, and their replies came across under the importer&#39;s name with no mark. Now they begin with «from YouGile: unknown author». Replies imported before this are not corrected: the author was not kept.</li>
 <li><strong>A busy YouGile is waited out, not treated as a failure.</strong> «502», «503» and «504» are retried like «too many requests»; a chat YouGile will not return no longer stops the board — the card comes without it and the number of such chats is named, and in the background fetch that card simply waits for the next import of the board.</li>
 <li><strong>YouGile history and chats come across.</strong> After an import over the API, task chats and task history are fetched in the background (YouGile allows 50 requests a minute; about half an hour for 800 tasks), with progress on the import screen. Replies become the card&#39;s discussion, and YouGile&#39;s history shows on the card&#39;s «История» tab under «До переноса», with its own dates. <code>takt-fetch</code> puts the history into the package too (<code>--no-history</code> skips it).</li>
+<li><strong>Filters on the «Tasks» tab.</strong> Status (by the kind of column, or blocked), due date (overdue, within 3 days, none) and label; the choice is kept in the address like the rest of the tab.</li>
 <li><strong>A «Tasks» tab.</strong> A person&#39;s cards on every board you can see — yours by default, anyone&#39;s from the list or from «Tasks» next to their name under «Команда». A private board you cannot see stays hidden.</li>
 <li><strong>The board&#39;s toolbar is rebuilt.</strong> The view (Board, Table, Changes) is a list at the left; the filter is the main panel and stays open on a wide screen (on a narrow one it is folded under «Отбор» as before); the card search is a row below.</li>
 <li><strong>Labels are named on the card.</strong> Under the title, as text — three of them and «+N»; they used to be coloured dots with the name only in a tooltip. Pressing them edits the card&#39;s labels.</li>
@@ -252,7 +253,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-70-g2de5ee7-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-71-g2e9e5fe-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

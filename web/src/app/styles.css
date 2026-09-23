@@ -4003,6 +4003,13 @@ textarea.description {
   gap: var(--space-3);
   align-items: center;
 }
+/* Отбор — своей строкой под выбором человека: «чьи» и «какие» —
+   разные вопросы, и в одну строку они рвутся посередине. Списки держат
+   ширину, как на доске: после переноса названия меток бывают длинными. */
+.tasks-filter select {
+  width: auto;
+  max-width: 12.5rem;
+}
 .tasks-mark {
   display: inline-block;
   margin-left: var(--space-2);

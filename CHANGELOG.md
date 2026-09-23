@@ -198,6 +198,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   discussion, and YouGile's history shows on the card's «История» tab
   under «До переноса», with its own dates. `takt-fetch` puts the history
   into the package too (`--no-history` skips it).
+- **Filters on the «Tasks» tab.** Status (by the kind of column, or
+  blocked), due date (overdue, within 3 days, none) and label; the choice
+  is kept in the address like the rest of the tab.
 - **A «Tasks» tab.** A person's cards on every board you can see —
   yours by default, anyone's from the list or from «Tasks» next to their
   name under «Команда». A private board you cannot see stays hidden.

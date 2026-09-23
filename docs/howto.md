@@ -432,7 +432,11 @@ every board you can see — your own by default. Pick someone else in
 **Whose tasks**, or press **Tasks** next to their name under **Team**.
 The list is a table: number, task, board, column, due date, priority,
 labels and how long it has been in progress; the task opens its card on
-its board. **Show finished** adds finished work. A private board you
+its board. **Show finished** adds finished work. The row below narrows
+the list: **Status** (not started, in progress, done — by the kind of
+column, since boards name their columns differently — or blocked),
+**Due** (overdue, within 3 days, no due date) and **Label** (only the
+labels these tasks carry). **Clear filters** brings everything back. A private board you
 have no access to is not shown, even if the person works on it. The
 address keeps the choice, so the list can be sent to someone.
 
