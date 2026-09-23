@@ -172,7 +172,8 @@ does not come twice.
 **Comments** come across with their date. The author is the matched
 person when their e-mail is found; otherwise the comment is written on
 behalf of the person importing, and begins with the author's name as
-text — “from YouGile: Ivan Petrov” — so that nobody is invented and
+text — “from YouGile: Ivan Petrov”, or “unknown author” when the
+source does not name them — so that nobody is invented and
 nothing is attributed to the wrong person.
 
 **History** follows the rule of every import: dates come across, moves

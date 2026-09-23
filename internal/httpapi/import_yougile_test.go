@@ -140,7 +140,10 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 			// сообщение: история задачи в YouGile.
 			// Номер сообщения — его время; у YouGile он постоянный, и
 			// выборки сравниваются по нему.
-			items := []map[string]any{{"id": chatAt, "fromUserId": "u-2", "text": "Начал сверку"}}
+			// u-gone в users нет — так YouGile отдаёт убранного из компании.
+			// Его слова не должны стать словами переносящего.
+			items := []map[string]any{{"id": chatAt, "fromUserId": "u-2", "text": "Начал сверку"},
+				{"id": chatAt + 30_000, "fromUserId": "u-gone", "text": "Сверку закончил не я"}}
 			if r.URL.Query().Get("includeSystem") == "true" {
 				items = append(items, map[string]any{"id": chatAt + 60_000, "fromUserId": "u-1",
 					"text": "Задача перемещена в колонку «Нужно сделать»"})
@@ -373,7 +376,7 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	if !job.Finished || job.Failed != "" || job.Done != 1 || job.Skipped != 1 ||
-		job.Comments != 1 || job.History != 1 {
+		job.Comments != 2 || job.History != 1 {
 		t.Fatalf("задание: %+v", job)
 	}
 
@@ -396,8 +399,21 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID+"/cards/"+c.ID, nil, http.StatusOK), &detail)
 		h := detail.SourceHistory
 		if h.Source != "yougile" || h.Pending || len(h.Entries) != 1 ||
-			h.Entries[0].Text != "Задача перемещена в колонку «Нужно сделать»" || detail.Comments != 1 {
+			h.Entries[0].Text != "Задача перемещена в колонку «Нужно сделать»" || detail.Comments != 2 {
 			t.Fatalf("история карточки: %+v, реплик %d", h, detail.Comments)
+		}
+		var comments struct {
+			Comments []struct {
+				Body string `json:"body"`
+			} `json:"comments"`
+		}
+		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID+"/cards/"+c.ID+"/comments", nil, http.StatusOK), &comments)
+		bodies := []string{}
+		for _, cm := range comments.Comments {
+			bodies = append(bodies, cm.Body)
+		}
+		if joined := strings.Join(bodies, " | "); !strings.Contains(joined, "из YouGile: автор неизвестен\n\nСверку закончил не я") {
+			t.Fatalf("реплика неизвестного автора: %q", joined)
 		}
 	}
 

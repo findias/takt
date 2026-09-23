@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-67-g1d0f1de-dirty.</p>
+<p>Every section in one file. Version v0.2.3-70-g2de5ee7-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -348,7 +348,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Choose where to and read <strong>What will happen</strong>: besides cards it counts subtasks, links and discussion replies. A person the source gave no e-mail for (Trello gives e-mails only to an administrator) is listed by name.</li>
 <li>Import. <strong>Import the next board of the package</strong> takes the same file to its next board.</li>
 </ol>
-<p>A reply by someone who is not in the organisation comes on behalf of the person importing and starts with the author&#39;s name — “from YouGile: Ivan Petrov”. A damaged package is refused as a whole and says which part did not match. Packages over 50 MB are imported by an administrator on the server; the format is described in <a href="import-package.html">Import package</a>.</p>
+<p>A reply by someone who is not in the organisation comes on behalf of the person importing and starts with the author&#39;s name — “from YouGile: Ivan Petrov”, or “from YouGile: unknown author” when YouGile no longer lists the person (someone removed from the company). A damaged package is refused as a whole and says which part did not match. Packages over 50 MB are imported by an administrator on the server; the format is described in <a href="import-package.html">Import package</a>.</p>
 <h2 id="team">The organisation</h2>
 <h3 id="tasks">See someone&#39;s tasks on every board</h3>
 <p>The <strong>Tasks</strong> tab lists the cards where a person is an assignee, on every board you can see — your own by default. Pick someone else in <strong>Whose tasks</strong>, or press <strong>Tasks</strong> next to their name under <strong>Team</strong>. The list is a table: number, task, board, column, due date, priority, labels and how long it has been in progress; the task opens its card on its board. <strong>Show finished</strong> adds finished work. A private board you have no access to is not shown, even if the person works on it. The address keeps the choice, so the list can be sent to someone.</p>
@@ -1284,7 +1284,7 @@ sha256sum -c SHA256SUMS</code></pre>
 </tbody>
 </table></div>
 <p>The key of a second import is <code>source.system</code> with the card&#39;s <code>externalId</code>. For YouGile it is the same key as import over the API uses, so a board brought over the API first and from a package later does not come twice.</p>
-<p><strong>Comments</strong> come across with their date. The author is the matched person when their e-mail is found; otherwise the comment is written on behalf of the person importing, and begins with the author&#39;s name as text — “from YouGile: Ivan Petrov” — so that nobody is invented and nothing is attributed to the wrong person.</p>
+<p><strong>Comments</strong> come across with their date. The author is the matched person when their e-mail is found; otherwise the comment is written on behalf of the person importing, and begins with the author&#39;s name as text — “from YouGile: Ivan Petrov”, or “unknown author” when the source does not name them — so that nobody is invented and nothing is attributed to the wrong person.</p>
 <p><strong>History</strong> follows the rule of every import: dates come across, moves between columns do not. The old system had its own columns, and its moves passed off as ours would give a metric no one can trust. Imported cards are marked, and <strong>Flow</strong> can count without them.</p>
 <h2 id="limits">Limits</h2>
 <div class="tablewrap"><table>
@@ -1623,6 +1623,7 @@ export YOUGILE_PASSWORD=…           # without it, the password is asked for</c
 <li><strong>A “?” next to concepts</strong> — a column limit, the board&#39;s promise, a block, label scopes, the flow metrics, roles, key scopes: two or three sentences on what it is, and a link to the help section.</li>
 <li><strong>Personal settings live behind your name.</strong> Clicking your name in the header opens «Личные настройки»: language, theme and density, password. «Выйти» is there too; the half-circle button is gone. Theme and density stay in the browser, since they often differ between devices.</li>
 <li><strong>Changing an email.</strong> Your own — behind your name, on the «Вход» tab, with your password. A member&#39;s — by the owner, «Почта…» under «Команда», for someone who belongs to no other organisation. Both show in the audit log as «email: old → new». An email managed by the identity provider or directory is changed there.</li>
+<li>**A reply by someone YouGile no longer lists is no longer passed off as the importer&#39;s.** YouGile does not return people removed from the company, and their replies came across under the importer&#39;s name with no mark. Now they begin with «from YouGile: unknown author». Replies imported before this are not corrected: the author was not kept.</li>
 <li><strong>A busy YouGile is waited out, not treated as a failure.</strong> «502», «503» and «504» are retried like «too many requests»; a chat YouGile will not return no longer stops the board — the card comes without it and the number of such chats is named, and in the background fetch that card simply waits for the next import of the board.</li>
 <li><strong>YouGile history and chats come across.</strong> After an import over the API, task chats and task history are fetched in the background (YouGile allows 50 requests a minute; about half an hour for 800 tasks), with progress on the import screen. Replies become the card&#39;s discussion, and YouGile&#39;s history shows on the card&#39;s «История» tab under «До переноса», with its own dates. <code>takt-fetch</code> puts the history into the package too (<code>--no-history</code> skips it).</li>
 <li><strong>A «Tasks» tab.</strong> A person&#39;s cards on every board you can see — yours by default, anyone&#39;s from the list or from «Tasks» next to their name under «Команда». A private board you cannot see stays hidden.</li>
@@ -1758,6 +1759,7 @@ export YOUGILE_PASSWORD=…           # without it, the password is asked for</c
 <li><strong>«?» у понятий</strong> — лимита колонки, обещания доски, блокировки, области метки, метрик потока, ролей, разрешений ключа: две-три фразы о том, что это, и ссылка на раздел справки.</li>
 <li><strong>Личные настройки — за именем.</strong> Щелчок по имени в шапке открывает «Личные настройки»: язык, тема и плотность, пароль. «Выйти» — там же; кнопки с полукругом больше нет. Тема и плотность остаются в браузере: на разных устройствах они часто разные.</li>
 <li><strong>Смена почты.</strong> Свою — за именем, вкладка «Вход», с паролем. Участнику — владелец, «Почта…» в «Команде», если человек не состоит в других организациях. Обе видны в журнале как «почта: старая → новая». Почту, которую ведёт провайдер или каталог, меняют там.</li>
+<li>**Реплика того, кого YouGile уже не показывает, больше не выдаётся за слова переносящего.** Убранных из компании YouGile не отдаёт, и их реплики переезжали от имени переносящего без пометки. Теперь они начинаются с «из YouGile: автор неизвестен». Перенесённое раньше не исправляется: автор не сохранился.</li>
 <li><strong>Занятый YouGile пережидается, а не считается поломкой.</strong> Ответы «502», «503» и «504» повторяются, как «слишком много запросов»; чат, который YouGile не отдал, больше не роняет доску — карточка едет без него, число таких чатов названо, а при дотягивании фоном такая карточка просто ждёт следующего переноса доски.</li>
 <li><strong>История и чаты YouGile переезжают.</strong> После переноса по API чаты и история задач дотягиваются фоном (YouGile пускает 50 запросов в минуту; 800 задач — около получаса), ход дела виден на экране переноса. Реплики становятся обсуждением карточки, история YouGile — на вкладке «История» карточки под «До переноса», со своими датами. <code>takt-fetch</code> кладёт историю и в пакет (<code>--no-history</code> — без неё).</li>
 <li><strong>Вкладка «Задачи».</strong> Карточки человека на всех досках, которые видны вам, — по умолчанию ваши, чужие — из списка или по «Задачи» рядом с именем в «Команде». Закрытая доска, которой вам не видно, не видна и здесь.</li>

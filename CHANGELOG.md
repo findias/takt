@@ -181,6 +181,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   under «Команда», for someone who belongs to no other organisation.
   Both show in the audit log as «email: old → new». An email managed by
   the identity provider or directory is changed there.
+- **A reply by someone YouGile no longer lists is no longer passed off
+  as the importer's.** YouGile does not return people removed from the
+  company, and their replies came across under the importer's name with
+  no mark. Now they begin with «from YouGile: unknown author». Replies
+  imported before this are not corrected: the author was not kept.
 - **A busy YouGile is waited out, not treated as a failure.** «502»,
   «503» and «504» are retried like «too many requests»; a chat YouGile
   will not return no longer stops the board — the card comes without it

@@ -261,7 +261,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Choose where to and read <strong>What will happen</strong>: besides cards it counts subtasks, links and discussion replies. A person the source gave no e-mail for (Trello gives e-mails only to an administrator) is listed by name.</li>
 <li>Import. <strong>Import the next board of the package</strong> takes the same file to its next board.</li>
 </ol>
-<p>A reply by someone who is not in the organisation comes on behalf of the person importing and starts with the author&#39;s name — “from YouGile: Ivan Petrov”. A damaged package is refused as a whole and says which part did not match. Packages over 50 MB are imported by an administrator on the server; the format is described in <a href="import-package.html">Import package</a>.</p>
+<p>A reply by someone who is not in the organisation comes on behalf of the person importing and starts with the author&#39;s name — “from YouGile: Ivan Petrov”, or “from YouGile: unknown author” when YouGile no longer lists the person (someone removed from the company). A damaged package is refused as a whole and says which part did not match. Packages over 50 MB are imported by an administrator on the server; the format is described in <a href="import-package.html">Import package</a>.</p>
 <h2 id="team">The organisation</h2>
 <h3 id="tasks">See someone&#39;s tasks on every board</h3>
 <p>The <strong>Tasks</strong> tab lists the cards where a person is an assignee, on every board you can see — your own by default. Pick someone else in <strong>Whose tasks</strong>, or press <strong>Tasks</strong> next to their name under <strong>Team</strong>. The list is a table: number, task, board, column, due date, priority, labels and how long it has been in progress; the task opens its card on its board. <strong>Show finished</strong> adds finished work. A private board you have no access to is not shown, even if the person works on it. The address keeps the choice, so the list can be sent to someone.</p>
@@ -343,7 +343,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-67-g1d0f1de-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-70-g2de5ee7-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

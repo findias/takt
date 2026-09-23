@@ -143,9 +143,7 @@ func (s *Service) AddSourceHistory(ctx context.Context, orgID, actorID, boardID,
 				author, text := people[cmp.Or(cm.AuthorKey, cm.AuthorEmail)], cm.Text
 				if author == "" {
 					author = actorID
-					if cm.AuthorName != "" {
-						text = fromWord + " " + sourceName + ": " + cm.AuthorName + "\n\n" + text
-					}
+					text = foreignComment(ctx, fromWord, sourceName, cm.AuthorName, text)
 				}
 				at := cm.At
 				if at.IsZero() {

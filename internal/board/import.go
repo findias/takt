@@ -1092,9 +1092,7 @@ func importRelations(
 				// а чья она — сказано в ней самой. Выдумывать человека
 				// нельзя, и приписать слова не тому — тоже.
 				author = actorID
-				if cm.AuthorName != "" {
-					text = fromWord + " " + plan.SourceName + ": " + cm.AuthorName + "\n\n" + text
-				}
+				text = foreignComment(ctx, fromWord, plan.SourceName, cm.AuthorName, text)
 			}
 			at := cm.At
 			if at.IsZero() {
@@ -1253,4 +1251,13 @@ func looksLikeUUID(s string) bool {
 		}
 	}
 	return true
+}
+
+// foreignComment — текст реплики, автора которой в организации нет:
+// с припиской, чья она. Автор без имени — не повод промолчать: источник
+// не отдаёт того, кого убрали из компании, и без приписки его слова
+// выглядели бы словами переносящего.
+func foreignComment(ctx context.Context, fromWord, sourceName, authorName, text string) string {
+	name := cmp.Or(authorName, i18n.Name(ctx, "автор неизвестен"))
+	return fromWord + " " + sourceName + ": " + name + "\n\n" + text
 }

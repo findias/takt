@@ -361,7 +361,8 @@ var en = map[string]string{
 	"перенос из YouGile на этой установке выключен — выгрузите таблицу в YouGile и перенесите её файлом": "import from YouGile is switched off on this installation — export a table from YouGile and import it as a file",
 
 	// --- Пакет переноса ---
-	"из": "from",
+	"из":               "from",
+	"автор неизвестен": "unknown author",
 	"чаты задач — собраны без них: чаты переносит пакет переноса":                        "task chats — collected without them: an import package carries chats",
 	"сообщения чатов без текста (вложения): %s":                                          "chat messages without text (attachments): %s",
 	"файлы, права доступа и учёт времени — их в карточке нет":                            "files, access rights and time tracking — a card has none of them",

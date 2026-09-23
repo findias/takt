@@ -415,7 +415,8 @@ outside, where there is internet, and carried in as a file.
 
 A reply by someone who is not in the organisation comes on behalf of
 the person importing and starts with the author's name — “from YouGile:
-Ivan Petrov”. A damaged package is refused as a whole and says which
+Ivan Petrov”, or “from YouGile: unknown author” when YouGile no longer
+lists the person (someone removed from the company). A damaged package is refused as a whole and says which
 part did not match. Packages over 50 MB are imported by an
 administrator on the server; the format is described in
 [Import package](import-package.md).
