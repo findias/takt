@@ -4,8 +4,8 @@
 [import package](import-package.md) — a single `.takt` file that is
 carried into a closed network and imported into takt there. So far it
 knows YouGile, Jira — the cloud one and your own installation (Data
-Center, Server) — and Kaiten, cloud or on-premises; Weeek and Trello
-come next.
+Center, Server) — Kaiten, cloud or on-premises, and monday; Weeek and
+Trello come next.
 
 It is a separate program on purpose. It runs where there is internet —
 usually on a laptop — and the takt installed inside the closed network
@@ -195,6 +195,51 @@ certificate is signed by your own authority.
 card for comments. When Kaiten asks to wait (429), the exporter waits
 until the moment Kaiten names and carries on.
 
+## monday
+
+The same package from a monday.com board. This is the source where the
+exporter matters most: monday's own Excel export stops at 10,000 items
+and does not say so, while its API pages through everything.
+
+**Sign in.** With a personal token: your avatar → **Developers** →
+**API token**. `--url` is not needed — monday has one API address.
+
+```sh
+export MONDAY_TOKEN=…
+takt-fetch monday boards
+takt-fetch monday fetch --board 1234567890 --out sales.takt
+```
+
+`boards` prints the id, the workspace and the title; documents and the
+hidden subitem boards are left out.
+
+**What becomes the columns.** A monday board has no columns in the
+kanban sense; they come either from a status column or from the groups.
+Without a flag the exporter takes the first status column that is not
+called priority, says which one it took, and makes a column of each of
+its values in monday's order; the values monday counts as done mark
+their column as done. `--column "Stage"` names another status column,
+`--column group` takes the groups in their order. An item with no value
+in that column goes into the first column, and the package says how
+many.
+
+What goes in: the item's name, the people of every people column
+(a team in it is not a person and is skipped), tags as labels, the
+priority from a status column called priority, the due date from the
+date column called due (or the only date column), the estimate from the
+number column called estimate, the created date, subitems as subtasks
+in their parent's column, dependencies as **blocks** links from the item
+that is waited for, and updates as the discussion, oldest first.
+
+What does not, and is named under **Not imported**: finish dates —
+monday has none, so a done card gets the moment of the import; files,
+time tracking, formulas, connections between boards. People whose email
+monday did not return come by name; you match them in the preview.
+
+**How long.** A hundred items per request with their updates and
+subitems. monday counts query complexity per minute; when the budget
+runs out it names the wait, and the exporter waits and carries on.
+
 ## Carry it in and import
 
 The package file is readable only by its owner. Carry it across the
@@ -239,6 +284,10 @@ Russian, as the server does.
 | Kaiten will not let you see this board | the account has no access to the board's space |
 | the address answers, but it is not Kaiten | `--url` points to something else, a login page or a proxy |
 | the board … has more than 10000 cards | split the board in Kaiten |
+| signing in to monday needs MONDAY_TOKEN | set the personal token from your monday profile |
+| monday did not accept the token | the token was regenerated, or it belongs to another account |
+| the board has no status column … | name one of the listed columns in `--column`, or `--column group` |
+| the board … has more than 10000 items | split the board in monday |
 
 A chat YouGile does not return does not stop the board: the card comes
 without it, and the package says how many such chats there were. A

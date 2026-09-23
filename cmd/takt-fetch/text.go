@@ -22,6 +22,7 @@ type texts struct {
 	usageYougile    string
 	usageJira       string
 	usageKaiten     string
+	usageMonday     string
 	unknownSource   string
 	unknownCommand  func(source, cmd string) string
 	jiraNoURL       string
@@ -30,6 +31,10 @@ type texts struct {
 	kaitenNoURL     string
 	kaitenNeedLogin string
 	kaitenNoBoard   string
+	mondayNeedLogin string
+	mondayNoBoard   string
+	// mondayColumns — что стало колонками доски monday.
+	mondayColumns func(byGroup bool, status string) string
 	// lane — имя метки, которой едет дорожка Kaiten.
 	lane           func(title string) string
 	noOut          string
@@ -77,7 +82,7 @@ var ru = texts{
 	usage: `takt-fetch — выгрузчик досок в пакет переноса takt
 
 Запускают там, где есть интернет (или рядом со своей Jira или Kaiten
-в том же контуре): выгрузчик заходит в YouGile, Jira или Kaiten, собирает доски вместе
+в том же контуре): выгрузчик заходит в YouGile, Jira, Kaiten или monday, собирает доски вместе
 с подзадачами, связями и обсуждением и пишет файл-пакет (.takt). Пакет
 несут в закрытый контур и переносят в takt: экраном «Перенос задач» →
 «Пакет переноса» или командой takt import на сервере.
@@ -92,6 +97,9 @@ var ru = texts{
   takt-fetch kaiten boards --url АДРЕС         доски Kaiten: id, пространство, название
   takt-fetch kaiten fetch --url АДРЕС --board ID --out ФАЙЛ.takt [флаги]
                                                собрать пакет из Kaiten
+  takt-fetch monday boards                     доски monday: id, рабочее пространство, название
+  takt-fetch monday fetch --board ID --out ФАЙЛ.takt [флаги]
+                                               собрать пакет из monday
   takt-fetch version                           версия выгрузчика
   takt-fetch help                              эта справка
 
@@ -111,18 +119,24 @@ var ru = texts{
 Вход в Kaiten — тоже через окружение:
   KAITEN_TOKEN=токен                        API-ключ из профиля Kaiten (облако и коробка)
 
+Вход в monday — тоже через окружение:
+  MONDAY_TOKEN=токен                        личный токен: аватар → Developers → API token
+
 Флаги:
   --url АДРЕС          адрес YouGile (по умолчанию https://ru.yougile.com);
                        у Jira обязателен: https://компания.atlassian.net;
-                       у Kaiten тоже: https://компания.kaiten.ru или адрес коробки
+                       у Kaiten тоже: https://компания.kaiten.ru или адрес коробки;
+                       у monday не нужен
   --company ИМЯ        компания, если их у почты несколько
   --board ID           доска; можно несколько раз; --all — все доски компании
   --out ФАЙЛ           куда записать пакет (перезаписывается целиком)
   --no-chats           без чатов задач: быстрее, но обсуждение не переедет
   --no-history         без истории задач: вдвое меньше запросов, но история
                        «до переноса» у карточек будет пуста
-  --no-comments        Jira и Kaiten: без комментариев — меньше запросов,
+  --no-comments        Jira, Kaiten и monday: без комментариев — меньше запросов,
                        обсуждение не переедет
+  --column ИМЯ         monday: какая колонка статуса станет колонками доски;
+                       group — группы; без флага — первая колонка статуса
   --collected-by ТЕКСТ кто собрал и зачем — попадёт в пакет как есть
 
 Сколько ждать: YouGile пускает 50 запросов в минуту на компанию, и выгрузчик
@@ -142,6 +156,10 @@ var ru = texts{
   takt-fetch kaiten boards --url https://company.kaiten.ru
   takt-fetch kaiten fetch --url https://company.kaiten.ru --board 345 --out склад.takt
 
+  export MONDAY_TOKEN=…
+  takt-fetch monday boards
+  takt-fetch monday fetch --board 1234567890 --out продажи.takt
+
 Язык справки и сообщений — из TAKT_LANG или LANG (ru, en).
 Подробно: https://github.com/findias/takt/blob/master/docs/ru/выгрузчик.md
 `,
@@ -160,7 +178,12 @@ takt-fetch kaiten fetch --url АДРЕС --board ID --out ФАЙЛ.takt [фла�
 
 Всё о командах, входе и флагах — takt-fetch help.
 `,
-	unknownSource: "такого источника нет — есть yougile, jira и kaiten (справка: takt-fetch help)",
+	usageMonday: `takt-fetch monday boards
+takt-fetch monday fetch --board ID --out ФАЙЛ.takt [флаги]
+
+Всё о командах, входе и флагах — takt-fetch help.
+`,
+	unknownSource: "такого источника нет — есть yougile, jira, kaiten и monday (справка: takt-fetch help)",
 	unknownCommand: func(source, cmd string) string {
 		return fmt.Sprintf("у %s нет команды «%s» — есть boards и fetch (справка: takt-fetch help)", source, cmd)
 	},
@@ -171,9 +194,17 @@ takt-fetch kaiten fetch --url АДРЕС --board ID --out ФАЙЛ.takt [фла�
 	kaitenNeedLogin: "нужен вход в Kaiten: KAITEN_TOKEN — API-ключ из профиля Kaiten",
 	kaitenNoBoard:   "не названа ни одна доска: --board ID (список — takt-fetch kaiten boards --url …)",
 	lane:            func(title string) string { return "Дорожка: " + title },
-	noOut:           "не назван файл пакета: --out склад.takt",
-	noBoard:         "не названа ни одна доска: --board ID (список — takt-fetch yougile boards) или --all",
-	needLogin:       "нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN (и пароль)",
+	mondayNeedLogin: "нужен вход в monday: MONDAY_TOKEN — личный токен (аватар → Developers → API token)",
+	mondayNoBoard:   "не названа ни одна доска: --board ID (список — takt-fetch monday boards)",
+	mondayColumns: func(byGroup bool, status string) string {
+		if byGroup {
+			return "колонки доски — группы monday"
+		}
+		return "колонки доски — значения колонки статуса «" + status + "» (другая — --column)"
+	},
+	noOut:     "не назван файл пакета: --out склад.takt",
+	noBoard:   "не названа ни одна доска: --board ID (список — takt-fetch yougile boards) или --all",
+	needLogin: "нужен вход в YouGile: YOUGILE_KEY или YOUGILE_LOGIN (и пароль)",
 	passwordPrompt: func(login string) string {
 		return "Пароль YouGile для " + login + " (виден при наборе; YOUGILE_PASSWORD его заменяет): "
 	},
@@ -202,7 +233,7 @@ var en = texts{
 	usage: `takt-fetch — exports boards into a takt import package
 
 Run it where there is internet (or next to your own Jira or Kaiten inside
-the same network): the exporter signs in to YouGile, Jira or Kaiten, collects boards with
+the same network): the exporter signs in to YouGile, Jira, Kaiten or monday, collects boards with
 their subtasks, links and discussion, and writes a package file (.takt).
 The package is carried into the closed network and imported into takt:
 on the «Import tasks» screen → «Import package», or with takt import on
@@ -218,6 +249,9 @@ Commands:
   takt-fetch kaiten boards --url ADDRESS       Kaiten boards: id, space, title
   takt-fetch kaiten fetch --url ADDRESS --board ID --out FILE.takt [flags]
                                                build the package from Kaiten
+  takt-fetch monday boards                     monday boards: id, workspace, title
+  takt-fetch monday fetch --board ID --out FILE.takt [flags]
+                                               build the package from monday
   takt-fetch version                           the exporter's version
   takt-fetch help                              this help
 
@@ -238,18 +272,24 @@ Signing in to Jira — through the environment too:
 Signing in to Kaiten — through the environment too:
   KAITEN_TOKEN=token                        the API key from your Kaiten profile (cloud and on-premises)
 
+Signing in to monday — through the environment too:
+  MONDAY_TOKEN=token                        a personal token: avatar → Developers → API token
+
 Flags:
   --url ADDRESS        YouGile address (default https://ru.yougile.com);
                        required for Jira: https://company.atlassian.net;
-                       and for Kaiten: https://company.kaiten.ru or your own address
+                       and for Kaiten: https://company.kaiten.ru or your own address;
+                       not needed for monday
   --company NAME       the company, if the email has several
   --board ID           a board; may be repeated; --all takes every board
   --out FILE           where to write the package (overwritten whole)
   --no-chats           without task chats: faster, but discussions do not come
   --no-history         without task history: half the requests, but the cards'
                        «before the import» history stays empty
-  --no-comments        Jira and Kaiten: without comments — fewer requests,
+  --no-comments        Jira, Kaiten and monday: without comments — fewer requests,
                        but the discussion does not come
+  --column NAME        monday: which status column becomes the board's columns;
+                       group — the groups; without it — the first status column
   --collected-by TEXT  who collected it and why — goes into the package as is
 
 How long: YouGile allows 50 requests a minute per company, and the exporter
@@ -269,6 +309,10 @@ Example:
   takt-fetch kaiten boards --url https://company.kaiten.ru
   takt-fetch kaiten fetch --url https://company.kaiten.ru --board 345 --out warehouse.takt
 
+  export MONDAY_TOKEN=…
+  takt-fetch monday boards
+  takt-fetch monday fetch --board 1234567890 --out sales.takt
+
 Help and messages follow TAKT_LANG or LANG (ru, en).
 More: https://github.com/findias/takt/blob/master/docs/takt-fetch.md
 `,
@@ -287,7 +331,12 @@ takt-fetch kaiten fetch --url ADDRESS --board ID --out FILE.takt [flags]
 
 Everything about commands, signing in and flags — takt-fetch help.
 `,
-	unknownSource: "there is no such source — there are yougile, jira and kaiten (help: takt-fetch help)",
+	usageMonday: `takt-fetch monday boards
+takt-fetch monday fetch --board ID --out FILE.takt [flags]
+
+Everything about commands, signing in and flags — takt-fetch help.
+`,
+	unknownSource: "there is no such source — there are yougile, jira, kaiten and monday (help: takt-fetch help)",
 	unknownCommand: func(source, cmd string) string {
 		return fmt.Sprintf("%s has no command «%s» — there are boards and fetch (help: takt-fetch help)", source, cmd)
 	},
@@ -298,9 +347,17 @@ Everything about commands, signing in and flags — takt-fetch help.
 	kaitenNeedLogin: "signing in to Kaiten needs KAITEN_TOKEN — the API key from your Kaiten profile",
 	kaitenNoBoard:   "no board named: --board ID (list them with takt-fetch kaiten boards --url …)",
 	lane:            func(title string) string { return "Lane: " + title },
-	noOut:           "no package file named: --out warehouse.takt",
-	noBoard:         "no board named: --board ID (list them with takt-fetch yougile boards) or --all",
-	needLogin:       "signing in to YouGile needs YOUGILE_KEY or YOUGILE_LOGIN (and a password)",
+	mondayNeedLogin: "signing in to monday needs MONDAY_TOKEN — a personal token (avatar → Developers → API token)",
+	mondayNoBoard:   "no board named: --board ID (list them with takt-fetch monday boards)",
+	mondayColumns: func(byGroup bool, status string) string {
+		if byGroup {
+			return "the board's columns are the monday groups"
+		}
+		return "the board's columns are the values of the status column «" + status + "» (another one — --column)"
+	},
+	noOut:     "no package file named: --out warehouse.takt",
+	noBoard:   "no board named: --board ID (list them with takt-fetch yougile boards) or --all",
+	needLogin: "signing in to YouGile needs YOUGILE_KEY or YOUGILE_LOGIN (and a password)",
 	passwordPrompt: func(login string) string {
 		return "YouGile password for " + login + " (visible as you type; YOUGILE_PASSWORD replaces it): "
 	},
@@ -341,6 +398,9 @@ Everything about commands, signing in and flags — takt-fetch help.
 		if m := cardCommentsLine.FindStringSubmatch(s); m != nil {
 			return fmt.Sprintf("comments: %s of %s cards", m[1], m[2])
 		}
+		if m := itemsLine.FindStringSubmatch(s); m != nil {
+			return "items: " + m[1]
+		}
 		return s
 	},
 }
@@ -354,4 +414,6 @@ var (
 	// Строки хода дела клиента Kaiten.
 	cardsLine        = regexp.MustCompile(`^карточки: (\d+)$`)
 	cardCommentsLine = regexp.MustCompile(`^комментарии: (\d+) из (\d+) карточек$`)
+	// Строка хода дела клиента monday.
+	itemsLine = regexp.MustCompile(`^элементы: (\d+)$`)
 )

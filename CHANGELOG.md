@@ -78,7 +78,9 @@ it collects YouGile boards — with subtasks, task chats and task
 history — and Jira Software boards, cloud or your own Data Center —
 with subtasks, links, estimates and comments — and Kaiten boards,
 cloud or on-premises — with subcolumns, lanes as labels, subtasks,
-blocks and comments — into a `.takt` package. A Jira or Kaiten that
+blocks and comments — and monday boards, past the 10,000 items monday's
+own export stops at, with the status or the groups as columns, subitems,
+dependencies and updates — into a `.takt` package. A Jira or Kaiten that
 already lives inside the closed network is collected from a machine
 next to it, and nothing crosses the perimeter. Built for
 linux, macOS and Windows,

@@ -408,6 +408,25 @@ var en = map[string]string{
 	"люди без почты в ответе Kaiten: %s — сопоставьте их в предпросмотре вручную":                                        "people without an email in Kaiten's answer: %s — match them by hand in the preview",
 	"архивные карточки, причины блокировок, вложения, чек-листы, учёт времени и история перемещений — их в карточке нет": "archived cards, block reasons, attachments, checklists, time tracking and move history — a card has none of these",
 	"Дорожка: %s": "Lane: %s",
+
+	// Выгрузка из monday (takt-fetch monday, internal/importer/monday).
+	"monday не отвечает — проверьте подключение к интернету":                                        "monday does not answer — check the internet connection",
+	"monday не принял токен — проверьте MONDAY_TOKEN: его выдают в профиле, Developers → API token": "monday did not accept the token — check MONDAY_TOKEN: it is issued in your profile, Developers → API token",
+	"monday просит подождать: исчерпан предел запросов — повторите через несколько минут":           "monday asks to wait: the request limit is used up — try again in a few minutes",
+	"monday сейчас не справляется — повторите через несколько минут":                                "monday cannot cope right now — try again in a few minutes",
+	"в monday нет такой доски — выберите доску из списка":                                           "monday has no such board — pick one from the list",
+	"адрес отвечает, но это не monday — проверьте --url: по умолчанию https://api.monday.com/v2":    "the address answers, but it is not monday — check --url: the default is https://api.monday.com/v2",
+	"monday ответил больше чем %s МБ — это не ответ monday":                                         "monday answered with more than %s MB — that is not a monday answer",
+	"monday ответил %s":  "monday answered %s",
+	"monday отказал: %s": "monday refused: %s",
+	"на доске «%s» больше %s элементов — takt переносит до %s за раз; разделите доску в monday":          "the board “%s” has more than %s items — takt imports up to %s at a time; split the board in monday",
+	"на доске нет колонки статуса «%s» и нет ни одной другой — возьмите группы: --column group":          "the board has no status column “%s” and no other one — take the groups: --column group",
+	"на доске нет колонки статуса «%s» — есть «%s» или --column group":                                   "the board has no status column “%s” — there are “%s” or --column group",
+	"элементы без значения колонки — встали в первую колонку: %s":                                        "items without a value in the column — they went into the first column: %s",
+	"группы monday: %s — колонками стал статус; группы как колонки — --column group":                     "monday groups: %s — the status became the columns; groups as columns — --column group",
+	"люди без почты в ответе monday: %s — сопоставьте их в предпросмотре вручную":                        "people without an email in monday's answer: %s — match them by hand in the preview",
+	"даты завершения — у monday их нет: готовые карточки получат момент переноса":                        "finish dates — monday has none: done cards get the moment of the import",
+	"файлы, учёт времени, формулы, связи между досками и команды в колонке людей — их в карточке нет":    "files, time tracking, formulas, links between boards and teams in the people column — a card has none of these",
 	"перенос из YouGile на этой установке выключен — выгрузите таблицу в YouGile и перенесите её файлом": "import from YouGile is switched off on this installation — export a table from YouGile and import it as a file",
 
 	// --- Пакет переноса ---

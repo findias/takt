@@ -194,7 +194,7 @@ func TestFetchSaysWhatIsMissing(t *testing.T) {
 	var out, errOut bytes.Buffer
 	none := func(string) string { return "" }
 	if err := run(context.Background(), []string{"trello", "fetch"}, none, nil, &out, &errOut); err == nil ||
-		!strings.Contains(err.Error(), "есть yougile, jira и kaiten") {
+		!strings.Contains(err.Error(), "есть yougile, jira, kaiten и monday") {
 		t.Fatalf("незнакомый источник: %v", err)
 	}
 	if err := run(context.Background(), []string{"jira", "fetch"}, none, nil, &out, &errOut); err == nil ||
@@ -281,7 +281,7 @@ func TestProgressSpeaksTheLanguageOfTheEnvironment(t *testing.T) {
 func TestEveryFlagIsDescribed(t *testing.T) {
 	// Флаги у каждого источника свои, в своём файле.
 	var src []byte
-	for _, name := range []string{"main.go", "jira.go", "kaiten.go"} {
+	for _, name := range []string{"main.go", "jira.go", "kaiten.go", "monday.go"} {
 		raw, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
