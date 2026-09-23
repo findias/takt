@@ -1,6 +1,7 @@
 package importer
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -192,6 +193,36 @@ func TestColumnKindsFromNames(t *testing.T) {
 	} {
 		if got := ColumnKind(name); got != want {
 			t.Errorf("%s: %s, ожидалось %s", name, got, want)
+		}
+	}
+}
+
+// Файл ровно той длины, на которой режет выгрузку известная платформа,
+// назван в отчёте: на строку меньше — тишина.
+func TestFileCutAtAKnownExportLimitIsNamed(t *testing.T) {
+	table := func(n int) Table {
+		tb := Table{Headers: []string{"Summary"}}
+		for i := range n {
+			tb.Rows = append(tb.Rows, []string{fmt.Sprintf("Задача %d", i)})
+			tb.Lines = append(tb.Lines, i+2)
+		}
+		return tb
+	}
+	for _, c := range []struct {
+		rows int
+		want string
+	}{
+		{1000, "ровно 1000 строк — столько за раз отдаёт выгрузка CSV облачной Jira"},
+		{10000, "ровно 10000 строк — столько за раз отдаёт выгрузка Excel из monday"},
+		{999, ""},
+	} {
+		p, err := Build(table(c.rows), Suggest([]string{"Summary"}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lost := strings.Join(p.Lost, " | ")
+		if c.want == "" && lost != "" || !strings.Contains(lost, c.want) {
+			t.Errorf("%d строк: %q", c.rows, lost)
 		}
 	}
 }

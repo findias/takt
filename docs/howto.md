@@ -361,7 +361,11 @@ on the board:
 A sample spreadsheet is on the same screen (**Download a sample
 spreadsheet**); its columns are recognised without any changes. One
 import takes up to 10,000 rows and 5 MB and runs in seconds; split
-a bigger file.
+a bigger file. Some exports stop at a fixed number of rows without
+saying so — a cloud Jira CSV at 1,000 issues, a monday Excel file at
+10,000 items. A file of exactly that length is named under **Not
+imported**: check that everything came, and export the rest as a second
+file.
 
 <!-- anchor: import-yougile -->
 ### Import a board from YouGile

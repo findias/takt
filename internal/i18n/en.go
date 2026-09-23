@@ -409,6 +409,11 @@ var en = map[string]string{
 	"архивные карточки, причины блокировок, вложения, чек-листы, учёт времени и история перемещений — их в карточке нет": "archived cards, block reasons, attachments, checklists, time tracking and move history — a card has none of these",
 	"Дорожка: %s": "Lane: %s",
 
+	// Файл ровно той длины, на которой режет выгрузку платформа.
+	"в файле ровно %s строк — столько за раз отдаёт выгрузка %s; если задач в источнике больше, остальные в файл не попали — выгрузите их отдельным файлом": "the file has exactly %s rows — that is how many %s gives at a time; if the source has more tasks, the rest did not make it into the file — export them as a separate file",
+	"CSV облачной Jira": "a cloud Jira CSV export",
+	"Excel из monday":   "a monday Excel export",
+
 	// Выгрузка из monday (takt-fetch monday, internal/importer/monday).
 	"monday не отвечает — проверьте подключение к интернету":                                        "monday does not answer — check the internet connection",
 	"monday не принял токен — проверьте MONDAY_TOKEN: его выдают в профиле, Developers → API token": "monday did not accept the token — check MONDAY_TOKEN: it is issued in your profile, Developers → API token",

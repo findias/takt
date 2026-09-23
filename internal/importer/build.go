@@ -162,7 +162,20 @@ func Build(t Table, m Mapping) (Plan, error) {
 		c.ExternalID = key
 		p.Cards = append(p.Cards, c)
 	}
+	if name, ok := exportLimits[len(t.Rows)]; ok {
+		p.Lost = append(p.Lost, fmt.Sprintf("в файле ровно %d строк — столько за раз отдаёт выгрузка %s; если задач в источнике больше, остальные в файл не попали — выгрузите их отдельным файлом", len(t.Rows), name))
+	}
 	return p, nil
+}
+
+// exportLimits — на скольких строках обрезают выгрузку известные
+// платформы, молча: CSV облачной Jira — на тысяче задач, xlsx monday —
+// на десяти тысячах элементов. Файл ровно такой длины — не удача,
+// а повод спросить, всё ли приехало (ROADMAP 23.5); сказать это
+// можно только до переноса.
+var exportLimits = map[int]string{
+	1000:  "CSV облачной Jira",
+	10000: "Excel из monday",
 }
 
 // split делит перечисление: запятая, точка с запятой, перевод строки.

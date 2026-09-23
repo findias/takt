@@ -72,6 +72,11 @@ see no change. The sign-in button of a company provider follows the
 same rule when `OIDC_LABEL` is unset ("Company account"); a caption you
 set yourself is shown as you wrote it.
 
+**A file cut short by its own export is named.** A cloud Jira CSV
+stops at 1,000 issues and a monday Excel file at 10,000 items, silently.
+A spreadsheet of exactly that length now gets a line under «Не
+переносится» in the preview: check that everything came.
+
 **A new release file, `takt-fetch`, that is not installed.** The
 exporter for moving into a closed network: run where there is internet,
 it collects YouGile boards — with subtasks, task chats and task

@@ -249,7 +249,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>the card&#39;s history says «перенесена из таблицы» and, if the file had one, its key in the old system;</li>
 <li><strong>Flow</strong> says how many cards of the report were imported, draws them as hollow dots on the cycle-time chart, marks them in the aging list, and <strong>Count without imported cards</strong> recalculates every figure — cycle time, throughput, the forecast, the cumulative flow — without them.</li>
 </ul>
-<p>A sample spreadsheet is on the same screen (<strong>Download a sample spreadsheet</strong>); its columns are recognised without any changes. One import takes up to 10,000 rows and 5 MB and runs in seconds; split a bigger file.</p>
+<p>A sample spreadsheet is on the same screen (<strong>Download a sample spreadsheet</strong>); its columns are recognised without any changes. One import takes up to 10,000 rows and 5 MB and runs in seconds; split a bigger file. Some exports stop at a fixed number of rows without saying so — a cloud Jira CSV at 1,000 issues, a monday Excel file at 10,000 items. A file of exactly that length is named under <strong>Not imported</strong>: check that everything came, and export the rest as a second file.</p>
 <h3 id="import-yougile">Import a board from YouGile</h3>
 <p>A YouGile board comes over whole through its API: columns, tasks, assignees, deadlines, dates, stickers and checklists.</p>
 <ol>
@@ -350,7 +350,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-76-g4da71c1-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-77-g76a1d46-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
