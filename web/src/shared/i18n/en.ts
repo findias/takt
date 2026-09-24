@@ -261,6 +261,8 @@ export const en: typeof ru = {
     partsBlocked: (n: number) => `Parts blocked: ${n}`,
     partBlocked: (what: string) => `Part blocked: ${what}`,
     progress: (done: string, total: string) => `${done} of ${total}`,
+    subtree: (progress: string) => `all told ${progress}`,
+    subtreeTitle: 'Leaves of the whole subtree: intermediate parts are not counted here',
     priority: { highest: 'Highest', high: 'High', medium: 'Medium', low: 'Low' },
     priorityShort: { highest: 'urgent', high: 'important', medium: 'normal', low: 'background' },
     blockExpired: 'block deadline passed',

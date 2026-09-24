@@ -1,4 +1,4 @@
-import { priorityLabel, priorityRank, progressLabel } from '../../entities/card/model.ts'
+import { priorityLabel, priorityRank, progressLabel, subtreeCount } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Priority } from '../../shared/api/index.ts'
 import { live, locale, t } from '../../shared/i18n/index.ts'
@@ -132,7 +132,9 @@ export function groupsOf(
       group.cardId = parentId
       // Прогресс словами «готово …»: голое «0 из 3» рядом со счётчиком
       // дорожки читалось бы одним числом с ним.
-      const progress = progressLabel(own)
+      // По корню дорожка собирает всё поддерево — и счёт ей нужен
+      // по листьям, а не по прямым частям.
+      const progress = grouping === 'root' ? (subtreeCount(own) ?? progressLabel(own)) : progressLabel(own)
       group.note = progress ? t.board.parentProgress(progress) : undefined
       return group
     }

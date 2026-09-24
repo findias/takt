@@ -187,7 +187,11 @@ test('у каждой группировки есть человеческое �
 // Дерево: эпик → две фичи → задачи; одна фича на доске соседей.
 function tree() {
   const cards = [
-    card('эпик', { title: 'Переезд склада', progress: { done: 1, total: 2, byWeight: false } }),
+    card('эпик', {
+      title: 'Переезд склада',
+      progress: { done: 1, total: 2, byWeight: false },
+      subtree: { done: 1, total: 4, byWeight: false, stuck: 0 },
+    }),
     card('фича'),
     card('задача-1'),
     card('задача-2'),
@@ -233,9 +237,11 @@ test('родитель с чужой доски — дорожка есть, и 
   assert.equal(foreign.cardId, undefined)
 })
 
-test('по корню: задача под фичей встаёт в дорожку эпика', () => {
+test('по корню: задача под фичей встаёт в дорожку эпика, и счёт — по всему поддереву', () => {
   const base = tree()
-  const by = lanes(groupsOf(base, base.order, 'root'))
+  const groups = groupsOf(base, base.order, 'root')
+  assert.equal(groups.find((g) => g.id === 'эпик')!.note, 'готово 1 из 4')
+  const by = lanes(groups)
   assert.deepEqual(by['эпик'], ['фича', 'задача-1', 'задача-2', 'задача-3'])
   assert.equal(by['фича'], undefined)
 })

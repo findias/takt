@@ -21,6 +21,8 @@ import {
   blockedPartsLabel,
   progressLabel,
   progressRatio,
+  subtreeLabel,
+  deepStuckLabel,
   unitLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
@@ -269,6 +271,10 @@ function CardViewInner({
   // часть упёрлась — задача не идёт. Раньше об этом знала только сама
   // часть, а с доски работа выглядела идущей.
   const stuckParts = blockedParts(subtasks)
+  // И глубже прямых частей: задача внука, упёршаяся под фичей, стоит
+  // и эпик (этап 32.3). Счёт приносит сервер — внуков на доске может
+  // не быть вовсе.
+  const deepStuck = card ? deepStuckLabel(card, stuckParts.length) : null
   // Срок блокировки — часть той же тревоги, а не новое поле: бюджет
   // полей карточки жёсткий. Меньше суток до срока — пометка меняет вид:
   // это и есть уведомление продукта, который никуда не пишет.
@@ -279,11 +285,13 @@ function CardViewInner({
         text: t.cardView.blockedFor(card.blocked.reason),
         title: card.blocked.reason,
       }
-    : stuckParts.length > 0
+    : stuckParts.length > 0 || deepStuck
       ? {
           kind: 'blocked',
-          text: blockedPartsLabel(stuckParts) ?? '',
-          title: stuckParts.map((s) => s.title).join(', '),
+          text: deepStuck ?? blockedPartsLabel(stuckParts) ?? '',
+          title: [...stuckParts.map((s) => s.title), card?.subtree?.stuckTitle]
+            .filter(Boolean)
+            .join(', '),
         }
       : // Горит, а не «подходит»: тревогу занимает только сегодняшнее
       // и просроченное. Срок через два-три дня остаётся тихой
@@ -821,6 +829,16 @@ function CardViewInner({
                   </div>
                   <span className="muted small">{progressLabel(card, unit)}</span>
                 </>
+              )}
+
+              {/* Второй счёт — только у карточки с внуками: «2 из 3»
+                  говорит о фичах, «всего 11 из 20» — о задачах под ними.
+                  Без него эпик с тремя фичами выглядел почти готовым,
+                  сколько бы работы ни оставалось внутри третьей. */}
+              {card && subtreeLabel(card, unit) && (
+                <span className="muted small" title={t.card.subtreeTitle}>
+                  {subtreeLabel(card, unit)}
+                </span>
               )}
 
               {/* Кто делает части — здесь же, у меры: подзадачи одной

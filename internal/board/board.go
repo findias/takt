@@ -180,6 +180,10 @@ type Card struct {
 	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
 	// руками — значит завести поле, которое никто не обновляет.
 	Progress *Progress `json:"progress,omitempty"`
+	// Subtree — счёт по всему поддереву; есть только у карточки с внуками.
+	// У остальных прямые части и есть всё поддерево, и второй счёт
+	// повторил бы первый.
+	Subtree *Subtree `json:"subtree,omitempty"`
 	// Открытая блокировка, если есть.
 	Blocked *Block `json:"blocked,omitempty"`
 	// Сколько реплик в обсуждении. Считается запросом на доску, как
@@ -206,6 +210,26 @@ type Progress struct {
 	// ByWeight говорит, чем измерен прогресс: весом или штуками. Клиенту
 	// это нужно, чтобы подписать «3 из 5» или «12 из 20 очков».
 	ByWeight bool `json:"byWeight"`
+}
+
+// Subtree — прогресс по листьям всего поддерева и застрявшее в нём
+// глубже прямых частей (этап 32.3).
+//
+// Считаются листья, а не все потомки: промежуточный узел — это его
+// листья, и «фича и её задачи» иначе посчитались бы дважды. Вес — сумма
+// оценок листьев, тем же правилом, что у прямых частей: вес, только если
+// оценены все.
+//
+// Застрявшее — правило этапа 17 на любой глубине: упёршаяся часть
+// останавливает и целое, сколько бы уровней между ними ни было. Прямые
+// части здесь не считаются: о них клиент знает из связей доски.
+type Subtree struct {
+	Progress
+	// Stuck — заблокированных потомков глубже прямых частей.
+	Stuck int `json:"stuck"`
+	// Первая из них — чтобы назвать причину словами, как у прямой части.
+	StuckTitle  string `json:"stuckTitle,omitempty"`
+	StuckReason string `json:"stuckReason,omitempty"`
 }
 
 // Block — интервал блокировки. Именно интервал, а не флаг: из булева поля
@@ -630,6 +654,10 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	}
 	progressRows.Close()
 
+	if err := loadSubtrees(ctx, tx, boardID, byID); err != nil {
+		return err
+	}
+
 	// Число реплик. Удалённые не считаются: обсуждение — это то, что
 	// в нём осталось, а не то, что когда-то было написано.
 	commentRows, err := tx.Query(ctx, `
@@ -935,4 +963,99 @@ func nextPosition(ctx context.Context, tx pgx.Tx, columnID string, pl Placement,
 		return "", fmt.Errorf("вычисление позиции: %w", err)
 	}
 	return pos, nil
+}
+
+// loadSubtrees считает Subtree для карточек доски, у которых есть внуки.
+// Одним рекурсивным запросом на доску: обход по карточке — это пятьсот
+// обходов на доске в пятьсот карточек. Глубина ограничена тем же
+// MaxSubtaskDepth, что и само дерево: цикл, если он всё же возник
+// в связях, не уведёт запрос в бесконечность.
+//
+// Потомки на досках, которых спрашивающему не видно, не считаются:
+// их отсекают политики базы, как и в прямом прогрессе.
+func loadSubtrees(ctx context.Context, tx pgx.Tx, boardID string, byID map[string]*Card) error {
+	got, err := subtrees(ctx, tx, &boardID, nil)
+	if err != nil {
+		return err
+	}
+	for id, st := range got {
+		if card := byID[id]; card != nil {
+			card.Subtree = st
+		}
+	}
+	return nil
+}
+
+// subtreeOf — то же для одной карточки: патч обязан нести ровно тот же
+// счёт, что снимок, иначе полоса прыгает после каждой правки.
+func subtreeOf(ctx context.Context, tx pgx.Tx, cardID string) (*Subtree, error) {
+	got, err := subtrees(ctx, tx, nil, &cardID)
+	if err != nil {
+		return nil, err
+	}
+	return got[cardID], nil
+}
+
+// subtrees — счёт поддеревьев корней доски или одной карточки: одно
+// условие на оба случая, чтобы снимку и патчу негде было разойтись.
+func subtrees(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[string]*Subtree, error) {
+	out := map[string]*Subtree{}
+	rows, err := tx.Query(ctx, `
+		with recursive tree(root, card, depth) as (
+			select l.from_card, l.to_card, 1
+			  from card_links l
+			  join cards r on r.id = l.from_card and r.archived_at is null
+			 where l.kind = 'subtask'
+			   and ($1::uuid is null or r.board_id = $1)
+			   and ($3::uuid is null or r.id = $3)
+			union all
+			select t.root, l.to_card, t.depth + 1
+			  from tree t
+			  join card_links l on l.from_card = t.card and l.kind = 'subtask'
+			 where t.depth < $2
+		),
+		nodes as (
+			select distinct on (t.root, c.id) t.root, t.depth, c.id, c.title, c.estimate,
+			       `+cardDone+` as done,
+			       not exists (select 1 from card_links k
+			                     join cards kc on kc.id = k.to_card and kc.archived_at is null
+			                    where k.from_card = c.id and k.kind = 'subtask') as leaf,
+			       b.reason as blocked_reason, b.id is not null as blocked
+			  from tree t
+			  join cards c on c.id = t.card and c.archived_at is null
+			  left join card_blocks b on b.card_id = c.id and b.unblocked_at is null
+			 order by t.root, c.id, t.depth
+		)
+		select root,
+		       count(*) filter (where leaf),
+		       count(*) filter (where leaf and done),
+		       count(*) filter (where leaf and estimate is null),
+		       coalesce(sum(estimate) filter (where leaf), 0)::float8,
+		       coalesce(sum(estimate) filter (where leaf and done), 0)::float8,
+		       count(*) filter (where blocked and depth > 1),
+		       coalesce((array_agg(title order by depth, title) filter (where blocked and depth > 1))[1], ''),
+		       coalesce((array_agg(blocked_reason order by depth, title) filter (where blocked and depth > 1))[1], '')
+		  from nodes
+		 group by root
+		having max(depth) > 1`, boardID, MaxSubtaskDepth, cardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var total, done, unestimated int
+		var weight, weightDone float64
+		var st Subtree
+		if err := rows.Scan(&id, &total, &done, &unestimated, &weight, &weightDone,
+			&st.Stuck, &st.StuckTitle, &st.StuckReason); err != nil {
+			return nil, err
+		}
+		st.Progress = Progress{Done: float64(done), Total: float64(total)}
+		if unestimated == 0 && weight > 0 {
+			st.Progress = Progress{Done: weightDone, Total: weight, ByWeight: true}
+		}
+		out[id] = &st
+	}
+	return out, rows.Err()
 }

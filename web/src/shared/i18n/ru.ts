@@ -263,6 +263,8 @@ export const ru = {
     partsBlocked: (n: number) => `Части заблокированы: ${n}`,
     partBlocked: (what: string) => `Часть заблокирована: ${what}`,
     progress: (done: string, total: string) => `${done} из ${total}`,
+    subtree: (progress: string) => `всего ${progress}`,
+    subtreeTitle: 'Листья всего поддерева: промежуточные части в этот счёт не входят',
     priority: { highest: 'Наивысший', high: 'Высокий', medium: 'Средний', low: 'Низкий' },
     priorityShort: { highest: 'горит', high: 'важно', medium: 'обычный', low: 'фоном' },
     blockExpired: 'срок блокировки истёк',

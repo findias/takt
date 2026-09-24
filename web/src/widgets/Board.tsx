@@ -300,6 +300,8 @@ export function Board({
       const foreign = base.linked[link.toCard]
       if (own ? Boolean(own.blocked) : Boolean(foreign?.blocked)) stuck.add(link.fromCard)
     }
+    // И застрявшее глубже прямых частей: его знает только сервер.
+    for (const card of Object.values(base.cards)) if (card.subtree?.stuck) stuck.add(card.id)
     const context = {
       labelsOf: (cardId: string) => base.cardLabels[cardId] ?? [],
       iterationOf: (cardId: string) => base.cardIterations[cardId],

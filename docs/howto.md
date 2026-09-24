@@ -235,6 +235,17 @@ A part is an ordinary card: it can live on a different board if a
 different team does the work. The parent card grows a "so many of so
 many" bar.
 
+Parts can have parts of their own — an epic, its features, the tasks
+under them, up to five levels. A card with grandchildren shows two
+counts: its direct parts ("0 of 3" features) and "all told 1 of 6" —
+the leaves of the whole tree, the tasks at the bottom. A middle card is
+not counted there, or a feature and its tasks would count twice; the
+weight, when every leaf is estimated, is the sum of the leaves'
+estimates. A blocked part at any depth stops the top card too: the
+epic shows "Part blocked" when a task two levels down is stuck. A
+blocked parent does not stop its parts — they are what people carry on
+with.
+
 ### Tie a card to service-desk tickets
 
 1. Open the card, **Tasks** tab.

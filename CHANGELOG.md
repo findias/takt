@@ -242,6 +242,13 @@ the branch adds. It cannot be combined with `DEMO=on`.
   empty. No card types: the level follows from the place in the tree.
   The demo organisation has an epic on «Платформа» over two features on
   «Поставки» and a third next to it.
+- **Progress over the whole tree.** A card with grandchildren shows a
+  second count, «всего 11 из 20» — the leaves of its subtree, the middle
+  levels not counted twice, weighed by the leaves' estimates when all
+  are estimated. A part blocked at any depth stops the top card, which
+  learns of it at once rather than after a reload; the swimlane «По
+  корню дерева» counts by leaves too. Cards without grandchildren look
+  exactly as before.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

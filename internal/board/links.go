@@ -341,6 +341,14 @@ func linkPatch(ctx context.Context, tx pgx.Tx, boardID string, p linkPayload) (P
 		}
 		patch.Cards = append(patch.Cards, c)
 	}
+	// Новая или снятая часть меняет счёт поддерева у всех выше родителя.
+	if p.Kind == LinkSubtask {
+		above, err := parentCards(ctx, tx, boardID, p.FromCard)
+		if err != nil {
+			return Patch{}, err
+		}
+		patch.Cards = append(patch.Cards, above...)
+	}
 	return patch, nil
 }
 
@@ -394,6 +402,9 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 		return Card{}, err
 	}
 	c.Progress = p
+	if c.Subtree, err = subtreeOf(ctx, tx, cardID); err != nil {
+		return Card{}, err
+	}
 
 	var b Block
 	err = tx.QueryRow(ctx, `
@@ -510,12 +521,13 @@ func setCardDone(
 	return withParent(ctx, tx, boardID, c)
 }
 
-// withParent добавляет к патчу родителя этой карточки, если она чья-то
-// часть. Всё, что меняет готовность части, меняет и долю родителя —
-// а сам он об этом не узнаёт ниоткуда: связь не его поле. Без этого
-// полоса разбиения оставалась прежней до перезагрузки страницы.
+// withParent добавляет к патчу предков этой карточки, если она чья-то
+// часть. Всё, что меняет готовность или блокировку части, меняет и долю
+// родителя, и счёт поддерева у всех, кто выше (этап 32.3), — а сами они
+// об этом не узнают ниоткуда: связь не их поле. Без этого полоса
+// разбиения оставалась прежней до перезагрузки страницы.
 //
-// Родитель на чужой доске в патч не попадает: там его перечитают
+// Предок на чужой доске в патч не попадает: там его перечитают
 // со снимком, как и всё остальное чужое.
 func withParent(ctx context.Context, tx pgx.Tx, boardID string, c Card) (Patch, error) {
 	parents, err := parentCards(ctx, tx, boardID, c.ID)
@@ -525,28 +537,39 @@ func withParent(ctx context.Context, tx pgx.Tx, boardID string, c Card) (Patch, 
 	return Patch{Cards: append([]Card{c}, parents...)}, nil
 }
 
-// parentCards — родитель этой карточки, если она чья-то часть и родитель
-// живёт на этой же доске. Ноль или одна карточка: подзадача принадлежит
-// одному родителю.
+// parentCards — предки этой карточки, живущие на этой же доске, от
+// ближнего к корню. Подъём ограничен MaxSubtaskDepth, как и само дерево.
+// Предок на чужой доске пропускается, но подъём идёт дальше: над ним
+// может снова стоять карточка этой доски.
 func parentCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card, error) {
-	var parentID string
-	err := tx.QueryRow(ctx, `
-		select from_card from card_links
-		 where to_card = $1 and kind = 'subtask'`, cardID).Scan(&parentID)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows): // карточка не чья-то часть
-		return nil, nil
-	case err != nil:
-		return nil, err
-	}
-	parent, err := readCard(ctx, tx, boardID, parentID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
+	rows, err := tx.Query(ctx, `
+		with recursive up(card, depth) as (
+			select from_card, 1 from card_links where to_card = $1 and kind = 'subtask'
+			union all
+			select l.from_card, u.depth + 1
+			  from up u join card_links l on l.to_card = u.card and l.kind = 'subtask'
+			 where u.depth < $2
+		)
+		select card from up order by depth`, cardID, MaxSubtaskDepth)
 	if err != nil {
 		return nil, err
 	}
-	return []Card{parent}, nil
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	var out []Card
+	for _, id := range ids {
+		parent, err := readCard(ctx, tx, boardID, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, parent)
+	}
+	return out, nil
 }
 
 // --- блокировки ---
@@ -666,7 +689,9 @@ func blockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	if err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{c}}, nil
+	// Блокировка части останавливает и предков (этап 17 на любой глубине,
+	// 32.3): они узнают об этом только с патчем.
+	return withParent(ctx, tx, boardID, c)
 }
 
 func unblockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -696,5 +721,5 @@ func unblockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 	if err != nil {
 		return Patch{}, err
 	}
-	return Patch{Cards: []Card{c}}, nil
+	return withParent(ctx, tx, boardID, c)
 }

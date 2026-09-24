@@ -321,6 +321,36 @@ export function blockedPartsLabel(parts: Related[]): string | null {
     : t.card.partBlocked(one.title)
 }
 
+/**
+ * Подпись счёта по всему поддереву — «всего 11 из 20». Есть только
+ * у карточки с внуками: у остальных прямые части и есть всё поддерево.
+ */
+export function subtreeLabel(card: Card, unit?: EstimateUnit): string | null {
+  const count = subtreeCount(card, unit)
+  return count ? t.card.subtree(count) : null
+}
+
+/** Сам счёт поддерева, без «всего» — для заголовка дорожки по корню,
+ *  где он и так единственный. */
+export function subtreeCount(card: Card, unit?: EstimateUnit): string | null {
+  if (!card.subtree || card.subtree.total === 0) return null
+  const { done, total, byWeight } = card.subtree
+  const base = t.card.progress(number(done), number(total))
+  return byWeight && unit ? `${base} ${t.card.unit(total, unit)}` : base
+}
+
+/**
+ * Застрявшее глубже прямых частей — правило этапа 17 на любой глубине:
+ * упёршаяся часть останавливает и целое, сколько бы уровней ни было
+ * между ними. Подпись та же, что у прямых частей.
+ */
+export function deepStuckLabel(card: Card, direct: number): string | null {
+  const stuck = card.subtree?.stuck ?? 0
+  if (stuck === 0) return null
+  if (stuck + direct > 1) return t.card.partsBlocked(stuck + direct)
+  return t.card.partBlocked(card.subtree?.stuckReason || card.subtree?.stuckTitle || '')
+}
+
 export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
   if (!card.progress || card.progress.total === 0) return null
   const { done, total, byWeight } = card.progress

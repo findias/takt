@@ -30,6 +30,7 @@ import {
   priorityLabel,
   cardDetails,
   progressLabel,
+  subtreeLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { labelOrigin, chipClass } from '../../entities/label/model.ts'
@@ -171,7 +172,8 @@ export function CardPanel({
   const details = cardDetails(base, cardId)
   if (!details) return null
   const { card } = details
-  const label = progressLabel(card, unit)
+  // Счёт прямых частей и, у карточки с внуками, всего поддерева.
+  const label = [progressLabel(card, unit), subtreeLabel(card, unit)].filter(Boolean).join(' · ') || null
   // Кто держит эту работу. Ищется среди уже разобранных связей: держат
   // почти всегда свои части, а карточку с чужой доски снимок принёс
   // вместе со связью.

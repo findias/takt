@@ -398,3 +398,22 @@ test('срок блокировки читается словами и пред�
     expired: true,
   })
 })
+
+test('второй счёт — только у карточки с внуками', async () => {
+  const { subtreeLabel, subtreeCount } = await import('./model.ts')
+  assert.equal(subtreeLabel(card('a', 'Фича')), null)
+  const epic = card('e', 'Эпик', { subtree: { done: 11, total: 20, byWeight: false, stuck: 0 } })
+  assert.equal(subtreeLabel(epic), 'всего 11 из 20')
+  assert.equal(subtreeCount(epic), '11 из 20')
+})
+
+test('застрявший внук останавливает корень, и причина названа словами', async () => {
+  const { deepStuckLabel } = await import('./model.ts')
+  const epic = card('e', 'Эпик', {
+    subtree: { done: 0, total: 3, byWeight: false, stuck: 1, stuckTitle: 'Задача', stuckReason: 'ждём доступ' },
+  })
+  assert.equal(deepStuckLabel(epic, 0), 'Часть заблокирована: ждём доступ')
+  // С застрявшей прямой частью — общим счётом, а не двумя тревогами.
+  assert.equal(deepStuckLabel(epic, 1), 'Части заблокированы: 2')
+  assert.equal(deepStuckLabel(card('a', 'Фича'), 1), null)
+})
