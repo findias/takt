@@ -2972,3 +2972,45 @@ test('задача команды несёт метку эпика с портф
   await page.getByRole('button', { name: 'Убрать из фильтра эпик «Большой переезд»' }).click()
   await expect(cardIn(page, 'Очередь', 'Своя работа')).toBeVisible()
 })
+
+test('эпик портфеля говорит, где его работа, а дерево портфеля доходит до задач команды', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Склад')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByPlaceholder('Название новой доски').fill('Эпики')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await addCard(page, 'Идея', 'Большой переезд')
+  await cardIn(page, 'Идея', 'Большой переезд').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Фича переезда')
+  await page.getByRole('combobox', { name: 'Доска подзадачи' }).selectOption({ label: 'Склад' })
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  // Задача фичи — на доске команды, портфелю её снимок не знает.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Склад')
+  await cardIn(page, 'Очередь', 'Фича переезда').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Задача переезда')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Эпики', exact: true }).click()
+  const teams = cardIn(page, 'Идея', 'Большой переезд').getByRole('list', { name: 'Где работа эпика' })
+  const share = teams.getByRole('link', { name: /0\/1/ })
+  await expect(share).toHaveAttribute('title', /^Склад: готово 0 из 1/)
+
+  // Дерево портфеля: эпик › фича на Складе › её задача — через доску.
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
+  const tree = page.getByRole('list', { name: 'Дерево работы доски' })
+  await expect(tree.getByText('Задача переезда', { exact: true })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
+
+  // Значок ведёт на доску команды, отобранную по эпику.
+  await share.click()
+  await expect(page).toHaveURL(/[?&]epic=/)
+  await expect(cardIn(page, 'Очередь', 'Фича переезда')).toBeVisible()
+})

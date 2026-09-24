@@ -32,6 +32,7 @@ import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { SubtaskRow } from './SubtaskRow.tsx'
+import { boardPath, navigate } from '../../shared/router/index.ts'
 import {
   ArchiveIcon,
   BlockedIcon,
@@ -870,6 +871,36 @@ function CardViewInner({
                 </span>
               )}
             </div>
+          )}
+
+          {/* Где работа эпика (этап 33.5): полоса говорит «сколько»,
+              значки — «где и где стоит». Значок ведёт на доску команды
+              с отбором по этому эпику: следующий вопрос после «у ПОСТ
+              стоит одна» — «какая». Стоящее — словом, а не цветом:
+              тревога на карточке одна, и её уже подняла полоса. */}
+          {card?.teams && card.teams.length > 0 && (
+            <ul className="card-teams" aria-label={t.cardView.teams}>
+              {card.teams.map((s) => {
+                const href = `${boardPath(s.boardId)}?epic=${card.id}`
+                return (
+                  <li key={s.boardId}>
+                    <a
+                      className={s.blocked > 0 ? 'mark team-share team-share--stuck' : 'mark team-share'}
+                      href={href}
+                      title={t.cardView.teamShareTitle(s.boardName, s.done, s.total, s.blocked)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+                        e.preventDefault()
+                        navigate(href)
+                      }}
+                    >
+                      {t.cardView.teamShare(s.boardKey || s.boardName, s.done, s.total, s.blocked)}
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
           )}
 
           {/* Раскрытые подзадачи. Список, а не карточки: карточка этой же

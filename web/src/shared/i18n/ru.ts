@@ -733,6 +733,11 @@ export const ru = {
     titleLabel: 'Название карточки',
     select: (title: string) => `Выделить «${title}»`,
     epicFilter: (title: string) => `Эпик «${title}»: показать только его работу`,
+    teams: 'Где работа эпика',
+    teamShare: (key: string, done: number, total: number, blocked: number) =>
+      blocked > 0 ? `${key} ${done}/${total} · стоит ${blocked}` : `${key} ${done}/${total}`,
+    teamShareTitle: (board: string, done: number, total: number, blocked: number) =>
+      `${board}: готово ${done} из ${total}${blocked > 0 ? `, стоит ${blocked}` : ''}. Открыть доску с отбором по эпику`,
     subtaskOf: 'подзадача задачи ',
     labelsOf: (names: string) => `Метки: ${names}`,
     noLabels: 'Метки: ни одной',

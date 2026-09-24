@@ -48,3 +48,24 @@ func (s *Server) handleCardPath(w http.ResponseWriter, r *http.Request, p auth.P
 		writeJSON(w, http.StatusOK, map[string]any{"path": path})
 	}
 }
+
+// Ветка карточки вниз через доски — для вида «Дерево» (этап 33.5).
+// Снимок доски знает части только своей доски и прямых соседей; эпик
+// портфеля раскладывается на три уровня по чужим доскам, и собрать его
+// может только сервер.
+func (s *Server) handleCardTree(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	id := r.PathValue("id")
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, http.StatusNotFound, "карточки нет или её доска вам закрыта — попросите ссылку у того, кто её прислал")
+		return
+	}
+	nodes, err := s.boards.CardTree(r.Context(), p.OrgID, p.ID, id)
+	switch {
+	case errors.Is(err, board.ErrNotFound):
+		writeError(w, http.StatusNotFound, "карточки нет или её доска вам закрыта — попросите ссылку у того, кто её прислал")
+	case err != nil:
+		s.fail(w, "ветка карточки", err)
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"nodes": nodes})
+	}
+}

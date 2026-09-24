@@ -133,6 +133,7 @@ func (s *Server) Handler() http.Handler {
 	// не открыты.
 	mux.HandleFunc("GET /api/tasks", s.human(s.handleTasks))
 	mux.HandleFunc("GET /api/cards/{id}/path", s.human(s.handleCardPath))
+	mux.HandleFunc("GET /api/cards/{id}/tree", s.human(s.handleCardTree))
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
 	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))

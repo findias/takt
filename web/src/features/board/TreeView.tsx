@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { BaseState } from '../../entities/board/model.ts'
-import type { Card, EstimateUnit } from '../../shared/api/index.ts'
+import { request } from '../../shared/api/index.ts'
+import type { Card, EstimateUnit, TreeNode } from '../../shared/api/index.ts'
 import { progressLabel } from '../../entities/card/model.ts'
 import { locale, t } from '../../shared/i18n/index.ts'
 
@@ -9,17 +10,18 @@ import { locale, t } from '../../shared/i18n/index.ts'
  * рядом с «Доской» и «Таблицей», а не поверх них. Кому нужна иерархия,
  * смотрит здесь; доска остаётся доской потока.
  *
- * Строится из снимка доски: карточки доски и связи «подзадача» с обеих
- * сторон. Карточка с другой доски стоит со своей подписью, и под ней
- * собраны её части с этой доски — так «эпик › релиз соседей › наша
- * задача» остаётся одной веткой. Корнем чужая карточка становится,
- * только если её родитель снимку неизвестен. Части чужой карточки,
- * лежащие на третьих досках, не видны: заглядывать в чужие доски снимок
- * не умеет, и это честная граница вида.
+ * Строится из снимка доски, а ветки, уходящие на другие доски,
+ * досчитывает сервер (этап 33.5): снимок знает только свои карточки
+ * и их прямых соседей, а эпик портфеля лежит тремя уровнями на досках
+ * команд. Спрашиваются только такие ветки — дерево доски, где всё своё,
+ * запросов не делает. Свои карточки берутся из снимка: они живые,
+ * а ответ сервера — на момент запроса.
  *
  * Отбор доски здесь не действует: дерево без половины веток не
  * отвечает на вопрос «далеко ли до эпика».
  */
+
+const loadTree = (cardId: string) => request<{ nodes: TreeNode[] }>('GET', `/api/cards/${cardId}/tree`)
 
 type Node = {
   id: string
@@ -28,6 +30,10 @@ type Node = {
   own: Card | null
   /** Где карточка: колонка этой доски или чужая доска. */
   where: string
+  done: boolean
+  blocked: boolean
+  /** Есть ли в ветке карточки других досок — тогда её досчитывает сервер. */
+  foreign: boolean
   children: Node[]
 }
 
@@ -41,7 +47,32 @@ export function TreeView({
   onOpenCard: (cardId: string) => void
 }) {
   const s = t.tree
-  const { roots, alone } = useMemo(() => build(base), [base])
+  const [remote, setRemote] = useState<Map<string, TreeNode>>(() => new Map())
+  const { roots, alone } = useMemo(() => build(base, remote), [base, remote])
+  // Какие ветки спросить у сервера. Ключ строкой, чтобы пересборка
+  // дерева от ответа сервера не запрашивала его снова.
+  const wanted = roots
+    .filter((r) => r.foreign)
+    .map((r) => r.id)
+    .join(' ')
+  useEffect(() => {
+    if (!wanted) return
+    let current = true
+    // Молча: без ответа дерево остаётся тем, что знает снимок, — честно
+    // неполным, а не сломанным.
+    void Promise.all(wanted.split(' ').map((id) => loadTree(id).catch(() => ({ nodes: [] as TreeNode[] })))).then(
+      (answers) => {
+        if (!current) return
+        const next = new Map<string, TreeNode>()
+        for (const a of answers) for (const n of a.nodes) next.set(n.id, n)
+        setRemote(next)
+      },
+    )
+    return () => {
+      current = false
+    }
+    // Связи — тоже повод спросить заново: часть привязали или отвязали.
+  }, [wanted, base.links])
   // Свёрнутое — локально: вид раскрыт целиком по умолчанию, дерево
   // смотрят, чтобы увидеть всё сразу.
   const [folded, setFolded] = useState<Set<string>>(() => new Set())
@@ -80,7 +111,8 @@ export function TreeView({
           ) : (
             <span className="tree-title">{node.title}</span>
           )}
-          {node.own?.blocked && <span className="mark mark--alarm">{s.blocked}</span>}
+          {node.blocked && <span className="mark mark--alarm">{s.blocked}</span>}
+          {node.done && <span className="mark">{s.done}</span>}
           <span className="muted small">{node.where}</span>
           {progress && <span className="muted small">{progress}</span>}
         </div>
@@ -109,51 +141,64 @@ export function TreeView({
   )
 }
 
-function build(base: BaseState): { roots: Node[]; alone: Node[] } {
+function build(base: BaseState, remote: Map<string, TreeNode>): { roots: Node[]; alone: Node[] } {
   const kids = new Map<string, string[]>()
   const parentOf = new Map<string, string>()
-  for (const link of base.links) {
-    if (link.kind !== 'subtask') continue
-    parentOf.set(link.toCard, link.fromCard)
-    kids.set(link.fromCard, [...(kids.get(link.fromCard) ?? []), link.toCard])
+  const link = (parent: string, child: string) => {
+    if (parentOf.has(child)) return
+    parentOf.set(child, parent)
+    kids.set(parent, [...(kids.get(parent) ?? []), child])
   }
+  for (const l of base.links) if (l.kind === 'subtask') link(l.fromCard, l.toCard)
+  // Сервер добавляет только части чужих карточек: части своих снимок
+  // знает целиком, и знает свежее.
+  for (const n of remote.values()) if (n.parentId && !base.cards[n.parentId]) link(n.parentId, n.id)
+
   const byNumber = (a: Node, b: Node) =>
     (a.number ?? '').localeCompare(b.number ?? '', locale(), { numeric: true }) ||
     a.title.localeCompare(b.title, locale())
 
   const node = (id: string, seen: Set<string>): Node => {
     const own = base.cards[id] ?? null
+    const far = own ? undefined : remote.get(id)
     const foreign = own ? null : base.linked[id]
     // Цикл в связях не должен уводить отрисовку в бесконечность:
     // карточка, уже встреченная на пути, дальше не раскрывается.
     const next = new Set(seen).add(id)
-    // Части чужой карточки тоже известны — те, что на этой доске:
-    // связь с ними есть в снимке. Так «эпик › релиз соседей › наша задача»
-    // собирается одной веткой, а не распадается на два корня.
     const children = !seen.has(id) ? (kids.get(id) ?? []).map((c) => node(c, next)).sort(byNumber) : []
+    const visible = own !== null || foreign !== undefined || far?.visible === true
+    const boardName = foreign?.boardName ?? far?.boardName
     return {
       id,
-      title: own?.title ?? foreign?.title ?? t.card.unavailable,
-      number: own?.number ?? null,
+      title: own?.title ?? foreign?.title ?? far?.title ?? t.card.unavailable,
+      number: own?.number ?? far?.number ?? null,
       own,
       where: own
         ? (base.columns[own.columnId]?.name ?? '')
-        : foreign
-          ? t.card.onBoard(foreign.boardName)
+        : visible && boardName
+          ? [t.card.onBoard(boardName), far?.columnName].filter(Boolean).join(' · ')
           : t.card.hiddenTeam,
+      done: own ? own.outcome === 'done' || own.doneAt !== null : far?.done === true,
+      blocked: own ? Boolean(own.blocked) : far?.blocked === true,
+      foreign: !own || children.some((c) => c.foreign),
       children,
     }
   }
 
   const roots: Node[] = []
   const alone: Node[] = []
-  // Корни — карточки доски без родителя и родители с других досок,
-  // под которыми здесь лежат части. Чужой родитель — корень, только если над ним никого не известно:
-  // иначе он уже стоит веткой под своим родителем.
+  // Корни — карточки доски без родителя и чужие карточки на вершине
+  // ветки, в которой лежат карточки доски. Чужой родитель, над которым
+  // кто-то известен, — не корень: он уже стоит веткой под своим родителем.
   const foreignParents = new Set<string>()
   for (const card of Object.values(base.cards)) {
-    const parent = parentOf.get(card.id)
-    if (parent && !base.cards[parent] && !parentOf.has(parent)) foreignParents.add(parent)
+    const path = new Set([card.id])
+    let top = card.id
+    for (let up = parentOf.get(top); up !== undefined && !path.has(up); up = parentOf.get(top)) {
+      path.add(up)
+      top = up
+    }
+    if (!base.cards[top]) foreignParents.add(top)
   }
   for (const id of foreignParents) roots.push(node(id, new Set()))
   for (const card of Object.values(base.cards)) {

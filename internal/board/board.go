@@ -195,6 +195,10 @@ type Card struct {
 	// Пусто — эпика нет, он на доске, которой спрашивающему не видно,
 	// или карточка сама лежит на портфеле.
 	Epic *EpicRef `json:"epic,omitempty"`
+	// Teams — где лежит работа эпика: его поддерево по доскам команд
+	// (этап 33.5). Есть только у карточки портфеля с частями на других
+	// досках.
+	Teams []TeamShare `json:"teams,omitempty"`
 	// Открытая блокировка, если есть.
 	Blocked *Block `json:"blocked,omitempty"`
 	// Сколько реплик в обсуждении. Считается запросом на доску, как
@@ -770,6 +774,15 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for id, e := range got {
 		if card := byID[id]; card != nil {
 			card.Epic = e
+		}
+	}
+	shares, err := teams(ctx, tx, &boardID, nil)
+	if err != nil {
+		return err
+	}
+	for id, t := range shares {
+		if card := byID[id]; card != nil {
+			card.Teams = t
 		}
 	}
 

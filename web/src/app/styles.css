@@ -4938,6 +4938,27 @@ span.tree-toggle {
 /* Метка эпика на карточке (этап 33.3): короткая, в одну строку,
    полное название — в подсказке. Шире трети карточки она вытесняла бы
    номер и строку родителя. */
+/* Значки команд на карточке эпика (этап 33.5): строкой под полосой,
+   переносом, если досок много, — ключ доски короткий, и три-четыре
+   значка встают в одну строку колонки. */
+.card-teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.team-share {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.team-share:hover {
+  text-decoration: underline;
+}
+.team-share--stuck {
+  color: var(--warn);
+}
 .card-epic {
   max-width: 12rem;
   overflow: hidden;

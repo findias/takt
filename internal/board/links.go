@@ -450,6 +450,11 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 		return Card{}, err
 	}
 	c.Epic = epic[cardID]
+	shares, err := teams(ctx, tx, nil, &cardID)
+	if err != nil {
+		return Card{}, err
+	}
+	c.Teams = shares[cardID]
 
 	var b Block
 	err = tx.QueryRow(ctx, `

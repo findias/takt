@@ -74,7 +74,11 @@ portfolio shows how long epics take and how many run at once, the team
 boards show their own work. On a team board every card that belongs to
 an epic carries its coloured mark — the same colour on every board;
 press it to show only that epic's work, and remove the epic chip from
-the filter strip to show everything again. An existing board becomes a portfolio (and
+the filter strip to show everything again. On the portfolio itself an
+epic card shows, under its progress bar, where its work lies: one badge
+per team board with how many of its tasks are done there, and how many
+are stuck, for example "SUP 1/4 · 2 stuck". The badge opens that board
+filtered by the epic. An existing board becomes a portfolio (and
 back) under **How we work** in **Flow** — **Board level**. The board
 list marks portfolios **epic portfolio**.
 
@@ -84,10 +88,13 @@ list marks portfolios **epic portfolio**.
 In the view list, next to **Board** and **Table**, pick **Tree**. Every
 card with parts is shown with its parts under it, level by level: the
 number, the column, how much is done — by the leaves of its whole
-subtree — and whether it is blocked. A
-parent on another board heads its own branch, signed with that board;
-parts on other boards show as a line with their board, without their
-own parts. Cards with no parent and no parts are folded into one line
+subtree — whether it is blocked, and whether it is done. A
+parent on another board heads its own branch, signed with that board.
+A branch that reaches other boards is followed there to the end: parts
+on other boards show with their board and column, and so do their own
+parts, however many boards the branch crosses — the portfolio tree
+goes from the epic down to the team's tasks. A card on a board you
+cannot see is named "Card unavailable". Cards with no parent and no parts are folded into one line
 at the bottom. **▾** folds a branch. Filters do not apply to this view:
 a tree with half its branches missing cannot say how far the epic is.
 

@@ -610,12 +610,16 @@ export type Card = {
   /** Прогресс по подзадачам; пусто, если подзадач нет. `byWeight`
    *  говорит, чем он измерен: суммой оценок или штуками. */
   progress?: { done: number; total: number; byWeight: boolean }
-  /** Счёт по листьям всего поддерева — только у карточки с внуками
-   *  (этап 32.3). `stuck` — заблокированных глубже прямых частей: о прямых
-   *  клиент знает из связей доски. */
   /** Эпик карточки — ближайший предок на доске-портфеле (этап 33.3).
    *  Пусто — эпика нет, он не виден или карточка сама на портфеле. */
   epic?: { id: string; title: string; boardId: string }
+  /** Где лежит работа карточки портфеля: её поддерево по доскам команд
+   *  (этап 33.5). `total` и `done` — листья, как у полосы; `blocked` —
+   *  стоящих карточек доски на любой глубине. */
+  teams?: TeamShare[]
+  /** Счёт по листьям всего поддерева — только у карточки с внуками
+   *  (этап 32.3). `stuck` — заблокированных глубже прямых частей: о прямых
+   *  клиент знает из связей доски. */
   subtree?: {
     done: number
     total: number
@@ -634,6 +638,30 @@ export type Card = {
    *  у подзадачи своё обсуждение, и без числа о нём узнают, только
    *  зайдя внутрь. */
   comments: number
+}
+
+export type TeamShare = {
+  boardId: string
+  boardName: string
+  boardKey: string
+  total: number
+  done: number
+  blocked: number
+}
+
+/** Узел ветки через доски (этап 33.5). Недоступный — только `id`
+ *  и `parentId`: название и доску закрытой карточки сервер не отдаёт. */
+export type TreeNode = {
+  id: string
+  parentId?: string
+  visible: boolean
+  number?: string
+  title?: string
+  boardId?: string
+  boardName?: string
+  columnName?: string
+  done: boolean
+  blocked: boolean
 }
 
 export type Priority = 'highest' | 'high' | 'medium' | 'low'

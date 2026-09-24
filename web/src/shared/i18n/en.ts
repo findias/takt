@@ -727,6 +727,11 @@ export const en: typeof ru = {
     titleLabel: 'Card title',
     select: (title: string) => `Select “${title}”`,
     epicFilter: (title: string) => `Epic “${title}”: show only its work`,
+    teams: 'Where the epic’s work is',
+    teamShare: (key: string, done: number, total: number, blocked: number) =>
+      blocked > 0 ? `${key} ${done}/${total} · ${blocked} stuck` : `${key} ${done}/${total}`,
+    teamShareTitle: (board: string, done: number, total: number, blocked: number) =>
+      `${board}: ${done} of ${total} done${blocked > 0 ? `, ${blocked} stuck` : ''}. Open the board filtered by this epic`,
     subtaskOf: 'subtask of ',
     labelsOf: (names: string) => `Labels: ${names}`,
     noLabels: 'Labels: none',

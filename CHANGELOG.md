@@ -276,9 +276,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   epics never mix with tasks in cycle time or the promise, and the
   portfolio shows how long epics take and how many run at once. On team
   boards a card carries its epic's coloured mark; pressing it filters
-  the board to that epic, and the export gets an «Эпик» column. The new
+  the board to that epic, and the export gets an «Эпик» column. On the
+  portfolio an epic card shows where its work lies: a badge per team
+  board with its tasks done there and how many are stuck («ПОСТ 1/4 ·
+  стоит 2»), opening that board filtered by the epic. The new
   «Дерево» view, next to «Доска» and «Таблица», shows epics, features
-  and tasks as a hierarchy, parts on other boards included. Migration `0070` adds
+  and tasks as a hierarchy; a branch that reaches other boards is
+  followed there to the end, so the portfolio tree goes from the epic
+  down to the team's tasks. Migration `0070` adds
   `boards.level`, default «team».
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
