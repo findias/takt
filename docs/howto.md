@@ -459,6 +459,39 @@ labels these tasks carry). **Clear filters** brings everything back. A private b
 have no access to is not shown, even if the person works on it. The
 address keeps the choice, so the list can be sent to someone.
 
+<!-- anchor: reports -->
+### Export cards for a report
+
+When someone asks you to "send a spreadsheet", open the **Reports**
+tab. Choose the **Period** — two dates, or **30 days**, **90 days**,
+**This quarter**, **Last quarter** — and narrow it down if you need to:
+**Boards**, **Subdivisions** (a subdivision includes the ones nested in
+it), **Assignees**, **Labels**, **Priority**, **State**, and an
+**Iteration** once a single board is chosen. Empty means "any". A card
+is included if it was alive during the period: created before the
+period ended and not finished before it began. Its state and age are as
+of today.
+
+Below the selection you see how many cards match. Then download:
+
+- **Excel (XLSX)** opens on a **Summary** sheet: what was selected,
+  cards done and discarded in the period, work in progress, cycle time
+  and age (median and 85th percentile), throughput by week and a
+  cumulative flow diagram — both with charts — iteration completion and
+  a breakdown by subdivision. The **Data** sheet has one row per card
+  with every field, ready for pivot tables. Everything on the summary
+  is counted from those same rows.
+- **CSV** holds the same rows without the summary.
+- **JSON** is for a program: field names as in the API, values as
+  codes (`done`, `high`).
+
+Column names follow the interface language. Times are in UTC. Only
+boards you can see are included. One export takes at most 50,000 cards;
+if more match, the screen says how many and asks you to shorten the
+period or pick boards. The address keeps the selection, so the link can
+be sent to someone. The same export is open to integration keys with
+`boards:read`: `GET /api/v1/reports/cards`.
+
 ### Invite someone
 
 1. **Team** tab → **Invite** section.

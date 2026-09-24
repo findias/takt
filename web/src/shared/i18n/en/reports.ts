@@ -1,0 +1,47 @@
+// Раздел каталога, который грузится вместе со своим экраном (см. index.ts).
+import type { reports as ru } from '../ru/reports.ts'
+
+export const reports: typeof ru = {
+    title: 'Card export',
+    intro:
+      'Cards matching your selection as one table, plus a flow summary for the period: throughput, cycle time, cumulative flow, iterations and subdivisions.',
+    period: 'Period',
+    from: 'Period start',
+    to: 'Period end',
+    presets: { days30: '30 days', days90: '90 days', quarter: 'This quarter', lastQuarter: 'Last quarter' },
+    periodRule:
+      'A card is included if it was alive during the period: created before the period ended and not finished before it began. State and age are as of today.',
+    reversed: 'The period ends before it starts — swap the dates.',
+    boards: 'Boards',
+    allBoards: 'All boards',
+    addBoard: 'Add a board',
+    teams: 'Subdivisions',
+    allTeams: 'All subdivisions',
+    addTeam: 'Add a subdivision',
+    teamsHint: 'A subdivision includes the ones nested in it.',
+    assignees: 'Assignees',
+    allAssignees: 'Everyone',
+    addAssignee: 'Add an assignee',
+    labels: 'Labels',
+    allLabels: 'Any',
+    addLabel: 'Add a label',
+    remove: (name: string) => `Remove “${name}” from the selection`,
+    priority: 'Priority',
+    state: 'State',
+    states: { queued: 'Queued', active: 'In progress', done: 'Done', discarded: 'Discarded' },
+    iteration: 'Iteration',
+    anyIteration: 'Any',
+    iterationHint: 'An iteration can be picked once a single board is selected.',
+    archived: 'Include archived cards',
+    reset: 'Clear selection',
+    counting: 'Counting cards…',
+    count: (n: number) => `${n} ${n === 1 ? 'card matches' : 'cards match'} the selection.`,
+    none: 'No cards match the selection: the file will hold only the header.',
+    tooMany: (n: number, limit: number) =>
+      `${n} cards match, and one export takes at most ${limit}. Shorten the period or pick boards.`,
+    countFailed: 'Could not count the cards',
+    download: 'Download',
+    formats: { xlsx: 'Excel (XLSX)', csv: 'CSV', json: 'JSON' },
+    formatsHint:
+      'The Excel workbook opens on a summary with charts; the second sheet holds the data, one row per card, ready for pivot tables. CSV has the same rows without the summary. JSON is for processing by a program.',
+}

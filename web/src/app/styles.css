@@ -2655,7 +2655,8 @@ textarea.description {
 .btn:active:not(:disabled) {
   background: var(--surface-2);
 }
-.btn:disabled {
+.btn:disabled,
+.btn[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -4000,6 +4001,55 @@ textarea.description {
 .import-list {
   margin: var(--space-1) 0 0;
   padding-left: var(--space-6);
+}
+
+/* Выгрузка для руководства: период и отбор — группами без рамок,
+   как в личных настройках; списки держат ширину, выбранное фишками
+   переносится своей строкой. Ссылки скачивания — те же кнопки, но
+   без подчёркивания ссылки. */
+.reports {
+  max-width: 60rem;
+}
+.reports-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.reports-group legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+.reports-group p {
+  margin: 0;
+}
+.reports .row {
+  flex-wrap: wrap;
+}
+.pick-list select {
+  width: auto;
+  max-width: 16rem;
+}
+/* Подписи отбора одной ширины: списки начинаются с одного края, и глаз
+   идёт по ним столбцом. На узком экране ширина не держится — там
+   подпись с полем и так делят строку. */
+/* Цвет — как у подписей внутри <label>: «Приоритет» стоит над группой
+   флажков, а не внутри подписи, и без этого выходил темнее соседей. */
+.reports .report-name {
+  color: var(--ink-2);
+}
+@media (min-width: 40rem) {
+  .reports .pick-list-name,
+  .reports .report-name {
+    min-width: 8.5rem;
+  }
+}
+.reports a.btn {
+  text-decoration: none;
 }
 
 /* Задачи человека со всех досок: выбор человека и флажок — одной

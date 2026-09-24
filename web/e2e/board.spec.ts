@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { workbook } from './xlsx.ts'
 import { taktPackage } from './takt-package.ts'
 import { expect, test } from '@playwright/test'
@@ -2799,4 +2800,36 @@ test('вкладка «Задачи» собирает карточки чело
   await table.getByRole('button', { name: 'Моя задача' }).click()
   await expect(page).toHaveURL(/\/board\/.+\/card\//)
   await expect(page.getByRole('heading', { name: 'Моя задача' })).toBeVisible()
+})
+
+test('выгрузка называет число карточек до файла и отдаёт те же строки', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Поставки')
+  await addCard(page, 'Очередь', 'Заказать упаковку')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Соседи')
+  await addCard(page, 'Очередь', 'Чужая работа')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Отчёты', exact: true }).click()
+  const status = page.getByRole('status').filter({ hasText: 'Под отбор' })
+  await expect(status).toHaveText('Под отбор попадают 2 карточки.')
+
+  // Отбор по доске сужает число и попадает в адрес — ссылку пересылают.
+  await page.getByLabel('Доски').selectOption({ label: 'Поставки' })
+  await expect(status).toHaveText('Под отбор попадает 1 карточка.')
+  await expect(page).toHaveURL(/[?&]board=/)
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'CSV' }).click()
+  const file = await download
+  const csv = (await readFile(await file.path())).toString('utf8')
+  expect(csv).toContain('Заказать упаковку')
+  expect(csv).not.toContain('Чужая работа')
+
+  // Книга — zip: первые байты PK.
+  const book = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Excel (XLSX)' }).click()
+  const raw = await readFile(await (await book).path())
+  expect(raw.subarray(0, 2).toString()).toBe('PK')
 })

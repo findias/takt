@@ -84,6 +84,10 @@ test('английские снимки для документации', async 
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/19-team.png`, fullPage: true })
 
+  await page.getByRole('button', { name: 'Reports', exact: true }).click()
+  await page.getByRole('status').filter({ hasText: 'match' }).waitFor()
+  await page.screenshot({ path: `${SHOTS}/42-reports.png`, fullPage: true })
+
   // Import from a spreadsheet — preview only, the demo boards stay as they are.
   await page.goto('/import')
   await page.getByLabel('CSV or Excel file').setInputFiles({

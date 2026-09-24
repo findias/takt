@@ -23,6 +23,7 @@ import (
 	"github.com/findias/takt/internal/oidc"
 	"github.com/findias/takt/internal/org"
 	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/report"
 	"github.com/findias/takt/internal/scim"
 	"github.com/findias/takt/internal/store"
 	"github.com/findias/takt/internal/team"
@@ -39,6 +40,7 @@ type Server struct {
 	client  *apiclient.Service
 	hooks   *webhook.Service
 	metrics *metrics.Service
+	reports *report.Service
 	hub     *realtime.Hub
 	limiter *limiter
 	audit   *audit.Service
@@ -65,6 +67,7 @@ func New(cfg config.Config, db *store.Store, log *slog.Logger, hub *realtime.Hub
 		client:  apiclient.New(db),
 		hooks:   webhook.New(db, board.EventNames()),
 		metrics: metrics.New(db),
+		reports: report.New(db),
 		hub:     hub,
 		limiter: newLimiter(),
 		audit:   audit.New(db),
@@ -163,6 +166,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerContractRoutes(mux)
 	s.registerWebhookRoutes(mux)
 	s.registerMetricsRoutes(mux)
+	s.registerReportRoutes(mux)
 	s.registerStreamRoutes(mux)
 	s.registerExportRoutes(mux)
 	s.registerOIDCRoutes(mux)

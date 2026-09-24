@@ -81,6 +81,9 @@ test file backing each promise, is in
   `done`), start and finish points, entry policy. Cycle time,
   throughput, cumulative flow and a percentile forecast come from that
   markup rather than from an eyeball estimate.
+- **Export for management.** Cards by period, boards, subdivisions,
+  people and labels as one flat table, with a flow summary and charts
+  counted from the same rows: Excel, CSV or JSON.
 - **Work-in-progress limit per column.** Soft by default: the excess is
   highlighted and does not stop you. A hard limit is switched on by a
   flag and answers `409`.

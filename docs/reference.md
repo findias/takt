@@ -199,6 +199,7 @@ mark removed, archived, restored to the board.
 | Cards on a board | 500 without losing responsiveness |
 | Rows in the table | 1000, sorting under 200 ms |
 | First paint of the board | under a second |
+| Cards in one export (**Reports**) | 50,000; the server keeps them out of memory |
 
 ## The integration API
 

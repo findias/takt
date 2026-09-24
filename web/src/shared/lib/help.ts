@@ -21,6 +21,7 @@ export const HELP_TOPICS = {
   iterations: 'howto#iterations',
   team: 'howto#team',
   tasks: 'howto#tasks',
+  reports: 'howto#reports',
   structure: 'howto#structure',
   account: 'howto#language',
   import: 'howto#import',

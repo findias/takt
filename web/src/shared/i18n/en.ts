@@ -417,6 +417,7 @@ export const en: typeof ru = {
     tasks: 'Tasks',
     team: 'Team',
     structure: 'Structure',
+    reports: 'Reports',
     import: 'Import tasks',
     sections: 'Sections',
     offline:

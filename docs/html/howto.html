@@ -272,6 +272,15 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="team">The organisation</h2>
 <h3 id="tasks">See someone&#39;s tasks on every board</h3>
 <p>The <strong>Tasks</strong> tab lists the cards where a person is an assignee, on every board you can see — your own by default. Pick someone else in <strong>Whose tasks</strong>, or press <strong>Tasks</strong> next to their name under <strong>Team</strong>. The list is a table: number, task, board, column, due date, priority, labels and how long it has been in progress; the task opens its card on its board. <strong>Show finished</strong> adds finished work. The row below narrows the list: <strong>Status</strong> (not started, in progress, done — by the kind of column, since boards name their columns differently — or blocked), <strong>Due</strong> (overdue, within 3 days, no due date) and <strong>Label</strong> (only the labels these tasks carry). <strong>Clear filters</strong> brings everything back. A private board you have no access to is not shown, even if the person works on it. The address keeps the choice, so the list can be sent to someone.</p>
+<h3 id="reports">Export cards for a report</h3>
+<p>When someone asks you to &#34;send a spreadsheet&#34;, open the <strong>Reports</strong> tab. Choose the <strong>Period</strong> — two dates, or <strong>30 days</strong>, <strong>90 days</strong>, <strong>This quarter</strong>, <strong>Last quarter</strong> — and narrow it down if you need to: <strong>Boards</strong>, <strong>Subdivisions</strong> (a subdivision includes the ones nested in it), <strong>Assignees</strong>, <strong>Labels</strong>, <strong>Priority</strong>, <strong>State</strong>, and an <strong>Iteration</strong> once a single board is chosen. Empty means &#34;any&#34;. A card is included if it was alive during the period: created before the period ended and not finished before it began. Its state and age are as of today.</p>
+<p>Below the selection you see how many cards match. Then download:</p>
+<ul>
+<li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion and a breakdown by subdivision. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables. Everything on the summary is counted from those same rows.</li>
+<li><strong>CSV</strong> holds the same rows without the summary.</li>
+<li><strong>JSON</strong> is for a program: field names as in the API, values as codes (<code>done</code>, <code>high</code>).</li>
+</ul>
+<p>Column names follow the interface language. Times are in UTC. Only boards you can see are included. One export takes at most 50,000 cards; if more match, the screen says how many and asks you to shorten the period or pick boards. The address keeps the selection, so the link can be sent to someone. The same export is open to integration keys with <code>boards:read</code>: <code>GET /api/v1/reports/cards</code>.</p>
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
 <li><strong>Team</strong> tab → <strong>Invite</strong> section.</li>
@@ -350,7 +359,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-78-gec7e2b4-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-79-g1d80d98-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

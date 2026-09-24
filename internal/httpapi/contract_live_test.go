@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pb33f/libopenapi"
@@ -76,6 +77,14 @@ func TestContractDescribesWhatServerAnswers(t *testing.T) {
 	// пустые ряды, cycleTime и forecast равные null. Схема отчёта
 	// проверяется целиком именно здесь.
 	c.call("GET", "/boards/"+boardID+"/metrics?days=30", nil, http.StatusOK)
+
+	// Выгрузка: JSON сверяется со схемой целиком, отказ — со схемой
+	// ошибки. Период — сегодня: карточка, заведённая выше, в нём жила.
+	today := time.Now().UTC().Format(time.DateOnly)
+	period := "?from=" + today + "&to=" + today + "&board=" + boardID
+	c.call("GET", "/reports/cards/count"+period, nil, http.StatusOK)
+	c.call("GET", "/reports/cards"+period+"&format=json", nil, http.StatusOK)
+	c.call("GET", "/reports/cards?from="+today+"&to=2000-01-01", nil, http.StatusBadRequest)
 }
 
 // contractClient ходит снаружи: по /api/v1 и ключом, а не сессией.

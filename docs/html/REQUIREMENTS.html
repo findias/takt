@@ -149,6 +149,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Т15</td><td>У блокировки может быть срок: она снимается сама моментом срока, без автора, в любой организации, и видна заранее</td><td><code>internal/board/block_until_test.go</code>, <code>web/src/entities/card/model.test.ts</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 <tr><td>Т16</td><td>Перенос из таблицы: сперва предпросмотр, который ничего не пишет; ненайденный человек не заводится, а называется; плохая строка не роняет остальные; повтор того же файла двойников не заводит</td><td><code>internal/importer/importer_test.go</code>, <code>internal/httpapi/import_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 <tr><td>Т17</td><td>Пакет переноса из-за периметра: читается только описанное форматом, испорченный отвергается целиком с названием части; подзадачи, связи и обсуждение переезжают без выдуманных людей; большой пакет переносит администратор командой; выгрузчик не пишет в пакет ни ключа, ни пароля</td><td><code>internal/importer/pack/pack_test.go</code>, <code>internal/httpapi/import_package_test.go</code>, <code>cmd/takt/import_test.go</code>, <code>cmd/takt-fetch/main_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
+<tr><td>Т18</td><td>Выгрузка для руководства: карточки по отбору одной таблицей и сводка потока за период из тех же строк — XLSX с диаграммами, CSV и JSON; видно только то, что человек видит на экране; больше предела — отказ с числом до первой строки, а не обрезанный файл</td><td><code>internal/report/report_test.go</code>, <code>internal/httpapi/contract_live_test.go</code>, <code>web/src/widgets/reportFilter.test.ts</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="пределы">Пределы</h2>
@@ -164,6 +165,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>П6</td><td>Соседняя доска не замедляется от занятой</td><td><code>internal/board/load_test.go</code> (<code>make load</code>)</td></tr>
 <tr><td>П7</td><td>Скрипты при открытии, вместе с каталогом языка, — не больше 130 КБ сжатыми; сервер отдаёт их сжатыми</td><td><code>web/e2e/perf.spec.ts</code>, <code>internal/httpapi/static_test.go</code></td></tr>
 <tr><td>П17</td><td>Перенос из таблицы вставляет пачкой: 10 000 строк за один запрос, две тысячи — быстрее четырёх секунд, предпросмотр так же</td><td><code>internal/httpapi/import_test.go</code></td></tr>
+<tr><td>П18</td><td>Выгрузка берёт до 50 000 карточек; время растёт с их числом линейно, память сервера — не растёт: строки идут из базы в ответ потоком (замер 24.09.2026: 50 000 карточек в XLSX — 4,6 с, пик памяти сервера 29 МБ)</td><td><code>internal/report/load_test.go</code> (<code>make load</code>)</td></tr>
 </tbody>
 </table></div>
 <h2 id="как-продукт-себя-ведёт">Как продукт себя ведёт</h2>
@@ -254,7 +256,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-78-gec7e2b4-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-79-g1d80d98-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

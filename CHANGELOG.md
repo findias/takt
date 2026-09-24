@@ -217,6 +217,20 @@ the branch adds. It cannot be combined with `DEMO=on`.
   discussion, and YouGile's history shows on the card's «История» tab
   under «До переноса», with its own dates. `takt-fetch` puts the history
   into the package too (`--no-history` skips it).
+- **The «Reports» tab: an export for management.** A period, and if
+  needed boards, subdivisions, assignees, labels, priority, state and
+  an iteration; the screen says how many cards match before you
+  download. The Excel workbook opens on a summary — done and discarded
+  in the period, work in progress, cycle time and age (median and 85th
+  percentile), throughput by week and cumulative flow with charts,
+  iteration completion, a breakdown by subdivision — counted from the
+  «Data» sheet next to it, one row per card, ready for pivot tables.
+  CSV has the same rows, JSON is for programs and is open to
+  integration keys (`GET /api/v1/reports/cards`, `boards:read`). Only
+  boards you can see are included; one export takes up to 50,000
+  cards, and past that the screen asks you to narrow it instead of
+  cutting the file short. No new dependency: the workbook is written
+  by the server itself, streamed straight from the database.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

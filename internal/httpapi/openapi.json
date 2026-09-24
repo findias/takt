@@ -82,9 +82,69 @@
               "yougile_failed",
               "yougile_not_found",
               "yougile_off",
+              "report_too_large",
               "internal"
             ]
           }
+        }
+      },
+      "ReportCard": {
+        "type": "object",
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
+        "properties": {
+          "number": { "type": "string" },
+          "title": { "type": "string" },
+          "board": { "type": "string" },
+          "team": { "type": "string", "description": "Подразделение, которое ведёт доску; пусто, если его нет." },
+          "column": { "type": "string" },
+          "state": { "type": "string", "enum": ["queued", "active", "done", "discarded"] },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "highest"] },
+          "estimate": { "type": ["number", "null"] },
+          "assignees": { "type": "string", "description": "Имена через запятую: плоская строка, чтобы из неё строилась сводная." },
+          "labels": { "type": "string", "description": "Названия через запятую." },
+          "iteration": { "type": "string", "description": "Последняя по началу итерация, в которой карточка сейчас." },
+          "parent": { "type": "string", "description": "Номер родителя, если карточка — подзадача и родитель виден." },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "startedAt": { "type": ["string", "null"], "format": "date-time" },
+          "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "dueOn": { "type": ["string", "null"], "format": "date" },
+          "cycleTimeDays": { "type": ["number", "null"], "description": "Время цикла сделанной карточки, дней до сотых." },
+          "ageDays": { "type": ["number", "null"], "description": "Возраст незаконченной работы, дней до сотых." },
+          "blocked": { "type": "boolean" },
+          "blockReason": { "type": "string" },
+          "imported": { "type": "boolean", "description": "Перенесена из другой системы: её даты взяты оттуда." },
+          "archived": { "type": "boolean" }
+        }
+      },
+      "ReportSummary": {
+        "type": "object",
+        "required": ["chosen", "cards", "finished", "discarded", "wip", "cycleTime", "age", "throughput", "flowStep", "flow", "iterations", "teams"],
+        "properties": {
+          "chosen": {
+            "type": "object",
+            "description": "Отбор словами: названия выбранного. Пустой список — «любые».",
+            "required": ["boards", "teams", "assignees", "labels", "iteration", "priorities", "states"],
+            "properties": {
+              "boards": { "type": "array", "items": { "type": "string" } },
+              "teams": { "type": "array", "items": { "type": "string" } },
+              "assignees": { "type": "array", "items": { "type": "string" } },
+              "labels": { "type": "array", "items": { "type": "string" } },
+              "iteration": { "type": "string" },
+              "priorities": { "type": "array", "items": { "type": "string" } },
+              "states": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "cards": { "type": "integer" },
+          "finished": { "type": "integer", "description": "Сделано внутри периода." },
+          "discarded": { "type": "integer", "description": "Отброшено внутри периода." },
+          "wip": { "type": "integer", "description": "В работе сейчас." },
+          "cycleTime": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
+          "age": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
+          "throughput": { "type": "array", "items": { "type": "object", "required": ["week", "count"], "properties": { "week": { "type": "string", "format": "date" }, "count": { "type": "integer" } } } },
+          "flowStep": { "type": "string", "enum": ["day", "week"], "description": "Шаг накопительной: по дням до 120 дней периода, дальше по неделям." },
+          "flow": { "type": "array", "items": { "type": "object", "required": ["day", "queued", "inProgress", "done"], "properties": { "day": { "type": "string", "format": "date" }, "queued": { "type": "integer" }, "inProgress": { "type": "integer" }, "done": { "type": "integer" } } } },
+          "iterations": { "type": "array", "items": { "type": "object", "required": ["name", "board", "startsOn", "endsOn", "closed", "planned", "done"], "properties": { "name": { "type": "string" }, "board": { "type": "string" }, "startsOn": { "type": "string", "format": "date" }, "endsOn": { "type": "string", "format": "date" }, "closed": { "type": "boolean" }, "planned": { "type": "integer" }, "done": { "type": "integer" } } } },
+          "teams": { "type": "array", "items": { "type": "object", "required": ["team", "cards", "finished", "wip", "cycleTimeP50", "cycleTimeP85"], "properties": { "team": { "type": "string" }, "cards": { "type": "integer" }, "finished": { "type": "integer" }, "wip": { "type": "integer" }, "cycleTimeP50": { "type": ["number", "null"] }, "cycleTimeP85": { "type": ["number", "null"] } } } }
         }
       },
       "Board": {
@@ -558,6 +618,82 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
             }
           }
+        }
+      }
+    },
+    "/reports/cards": {
+      "get": {
+        "summary": "Выгрузка карточек по параметрам",
+        "description": "Разрешение boards:read — это те же карточки, сведённые в таблицу. Одна строка на карточку со всем, что о ней спрашивают, и сводка потока за период, посчитанная из тех же строк. Видны только доски, которые видит владелец ключа. Больше 50 000 карточек — отказ 422 с кодом report_too_large до первой строки: половина отчёта хуже, чем никакого. Время — в UTC. Строки идут потоком по мере чтения из базы; оборванный ответ узнаётся по незакрытому JSON.",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Начало периода, включительно. Карточка попадает в выгрузку, если жила в периоде: заведена до его конца и не закончена до его начала." },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Конец периода, включительно. Период не длиннее 1830 дней." },
+          { "name": "board", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Доски. Повтором (?board=a&board=b) или через запятую. Без него — все видимые доски." },
+          { "name": "team", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Подразделения, которые ведут доски. Подразделение берёт и вложенные." },
+          { "name": "assignee", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Исполнители: карточка попадает, если среди её исполнителей есть кто-то из названных." },
+          { "name": "label", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Метки: карточка попадает, если у неё есть хотя бы одна из названных." },
+          { "name": "priority", "in": "query", "schema": { "type": "array", "items": { "type": "string", "enum": ["low", "medium", "high", "highest"] } }, "style": "form", "explode": true },
+          { "name": "state", "in": "query", "schema": { "type": "array", "items": { "type": "string", "enum": ["queued", "active", "done", "discarded"] } }, "style": "form", "explode": true, "description": "Состояние сейчас, а не на конец периода: queued — не начата, active — в работе, done — сделана, discarded — отброшена." },
+          { "name": "iteration", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Итерация: карточки, которые в ней сейчас." },
+          { "name": "archived", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "И карточки, убранные в архив. Доски в архиве не попадают никогда." },
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "csv", "xlsx"], "default": "xlsx" }, "description": "json — для обработки: поля как здесь, значения — коды. csv — плоская таблица, шапка на языке запроса. xlsx — книга: лист сводки с диаграммами и лист данных." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Выгрузка. У csv и xlsx — файлом (Content-Disposition: attachment).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["from", "to", "limit", "cards", "summary"],
+                  "properties": {
+                    "from": { "type": "string", "format": "date" },
+                    "to": { "type": "string", "format": "date" },
+                    "limit": { "type": "integer", "description": "Сколько карточек берёт одна выгрузка." },
+                    "cards": { "type": "array", "items": { "$ref": "#/components/schemas/ReportCard" } },
+                    "summary": { "$ref": "#/components/schemas/ReportSummary" }
+                  }
+                }
+              },
+              "text/csv": { "schema": { "type": "string" } },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { "schema": { "type": "string", "format": "binary" } }
+            }
+          },
+          "400": { "description": "Параметр, с которым выгрузку не собрать; текст называет какой.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "Под параметры попадает больше карточек, чем берёт одна выгрузка (код report_too_large). Сузьте период или выберите доски; сколько попадает — GET /reports/cards/count.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/reports/cards/count": {
+      "get": {
+        "summary": "Сколько карточек попадёт в выгрузку",
+        "description": "Те же параметры, что у /reports/cards, без формата. Ответ раньше файла: экран показывает число, пока человек выбирает отбор.",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Начало периода, включительно. Карточка попадает в выгрузку, если жила в периоде: заведена до его конца и не закончена до его начала." },
+          { "name": "to", "in": "query", "required": true, "schema": { "type": "string", "format": "date" }, "description": "Конец периода, включительно. Период не длиннее 1830 дней." },
+          { "name": "board", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Доски. Повтором (?board=a&board=b) или через запятую. Без него — все видимые доски." },
+          { "name": "team", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Подразделения, которые ведут доски. Подразделение берёт и вложенные." },
+          { "name": "assignee", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Исполнители: карточка попадает, если среди её исполнителей есть кто-то из названных." },
+          { "name": "label", "in": "query", "schema": { "type": "array", "items": { "type": "string", "format": "uuid" } }, "style": "form", "explode": true, "description": "Метки: карточка попадает, если у неё есть хотя бы одна из названных." },
+          { "name": "priority", "in": "query", "schema": { "type": "array", "items": { "type": "string", "enum": ["low", "medium", "high", "highest"] } }, "style": "form", "explode": true },
+          { "name": "state", "in": "query", "schema": { "type": "array", "items": { "type": "string", "enum": ["queued", "active", "done", "discarded"] } }, "style": "form", "explode": true, "description": "Состояние сейчас, а не на конец периода: queued — не начата, active — в работе, done — сделана, discarded — отброшена." },
+          { "name": "iteration", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Итерация: карточки, которые в ней сейчас." },
+          { "name": "archived", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "И карточки, убранные в архив. Доски в архиве не попадают никогда." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Число и предел.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["total", "limit"],
+                  "properties": { "total": { "type": "integer" }, "limit": { "type": "integer" } }
+                }
+              }
+            }
+          },
+          "400": { "description": "Параметр, с которым выгрузку не собрать; текст называет какой.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },

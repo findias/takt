@@ -43,6 +43,11 @@ const Team = lazy(
 const Tasks = lazy(
   withSections(() => import('../widgets/Tasks.tsx').then((m) => ({ default: m.Tasks })), 'tasks'),
 )
+// Выгрузка для руководства (этап 24): её открывают раз в месяц,
+// к отчёту, — в куске доски ей не место.
+const Reports = lazy(
+  withSections(() => import('../widgets/Reports.tsx').then((m) => ({ default: m.Reports })), 'reports'),
+)
 const Structure = lazy(
   withSections(
     () => import('../widgets/Structure.tsx').then((m) => ({ default: m.Structure })),
@@ -70,7 +75,7 @@ const PasswordLinkScreen = lazy(
   ),
 )
 
-const TABS = ['boards', 'tasks', 'team', 'structure'] as const
+const TABS = ['boards', 'tasks', 'reports', 'team', 'structure'] as const
 const tabTitle = (name: (typeof TABS)[number]) => t.app[name]
 
 /** Сообщения общие на всё приложение: их очередь и время жизни —
@@ -227,7 +232,9 @@ function Screens() {
             ? 'import'
             : route.name === 'tasks'
               ? 'tasks'
-              : null,
+              : route.name === 'reports'
+                ? 'reports'
+                : null,
   )
   // F1 и «?» — справка по тому экрану, где человек сейчас. Слушатель
   // один на приложение: экраны о клавише не знают, они знают свою тему.
@@ -361,9 +368,11 @@ function Screens() {
           {(route.name === 'team' ||
             route.name === 'structure' ||
             route.name === 'import' ||
+            route.name === 'reports' ||
             route.name === 'tasks') && (
             <Suspense fallback={<Skeleton lines={3} />}>
               {route.name === 'tasks' && <Tasks principal={principal} />}
+              {route.name === 'reports' && <Reports />}
               {route.name === 'team' && <Team principal={principal} />}
               {route.name === 'import' && <ImportScreen />}
               {route.name === 'structure' && (

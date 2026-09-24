@@ -423,6 +423,7 @@ export const ru = {
     tasks: 'Задачи',
     team: 'Команда',
     structure: 'Структура',
+    reports: 'Отчёты',
     import: 'Перенос задач',
     sections: 'Разделы',
     offline:

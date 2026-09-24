@@ -282,7 +282,7 @@ security-report: ## Отчёты сканеров машинным формат�
 .PHONY: load
 load: db migrate ## Поведение под нагрузкой (идёт минуты)
 	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \
-	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit' ./internal/board/ ./internal/httpapi/
+	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit' ./internal/board/ ./internal/httpapi/ ./internal/report/
 
 .PHONY: check
 check: ## Форматирование, vet и все тесты (кроме сквозных и нагрузочных)

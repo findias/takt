@@ -608,6 +608,11 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByRole('table', { name: /^Задачи:/ }).waitFor()
   await page.screenshot({ path: `${SHOTS}/39-задачи.png`, fullPage: true })
 
+  // Выгрузка для руководства (этап 24): отбор и число до файла.
+  await page.getByRole('button', { name: 'Отчёты', exact: true }).click()
+  await page.getByRole('status').filter({ hasText: 'Под отбор' }).waitFor()
+  await page.screenshot({ path: `${SHOTS}/42-отчёты.png`, fullPage: true })
+
   // Английский: браузер с английским языком системы, человек язык
   // не выбирал — значит, решает браузер.
   const english = await browser.newContext({ locale: 'en-GB' })
