@@ -822,6 +822,8 @@ export const en: typeof ru = {
     history: 'History',
     tasks: 'Tasks',
     cardLabel: (number: string, title: string) => `Card ${number} “${title}”`,
+    path: 'Path to the root',
+    pathHidden: (n: number) => `${n} more ${n === 1 ? 'level' : 'levels'} in between`,
     sections: 'Card sections',
     blocked: 'Blocked',
     heldBy: 'Held up by:',

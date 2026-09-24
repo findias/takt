@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/findias/takt/internal/auth"
 	"github.com/findias/takt/internal/board"
 )
@@ -23,5 +25,26 @@ func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request, p auth.Prin
 		s.fail(w, "задачи человека", err)
 	default:
 		writeJSON(w, http.StatusOK, list)
+	}
+}
+
+// Путь карточки до корня дерева — для строки «Эпик › Фича» в панели.
+// Отдельным запросом, а не в снимке доски: предки бывают на других
+// досках, и считать путь каждой из пятисот карточек ради той, что
+// открыта, незачем.
+func (s *Server) handleCardPath(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	id := r.PathValue("id")
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, http.StatusNotFound, "карточки нет или её доска вам закрыта — попросите ссылку у того, кто её прислал")
+		return
+	}
+	path, err := s.boards.CardPath(r.Context(), p.OrgID, p.ID, id)
+	switch {
+	case errors.Is(err, board.ErrNotFound):
+		writeError(w, http.StatusNotFound, "карточки нет или её доска вам закрыта — попросите ссылку у того, кто её прислал")
+	case err != nil:
+		s.fail(w, "путь карточки", err)
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"path": path})
 	}
 }

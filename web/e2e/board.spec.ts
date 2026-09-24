@@ -1627,7 +1627,9 @@ test('подзадача заводится из карточки одним п�
   await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты' }).click()
   await expect(page.getByRole('heading', { name: 'Прогнать тесты' })).toBeVisible()
   await page.getByRole('tab', { name: 'Задачи' }).click()
-  await page.getByRole('complementary').getByRole('button', { name: 'Выпустить релиз' }).click()
+  // Со вкладки «Задачи», а не с пути до корня над номером: там та же
+  // карточка названа второй раз.
+  await page.getByLabel('Задачи', { exact: true }).getByRole('button', { name: 'Выпустить релиз' }).click()
   await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 

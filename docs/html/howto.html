@@ -205,6 +205,7 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. A card with grandchildren shows two counts: its direct parts (&#34;0 of 3&#34; features) and &#34;all told 1 of 6&#34; — the leaves of the whole tree, the tasks at the bottom. A middle card is not counted there, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
+<p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
 <h3 id="tie-a-card-to-service-desk-tickets">Tie a card to service-desk tickets</h3>
 <ol>
 <li>Open the card, <strong>Tasks</strong> tab.</li>
@@ -362,7 +363,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-84-g1f8dce2-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-85-gd6c265b-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

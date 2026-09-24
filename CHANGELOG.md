@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Sixteen migrations, all safe for the running version.** `0052` gives
+**Seventeen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -28,7 +28,8 @@ whose password has not been set yet, `0064` remembers what was chosen
 for each person of an import source, `0065` keeps a card's history
 from the system it was imported from, `0066` adds a card's references
 to service-desk tickets (RDS, service requests, change requests,
-problems), `0067` adds named slices of the management export. They
+problems), `0067` adds named slices of the management export, `0068`
+lets a subtask see its link to a parent on a hidden board. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -249,6 +250,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   learns of it at once rather than after a reload; the swimlane «По
   корню дерева» counts by leaves too. Cards without grandchildren look
   exactly as before.
+- **Path to the root in the card panel.** Above the number: «Эпик ·
+  Платформа › Фича». Each link opens its card; a link on another board
+  is signed with the board; a parent on a board you cannot see is named
+  «Недоступная карточка» instead of vanishing. For that, migration `0068`
+  lets a subtask see its link to the parent even when the parent is
+  hidden — the link only, not the parent's name or board. Additive and
+  safe for the running version, which already names such a card
+  unavailable.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

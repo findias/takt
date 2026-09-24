@@ -46,6 +46,10 @@ import { Skeleton } from '../../shared/ui/states.tsx'
 // на заглушку ровно тогда, когда нажал.
 const loadCardTasks = () => import('./CardTasks.tsx')
 const CardTasks = lazy(() => loadCardTasks().then((m) => ({ default: m.CardTasks })))
+// Путь до корня нужен только карточке с родителем и едет своим куском:
+// первая загрузка доски стоит у порога размера (web/e2e/perf.spec.ts),
+// а у большинства карточек пути нет.
+const CardPath = lazy(() => import('./CardPath.tsx').then((m) => ({ default: m.CardPath })))
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -194,7 +198,23 @@ export function CardPanel({
       title={card.title}
       // Номер над названием: открыв карточку по ссылке из переписки,
       // первым делом сверяют, та ли это задача.
-      eyebrow={<span className="card-number">{card.number}</span>}
+      // Над номером — путь до корня: «Эпик › Фича». Открытая часть
+      // без него не говорит, ради чего её делают.
+      eyebrow={
+        <>
+          {details.parent && (
+            <Suspense fallback={null}>
+              <CardPath
+                cardId={card.id}
+                parentId={details.parent.id}
+                boardId={boardId}
+                onOpenCard={onOpenCard}
+              />
+            </Suspense>
+          )}
+          <span className="card-number">{card.number}</span>
+        </>
+      }
       label={t.panel.cardLabel(card.number, card.title)}
       onClose={onClose}
     >

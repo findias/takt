@@ -246,6 +246,14 @@ epic shows "Part blocked" when a task two levels down is stuck. A
 blocked parent does not stop its parts — they are what people carry on
 with.
 
+An open part shows its path to the root above the number: "Move to the
+new warehouse · Platform › Ship the warehouse release". A link on this
+board opens that card here; a link on another board is signed with the
+board and opens it there. A parent on a board you cannot see is named
+"Unavailable card" rather than dropped, so the path is never shorter
+than it is; its name and board stay closed. A path longer than three
+links folds its middle into "…", and the whole chain is in the tooltip.
+
 ### Tie a card to service-desk tickets
 
 1. Open the card, **Tasks** tab.

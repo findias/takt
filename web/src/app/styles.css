@@ -4850,3 +4850,47 @@ textarea.description {
   font-size: var(--text-sm);
   white-space: nowrap;
 }
+
+/* Путь до корня над номером карточки в панели: звенья в строку через
+   «›», длинное название обрезается многоточием, а не переносит шапку
+   на три строки — шапка панели держит высоту (снимок 16.08.2026). */
+.card-path ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.card-path li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+}
+/* Доска звена не сжимается: обрезается название, а «· Платформа»
+   остаётся целым — по нему и видно, что звено чужое. */
+.card-path-board {
+  flex: none;
+}
+/* Шапка с путём шире обычной: иначе список режима панели рядом
+   сжимает путь до столбика в одно звено на строку. */
+.panel-heading:has(.card-path) {
+  flex-basis: 22rem;
+}
+.card-path li + li::before {
+  content: '›';
+  color: var(--ink-3);
+  margin-right: var(--space-1);
+}
+.card-path li > button,
+.card-path li > a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem;
+}

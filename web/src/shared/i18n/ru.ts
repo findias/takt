@@ -828,6 +828,8 @@ export const ru = {
     history: 'История',
     tasks: 'Задачи',
     cardLabel: (number: string, title: string) => `Карточка ${number} «${title}»`,
+    path: 'Путь до корня',
+    pathHidden: (n: number) => `ещё ${n} ${n === 1 ? 'уровень' : n < 5 ? 'уровня' : 'уровней'} между ними`,
     sections: 'Разделы карточки',
     blocked: 'Заблокирована',
     heldBy: 'Держит:',
