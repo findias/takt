@@ -93,7 +93,8 @@ parent on another board heads its own branch, signed with that board.
 A branch that reaches other boards is followed there to the end: parts
 on other boards show with their board and column, and so do their own
 parts, however many boards the branch crosses — the portfolio tree
-goes from the epic down to the team's tasks. A card on a board you
+goes from the epic down to the team's tasks. The name of a card on
+another board opens it on its own board. A card on a board you
 cannot see is named "Card unavailable". Cards with no parent and no parts are folded into one line
 at the bottom. **▾** folds a branch. Filters do not apply to this view:
 a tree with half its branches missing cannot say how far the epic is.

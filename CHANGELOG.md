@@ -283,7 +283,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   «Дерево» view, next to «Доска» and «Таблица», shows epics, features
   and tasks as a hierarchy; a branch that reaches other boards is
   followed there to the end, so the portfolio tree goes from the epic
-  down to the team's tasks. Migration `0070` adds
+  down to the team's tasks, and a card from another board opens on its
+  own board. Migration `0070` adds
   `boards.level`, default «team».
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice

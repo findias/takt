@@ -3013,4 +3013,13 @@ test('эпик портфеля говорит, где его работа, а �
   await share.click()
   await expect(page).toHaveURL(/[?&]epic=/)
   await expect(cardIn(page, 'Очередь', 'Фича переезда')).toBeVisible()
+
+  // В дереве доски команды эпик с портфеля — ссылка: открывает его там.
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
+  await page
+    .getByRole('list', { name: 'Дерево работы доски' })
+    .getByRole('link', { name: 'Большой переезд', exact: true })
+    .click()
+  await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Большой переезд' })).toBeVisible()
 })

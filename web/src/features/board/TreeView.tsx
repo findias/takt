@@ -4,6 +4,7 @@ import { request } from '../../shared/api/index.ts'
 import type { Card, EstimateUnit, TreeNode } from '../../shared/api/index.ts'
 import { progressLabel } from '../../entities/card/model.ts'
 import { locale, t } from '../../shared/i18n/index.ts'
+import { boardPath, navigate } from '../../shared/router/index.ts'
 
 /**
  * Вид «Дерево» (этап 32.6): эпики, фичи и задачи доски — иерархией,
@@ -30,6 +31,8 @@ type Node = {
   own: Card | null
   /** Где карточка: колонка этой доски или чужая доска. */
   where: string
+  /** Доска чужой карточки, если она видна: туда ведёт её название. */
+  boardId: string | null
   done: boolean
   blocked: boolean
   /** Есть ли в ветке карточки других досок — тогда её досчитывает сервер. */
@@ -108,6 +111,21 @@ export function TreeView({
             <button type="button" className="link tree-title" onClick={() => onOpenCard(node.id)}>
               {node.title}
             </button>
+          ) : node.boardId ? (
+            // Карточка другой доски открывается на своей доске: здесь
+            // её панели нет. Ссылкой — чтобы открывалась и в новой
+            // вкладке, как звено пути до корня.
+            <a
+              className="link tree-title"
+              href={boardPath(node.boardId, node.id)}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+                e.preventDefault()
+                navigate(boardPath(node.boardId ?? '', node.id))
+              }}
+            >
+              {node.title}
+            </a>
           ) : (
             <span className="tree-title">{node.title}</span>
           )}
@@ -168,6 +186,7 @@ function build(base: BaseState, remote: Map<string, TreeNode>): { roots: Node[];
     const children = !seen.has(id) ? (kids.get(id) ?? []).map((c) => node(c, next)).sort(byNumber) : []
     const visible = own !== null || foreign !== undefined || far?.visible === true
     const boardName = foreign?.boardName ?? far?.boardName
+    const boardId = own ? null : visible ? (foreign?.boardId ?? far?.boardId ?? null) : null
     return {
       id,
       title: own?.title ?? foreign?.title ?? far?.title ?? t.card.unavailable,
@@ -178,6 +197,7 @@ function build(base: BaseState, remote: Map<string, TreeNode>): { roots: Node[];
         : visible && boardName
           ? [t.card.onBoard(boardName), far?.columnName].filter(Boolean).join(' · ')
           : t.card.hiddenTeam,
+      boardId,
       done: own ? own.outcome === 'done' || own.doneAt !== null : far?.done === true,
       blocked: own ? Boolean(own.blocked) : far?.blocked === true,
       foreign: !own || children.some((c) => c.foreign),
