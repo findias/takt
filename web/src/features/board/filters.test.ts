@@ -65,6 +65,7 @@ test('адрес переживает круг: разобрали, собрал
     due: true,
     expiring: true,
     iteration: 'it-1',
+    epic: 'e-1',
   }
   const query = filtersToQuery(filters)
   assert.deepEqual(parseFilters(query), filters)
@@ -250,4 +251,12 @@ test('блокировка истекает — срок в ближайшие �
   assert.equal(matches(card(), filters, at), false)
   assert.equal(activeCount(filters), 1)
   assert.equal(parseFilters(filtersToQuery(filters)).expiring, true)
+})
+
+test('отбор по эпику оставляет только работу этого эпика', () => {
+  const f = { ...EMPTY, epic: 'e-1' }
+  assert.equal(matches(card({ epic: { id: 'e-1', title: 'Переезд', boardId: 'p' } }), f, ctx), true)
+  assert.equal(matches(card({ epic: { id: 'e-2', title: 'Другой', boardId: 'p' } }), f, ctx), false)
+  assert.equal(matches(card(), f, ctx), false)
+  assert.equal(activeCount(f), 1)
 })

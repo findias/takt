@@ -237,13 +237,15 @@ test('родитель с чужой доски — дорожка есть, и 
   assert.equal(foreign.cardId, undefined)
 })
 
-test('по корню: задача под фичей встаёт в дорожку эпика, и счёт — по всему поддереву', () => {
-  const base = tree()
-  const groups = groupsOf(base, base.order, 'root')
-  assert.equal(groups.find((g) => g.id === 'эпик')!.note, 'готово 1 из 4')
+test('по эпику: дорожка — эпик с портфеля, названный сервером; без эпика — своя дорожка', () => {
+  const epic = { id: 'э-1', title: 'Переезд склада', boardId: 'портфель' }
+  const base = state([card('фича', { epic }), card('задача', { epic }), card('сама-по-себе')])
+  const groups = groupsOf(base, base.order, 'epic')
   const by = lanes(groups)
-  assert.deepEqual(by['эпик'], ['фича', 'задача-1', 'задача-2', 'задача-3'])
-  assert.equal(by['фича'], undefined)
+  assert.deepEqual(by['э-1'], ['фича', 'задача'])
+  assert.deepEqual(by['none'], ['сама-по-себе'])
+  assert.equal(groups.find((g) => g.id === 'э-1')!.title, 'Переезд склада')
+  assert.equal(groups.find((g) => g.id === 'none')!.title, 'Без эпика')
 })
 
 test('«Без родителя» держится и пустой — там теряется работа', () => {
@@ -258,19 +260,9 @@ test('«Без родителя» держится и пустой — там т
   )
 })
 
-test('уровень дерева живёт в адресе и в сохранённом виде', () => {
-  assert.equal(parseGrouping(new URLSearchParams('group=root')), 'root')
+test('группировка живёт в адресе; старая «по корню» открывается «по эпику»', () => {
+  assert.equal(parseGrouping(new URLSearchParams('group=root')), 'epic')
+  assert.equal(parseGrouping(new URLSearchParams('group=epic')), 'epic')
   assert.equal(groupingToQuery('parent', new URLSearchParams('label=l-1')).toString(), 'label=l-1&group=parent')
-  assert.equal(GROUPING_NAMES.root, 'По корню дерева')
-})
-
-test('цикл из связей не вешает подъём к корню', () => {
-  const base = state([card('a'), card('b')], {
-    links: [
-      { fromCard: 'a', toCard: 'b', kind: 'subtask' },
-      { fromCard: 'b', toCard: 'a', kind: 'subtask' },
-    ],
-  })
-  const groups = groupsOf(base, base.order, 'root')
-  assert.equal(groups.reduce((n, g) => n + g.count, 0), 2)
+  assert.equal(GROUPING_NAMES.epic, 'По эпику')
 })

@@ -239,18 +239,16 @@ the branch adds. It cannot be combined with `DEMO=on`.
   one. Migration `0067` adds the slices, each visible only to its owner.
 - **Swimlanes by the work tree.** «По родителю» gives each parent its
   own lane with its subtasks, titled with its number, name and how much
-  is done; «По корню дерева» climbs to the top, so a task under a
-  feature stands in its epic's lane. A parent on another board gets a
+  is done; «По эпику» gives each epic of a portfolio board its lane,
+  however deep its tasks sit. A parent on another board gets a
   lane that says whose board it is; «Без родителя» stays even when
-  empty. No card types: the level follows from the place in the tree.
-  The demo organisation has an epic on «Платформа» over two features on
-  «Поставки» and a third next to it.
+  empty.
 - **Progress over the whole tree.** A card with grandchildren shows a
   second count, «всего 11 из 20» — the leaves of its subtree, the middle
   levels not counted twice, weighed by the leaves' estimates when all
   are estimated. A part blocked at any depth stops the top card, which
-  learns of it at once rather than after a reload; the swimlane «По
-  корню дерева» counts by leaves too. Cards without grandchildren look
+  learns of it at once rather than after a reload. Cards without
+  grandchildren look
   exactly as before.
 - **Path to the root in the card panel.** Above the number: «Эпик ·
   Платформа › Фича». Each link opens its card; a link on another board
@@ -275,7 +273,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   a board in «Поток». Every card on a portfolio is an epic; its
   features live on the team boards. Each board counts its own flow, so
   epics never mix with tasks in cycle time or the promise, and the
-  portfolio shows how long epics take and how many run at once. The new
+  portfolio shows how long epics take and how many run at once. On team
+  boards a card carries its epic's coloured mark; pressing it filters
+  the board to that epic, and the export gets an «Эпик» column. The new
   «Дерево» view, next to «Доска» and «Таблица», shows epics, features
   and tasks as a hierarchy, parts on other boards included. Migration `0070` adds
   `boards.level`, default «team».

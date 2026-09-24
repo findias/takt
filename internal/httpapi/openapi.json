@@ -91,7 +91,7 @@
       },
       "ReportCard": {
         "type": "object",
-        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "epic", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
         "properties": {
           "number": { "type": "string" },
           "title": { "type": "string" },
@@ -105,6 +105,7 @@
           "labels": { "type": "string", "description": "Названия через запятую." },
           "iteration": { "type": "string", "description": "Последняя по началу итерация, в которой карточка сейчас." },
           "parent": { "type": "string", "description": "Номер родителя, если карточка — подзадача и родитель виден." },
+          "epic": { "type": "string", "description": "Название эпика — ближайшего предка на доске-портфеле; пусто, если его нет или он не виден." },
           "createdAt": { "type": "string", "format": "date-time" },
           "startedAt": { "type": ["string", "null"], "format": "date-time" },
           "finishedAt": { "type": ["string", "null"], "format": "date-time" },

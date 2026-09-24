@@ -624,3 +624,17 @@ export function candidatesForSubtask(base: BaseState, details: CardDetails): Car
     .filter((c) => !taken.has(c.id) && !hasParent.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, locale()))
 }
+
+const EPIC_TONES = ['blue', 'violet', 'teal', 'amber', 'rose', 'green', 'brown', 'slate'] as const
+
+/**
+ * Цвет метки эпика (этап 33.3) — из идентификатора эпика, одинаковый
+ * у всех его задач на всех досках. Руками не задаётся: поле ради
+ * оформления никто не поддерживает. Оттенки — те же, что у меток,
+ * поэтому контраст уже проверен в обеих темах.
+ */
+export function epicTone(epicId: string): (typeof EPIC_TONES)[number] {
+  let h = 0
+  for (let i = 0; i < epicId.length; i++) h = (h * 31 + epicId.charCodeAt(i)) >>> 0
+  return EPIC_TONES[h % EPIC_TONES.length]
+}

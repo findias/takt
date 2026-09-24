@@ -341,15 +341,55 @@ func linkPatch(ctx context.Context, tx pgx.Tx, boardID string, p linkPayload) (P
 		}
 		patch.Cards = append(patch.Cards, c)
 	}
-	// Новая или снятая часть меняет счёт поддерева у всех выше родителя.
+	// Новая или снятая часть меняет счёт поддерева у всех выше родителя,
+	// а эпик — у всех ниже части (этап 33.3): привязали фичу к эпику —
+	// метка эпика нужна и её задачам.
 	if p.Kind == LinkSubtask {
 		above, err := parentCards(ctx, tx, boardID, p.FromCard)
 		if err != nil {
 			return Patch{}, err
 		}
 		patch.Cards = append(patch.Cards, above...)
+		below, err := childCards(ctx, tx, boardID, p.ToCard)
+		if err != nil {
+			return Patch{}, err
+		}
+		patch.Cards = append(patch.Cards, below...)
 	}
 	return patch, nil
+}
+
+// childCards — потомки карточки на этой доске, без неё самой, с пределом
+// глубины дерева.
+func childCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card, error) {
+	rows, err := tx.Query(ctx, `
+		with recursive down(card, depth) as (
+			select to_card, 1 from card_links where from_card = $1 and kind = 'subtask'
+			union all
+			select l.to_card, d.depth + 1
+			  from down d join card_links l on l.from_card = d.card and l.kind = 'subtask'
+			 where d.depth < $2
+		)
+		select distinct card from down`, cardID, MaxSubtaskDepth)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	var out []Card
+	for _, id := range ids {
+		c, err := readCard(ctx, tx, boardID, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
 
 // readCard читает карточку доски вместе с вычисляемым прогрессом и
@@ -405,6 +445,11 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 	if c.Subtree, err = subtreeOf(ctx, tx, cardID); err != nil {
 		return Card{}, err
 	}
+	epic, err := epics(ctx, tx, nil, &cardID)
+	if err != nil {
+		return Card{}, err
+	}
+	c.Epic = epic[cardID]
 
 	var b Block
 	err = tx.QueryRow(ctx, `

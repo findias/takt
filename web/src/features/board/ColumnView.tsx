@@ -89,6 +89,7 @@ type ColumnProps = {
   holds: Record<string, Related[]>
   waitsFor: Record<string, Related[]>
   onLabel: (cardId: string, labelId: string, on: boolean) => void
+  onEpic: (epicId: string) => void
   /** Выделенные карточки — одним набором на доску: массовое действие
    *  спрашивают у доски, а не у колонки. */
   selected: Set<string>
@@ -300,6 +301,7 @@ export function ColumnView(props: ColumnProps) {
             holds={props.holds[cardId] ?? NO_SUBTASKS}
             waitsFor={props.waitsFor[cardId] ?? NO_SUBTASKS}
             onLabel={props.onLabel}
+            onEpic={props.onEpic}
             selected={props.selected.has(cardId)}
             onSelect={props.onSelect}
             onPrioritise={props.onPrioritise}

@@ -23,8 +23,7 @@ import {
   progressRatio,
   subtreeLabel,
   deepStuckLabel,
-  unitLabel,
-} from '../../entities/card/model.ts'
+  unitLabel, epicTone } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { labelTitle, chipClass } from '../../entities/label/model.ts'
 import { LabelPickerButton } from './LabelPicker.tsx'
@@ -97,6 +96,8 @@ type CardProps = {
   holds: Related[]
   waitsFor: Related[]
   onLabel: (cardId: string, labelId: string, on: boolean) => void
+  /** Нажатие на метку эпика — отбор доски по нему (этап 33.3). */
+  onEpic: (epicId: string) => void
   /** Выделена ли карточка для действия над многими сразу. */
   selected: boolean
   /** `extend` — shift-щелчок: взять всё между прошлым флажком и этим. */
@@ -148,6 +149,7 @@ function CardViewInner({
   holds,
   waitsFor,
   onLabel,
+  onEpic,
   selected,
   onSelect,
   onPrioritise,
@@ -436,7 +438,26 @@ function CardViewInner({
               <span className="card-number">{card.number}</span>
             )}
 
-            {parent && (
+            {/* Метка эпика (этап 33.3): цвет из эпика, одинаковый у всех его
+                задач, название обрезается, полное — в подсказке. Нажатие
+                отбирает доску по эпику: «что ещё идёт ради него». */}
+            {card?.epic && (
+              <button
+                type="button"
+                className={`chip chip--${epicTone(card.epic.id)} card-epic`}
+                title={card.epic.title}
+                aria-label={t.cardView.epicFilter(card.epic.title)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (card.epic) onEpic(card.epic.id)
+                }}
+              >
+                {card.epic.title}
+              </button>
+            )}
+            {/* Родитель-эпик уже назван меткой — второй раз строкой его
+                не повторяем. */}
+            {parent && parent.id !== card?.epic?.id && (
               <span className="card-parent">
                 {/* Стрелка объясняет связь глазу, а диктору не говорит
                     ничего: без слова он читал два названия подряд, будто

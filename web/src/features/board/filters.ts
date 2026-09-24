@@ -47,6 +47,9 @@ export type Filters = {
    *  это ответ на «к чему это привязано снаружи», и без отбора по ней
    *  спринт нельзя увидеть на доске: он живёт только в отчёте. */
   iteration: string | null
+  /** Идентификатор эпика (этап 33.3): работа ради одного эпика. Ставится
+   *  нажатием на метку эпика на карточке. */
+  epic: string | null
 }
 
 export const EMPTY: Filters = {
@@ -59,6 +62,7 @@ export const EMPTY: Filters = {
   urgent: false,
   due: false,
   iteration: null,
+  epic: null,
 }
 
 /** «Ни на ком» — тоже ответ на вопрос «чьё это», и его надо уметь
@@ -79,7 +83,8 @@ export function isEmpty(f: Filters): boolean {
     !f.aging &&
     !f.urgent &&
     !f.due &&
-    f.iteration === null
+    f.iteration === null &&
+    f.epic === null
   )
 }
 
@@ -101,7 +106,8 @@ export function activeCount(f: Filters): number {
     (f.aging ? 1 : 0) +
     (f.urgent ? 1 : 0) +
     (f.due ? 1 : 0) +
-    (f.iteration === null ? 0 : 1)
+    (f.iteration === null ? 0 : 1) +
+    (f.epic === null ? 0 : 1)
   )
 }
 
@@ -117,6 +123,7 @@ export function parseFilters(query: URLSearchParams): Filters {
     urgent: query.get('urgent') === '1',
     due: query.get('due') === '1',
     iteration: query.get('iteration'),
+    epic: query.get('epic'),
   }
 }
 
@@ -140,6 +147,7 @@ export function filtersToQuery(f: Filters, base?: URLSearchParams): URLSearchPar
   set('urgent', f.urgent ? '1' : null)
   set('due', f.due ? '1' : null)
   set('iteration', f.iteration)
+  set('epic', f.epic)
   return query
 }
 
@@ -175,6 +183,8 @@ export function matches(card: Card, f: Filters, ctx: FilterContext): boolean {
       return false
     }
   }
+
+  if (f.epic && card.epic?.id !== f.epic) return false
 
   if (f.labels.length > 0) {
     const own = new Set(ctx.labelsOf(card.id))

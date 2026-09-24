@@ -22,7 +22,6 @@ import type {
   Iteration,
   Priority,
 } from '../shared/api/index.ts'
-import { CardPanel } from '../features/board/CardPanel.tsx'
 import { BoardSkeleton, EmptyState, ErrorState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
@@ -90,6 +89,12 @@ import { Bell } from '../features/notifications/Bell.tsx'
  */
 const loadTableView = () => import('../features/board/TableView.tsx')
 const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView })))
+// Панель карточки — своим куском (этап 33.3): первая загрузка доски
+// упёрлась в порог размера (web/e2e/perf.spec.ts), а панель нужна только
+// открытой карточке. Загрузка начинается, как только доска нарисована,
+// поэтому к первому нажатию на карточку кусок обычно уже на месте.
+const loadCardPanel = () => import('../features/board/CardPanel.tsx')
+const CardPanel = lazy(() => loadCardPanel().then((m) => ({ default: m.CardPanel })))
 const Flow = lazy(
   withSections(
     () => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })),
@@ -255,8 +260,26 @@ export function Board({
     (next: Filters) => setQuery(filtersToQuery(next, query), { replace: true }),
     [query],
   )
+  // Отбор по эпику — с метки на карточке (этап 33.3). Через ссылку
+  // на отбор, а не замыканием на него: иначе обработчик менялся бы
+  // с каждым отбором и перерисовывал бы все карточки доски.
+  const filtersNow = useRef(filters)
+  filtersNow.current = filters
+  const setFiltersNow = useRef(setFilters)
+  setFiltersNow.current = setFilters
+  const filterByEpic = useCallback((epicId: string) => {
+    const f = filtersNow.current
+    setFiltersNow.current({ ...f, epic: f.epic === epicId ? null : epicId })
+  }, [])
 
   const { base, order: fullOrder, moveCard } = board
+  // Кусок панели карточки — сразу за доской, а не по нажатию: см. довод
+  // у loadCardPanel.
+  // Повторный вызов с каждым новым снимком ничего не стоит: сборщик
+  // отдаёт уже загруженный модуль.
+  useEffect(() => {
+    if (base) void loadCardPanel()
+  }, [base])
   // Есть ли вообще блокировки со сроком — от этого зависит, стоит ли
   // в строке отборов «Блокировка истекает».
   const hasBlockDeadlines = useMemo(
@@ -964,6 +987,7 @@ export function Board({
         waitsFor={dependencies.waitsFor}
         children={children}
         onLabel={toggleLabel}
+        onEpic={filterByEpic}
         selected={picked}
         onSelect={pickCard}
         onPrioritise={prioritiseCard}
@@ -1085,6 +1109,11 @@ export function Board({
           iterations={openIterations}
           hidden={hidden}
           hasBlockDeadlines={hasBlockDeadlines}
+          epicTitle={
+            filters.epic
+              ? (Object.values(base.cards).find((c) => c.epic?.id === filters.epic)?.epic?.title ?? null)
+              : null
+          }
           onChange={setFilters}
         />
         <select
@@ -1410,42 +1439,44 @@ export function Board({
       )}
 
       {openCard && base.cards[openCard] && (
-        <CardPanel
-          base={base}
-          boardId={boardId}
-          cardId={openCard}
-          unit={unit}
-          meId={meId}
-          canEdit={canEdit}
-          onClose={() => setOpenCard(null)}
-          onDescribe={(id, text) => void board.describeCard(id, text)}
-          onEstimate={estimateCard}
-          onOpenCard={showCard}
-          onAssign={assignCard}
-          onLabel={toggleLabel}
-          onPrioritise={prioritiseCard}
-          onDue={commitCard}
-          subtaskBoards={subtaskBoards}
-          onSubtask={(parentCardId, title, toBoard) =>
-            void board.createSubtask(parentCardId, title, undefined, toBoard)
-          }
-          onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
-          onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
-          onBlock={blockCard}
-          onSetBlockUntil={setBlockUntil}
-          onUnblock={unblockCard}
-          onMarkDone={markDone}
-          onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
-          onAddRef={(id, kind, ref) => void board.addCardRef(id, kind, ref)}
-          onRemoveRef={(id, refId) => void board.removeCardRef(id, refId)}
-          onIteration={(id, iterationId) => {
-            const current = base.cardIterations[id]
-            // Перенос — это выход из одного и вход в другой, и оба факта
-            // остаются в истории: карточка не может идти в двух сразу.
-            if (current) void board.removeFromIteration(id, current)
-            if (iterationId) void board.addToIteration(id, iterationId)
-          }}
-        />
+        <Suspense fallback={null}>
+          <CardPanel
+            base={base}
+            boardId={boardId}
+            cardId={openCard}
+            unit={unit}
+            meId={meId}
+            canEdit={canEdit}
+            onClose={() => setOpenCard(null)}
+            onDescribe={(id, text) => void board.describeCard(id, text)}
+            onEstimate={estimateCard}
+            onOpenCard={showCard}
+            onAssign={assignCard}
+            onLabel={toggleLabel}
+            onPrioritise={prioritiseCard}
+            onDue={commitCard}
+            subtaskBoards={subtaskBoards}
+            onSubtask={(parentCardId, title, toBoard) =>
+              void board.createSubtask(parentCardId, title, undefined, toBoard)
+            }
+            onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
+            onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
+            onBlock={blockCard}
+            onSetBlockUntil={setBlockUntil}
+            onUnblock={unblockCard}
+            onMarkDone={markDone}
+            onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
+            onAddRef={(id, kind, ref) => void board.addCardRef(id, kind, ref)}
+            onRemoveRef={(id, refId) => void board.removeCardRef(id, refId)}
+            onIteration={(id, iterationId) => {
+              const current = base.cardIterations[id]
+              // Перенос — это выход из одного и вход в другой, и оба факта
+              // остаются в истории: карточка не может идти в двух сразу.
+              if (current) void board.removeFromIteration(id, current)
+              if (iterationId) void board.addToIteration(id, iterationId)
+            }}
+          />
+        </Suspense>
       )}
 
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">

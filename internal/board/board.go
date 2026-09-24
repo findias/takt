@@ -191,6 +191,10 @@ type Card struct {
 	// У остальных прямые части и есть всё поддерево, и второй счёт
 	// повторил бы первый.
 	Subtree *Subtree `json:"subtree,omitempty"`
+	// Epic — эпик карточки: ближайший предок на доске-портфеле (этап 33.3).
+	// Пусто — эпика нет, он на доске, которой спрашивающему не видно,
+	// или карточка сама лежит на портфеле.
+	Epic *EpicRef `json:"epic,omitempty"`
 	// Открытая блокировка, если есть.
 	Blocked *Block `json:"blocked,omitempty"`
 	// Сколько реплик в обсуждении. Считается запросом на доску, как
@@ -237,6 +241,14 @@ type Subtree struct {
 	// Первая из них — чтобы назвать причину словами, как у прямой части.
 	StuckTitle  string `json:"stuckTitle,omitempty"`
 	StuckReason string `json:"stuckReason,omitempty"`
+}
+
+// EpicRef — эпик карточки: сколько нужно, чтобы назвать его на карточке
+// и открыть.
+type EpicRef struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	BoardID string `json:"boardId"`
 }
 
 // Block — интервал блокировки. Именно интервал, а не флаг: из булева поля
@@ -751,6 +763,15 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	if err := loadSubtrees(ctx, tx, boardID, byID); err != nil {
 		return err
 	}
+	got, err := epics(ctx, tx, &boardID, nil)
+	if err != nil {
+		return err
+	}
+	for id, e := range got {
+		if card := byID[id]; card != nil {
+			card.Epic = e
+		}
+	}
 
 	// Число реплик. Удалённые не считаются: обсуждение — это то, что
 	// в нём осталось, а не то, что когда-то было написано.
@@ -1150,6 +1171,49 @@ func subtrees(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[stri
 			st.Progress = Progress{Done: weightDone, Total: weight, ByWeight: true}
 		}
 		out[id] = &st
+	}
+	return out, rows.Err()
+}
+
+// epics — эпик каждой карточки доски (или одной карточки): ближайший
+// предок на доске уровня «портфель». Одним рекурсивным запросом с тем же
+// пределом глубины, что у дерева, — снимку и патчу негде разойтись.
+//
+// Предок на невидимой доске отсекается политиками, а выше него подъём
+// не идёт: связи над ним не видны. Карточкам самого портфеля эпик
+// не назначается — они и есть эпики.
+func epics(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[string]*EpicRef, error) {
+	out := map[string]*EpicRef{}
+	rows, err := tx.Query(ctx, `
+		with recursive up(card, anc, depth) as (
+			select c.id, l.from_card, 1
+			  from cards c
+			  join boards cb on cb.id = c.board_id and cb.level = 'team'
+			  join card_links l on l.to_card = c.id and l.kind = 'subtask'
+			 where c.archived_at is null
+			   and ($1::uuid is null or c.board_id = $1)
+			   and ($3::uuid is null or c.id = $3)
+			union all
+			select u.card, l.from_card, u.depth + 1
+			  from up u join card_links l on l.to_card = u.anc and l.kind = 'subtask'
+			 where u.depth < $2
+		)
+		select distinct on (u.card) u.card, a.id, a.title, a.board_id
+		  from up u
+		  join cards a on a.id = u.anc and a.archived_at is null
+		  join boards b on b.id = a.board_id and b.level = 'portfolio'
+		 order by u.card, u.depth`, boardID, MaxSubtaskDepth, cardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var e EpicRef
+		if err := rows.Scan(&id, &e.ID, &e.Title, &e.BoardID); err != nil {
+			return nil, err
+		}
+		out[id] = &e
 	}
 	return out, rows.Err()
 }

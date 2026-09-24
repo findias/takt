@@ -4934,3 +4934,14 @@ span.tree-toggle {
 .tree-alone {
   margin-top: var(--space-3);
 }
+
+/* Метка эпика на карточке (этап 33.3): короткая, в одну строку,
+   полное название — в подсказке. Шире трети карточки она вытесняла бы
+   номер и строку родителя. */
+.card-epic {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}

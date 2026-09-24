@@ -25,7 +25,7 @@ var dataColumns = []struct {
 }{
 	{"Номер", 11}, {"Название", 48}, {"Доска", 20}, {"Подразделение", 18},
 	{"Колонка", 16}, {"Состояние", 12}, {"Приоритет", 12}, {"Оценка", 9},
-	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11},
+	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11}, {"Эпик", 24},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
 	{"Время цикла, дней", 12}, {"Возраст, дней", 12}, {"Заблокирована", 12},
 	{"Причина блокировки", 28}, {"Перенесена", 11}, {"В архиве", 10},
@@ -125,7 +125,7 @@ func (s *csvSink) Row(r Row) error {
 	return s.w.Write([]string{
 		r.Number, cellText(r.Title), cellText(r.Board), cellText(r.Team), cellText(r.Column),
 		s.words.state[r.State], s.words.priority[r.Priority], est,
-		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent,
+		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent, cellText(r.Epic),
 		csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
 		csvDays(r.CycleDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
 		cellText(r.BlockReason), s.words.flag(r.Imported), s.words.flag(r.Archived),
@@ -215,7 +215,7 @@ func (s *xlsxSink) Row(r Row) error {
 	return s.book.dataRow(
 		str(r.Number), str(r.Title), str(r.Board), str(r.Team), str(r.Column),
 		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est,
-		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent),
+		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent), str(r.Epic),
 		stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
 		optDec(r.CycleDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
 		str(r.BlockReason), str(s.words.flag(r.Imported)), str(s.words.flag(r.Archived)),

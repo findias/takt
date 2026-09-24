@@ -126,18 +126,21 @@ func (f *Filter) Check() error {
 // Row — строка листа «Данные»: одна карточка со всем, что о ней
 // спрашивают. Поля JSON — как в API, а не как в базе.
 type Row struct {
-	Number      string     `json:"number"`
-	Title       string     `json:"title"`
-	Board       string     `json:"board"`
-	Team        string     `json:"team"`
-	Column      string     `json:"column"`
-	State       string     `json:"state"`
-	Priority    string     `json:"priority"`
-	Estimate    *float64   `json:"estimate"`
-	Assignees   string     `json:"assignees"`
-	Labels      string     `json:"labels"`
-	Iteration   string     `json:"iteration"`
-	Parent      string     `json:"parent"`
+	Number    string   `json:"number"`
+	Title     string   `json:"title"`
+	Board     string   `json:"board"`
+	Team      string   `json:"team"`
+	Column    string   `json:"column"`
+	State     string   `json:"state"`
+	Priority  string   `json:"priority"`
+	Estimate  *float64 `json:"estimate"`
+	Assignees string   `json:"assignees"`
+	Labels    string   `json:"labels"`
+	Iteration string   `json:"iteration"`
+	Parent    string   `json:"parent"`
+	// Epic — название эпика: ближайшего предка на доске-портфеле
+	// (этап 33.3). Пусто — эпика нет или он не виден.
+	Epic        string     `json:"epic"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	StartedAt   *time.Time `json:"startedAt"`
 	FinishedAt  *time.Time `json:"finishedAt"`
@@ -375,6 +378,17 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		                  order by i.starts_on desc limit 1), ''),
 		       coalesce((select p.number from card_links k join cards p on p.id = k.from_card
 		                  where k.to_card = c.id and k.kind = 'subtask' limit 1), ''),
+		       coalesce((with recursive up(anc, depth) as (
+		                   select k.from_card, 1 from card_links k
+		                    where k.to_card = c.id and k.kind = 'subtask'
+		                   union all
+		                   select k.from_card, u.depth + 1
+		                     from up u join card_links k on k.to_card = u.anc and k.kind = 'subtask'
+		                    where u.depth < 5)
+		                 select a.title from up u
+		                   join cards a on a.id = u.anc
+		                   join boards ab on ab.id = a.board_id and ab.level = 'portfolio'
+		                  order by u.depth limit 1), ''),
 		       c.created_at, c.started_at, c.finished_at,
 		       to_char(c.due_on, 'YYYY-MM-DD'),
 		       case when c.outcome = 'done' and c.started_at is not null
@@ -399,7 +413,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 	for rows.Next() {
 		var r Row
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
-			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent,
+			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
 			&r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
 			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived); err != nil {
 			return err

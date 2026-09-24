@@ -44,9 +44,9 @@ by: assignee, label, iteration or priority.
 
 **By parent** gives every parent its own lane with its subtasks — the
 lane is titled with the parent's number, name and how much of it is
-done, and opens the parent. **By tree root** goes all the way up: a
-task under a feature stands in the lane of the epic above the feature.
-A parent on another board still gets
+done, and opens the parent. **By epic** gives every epic of a portfolio
+board its lane, however deep its tasks sit, and puts the rest in **No
+epic**. A parent on another board still gets
 a lane, and its title says whose board it is. Work with no parent sits
 in **No parent**, which stays even when empty. In these two groupings
 subtasks are shown in the columns rather than folded inside their
@@ -71,7 +71,10 @@ gathers the branch across boards.
 
 Each board counts its own flow, so epics never mix with tasks: the
 portfolio shows how long epics take and how many run at once, the team
-boards show their own work. An existing board becomes a portfolio (and
+boards show their own work. On a team board every card that belongs to
+an epic carries its coloured mark — the same colour on every board;
+press it to show only that epic's work, and remove the epic chip from
+the filter strip to show everything again. An existing board becomes a portfolio (and
 back) under **How we work** in **Flow** — **Board level**. The board
 list marks portfolios **epic portfolio**.
 

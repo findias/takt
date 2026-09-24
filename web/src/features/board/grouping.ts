@@ -1,4 +1,4 @@
-import { priorityLabel, priorityRank, progressLabel, subtreeCount } from '../../entities/card/model.ts'
+import { priorityLabel, priorityRank, progressLabel } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Priority } from '../../shared/api/index.ts'
 import { live, locale, t } from '../../shared/i18n/index.ts'
@@ -18,26 +18,25 @@ import { live, locale, t } from '../../shared/i18n/index.ts'
  * Группировка — состояние адреса, как и фильтры: сгруппированный вид
  * посылают ссылкой.
  */
-export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority' | 'parent' | 'root'
+export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority' | 'parent' | 'epic'
 
-const GROUPINGS: Grouping[] = ['assignee', 'label', 'iteration', 'priority', 'parent', 'root']
+const GROUPINGS: Grouping[] = ['assignee', 'label', 'iteration', 'priority', 'parent', 'epic']
 
-/** Группировки по дереву работы: в них подзадача стоит в дорожке
- *  своего родителя, а не прячется внутри его карточки. */
+/** Группировка по родителю: в ней подзадача стоит в дорожке своего
+ *  родителя, а не прячется внутри его карточки. По эпику части остаются
+ *  внутри родителя — они в той же дорожке, что и он. */
 export function byTree(grouping: Grouping): boolean {
-  return grouping === 'parent' || grouping === 'root'
+  return grouping === 'parent'
 }
-
-/** Предел подъёма к корню — тот же, что у сервера (MaxSubtaskDepth):
- *  глубже дерево не бывает, а обрыв цикла здесь страхует от связей,
- *  пришедших патчем посреди правки. */
-const MAX_DEPTH = 5
 
 export const GROUPING_NAMES = live(() => t.board.grouping) as Record<Grouping, string>
 
 export function parseGrouping(query: URLSearchParams): Grouping {
-  const value = query.get('group') as Grouping | null
-  return value && GROUPINGS.includes(value) ? value : 'none'
+  const value = query.get('group')
+  // «По корню дерева» заменено «по эпику» (этап 33.3): старая ссылка
+  // открывает то, ради чего её делали.
+  if (value === 'root') return 'epic'
+  return value && GROUPINGS.includes(value as Grouping) ? (value as Grouping) : 'none'
 }
 
 export function groupingToQuery(grouping: Grouping, base?: URLSearchParams): URLSearchParams {
@@ -101,9 +100,11 @@ export function groupsOf(
       ? t.board.nobody
       : grouping === 'label'
         ? t.board.noLabel
-        : byTree(grouping)
+        : grouping === 'parent'
           ? t.board.noParent
-          : t.board.noIteration
+          : grouping === 'epic'
+            ? t.board.noEpic
+            : t.board.noIteration
   if (grouping !== 'priority') ensure('none', emptyTitle)
 
   // Родитель каждой карточки — одним обходом связей, как childrenOf:
@@ -112,19 +113,6 @@ export function groupsOf(
   if (byTree(grouping)) {
     for (const link of base.links) if (link.kind === 'subtask') parentOf.set(link.toCard, link.fromCard)
   }
-  const laneOf = (cardId: string): string | undefined => {
-    let parent = parentOf.get(cardId)
-    if (grouping === 'root') {
-      // Корень — самый верхний, кого доска знает: над родителем с чужой
-      // доски связей в снимке нет, и он для этой доски и есть вершина.
-      for (let depth = 1; parent && depth < MAX_DEPTH; depth++) {
-        const above = parentOf.get(parent)
-        if (!above || above === cardId) break
-        parent = above
-      }
-    }
-    return parent
-  }
   const lane = (parentId: string) => {
     const own = base.cards[parentId]
     if (own) {
@@ -132,9 +120,7 @@ export function groupsOf(
       group.cardId = parentId
       // Прогресс словами «готово …»: голое «0 из 3» рядом со счётчиком
       // дорожки читалось бы одним числом с ним.
-      // По корню дорожка собирает всё поддерево — и счёт ей нужен
-      // по листьям, а не по прямым частям.
-      const progress = grouping === 'root' ? (subtreeCount(own) ?? progressLabel(own)) : progressLabel(own)
+      const progress = progressLabel(own)
       group.note = progress ? t.board.parentProgress(progress) : undefined
       return group
     }
@@ -167,9 +153,14 @@ export function groupsOf(
           const label = base.labels.find((l) => l.id === labelId)
           if (label) keys.push([label.id, label.name])
         }
-      } else if (byTree(grouping)) {
-        const parentId = laneOf(cardId)
+      } else if (grouping === 'parent') {
+        const parentId = parentOf.get(cardId)
         keys.push(parentId ? [lane(parentId).id, ''] : ['none', emptyTitle])
+      } else if (grouping === 'epic') {
+        // Эпик приносит сервер: он на другой доске, и подниматься к нему
+        // по связям снимка нельзя — средних звеньев в снимке может не быть.
+        const epic = card.epic
+        keys.push(epic ? [epic.id, epic.title] : ['none', emptyTitle])
       } else if (grouping === 'priority') {
         // Уровень назван полно, как в таблице: дорожки сравнивают друг
         // с другом, и в заголовке нужен порядок, который виден в самом

@@ -24,6 +24,7 @@ function show() {
         iterations={[]}
         hidden={0}
         hasBlockDeadlines={false}
+        epicTitle={null}
         onChange={() => {}}
       />
       <CardSearch filters={EMPTY} onChange={() => {}} />

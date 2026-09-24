@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
 import { groupByOrigin, labelTitle, chipClass } from '../../entities/label/model.ts'
+import { epicTone } from '../../entities/card/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
 import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
@@ -27,6 +28,7 @@ export function FilterBar({
   iterations,
   hidden,
   hasBlockDeadlines,
+  epicTitle,
   onChange,
 }: {
   filters: Filters
@@ -41,6 +43,9 @@ export function FilterBar({
    *  не показывается: вопрос, который здесь не задать, только
    *  растягивает строку. */
   hasBlockDeadlines: boolean
+  /** Название эпика, по которому отобрано (этап 33.3); отбор ставят
+   *  с метки на карточке, а снимают здесь. */
+  epicTitle: string | null
   onChange: (next: Filters) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -159,6 +164,16 @@ export function FilterBar({
               ),
             )}
           </select>
+        )}
+
+        {filters.epic && (
+          <button
+            className={`chip chip--${epicTone(filters.epic)} chip--removable`}
+            aria-label={t.filters.removeEpic(epicTitle ?? '')}
+            onClick={() => onChange({ ...filters, epic: null })}
+          >
+            {t.filters.epicOn(epicTitle ?? '…')} ×
+          </button>
         )}
 
         {filters.labels.map((id) => {

@@ -2941,3 +2941,34 @@ test('портфель эпиков заводится шаблоном и на�
   await page.getByRole('button', { name: 'Все доски' }).click()
   await expect(page.getByText(/портфель эпиков/)).toBeVisible()
 })
+
+test('задача команды несёт метку эпика с портфеля, и метка отбирает доску', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Склад')
+  await addCard(page, 'Очередь', 'Своя работа')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByPlaceholder('Название новой доски').fill('Эпики')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await addCard(page, 'Идея', 'Большой переезд')
+
+  // Фича эпика — на доске команды.
+  await cardIn(page, 'Идея', 'Большой переезд').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Фича переезда')
+  await page.getByRole('combobox', { name: 'Доска подзадачи' }).selectOption({ label: 'Склад' })
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Склад')
+  const feature = cardIn(page, 'Очередь', 'Фича переезда')
+  await expect(feature.getByRole('button', { name: /Эпик «Большой переезд»/ })).toBeVisible()
+
+  // Метка отбирает доску по эпику: своей работы вне эпика не видно.
+  await feature.getByRole('button', { name: /Эпик «Большой переезд»/ }).click()
+  await expect(page).toHaveURL(/[?&]epic=/)
+  await expect(cardIn(page, 'Очередь', 'Своя работа')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Убрать из фильтра эпик «Большой переезд»' }).click()
+  await expect(cardIn(page, 'Очередь', 'Своя работа')).toBeVisible()
+})
