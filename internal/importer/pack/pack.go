@@ -85,7 +85,17 @@ type Board struct {
 	// HistoryCollected — выгрузчик собирал историю задач: у карточки без
 	// history её в источнике просто нет, и дотягивать нечего.
 	HistoryCollected bool `json:"historyCollected,omitempty"`
+	// Level — уровень доски: пусто или team — доска команды, portfolio —
+	// доска-портфель эпиков (этап 33.6). Эпики источника едут отдельной
+	// доской, а их части на досках команд ссылаются на них родителем.
+	Level string `json:"level,omitempty"`
 }
+
+// Уровни доски, которые формат знает.
+const (
+	LevelTeam      = "team"
+	LevelPortfolio = "portfolio"
+)
 
 type Column struct {
 	ExternalID string  `json:"externalId"`
@@ -256,6 +266,9 @@ func Read(raw []byte) (*Package, error) {
 		var b Board
 		if err := json.Unmarshal(data, &b); err != nil {
 			return nil, fmt.Errorf("«%s» не разобран: %w", e.File, err)
+		}
+		if b.Level != "" && b.Level != LevelTeam && b.Level != LevelPortfolio {
+			return nil, fmt.Errorf("у доски «%s» уровень «%s» — формат знает только team и portfolio", b.Title, b.Level)
 		}
 		if len(b.Cards) > MaxCards {
 			return nil, fmt.Errorf("на доске «%s» %d карточек — за раз переносим до %d, разделите её в источнике", b.Title, len(b.Cards), MaxCards)

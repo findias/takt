@@ -78,7 +78,8 @@ the filter strip to show everything again. On the portfolio itself an
 epic card shows, under its progress bar, where its work lies: one badge
 per team board with how many of its tasks are done there, and how many
 are stuck, for example "SUP 1/4 · 2 stuck". The badge opens that board
-filtered by the epic. An existing board becomes a portfolio (and
+filtered by the epic. Moving from Jira? `takt-fetch` brings the epics as a portfolio board of
+the package, and their issues keep them as parents. An existing board becomes a portfolio (and
 back) under **How we work** in **Flow** — **Board level**. The board
 list marks portfolios **epic portfolio**.
 

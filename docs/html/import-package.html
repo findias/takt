@@ -203,9 +203,10 @@ color:var(--ink-3);font-size:.85rem}
   ],
   &#34;lost&#34;: []
 }</code></pre>
-<p>Every object is referred to by its <code>externalId</code> — the identifier in the source system, a string. References point only inside the same board file; a card&#39;s <code>parent</code> or link target on another board is dropped and named in the report.</p>
+<p>Every object is referred to by its <code>externalId</code> — the identifier in the source system, a string. References point inside the same board file, with one exception: a card&#39;s <code>parent</code> may be a card on another board of the same package — an epic on the portfolio board and its feature on a team board. Boards are moved one at a time and in any order; whichever of the two is moved second makes the card a part of its parent, and until then the report names the board still to move. A link target on another board, or a <code>parent</code> found on no board of the package, is dropped and named in the report.</p>
 <p><strong>Columns</strong> are listed in board order. <code>kind</code> is a hint — <code>queue</code>, <code>in_progress</code>, <code>done</code> or <code>null</code> when the exporter could not tell; the preview shows it and a person can send any column to another one on an existing board, exactly as for a spreadsheet.</p>
 <p>A board with <code>&#34;historyCollected&#34;: true</code> says the exporter collected task history: a card without <code>history</code> simply had none, and nothing is fetched later.</p>
+<p>A board with <code>&#34;level&#34;: &#34;portfolio&#34;</code> is an epic portfolio: moved into a new board, it becomes a portfolio board without iterations, and its cards are epics. Without <code>level</code>, or with <code>&#34;team&#34;</code>, it is a team board. An older takt ignores the field and creates an ordinary board.</p>
 <p><strong>People</strong> are matched by e-mail against the organisation, case insensitively; in the preview the owner can match anyone with a member, create an account or leave them out, and nobody is created without that choice. <code>email</code> is <code>null</code> when the source did not give it — Trello gives members&#39; e-mails only to a workspace administrator, so a package collected by anyone else has no e-mails, and <code>takt-fetch</code> says so before it starts. A person without a match is not assigned; the report lists them by e-mail or by name, and their cards get a technical label with their name — one per person, told apart by <code>externalId</code>, so two namesakes get two labels.</p>
 <p><strong>Labels</strong> become labels of the board by name; a label with the same name that already applies to the board is reused.</p>
 <p><strong>Cards</strong>:</p>
@@ -245,7 +246,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Passwords, API keys, tokens and session cookies of the source system. <code>takt-fetch</code> takes them from the command line or the environment and does not write them anywhere; a test searches every package it writes for the key it was given.</p>
 <h2 id="versions">Versions</h2>
 <p>A change that an existing reader would misread — a field renamed, a meaning changed, a required field added — raises <code>version</code>. Adding an optional field does not: readers ignore fields they do not know inside <code>boards/&lt;n&gt;.json</code>. A reader states every version it accepts, and a newer package is refused with the versions this installation reads, so that the answer is “upgrade takt”, not a half-imported board.</p>
-<footer>Takt, version v0.2.3-92-gbf6d3e7-dirty. Built from import-package.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-93-g3e6d484-dirty. Built from import-package.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

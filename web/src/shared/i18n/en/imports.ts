@@ -107,6 +107,7 @@ export const imports: typeof ru = {
   created: (n: number) => `Imported: ${cards(n)}.`,
   toBoard: (name: string) => `Board “${name}”.`,
   toNewBoard: (name: string) => `A new board “${name}” will be created.`,
+  portfolio: 'This is an epic portfolio: the board is created as a portfolio, without iterations, and its cards are epics for the team boards.',
   columns: 'Columns',
   newColumns: 'New columns',
   kinds: { queue: 'queue', in_progress: 'work', done: 'done' },

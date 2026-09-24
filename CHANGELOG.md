@@ -95,6 +95,15 @@ linux, macOS and Windows,
 with its own SBOM and sum; it is not in the image, the chart or the
 bundle. How to use it is on its own page, `docs/takt-fetch.md`, and in
 `takt-fetch help`, in Russian or English by `TAKT_LANG` / `LANG`.
+Jira epics come as a board of their own: the epics of every collected
+board, on it or only linked from it, go into one more board of the
+package, «Эпики», of the epic portfolio level, and their issues on the
+team boards keep the epic as their parent — through the parent in the
+cloud, through *Epic Link* on your own installation. The package format
+gains an optional `level` on a board, and a `parent` may now be a card
+on another board of the package; move the boards in any order, and the
+link appears when both are in. An older takt ignores `level` and
+creates an ordinary board. `--no-epics` keeps the old way.
 
 **A new command, `takt import`, for boards coming into a closed
 network.** It imports an import package (`.takt`, see

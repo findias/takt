@@ -37,6 +37,7 @@ func runJira(ctx context.Context, tx texts, lang i18n.Lang, args []string, env f
 	fs.Var(&boards, "board", "")
 	file := fs.String("out", "", "")
 	noComments := fs.Bool("no-comments", false, "")
+	noEpics := fs.Bool("no-epics", false, "")
 	collectedBy := fs.String("collected-by", "", "")
 	if err := fs.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -73,14 +74,29 @@ func runJira(ctx context.Context, tx texts, lang i18n.Lang, args []string, env f
 	}
 	var collected []pack.Board
 	var cards int
+	opt := jira.FetchOptions{
+		Comments: !*noComments,
+		Progress: func(s string) { fmt.Fprintln(errOut, "  "+tx.progress(s)) },
+	}
+	// Эпики всех досок — одной доской-портфелем в конце пакета (этап 33.6):
+	// эпик бывает общим у нескольких команд.
+	if !*noEpics {
+		opt.Epics = jira.NewEpics()
+	}
 	for i, id := range boards {
 		fmt.Fprintln(errOut, tx.boardOf(i+1, len(boards)))
-		b, err := client.Board(ctx, id, jira.FetchOptions{
-			Comments: !*noComments,
-			Progress: func(s string) { fmt.Fprintln(errOut, "  "+tx.progress(s)) },
-		})
+		b, err := client.Board(ctx, id, opt)
 		if err != nil {
 			return fmt.Errorf("%s: %s", tx.board(id), i18n.Say(lang, err.Error()))
+		}
+		cards += len(b.Cards)
+		collected = append(collected, b)
+	}
+	if opt.Epics != nil && opt.Epics.Len() > 0 {
+		fmt.Fprintln(errOut, tx.epicsOf(opt.Epics.Len()))
+		b, err := client.Portfolio(ctx, opt.Epics, tx.epics, opt)
+		if err != nil {
+			return fmt.Errorf("%s: %s", tx.epics.Title, i18n.Say(lang, err.Error()))
 		}
 		cards += len(b.Cards)
 		collected = append(collected, b)

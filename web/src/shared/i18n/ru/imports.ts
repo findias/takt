@@ -108,6 +108,7 @@ export const imports = {
   created: (n: number) => `Перенесено: ${карточек(n)}.`,
   toBoard: (name: string) => `Доска «${name}».`,
   toNewBoard: (name: string) => `Будет заведена доска «${name}».`,
+  portfolio: 'Это портфель эпиков: доска заводится портфелем, без итераций, и её карточки — эпики для досок команд.',
   columns: 'Колонки',
   newColumns: 'Новые колонки',
   kinds: { queue: 'очередь', in_progress: 'работа', done: 'готово' },

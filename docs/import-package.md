@@ -118,9 +118,14 @@ version 1.
 ```
 
 Every object is referred to by its `externalId` — the identifier in the
-source system, a string. References point only inside the same board
-file; a card's `parent` or link target on another board is dropped and
-named in the report.
+source system, a string. References point inside the same board file,
+with one exception: a card's `parent` may be a card on another board of
+the same package — an epic on the portfolio board and its feature on a
+team board. Boards are moved one at a time and in any order; whichever
+of the two is moved second makes the card a part of its parent, and
+until then the report names the board still to move. A link target on
+another board, or a `parent` found on no board of the package, is
+dropped and named in the report.
 
 **Columns** are listed in board order. `kind` is a hint — `queue`,
 `in_progress`, `done` or `null` when the exporter could not tell; the
@@ -130,6 +135,11 @@ existing board, exactly as for a spreadsheet.
 A board with `"historyCollected": true` says the exporter collected
 task history: a card without `history` simply had none, and nothing is
 fetched later.
+
+A board with `"level": "portfolio"` is an epic portfolio: moved into a
+new board, it becomes a portfolio board without iterations, and its
+cards are epics. Without `level`, or with `"team"`, it is a team board.
+An older takt ignores the field and creates an ordinary board.
 
 **People** are matched by e-mail against the organisation, case
 insensitively; in the preview the owner can match anyone with a

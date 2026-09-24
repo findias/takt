@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/findias/takt/internal/i18n"
+	"github.com/findias/takt/internal/importer/jira"
 )
 
 // Тексты выгрузчика на двух языках. Свой набор, а не каталог сервера:
@@ -46,10 +47,13 @@ type texts struct {
 	manyCompanies  func(login string, names []string) string
 	keyCreated     string
 	boardOf        func(i, n int) string
-	tooBig         func(title string, n, limit int) string
-	board          func(id string) string
-	written        func(file string, boards, cards int) string
-	carry          string
+	// epics — доска эпиков Jira и её колонки (этап 33.6), и строка хода дела.
+	epics   jira.PortfolioNames
+	epicsOf func(n int) string
+	tooBig  func(title string, n, limit int) string
+	board   func(id string) string
+	written func(file string, boards, cards int) string
+	carry   string
 	// progress — строка хода дела от клиента YouGile на языке выгрузчика.
 	progress func(s string) string
 }
@@ -135,6 +139,8 @@ var ru = texts{
                        «до переноса» у карточек будет пуста
   --no-comments        Jira, Kaiten и monday: без комментариев — меньше запросов,
                        обсуждение не переедет
+  --no-epics           Jira: эпики не выносить на доску-портфель — эпик на доске
+                       останется её карточкой, эпик вне доски не переедет
   --column ИМЯ         monday: какая колонка статуса станет колонками доски;
                        group — группы; без флага — первая колонка статуса
   --collected-by ТЕКСТ кто собрал и зачем — попадёт в пакет как есть
@@ -217,6 +223,10 @@ takt-fetch monday fetch --board ID --out ФАЙЛ.takt [флаги]
 	},
 	keyCreated: "В YouGile заведён ключ API для выгрузки; когда закончите, его можно удалить там.",
 	boardOf:    func(i, n int) string { return fmt.Sprintf("доска %d из %d…", i, n) },
+	epics:      jira.PortfolioNames{Title: "Эпики", Idea: "Идея", Work: "В работе", Done: "Готово"},
+	epicsOf: func(n int) string {
+		return fmt.Sprintf("эпики: %d — отдельной доской-портфелем…", n)
+	},
 	tooBig: func(title string, n, limit int) string {
 		return fmt.Sprintf("на доске «%s» %d карточек — takt переносит до %d за раз; разделите её в YouGile", title, n, limit)
 	},
@@ -288,6 +298,8 @@ Flags:
                        «before the import» history stays empty
   --no-comments        Jira, Kaiten and monday: without comments — fewer requests,
                        but the discussion does not come
+  --no-epics           Jira: do not move epics to a portfolio board — an epic on
+                       the board stays its card, an epic off the board does not come
   --column NAME        monday: which status column becomes the board's columns;
                        group — the groups; without it — the first status column
   --collected-by TEXT  who collected it and why — goes into the package as is
@@ -368,6 +380,8 @@ Everything about commands, signing in and flags — takt-fetch help.
 	},
 	keyCreated: "An API key for the export was created in YouGile; you can delete it there when you are done.",
 	boardOf:    func(i, n int) string { return fmt.Sprintf("board %d of %d…", i, n) },
+	epics:      jira.PortfolioNames{Title: "Epics", Idea: "Idea", Work: "In progress", Done: "Done"},
+	epicsOf:    func(n int) string { return fmt.Sprintf("epics: %d — as a separate portfolio board…", n) },
 	tooBig: func(title string, n, limit int) string {
 		return fmt.Sprintf("the board «%s» has %d cards — takt imports up to %d at a time; split it in YouGile", title, n, limit)
 	},

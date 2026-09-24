@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -56,6 +57,20 @@ func fakeJira(t *testing.T, cloud bool) *httptest.Server {
 		}
 		return p
 	}
+	// Эпик: облако называет его уровнем иерархии, своя установка —
+	// только названием типа.
+	epicType := map[string]any{"name": "Epic"}
+	if cloud {
+		epicType["hierarchyLevel"] = 1
+	}
+	withEpic := func(f map[string]any) map[string]any {
+		if cloud {
+			f["parent"] = map[string]any{"id": "20", "key": "DEV-9", "fields": map[string]any{"issuetype": epicType}}
+		} else {
+			f["customfield_10008"] = "DEV-9"
+		}
+		return f
+	}
 	anna := person("acc-1", "Анна", "anna@example.test")
 	ivan := person("acc-2", "Иван Петров", "")
 	firstComment := map[string]any{"author": ivan, "created": "2026-09-02T09:00:00.000+0300",
@@ -95,7 +110,16 @@ func fakeJira(t *testing.T, cloud bool) *httptest.Server {
 		}},
 		// Статус не привязан к колонкам доски: на доске Jira её не видно.
 		{"id": "13", "key": "DEV-4", "fields": map[string]any{"summary": "Вне доски", "status": map[string]any{"id": "6"}}},
+		// Эпик на самой доске: едет на портфель, а не в колонку команды.
+		{"id": "15", "key": "DEV-6", "fields": map[string]any{"summary": "Эпик на доске", "status": map[string]any{"id": "1"},
+			"issuetype": epicType}},
+		// Задача эпика, которого на доске нет: облако знает его родителем,
+		// своя установка — полем «Epic Link».
+		{"id": "14", "key": "DEV-5", "fields": withEpic(map[string]any{"summary": "Задача эпика", "status": map[string]any{"id": "1"}})},
 	}
+	// Эпик вне доски — приходит отдельным поиском.
+	outerEpic := map[string]any{"id": "20", "key": "DEV-9", "fields": map[string]any{
+		"summary": "Большой переезд", "status": map[string]any{"id": "3"}, "issuetype": epicType}}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, basic := r.BasicAuth()
@@ -147,19 +171,32 @@ func fakeJira(t *testing.T, cloud bool) *httptest.Server {
 				StartAt       int      `json:"startAt"`
 			}
 			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body.JQL == "id in (20)" || body.JQL == `key in ("DEV-9")` {
+				page := map[string]any{"issues": []any{outerEpic}}
+				if cloud {
+					page["isLast"] = true
+				} else {
+					page["startAt"], page["total"] = 0, 1
+				}
+				send(page)
+				return
+			}
+			if !cloud && !strings.Contains(strings.Join(body.Fields, ","), "customfield_10008") {
+				t.Errorf("своя установка: поиск без поля «Epic Link»: %+v", body.Fields)
+			}
 			if !strings.HasPrefix(body.JQL, "filter = 10001 AND (fixVersion") || !strings.Contains(strings.Join(body.Fields, ","), "customfield_10016") {
 				t.Errorf("запрос поиска: %+v", body)
 			}
 			// Две страницы: первая — две задачи.
 			from := body.StartAt
-			if cloud && body.NextPageToken == "p2" {
-				from = 2
+			if cloud && body.NextPageToken != "" {
+				from, _ = strconv.Atoi(strings.TrimPrefix(body.NextPageToken, "p"))
 			}
 			to := min(from+2, len(issues))
 			page := map[string]any{"issues": issues[from:to]}
 			if cloud {
 				if to < len(issues) {
-					page["nextPageToken"] = "p2"
+					page["nextPageToken"] = "p" + strconv.Itoa(to)
 				} else {
 					page["isLast"] = true
 				}
@@ -167,6 +204,11 @@ func fakeJira(t *testing.T, cloud bool) *httptest.Server {
 				page["startAt"], page["total"] = from, len(issues)
 			}
 			send(page)
+		case "/rest/api/2/field":
+			send([]any{
+				map[string]any{"id": "summary", "schema": map[string]any{"type": "string"}},
+				map[string]any{"id": "customfield_10008", "schema": map[string]any{"custom": "com.pyxis.greenhopper.jira:gh-epic-link"}},
+			})
 		case api + "issue/10/comment":
 			send(map[string]any{"comments": []any{firstComment, secondComment}, "total": 2})
 		default:
@@ -206,7 +248,8 @@ func TestFetchJiraWritesAPackageTaktReads(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%v\n%s", err, errOut.String())
 			}
-			if !strings.Contains(out.String(), "досок 1, карточек 3") {
+			// Доска команды — четыре задачи, портфель — два эпика.
+			if !strings.Contains(out.String(), "досок 2, карточек 6") {
 				t.Fatalf("итог: %s", out.String())
 			}
 			raw, _ := os.ReadFile(file)
@@ -264,6 +307,28 @@ func TestFetchJiraWritesAPackageTaktReads(t *testing.T) {
 			}
 			if by["DEV-2"].Parent != "10" {
 				t.Fatalf("подзадача: %+v", by["DEV-2"])
+			}
+			if _, onTeam := by["DEV-6"]; onTeam {
+				t.Fatalf("эпик остался в колонке команды: %+v", by["DEV-6"])
+			}
+			if c := by["DEV-5"]; c.Parent != "20" || c.ParentBoard != "Эпики" {
+				t.Fatalf("задача эпика вне доски: %+v", c)
+			}
+
+			// Портфель — последней доской пакета: эпики с доски и вне её.
+			epics, err := pkg.Plan(2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			col := map[string]string{}
+			for _, c := range epics.Cards {
+				col[c.Number] = c.Column
+			}
+			if !epics.Portfolio || col["DEV-6"] != "Идея" || col["DEV-9"] != "В работе" || len(col) != 2 {
+				t.Fatalf("портфель: уровень %v, эпики %v", epics.Portfolio, col)
+			}
+			if len(epics.ForeignParts) != 1 || epics.ForeignParts[0] != (importer.ForeignPart{Parent: "20", Child: "14"}) {
+				t.Fatalf("части эпиков на доске команды: %+v", epics.ForeignParts)
 			}
 			lost := strings.Join(plan.Lost, " | ")
 			if !strings.Contains(lost, "нет среди колонок доски Jira: 1") || !strings.Contains(lost, "приватности Jira: 1") {

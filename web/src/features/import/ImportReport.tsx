@@ -27,6 +27,9 @@ export function ImportReport({
       <p>
         <strong>{report.applied ? s.created(report.created) : s.willCreate(report.created, report.rows)}</strong>{' '}
         {report.newBoard && !report.applied ? s.toNewBoard(boardName) : s.toBoard(report.boardName)}
+        {/* Уровень — вслух до переноса: портфель считает поток эпиков
+            отдельно, и узнать об этом после — поздно. */}
+        {report.portfolio && <> {s.portfolio}</>}
       </p>
       {report.parts + report.links + report.comments > 0 && (
         <p>{s.relations(report.parts, report.links, report.comments)}</p>

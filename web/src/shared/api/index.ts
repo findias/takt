@@ -475,6 +475,9 @@ export type ImportReport = {
   boardId?: string
   boardName: string
   newBoard: boolean
+  /** Новая доска заводится портфелем эпиков: так она названа в пакете
+   *  (этап 33.6). */
+  portfolio: boolean
   rows: number
   created: number
   /** Из пакета переноса: подзадачи, связи, реплики обсуждения. */

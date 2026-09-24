@@ -23,3 +23,13 @@ func priority(p *struct {
 	}
 	return ""
 }
+
+// epicTypeName — название типа «эпик»: Jira переводит его на язык
+// учётной записи, как и приоритеты.
+func epicTypeName(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "epic", "эпик":
+		return true
+	}
+	return false
+}

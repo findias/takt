@@ -85,9 +85,9 @@ var (
 	}
 	queueWords = map[string]bool{
 		"очередь": true, "бэклог": true, "новые": true, "новая": true, "запланировано": true,
-		"к выполнению": true, "идеи": true, "сделать": true, "нужно сделать": true,
+		"к выполнению": true, "идеи": true, "идея": true, "сделать": true, "нужно сделать": true,
 		"backlog": true, "to do": true, "todo": true, "new": true, "open": true,
-		"planned": true, "ideas": true, "queue": true,
+		"planned": true, "ideas": true, "idea": true, "queue": true,
 	}
 	progressWords = map[string]bool{
 		"в работе": true, "в процессе": true, "делаем": true,

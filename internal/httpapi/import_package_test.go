@@ -235,3 +235,88 @@ func TestMissingPeopleBecomePersonLabels(t *testing.T) {
 		}
 	}
 }
+
+// Эпики пакета едут доской-портфелем (этап 33.6), а их части — на доске
+// команды. Доски переносятся по одной и в любом порядке: связь «эпик —
+// фича» заводит та, что переезжает второй, и повтор её не удваивает.
+func TestPackageEpicsLandOnPortfolioInEitherOrder(t *testing.T) {
+	for _, portfolioFirst := range []bool{true, false} {
+		a := newAPI(t)
+		owner := a.registerOrg("Эпики из пакета")
+		team := pack.Board{ExternalID: "b-1", Title: "Разработка",
+			Columns: []pack.Column{{ExternalID: "c-1", Title: "Нужно сделать"}},
+			Cards: []pack.Card{
+				{ExternalID: "s-1", Number: "DEV-2", Title: "Фича", Column: "c-1", Parent: strp("e-1")},
+				{ExternalID: "s-2", Number: "DEV-3", Title: "Задача фичи", Column: "c-1", Parent: strp("s-1")},
+			}}
+		epics := pack.Board{ExternalID: "epics", Title: "Эпики", Level: pack.LevelPortfolio,
+			Columns: []pack.Column{{ExternalID: "1", Title: "Идея"}},
+			Cards:   []pack.Card{{ExternalID: "e-1", Number: "DEV-1", Title: "Переезд", Column: "1"}}}
+		var buf bytes.Buffer
+		if err := pack.Write(&buf, pack.Manifest{CreatedBy: "проверка", Source: pack.Source{System: "jira"}}, []pack.Board{team, epics}); err != nil {
+			t.Fatal(err)
+		}
+		raw := buf.Bytes()
+
+		type report struct {
+			BoardID   string `json:"boardId"`
+			Portfolio bool   `json:"portfolio"`
+			Parts     int    `json:"parts"`
+			Problems  []struct {
+				Message string `json:"message"`
+			} `json:"problems"`
+		}
+		move := func(board int, name string) report {
+			var ans struct {
+				Report report `json:"report"`
+			}
+			body := map[string]any{"file": raw, "board": board, "newBoardName": name, "apply": true}
+			if err := json.Unmarshal(owner.mustDo("POST", "/api/import/package", body, http.StatusOK), &ans); err != nil {
+				t.Fatal(err)
+			}
+			return ans.Report
+		}
+		var first, second report
+		if portfolioFirst {
+			first, second = move(2, "Эпики"), move(1, "Разработка")
+		} else {
+			first, second = move(1, "Разработка"), move(2, "Эпики")
+			// Доска команды переехала раньше эпика — отчёт говорит, что делать.
+			if len(first.Problems) != 1 || !strings.Contains(first.Problems[0].Message, "«Эпики»") {
+				t.Fatalf("без портфеля отчёт не назвал его доску: %+v", first.Problems)
+			}
+		}
+		pf, teamBoard := first, second
+		if !portfolioFirst {
+			pf, teamBoard = second, first
+		}
+		if !pf.Portfolio || teamBoard.Portfolio {
+			t.Fatalf("уровень: портфель %v, команда %v", pf.Portfolio, teamBoard.Portfolio)
+		}
+		// Эпик → фича заводит вторая доска; фича → задача — доска команды.
+		if parts := first.Parts + second.Parts; parts != 2 {
+			t.Fatalf("порядок портфель-первым=%v: частей %d, ожидалось 2 (%+v, %+v)", portfolioFirst, parts, first, second)
+		}
+		var snap struct {
+			Board struct {
+				Level string `json:"level"`
+			} `json:"board"`
+			Cards []struct {
+				Title string `json:"title"`
+				Epic  *struct {
+					Title string `json:"title"`
+				} `json:"epic"`
+			} `json:"cards"`
+		}
+		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+teamBoard.BoardID, nil, http.StatusOK), &snap)
+		for _, c := range snap.Cards {
+			if c.Epic == nil || c.Epic.Title != "Переезд" {
+				t.Errorf("порядок портфель-первым=%v: у «%s» эпик %+v", portfolioFirst, c.Title, c.Epic)
+			}
+		}
+		// Повтор портфеля связь не удваивает и не считает заново.
+		if again := move(2, "Эпики 2"); again.Parts != 0 {
+			t.Errorf("повтор портфеля: частей %d", again.Parts)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package pack
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"time"
@@ -56,6 +57,30 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 		cards[c.ExternalID] = true
 	}
 	parents := parentsWithoutCycles(b.Cards)
+	plan.Portfolio = b.Level == LevelPortfolio
+
+	// Родитель на другой доске пакета (этап 33.6): эпик на портфеле,
+	// фича на доске команды. Доски переносятся по одной и в любом
+	// порядке, поэтому связь ищется в обе стороны: у карточки этой доски
+	// — родитель, переехавший раньше, у родителя с этой доски — части,
+	// переехавшие раньше. Какая доска ни переехала бы второй, связь
+	// заводит она.
+	elsewhere := map[string]string{}
+	nameOf := map[string]string{}
+	for i, other := range p.Boards {
+		if i == board-1 {
+			continue
+		}
+		for _, c := range other.Cards {
+			if _, seen := elsewhere[c.ExternalID]; !seen {
+				elsewhere[c.ExternalID] = strings.TrimSpace(other.Title)
+				nameOf[c.ExternalID] = strings.TrimSpace(strings.TrimSpace(c.Number) + " " + strings.TrimSpace(c.Title))
+			}
+			if c.Parent != nil && cards[*c.Parent] && !cards[c.ExternalID] {
+				plan.ForeignParts = append(plan.ForeignParts, importer.ForeignPart{Parent: *c.Parent, Child: c.ExternalID})
+			}
+		}
+	}
 
 	for i, c := range b.Cards {
 		row := i + 1
@@ -117,7 +142,12 @@ func (p *Package) Plan(board int) (importer.Plan, error) {
 			}
 		}
 		if c.Parent != nil && *c.Parent != "" {
+			other, onOther := elsewhere[*c.Parent]
 			switch {
+			case !cards[*c.Parent] && onOther:
+				card.Parent = *c.Parent
+				card.ParentBoard = other
+				card.ParentName = cmp.Or(nameOf[*c.Parent], *c.Parent)
 			case !cards[*c.Parent]:
 				problem("", *c.Parent, "родителя «%s» на этой доске пакета нет — карточка переедет без него", *c.Parent)
 			case parents[c.ExternalID] == "":

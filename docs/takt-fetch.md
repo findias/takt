@@ -114,12 +114,24 @@ takt-fetch jira fetch --url https://company.atlassian.net --board 12 --out dev.t
 there is no default Jira. `--no-comments` leaves the comments out:
 fewer requests, but the discussion does not come.
 
+**Epics go to a portfolio board.** An epic — an issue of hierarchy
+level 1 in the cloud, of type *Epic* on your own installation — does
+not go into a team column. The epics of all the collected boards, those
+on a board and those only linked from it, come as one more board of the
+package, "Epics", with the level of an epic portfolio and three
+columns — idea, work and done — by the category of the epic's status.
+Their issues on the team boards keep the epic as their parent: in the
+cloud through the parent, on your own installation through the
+*Epic Link* field. Move the team boards and "Epics" in any order — the
+link appears as soon as both are in. `--no-epics` keeps the old way: an
+epic on the board stays its card, an epic off the board does not come.
+
 What goes in: the board's columns in their order, each issue into the
 column of its status; the summary, the description as plain text
 (checklists as `- [x]` lines, mentions as names), the assignee, labels,
 priority, due date, the estimate from the field the board estimates by
 (usually Story Points), the created and resolved dates, subtasks whose
-parent is on the same board, **Blocks** links as blocks and all other
+parent is on the same board (and the epic, see above), **Blocks** links as blocks and all other
 links as relates, and comments. Columns get a hint from their statuses'
 category — *To Do*, *In Progress*, *Done* — which the preview lets you
 change.

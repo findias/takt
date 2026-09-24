@@ -46,8 +46,11 @@ type ImportReport struct {
 	BoardID   string `json:"boardId,omitempty"`
 	BoardName string `json:"boardName"`
 	NewBoard  bool   `json:"newBoard"`
-	Rows      int    `json:"rows"`
-	Created   int    `json:"created"`
+	// Portfolio — новая доска заводится портфелем эпиков: так она
+	// названа в пакете (этап 33.6).
+	Portfolio bool `json:"portfolio"`
+	Rows      int  `json:"rows"`
+	Created   int  `json:"created"`
 	// Что переезжает сверх карточек — из пакета переноса: подзадачи,
 	// связи, реплики обсуждения.
 	Parts    int `json:"parts"`
@@ -232,6 +235,15 @@ func (s *Service) Import(
 			return rep, err
 		}
 		rep.BoardID, rep.BoardName, rep.NewBoard = b.ID, b.Name, true
+		// Портфель источника заводится портфелем, как по шаблону: эпики
+		// не смешиваются с задачами в потоке с первого дня.
+		if plan.Portfolio {
+			if _, err := tx.Exec(ctx, `update boards set iterations_enabled = false, level = $2 where id = $1`,
+				b.ID, LevelPortfolio); err != nil {
+				return rep, err
+			}
+			rep.Portfolio = true
+		}
 		for _, c := range columns {
 			rep.NewColumns = append(rep.NewColumns, ImportColumn{Name: c.Name, Kind: c.Kind})
 			fresh[c.ID] = true
@@ -299,6 +311,17 @@ func (s *Service) Import(
 	for i, c := range plan.Cards {
 		keys[i] = c.ExternalID
 	}
+	// Карточки других досок пакета, с которыми связывают эта доска:
+	// родители на портфеле и части на досках команд (этап 33.6).
+	var others []string
+	for _, c := range plan.Cards {
+		if c.ParentBoard != "" {
+			others = append(others, c.Parent)
+		}
+	}
+	for _, f := range plan.ForeignParts {
+		others = append(others, f.Child)
+	}
 	already := map[string]ImportSkip{}
 	// Идентификаторы уже перенесённого — чтобы новая подзадача нашла
 	// родителя, переехавшего прошлым прогоном.
@@ -328,6 +351,34 @@ func (s *Service) Import(
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return rep, err
+	}
+	otherID := map[string]string{}
+	// Часть, у которой родитель уже есть, второго не получает: повторный
+	// перенос портфеля не должен ни плодить связи, ни считать их заново.
+	adopted := map[string]bool{}
+	if len(others) > 0 {
+		rows, err := tx.Query(ctx, `
+			select c.external_id, c.id,
+			       exists (select 1 from card_links l where l.to_card = c.id and l.kind = 'subtask')
+			  from cards c
+			 where c.external_source = $1 and c.external_id = any($2) and c.archived_at is null`, plan.Source, others)
+		if err != nil {
+			return rep, err
+		}
+		for rows.Next() {
+			var k, id string
+			var has bool
+			if err := rows.Scan(&k, &id, &has); err != nil {
+				rows.Close()
+				return rep, err
+			}
+			otherID[k] = id
+			adopted[k] = has
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return rep, err
+		}
 	}
 
 	// Люди — по выбору в предпросмотре, иначе по почте среди участников
@@ -496,7 +547,7 @@ func (s *Service) Import(
 		}
 		rep.AssignedLater = int(tag.RowsAffected())
 	}
-	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, people, &rep); err != nil {
+	if err := importRelations(ctx, tx, orgID, actorID, rep.BoardID, plan, todo, ids, alreadyID, otherID, adopted, people, &rep); err != nil {
 		return rep, err
 	}
 	// История источника (0065): пакет с историей несёт её сам, и карточки
@@ -1025,9 +1076,13 @@ func keptColumns(ctx context.Context, names []string, kinds map[string]string) [
 // к уже перенесённой задаче.
 func importRelations(
 	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, plan importer.Plan,
-	todo []importRow, ids []string, alreadyID, people map[string]string, rep *ImportReport,
+	todo []importRow, ids []string, alreadyID, otherID map[string]string, adopted map[string]bool,
+	people map[string]string, rep *ImportReport,
 ) error {
 	byKey := map[string]string{}
+	for k, id := range otherID {
+		byKey[k] = id
+	}
 	for k, id := range alreadyID {
 		byKey[k] = id
 	}
@@ -1068,6 +1123,11 @@ func importRelations(
 		if c.Parent != "" {
 			parent := byKey[c.Parent]
 			switch {
+			case parent == "" && c.ParentBoard != "":
+				// Не отказ: доски пакета переносятся по одной, и связь
+				// заведёт та, что переедет второй.
+				rep.Problems = append(rep.Problems, importer.Problem{Row: c.Row, Value: c.Parent,
+					Message: fmt.Sprintf("родитель «%s» — на доске пакета «%s», она ещё не перенесена: перенесите её, и карточка станет его частью", c.ParentName, c.ParentBoard)})
 			case parent == "":
 				rep.Problems = append(rep.Problems, importer.Problem{Row: c.Row, Value: c.Parent,
 					Message: fmt.Sprintf("родитель «%s» не переехал — карточка переедет без него", c.Parent)})
@@ -1101,6 +1161,17 @@ func importRelations(
 			cCards, cAuthors, cTexts, cAt = append(cCards, id), append(cAuthors, author), append(cTexts, text), append(cAt, at)
 			rep.Comments++
 		}
+	}
+	// Части с других досок пакета, переехавшие раньше этой: их родитель
+	// приехал только сейчас. Родитель — и заведённый этим прогоном, и
+	// переехавший прошлым: пакет могли перенести заново.
+	for _, f := range plan.ForeignParts {
+		parent, child := byKey[f.Parent], otherID[f.Child]
+		if parent == "" || child == "" || adopted[f.Child] {
+			continue
+		}
+		from, to, kinds = append(from, parent), append(to, child), append(kinds, "subtask")
+		rep.Parts++
 	}
 	if len(from) > 0 {
 		if _, err := tx.Exec(ctx, `
