@@ -20,8 +20,9 @@ in the English interface.
    becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty
    and we derive it from the name.
 3. In **How we work**, leave **Blank** or pick **Kanban** (a soft limit
-   of 3 on **In progress**, no iterations) or **Scrum** (a first
-   two-week iteration from today).
+   of 3 on **In progress**, no iterations), **Scrum** (a first
+   two-week iteration from today) or **Epic portfolio** (a board of
+   epics above the team boards).
 4. Press **Create**.
 
 The board opens straight away with three columns: **Queue**,

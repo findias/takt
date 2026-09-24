@@ -200,12 +200,11 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 		       count(*)
 		  from (
 			select extract(epoch from (finished_at - started_at)) / 86400.0 as d
-			  from cards c
+			  from cards
 			 where board_id = $1 and outcome = 'done'
 			   and started_at is not null and finished_at is not null
 			   and finished_at >= now() - make_interval(days => $2)
 			   and (not $3 or external_source is null)
-			   and `+store.NotContainer+`
 		  ) t`, boardID, days, lived).Scan(&p.P50, &p.P85, &p.P95, &p.Count)
 	if err != nil {
 		return err
@@ -215,11 +214,10 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	}
 
 	if err := tx.QueryRow(ctx, `
-		select count(*) from cards c
+		select count(*) from cards
 		 where board_id = $1 and outcome = 'discarded'
 		   and updated_at >= now() - make_interval(days => $2)
-		   and (not $3 or external_source is null)
-		   and `+store.NotContainer,
+		   and (not $3 or external_source is null)`,
 		boardID, days, lived).Scan(&out.Discarded); err != nil {
 		return err
 	}
@@ -230,12 +228,11 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 		select id, title, to_char(finished_at, 'YYYY-MM-DD'),
 		       extract(epoch from (finished_at - started_at)) / 86400.0,
 		       external_source is not null
-		  from cards c
+		  from cards
 		 where board_id = $1 and outcome = 'done'
 		   and started_at is not null and finished_at is not null
 		   and finished_at >= now() - make_interval(days => $2)
 		   and (not $3 or external_source is null)
-		   and `+store.NotContainer+`
 		 order by finished_at`, boardID, days, lived)
 	if err != nil {
 		return err
@@ -268,7 +265,6 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 		    on c.board_id = $1
 		   and date_trunc('week', c.finished_at) = w.week
 		   and (not $3 or c.external_source is null)
-		   and `+store.NotContainer+`
 		 group by w.week
 		 order by w.week`, boardID, days, lived)
 	if err != nil {
@@ -297,7 +293,6 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, lived bo
 		 where c.board_id = $1 and c.archived_at is null
 		   and c.started_at is not null and c.finished_at is null
 		   and (not $2 or c.external_source is null)
-		   and `+store.NotContainer+`
 		 order by c.started_at`, boardID, lived)
 	if err != nil {
 		return err
@@ -322,11 +317,10 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, lived bo
 // «посчитано без 40 перенесённых» говорит, сколько отброшено.
 func (s *Service) imported(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
 	return tx.QueryRow(ctx, `
-		select count(*) from cards c
+		select count(*) from cards
 		 where board_id = $1 and external_source is not null
 		   and (finished_at >= now() - make_interval(days => $2)
-		        or (archived_at is null and started_at is not null and finished_at is null))
-		   and `+store.NotContainer,
+		        or (archived_at is null and started_at is not null and finished_at is null))`,
 		boardID, days).Scan(&out.Imported)
 }
 
@@ -356,7 +350,6 @@ func (s *Service) flow(ctx context.Context, tx pgx.Tx, boardID string, days int,
 		  from days d
 		  left join cards c on c.board_id = $1 and c.archived_at is null
 		                   and (not $3 or c.external_source is null)
-		                   and `+store.NotContainer+`
 		 group by d.day
 		 order by d.day`, boardID, days, lived)
 	if err != nil {

@@ -51,6 +51,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/views/{id}", s.authed(s.handleDeleteView))
 	mux.HandleFunc("PUT /api/boards/{id}/sle", s.authed(s.handleSetSLE))
 	mux.HandleFunc("PUT /api/boards/{id}/iterations-enabled", s.authed(s.handleSetIterations))
+	mux.HandleFunc("PUT /api/boards/{id}/level", s.authed(s.handleSetLevel))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
@@ -618,6 +619,30 @@ func (s *Server) handleSetIterations(w http.ResponseWriter, r *http.Request, p a
 	}
 	err := s.boards.SetIterations(r.Context(), p.OrgID, p.ID, r.PathValue("id"), *req.Enabled)
 	if s.failAccess(w, "итерации доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Уровень доски: команда или портфель эпиков (этап 33). Обратимо,
+// без вопроса.
+func (s *Server) handleSetLevel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Level string `json:"level"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := s.boards.SetLevel(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Level)
+	if errors.Is(err, board.ErrUnknownLevel) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if s.failAccess(w, "уровень доски", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

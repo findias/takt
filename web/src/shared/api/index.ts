@@ -525,7 +525,7 @@ export type ImportAnswer = {
 }
 
 /** Шаблон доски: задаёт только начальные настройки и нигде не хранится. */
-export type BoardTemplate = 'empty' | 'kanban' | 'scrum'
+export type BoardTemplate = 'empty' | 'kanban' | 'scrum' | 'portfolio'
 
 export type BoardInfo = {
   id: string
@@ -541,6 +541,9 @@ export type BoardInfo = {
    *  всё про итерации, ничего не удаляя. Пусто — сервер старше поля,
    *  и итерации, как прежде, включены. */
   iterationsEnabled?: boolean
+  /** Уровень доски (этап 33): работа команды или портфель эпиков.
+   *  Пусто — сервер старше поля, доска — команды. */
+  level?: 'team' | 'portfolio'
   /** Можно ли в доску писать. Отвечает список досок — из него выбирают,
    *  куда поставить работу соседям. В снимке доски поля нет: там на этот
    *  вопрос не отвечают, и «нельзя» отличается от «не спрашивали». */
@@ -1258,6 +1261,8 @@ export const api = {
    *  и повторять это правило здесь нельзя — разъедется. */
   createBoard: (name: string, key = '', template: BoardTemplate = 'empty') =>
     request<BoardInfo>('POST', '/api/boards', { name, key, template }),
+  setLevel: (boardId: string, level: 'team' | 'portfolio') =>
+    request<void>('PUT', `/api/boards/${boardId}/level`, { level }),
   setIterations: (boardId: string, enabled: boolean) =>
     request<void>('PUT', `/api/boards/${boardId}/iterations-enabled`, { enabled }),
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),

@@ -144,8 +144,8 @@ hung. Every list that offers a label also says where it comes from.
 | Forecast | how many days to finish a given number of cards |
 | Discarded | how much was taken off the board unfinished |
 
-Epics — cards with grandchildren — are left out of every metric and of
-the column limit: their work is their parts, already counted.
+Every board counts its own metrics. Epics live on a portfolio board, so
+their months never mix with a team's days.
 
 <!-- anchor: key-scopes -->
 ## Integration key scopes

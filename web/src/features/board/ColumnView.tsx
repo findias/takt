@@ -54,9 +54,6 @@ type ColumnProps = {
    *  своей строкой. В счёт колонки они входят: это идущая работа,
    *  и лимит одновременной работы считает её на сервере так же. */
   partsInside: number
-  /** Сколько эпиков в колонке: места в лимите они не занимают (этап 32.6)
-   *  и из счётчика «N из лимита» вычитаются. */
-  containers: number
   cards: BaseState['cards']
   unit: EstimateUnit
   sleDays: number | null
@@ -216,7 +213,7 @@ export function ColumnView(props: ColumnProps) {
         <div className="row row--tight">
           <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
           <ColumnCount
-            count={props.cardIds.length + props.partsInside - props.containers}
+            count={props.cardIds.length + props.partsInside}
             limit={props.column.wipLimit}
             hard={props.column.wipLimitHard}
             onSetLimit={props.onSetLimit}

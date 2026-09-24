@@ -88,3 +88,36 @@ func TestIterationsSwitchKeepsHistory(t *testing.T) {
 			snap.Board.IterationsEnabled, len(snap.Iterations), snap.CardIterations[card])
 	}
 }
+
+// Портфель эпиков (этап 33): свой уровень, «Идея» первой колонкой,
+// мягкий лимит на работе, без итераций; уровень меняется обратимо.
+func TestPortfolioBoard(t *testing.T) {
+	f := newFixture(t)
+	p, err := f.svc.CreateFrom(f.ctx, f.orgID, f.actorID, "Портфель", "", TemplatePortfolio)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snap.Board.Level != LevelPortfolio || snap.Board.IterationsEnabled {
+		t.Errorf("портфель: уровень %q, итерации %v", snap.Board.Level, snap.Board.IterationsEnabled)
+	}
+	if snap.Columns[0].Name != "Идея" || snap.Columns[1].WIPLimit == nil || snap.Columns[1].WIPLimitHard {
+		t.Errorf("колонки портфеля: %q, лимит %v, жёсткий %v",
+			snap.Columns[0].Name, snap.Columns[1].WIPLimit, snap.Columns[1].WIPLimitHard)
+	}
+	if f.snapshot().Board.Level != LevelTeam {
+		t.Error("обычная доска — не доска команды")
+	}
+	if err := f.svc.SetLevel(f.ctx, f.orgID, f.actorID, f.boardID, LevelPortfolio); err != nil {
+		t.Fatal(err)
+	}
+	if f.snapshot().Board.Level != LevelPortfolio {
+		t.Error("уровень не сменился")
+	}
+	if err := f.svc.SetLevel(f.ctx, f.orgID, f.actorID, f.boardID, "strategy"); !errors.Is(err, ErrUnknownLevel) {
+		t.Errorf("незнакомый уровень: %v", err)
+	}
+}

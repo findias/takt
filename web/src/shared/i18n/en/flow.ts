@@ -43,6 +43,10 @@ export const flow: typeof ru = {
     throughputLabel: (list: string) => `Throughput: ${list}`,
     promise: 'Board promise',
     howWeWork: 'How we work',
+    level: 'Board level',
+    levels: { team: 'Team board', portfolio: 'Epic portfolio' },
+    levelHint:
+      "A portfolio's cards are epics: their parts live on team boards, while the epics have their own flow and limits. Each board's metrics are counted separately, so epics do not mix with tasks.",
     iterations: 'We work in iterations',
     iterationsHint:
       'Off — iterations disappear from the filter, grouping, cards and table. Nothing is deleted: turn it back on and everything returns, reports included.',

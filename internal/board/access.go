@@ -463,6 +463,31 @@ func (s *Service) SetIterations(ctx context.Context, orgID, actorID, boardID str
 		})))
 }
 
+// ErrUnknownLevel — уровня доски с таким именем нет.
+var ErrUnknownLevel = errors.New("уровень доски бывает team или portfolio")
+
+// SetLevel меняет уровень доски — «команда» или «портфель» (этап 33).
+// Обратимо и ничего не удаляет: карточки остаются, меняется лишь то,
+// эпики это или работа команды.
+func (s *Service) SetLevel(ctx context.Context, orgID, actorID, boardID, level string) error {
+	if level != LevelTeam && level != LevelPortfolio {
+		return ErrUnknownLevel
+	}
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(s.db.InScope(ctx,
+		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, `
+				update boards set level = $2
+				 where id = $1 and archived_at is null`, boardID, level)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				return ErrNotFound
+			}
+			return nil
+		})))
+}
+
 // --- архив ---
 
 // Archive убирает доску с глаз, не удаляя её. Журнал переходов и все
@@ -680,7 +705,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Visibility = &visibility

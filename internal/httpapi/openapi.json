@@ -91,7 +91,7 @@
       },
       "ReportCard": {
         "type": "object",
-        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived", "container"],
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
         "properties": {
           "number": { "type": "string" },
           "title": { "type": "string" },
@@ -114,8 +114,7 @@
           "blocked": { "type": "boolean" },
           "blockReason": { "type": "string" },
           "imported": { "type": "boolean", "description": "Перенесена из другой системы: её даты взяты оттуда." },
-          "archived": { "type": "boolean" },
-          "container": { "type": "boolean", "description": "Эпик — карточка с внуками: её работа посчитана частями, поэтому в сводке и метриках потока она не считается." }
+          "archived": { "type": "boolean" }
         }
       },
       "ReportSummary": {
@@ -170,6 +169,11 @@
             "type": "string",
             "enum": ["org", "team", "private"],
             "description": "Кому доска видна: всей организации, своему подразделению или только вписанным поимённо. Отвечает список досок; в снимке доски поля нет."
+          },
+          "level": {
+            "type": "string",
+            "enum": ["team", "portfolio"],
+            "description": "Уровень доски: team — работа команды, portfolio — эпики. Эпик — карточка доски-портфеля; у каждой доски свои метрики, поэтому эпики в числа команд не попадают."
           },
           "iterationsEnabled": {
             "type": "boolean",
@@ -358,7 +362,7 @@
                     "type": "string",
                     "description": "От двух до шести букв или цифр, начиная с буквы. Пусто — выводится из названия доски."
                   },
-                  "template": { "type": "string", "enum": ["empty", "kanban", "scrum"], "default": "empty", "description": "Начальные настройки доски. empty — три размеченные колонки, как было всегда; kanban — те же колонки с мягким лимитом 3 на работе и выключенными итерациями; scrum — те же колонки и первая итерация на две недели с сегодняшнего дня. Шаблон нигде не хранится: после создания доска ничем не отличается от других." }
+                  "template": { "type": "string", "enum": ["empty", "kanban", "scrum", "portfolio"], "default": "empty", "description": "Начальные настройки доски. empty — три размеченные колонки, как было всегда; kanban — те же колонки с мягким лимитом 3 на работе и выключенными итерациями; scrum — те же колонки и первая итерация на две недели с сегодняшнего дня; portfolio — доска эпиков: «Идея, В работе, Готово», мягкий лимит 3, без итераций, уровень portfolio. Шаблон нигде не хранится: после создания доска ничем не отличается от других." }
                 }
               }
             }

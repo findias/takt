@@ -10,17 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Boards with epics get shorter promises, and that is a fix.** An epic —
-a card with grandchildren — no longer takes a place in the column limit
-and is no longer counted in flow metrics or the export summary: its
-work is its parts, which were already counted. Until now an epic that
-ran for three months sat in cycle time next to two-day tasks and
-inflated the 85th percentile, and with it the board promise and the
-forecast. After the upgrade such boards show shorter numbers; boards
-without epics see no change. A feature with tasks is still counted as
-work.
-
-**Eighteen migrations, all safe for the running version.** `0052` gives
+**Nineteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -40,7 +30,8 @@ from the system it was imported from, `0066` adds a card's references
 to service-desk tickets (RDS, service requests, change requests,
 problems), `0067` adds named slices of the management export, `0068`
 lets a subtask see its link to a parent on a hidden board, `0069` adds a
-board's iterations switch. They
+board's iterations switch, `0070` adds a board's level (team or epic
+portfolio). They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -278,12 +269,16 @@ the branch adds. It cannot be combined with `DEMO=on`.
   strip was brings them back with their history and reports. Migration
   `0069` adds `boards.iterations_enabled`, default true, so every
   existing board keeps working in iterations.
-- **Epics, visible without getting in the way.** A card with
-  grandchildren is marked «эпик» on the board, and the new «Дерево» view,
-  next to «Доска» and «Таблица», shows epics, features and tasks as a
-  hierarchy — with each card's column, progress, blocks and, for cards
-  on other boards, whose board it is. Boards without a tree change
-  nothing.
+- **Epics on a portfolio board.** A board has a level: a team board or
+  an «Портфель эпиков» — create one from the template of that name
+  («Идея, В работе, Готово», a soft limit of 3, no iterations) or switch
+  a board in «Поток». Every card on a portfolio is an epic; its
+  features live on the team boards. Each board counts its own flow, so
+  epics never mix with tasks in cycle time or the promise, and the
+  portfolio shows how long epics take and how many run at once. The new
+  «Дерево» view, next to «Доска» and «Таблица», shows epics, features
+  and tasks as a hierarchy, parts on other boards included. Migration `0070` adds
+  `boards.level`, default «team».
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

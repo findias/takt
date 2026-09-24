@@ -148,9 +148,6 @@ type Row struct {
 	BlockReason string     `json:"blockReason"`
 	Imported    bool       `json:"imported"`
 	Archived    bool       `json:"archived"`
-	// Container — эпик, карточка с внуками (этап 32.6): строкой в данных
-	// остаётся, но в сводке не считается — её работа посчитана частями.
-	Container bool `json:"container"`
 }
 
 // Summary — лист «Сводка»: то, что показывает «Поток», но за период
@@ -277,7 +274,7 @@ func (s *Service) Export(ctx context.Context, orgID, userID string, f Filter, op
 		// #sql-склейка: условие собирает Filter.sql из постоянных кусков, значения идут параметрами
 		if _, err := tx.Exec(ctx, `
 			create temp table report_cards on commit drop as
-			select c.id, not `+store.NotContainer+` as container `+where, args...); err != nil {
+			select c.id `+where, args...); err != nil {
 			return err
 		}
 		var total int
@@ -385,7 +382,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		       case when c.started_at is not null and c.finished_at is null
 		            then extract(epoch from (now() - c.started_at)) / 86400.0 end,
 		       k.id is not null, coalesce(k.reason, ''),
-		       c.external_source is not null, c.archived_at is not null, r.container
+		       c.external_source is not null, c.archived_at is not null
 		  from report_cards r
 		  join cards c on c.id = r.id
 		  join boards b on b.id = c.board_id
@@ -404,7 +401,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
 			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent,
 			&r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
-			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Container); err != nil {
+			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived); err != nil {
 			return err
 		}
 		r.CreatedAt = r.CreatedAt.UTC()
@@ -445,8 +442,7 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		       case when c.outcome = 'done' and c.started_at is not null and c.finished_at < $1
 		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle,
 		       case when c.started_at is not null and c.finished_at is null
-		            then extract(epoch from (now() - c.started_at)) / 86400.0 end as age) d
-		 where not r.container`,
+		            then extract(epoch from (now() - c.started_at)) / 86400.0 end as age) d`,
 		next).Scan(&sum.Finished, &sum.Discarded, &sum.WIP, &c50, &c85, &a50, &a85); err != nil {
 		return sum, err
 	}
@@ -466,7 +462,7 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 			                       interval '1 week') as week)
 		select to_char(w.week, 'YYYY-MM-DD'), count(c.id)
 		  from weeks w
-		  left join (report_cards r join cards c on c.id = r.id and not r.container)
+		  left join (report_cards r join cards c on c.id = r.id)
 		    on c.outcome = 'done' and c.finished_at >= $1 and c.finished_at < $2
 		   and date_trunc('week', c.finished_at) = w.week
 		 group by w.week order by w.week`, from, next)
@@ -508,7 +504,7 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		             and (c.finished_at is null or c.finished_at >= d.edge)),
 		       count(c.id) filter (where c.finished_at < d.edge)
 		  from steps d
-		  left join (report_cards r join cards c on c.id = r.id and not r.container) on true
+		  left join (report_cards r join cards c on c.id = r.id) on true
 		 group by d.edge order by d.edge`, from, next, "1 "+sum.FlowStep)
 	if err != nil {
 		return sum, err
@@ -534,7 +530,7 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		  from iterations i
 		  join boards b on b.id = i.board_id
 		  join iteration_cards ic on ic.iteration_id = i.id and ic.removed_at is null
-		  join report_cards r on r.id = ic.card_id and not r.container
+		  join report_cards r on r.id = ic.card_id
 		  join cards c on c.id = r.id
 		 where i.starts_on < $2 and i.ends_on >= $1
 		 group by i.id, i.name, b.name, i.starts_on, i.ends_on, i.closed_at
@@ -572,7 +568,6 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		  cross join lateral (select
 		       case when c.outcome = 'done' and c.started_at is not null and c.finished_at < $1
 		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle) d
-		 where not r.container
 		 group by t.id, t.name
 		 order by t.name nulls last`, next)
 	if err != nil {

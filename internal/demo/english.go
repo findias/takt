@@ -35,6 +35,7 @@ var english = map[string]string{
 	// Подразделения.
 	"Разработка": "Engineering",
 	"Платформа":  "Platform",
+	"Портфель":   "Portfolio",
 	"Ядро":       "Core",
 	"Продажи":    "Sales",
 	"Курсы":      "Training",
@@ -43,6 +44,7 @@ var english = map[string]string{
 	"Поставки": "Supplies",
 	"ПОСТ":     "SUP",
 	"ПЛАТ":     "PLAT",
+	"ПОРТ":     "PORT",
 	"Найм":     "Hiring",
 	"НАЙМ":     "HIRE",
 

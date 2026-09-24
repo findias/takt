@@ -257,38 +257,3 @@ func TestMetricsOfForeignBoardAreNotFound(t *testing.T) {
 		t.Errorf("метрики чужой доски: %v", err)
 	}
 }
-
-// Эпик — карточка с внуками — в метрики потока не входит (этап 32.6):
-// шедший девяносто дней, он раздувал бы 85-ю процентиль, а по ней
-// считаются обещание доски и прогноз. Его задачи — входят.
-func TestContainerStaysOutOfFlow(t *testing.T) {
-	f := newFixture(t)
-	epic := f.card("Эпик", 95, days(90), done())
-	feature := f.card("Фича", 10, days(4), done())
-	task := f.card("Задача", 5, days(2), done())
-	f.inTenant(func(tx pgx.Tx) error {
-		for _, l := range [][2]string{{epic, feature}, {feature, task}} {
-			if _, err := tx.Exec(f.ctx, `insert into card_links (org_id, from_card, to_card, kind)
-				values ($1, $2, $3, 'subtask')`, f.orgID, l[0], l[1]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	report, err := f.svc.Report(f.ctx, f.orgID, f.userID, f.boardID, 120)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if report.CycleTime == nil || report.CycleTime.Count != 2 {
-		t.Fatalf("время цикла посчитано по %+v, ожидались фича и задача без эпика", report.CycleTime)
-	}
-	if report.CycleTime.P85 > 10 {
-		t.Errorf("85-я процентиль %.1f: эпик на 90 дней попал в счёт", report.CycleTime.P85)
-	}
-	for _, c := range report.Finished {
-		if c.ID == epic {
-			t.Error("эпик среди точек времени цикла")
-		}
-	}
-}

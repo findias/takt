@@ -14,7 +14,6 @@ import (
 
 	"github.com/findias/takt/internal/rank"
 	"github.com/findias/takt/internal/realtime"
-	"github.com/findias/takt/internal/store"
 	"github.com/findias/takt/internal/webhook"
 )
 
@@ -527,7 +526,7 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err != nil {
 		return Patch{}, err
 	}
-	if err := enforceWIP(ctx, tx, col, ""); err != nil {
+	if err := enforceWIP(ctx, tx, col); err != nil {
 		return Patch{}, err
 	}
 
@@ -626,7 +625,7 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 	// не добавляет работы и не должна упираться в лимит — тем более что
 	// колонка могла переполниться раньше, пока лимит был мягким.
 	if fromColumn != p.ToColumnID {
-		if err := enforceWIP(ctx, tx, to, p.CardID); err != nil {
+		if err := enforceWIP(ctx, tx, to); err != nil {
 			return Patch{}, err
 		}
 	}
@@ -1149,30 +1148,14 @@ func columnName(ctx context.Context, tx pgx.Tx, columnID string) string {
 // с жёстким лимитом. Мягкий лимит здесь намеренно не делает ничего: он нужен,
 // чтобы команда видела перегрузку, а не чтобы мешать ей работать. Так же
 // устроены Jira, Azure DevOps и GitHub; жёсткий лимит — выбор колонки.
-//
-// Контейнер — карточка с внуками, эпик (этап 32.6) — места в лимите
-// не занимает и сам проходит в полную колонку: его работа уже посчитана
-// частями, и второй раз она лимит не съедает. moving — переносимая
-// карточка; пусто — карточка новая и контейнером быть не может.
-func enforceWIP(ctx context.Context, tx pgx.Tx, col Column, moving string) error {
+func enforceWIP(ctx context.Context, tx pgx.Tx, col Column) error {
 	if col.WIPLimit == nil || !col.WIPLimitHard {
 		return nil
 	}
-	if moving != "" {
-		var container bool
-		if err := tx.QueryRow(ctx, `select not `+store.NotContainer+` from cards c where c.id = $1`,
-			moving).Scan(&container); err != nil {
-			return err
-		}
-		if container {
-			return nil
-		}
-	}
 	var count int
 	err := tx.QueryRow(ctx, `
-		select count(*) from cards c
-		 where column_id = $1 and archived_at is null
-		   and `+store.NotContainer, col.ID).Scan(&count)
+		select count(*) from cards
+		 where column_id = $1 and archived_at is null`, col.ID).Scan(&count)
 	if err != nil {
 		return err
 	}

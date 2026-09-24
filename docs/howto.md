@@ -46,8 +46,7 @@ by: assignee, label, iteration or priority.
 lane is titled with the parent's number, name and how much of it is
 done, and opens the parent. **By tree root** goes all the way up: a
 task under a feature stands in the lane of the epic above the feature.
-That is how to see an epic without a card type called "epic": the level
-comes from the place in the tree. A parent on another board still gets
+A parent on another board still gets
 a lane, and its title says whose board it is. Work with no parent sits
 in **No parent**, which stays even when empty. In these two groupings
 subtasks are shown in the columns rather than folded inside their
@@ -58,13 +57,31 @@ Swimlanes are a slice, not a different board: you cannot drag a card
 between them, because the lane is derived from a property of the card.
 To change the lane, change the property.
 
+<!-- anchor: portfolio -->
+### Keep epics on a portfolio board
+
+Epics live on a board of their own, not in the columns of a team.
+Create a board with **Epic portfolio** in **How we work**: its columns
+are "Idea", "In progress" and "Done", with a soft limit of 3 on "In
+progress" and no iterations. Every card on it is an epic. Split an
+epic into features on the team boards: open it, **Tasks** tab, pick the
+team's board next to the name, **Subtask**. A task on a team board
+then shows the epic in its path to the root, and the **Tree** view
+gathers the branch across boards.
+
+Each board counts its own flow, so epics never mix with tasks: the
+portfolio shows how long epics take and how many run at once, the team
+boards show their own work. An existing board becomes a portfolio (and
+back) under **How we work** in **Flow** — **Board level**. The board
+list marks portfolios **epic portfolio**.
+
 <!-- anchor: tree -->
 ### See epics, features and tasks as a tree
 
 In the view list, next to **Board** and **Table**, pick **Tree**. Every
 card with parts is shown with its parts under it, level by level: the
 number, the column, how much is done — directly and "all told" by the
-leaves — and whether it is blocked. An epic is marked **epic**. A
+leaves — and whether it is blocked. A
 parent on another board heads its own branch, signed with that board;
 parts on other boards show as a line with their board, without their
 own parts. Cards with no parent and no parts are folded into one line
@@ -153,10 +170,6 @@ can still be moved in: the limit is there to make overload visible.
 A hard limit refuses the move and says to make room first. The field
 below the limit holds the column's entry rule — what must be done before
 a card comes here.
-
-An epic — a card with grandchildren, marked **epic** on the board — takes
-no place in the limit and is not counted in **Flow**: its work is its
-parts, which are counted already. A feature with tasks is still work.
 
 <!-- anchor: promise -->
 ### Promise how long work takes

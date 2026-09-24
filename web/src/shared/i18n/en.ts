@@ -481,9 +481,10 @@ export const en: typeof ru = {
     create: 'Create',
     keyHint: 'The key starts card numbers: OPS-14. Leave it empty and we derive it from the name; it cannot be changed later.',
     template: 'How we work',
-    templates: { empty: 'Blank', kanban: 'Kanban', scrum: 'Scrum' },
+    templates: { empty: 'Blank', kanban: 'Kanban', scrum: 'Scrum', portfolio: 'Epic portfolio' },
+    portfolio: 'epic portfolio',
     templateHint:
-      'Kanban — a limit on «In progress» and no iterations; Scrum — with a first two-week iteration. A template only sets the start: afterwards the board is set up like any other.',
+      'Kanban — a limit on «In progress» and no iterations; Scrum — with a first two-week iteration; Epic portfolio — a board of epics above the team boards. A template only sets the start: afterwards the board is set up like any other.',
     showArchive: 'Show archive',
     archiveEmpty:
       'The archive is empty. Boards taken off the list end up here: they are not deleted and can be restored from here.',
@@ -723,7 +724,6 @@ export const en: typeof ru = {
       `Card “${title}”. Arrows — move focus, Ctrl with arrows — move the card, Enter — open, E — rename.`,
     titleLabel: 'Card title',
     select: (title: string) => `Select “${title}”`,
-    epic: 'epic',
     subtaskOf: 'subtask of ',
     labelsOf: (names: string) => `Labels: ${names}`,
     noLabels: 'Labels: none',

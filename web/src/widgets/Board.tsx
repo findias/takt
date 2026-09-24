@@ -943,7 +943,6 @@ export function Board({
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
         partsInside={parts?.[columnId] ?? 0}
-        containers={(groupOrder[columnId] ?? []).filter((id) => base.cards[id]?.subtree).length}
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
@@ -1304,6 +1303,7 @@ export function Board({
           sleDays={base.info.sleDays}
           sleProbability={base.info.sleProbability}
           iterationsEnabled={iterationsOn}
+          level={base.info.level === 'portfolio' ? 'portfolio' : 'team'}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

@@ -21,6 +21,7 @@ export function Flow({
   sleDays,
   sleProbability,
   iterationsEnabled,
+  level,
   onClose,
   onPromise,
 }: {
@@ -31,6 +32,8 @@ export function Flow({
    *  работает, рядом с обещанием доски. На полосе над доской её нет:
    *  там на счету каждый орган (e2e «шапка доски не съедает экран»). */
   iterationsEnabled: boolean
+  /** Уровень доски (этап 33): команда или портфель эпиков. */
+  level: 'team' | 'portfolio'
   onClose: () => void
   /** Обещание изменилось — доске стоит перечитать себя. */
   onPromise: () => void
@@ -93,6 +96,7 @@ export function Flow({
       />
 
       <IterationsSwitch boardId={boardId} enabled={iterationsEnabled} onChanged={onPromise} />
+      <LevelSwitch boardId={boardId} level={level} onChanged={onPromise} />
 
       {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
           читается уже с этой оговоркой. Переключатель виден, пока есть
@@ -414,6 +418,49 @@ function IterationsSwitch({
         <span>{t.flow.iterations}</span>
       </label>
       <p className="muted small">{t.flow.iterationsHint}</p>
+    </section>
+  )
+}
+
+/** Уровень доски: команда или портфель эпиков. Обратимо, без вопроса,
+ *  как и итерации: карточки остаются, меняется лишь то, чем они считаются. */
+function LevelSwitch({
+  boardId,
+  level,
+  onChanged,
+}: {
+  boardId: string
+  level: 'team' | 'portfolio'
+  onChanged: () => void
+}) {
+  const [value, setValue] = useState(level)
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <section className="stack stack--tight">
+      <ScreenError>{error}</ScreenError>
+      <label className="row row--tight small">
+        <span>{t.flow.level}</span>
+        <select
+          value={value}
+          onChange={(e) => {
+            const next = e.target.value as 'team' | 'portfolio'
+            const prev = value
+            setValue(next)
+            setError(null)
+            api
+              .setLevel(boardId, next)
+              .then(onChanged)
+              .catch((err) => {
+                setValue(prev)
+                setError(err instanceof Error ? err.message : t.common.notDone)
+              })
+          }}
+        >
+          <option value="team">{t.flow.levels.team}</option>
+          <option value="portfolio">{t.flow.levels.portfolio}</option>
+        </select>
+      </label>
+      <p className="muted small">{t.flow.levelHint}</p>
     </section>
   )
 }

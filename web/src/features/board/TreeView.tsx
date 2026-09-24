@@ -82,7 +82,6 @@ export function TreeView({
           ) : (
             <span className="tree-title">{node.title}</span>
           )}
-          {node.own?.subtree && <span className="mark card-level">{t.cardView.epic}</span>}
           {node.own?.blocked && <span className="mark mark--alarm">{s.blocked}</span>}
           <span className="muted small">{node.where}</span>
           {progress && <span className="muted small">{progress}</span>}

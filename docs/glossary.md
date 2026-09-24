@@ -17,8 +17,9 @@ documentation use, and what each of them means in Takt.
 | Board promise | How many days work usually takes to cross the board, and with what probability — "usually 8 days with 85% probability". Cards running longer show up under **Longer than promised** |
 | Block | A card that is waiting for something, always with a reason. A block may have a deadline, after which it lifts itself |
 | Subtask | A part of a card. It is an ordinary card and may live on another team's board; the parent shows "so many of so many" |
+| Epic, portfolio | An epic is a card on a portfolio board — a board of level **Epic portfolio**. Its parts, the features, live on team boards. Epics have their own flow and limits, and do not mix with tasks in metrics |
 | Root, leaf | The top of a tree of subtasks — an epic, say — and the cards at its bottom that have no parts of their own. A card with grandchildren counts "all told" by leaves; **By tree root** puts a task into its epic's lane |
-| Board template | **Blank**, **Kanban** or **Scrum** when a board is created. It sets only the start and is not kept: afterwards the board is like any other |
+| Board template | **Blank**, **Kanban**, **Scrum** or **Epic portfolio** when a board is created. It sets only the start and is not kept: afterwards the board is like any other |
 | Label | A mark on a card. It belongs to one of three places — the organisation, a subdivision (with everything inside it) or one board — and is offered only there |
 | Iteration | A sprint or a release: a name and dates. Closing it freezes what it contains for good and produces a report. A board can stop working in iterations and start again without losing any |
 | Swimlanes | The board sliced into rows by assignee, label, iteration, priority, parent or tree root. A slice of the same board, not another board |

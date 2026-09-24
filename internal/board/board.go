@@ -68,6 +68,10 @@ type Info struct {
 	// Работает ли доска итерациями (0069). Выключено — экран прячет всё
 	// про итерации, но ничего не удаляется.
 	IterationsEnabled bool `json:"iterationsEnabled"`
+	// Уровень доски (0070): team — работа команды, portfolio — эпики.
+	// Эпик — карточка портфеля; метрики у каждой доски свои, поэтому
+	// эпики в числа команд не попадают сами собой.
+	Level string `json:"level"`
 	// Ключ доски — префикс номеров её карточек: ПРО в ПРО-142. Задаётся
 	// при создании и не меняется: номер карточки хранится целиком, и
 	// смена ключа развела бы на одной доске два разных префикса.
@@ -100,11 +104,11 @@ type Info struct {
 // boardFields — общий список полей доски, по тем же соображениям, что
 // columnFields и cardFields ниже: список повторяется в нескольких
 // запросах, и разъехавшийся порядок ловится только в рантайме.
-const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled`
+const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled, level`
 
 func scanBoard(row pgx.Row) (Info, error) {
 	var b Info
-	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled)
+	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level)
 	return b, err
 }
 
@@ -430,7 +434,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &writable, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
@@ -460,6 +464,17 @@ const (
 	TemplateEmpty  = "empty"
 	TemplateKanban = "kanban"
 	TemplateScrum  = "scrum"
+	// Портфель эпиков (этап 33): эпики своим потоком — «Идея → В работе
+	// → Готово», мягкий лимит на работе и без итераций. Лимит эпиков
+	// в работе — главное, что портфелю даёт канбан: три одновременных
+	// эпика — уже много для одной организации на сто человек.
+	TemplatePortfolio = "portfolio"
+)
+
+// Уровни доски.
+const (
+	LevelTeam      = "team"
+	LevelPortfolio = "portfolio"
 )
 
 // kanbanWIP — лимит на «В работе» у канбан-доски. Мягкий: превышение
@@ -472,7 +487,7 @@ const kanbanWIP = 3
 const scrumSprintDays = 14
 
 // ErrUnknownTemplate — шаблона с таким именем нет.
-var ErrUnknownTemplate = errors.New("шаблон доски бывает empty, kanban или scrum")
+var ErrUnknownTemplate = errors.New("шаблон доски бывает empty, kanban, scrum или portfolio")
 
 // CreateFrom заводит доску по шаблону. Пустой шаблон — как было всегда:
 // три размеченные колонки, итерации включены.
@@ -480,7 +495,8 @@ func (s *Service) CreateFrom(ctx context.Context, orgID, userID, name, key, temp
 	if template == "" {
 		template = TemplateEmpty
 	}
-	if template != TemplateEmpty && template != TemplateKanban && template != TemplateScrum {
+	if template != TemplateEmpty && template != TemplateKanban && template != TemplateScrum &&
+		template != TemplatePortfolio {
 		return Info{}, ErrUnknownTemplate
 	}
 	var b Info
@@ -489,8 +505,14 @@ func (s *Service) CreateFrom(ctx context.Context, orgID, userID, name, key, temp
 		// журнал переходов копится, а метрики потока по нему не считаются.
 		var err error
 		var cols []Column
+		first := i18n.Name(ctx, "Очередь")
+		if template == TemplatePortfolio {
+			// Эпик сперва — идея: «очередь» у портфеля звучала бы как
+			// работа, которую кто-то уже ждёт.
+			first = i18n.Name(ctx, "Идея")
+		}
 		b, cols, err = createBoard(ctx, tx, orgID, name, key, []Column{
-			{Name: i18n.Name(ctx, "Очередь"), Kind: KindQueue},
+			{Name: first, Kind: KindQueue},
 			{Name: i18n.Name(ctx, "В работе"), Kind: KindInProgress, IsStartedPoint: true},
 			{Name: i18n.Name(ctx, "Готово"), Kind: KindDone, IsFinishedPoint: true},
 		})
@@ -498,6 +520,16 @@ func (s *Service) CreateFrom(ctx context.Context, orgID, userID, name, key, temp
 			return err
 		}
 		switch template {
+		case TemplatePortfolio:
+			if _, err := tx.Exec(ctx, `update board_columns set wip_limit = $2 where id = $1`,
+				cols[1].ID, kanbanWIP); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `update boards set iterations_enabled = false, level = $2 where id = $1`,
+				b.ID, LevelPortfolio); err != nil {
+				return err
+			}
+			b.IterationsEnabled, b.Level = false, LevelPortfolio
 		case TemplateKanban:
 			// Канбан: лимит на работе и итерации выключены.
 			if _, err := tx.Exec(ctx, `update board_columns set wip_limit = $2 where id = $1`,

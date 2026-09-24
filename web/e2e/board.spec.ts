@@ -2901,7 +2901,7 @@ test('шаблон доски задаёт начало, а итерации в�
   await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toHaveCount(1)
 })
 
-test('вид «Дерево» показывает эпик с фичами и задачами, а доска помечает эпик', async ({ page }) => {
+test('вид «Дерево» показывает эпик с фичами и задачами', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с деревом')
   await addCard(page, 'Очередь', 'Переезд')
@@ -2915,13 +2915,29 @@ test('вид «Дерево» показывает эпик с фичами и �
   await page.getByRole('button', { name: 'Подзадача' }).click()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
-  // Карточка с внуками — эпик, и это видно на доске.
-  await expect(cardIn(page, 'Очередь', 'Переезд').getByText('эпик', { exact: true })).toBeVisible()
-
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
   const tree = page.getByRole('list', { name: 'Дерево работы доски' })
   await expect(tree.getByRole('button', { name: 'Переезд', exact: true })).toBeVisible()
   await expect(tree.getByRole('button', { name: 'Задача', exact: true })).toBeVisible()
   await tree.getByRole('button', { name: 'Свернуть «Переезд»' }).click()
   await expect(tree.getByRole('button', { name: 'Задача', exact: true })).toHaveCount(0)
+})
+
+test('портфель эпиков заводится шаблоном и назван в списке досок', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Эпики')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  // Первая колонка портфеля — идея, а не очередь.
+  await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Работать итерациями' })).toBeVisible()
+
+  // Уровень меняется в «Потоке» и возвращается обратно.
+  await page.getByRole('button', { name: 'Поток' }).click()
+  const level = page.getByRole('combobox', { name: 'Уровень доски' })
+  await expect(level).toHaveValue('portfolio')
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await expect(page.getByText(/портфель эпиков/)).toBeVisible()
 })

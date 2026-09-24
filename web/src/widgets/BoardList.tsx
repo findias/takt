@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { ApiError, VISIBILITY_NAMES, api } from '../shared/api/index.ts'
 import type { BoardInfo, BoardTemplate, Member, Principal, Team } from '../shared/api/index.ts'
 
-const TEMPLATES: BoardTemplate[] = ['empty', 'kanban', 'scrum']
+const TEMPLATES: BoardTemplate[] = ['empty', 'kanban', 'scrum', 'portfolio']
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
@@ -28,6 +28,9 @@ const BoardAccess = lazy(() =>
  */
 function boardLine(b: BoardInfo, teams: Team[]): string {
   const parts = [b.key]
+  // Портфель эпиков назван сразу за ключом: это другой уровень работы,
+  // и в списке он не должен читаться ещё одной доской команды.
+  if (b.level === 'portfolio') parts.push(t.boards.portfolio)
   if (b.visibility === 'team') {
     const team = teams.find((t) => t.id === b.teamId)
     parts.push(team ? t.boards.visibleToTeam(team.name) : VISIBILITY_NAMES.team.toLowerCase())
