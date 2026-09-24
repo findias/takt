@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { ApiError, VISIBILITY_NAMES, api } from '../shared/api/index.ts'
-import type { BoardInfo, Member, Principal, Team } from '../shared/api/index.ts'
+import type { BoardInfo, BoardTemplate, Member, Principal, Team } from '../shared/api/index.ts'
+
+const TEMPLATES: BoardTemplate[] = ['empty', 'kanban', 'scrum']
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { useToast } from '../shared/ui/Toast.tsx'
@@ -51,6 +53,7 @@ export function BoardList({
   // из названия». Поле стоит рядом с названием, потому что после
   // заведения ключ уже не сменить — он в номерах всех карточек.
   const [key, setKey] = useState('')
+  const [template, setTemplate] = useState<BoardTemplate>('empty')
   const [error, setError] = useState<string | null>(null)
   // Отказ заведения показывается у формы, а не наверху списка: форма
   // стоит под досками, и сообщение над ними человек не увидит вовсе.
@@ -255,7 +258,7 @@ export function BoardList({
             }
             form.clear()
             api
-              .createBoard(name.trim(), key.trim())
+              .createBoard(name.trim(), key.trim(), template)
               .then((b) => {
                 setName('')
                 setKey('')
@@ -315,6 +318,20 @@ export function BoardList({
               />
             )}
           </Field>
+          {/* Шаблон — выбором в том же ряду: он задаёт только начало,
+              и отдельный шаг мастера придал бы ему вес решения, которого
+              у него нет. */}
+          <select
+            value={template}
+            aria-label={t.boards.template}
+            onChange={(e) => setTemplate(e.target.value as BoardTemplate)}
+          >
+            {TEMPLATES.map((v) => (
+              <option key={v} value={v}>
+                {t.boards.templates[v]}
+              </option>
+            ))}
+          </select>
           <button className="primary" type="submit" aria-label={t.boards.createBoard}>
             {t.boards.create}
           </button>
@@ -326,7 +343,7 @@ export function BoardList({
           о нём из отказа — значит узнать поздно. */}
       {canEdit && (
         <p className="muted small" id="board-key-hint">
-          {t.boards.keyHint}
+          {t.boards.keyHint} {t.boards.templateHint}
         </p>
       )}
       {/* Переезд — ссылкой, а не кнопкой: он ведёт на свой экран, и открыть

@@ -73,7 +73,7 @@ it('ключ доезжает таким, каким его набрали, и �
   await userEvent.type(screen.getByLabelText(/Ключ доски/), 'пост')
   await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
-  await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Поставки', 'ПОСТ'))
+  await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Поставки', 'ПОСТ', 'empty'))
 })
 
 it('незаданный ключ уходит пустым: выводит его сервер, а не мы', async () => {
@@ -83,7 +83,19 @@ it('незаданный ключ уходит пустым: выводит ег
   await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Найм')
   await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
 
-  await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Найм', ''))
+  await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Найм', '', 'empty'))
+})
+
+it('шаблон доски уходит тем, что выбрали; по умолчанию — пустая, как прежде', async () => {
+  createBoard.mockResolvedValue({ id: 'b-3', name: 'Спринты', key: 'СПР' })
+  show()
+
+  await userEvent.type(await screen.findByPlaceholderText('Название новой доски'), 'Спринты')
+  expect((screen.getByRole('combobox', { name: 'Как работаем' }) as HTMLSelectElement).value).toBe('empty')
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Как работаем' }), 'Скрам')
+  await userEvent.click(screen.getByRole('button', { name: 'Завести доску' }))
+
+  await waitFor(() => expect(createBoard).toHaveBeenCalledWith('Спринты', '', 'scrum'))
 })
 
 it('занятый ключ и негодный ключ — разные отказы, и оба помечают поле', async () => {

@@ -20,12 +20,17 @@ export function Flow({
   boardId,
   sleDays,
   sleProbability,
+  iterationsEnabled,
   onClose,
   onPromise,
 }: {
   boardId: string
   sleDays: number | null
   sleProbability: number
+  /** «Работаем итерациями» (этап 32.4) — настройка того, как команда
+   *  работает, рядом с обещанием доски. На полосе над доской её нет:
+   *  там на счету каждый орган (e2e «шапка доски не съедает экран»). */
+  iterationsEnabled: boolean
   onClose: () => void
   /** Обещание изменилось — доске стоит перечитать себя. */
   onPromise: () => void
@@ -86,6 +91,8 @@ export function Flow({
         suggestion={report.cycleTime ? Math.ceil(report.cycleTime.p85) : null}
         onChanged={onPromise}
       />
+
+      <IterationsSwitch boardId={boardId} enabled={iterationsEnabled} onChanged={onPromise} />
 
       {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
           читается уже с этой оговоркой. Переключатель виден, пока есть
@@ -362,3 +369,51 @@ function Promise_({
 }
 
 const Promise = Promise_
+
+/** Флажок «Работаем итерациями». Без вопроса: выключение обратимо
+ *  и ничего не удаляет — отчёты и состав итераций вернутся с включением. */
+function IterationsSwitch({
+  boardId,
+  enabled,
+  onChanged,
+}: {
+  boardId: string
+  enabled: boolean
+  onChanged: () => void
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  // Флажок меняется сразу, а не после перечитывания доски: иначе он
+  // полсекунды показывает прежнее, и кажется, что нажатие не прошло.
+  // Отказ возвращает прежнее значение и объясняет причину.
+  const [on, setOn] = useState(enabled)
+  return (
+    <section className="stack stack--tight">
+      <h3 className="section-title">{t.flow.howWeWork}</h3>
+      <ScreenError>{error}</ScreenError>
+      <label className="row row--tight small">
+        <input
+          type="checkbox"
+          checked={on}
+          aria-busy={busy || undefined}
+          onChange={(e) => {
+            const next = e.target.checked
+            setOn(next)
+            setBusy(true)
+            setError(null)
+            api
+              .setIterations(boardId, next)
+              .then(onChanged)
+              .catch((err) => {
+                setOn(!next)
+                setError(err instanceof Error ? err.message : t.common.notDone)
+              })
+              .finally(() => setBusy(false))
+          }}
+        />
+        <span>{t.flow.iterations}</span>
+      </label>
+      <p className="muted small">{t.flow.iterationsHint}</p>
+    </section>
+  )
+}

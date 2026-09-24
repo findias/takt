@@ -19,11 +19,15 @@ in the English interface.
 2. Next to it, in **Key**, type a short word — `ПОСТ`, say. It
    becomes the prefix of card numbers: ПОСТ-1, ПОСТ-2. Leave it empty
    and we derive it from the name.
-3. Press **Create**.
+3. In **How we work**, leave **Blank** or pick **Kanban** (a soft limit
+   of 3 on **In progress**, no iterations) or **Scrum** (a first
+   two-week iteration from today).
+4. Press **Create**.
 
 The board opens straight away with three columns: **Queue**,
 **In progress**, **Done**. Those are stages of work,
-and you can change them.
+and you can change them. The template only sets the start: afterwards
+the board is set up like any other.
 
 ## 2. Put work on it
 

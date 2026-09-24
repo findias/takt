@@ -288,6 +288,13 @@ Deleting for good asks for confirmation and cannot be undone.
    iteration contains for good. A report appears: what made it and
    what did not.
 
+A team that does not work in iterations opens **Flow** and clears **We
+work in iterations** under **How we work**: iterations disappear from
+the filter, the grouping, the cards, the table and the card panel.
+Nothing is deleted, so nothing is asked. To bring them back, press
+**Work in iterations** where the iteration strip used to be, or tick
+the box again — everything returns, reports included.
+
 <!-- anchor: import -->
 ## Moving in
 

@@ -480,6 +480,10 @@ export const en: typeof ru = {
     createBoard: 'Create board',
     create: 'Create',
     keyHint: 'The key starts card numbers: OPS-14. Leave it empty and we derive it from the name; it cannot be changed later.',
+    template: 'How we work',
+    templates: { empty: 'Blank', kanban: 'Kanban', scrum: 'Scrum' },
+    templateHint:
+      'Kanban — a limit on «In progress» and no iterations; Scrum — with a first two-week iteration. A template only sets the start: afterwards the board is set up like any other.',
     showArchive: 'Show archive',
     archiveEmpty:
       'The archive is empty. Boards taken off the list end up here: they are not deleted and can be restored from here.',
@@ -971,6 +975,7 @@ export const en: typeof ru = {
     closeIterationOf: (name: string) => `Close iteration “${name}”`,
     closed: 'Closed:',
     addIteration: '+ iteration',
+    iterationsOn: 'Work in iterations',
     iterationName: 'Iteration name',
     name: 'Name',
     starts: 'Start',

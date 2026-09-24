@@ -444,6 +444,25 @@ func (s *Service) SetSLE(ctx context.Context, orgID, actorID, boardID string, da
 		})))
 }
 
+// SetIterations включает и выключает «Работаем итерациями». Обратимо
+// и ничего не удаляет, поэтому без вопроса; право — то же, что у обещания
+// доски: настройку доски меняет тот, кто может в неё писать.
+func (s *Service) SetIterations(ctx context.Context, orgID, actorID, boardID string, enabled bool) error {
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(s.db.InScope(ctx,
+		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, `
+				update boards set iterations_enabled = $2
+				 where id = $1 and archived_at is null`, boardID, enabled)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				return ErrNotFound
+			}
+			return nil
+		})))
+}
+
 // --- архив ---
 
 // Archive убирает доску с глаз, не удаляя её. Журнал переходов и все
@@ -661,7 +680,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Visibility = &visibility

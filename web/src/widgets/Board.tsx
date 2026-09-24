@@ -282,6 +282,10 @@ export function Board({
   // Фильтр применяется к показу, а не к данным: перетаскивание,
   // счётчики лимита и догон патчами продолжают работать с полной
   // доской, иначе включённый фильтр начал бы менять её поведение.
+  // «Работаем итерациями» выключено — итерации пропадают с экрана
+  // целиком (этап 32.4): из отбора, группировки, карточек и таблицы.
+  // Данные не трогаются, включение вернёт всё как было.
+  const iterationsOn = base?.info.iterationsEnabled !== false
   const { order, partIds, hidden } = useMemo(() => {
     if (!base)
       return {
@@ -315,17 +319,25 @@ export function Board({
       next[columnId] = ids.filter((id) => {
         const card = base.cards[id]
         if (!card) return true
-        const ok = matches(card, filters, context)
+        // Отбор по итерации при выключенных итерациях не действует: иначе
+        // ссылка, присланная до выключения, прятала бы карточки без
+        // единого видимого повода.
+        const ok = matches(card, iterationsOn ? filters : { ...filters, iteration: null }, context)
         if (!ok) hidden += 1
         return ok
       })
     }
     return { ...withoutParts(base, next), hidden }
-  }, [base, fullOrder, filters])
+  }, [base, fullOrder, filters, iterationsOn])
 
   // Группировка — тоже состояние адреса: сгруппированный вид посылают
   // ссылкой наравне с отфильтрованным.
-  const grouping = useMemo(() => parseGrouping(query), [query])
+  // Группировка по итерации при выключенных итерациях — как её отсутствие:
+  // ссылка, присланная до выключения, открывает доску, а не пустые дорожки.
+  const grouping = useMemo(() => {
+    const asked = parseGrouping(query)
+    return asked === 'iteration' && base?.info.iterationsEnabled === false ? 'none' : asked
+  }, [query, base?.info.iterationsEnabled])
   const setGrouping = useCallback(
     (next: Grouping) => setQuery(groupingToQuery(next, query), { replace: true }),
     [query],
@@ -441,7 +453,7 @@ export function Board({
         run: () => setShowAccess(true),
       },
       ...(Object.keys(GROUPING_NAMES) as Grouping[])
-        .filter((g) => g !== grouping)
+        .filter((g) => g !== grouping && (base.info.iterationsEnabled !== false || g !== 'iteration'))
         .map((g) => ({
           id: `group-${g}`,
           title: GROUPING_NAMES[g],
@@ -787,7 +799,7 @@ export function Board({
 
   // Отбирают по идущим итерациям: закрытую смотрят отчётом, а не доской.
   const openIterations = useMemo(
-    () => (base ? base.iterations.filter((i) => !i.closedAt) : []),
+    () => (base && base.info.iterationsEnabled !== false ? base.iterations.filter((i) => !i.closedAt) : []),
     [base],
   )
 
@@ -801,7 +813,7 @@ export function Board({
    *  Считается один раз на доску — как и всё, что уходит в карточку. */
   const cardIterationNames = useMemo(() => {
     const names: Record<string, string> = {}
-    if (!base) return names
+    if (!base || base.info.iterationsEnabled === false) return names
     const byId = new Map(base.iterations.map((i) => [i.id, i.name]))
     for (const [cardId, iterationId] of Object.entries(base.cardIterations)) {
       const name = byId.get(iterationId)
@@ -1069,11 +1081,13 @@ export function Board({
           aria-label={t.screen.grouping}
           onChange={(e) => setGrouping(e.target.value as Grouping)}
         >
-          {(Object.keys(GROUPING_NAMES) as Grouping[]).map((g) => (
-            <option key={g} value={g}>
-              {GROUPING_NAMES[g]}
-            </option>
-          ))}
+          {(Object.keys(GROUPING_NAMES) as Grouping[])
+            .filter((g) => iterationsOn || g !== 'iteration')
+            .map((g) => (
+              <option key={g} value={g}>
+                {GROUPING_NAMES[g]}
+              </option>
+            ))}
         </select>
         {/* «?» — когда доска уже разложена дорожками: в строке инструментов
             он виден всегда и становился бы шумом, а вопрос «почему
@@ -1138,13 +1152,26 @@ export function Board({
           onPick={(assignee) => setFilters({ ...filters, assignee })}
         />
         <FlowHint columns={columnList} />
-        <Iterations
-          boardId={boardId}
-          canEdit={canEdit}
-          iterations={base.iterations}
-          onChanged={board.reload}
-          onReport={setReportOf}
-        />
+        {iterationsOn ? (
+          <Iterations
+            boardId={boardId}
+            canEdit={canEdit}
+            iterations={base.iterations}
+            onChanged={board.reload}
+            onReport={setReportOf}
+          />
+        ) : (
+          canEdit && (
+            // Включение — там же, где итерации жили: искать его
+            // в настройках, которых не видно, никто не станет.
+            <button
+              className="btn btn--quiet"
+              onClick={() => void api.setIterations(boardId, true).then(board.reload)}
+            >
+              {t.screen.iterationsOn}
+            </button>
+          )
+        )}
       </div>
 
       {Object.keys(base.cards).length === 0 && (
@@ -1257,6 +1284,7 @@ export function Board({
           boardId={boardId}
           sleDays={base.info.sleDays}
           sleProbability={base.info.sleProbability}
+          iterationsEnabled={iterationsOn}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

@@ -339,12 +339,16 @@ export function CardPanel({
               onChange={(next) => onPrioritise(card.id, next)}
             />
 
-            <IterationPicker
-              iterations={base.iterations}
-              current={base.cardIterations[card.id] ?? null}
-              canEdit={canEdit}
-              onChange={(id) => onIteration(card.id, id)}
-            />
+            {/* Итерации выключены — выбора нет (этап 32.4); вхождение
+                карточки при этом не снимается и вернётся с включением. */}
+            {base.info.iterationsEnabled !== false && (
+              <IterationPicker
+                iterations={base.iterations}
+                current={base.cardIterations[card.id] ?? null}
+                canEdit={canEdit}
+                onChange={(id) => onIteration(card.id, id)}
+              />
+            )}
 
             <Assignees
               people={base.people}

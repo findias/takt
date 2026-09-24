@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Seventeen migrations, all safe for the running version.** `0052` gives
+**Eighteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -29,7 +29,8 @@ for each person of an import source, `0065` keeps a card's history
 from the system it was imported from, `0066` adds a card's references
 to service-desk tickets (RDS, service requests, change requests,
 problems), `0067` adds named slices of the management export, `0068`
-lets a subtask see its link to a parent on a hidden board. They
+lets a subtask see its link to a parent on a hidden board, `0069` adds a
+board's iterations switch. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -258,6 +259,15 @@ the branch adds. It cannot be combined with `DEMO=on`.
   hidden — the link only, not the parent's name or board. Additive and
   safe for the running version, which already names such a card
   unavailable.
+- **Board templates and an iterations switch.** A new board is
+  «Пустая» (as before), «Канбан» — a soft limit of 3 on «В работе» and
+  no iterations — or «Скрам», with a first two-week iteration. The
+  template is not kept. «Работаем итерациями» in «Поток» (next to the
+  board promise) hides iterations from the filter, grouping, cards,
+  table and card panel when cleared; «Работать итерациями» where the
+  strip was brings them back with their history and reports. Migration
+  `0069` adds `boards.iterations_enabled`, default true, so every
+  existing board keeps working in iterations.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

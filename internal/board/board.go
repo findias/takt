@@ -65,6 +65,9 @@ type Info struct {
 	// неподвижно, и по нему видно, что стало хуже.
 	SLEDays        *int `json:"sleDays"`
 	SLEProbability int  `json:"sleProbability"`
+	// Работает ли доска итерациями (0069). Выключено — экран прячет всё
+	// про итерации, но ничего не удаляется.
+	IterationsEnabled bool `json:"iterationsEnabled"`
 	// Ключ доски — префикс номеров её карточек: ПРО в ПРО-142. Задаётся
 	// при создании и не меняется: номер карточки хранится целиком, и
 	// смена ключа развела бы на одной доске два разных префикса.
@@ -97,11 +100,11 @@ type Info struct {
 // boardFields — общий список полей доски, по тем же соображениям, что
 // columnFields и cardFields ниже: список повторяется в нескольких
 // запросах, и разъехавшийся порядок ловится только в рантайме.
-const boardFields = `id, name, version, sle_days, sle_probability, key`
+const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled`
 
 func scanBoard(row pgx.Row) (Info, error) {
 	var b Info
-	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key)
+	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled)
 	return b, err
 }
 
@@ -427,7 +430,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &writable, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
@@ -447,17 +450,76 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 // придумывать его при создании доски человека заставлять незачем —
 // в подавляющем большинстве случаев подойдёт выведенный.
 func (s *Service) Create(ctx context.Context, orgID, userID, name, key string) (Info, error) {
+	return s.CreateFrom(ctx, orgID, userID, name, key, TemplateEmpty)
+}
+
+// Шаблоны доски (этап 32.4). Шаблон задаёт только начальные настройки
+// и нигде не хранится: после создания доска ничем не отличается
+// от других, и «скрамовая» доска завтра может работать без итераций.
+const (
+	TemplateEmpty  = "empty"
+	TemplateKanban = "kanban"
+	TemplateScrum  = "scrum"
+)
+
+// kanbanWIP — лимит на «В работе» у канбан-доски. Мягкий: превышение
+// подсвечено, но не запрещено, — лимит, введённый вместе с доской,
+// должен приглашать к разговору, а не останавливать первую же неделю.
+const kanbanWIP = 3
+
+// scrumSprintDays — длина первой итерации скрам-доски: две недели,
+// самая частая длина спринта.
+const scrumSprintDays = 14
+
+// ErrUnknownTemplate — шаблона с таким именем нет.
+var ErrUnknownTemplate = errors.New("шаблон доски бывает empty, kanban или scrum")
+
+// CreateFrom заводит доску по шаблону. Пустой шаблон — как было всегда:
+// три размеченные колонки, итерации включены.
+func (s *Service) CreateFrom(ctx context.Context, orgID, userID, name, key, template string) (Info, error) {
+	if template == "" {
+		template = TemplateEmpty
+	}
+	if template != TemplateEmpty && template != TemplateKanban && template != TemplateScrum {
+		return Info{}, ErrUnknownTemplate
+	}
 	var b Info
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		// Колонки по умолчанию сразу размечены: без точек старта и финиша
 		// журнал переходов копится, а метрики потока по нему не считаются.
 		var err error
-		b, _, err = createBoard(ctx, tx, orgID, name, key, []Column{
+		var cols []Column
+		b, cols, err = createBoard(ctx, tx, orgID, name, key, []Column{
 			{Name: i18n.Name(ctx, "Очередь"), Kind: KindQueue},
 			{Name: i18n.Name(ctx, "В работе"), Kind: KindInProgress, IsStartedPoint: true},
 			{Name: i18n.Name(ctx, "Готово"), Kind: KindDone, IsFinishedPoint: true},
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		switch template {
+		case TemplateKanban:
+			// Канбан: лимит на работе и итерации выключены.
+			if _, err := tx.Exec(ctx, `update board_columns set wip_limit = $2 where id = $1`,
+				cols[1].ID, kanbanWIP); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `update boards set iterations_enabled = false where id = $1`, b.ID); err != nil {
+				return err
+			}
+			b.IterationsEnabled = false
+		case TemplateScrum:
+			// Скрам: первая итерация на две недели с сегодняшнего дня —
+			// без неё доска «скрама» встречала бы пустой полосой итераций.
+			first := i18n.Name(ctx, "Итерация 1")
+			if _, err := tx.Exec(ctx, `
+				insert into iterations (org_id, board_id, name, goal, starts_on, ends_on)
+				values ($1, $2, $3, '', current_date, current_date + $4::int - 1)`,
+				orgID, b.ID, first, scrumSprintDays); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	return b, err
 }

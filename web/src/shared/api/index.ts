@@ -524,6 +524,9 @@ export type ImportAnswer = {
   report: ImportReport | null
 }
 
+/** Шаблон доски: задаёт только начальные настройки и нигде не хранится. */
+export type BoardTemplate = 'empty' | 'kanban' | 'scrum'
+
 export type BoardInfo = {
   id: string
   name: string
@@ -534,6 +537,10 @@ export type BoardInfo = {
   /** Обещание доски: «85% работы проходит доску за 8 дней». Пусто — обещания нет. */
   sleDays: number | null
   sleProbability: number
+  /** Работает ли доска итерациями (этап 32.4). Выключено — экран прячет
+   *  всё про итерации, ничего не удаляя. Пусто — сервер старше поля,
+   *  и итерации, как прежде, включены. */
+  iterationsEnabled?: boolean
   /** Можно ли в доску писать. Отвечает список досок — из него выбирают,
    *  куда поставить работу соседям. В снимке доски поля нет: там на этот
    *  вопрос не отвечают, и «нельзя» отличается от «не спрашивали». */
@@ -1249,8 +1256,10 @@ export const api = {
     request<void>('DELETE', `/api/boards/${boardId}/permanently`, { name }),
   /** Пустой ключ означает «выведи из названия»: так решает сервер,
    *  и повторять это правило здесь нельзя — разъедется. */
-  createBoard: (name: string, key = '') =>
-    request<BoardInfo>('POST', '/api/boards', { name, key }),
+  createBoard: (name: string, key = '', template: BoardTemplate = 'empty') =>
+    request<BoardInfo>('POST', '/api/boards', { name, key, template }),
+  setIterations: (boardId: string, enabled: boolean) =>
+    request<void>('PUT', `/api/boards/${boardId}/iterations-enabled`, { enabled }),
   snapshot: (boardId: string) => request<Snapshot>('GET', `/api/boards/${boardId}`),
 
   operation: (boardId: string, operationId: string, type: string, payload: unknown) =>

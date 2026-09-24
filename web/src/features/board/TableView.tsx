@@ -131,7 +131,7 @@ export function TableView({
             <SortableHead sort={sort} by="due" onSort={onSort}>
               {t.talk.colDue}
             </SortableHead>
-            <th scope="col">{t.talk.colIteration}</th>
+            {base.info.iterationsEnabled !== false && <th scope="col">{t.talk.colIteration}</th>}
             <th scope="col">
               <span className="sr-only">{t.talk.colActions}</span>
             </th>
@@ -202,7 +202,12 @@ export function TableView({
                 <td className={dueIsBurning(card.dueOn) ? 'table-overdue' : 'muted small'}>
                   {card.dueOn === null ? '—' : dateWords(card.dueOn)}
                 </td>
-                <td className="muted small">{iterationName[base.cardIterations[card.id]] ?? '—'}</td>
+                {/* «Работаем итерациями» выключено — колонки нет вовсе
+                    (этап 32.4): пустая колонка «—» на каждой строке
+                    была бы тем же шумом, от которого и выключали. */}
+                {base.info.iterationsEnabled !== false && (
+                  <td className="muted small">{iterationName[base.cardIterations[card.id]] ?? '—'}</td>
+                )}
                 <td>
                   <Menu
                     label={t.talk.cardActions(card.title)}

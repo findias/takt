@@ -42,6 +42,10 @@ export const flow: typeof ru = {
       ` So far the past holds only ${cards} ${cards === 1 ? 'card' : 'cards'} over ${weeks} ${weeks === 1 ? 'week' : 'weeks'} — too little to rely on.`,
     throughputLabel: (list: string) => `Throughput: ${list}`,
     promise: 'Board promise',
+    howWeWork: 'How we work',
+    iterations: 'We work in iterations',
+    iterationsHint:
+      'Off — iterations disappear from the filter, grouping, cards and table. Nothing is deleted: turn it back on and everything returns, reports included.',
     noPromise:
       'No promise. A board without history cannot promise anything — but once finished cards appear, the promise is worth naming: the age of running work is compared with it.',
     promiseIs: (p: number, days: number) => `${p}% of work passes the board within ${days} ${days === 1 ? 'day' : 'days'}`,

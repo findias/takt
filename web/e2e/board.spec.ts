@@ -2872,3 +2872,31 @@ test('срез повторяет отчёт одной кнопкой и воз
   await page.reload()
   await expect(slice).toBeVisible()
 })
+
+test('шаблон доски задаёт начало, а итерации выключаются и возвращаются без потерь', async ({ page }) => {
+  await register(page)
+  await page.getByPlaceholder('Название новой доски').fill('Спринты')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Скрам' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
+
+  // Скрам: первая итерация уже заведена.
+  await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toBeVisible()
+  const grouping = page.getByRole('combobox', { name: 'Группировка' })
+  await expect(grouping.getByRole('option', { name: 'По итерации' })).toHaveCount(1)
+
+  // Выключение — в «Потоке», рядом с обещанием доски: прячет итерации
+  // отовсюду и ни о чём не спрашивает.
+  await page.getByRole('button', { name: 'Поток' }).click()
+  await page.getByRole('checkbox', { name: 'Работаем итерациями' }).uncheck()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+  await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toHaveCount(0)
+  await expect(grouping.getByRole('option', { name: 'По итерации' })).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Итерация' })).toHaveCount(0)
+
+  // Включение возвращает ту же итерацию, а не новую.
+  await page.getByRole('button', { name: 'Работать итерациями' }).click()
+  await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toHaveCount(1)
+})

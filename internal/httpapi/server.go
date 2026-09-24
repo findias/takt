@@ -972,6 +972,8 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 		// Пусто — ключ выводится из названия. Придумывать префикс номеров
 		// при заведении доски человека заставлять незачем.
 		Key string `json:"key"`
+		// Шаблон: empty, kanban или scrum; пусто — empty, как было всегда.
+		Template string `json:"template"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -981,7 +983,11 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request, p aut
 		writeError(w, http.StatusBadRequest, "у доски должно быть название")
 		return
 	}
-	b, err := s.boards.Create(r.Context(), p.OrgID, p.ID, req.Name, req.Key)
+	b, err := s.boards.CreateFrom(r.Context(), p.OrgID, p.ID, req.Name, req.Key, req.Template)
+	if errors.Is(err, board.ErrUnknownTemplate) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if errors.Is(err, board.ErrBadKey) {
 		writeCoded(w, http.StatusBadRequest, "board_key_invalid", board.ErrBadKey.Error())
 		return
