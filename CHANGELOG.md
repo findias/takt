@@ -240,8 +240,8 @@ the branch adds. It cannot be combined with `DEMO=on`.
   feature stands in its epic's lane. A parent on another board gets a
   lane that says whose board it is; «Без родителя» stays even when
   empty. No card types: the level follows from the place in the tree.
-  The demo organisation has an epic with two features and a third on
-  the neighbours' board.
+  The demo organisation has an epic on «Платформа» over two features on
+  «Поставки» and a third next to it.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

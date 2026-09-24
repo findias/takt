@@ -59,7 +59,9 @@ test('владелец видит доску с карточками, карто
   const card = page.getByRole('group', { name: /Выпустить релиз склада/ })
   await expect(card).toBeVisible()
 
-  await card.click()
+  // По названию, а не в середину: середина карточки бывает на метках
+  // (открывают выбор метки) или на строке родителя — смотря что на ней.
+  await card.getByText('Выпустить релиз склада', { exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Работа' })).toBeVisible()
   await page.keyboard.press('Escape')
 
