@@ -107,6 +107,14 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			  where org_id = $1 and archived_at is null`,
 		},
 		{
+			// Без него дорожки «по родителю» и «по корню» выглядят
+			// одинаково, и отличия между ними глазами не проверить.
+			"дерево подзадач в три уровня",
+			`select exists (select 1 from card_links a
+			                  join card_links b on b.from_card = a.to_card and b.kind = 'subtask'
+			                 where a.org_id = $1 and a.kind = 'subtask')`,
+		},
+		{
 			"карточки с оценкой",
 			`select count(*) >= 3 from cards where org_id = $1 and estimate is not null`,
 		},
@@ -240,8 +248,9 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 // TopUp доливает в уже наполненную базу то, что наполнение научилось
 // заводить позже, — чтобы новое обещание сверки не требовало сносить
 // базу стенда и демо. Сейчас это перенесённые из таблицы карточки
-// и метка человека, которого перенос не нашёл (этап 23). Повтор безопасен: перенос пропускает уже переехавшее
-// по внешнему ключу.
+// и метка человека, которого перенос не нашёл (этап 23), и эпик над
+// фичами (этап 32). Повтор безопасен: перенос пропускает уже переехавшее
+// по внешнему ключу, эпик не заводится второй раз.
 func TopUp(ctx context.Context, db *store.Store) error {
 	var orgID, ownerID string
 	err := db.Pool.QueryRow(ctx, `
@@ -255,7 +264,10 @@ func TopUp(ctx context.Context, db *store.Store) error {
 	}
 	f := newFiller(ctx, db)
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
-	return f.imported()
+	if err := f.imported(); err != nil {
+		return err
+	}
+	return f.epic()
 }
 
 // TopUpEnglish — то же для английской организации стенда.
@@ -270,5 +282,8 @@ func TopUpEnglish(ctx context.Context, db *store.Store) error {
 	f := newFiller(i18n.WithLang(ctx, i18n.EN), db)
 	f.english = true
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
-	return f.imported()
+	if err := f.imported(); err != nil {
+		return err
+	}
+	return f.epic()
 }

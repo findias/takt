@@ -759,30 +759,7 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		return err
 	}
 
-	// Дерево в три уровня: эпик — фичи — задачи, одна фича у соседей.
-	// Без него дорожки «по родителю» и «по корню» не отличить друг
-	// от друга, а заголовок дорожки с чужой доски не увидеть вовсе.
-	// Эпик заводится последним, чтобы номера прежних карточек
-	// не сдвинулись: на них ссылаются документация и проверки.
-	epic, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
-		"columnId": queue.ID, "title": f.w("Переезд на новый склад"), "place": "end"})
-	if err != nil {
-		return err
-	}
-	epicID := epic.Patch.Cards[0].ID
-	if _, err := f.apply(b.ID, "MOVE_CARD", map[string]any{
-		"cardId": epicID, "toColumnId": doing.ID, "place": "end"}); err != nil {
-		return err
-	}
-	for _, feature := range []string{"Выпустить релиз склада", "Обновить регламент приёмки"} {
-		if _, err := f.apply(b.ID, "LINK_CARDS", map[string]any{
-			"fromCard": epicID, "toCard": ids[feature], "kind": "subtask"}); err != nil {
-			return fmt.Errorf("эпик и %q: %w", feature, err)
-		}
-	}
-	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
-		"parentCardId": epicID, "title": f.w("Перевезти стеллажи"),
-		"boardId": neighbour.ID}); err != nil {
+	if err := f.epic(); err != nil {
 		return err
 	}
 
@@ -833,6 +810,89 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 
 // iterations заводит закрытую итерацию с составом и идущую следом —
 // на закрытой видно отчёт, на открытой то, как она выглядит в работе.
+// epic — дерево в три уровня: эпик — фичи — задачи, одна фича
+// у соседей. Без него дорожки «по родителю» и «по корню» не отличить
+// друг от друга, а заголовок дорожки с чужой доски не увидеть вовсе.
+//
+// Доски и фичи находит по ключам и названиям, а не получает готовыми:
+// тем же шагом эпик доливается в стенд и демо, наполненные раньше, чем
+// он появился (TopUp). Повтор безопасен — есть эпик, шаг ничего не делает.
+// Эпик заводится последним, чтобы номера прежних карточек не сдвинулись:
+// на них ссылаются документация и проверки.
+func (f *filler) epic() error {
+	var postavki, platforma, queue, epicID string
+	var shelving bool
+	features := map[string]string{}
+	linked := map[string]bool{}
+	err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `select id from boards where key = $1`, f.w("ПОСТ")).Scan(&postavki); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(f.ctx, `select id from boards where key = $1`, f.w("ПЛАТ")).Scan(&platforma); err != nil {
+			return err
+		}
+		// Эпик — в очереди: он и правда не взят целиком, а колонка
+		// «В работе» с жёстким лимитом на обжитом стенде бывает полна.
+		if err := tx.QueryRow(f.ctx, `
+			select id from board_columns where board_id = $1 and kind = 'queue'
+			   and archived_at is null order by position limit 1`, postavki).Scan(&queue); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(f.ctx, `
+			select coalesce(max(id::text), '') from cards
+			 where board_id = $1 and title = $2 and archived_at is null`,
+			postavki, f.w("Переезд на новый склад")).Scan(&epicID); err != nil {
+			return err
+		}
+		for _, title := range []string{"Выпустить релиз склада", "Обновить регламент приёмки"} {
+			var id string
+			var has bool
+			if err := tx.QueryRow(f.ctx, `
+				select c.id, exists (select 1 from card_links l
+				                      where l.to_card = c.id and l.kind = 'subtask'
+				                        and l.from_card::text = $3)
+				  from cards c where c.board_id = $1 and c.title = $2 and c.archived_at is null
+				 order by c.created_at limit 1`, postavki, f.w(title), epicID).Scan(&id, &has); err != nil {
+				return fmt.Errorf("фича %q для эпика: %w", title, err)
+			}
+			features[title], linked[title] = id, has
+		}
+		return tx.QueryRow(f.ctx, `
+			select exists (select 1 from card_links l join cards c on c.id = l.to_card
+			                where l.from_card::text = $1 and l.kind = 'subtask' and c.title = $2)`,
+			epicID, f.w("Перевезти стеллажи")).Scan(&shelving)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Каждый кусок — только если его нет: долив, оборванный на середине,
+	// следующим прогоном доводится, а не оставляет эпик без фич.
+	if epicID == "" {
+		res, err := f.apply(postavki, "CREATE_CARD", map[string]any{
+			"columnId": queue, "title": f.w("Переезд на новый склад"), "place": "end"})
+		if err != nil {
+			return err
+		}
+		epicID = res.Patch.Cards[0].ID
+	}
+	for _, title := range []string{"Выпустить релиз склада", "Обновить регламент приёмки"} {
+		if linked[title] {
+			continue
+		}
+		if _, err := f.apply(postavki, "LINK_CARDS", map[string]any{
+			"fromCard": epicID, "toCard": features[title], "kind": "subtask"}); err != nil {
+			return fmt.Errorf("эпик и %q: %w", title, err)
+		}
+	}
+	if shelving {
+		return nil
+	}
+	_, err = f.apply(postavki, "CREATE_SUBTASK", map[string]any{
+		"parentCardId": epicID, "title": f.w("Перевезти стеллажи"), "boardId": platforma})
+	return err
+}
+
 func (f *filler) iterations(b board.Info, ids map[string]string) error {
 	past, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), b.ID,
 		f.w("Неделя 32"), f.w("Закрыть июльские хвосты"),
