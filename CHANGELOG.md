@@ -10,6 +10,16 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
+**Boards with epics get shorter promises, and that is a fix.** An epic —
+a card with grandchildren — no longer takes a place in the column limit
+and is no longer counted in flow metrics or the export summary: its
+work is its parts, which were already counted. Until now an epic that
+ran for three months sat in cycle time next to two-day tasks and
+inflated the 85th percentile, and with it the board promise and the
+forecast. After the upgrade such boards show shorter numbers; boards
+without epics see no change. A feature with tasks is still counted as
+work.
+
 **Eighteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
@@ -268,6 +278,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   strip was brings them back with their history and reports. Migration
   `0069` adds `boards.iterations_enabled`, default true, so every
   existing board keeps working in iterations.
+- **Epics, visible without getting in the way.** A card with
+  grandchildren is marked «эпик» on the board, and the new «Дерево» view,
+  next to «Доска» and «Таблица», shows epics, features and tasks as a
+  hierarchy — with each card's column, progress, blocks and, for cards
+  on other boards, whose board it is. Boards without a tree change
+  nothing.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

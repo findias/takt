@@ -435,6 +435,11 @@ function CardViewInner({
               // а нажатие на карточку и так её открывает.
               <span className="card-number">{card.number}</span>
             )}
+            {/* Эпик — карточка с внуками — назван словом (этап 32.6): на доске
+                он иначе неотличим от задачи. Слово выводится из дерева,
+                а не из поля; у карточек без внуков его нет, и место на них
+                не тратится. */}
+            {card?.subtree && <span className="mark card-level">{t.cardView.epic}</span>}
             {parent && (
               <span className="card-parent">
                 {/* Стрелка объясняет связь глазу, а диктору не говорит

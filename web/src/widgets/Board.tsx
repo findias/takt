@@ -34,14 +34,13 @@ import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.
 import { Views } from '../features/board/Views.tsx'
 import { SORT_NAMES, parseSort, sortToQuery } from '../features/board/tableSort.ts'
 import { Workload } from '../features/board/Workload.tsx'
-import { BulkBar } from '../features/board/BulkBar.tsx'
 import type { Sort } from '../features/board/tableSort.ts'
 import { Palette, paletteHint, usePaletteHotkey } from '../features/board/Palette.tsx'
 import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { useColumnWidths } from '../features/board/columnWidth.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { childrenOf, dependenciesOf, parentsOf, rangeWords } from '../entities/card/model.ts'
+import { childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -66,7 +65,6 @@ import { visibilityLabel } from '../features/access/visibility.ts'
 import { ColumnView } from '../features/board/ColumnView.tsx'
 import { useBoard } from '../features/board/useBoard.ts'
 import { SandboxNote } from '../features/demo/SandboxNote.tsx'
-import { ScreenError } from '../shared/ui/Field'
 import { locale, t, withSections } from '../shared/i18n/index.ts'
 import { useHelpTopic } from '../shared/lib/help.ts'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
@@ -98,6 +96,16 @@ const Flow = lazy(
     'flow',
     'flowReport',
   ),
+)
+// Дерево работы — вид для тех, кому нужна иерархия (этап 32.6); с доской
+// он не грузится, и подписи едут вместе с ним.
+const TreeView = lazy(
+  withSections(() => import('../features/board/TreeView.tsx').then((m) => ({ default: m.TreeView })), 'tree'),
+)
+// Полоса действий над выделенными нужна, только когда что-то выделено.
+const BulkBar = lazy(() => import('../features/board/BulkBar.tsx').then((m) => ({ default: m.BulkBar })))
+const Iterations = lazy(() =>
+  import('../features/board/Iterations.tsx').then((m) => ({ default: m.Iterations })),
 )
 const Changes = lazy(() =>
   import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })),
@@ -232,7 +240,8 @@ export function Board({
   const filters = useMemo(() => parseFilters(query), [query])
   // Вид и сортировка живут в адресе рядом с фильтрами: отсортированный
   // список присылают ссылкой так же, как отфильтрованную доску.
-  const view = query.get('view') === 'table' ? 'table' : query.get('view') === 'changes' ? 'changes' : 'board'
+  const asked = query.get('view')
+  const view = asked === 'table' || asked === 'changes' || asked === 'tree' ? asked : 'board'
   const asTable = view === 'table'
   // Кусок таблицы едет рядом с данными доски, а не за ними: см. довод
   // у `loadTableView`. Эффект, а не вызов в теле, — загрузка не должна
@@ -768,7 +777,9 @@ export function Board({
             ? 'archive'
             : view === 'table'
               ? 'table'
-              : 'board',
+              : view === 'tree'
+                ? 'tree'
+                : 'board',
   )
   // Название хранится вместе с идентификатором, а не берётся из доски:
   // карточку спрашивают удалить и из архива, а там её на доске уже нет.
@@ -932,6 +943,7 @@ export function Board({
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
         partsInside={parts?.[columnId] ?? 0}
+        containers={(groupOrder[columnId] ?? []).filter((id) => base.cards[id]?.subtree).length}
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
@@ -1051,6 +1063,7 @@ export function Board({
         >
           <option value="board">{t.screen.viewBoard}</option>
           <option value="table">{t.screen.viewTable}</option>
+          <option value="tree">{t.screen.viewTree}</option>
           <option value="changes">{t.screen.viewChanges}</option>
         </select>
         {asTable && (
@@ -1153,13 +1166,15 @@ export function Board({
         />
         <FlowHint columns={columnList} />
         {iterationsOn ? (
-          <Iterations
-            boardId={boardId}
-            canEdit={canEdit}
-            iterations={base.iterations}
-            onChanged={board.reload}
-            onReport={setReportOf}
-          />
+          <Suspense fallback={null}>
+            <Iterations
+              boardId={boardId}
+              canEdit={canEdit}
+              iterations={base.iterations}
+              onChanged={board.reload}
+              onReport={setReportOf}
+            />
+          </Suspense>
         ) : (
           canEdit && (
             // Включение — там же, где итерации жили: искать его
@@ -1217,7 +1232,11 @@ export function Board({
           раскладка. Колонки при этом не рисуются вовсе — прятать их
           стилями значило бы держать в разметке пятьсот невидимых
           карточек. */}
-      {view === 'changes' ? (
+      {view === 'tree' ? (
+        <Suspense fallback={<Skeleton lines={6} />}>
+          <TreeView base={base} unit={unit} onOpenCard={showCard} />
+        </Suspense>
+      ) : view === 'changes' ? (
         // Заглушка в форме списка, а не слово «загружаем»: кусок
         // приезжает за десятки миллисекунд, и мигать словом дольше,
         // чем показывать раскладку.
@@ -1294,39 +1313,41 @@ export function Board({
       {/* Полоса действий над выделенными. Пусто выделено — полосы нет:
           она обещала бы действие, которому не над чем работать. */}
       {chosen.length > 0 && (
-        <BulkBar
-          count={chosen.length}
-          columns={columnList}
-          boardId={boardId}
-          labels={base.labels}
-          people={base.people}
-          onMove={(columnId) => {
-            const ids = chosen
-            clearPicked()
-            void board.moveMany(ids, columnId)
-          }}
-          onPrioritise={(priority) => {
-            const ids = chosen
-            clearPicked()
-            void board.prioritiseMany(ids, priority)
-          }}
-          onLabel={(labelId) => {
-            const ids = chosen
-            clearPicked()
-            void board.labelMany(ids, labelId)
-          }}
-          onAssign={(userId) => {
-            const ids = chosen
-            clearPicked()
-            void board.assignMany(ids, userId)
-          }}
-          onArchive={() => {
-            const ids = chosen
-            clearPicked()
-            void board.archiveMany(ids)
-          }}
-          onClear={clearPicked}
-        />
+        <Suspense fallback={null}>
+          <BulkBar
+            count={chosen.length}
+            columns={columnList}
+            boardId={boardId}
+            labels={base.labels}
+            people={base.people}
+            onMove={(columnId) => {
+              const ids = chosen
+              clearPicked()
+              void board.moveMany(ids, columnId)
+            }}
+            onPrioritise={(priority) => {
+              const ids = chosen
+              clearPicked()
+              void board.prioritiseMany(ids, priority)
+            }}
+            onLabel={(labelId) => {
+              const ids = chosen
+              clearPicked()
+              void board.labelMany(ids, labelId)
+            }}
+            onAssign={(userId) => {
+              const ids = chosen
+              clearPicked()
+              void board.assignMany(ids, userId)
+            }}
+            onArchive={() => {
+              const ids = chosen
+              clearPicked()
+              void board.archiveMany(ids)
+            }}
+            onClear={clearPicked}
+          />
+        </Suspense>
       )}
 
       <Palette open={palette} commands={commands} onClose={() => setPalette(false)} />
@@ -1484,152 +1505,6 @@ function FlowHint({ columns }: { columns: Column[] }) {
           {text}
         </p>
       ))}
-    </div>
-  )
-}
-
-/**
- * Итерации доски.
- *
- * Закрытие необратимо, поэтому спрашивается подтверждением: это
- * утверждение «вот что было сделано», а не отметка о прочтении.
- */
-function Iterations({
-  boardId,
-  canEdit,
-  iterations,
-  onChanged,
-  onReport,
-}: {
-  boardId: string
-  /** Наблюдателю итерации видны, но заводить и закрывать их он не может:
-   *  показанная кнопка означала бы обещание, которое сервер отвергнет. */
-  canEdit: boolean
-  iterations: Iteration[]
-  onChanged: () => void
-  /** Открыть отчёт по итерации. */
-  onReport: (iteration: Iteration) => void
-}) {
-  const [adding, setAdding] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  // Какую итерацию спрашивают закрыть. Нативный confirm тут был
-  // единственным на всё приложение: он выглядит чужим и, в отличие
-  // от своего диалога, останавливает страницу целиком.
-  const [toClose, setToClose] = useState<Iteration | null>(null)
-  const open = iterations.filter((i) => i.closedAt === null)
-  // Закрытые не пропадают с экрана. Итерация закрывается ради ответа
-  // «что было в спринте на момент закрытия» — а до сих пор в этот момент
-  // она и исчезала, унося ответ вместе с собой.
-  const closed = iterations.filter((i) => i.closedAt !== null)
-
-  const act = (p: Promise<unknown>) => {
-    setError(null)
-    p.then(onChanged).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
-  }
-
-  return (
-    <div className="iterations">
-      <ScreenError>{error}</ScreenError>
-
-      <ConfirmDialog
-        open={toClose !== null}
-        title={t.screen.closeIterationTitle}
-        // Не просто «Закрыть»: рядом на экране живёт «Закрыть» панели,
-        // и одно и то же слово означало бы то «уйти отсюда», то
-        // «заморозить состав навсегда».
-        confirmLabel={t.screen.closeIteration}
-        danger
-        onCancel={() => setToClose(null)}
-        onConfirm={() => {
-          const it = toClose
-          setToClose(null)
-          if (it) act(api.closeIteration(boardId, it.id))
-        }}
-      >
-        <p>{t.screen.closeIterationBody(toClose?.name ?? '')}</p>
-      </ConfirmDialog>
-      <div className="row row--tight">
-        {/* «Итераций нет» — только когда их нет вовсе. Рядом со списком
-            закрытых эта надпись противоречила бы сама себе. */}
-        {iterations.length === 0 && !adding && <span className="muted small">{t.screen.noIterations}</span>}
-        {open.map((i) => (
-          <span key={i.id} className="mark" title={i.goal}>
-            <button className="link" onClick={() => onReport(i)}>
-              {i.name} · {rangeWords(i.startsOn, i.endsOn)} · {i.cardCount}
-            </button>
-            {/* Имя называет итерацию: кнопок «закрыть» в строке столько
-                же, сколько итераций, и с диктора они звучали одинаково. */}
-            {canEdit && (
-              <button
-                className="link"
-                aria-label={t.screen.closeIterationOf(i.name)}
-                onClick={() => setToClose(i)}
-              >
-                {/* Полностью: одинокое «закрыть» у плашки читалось как
-                    «убрать плашку», а действие необратимое — состав
-                    итерации застывает. На том же экране «Закрыть» есть
-                    у каждой панели (разбор 21.09.2026). */}
-                {t.screen.closeIteration}
-              </button>
-            )}
-          </span>
-        ))}
-        {closed.length > 0 && (
-          <>
-            <span className="muted small">{t.screen.closed}</span>
-            {closed.map((i) => (
-              <button key={i.id} className="link" title={i.goal} onClick={() => onReport(i)}>
-                {i.name}
-              </button>
-            ))}
-          </>
-        )}
-        {canEdit && !adding && (
-          <button className="link" onClick={() => setAdding(true)}>
-            {t.screen.addIteration}
-          </button>
-        )}
-      </div>
-
-      {adding && (
-        <form
-          className="row row--tight"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const data = new FormData(form)
-            const name = String(data.get('name') ?? '').trim()
-            if (!name) return
-            act(
-              api.createIteration(boardId, {
-                name,
-                goal: String(data.get('goal') ?? ''),
-                startsOn: String(data.get('startsOn') ?? ''),
-                endsOn: String(data.get('endsOn') ?? ''),
-              }),
-            )
-            setAdding(false)
-          }}
-        >
-          <input
-            name="name"
-            autoFocus
-            aria-label={t.screen.iterationName}
-            placeholder={t.screen.name}
-            required
-          />
-          <input name="startsOn" type="date" required aria-label={t.screen.starts} />
-          <input name="endsOn" type="date" required aria-label={t.screen.ends} />
-          <input name="goal" aria-label={t.screen.goalLabel} placeholder={t.screen.goal} />
-          <button type="submit" aria-label={t.screen.createIteration}>
-            {t.screen.create}
-          </button>
-          <Button kind="quiet" type="button" onClick={() => setAdding(false)}>
-            {t.common.cancel}
-          </Button>
-          <Hint topic="iteration" />
-        </form>
-      )}
     </div>
   )
 }

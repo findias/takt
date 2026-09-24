@@ -2900,3 +2900,28 @@ test('шаблон доски задаёт начало, а итерации в�
   await page.reload()
   await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toHaveCount(1)
 })
+
+test('вид «Дерево» показывает эпик с фичами и задачами, а доска помечает эпик', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с деревом')
+  await addCard(page, 'Очередь', 'Переезд')
+  await cardIn(page, 'Очередь', 'Переезд').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Фича')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByLabel('Задачи', { exact: true }).getByRole('button', { name: 'Фича' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Задача')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  // Карточка с внуками — эпик, и это видно на доске.
+  await expect(cardIn(page, 'Очередь', 'Переезд').getByText('эпик', { exact: true })).toBeVisible()
+
+  await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
+  const tree = page.getByRole('list', { name: 'Дерево работы доски' })
+  await expect(tree.getByRole('button', { name: 'Переезд', exact: true })).toBeVisible()
+  await expect(tree.getByRole('button', { name: 'Задача', exact: true })).toBeVisible()
+  await tree.getByRole('button', { name: 'Свернуть «Переезд»' }).click()
+  await expect(tree.getByRole('button', { name: 'Задача', exact: true })).toHaveCount(0)
+})

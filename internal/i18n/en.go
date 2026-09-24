@@ -547,6 +547,7 @@ var en = map[string]string{
 	"Цикл, медиана":       "Cycle, median",
 	"Цикл, 85-я":          "Cycle, 85th",
 	"Без подразделения":   "No subdivision",
+	"Эпик":                "Epic",
 	"шаблон доски бывает empty, kanban или scrum": "the board template is empty, kanban or scrum",
 	"укажите enabled: true или false":             "give enabled: true or false",
 	"Итерация 1": "Iteration 1",

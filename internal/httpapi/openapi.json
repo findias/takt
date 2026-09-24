@@ -91,7 +91,7 @@
       },
       "ReportCard": {
         "type": "object",
-        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived", "container"],
         "properties": {
           "number": { "type": "string" },
           "title": { "type": "string" },
@@ -114,7 +114,8 @@
           "blocked": { "type": "boolean" },
           "blockReason": { "type": "string" },
           "imported": { "type": "boolean", "description": "Перенесена из другой системы: её даты взяты оттуда." },
-          "archived": { "type": "boolean" }
+          "archived": { "type": "boolean" },
+          "container": { "type": "boolean", "description": "Эпик — карточка с внуками: её работа посчитана частями, поэтому в сводке и метриках потока она не считается." }
         }
       },
       "ReportSummary": {

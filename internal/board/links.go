@@ -192,7 +192,7 @@ func createSubtask(
 	if err != nil {
 		return Patch{}, err
 	}
-	if err := enforceWIP(ctx, tx, col); err != nil {
+	if err := enforceWIP(ctx, tx, col, ""); err != nil {
 		return Patch{}, err
 	}
 

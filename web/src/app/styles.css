@@ -4894,3 +4894,43 @@ textarea.description {
   white-space: nowrap;
   max-width: 18rem;
 }
+
+/* Вид «Дерево»: строка карточки со сдвигом по глубине, раскрытие —
+   кнопкой той же ширины, что пустое место у листа, чтобы номера
+   стояли столбцом на каждом уровне. */
+.tree-view {
+  padding: var(--space-3) var(--space-4);
+  max-width: 72rem;
+}
+.tree,
+.tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tree-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding-block: var(--space-1);
+  border-bottom: 1px solid var(--rule);
+}
+.tree-toggle {
+  flex: none;
+  width: 1.5rem;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+span.tree-toggle {
+  cursor: default;
+}
+.tree-title {
+  font-weight: 500;
+}
+.tree-alone {
+  margin-top: var(--space-3);
+}

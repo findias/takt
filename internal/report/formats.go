@@ -28,7 +28,7 @@ var dataColumns = []struct {
 	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
 	{"Время цикла, дней", 12}, {"Возраст, дней", 12}, {"Заблокирована", 12},
-	{"Причина блокировки", 28}, {"Перенесена", 11}, {"В архиве", 10},
+	{"Причина блокировки", 28}, {"Перенесена", 11}, {"В архиве", 10}, {"Эпик", 8},
 }
 
 func header(ctx context.Context) ([]string, []float64) {
@@ -129,6 +129,7 @@ func (s *csvSink) Row(r Row) error {
 		csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
 		csvDays(r.CycleDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
 		cellText(r.BlockReason), s.words.flag(r.Imported), s.words.flag(r.Archived),
+		s.words.flag(r.Container),
 	})
 }
 
@@ -219,6 +220,7 @@ func (s *xlsxSink) Row(r Row) error {
 		stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
 		optDec(r.CycleDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
 		str(r.BlockReason), str(s.words.flag(r.Imported)), str(s.words.flag(r.Archived)),
+		str(s.words.flag(r.Container)),
 	)
 }
 

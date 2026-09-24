@@ -16,6 +16,7 @@ export const HELP_TOPICS = {
   board: 'howto#board',
   card: 'quickstart#describe-work',
   table: 'howto#table',
+  tree: 'howto#tree',
   flow: 'reference#flow',
   archive: 'howto#archive',
   iterations: 'howto#iterations',

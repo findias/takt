@@ -412,10 +412,13 @@ export function ageLabel(
  * то есть меряет тем же тестом, из которого сделан.
  */
 export function agingLabel(
-  card: Pick<Card, 'startedAt' | 'finishedAt'>,
+  card: Pick<Card, 'startedAt' | 'finishedAt'> & { subtree?: Card['subtree'] },
   sleDays: number | null,
   now: number = Date.now(),
 ): string | null {
+  // Эпик — карточка с внуками — с обещанием доски не сравнивается
+  // (этап 32.6): обещание про работу, а работа эпика — его части.
+  if (card.subtree) return null
   if (!sleDays || !card.startedAt || card.finishedAt) return null
   const days = (now - Date.parse(card.startedAt)) / 86_400_000
   if (!(days > sleDays)) return null
