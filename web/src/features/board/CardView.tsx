@@ -21,7 +21,7 @@ import {
   blockedPartsLabel,
   progressLabel,
   progressRatio,
-  subtreeLabel,
+  directPartsLabel,
   deepStuckLabel,
   unitLabel, epicTone } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
@@ -830,7 +830,9 @@ function CardViewInner({
                       style={{ transform: `scaleX(${progressRatio(card)})` }}
                     />
                   </span>
-                  <span className="muted small" aria-hidden="true">
+                  {/* Полоса одна и мерит всё поддерево (этап 33.4); прямые
+                      части — в подсказке, для того, кто спросит. */}
+                  <span className="muted small" aria-hidden="true" title={directPartsLabel(card, unit) ?? undefined}>
                     {progressLabel(card, unit)}
                   </span>
                 </button>
@@ -839,9 +841,9 @@ function CardViewInner({
                   <div
                     className="progress"
                     role="progressbar"
-                    aria-valuenow={card.progress.done}
+                    aria-valuenow={Math.round(progressRatio(card) * 100)}
                     aria-valuemin={0}
-                    aria-valuemax={card.progress.total}
+                    aria-valuemax={100}
                     aria-label={t.cardView.subtasksDone(progressLabel(card, unit) ?? '')}
                   >
                     <div
@@ -849,19 +851,12 @@ function CardViewInner({
                       style={{ transform: `scaleX(${progressRatio(card)})` }}
                     />
                   </div>
-                  <span className="muted small">{progressLabel(card, unit)}</span>
+                  <span className="muted small" title={directPartsLabel(card, unit) ?? undefined}>
+                    {progressLabel(card, unit)}
+                  </span>
                 </>
               )}
 
-              {/* Второй счёт — только у карточки с внуками: «2 из 3»
-                  говорит о фичах, «всего 11 из 20» — о задачах под ними.
-                  Без него эпик с тремя фичами выглядел почти готовым,
-                  сколько бы работы ни оставалось внутри третьей. */}
-              {card && subtreeLabel(card, unit) && (
-                <span className="muted small" title={t.card.subtreeTitle}>
-                  {subtreeLabel(card, unit)}
-                </span>
-              )}
 
               {/* Кто делает части — здесь же, у меры: подзадачи одной
                   карточки почти всегда лежат на разных людях, и до сих

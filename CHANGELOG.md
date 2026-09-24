@@ -243,10 +243,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   however deep its tasks sit. A parent on another board gets a
   lane that says whose board it is; «Без родителя» stays even when
   empty.
-- **Progress over the whole tree.** A card with grandchildren shows a
-  second count, «всего 11 из 20» — the leaves of its subtree, the middle
+- **Progress over the whole tree, one bar.** On a card with
+  grandchildren the bar counts the leaves of its subtree — the middle
   levels not counted twice, weighed by the leaves' estimates when all
-  are estimated. A part blocked at any depth stops the top card, which
+  are estimated; its direct parts are in the tooltip and in the card
+  panel. A part blocked at any depth stops the top card, which
   learns of it at once rather than after a reload. Cards without
   grandchildren look
   exactly as before.

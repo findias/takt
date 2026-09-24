@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Card, EstimateUnit } from '../../shared/api/index.ts'
-import { progressLabel, subtreeLabel } from '../../entities/card/model.ts'
+import { progressLabel } from '../../entities/card/model.ts'
 import { locale, t } from '../../shared/i18n/index.ts'
 
 /**
@@ -55,9 +55,7 @@ export function TreeView({
 
   const row = (node: Node, depth: number) => {
     const open = !folded.has(node.id)
-    const progress = node.own
-      ? [progressLabel(node.own, unit), subtreeLabel(node.own, unit)].filter(Boolean).join(' · ')
-      : ''
+    const progress = node.own ? (progressLabel(node.own, unit) ?? '') : ''
     return (
       <li key={node.id}>
         <div className="tree-row" style={{ paddingInlineStart: `calc(${depth} * var(--space-5))` }}>

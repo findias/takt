@@ -322,24 +322,6 @@ export function blockedPartsLabel(parts: Related[]): string | null {
 }
 
 /**
- * Подпись счёта по всему поддереву — «всего 11 из 20». Есть только
- * у карточки с внуками: у остальных прямые части и есть всё поддерево.
- */
-export function subtreeLabel(card: Card, unit?: EstimateUnit): string | null {
-  const count = subtreeCount(card, unit)
-  return count ? t.card.subtree(count) : null
-}
-
-/** Сам счёт поддерева, без «всего» — для заголовка дорожки по корню,
- *  где он и так единственный. */
-export function subtreeCount(card: Card, unit?: EstimateUnit): string | null {
-  if (!card.subtree || card.subtree.total === 0) return null
-  const { done, total, byWeight } = card.subtree
-  const base = t.card.progress(number(done), number(total))
-  return byWeight && unit ? `${base} ${t.card.unit(total, unit)}` : base
-}
-
-/**
  * Застрявшее глубже прямых частей — правило этапа 17 на любой глубине:
  * упёршаяся часть останавливает и целое, сколько бы уровней ни было
  * между ними. Подпись та же, что у прямых частей.
@@ -351,12 +333,33 @@ export function deepStuckLabel(card: Card, direct: number): string | null {
   return t.card.partBlocked(card.subtree?.stuckReason || card.subtree?.stuckTitle || '')
 }
 
+/**
+ * Чем мерить готовность карточки — одной полосой (этап 33.4): у карточки
+ * с внуками — по всем листьям поддерева, у остальных — по прямым частям
+ * (у них это одно и то же). Два числа на одной карточке, «0 из 3 · всего
+ * 1 из 6», аналога ни у кого не нашли: Azure считает одну полосу
+ * по потомкам, и её и читают.
+ */
+function measure(card: Card): { done: number; total: number; byWeight: boolean } | null {
+  const m = card.subtree ?? card.progress
+  return m && m.total > 0 ? m : null
+}
+
+function countLabel(m: { done: number; total: number; byWeight: boolean }, unit?: EstimateUnit): string {
+  const base = t.card.progress(number(m.done), number(m.total))
+  return m.byWeight && unit ? `${base} ${t.card.unit(m.total, unit)}` : base
+}
+
 export function progressLabel(card: Card, unit?: EstimateUnit): string | null {
-  if (!card.progress || card.progress.total === 0) return null
-  const { done, total, byWeight } = card.progress
-  const base = t.card.progress(number(done), number(total))
-  if (!byWeight || !unit) return base
-  return `${base} ${t.card.unit(total, unit)}`
+  const m = measure(card)
+  return m ? countLabel(m, unit) : null
+}
+
+/** Прямые части — второстепенный счёт, для подсказки и панели: есть,
+ *  только когда полоса мерит поддерево и он с ней не совпадает. */
+export function directPartsLabel(card: Card, unit?: EstimateUnit): string | null {
+  if (!card.subtree || !card.progress || card.progress.total === 0) return null
+  return t.card.directParts(countLabel(card.progress, unit))
 }
 
 /** Как уровень называется человеку. «Средний» не показывается
@@ -600,8 +603,8 @@ function number(value: number): string {
 
 /** Доля выполненного от нуля до единицы — для полоски. */
 export function progressRatio(card: Card): number {
-  if (!card.progress || card.progress.total === 0) return 0
-  return card.progress.done / card.progress.total
+  const m = measure(card)
+  return m ? m.done / m.total : 0
 }
 
 /**

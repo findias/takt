@@ -83,8 +83,8 @@ list marks portfolios **epic portfolio**.
 
 In the view list, next to **Board** and **Table**, pick **Tree**. Every
 card with parts is shown with its parts under it, level by level: the
-number, the column, how much is done — directly and "all told" by the
-leaves — and whether it is blocked. A
+number, the column, how much is done — by the leaves of its whole
+subtree — and whether it is blocked. A
 parent on another board heads its own branch, signed with that board;
 parts on other boards show as a line with their board, without their
 own parts. Cards with no parent and no parts are folded into one line
@@ -269,10 +269,11 @@ different team does the work. The parent card grows a "so many of so
 many" bar.
 
 Parts can have parts of their own — an epic, its features, the tasks
-under them, up to five levels. A card with grandchildren shows two
-counts: its direct parts ("0 of 3" features) and "all told 1 of 6" —
-the leaves of the whole tree, the tasks at the bottom. A middle card is
-not counted there, or a feature and its tasks would count twice; the
+under them, up to five levels. The bar on a card with grandchildren
+counts the leaves of the whole tree — the tasks at the bottom, "1 of 6";
+its direct parts ("0 of 3" features) are in the bar's tooltip and next
+to it in the card panel. A middle card is not counted in the bar, or a
+feature and its tasks would count twice; the
 weight, when every leaf is estimated, is the sum of the leaves'
 estimates. A blocked part at any depth stops the top card too: the
 epic shows "Part blocked" when a task two levels down is stuck. A

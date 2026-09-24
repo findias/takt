@@ -399,12 +399,19 @@ test('срок блокировки читается словами и пред�
   })
 })
 
-test('второй счёт — только у карточки с внуками', async () => {
-  const { subtreeLabel, subtreeCount } = await import('./model.ts')
-  assert.equal(subtreeLabel(card('a', 'Фича')), null)
-  const epic = card('e', 'Эпик', { subtree: { done: 11, total: 20, byWeight: false, stuck: 0 } })
-  assert.equal(subtreeLabel(epic), 'всего 11 из 20')
-  assert.equal(subtreeCount(epic), '11 из 20')
+test('полоса одна: у карточки с внуками — по листьям, прямые части — подсказкой', async () => {
+  const { directPartsLabel } = await import('./model.ts')
+  const epic = card('e', 'Эпик', {
+    progress: { done: 0, total: 3, byWeight: false },
+    subtree: { done: 11, total: 20, byWeight: false, stuck: 0 },
+  })
+  assert.equal(progressLabel(epic), '11 из 20')
+  assert.equal(progressRatio(epic), 11 / 20)
+  assert.equal(directPartsLabel(epic), 'прямых частей 0 из 3')
+  // Без внуков — как было: прямые части и есть всё поддерево.
+  const feature = card('f', 'Фича', { progress: { done: 1, total: 2, byWeight: false } })
+  assert.equal(progressLabel(feature), '1 из 2')
+  assert.equal(directPartsLabel(feature), null)
 })
 
 test('застрявший внук останавливает корень, и причина названа словами', async () => {
