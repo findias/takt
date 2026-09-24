@@ -492,6 +492,14 @@ period or pick boards. The address keeps the selection, so the link can
 be sent to someone. The same export is open to integration keys with
 `boards:read`: `GET /api/v1/reports/cards`.
 
+A selection you repeat — "closed last quarter", "where work gets
+stuck" — is saved under a name with **Save selection as a slice**; it
+then sits under **Slices** and opens with one click. A ready-made
+period is kept as a word, not as dates: "Last quarter" opened in January
+gives October to December. Slices are your own; others do not see
+them — send the link instead. **×** removes a slice, and **Restore** in
+the message brings it back.
+
 ### Invite someone
 
 1. **Team** tab → **Invite** section.

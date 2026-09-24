@@ -4051,6 +4051,13 @@ textarea.description {
 .reports a.btn {
   text-decoration: none;
 }
+/* Выбранный готовый период и открытый срез — подложкой, как отобранный
+   человек в «Загрузке»: видно, чем сейчас посчитан отчёт. */
+.reports .btn[aria-pressed='true'],
+.report-slices .view-open[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
 
 /* Задачи человека со всех досок: выбор человека и флажок — одной
    строкой, числа в таблице — по правому краю. */

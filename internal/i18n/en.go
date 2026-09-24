@@ -547,4 +547,9 @@ var en = map[string]string{
 	"Цикл, медиана":       "Cycle, median",
 	"Цикл, 85-я":          "Cycle, 85th",
 	"Без подразделения":   "No subdivision",
+	"срез с таким названием уже есть — выберите другое":           "you already have a slice with this name — choose another",
+	"такого среза нет — возможно, его уже удалили":                "there is no such slice — it may have been deleted already",
+	"у среза должно быть название":                                "a slice needs a name",
+	"название среза длиннее 200 знаков — сократите его":           "the slice name is longer than 200 characters — shorten it",
+	"отбор среза слишком длинный — выберите меньше досок и людей": "the slice selection is too long — pick fewer boards and people",
 }

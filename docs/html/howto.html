@@ -281,6 +281,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>JSON</strong> is for a program: field names as in the API, values as codes (<code>done</code>, <code>high</code>).</li>
 </ul>
 <p>Column names follow the interface language. Times are in UTC. Only boards you can see are included. One export takes at most 50,000 cards; if more match, the screen says how many and asks you to shorten the period or pick boards. The address keeps the selection, so the link can be sent to someone. The same export is open to integration keys with <code>boards:read</code>: <code>GET /api/v1/reports/cards</code>.</p>
+<p>A selection you repeat — &#34;closed last quarter&#34;, &#34;where work gets stuck&#34; — is saved under a name with <strong>Save selection as a slice</strong>; it then sits under <strong>Slices</strong> and opens with one click. A ready-made period is kept as a word, not as dates: &#34;Last quarter&#34; opened in January gives October to December. Slices are your own; others do not see them — send the link instead. <strong>×</strong> removes a slice, and <strong>Restore</strong> in the message brings it back.</p>
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
 <li><strong>Team</strong> tab → <strong>Invite</strong> section.</li>
@@ -359,7 +360,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-79-g1d80d98-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-80-g4cd0977-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -83,6 +83,7 @@
               "yougile_not_found",
               "yougile_off",
               "report_too_large",
+              "report_slice_taken",
               "internal"
             ]
           }

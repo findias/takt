@@ -401,3 +401,35 @@ func TestJSONIsOneDocument(t *testing.T) {
 		t.Errorf("сводка %+v, предел %d", doc.Summary, doc.Limit)
 	}
 }
+
+// Срез свой у каждого: чужого не видно, не удалить и не занять его имя.
+func TestSlicesAreEachPersonsOwn(t *testing.T) {
+	f := newFixture(t)
+	saved, err := f.svc.SaveSlice(f.ctx, f.orgID, f.owner, "  Прошлый квартал ", "?period=lastQuarter&state=done")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Name != "Прошлый квартал" || saved.Query != "period=lastQuarter&state=done" {
+		t.Errorf("сохранено %+v: название и отбор не очищены", saved)
+	}
+	if _, err := f.svc.SaveSlice(f.ctx, f.orgID, f.owner, "прошлый КВАРТАЛ", ""); !errors.Is(err, ErrSliceExists) {
+		t.Errorf("одноимённый срез без учёта регистра прошёл: %v", err)
+	}
+	// У другого человека то же имя свободно, а чужой срез не виден.
+	if _, err := f.svc.SaveSlice(f.ctx, f.orgID, f.member, "Прошлый квартал", "state=active"); err != nil {
+		t.Errorf("у другого человека имя должно быть свободно: %v", err)
+	}
+	mine, err := f.svc.Slices(f.ctx, f.orgID, f.member)
+	if err != nil || len(mine) != 1 || mine[0].Query != "state=active" {
+		t.Errorf("участник видит %+v, %v; ожидался один свой срез", mine, err)
+	}
+	if err := f.svc.DeleteSlice(f.ctx, f.orgID, f.member, saved.ID); !errors.Is(err, ErrSliceNotFound) {
+		t.Errorf("чужой срез удалился или отказ не тот: %v", err)
+	}
+	if err := f.svc.DeleteSlice(f.ctx, f.orgID, f.owner, saved.ID); err != nil {
+		t.Errorf("свой срез не удалился: %v", err)
+	}
+	if _, err := f.svc.SaveSlice(f.ctx, f.orgID, f.owner, "   ", ""); !errors.Is(err, ErrBadFilter) {
+		t.Errorf("срез без названия прошёл: %v", err)
+	}
+}

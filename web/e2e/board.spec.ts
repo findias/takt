@@ -2833,3 +2833,40 @@ test('выгрузка называет число карточек до фай�
   const raw = await readFile(await (await book).path())
   expect(raw.subarray(0, 2).toString()).toBe('PK')
 })
+
+test('срез повторяет отчёт одной кнопкой и возвращается из тоста', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Поставки')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Отчёты', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Прошлый квартал' }).click()
+  await page.getByRole('checkbox', { name: 'Сделано' }).check()
+  await page.getByRole('button', { name: 'Сохранить отбор как срез' }).click()
+  await page.getByLabel('Название среза').fill('Закрыто за квартал')
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  const slice = page.getByRole('button', { name: 'Закрыто за квартал', exact: true })
+  await expect(slice).toHaveAttribute('aria-current', 'true')
+
+  // Период хранится словом, а не датами.
+  await page.getByRole('button', { name: '30 дней' }).click()
+  await page.getByRole('checkbox', { name: 'Сделано' }).uncheck()
+  await expect(slice).not.toHaveAttribute('aria-current', 'true')
+  await slice.click()
+  await expect(page).toHaveURL(/period=lastQuarter&state=done$/)
+  await expect(page.getByRole('checkbox', { name: 'Сделано' })).toBeChecked()
+
+  // Одноимённый — отказ под полем.
+  await page.getByRole('button', { name: 'Сохранить отбор как срез' }).click()
+  await page.getByLabel('Название среза').fill('закрыто за КВАРТАЛ')
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(page.getByText('срез с таким названием уже есть')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: 'Убрать срез «Закрыто за квартал»' }).click()
+  await expect(slice).toHaveCount(0)
+  await page.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(slice).toBeVisible()
+  await page.reload()
+  await expect(slice).toBeVisible()
+})

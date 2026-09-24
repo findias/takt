@@ -4,12 +4,14 @@ import type { Iteration } from '../shared/api/index.ts'
 import { PRIORITY_NAMES } from '../entities/card/model.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
 import { PickList } from '../shared/ui/PickList.tsx'
+import { Slices } from '../features/reports/Slices.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { t } from '../shared/i18n/index.ts'
 import {
   PRESETS,
   PRIORITIES,
   STATES,
+  addressQuery,
   downloadHref,
   parseReportFilter,
   periodReversed,
@@ -104,7 +106,7 @@ export function Reports() {
     const next = { ...f, ...patch }
     // Итерация принадлежит доске: сменили доски — итерация ушла.
     if (patch.boards && !(next.boards.length === 1 && next.boards[0] === oneBoard)) next.iteration = null
-    setQuery(reportQuery(next), { replace: true })
+    setQuery(addressQuery(next), { replace: true })
   }
   const toggle = <T extends string>(list: T[], value: T) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
@@ -116,23 +118,27 @@ export function Reports() {
   return (
     <div className="stack reports">
       <p className="muted">{s.intro}</p>
+      <Slices query={addressQuery(f).toString()} onOpen={(q) => setQuery(new URLSearchParams(q), { replace: false })} />
 
       <fieldset className="stack reports-group">
         <legend>{s.period}</legend>
         <div className="row">
           <label className="row row--tight">
             <span className="sr-only">{s.from}</span>
-            <input type="date" value={f.from} max={f.to} onChange={(e) => e.target.value && change({ from: e.target.value })} />
+            <input type="date" value={f.from} max={f.to}
+              onChange={(e) => e.target.value && change({ from: e.target.value, to: f.to, period: null })} />
           </label>
           <span aria-hidden="true">—</span>
           <label className="row row--tight">
             <span className="sr-only">{s.to}</span>
-            <input type="date" value={f.to} min={f.from} onChange={(e) => e.target.value && change({ to: e.target.value })} />
+            <input type="date" value={f.to} min={f.from}
+              onChange={(e) => e.target.value && change({ from: f.from, to: e.target.value, period: null })} />
           </label>
         </div>
         <div className="row row--tight">
           {PRESETS.map((p) => (
-            <Button key={p} kind="quiet" onClick={() => change(presetPeriod(p, now))}>
+            <Button key={p} kind="quiet" aria-pressed={f.period === p}
+              onClick={() => change({ period: p, ...presetPeriod(p, now) })}>
               {s.presets[p]}
             </Button>
           ))}
@@ -191,7 +197,8 @@ export function Reports() {
           <span>{s.archived}</span>
         </label>
         <div>
-          <Button kind="quiet" onClick={() => setQuery(new URLSearchParams({ from: f.from, to: f.to }), { replace: true })}>
+          <Button kind="quiet" onClick={() => setQuery(addressQuery({ ...parseReportFilter(new URLSearchParams(), now),
+              period: f.period, from: f.from, to: f.to }), { replace: true })}>
             {s.reset}
           </Button>
         </div>

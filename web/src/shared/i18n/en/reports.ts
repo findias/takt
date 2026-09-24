@@ -40,6 +40,15 @@ export const reports: typeof ru = {
     tooMany: (n: number, limit: number) =>
       `${n} cards match, and one export takes at most ${limit}. Shorten the period or pick boards.`,
     countFailed: 'Could not count the cards',
+    slices: 'Slices',
+    slicesEmpty: 'Save the selection under a name to repeat the report with one click.',
+    sliceSave: 'Save selection as a slice',
+    sliceName: 'Slice name',
+    sliceForget: (name: string) => `Remove the slice “${name}”`,
+    sliceRemoved: (name: string) => `Slice “${name}” removed.`,
+    sliceRestore: 'Restore',
+    sliceSaveFailed: 'Could not save the slice',
+    sliceRemoveFailed: 'Could not remove the slice',
     download: 'Download',
     formats: { xlsx: 'Excel (XLSX)', csv: 'CSV', json: 'JSON' },
     formatsHint:

@@ -24,6 +24,61 @@ func (s *Server) registerReportRoutes(mux *http.ServeMux) {
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReport))
 	mux.HandleFunc("GET /api/reports/cards/count",
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReportCount))
+
+	// Срезы — сохранённые отборы человека, как виды доски: ключу
+	// интеграции они ни к чему, у него нет экрана, где их открывать.
+	mux.HandleFunc("GET /api/reports/slices", s.human(s.handleListSlices))
+	mux.HandleFunc("POST /api/reports/slices", s.human(s.handleSaveSlice))
+	mux.HandleFunc("DELETE /api/reports/slices/{id}", s.human(s.handleDeleteSlice))
+}
+
+func (s *Server) handleListSlices(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	list, err := s.reports.Slices(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "срезы выгрузки", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"slices": list})
+}
+
+func (s *Server) handleSaveSlice(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	var req struct {
+		Name  string `json:"name"`
+		Query string `json:"query"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	slice, err := s.reports.SaveSlice(r.Context(), p.OrgID, p.ID, req.Name, req.Query)
+	var bad *report.BadFilter
+	switch {
+	case errors.As(err, &bad):
+		writeError(w, http.StatusBadRequest, bad.Message)
+	case errors.Is(err, report.ErrSliceExists):
+		// Свой код: экран кладёт отказ под поле названия, а не над формой.
+		writeCoded(w, http.StatusConflict, "report_slice_taken", err.Error())
+	case err != nil:
+		s.fail(w, "сохранение среза", err)
+	default:
+		writeJSON(w, http.StatusCreated, slice)
+	}
+}
+
+func (s *Server) handleDeleteSlice(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	id := r.PathValue("id")
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, http.StatusNotFound, report.ErrSliceNotFound.Error())
+		return
+	}
+	err := s.reports.DeleteSlice(r.Context(), p.OrgID, p.ID, id)
+	switch {
+	case errors.Is(err, report.ErrSliceNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	case err != nil:
+		s.fail(w, "удаление среза", err)
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 // reportFilter читает параметры. Список можно передать повтором

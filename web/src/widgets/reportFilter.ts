@@ -10,6 +10,10 @@ export type State = (typeof STATES)[number]
 export type Format = 'xlsx' | 'csv' | 'json'
 
 export type ReportFilter = {
+  /** Готовый период словом: «прошлый квартал», открытый в январе,
+   *  обязан дать октябрь–декабрь, а не квартал, когда ссылку сохранили.
+   *  Пусто — период задан датами. */
+  period: Preset | null
   from: string
   to: string
   boards: string[]
@@ -81,12 +85,18 @@ function list(query: URLSearchParams, name: string): string[] {
 }
 
 export function parseReportFilter(query: URLSearchParams, now: Date): ReportFilter {
-  const period = defaultPeriod(now)
   const from = query.get('from') ?? ''
   const to = query.get('to') ?? ''
+  const named = query.get('period') as Preset | null
+  // Период словом сильнее дат; без того и другого — 90 дней, тоже
+  // словом: сохранённый так срез скользит вместе с календарём.
+  const dated = DATE.test(from) && DATE.test(to)
+  const period = named && PRESETS.includes(named) ? named : dated ? null : 'days90'
+  const dates = period ? presetPeriod(period, now) : { from, to }
   return {
-    from: DATE.test(from) ? from : period.from,
-    to: DATE.test(to) ? to : period.to,
+    period,
+    from: dates.from,
+    to: dates.to,
     boards: list(query, LISTS.boards),
     teams: list(query, LISTS.teams),
     assignees: list(query, LISTS.assignees),
@@ -102,9 +112,22 @@ export function parseReportFilter(query: URLSearchParams, now: Date): ReportFilt
   }
 }
 
-/** Параметры запроса — и для адреса экрана, и для сервера. */
+/** Параметры запроса к серверу: период всегда датами — сервер
+ *  не знает, какое «сегодня» у человека. */
 export function reportQuery(f: ReportFilter): URLSearchParams {
-  const q = new URLSearchParams({ from: f.from, to: f.to })
+  return withSelection(new URLSearchParams({ from: f.from, to: f.to }), f)
+}
+
+/** Параметры адреса экрана и сохранённого среза: готовый период —
+ *  словом, свой — датами. */
+export function addressQuery(f: ReportFilter): URLSearchParams {
+  return withSelection(
+    new URLSearchParams(f.period ? { period: f.period } : { from: f.from, to: f.to }),
+    f,
+  )
+}
+
+function withSelection(q: URLSearchParams, f: ReportFilter): URLSearchParams {
   for (const [key, name] of Object.entries(LISTS) as [keyof typeof LISTS, string][]) {
     if (f[key].length > 0) q.set(name, f[key].join(','))
   }

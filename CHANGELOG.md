@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Fifteen migrations, all safe for the running version.** `0052` gives
+**Sixteen migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -28,7 +28,7 @@ whose password has not been set yet, `0064` remembers what was chosen
 for each person of an import source, `0065` keeps a card's history
 from the system it was imported from, `0066` adds a card's references
 to service-desk tickets (RDS, service requests, change requests,
-problems). They
+problems), `0067` adds named slices of the management export. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -230,7 +230,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   boards you can see are included; one export takes up to 50,000
   cards, and past that the screen asks you to narrow it instead of
   cutting the file short. No new dependency: the workbook is written
-  by the server itself, streamed straight from the database.
+  by the server itself, streamed straight from the database. A
+  selection is saved as a named slice and repeats with one click; a
+  ready-made period is kept as a word, so «last quarter» stays the last
+  one. Migration `0067` adds the slices, each visible only to its owner.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

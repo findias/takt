@@ -42,6 +42,15 @@ export const reports = {
     tooMany: (n: number, limit: number) =>
       `Под отбор попадает ${n} карточек, а одна выгрузка берёт не больше ${limit}. Сузьте период или выберите доски.`,
     countFailed: 'Не удалось сосчитать карточки',
+    slices: 'Срезы',
+    slicesEmpty: 'Сохраните отбор под именем, чтобы повторять отчёт одной кнопкой.',
+    sliceSave: 'Сохранить отбор как срез',
+    sliceName: 'Название среза',
+    sliceForget: (name: string) => `Убрать срез «${name}»`,
+    sliceRemoved: (name: string) => `Срез «${name}» убран.`,
+    sliceRestore: 'Вернуть',
+    sliceSaveFailed: 'Не удалось сохранить срез',
+    sliceRemoveFailed: 'Не удалось убрать срез',
     download: 'Скачать',
     formats: { xlsx: 'Excel (XLSX)', csv: 'CSV', json: 'JSON' },
     formatsHint:
