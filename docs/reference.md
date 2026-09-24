@@ -98,7 +98,7 @@ another computer you start with the defaults.
 
 ## Groupings
 
-None, by assignee, by label, by iteration, by priority.
+None, by assignee, by label, by iteration, by priority, by parent, by tree root.
 
 ## Labels
 

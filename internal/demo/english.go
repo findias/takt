@@ -81,6 +81,8 @@ var english = map[string]string{
 	"Поправил, пересобираю.":                  "Fixed it, rebuilding.",
 	"Согласовать текст письма клиентам":       "Agree the wording of the customer letter",
 	"Поднять квоту на хранилище":              "Raise the storage quota",
+	"Переезд на новый склад":                  "Move to the new warehouse",
+	"Перевезти стеллажи":                      "Move the shelving",
 	"смежники не подтвердили формат выгрузки": "the partners have not confirmed the export format",
 	"Смежники обещали ответить до среды. Если не ответят — режем интеграцию из этого релиза.": "The partners promised an answer by Wednesday. If they don't reply, we cut the integration from this release.",
 	"Написал им ещё раз, приложил пример выгрузки.":                                           "Wrote to them again and attached a sample export.",

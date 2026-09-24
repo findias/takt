@@ -234,6 +234,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   selection is saved as a named slice and repeats with one click; a
   ready-made period is kept as a word, so «last quarter» stays the last
   one. Migration `0067` adds the slices, each visible only to its owner.
+- **Swimlanes by the work tree.** «По родителю» gives each parent its
+  own lane with its subtasks, titled with its number, name and how much
+  is done; «По корню дерева» climbs to the top, so a task under a
+  feature stands in its epic's lane. A parent on another board gets a
+  lane that says whose board it is; «Без родителя» stays even when
+  empty. No card types: the level follows from the place in the tree.
+  The demo organisation has an epic with two features and a third on
+  the neighbours' board.
 - **Filters on the «Tasks» tab.** Status (by the kind of column, or
   blocked), due date (overdue, within 3 days, none) and label; the choice
   is kept in the address like the rest of the tab.

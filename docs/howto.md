@@ -42,6 +42,18 @@ carrying both.
 In the **No grouping** list, choose what to slice
 by: assignee, label, iteration or priority.
 
+**By parent** gives every parent its own lane with its subtasks — the
+lane is titled with the parent's number, name and how much of it is
+done, and opens the parent. **By tree root** goes all the way up: a
+task under a feature stands in the lane of the epic above the feature.
+That is how to see an epic without a card type called "epic": the level
+comes from the place in the tree. A parent on another board still gets
+a lane, and its title says whose board it is. Work with no parent sits
+in **No parent**, which stays even when empty. In these two groupings
+subtasks are shown in the columns rather than folded inside their
+parent's card, since the lane is where they belong. The choice is kept
+in a saved view like the filters.
+
 Swimlanes are a slice, not a different board: you cannot drag a card
 between them, because the lane is derived from a property of the card.
 To change the lane, change the property.

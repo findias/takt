@@ -181,5 +181,90 @@ test('по уровню: пустой дорожки «без уровня» н�
 test('у каждой группировки есть человеческое название', () => {
   assert.equal(GROUPING_NAMES.assignee, 'По исполнителю')
   assert.equal(GROUPING_NAMES.priority, 'По приоритету')
-  assert.equal(Object.keys(GROUPING_NAMES).length, 5)
+  assert.equal(Object.keys(GROUPING_NAMES).length, 7)
+})
+
+// Дерево: эпик → две фичи → задачи; одна фича на доске соседей.
+function tree() {
+  const cards = [
+    card('эпик', { title: 'Переезд склада', progress: { done: 1, total: 2, byWeight: false } }),
+    card('фича'),
+    card('задача-1'),
+    card('задача-2'),
+    card('задача-3'),
+    card('сама-по-себе'),
+  ]
+  const sub = (fromCard: string, toCard: string) => ({ fromCard, toCard, kind: 'subtask' as const })
+  return state(cards, {
+    links: [
+      sub('эпик', 'фича'),
+      sub('эпик', 'чужая-фича'),
+      sub('фича', 'задача-1'),
+      sub('фича', 'задача-2'),
+      sub('чужая-фича', 'задача-3'),
+    ],
+    linked: {
+      'чужая-фича': { id: 'чужая-фича', title: 'Упаковка', boardId: 'b2', boardName: 'Соседи' } as never,
+    },
+  })
+}
+const lanes = (groups: ReturnType<typeof groupsOf>) =>
+  Object.fromEntries(groups.map((g) => [g.id, g.order[COL]]))
+
+test('по родителю: дорожка у каждого родителя, и сам родитель в ней не повторяется', () => {
+  const base = tree()
+  const groups = groupsOf(base, base.order, 'parent')
+  const by = lanes(groups)
+  assert.deepEqual(by['фича'], ['задача-1', 'задача-2'])
+  assert.deepEqual(by['эпик'], ['фича'])
+  assert.deepEqual(by['чужая-фича'], ['задача-3'])
+  assert.deepEqual(by['none'], ['эпик', 'сама-по-себе'])
+  const epic = groups.find((g) => g.id === 'эпик')!
+  assert.equal(epic.title, 'ДОСК-эпик Переезд склада')
+  assert.equal(epic.cardId, 'эпик')
+  assert.equal(epic.note, 'готово 1 из 2')
+})
+
+test('родитель с чужой доски — дорожка есть, и сказано, чья это доска', () => {
+  const base = tree()
+  const foreign = groupsOf(base, base.order, 'parent').find((g) => g.id === 'чужая-фича')!
+  assert.equal(foreign.title, 'Упаковка')
+  assert.equal(foreign.note, 'на доске «Соседи»')
+  assert.equal(foreign.cardId, undefined)
+})
+
+test('по корню: задача под фичей встаёт в дорожку эпика', () => {
+  const base = tree()
+  const by = lanes(groupsOf(base, base.order, 'root'))
+  assert.deepEqual(by['эпик'], ['фича', 'задача-1', 'задача-2', 'задача-3'])
+  assert.equal(by['фича'], undefined)
+})
+
+test('«Без родителя» держится и пустой — там теряется работа', () => {
+  const base = state([card('a'), card('b')], {
+    links: [{ fromCard: 'a', toCard: 'b', kind: 'subtask' }],
+    order: { [COL]: ['b'] },
+  })
+  const groups = groupsOf(base, base.order, 'parent')
+  assert.deepEqual(
+    groups.map((g) => [g.id, g.count]),
+    [['a', 1], ['none', 0]],
+  )
+})
+
+test('уровень дерева живёт в адресе и в сохранённом виде', () => {
+  assert.equal(parseGrouping(new URLSearchParams('group=root')), 'root')
+  assert.equal(groupingToQuery('parent', new URLSearchParams('label=l-1')).toString(), 'label=l-1&group=parent')
+  assert.equal(GROUPING_NAMES.root, 'По корню дерева')
+})
+
+test('цикл из связей не вешает подъём к корню', () => {
+  const base = state([card('a'), card('b')], {
+    links: [
+      { fromCard: 'a', toCard: 'b', kind: 'subtask' },
+      { fromCard: 'b', toCard: 'a', kind: 'subtask' },
+    ],
+  })
+  const groups = groupsOf(base, base.order, 'root')
+  assert.equal(groups.reduce((n, g) => n + g.count, 0), 2)
 })

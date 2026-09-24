@@ -759,6 +759,33 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		return err
 	}
 
+	// Дерево в три уровня: эпик — фичи — задачи, одна фича у соседей.
+	// Без него дорожки «по родителю» и «по корню» не отличить друг
+	// от друга, а заголовок дорожки с чужой доски не увидеть вовсе.
+	// Эпик заводится последним, чтобы номера прежних карточек
+	// не сдвинулись: на них ссылаются документация и проверки.
+	epic, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
+		"columnId": queue.ID, "title": f.w("Переезд на новый склад"), "place": "end"})
+	if err != nil {
+		return err
+	}
+	epicID := epic.Patch.Cards[0].ID
+	if _, err := f.apply(b.ID, "MOVE_CARD", map[string]any{
+		"cardId": epicID, "toColumnId": doing.ID, "place": "end"}); err != nil {
+		return err
+	}
+	for _, feature := range []string{"Выпустить релиз склада", "Обновить регламент приёмки"} {
+		if _, err := f.apply(b.ID, "LINK_CARDS", map[string]any{
+			"fromCard": epicID, "toCard": ids[feature], "kind": "subtask"}); err != nil {
+			return fmt.Errorf("эпик и %q: %w", feature, err)
+		}
+	}
+	if _, err := f.apply(b.ID, "CREATE_SUBTASK", map[string]any{
+		"parentCardId": epicID, "title": f.w("Перевезти стеллажи"),
+		"boardId": neighbour.ID}); err != nil {
+		return err
+	}
+
 	if err := f.blockDeadlines(b, ids); err != nil {
 		return err
 	}

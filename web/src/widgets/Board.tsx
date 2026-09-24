@@ -47,6 +47,7 @@ import {
   GROUPING_NAMES,
   groupingToQuery,
   groupsOf,
+  byTree,
   parseGrouping,
 } from '../features/board/grouping.ts'
 import type { Group, Grouping } from '../features/board/grouping.ts'
@@ -346,7 +347,10 @@ export function Board({
     for (const [columnId, ids] of Object.entries(partIds)) {
       вместе[columnId] = [...(вместе[columnId] ?? []), ...ids]
     }
-    const спрятанные = new Set(Object.values(partIds).flat())
+    // По дереву части не прячутся: дорожка родителя и есть место,
+    // где они видны. Спрятанные внутри карточки, они оставили бы
+    // дорожку пустой.
+    const спрятанные = new Set(byTree(grouping) ? [] : Object.values(partIds).flat())
     const partsIn: Record<string, Record<string, number>> = {}
     const groups = groupsOf(base, вместе, grouping).map((group) => {
       const видимые: Record<string, string[]> = {}
@@ -1219,7 +1223,18 @@ export function Board({
         >
           {grouping !== 'none' && (
             <div className="swimlane-head board-toolbar">
-              <h2 className="swimlane-title">{group.title}</h2>
+              <h2 className="swimlane-title">
+                {/* Дорожка родителя с этой доски открывает его карточку:
+                    дорожку по эпику смотрят, чтобы дойти до эпика. */}
+                {group.cardId ? (
+                  <button className="link" onClick={() => showCard(group.cardId!)}>
+                    {group.title}
+                  </button>
+                ) : (
+                  group.title
+                )}
+              </h2>
+              {group.note && <span className="muted small">{group.note}</span>}
               <span className="muted small">{group.count}</span>
             </div>
           )}

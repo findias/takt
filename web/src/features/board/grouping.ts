@@ -1,4 +1,4 @@
-import { priorityLabel, priorityRank } from '../../entities/card/model.ts'
+import { priorityLabel, priorityRank, progressLabel } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Priority } from '../../shared/api/index.ts'
 import { live, locale, t } from '../../shared/i18n/index.ts'
@@ -18,15 +18,26 @@ import { live, locale, t } from '../../shared/i18n/index.ts'
  * Группировка — состояние адреса, как и фильтры: сгруппированный вид
  * посылают ссылкой.
  */
-export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority'
+export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority' | 'parent' | 'root'
+
+const GROUPINGS: Grouping[] = ['assignee', 'label', 'iteration', 'priority', 'parent', 'root']
+
+/** Группировки по дереву работы: в них подзадача стоит в дорожке
+ *  своего родителя, а не прячется внутри его карточки. */
+export function byTree(grouping: Grouping): boolean {
+  return grouping === 'parent' || grouping === 'root'
+}
+
+/** Предел подъёма к корню — тот же, что у сервера (MaxSubtaskDepth):
+ *  глубже дерево не бывает, а обрыв цикла здесь страхует от связей,
+ *  пришедших патчем посреди правки. */
+const MAX_DEPTH = 5
 
 export const GROUPING_NAMES = live(() => t.board.grouping) as Record<Grouping, string>
 
 export function parseGrouping(query: URLSearchParams): Grouping {
-  const value = query.get('group')
-  return value === 'assignee' || value === 'label' || value === 'iteration' || value === 'priority'
-    ? value
-    : 'none'
+  const value = query.get('group') as Grouping | null
+  return value && GROUPINGS.includes(value) ? value : 'none'
 }
 
 export function groupingToQuery(grouping: Grouping, base?: URLSearchParams): URLSearchParams {
@@ -39,6 +50,11 @@ export function groupingToQuery(grouping: Grouping, base?: URLSearchParams): URL
 export type Group = {
   id: string
   title: string
+  /** Приписка к заголовку: прогресс родителя или чья это доска. */
+  note?: string
+  /** Карточка этой доски, по которой названа дорожка, — её открывают
+   *  с заголовка. */
+  cardId?: string
   /** columnId → упорядоченные id карточек этой группы. */
   order: Record<string, string[]>
   count: number
@@ -81,8 +97,52 @@ export function groupsOf(
   // Пустая группа заводится заранее: работа без исполнителя, без метки
   // и вне итерации — то, ради чего на группировку и смотрят.
   const emptyTitle =
-    grouping === 'assignee' ? t.board.nobody : grouping === 'label' ? t.board.noLabel : t.board.noIteration
+    grouping === 'assignee'
+      ? t.board.nobody
+      : grouping === 'label'
+        ? t.board.noLabel
+        : byTree(grouping)
+          ? t.board.noParent
+          : t.board.noIteration
   if (grouping !== 'priority') ensure('none', emptyTitle)
+
+  // Родитель каждой карточки — одним обходом связей, как childrenOf:
+  // спрашивать по карточке значило бы обходить связи пятьсот раз.
+  const parentOf = new Map<string, string>()
+  if (byTree(grouping)) {
+    for (const link of base.links) if (link.kind === 'subtask') parentOf.set(link.toCard, link.fromCard)
+  }
+  const laneOf = (cardId: string): string | undefined => {
+    let parent = parentOf.get(cardId)
+    if (grouping === 'root') {
+      // Корень — самый верхний, кого доска знает: над родителем с чужой
+      // доски связей в снимке нет, и он для этой доски и есть вершина.
+      for (let depth = 1; parent && depth < MAX_DEPTH; depth++) {
+        const above = parentOf.get(parent)
+        if (!above || above === cardId) break
+        parent = above
+      }
+    }
+    return parent
+  }
+  const lane = (parentId: string) => {
+    const own = base.cards[parentId]
+    if (own) {
+      const group = ensure(parentId, `${own.number} ${own.title}`)
+      group.cardId = parentId
+      // Прогресс словами «готово …»: голое «0 из 3» рядом со счётчиком
+      // дорожки читалось бы одним числом с ним.
+      const progress = progressLabel(own)
+      group.note = progress ? t.board.parentProgress(progress) : undefined
+      return group
+    }
+    const foreign = base.linked[parentId]
+    const group = ensure(parentId, foreign ? foreign.title : t.board.unknownParent)
+    // Чья доска — словами: дорожку чужой карточки не открыть здесь,
+    // и без приписки она читалась бы как своя, потерянная.
+    if (foreign) group.note = t.board.parentOnBoard(foreign.boardName)
+    return group
+  }
 
   for (const [columnId, ids] of Object.entries(order)) {
     for (const cardId of ids) {
@@ -105,6 +165,9 @@ export function groupsOf(
           const label = base.labels.find((l) => l.id === labelId)
           if (label) keys.push([label.id, label.name])
         }
+      } else if (byTree(grouping)) {
+        const parentId = laneOf(cardId)
+        keys.push(parentId ? [lane(parentId).id, ''] : ['none', emptyTitle])
       } else if (grouping === 'priority') {
         // Уровень назван полно, как в таблице: дорожки сравнивают друг
         // с другом, и в заголовке нужен порядок, который виден в самом
@@ -135,9 +198,11 @@ export function groupsOf(
   }
 
   // Пустая группа — последней: сначала то, что кем-то ведётся.
+  // Номера в названиях дорожек по дереву — числом: «ПОСТ-4» выше
+  // «ПОСТ-11», как их и заводили.
   return list.sort((a, b) => {
     if (a.id === 'none') return 1
     if (b.id === 'none') return -1
-    return a.title.localeCompare(b.title, locale())
+    return a.title.localeCompare(b.title, locale(), { numeric: true })
   })
 }

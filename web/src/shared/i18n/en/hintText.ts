@@ -21,5 +21,5 @@ export const hintText: typeof ru = {
   subscription: 'An address in your system where Takt sends an event every time something happens to cards. If one does not arrive, Takt retries, and after a long run of failures switches the subscription off.',
   export: 'All the organisation’s data in one file — to take it home or to move. The audit log is optional: it is usually larger than everything else.',
   savedView: 'A filter, a grouping and a layout under a name. All of it lives in the page address, so a view can be opened again or sent as a link.',
-  grouping: 'The board sliced into rows by assignee, label, iteration or priority. A slice of the same board: to move a card to another lane, change its property.',
+  grouping: 'The board sliced into rows by assignee, label, iteration, priority or the work tree — parent or root. A slice of the same board: to move a card to another lane, change its property.',
 }
