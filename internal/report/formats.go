@@ -178,14 +178,14 @@ func NewJSON(w io.Writer, f Filter) (Sink, error) {
 	if err != nil {
 		return nil, err
 	}
-	b.Write(head[:len(head)-1])
+	b.Write(head[:len(head)-1]) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	_, err = b.WriteString(`,"cards":[`)
 	return &jsonSink{w: b, first: true}, err
 }
 
 func (s *jsonSink) Row(r Row) error {
 	if !s.first {
-		s.w.WriteByte(',')
+		s.w.WriteByte(',') // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	}
 	s.first = false
 	body, err := json.Marshal(r)
@@ -201,9 +201,9 @@ func (s *jsonSink) Summary(sum Summary) error {
 	if err != nil {
 		return err
 	}
-	s.w.WriteString(`],"summary":`)
-	s.w.Write(body)
-	s.w.WriteString("}\n")
+	s.w.WriteString(`],"summary":`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
+	s.w.Write(body)                 // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
+	s.w.WriteString("}\n")          // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	return s.w.Flush()
 }
 

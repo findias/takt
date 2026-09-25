@@ -259,7 +259,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName string, header []string, wid
 	fmt.Fprintf(w2, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="%s" xmlns:r="%s"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>`, nsMain, nsRel)
 	writeCols(w2, widths)
-	w2.WriteString(`<sheetData>`)
+	w2.WriteString(`<sheetData>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	book.data = &sheetRows{w: w2}
 	cells := make([]cell, len(header))
 	for i, h := range header {
@@ -273,12 +273,12 @@ func writeCols(w *bufio.Writer, widths []float64) {
 	if len(widths) == 0 {
 		return
 	}
-	w.WriteString(`<cols>`)
+	w.WriteString(`<cols>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	for i, width := range widths {
 		fmt.Fprintf(w, `<col min="%d" max="%d" width="%s" customWidth="1"/>`, i+1, i+1,
 			strconv.FormatFloat(width, 'f', -1, 64))
 	}
-	w.WriteString(`</cols>`)
+	w.WriteString(`</cols>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 }
 
 // dataRow — строка листа «Данные».
@@ -327,7 +327,7 @@ func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float6
 	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="%s" xmlns:r="%s"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>`, nsMain, nsRel)
 	writeCols(w, widths)
-	w.WriteString(`<sheetData>`)
+	w.WriteString(`<sheetData>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	rows := &sheetRows{w: w}
 	charts := summary(rows)
 	if rows.err != nil {
@@ -335,7 +335,7 @@ func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float6
 	}
 	// Сводку печатают — альбомом и в ширину страницы, чтобы
 	// диаграммы не уезжали на отдельные листы бумаги.
-	w.WriteString(`</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><drawing r:id="rId1"/></worksheet>`)
+	w.WriteString(`</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><drawing r:id="rId1"/></worksheet>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	if err := w.Flush(); err != nil {
 		return err
 	}
