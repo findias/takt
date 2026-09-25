@@ -1,0 +1,16 @@
+<!-- @dsCard group="Формы" height=160 subtitle="выбор нескольких из списка, снятие крестиком" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+const options = [{ id: 'a', name: 'Анна Орлова' }, { id: 'b', name: 'Борис Ким' }, { id: 'v', name: 'Вера Лебедева' }, { id: 'g', name: 'Глеб Носов' }]
+function Demo() {
+  const [chosen, setChosen] = useState(['a'])
+  return h('div', { style: { maxWidth: 420 } }, h(T.PickList, { label: 'Исполнители', anyText: 'Любой', addText: 'Добавить исполнителя', options, chosen,
+    removeLabel: (n) => 'Убрать ' + n, onChange: setChosen }))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

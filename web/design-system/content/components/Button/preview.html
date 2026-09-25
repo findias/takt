@@ -1,0 +1,25 @@
+<!-- @dsCard group="Действия" height=120 subtitle="primary / default / quiet / danger, с иконкой, без подписи, занята, недоступна" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  const [busy, setBusy] = useState(false)
+  const save = () => { setBusy(true); setTimeout(() => setBusy(false), 1500) }
+  return h('div', null,
+    h('div', { className: 'demo' },
+      h(T.Button, { kind: 'primary', busy, onClick: save }, busy ? 'Сохраняем…' : 'Сохранить'),
+      h(T.Button, null, 'Отмена'),
+      h(T.Button, { kind: 'quiet' }, 'Показать все'),
+      h(T.Button, { kind: 'danger' }, 'Удалить доску…')),
+    h('div', { className: 'demo' },
+      h(T.Button, { icon: h(T.icons.PlusIcon) }, 'Колонка'),
+      h(T.IconButton, { label: 'Действия с карточкой' }, h(T.icons.MoreIcon)),
+      h(T.IconButton, { label: 'В архив', kind: 'default' }, h(T.icons.ArchiveIcon)),
+      h(T.Button, { disabled: true }, 'Недоступна')))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

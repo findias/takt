@@ -1,0 +1,13 @@
+<!-- @dsCard group="Действия" height=160 subtitle="копирует и говорит, что скопировано" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  return h(T.Toast, null, h('div', { className: 'demo' }, h('code', null, 'takt_live_3f9a…c21e'), h(T.CopyButton, { value: 'takt_live_3f9a8b7c6d5e4f3a2b1c21e', what: 'ключ' })))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

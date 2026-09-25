@@ -1,0 +1,18 @@
+<!-- @dsCard group="Состояния" height=330 subtitle="пусто с действием; отказ загрузки; заглушка" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  return h('div', null,
+    h(T.EmptyState, { title: 'В архиве пока ничего нет', action: h(T.Button, null, 'Открыть доску') }, 'Сюда попадают карточки, убранные с доски. Их можно вернуть из архива в любой момент.'),
+    h('div', { style: { height: 12 } }),
+    h(T.ErrorState, { what: 'загрузить доску', error: 'Сервер не отвечает. Проверьте соединение и обновите страницу.' }),
+    h('div', { style: { height: 12 } }),
+    h(T.Skeleton, { lines: 2 }))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

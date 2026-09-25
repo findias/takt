@@ -1,0 +1,18 @@
+<!-- @dsCard group="Диалоги" height=280 subtitle="необратимое спрашивает и называет, что исчезнет" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  const [open, setOpen] = useState(false)
+  return h('div', null,
+    h(T.Button, { kind: 'danger', onClick: () => setOpen(true) }, 'Удалить колонку…'),
+    h(T.ConfirmDialog, { open, danger: true, title: 'Удалить колонку «Проверка»?', confirmLabel: 'Удалить колонку',
+      onConfirm: () => setOpen(false), onCancel: () => setOpen(false) },
+      h('p', null, 'Шесть карточек из неё перейдут в колонку «В работе». Удаление не отменить.')))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

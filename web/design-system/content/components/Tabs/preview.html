@@ -1,0 +1,18 @@
+<!-- @dsCard group="Навигация" height=150 subtitle="стрелки внутри полосы, одна остановка Tab" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+const tabs = [{ id: 'about', label: 'Описание' }, { id: 'talk', label: 'Обсуждение' }, { id: 'links', label: 'Связи' }, { id: 'history', label: 'История' }]
+function Demo() {
+  const [active, setActive] = useState('about')
+  const base = T.useTabIds()
+  return h('div', null,
+    h(T.Tabs, { base, label: 'Карточка', tabs, active, onSelect: setActive }),
+    h(T.TabPanel, { base, id: active }, h('p', { className: 'muted small' }, 'Вкладка «' + tabs.find((t) => t.id === active).label + '». Стрелки ← → ходят по вкладкам.')))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

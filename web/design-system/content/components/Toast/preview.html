@@ -1,0 +1,17 @@
+<!-- @dsCard group="Сообщения" height=220 subtitle="info с обратным действием, warning; нажмите кнопки" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Pusher() {
+  const toast = T.useToast()
+  return h('div', { className: 'demo' },
+    h(T.Button, { onClick: () => toast({ text: 'Карточка убрана в архив', tone: 'info', action: { label: 'Вернуть', onAct: () => toast({ text: 'Карточка возвращена на доску', tone: 'info' }) } }) }, 'Убрать карточку в архив'),
+    h(T.Button, { onClick: () => toast({ text: 'Не сохранилось: сеть недоступна.', tone: 'warning' }) }, 'Отказ сети'))
+}
+function Demo() { return h(T.Toast, null, h(Pusher)) }
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

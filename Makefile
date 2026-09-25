@@ -108,6 +108,10 @@ web: ## Собрать фронтенд (вместе с установкой з
 web-dist: ## Пересобрать клиент (без установки зависимостей)
 	cd web && npm run build
 
+.PHONY: design-system
+design-system: web-dist ## Собрать дизайн-систему для Claude Design в web/design-system/out
+	cd web && node design-system/build.mjs
+
 .PHONY: web-dev
 web-dev: ## Vite с горячей перезагрузкой (запросы к API проксируются на $(DEV_PORT))
 	cd web && npm run dev

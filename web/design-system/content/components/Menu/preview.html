@@ -1,0 +1,23 @@
+<!-- @dsCard group="Действия" height=280 subtitle="пункты с иконками, переключатели, опасное последним" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  const [who, setWho] = useState(['Анна'])
+  const flip = (n) => setWho((w) => w.includes(n) ? w.filter((x) => x !== n) : [...w, n])
+  return h('div', { className: 'demo' },
+    h(T.Menu, { label: 'Действия с карточкой', align: 'left', items: [
+      { label: 'Переименовать', icon: h(T.icons.EditIcon), onSelect: () => {} },
+      { label: 'Переместить…', icon: h(T.icons.MoveIcon), onSelect: () => {} },
+      { label: 'В архив', icon: h(T.icons.ArchiveIcon), onSelect: () => {} },
+      { label: 'Удалить насовсем…', icon: h(T.icons.TrashIcon), danger: true, onSelect: () => {} },
+    ] }, h(T.icons.MoreIcon)),
+    h(T.Menu, { label: 'Исполнители', className: 'btn', align: 'left', items: ['Анна', 'Борис', 'Вера'].map((n) => ({ label: n, checked: who.includes(n), onSelect: () => flip(n) })) },
+      'Исполнители: ' + (who.join(', ') || 'нет')))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

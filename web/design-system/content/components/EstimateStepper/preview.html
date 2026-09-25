@@ -1,0 +1,16 @@
+<!-- @dsCard group="Формы" height=90 subtitle="оценка шагами; без оценки — пусто, а не ноль" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  const [pts, setPts] = useState(3), [days, setDays] = useState(null)
+  return h('div', { className: 'demo' },
+    h(T.EstimateStepper, { value: pts, unit: 'points', onChange: setPts }),
+    h(T.EstimateStepper, { value: days, unit: 'days', onChange: setDays }))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>

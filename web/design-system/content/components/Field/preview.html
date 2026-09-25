@@ -1,0 +1,19 @@
+<!-- @dsCard group="Формы" height=250 subtitle="подпись, пояснение, отказ, который стирается правкой" -->
+<!doctype html><html><head><meta charset="utf-8"><style>body{padding:16px;margin:0}.demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.demo+.demo{margin-top:12px}</style></head><body>
+<div id="root"></div>
+<script>
+(() => {
+const T = window.Takt, h = React.createElement, { useState } = React
+function Demo() {
+  const [key, setKey] = useState('ПОСТ')
+  const [error, setError] = useState('Ключ ПОСТ уже занят доской «Поставки» — выберите другой.')
+  return h('div', { style: { maxWidth: 360 } },
+    h(T.Field, { label: 'Название доски', hint: 'Видно всем в организации.' },
+      (p) => h('input', { ...p, defaultValue: 'Платформа' })),
+    h(T.Field, { label: 'Ключ', error, onFix: () => setError('') },
+      (p) => h('input', { ...p, value: key, onChange: (e) => setKey(e.target.value) })))
+}
+T.ready.then(() => ReactDOM.createRoot(document.getElementById('root')).render(h(Demo)))
+})()
+</script>
+</body></html>
