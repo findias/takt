@@ -362,11 +362,14 @@ Deleting for good asks for confirmation and cannot be undone.
    that end is its deadline; the **Commitment** field stays for promises
    made outside. Once the iteration has ended, a card that is not done
    shows it in red.
-4. When the time is up press **Close iteration**. It asks first, because
-   closing freezes what the iteration contains for good, and the button
-   stays inactive until you type the iteration's name — a stray click
-   cannot close a sprint. A report appears: what made it and what did
-   not.
+4. The iteration closes itself at the midnight after its last day, and
+   its report — what made it and what did not — is counted as of that
+   moment. To close it earlier press **Close iteration**. It asks first,
+   because closing freezes what the iteration contains for good, and the
+   button stays inactive until you type the iteration's name — a stray
+   click cannot close a sprint. An iteration created after its end, to
+   record the past, does not close itself: close it once its cards are
+   in.
 5. Move what was not finished into the next iteration: all at once with
    the move-unfinished button in the closed iteration's report, or
    one card at a time with **Move to** on its **Work** tab. The closed

@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Nineteen migrations, all safe for the running version.** `0052` gives
+**Twenty migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -31,7 +31,8 @@ to service-desk tickets (RDS, service requests, change requests,
 problems), `0067` adds named slices of the management export, `0068`
 lets a subtask see its link to a parent on a hidden board, `0069` adds a
 board's iterations switch, `0070` adds a board's level (team or epic
-portfolio). They
+portfolio), `0071` lets the server close iterations whose last day has
+passed. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
@@ -40,7 +41,9 @@ schema, and `helm rollback` of the pods needs nothing else.
 deadline has passed.** It runs inside `takt serve` once at start-up and
 then every minute; nothing to configure. With several replicas each one
 runs it, and that is safe: a block is closed once, at its deadline, not
-at the moment of the check. Every ten minutes the same loop also writes
+at the moment of the check. The same loop closes iterations whose
+last day has passed (see below), and that is safe with several replicas
+too. Every ten minutes the same loop also writes
 the time-driven notifications; with several replicas each is written
 once, because a notification about the same thing is not written
 twice.
@@ -397,6 +400,13 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **An iteration closes itself after its last day.** At the midnight
+  after its end (by the database clock), so the report counts what was
+  done by the end, not by whenever someone remembered to close it.
+  Cards not done stay in it as not done — move them to the next
+  iteration. An iteration created after its end (to record the past) is
+  not closed by itself: close it once its cards are in. Closing by hand
+  earlier works as before.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

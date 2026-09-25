@@ -184,6 +184,12 @@ color:var(--ink-3);font-size:.85rem}
 <li>It appears in the card&#39;s history and in <strong>Changes</strong> as <strong>block lifted by itself: the deadline passed</strong>, without an author, and subscribers receive <code>card.block_expired</code>.</li>
 <li>Less than a day before the deadline, the line under the card becomes bold and dashed. Nothing is mailed: the board is where you see it.</li>
 </ul>
+<h2 id="iterations-that-close-themselves">Iterations that close themselves</h2>
+<ul>
+<li>An iteration closes itself at the midnight after its last day, by the database clock. The same server check runs every minute; the moment of closing is the midnight, not the check, so the report does not depend on when the check ran.</li>
+<li>Cards not done stay in the closed iteration as not done. Move them with the move-unfinished button in its report or one by one from the card; the closed iteration&#39;s report does not change.</li>
+<li>An iteration created after its end is not closed by itself: its cards are added after it is created, and closing it at a midnight before that would give an empty report.</li>
+</ul>
 <h2 id="colours">Colours</h2>
 <p>One colour, one meaning — so that red still means something on a busy board.</p>
 <div class="tablewrap"><table>
@@ -285,7 +291,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-111-g0611839-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-112-gec05b45-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

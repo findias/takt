@@ -312,9 +312,10 @@ func checkMigrated(ctx context.Context, db *store.Store, log *slog.Logger) error
 	return nil
 }
 
-// expireBlocks снимает блокировки с вышедшим сроком — сразу и дальше
-// раз в минуту. Сбой прохода не останавливает сервер: следующий проход
-// подберёт то же самое, сроки от этого не денутся.
+// expireBlocks снимает блокировки с вышедшим сроком и закрывает
+// итерации с прошедшим концом — сразу и дальше раз в минуту. Сбой
+// прохода не останавливает сервер: следующий проход подберёт то же
+// самое, сроки от этого не денутся.
 func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) {
 	tick := time.NewTicker(board.ExpireEvery)
 	defer tick.Stop()
@@ -326,6 +327,14 @@ func expireBlocks(ctx context.Context, boards *board.Service, log *slog.Logger) 
 		}
 		if n > 0 {
 			log.Info("блокировки сняты по сроку", "сколько", n)
+		}
+		// Тем же циклом — итерации, чей последний день прошёл: момент
+		// закрытия ставится полуночью, так что минута опоздания прохода
+		// на отчёт не влияет.
+		if n, err := boards.CloseDueIterations(ctx); err != nil && ctx.Err() == nil {
+			log.Error("закрытие итераций по календарю", "err", err)
+		} else if n > 0 {
+			log.Info("итерации закрыты по календарю", "сколько", n)
 		}
 		// Тем же циклом — уведомления по времени: срок блокировки ближе
 		// суток, карточка перешагнула обещание. Реже: проход обходит все

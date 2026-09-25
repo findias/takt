@@ -230,7 +230,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>In the strip above the board press <strong>+ iteration</strong>.</li>
 <li>Set a name, a start and an end, press <strong>Create iteration</strong>.</li>
 <li>On cards, pick the iteration (<strong>Work</strong> tab). While the board is filtered by an iteration, a new card goes straight into it. The card then shows the iteration with its end — &#34;Week 40 · until 4 Oct&#34; — and that end is its deadline; the <strong>Commitment</strong> field stays for promises made outside. Once the iteration has ended, a card that is not done shows it in red.</li>
-<li>When the time is up press <strong>Close iteration</strong>. It asks first, because closing freezes what the iteration contains for good, and the button stays inactive until you type the iteration&#39;s name — a stray click cannot close a sprint. A report appears: what made it and what did not.</li>
+<li>The iteration closes itself at the midnight after its last day, and its report — what made it and what did not — is counted as of that moment. To close it earlier press <strong>Close iteration</strong>. It asks first, because closing freezes what the iteration contains for good, and the button stays inactive until you type the iteration&#39;s name — a stray click cannot close a sprint. An iteration created after its end, to record the past, does not close itself: close it once its cards are in.</li>
 <li>Move what was not finished into the next iteration: all at once with the move-unfinished button in the closed iteration&#39;s report, or one card at a time with <strong>Move to</strong> on its <strong>Work</strong> tab. The closed iteration&#39;s report stays as it was — the moved cards remain in it as not done.</li>
 </ol>
 <p>A team that does not work in iterations opens <strong>Flow</strong> and clears <strong>We work in iterations</strong> under <strong>How we work</strong>: iterations disappear from the filter, the grouping, the cards, the table and the card panel. Nothing is deleted, so nothing is asked. To bring them back, press <strong>Work in iterations</strong> where the iteration strip used to be, or tick the box again — everything returns, reports included.</p>
@@ -374,7 +374,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-111-g0611839-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-112-gec05b45-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

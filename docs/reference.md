@@ -75,6 +75,19 @@ the block stays until someone lifts it; that is the normal case.
 - Less than a day before the deadline, the line under the card becomes
   bold and dashed. Nothing is mailed: the board is where you see it.
 
+## Iterations that close themselves
+
+- An iteration closes itself at the midnight after its last day, by
+  the database clock. The same server check runs every minute; the
+  moment of closing is the midnight, not the check, so the report does
+  not depend on when the check ran.
+- Cards not done stay in the closed iteration as not done. Move them
+  with the move-unfinished button in its report or one by one from the
+  card; the closed iteration's report does not change.
+- An iteration created after its end is not closed by itself: its cards
+  are added after it is created, and closing it at a midnight before
+  that would give an empty report.
+
 ## Colours
 
 One colour, one meaning — so that red still means something on a busy

@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -1062,6 +1063,85 @@ func (f *filler) renewBlockDeadline() error {
 		"until":  time.Now().Add(48 * time.Hour).Truncate(time.Hour).Format(time.RFC3339),
 	})
 	return err
+}
+
+// renewRunningIteration возвращает «Поставкам» идущую итерацию, если
+// прежняя кончилась. Итерации закрываются сами после последнего дня
+// (ROADMAP 34.10), а даты демо считаются от момента наполнения: через
+// пару дней стенд остался бы без идущей итерации и не прошёл бы
+// собственную сверку, как 25.09.2026 с блокировками. Незакрытое из
+// только что закрытой долив переносит в новую — тем же путём, что
+// кнопка в отчёте: так на стенде виден и сам перенос. Идущая есть —
+// долив ничего не делает.
+func (f *filler) renewRunningIteration() error {
+	var boardID string
+	var running bool
+	err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `select id::text from boards where key = $1`, f.w("ПОСТ")).Scan(&boardID); err != nil {
+			return err
+		}
+		return tx.QueryRow(f.ctx, `
+			select exists (select 1 from iterations
+			                where board_id = $1 and closed_at is null and ends_on >= current_date)`,
+			boardID).Scan(&running)
+	})
+	if err != nil || running {
+		return err
+	}
+	if _, err := f.boards.CloseDueIterations(f.ctx); err != nil {
+		return err
+	}
+
+	// Незакрытое держат закрытые итерации — не обязательно последняя:
+	// долив мог не пройти, и хвост остался в позапрошлой.
+	held := map[string][]string{}
+	err = f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		rows, err := tx.Query(f.ctx, `
+			select ic.iteration_id::text, ic.card_id::text
+			  from iteration_cards ic join iterations i on i.id = ic.iteration_id
+			 where i.board_id = $1 and i.closed_at is not null and ic.removed_at is null`, boardID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var iterationID, cardID string
+			if err := rows.Scan(&iterationID, &cardID); err != nil {
+				return err
+			}
+			held[iterationID] = append(held[iterationID], cardID)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return err
+	}
+	var carry []string
+	for iterationID, cards := range held {
+		report, err := f.boards.IterationReport(f.ctx, f.orgID, f.owner(), boardID, iterationID)
+		if err != nil {
+			return err
+		}
+		for _, c := range report.Cards {
+			if !c.Done && !c.Dropped && !c.Archived && slices.Contains(cards, c.ID) {
+				carry = append(carry, c.ID)
+			}
+		}
+	}
+
+	_, week := time.Now().ISOWeek()
+	next, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), boardID,
+		fmt.Sprintf(f.w("Неделя %d"), week), f.w("Довести релиз склада до стенда"), date(-1), date(5))
+	if err != nil {
+		return err
+	}
+	for _, cardID := range carry {
+		if _, err := f.apply(boardID, "ADD_TO_ITERATION", map[string]any{
+			"cardId": cardID, "iterationId": next.ID}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // blockDeadlines заводит блокировки со сроком: одну через два дня,

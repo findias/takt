@@ -270,6 +270,9 @@ func TopUp(ctx context.Context, db *store.Store) error {
 	if err := f.renewBlockDeadline(); err != nil {
 		return err
 	}
+	if err := f.renewRunningIteration(); err != nil {
+		return err
+	}
 	return f.epic()
 }
 
@@ -289,6 +292,9 @@ func TopUpEnglish(ctx context.Context, db *store.Store) error {
 		return err
 	}
 	if err := f.renewBlockDeadline(); err != nil {
+		return err
+	}
+	if err := f.renewRunningIteration(); err != nil {
 		return err
 	}
 	return f.epic()

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/store/testdb"
 )
 
@@ -100,5 +101,69 @@ func TestTopUpRenewsBlockDeadlinesThatRanOut(t *testing.T) {
 	}
 	if err := Verify(ctx, db); err != nil {
 		t.Errorf("после долива: %v", err)
+	}
+}
+
+// Идущая итерация демо кончается через пару дней после наполнения
+// и закрывается сама (ROADMAP 34.10). Долив возвращает идущую
+// и переносит в неё незакрытое — иначе стенд не прошёл бы сверку.
+func TestTopUpRenewsTheRunningIterationThatEnded(t *testing.T) {
+	ctx := context.Background()
+	db := testdb.Open(t)
+	err := Fill(ctx, db)
+	if err != nil && !errors.Is(err, ErrAlreadyFilled) {
+		t.Fatalf("наполнение: %v", err)
+	}
+	var orgID, ownerID string
+	if err := db.Pool.QueryRow(ctx, `
+		select o.id, u.id from orgs o
+		  join memberships m on m.org_id = o.id
+		  join users u on u.id = m.user_id
+		 where o.name = $1 and lower(u.email) = $2`, OrgName, People[0].Email).
+		Scan(&orgID, &ownerID); err != nil {
+		t.Fatalf("организация стенда: %v", err)
+	}
+	// Время прошло: идущая итерация кончилась позавчера, заведена
+	// до своего конца, а карточки в неё положили тогда же.
+	if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			update iteration_cards ic set added_at = now() - interval '9 days'
+			  from iterations i
+			 where i.id = ic.iteration_id and i.closed_at is null`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			update iterations set starts_on = current_date - 8, ends_on = current_date - 2,
+			       created_at = now() - interval '10 days'
+			 where closed_at is null`)
+		return err
+	}); err != nil {
+		t.Fatalf("конец итерации: %v", err)
+	}
+	// Сервер её закрыл — и стенд остался без идущей.
+	if _, err := board.New(db).CloseDueIterations(ctx); err != nil {
+		t.Fatalf("закрытие по календарю: %v", err)
+	}
+	if err := Verify(ctx, db); err == nil {
+		t.Fatal("сверка прошла без идущей итерации — проверка ничего не проверяет")
+	}
+
+	if err := TopUp(ctx, db); err != nil {
+		t.Fatalf("долив: %v", err)
+	}
+	if err := Verify(ctx, db); err != nil {
+		t.Errorf("после долива: %v", err)
+	}
+	var carried int
+	if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			select count(*) from iteration_cards ic
+			  join iterations i on i.id = ic.iteration_id
+			 where i.closed_at is null and ic.removed_at is null`).Scan(&carried)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if carried == 0 {
+		t.Error("незакрытое из кончившейся итерации в новую не перенесено")
 	}
 }
