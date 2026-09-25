@@ -1004,6 +1004,14 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [run],
   )
 
+  // Упорядочивание переставляет всю колонку разом — с перечитыванием,
+  // как и прочие операции, что трогают много карточек.
+  const sortColumn = useCallback(
+    (columnId: string) =>
+      runAndReload('SORT_COLUMN', { columnId, by: 'iteration' }, t.ops.sortColumn),
+    [runAndReload],
+  )
+
   // null снимает лимит. Отсутствие поля ничего не меняет, поэтому «снять»
   // и «не трогать» приходится различать явно.
   const setColumnLimit = useCallback(
@@ -1054,6 +1062,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     createColumn,
     renameColumn,
     updateColumn,
+    sortColumn,
     setColumnLimit,
   }
 }

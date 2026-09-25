@@ -113,6 +113,8 @@ type ColumnProps = {
   onRenameColumn: (name: string) => void
   onSetLimit: (limit: number | null) => void
   onUpdateColumn: (patch: ColumnPatch) => void
+  /** Нет — на доске не работают итерациями, упорядочивать не по чему. */
+  onSortByIteration?: () => void
   onRenameCard: (cardId: string, title: string) => void
   onArchiveCard: (cardId: string) => void
   /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца.
@@ -266,6 +268,13 @@ export function ColumnView(props: ColumnProps) {
           column={props.column}
           onUpdate={props.onUpdateColumn}
           onSetLimit={props.onSetLimit}
+          onSortByIteration={
+            // Упорядочивать нечего, пока ни одна карточка не в итерации:
+            // кнопка, которая ничего не сдвинет, выглядела бы сломанной.
+            props.onSortByIteration && props.cardIds.some((id) => props.iterations[id])
+              ? props.onSortByIteration
+              : undefined
+          }
         />
       )}
 
@@ -551,6 +560,7 @@ function ColumnSettings({
   column,
   onUpdate,
   onSetLimit,
+  onSortByIteration,
 }: {
   column: Column
   onUpdate: (patch: ColumnPatch) => void
@@ -558,6 +568,7 @@ function ColumnSettings({
    *  задайте лимит» стояло там, где задать его было нечем, и человек
    *  шёл искать поле. */
   onSetLimit: (limit: number | null) => void
+  onSortByIteration?: () => void
 }) {
   const [policy, setPolicy] = useState(column.policy)
   useEffect(() => setPolicy(column.policy), [column.policy])
@@ -654,6 +665,22 @@ function ColumnSettings({
         onChange={(e) => setPolicy(e.target.value)}
         onBlur={() => policy !== column.policy && onUpdate({ policy })}
       />
+
+      {/* Порядок — здесь же, среди настроек колонки: действие редкое
+          и разовое, в шапке каждой колонки ему не место. Вопроса нет —
+          перестановка обратима руками. */}
+      {onSortByIteration && (
+        <div className="stack stack--tight">
+          <button
+            className="btn"
+            aria-label={t.column.sortByIterationOf(column.name)}
+            onClick={onSortByIteration}
+          >
+            {t.column.sortByIteration}
+          </button>
+          <p className="muted small">{t.column.sortByIterationHint}</p>
+        </div>
+      )}
     </div>
   )
 }

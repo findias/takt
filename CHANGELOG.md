@@ -400,6 +400,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A column can be put in sprint order.** **Markup** on the column →
+  **Order by iteration**: earlier iterations on top, cards without one
+  at the end, the order within an iteration kept. It is a one-off
+  rearrangement, not a mode: cards are moved by hand afterwards. The
+  new operation `SORT_COLUMN` `{columnId, by: "iteration"}` does it in
+  one step and writes no "moved" events — cards stay in their column.
+  The column's markup panel now scrolls inside the column on a short
+  screen instead of pushing the cards out of view.
 - **An iteration closes itself after its last day.** At the midnight
   after its end (by the database clock), so the report counts what was
   done by the end, not by whenever someone remembered to close it.

@@ -2312,6 +2312,11 @@ textarea.description {
   background: var(--surface-2);
   border-radius: var(--radius);
   font-size: var(--text);
+  /* На невысоком экране настройки длиннее колонки: без этого они
+     вылезали за её низ и выталкивали карточки из вида. Теперь сжимаются
+     и листаются сами, а карточкам остаётся их полоса. */
+  min-height: 0;
+  overflow-y: auto;
 }
 .column-settings label {
   cursor: pointer;

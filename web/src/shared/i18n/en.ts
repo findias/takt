@@ -688,6 +688,9 @@ export const en: typeof ru = {
   column: {
     markupOf: (name: string) => `Markup of column “${name}”`,
     markup: 'Markup',
+    sortByIteration: 'Order by iteration',
+    sortByIterationOf: (name: string) => `Order “${name}” by iteration`,
+    sortByIterationHint: 'Earlier iterations on top, none at the end; then the order is manual again.',
     expand: (name: string) => `Expand “${name}”`,
     collapse: (name: string) => `Collapse “${name}”`,
     moreCards: (n: number) => `${n} more: scroll to show them`,
@@ -806,6 +809,7 @@ export const en: typeof ru = {
     blockReason: 'Could not change the block reason',
     unblock: 'Could not lift the block',
     column: 'Could not change the column',
+    sortColumn: 'Could not order the column',
     columnLimit: 'Could not change the column limit',
     stale:
       'The server answer does not look like a board snapshot. The page seems to have been open for a long time and is out of date: reload it (Ctrl+R or Cmd+R).',

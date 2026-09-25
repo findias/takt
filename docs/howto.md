@@ -376,6 +376,12 @@ Deleting for good asks for confirmation and cannot be undone.
    iteration's report stays as it was — the moved cards remain in it as
    not done.
 
+To put a queue in sprint order, open **Markup** on the column and press
+**Order by iteration**: cards of earlier iterations go on top, cards
+without an iteration to the end, and within one iteration the order
+stays as it was. It happens once — after that you move cards by hand as
+before.
+
 A team that does not work in iterations opens **Flow** and clears **We
 work in iterations** under **How we work**: iterations disappear from
 the filter, the grouping, the cards, the table and the card panel.

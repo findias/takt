@@ -3361,3 +3361,44 @@ test('незакрытые карточки переносятся из закр
   await expect(panel.getByText('1 из 3')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Перенесём отчётом').getByText(/Неделя 38/)).toBeVisible()
 })
+
+// Очередь упорядочивается по итерации одним нажатием (владелец
+// 25.09.2026): раньше начатые — выше, без итерации — в конце; дальше
+// порядок снова ручной.
+test('колонка упорядочивается по итерации', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с очередью спринтов')
+  for (const title of ['Когда-нибудь', 'На следующую', 'На эту']) {
+    await addCard(page, 'Очередь', title)
+  }
+  for (const [name, start, end] of [
+    ['Неделя 40', '2026-09-28', '2026-10-04'],
+    ['Неделя 39', '2026-09-21', '2026-09-27'],
+  ]) {
+    await page.getByRole('button', { name: '+ итерация' }).click()
+    await page.getByPlaceholder('Название').fill(name)
+    await page.getByLabel('Начало').fill(start)
+    await page.getByLabel('Конец').fill(end)
+    await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
+    await expect(page.getByRole('button', { name: new RegExp(`^${name} ·`) })).toBeVisible()
+  }
+  for (const [title, iteration] of [
+    ['На следующую', 'Неделя 40'],
+    ['На эту', 'Неделя 39'],
+  ]) {
+    await cardIn(page, 'Очередь', title).click()
+    await page.getByRole('tab', { name: 'Работа' }).click()
+    await page.getByLabel('Итерация карточки').selectOption({ label: iteration })
+    await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
+  }
+
+  const titles = page.getByRole('region', { name: 'Очередь' }).locator('.card-title')
+  await expect(titles).toHaveText(['Когда-нибудь', 'На следующую', 'На эту'])
+
+  await page.getByRole('button', { name: 'Разметка колонки «Очередь»' }).click()
+  await page.getByRole('button', { name: 'Упорядочить «Очередь» по итерации' }).click()
+  await expect(titles).toHaveText(['На эту', 'На следующую', 'Когда-нибудь'])
+  // Сохранено, а не только нарисовано.
+  await page.reload()
+  await expect(titles).toHaveText(['На эту', 'На следующую', 'Когда-нибудь'])
+})

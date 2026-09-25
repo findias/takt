@@ -1085,6 +1085,9 @@ export function Board({
         onRenameColumn={(name) => void board.renameColumn(columnId, name)}
         onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
         onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
+        onSortByIteration={
+          iterationsOn && base.iterations.length > 0 ? () => void board.sortColumn(columnId) : undefined
+        }
         onRenameCard={renameCard}
         onArchiveCard={archiveCard}
         onDeleteCard={isOwner ? askDelete : undefined}

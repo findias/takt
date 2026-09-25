@@ -694,6 +694,9 @@ export const ru = {
   column: {
     markupOf: (name: string) => `Разметка колонки «${name}»`,
     markup: 'Разметка',
+    sortByIteration: 'Упорядочить по итерации',
+    sortByIterationOf: (name: string) => `Упорядочить «${name}» по итерации`,
+    sortByIterationHint: 'Раньше начатые — выше, без итерации — в конце; дальше порядок снова ручной.',
     expand: (name: string) => `Развернуть «${name}»`,
     collapse: (name: string) => `Свернуть «${name}»`,
     moreCards: (n: number) => `Ещё ${n}: прокрутите, чтобы показать`,
@@ -812,6 +815,7 @@ export const ru = {
     blockReason: 'Не удалось изменить причину блокировки',
     unblock: 'Не удалось снять блокировку',
     column: 'Не удалось изменить колонку',
+    sortColumn: 'Не удалось упорядочить колонку',
     columnLimit: 'Не удалось изменить лимит колонки',
     stale:
       'Ответ сервера не похож на снимок доски. Похоже, страница открыта давно и устарела: обновите её (Ctrl+R или Cmd+R).',
