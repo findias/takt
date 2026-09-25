@@ -345,6 +345,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   searches every board you can see by number or title, and gains the
   **Parent** kind, so a task can pick the epic above it. Before, the
   choice offered only cards of the same board.
+- **An epic is always the parent.** A subtask of a team's task can no
+  longer be created on the portfolio, nor an epic linked as a task's
+  subtask; the refusal says to link from the task with **Parent**
+  instead. Links made before stay as they are.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

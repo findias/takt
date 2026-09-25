@@ -3053,8 +3053,12 @@ test('задача команды подвешивается к эпику со 
   await cardIn(page, 'Очередь', 'Готовая задача').click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByText('Связать с существующей карточкой').click()
-  await page.getByRole('combobox', { name: 'Вид связи' }).selectOption({ label: 'Родитель' })
+  // Эпик всегда родитель: подзадачей его не выбрать и подзадачу
+  // на доске эпиков с задачи не завести.
+  await expect(page.getByRole('combobox', { name: 'Доска подзадачи' }).locator('option', { hasText: 'Эпики' })).toHaveCount(0)
   await page.getByRole('searchbox', { name: 'Карточка для связи' }).fill('переезд')
+  await expect(page.getByText('Ничего не нашлось')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Вид связи' }).selectOption({ label: 'Родитель' })
   await page.getByRole('button', { name: /Большой переезд.*Эпики · портфель/ }).click()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 

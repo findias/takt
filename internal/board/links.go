@@ -64,6 +64,9 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	}
 
 	if p.Kind == LinkSubtask {
+		if err := checkEpicStaysParent(ctx, tx, fromBoard, toBoard); err != nil {
+			return Patch{}, err
+		}
 		if err := checkSubtaskTree(ctx, tx, p.FromCard, p.ToCard); err != nil {
 			return Patch{}, err
 		}
@@ -73,6 +76,28 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 		return Patch{}, err
 	}
 	return linkPatch(ctx, tx, boardID, p)
+}
+
+// checkEpicStaysParent не даёт эпику встать под задачу команды.
+//
+// Эпик — карточка доски-портфеля, и в иерархии он всегда родитель:
+// эпик › фича › задача. С доски команды можно было завести подзадачу
+// на портфеле или связать карточку портфеля подзадачей задачи — эпик
+// оказывался под задачей, прогресс и путь до корня шли наоборот
+// (замечено владельцем 25.09.2026). Под эпиком эпик — можно: большой
+// эпик делят на меньшие на том же портфеле.
+func checkEpicStaysParent(ctx context.Context, tx pgx.Tx, parentBoard, childBoard string) error {
+	var parentLevel, childLevel string
+	if err := tx.QueryRow(ctx, `
+		select (select level from boards where id = $1), (select level from boards where id = $2)`,
+		parentBoard, childBoard).Scan(&parentLevel, &childLevel); err != nil {
+		return err
+	}
+	if childLevel == LevelPortfolio && parentLevel != LevelPortfolio {
+		return conflictf("", "эпик не может быть подзадачей задачи: эпик всегда родитель. "+
+			"Чтобы связать задачу с эпиком, откройте задачу и в «Связать с существующей карточкой» выберите вид «Родитель»")
+	}
+	return nil
 }
 
 // cardBoard говорит, на какой доске лежит карточка, и заодно отвечает
@@ -186,6 +211,10 @@ func createSubtask(
 	target := boardID
 	if p.BoardID != "" {
 		target = p.BoardID
+	}
+
+	if err := checkEpicStaysParent(ctx, tx, parentBoard, target); err != nil {
+		return Patch{}, err
 	}
 
 	col, err := subtaskColumn(ctx, tx, target, p.ColumnID)

@@ -71,7 +71,9 @@ team's board next to the name, **Subtask**. Work that already exists is
 linked from either side: on the epic, **Link to an existing card** with
 **Subtask**; on the team's task, the same with **Parent**. The search
 there looks through every board you can see — type the number or part
-of the title. A task on a team board then shows the epic in its path to
+of the title. An epic is always the parent: a team's task cannot take
+an epic as its subtask, and a subtask of a team's task cannot be created
+on the portfolio. A task on a team board then shows the epic in its path to
 the root, and the **Tree** view gathers the branch across boards.
 
 Each board counts its own flow, so epics never mix with tasks: the

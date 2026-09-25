@@ -128,6 +128,7 @@ export function CardTasks({
         {canEdit && (
           <LinkPicker
             boardId={base.info.id}
+            boardLevel={base.info.level ?? 'team'}
             details={details}
             onPick={(picked, kind) =>
               // «Родитель» — та же связь «подзадача», только в обратную
@@ -449,10 +450,12 @@ type PickKind = LinkKind | 'parent'
  */
 function LinkPicker({
   boardId,
+  boardLevel,
   details,
   onPick,
 }: {
   boardId: string
+  boardLevel: 'team' | 'portfolio'
   details: ReturnType<typeof cardDetails>
   onPick: (picked: string, kind: PickKind) => void
 }) {
@@ -491,7 +494,13 @@ function LinkPicker({
   // их снова значит предлагать повтор.
   const taken = new Set<string>([details.card.id, ...details.subtasks.map((s) => s.id)])
   if (details.parent) taken.add(details.parent.id)
-  const options = (found ?? []).filter((c) => !taken.has(c.id))
+  // Эпик всегда родитель: с задачи команды эпик не берут в подзадачи,
+  // а с эпика задачу команды — в родители. Сервер откажет и так;
+  // здесь заведомо запрещённое просто не предлагается.
+  const epicBelowTask = (c: FoundCard) =>
+    (boardLevel === 'team' && kind === 'subtask' && c.boardLevel === 'portfolio') ||
+    (boardLevel === 'portfolio' && kind === 'parent' && c.boardLevel !== 'portfolio')
+  const options = (found ?? []).filter((c) => !taken.has(c.id) && !epicBelowTask(c))
 
   return (
     <details className="link-picker">

@@ -1455,7 +1455,12 @@ export function Board({
             onLabel={toggleLabel}
             onPrioritise={prioritiseCard}
             onDue={commitCard}
-            subtaskBoards={subtaskBoards}
+            // С доски команды портфель не предлагается: подзадача там
+            // была бы эпиком под задачей, а эпик всегда родитель
+            // (сервер такое откажет — здесь просто не предлагаем).
+            subtaskBoards={subtaskBoards.filter(
+              (b) => base.info.level === 'portfolio' || b.level !== 'portfolio',
+            )}
             onSubtask={(parentCardId, title, toBoard) =>
               void board.createSubtask(parentCardId, title, undefined, toBoard)
             }
