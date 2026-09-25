@@ -91,7 +91,7 @@
       },
       "ReportCard": {
         "type": "object",
-        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "epic", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived"],
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "epic", "refs", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived", "description"],
         "properties": {
           "number": { "type": "string" },
           "title": { "type": "string" },
@@ -106,6 +106,18 @@
           "iteration": { "type": "string", "description": "Последняя по началу итерация, в которой карточка сейчас." },
           "parent": { "type": "string", "description": "Номер родителя, если карточка — подзадача и родитель виден." },
           "epic": { "type": "string", "description": "Название эпика — ближайшего предка на доске-портфеле; пусто, если его нет или он не виден." },
+          "refs": {
+            "type": "array",
+            "description": "Заявки, по которым идёт работа, в порядке добавления; в XLSX и CSV — столбец «Заявки» строкой «RDS 12345; Проблема PRB-7».",
+            "items": {
+              "type": "object",
+              "required": ["kind", "ref"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["rds", "zno", "zni", "problem"] },
+                "ref": { "type": "string", "description": "Номер или адрес заявки, как его вписали." }
+              }
+            }
+          },
           "createdAt": { "type": "string", "format": "date-time" },
           "startedAt": { "type": ["string", "null"], "format": "date-time" },
           "finishedAt": { "type": ["string", "null"], "format": "date-time" },
@@ -115,7 +127,8 @@
           "blocked": { "type": "boolean" },
           "blockReason": { "type": "string" },
           "imported": { "type": "boolean", "description": "Перенесена из другой системы: её даты взяты оттуда." },
-          "archived": { "type": "boolean" }
+          "archived": { "type": "boolean" },
+          "description": { "type": "string", "description": "Описание карточки целиком; в XLSX обрезается до 32 767 знаков — предела ячейки." }
         }
       },
       "ReportSummary": {

@@ -140,7 +140,10 @@ type Row struct {
 	Parent    string   `json:"parent"`
 	// Epic — название эпика: ближайшего предка на доске-портфеле
 	// (этап 33.3). Пусто — эпика нет или он не виден.
-	Epic        string     `json:"epic"`
+	Epic string `json:"epic"`
+	// Refs — заявки, по которым идёт работа: RDS, ЗНО, ЗНИ, проблемы,
+	// в порядке, в каком их добавляли.
+	Refs        []Ref      `json:"refs"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	StartedAt   *time.Time `json:"startedAt"`
 	FinishedAt  *time.Time `json:"finishedAt"`
@@ -151,6 +154,16 @@ type Row struct {
 	BlockReason string     `json:"blockReason"`
 	Imported    bool       `json:"imported"`
 	Archived    bool       `json:"archived"`
+	// Description — описание целиком: выгрузку отдают тем, кто доски
+	// не открывает, и «что надо сделать» они читают отсюда.
+	Description string `json:"description"`
+}
+
+// Ref — одна заявка карточки: вид (rds, zno, zni, problem) и номер
+// или адрес, как его вписали.
+type Ref struct {
+	Kind string `json:"kind"`
+	Ref  string `json:"ref"`
 }
 
 // Summary — лист «Сводка»: то, что показывает «Поток», но за период
@@ -389,6 +402,9 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		                   join cards a on a.id = u.anc
 		                   join boards ab on ab.id = a.board_id and ab.level = 'portfolio'
 		                  order by u.depth limit 1), ''),
+		       coalesce((select json_agg(json_build_object('kind', f.kind, 'ref', f.ref)
+		                                 order by f.created_at, f.ref)
+		                   from card_refs f where f.card_id = c.id), '[]'),
 		       c.created_at, c.started_at, c.finished_at,
 		       to_char(c.due_on, 'YYYY-MM-DD'),
 		       case when c.outcome = 'done' and c.started_at is not null
@@ -396,7 +412,8 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		       case when c.started_at is not null and c.finished_at is null
 		            then extract(epoch from (now() - c.started_at)) / 86400.0 end,
 		       k.id is not null, coalesce(k.reason, ''),
-		       c.external_source is not null, c.archived_at is not null
+		       c.external_source is not null, c.archived_at is not null,
+		       c.description
 		  from report_cards r
 		  join cards c on c.id = r.id
 		  join boards b on b.id = c.board_id
@@ -414,8 +431,8 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		var r Row
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
 			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
-			&r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
-			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived); err != nil {
+			&r.Refs, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
+			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Description); err != nil {
 			return err
 		}
 		r.CreatedAt = r.CreatedAt.UTC()

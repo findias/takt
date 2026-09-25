@@ -26,9 +26,13 @@ var dataColumns = []struct {
 	{"Номер", 11}, {"Название", 48}, {"Доска", 20}, {"Подразделение", 18},
 	{"Колонка", 16}, {"Состояние", 12}, {"Приоритет", 12}, {"Оценка", 9},
 	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11}, {"Эпик", 24},
+	{"Заявки", 22},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
 	{"Время цикла, дней", 12}, {"Возраст, дней", 12}, {"Заблокирована", 12},
 	{"Причина блокировки", 28}, {"Перенесена", 11}, {"В архиве", 10},
+	// Описание — последним: самое длинное, и в конце таблицы оно
+	// не раздвигает строки между столбцами, которые сравнивают.
+	{"Описание", 60},
 }
 
 func header(ctx context.Context) ([]string, []float64) {
@@ -45,7 +49,18 @@ func header(ctx context.Context) ([]string, []float64) {
 type words struct {
 	state    map[string]string
 	priority map[string]string
+	refKind  map[string]string
 	yes      string
+}
+
+// refs — заявки одной строкой: «RDS 12345; Проблема PRB-7». Точка
+// с запятой, а не запятая: в номере или адресе заявки запятая бывает.
+func (w words) refs(list []Ref) string {
+	parts := make([]string, len(list))
+	for i, r := range list {
+		parts[i] = w.refKind[r.Kind] + " " + r.Ref
+	}
+	return strings.Join(parts, "; ")
 }
 
 func wordsFor(ctx context.Context) words {
@@ -58,6 +73,10 @@ func wordsFor(ctx context.Context) words {
 		priority: map[string]string{
 			"highest": n("Наивысший"), "high": n("Высокий"),
 			"medium": n("Средний"), "low": n("Низкий"),
+		},
+		// Названия видов — те же, что в разделе «Заявки» карточки.
+		refKind: map[string]string{
+			"rds": "RDS", "zno": n("ЗНО"), "zni": n("ЗНИ"), "problem": n("Проблема"),
 		},
 		yes: n("да"),
 	}
@@ -126,9 +145,10 @@ func (s *csvSink) Row(r Row) error {
 		r.Number, cellText(r.Title), cellText(r.Board), cellText(r.Team), cellText(r.Column),
 		s.words.state[r.State], s.words.priority[r.Priority], est,
 		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent, cellText(r.Epic),
-		csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
+		cellText(s.words.refs(r.Refs)), csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
 		csvDays(r.CycleDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
 		cellText(r.BlockReason), s.words.flag(r.Imported), s.words.flag(r.Archived),
+		cellText(r.Description),
 	})
 }
 
@@ -216,9 +236,10 @@ func (s *xlsxSink) Row(r Row) error {
 		str(r.Number), str(r.Title), str(r.Board), str(r.Team), str(r.Column),
 		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est,
 		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent), str(r.Epic),
-		stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
+		str(s.words.refs(r.Refs)), stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
 		optDec(r.CycleDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
 		str(r.BlockReason), str(s.words.flag(r.Imported)), str(s.words.flag(r.Archived)),
+		str(r.Description),
 	)
 }
 

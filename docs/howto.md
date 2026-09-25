@@ -562,8 +562,11 @@ Below the selection you see how many cards match. Then download:
   and age (median and 85th percentile), throughput by week and a
   cumulative flow diagram — both with charts — iteration completion and
   a breakdown by subdivision. The **Data** sheet has one row per card
-  with every field, ready for pivot tables. Everything on the summary
-  is counted from those same rows.
+  with every field, ready for pivot tables: among them **Tickets** — the
+  card's RDS, service requests, change requests and problems in one
+  cell, `RDS 12345; Problem PRB-7` — and, last, the whole
+  **Description**. Everything on the summary is counted from those
+  same rows.
 - **CSV** holds the same rows without the summary.
 - **JSON** is for a program: field names as in the API, values as
   codes (`done`, `high`).

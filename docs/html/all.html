@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-96-g1bd1eca-dirty.</p>
+<p>Every section in one file. Version v0.2.3-98-gb771cc0-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -373,7 +373,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>When someone asks you to &#34;send a spreadsheet&#34;, open the <strong>Reports</strong> tab. Choose the <strong>Period</strong> — two dates, or <strong>30 days</strong>, <strong>90 days</strong>, <strong>This quarter</strong>, <strong>Last quarter</strong> — and narrow it down if you need to: <strong>Boards</strong>, <strong>Subdivisions</strong> (a subdivision includes the ones nested in it), <strong>Assignees</strong>, <strong>Labels</strong>, <strong>Priority</strong>, <strong>State</strong>, and an <strong>Iteration</strong> once a single board is chosen. Empty means &#34;any&#34;. A card is included if it was alive during the period: created before the period ended and not finished before it began. Its state and age are as of today.</p>
 <p>Below the selection you see how many cards match. Then download:</p>
 <ul>
-<li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion and a breakdown by subdivision. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables. Everything on the summary is counted from those same rows.</li>
+<li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion and a breakdown by subdivision. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables: among them <strong>Tickets</strong> — the card&#39;s RDS, service requests, change requests and problems in one cell, <code>RDS 12345; Problem PRB-7</code> — and, last, the whole <strong>Description</strong>. Everything on the summary is counted from those same rows.</li>
 <li><strong>CSV</strong> holds the same rows without the summary.</li>
 <li><strong>JSON</strong> is for a program: field names as in the API, values as codes (<code>done</code>, <code>high</code>).</li>
 </ul>
@@ -1732,6 +1732,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>Column width is dragged with the mouse</strong> or set from the keyboard, and remembered in the browser. Neighbouring columns no longer merge into one surface.</li>
 <li><strong>The side panel makes room</strong> instead of covering the board&#39;s controls.</li>
 <li><strong>The board&#39;s tools are two lines instead of three</strong> (five with a card open): the view and the whole filter on the first, search, grouping, saved views, «Найти», «Поток» and «Архив» on the second. The filter stays in view; its quick conditions — «Горит» to «Дольше обещанного» — are toggles now, a pressed one filled and ticked. Theme and density live behind your name.</li>
+<li><strong>The card export carries tickets and the description.</strong> The <strong>Data</strong> sheet (and CSV, and JSON) gains <strong>Tickets</strong> — RDS, service requests, change requests and problems in one cell — and, as the last column, the whole <strong>Description</strong>. JSON has <code>refs</code> as a list and <code>description</code>.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1877,6 +1878,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>Ширину колонки тянут мышью</strong> или задают с клавиатуры, и браузер её запоминает. Соседние колонки больше не сливаются в одну поверхность.</li>
 <li><strong>Боковая панель уступает место</strong>, а не закрывает управление доской.</li>
 <li><strong>Инструменты доски — две строки вместо трёх</strong> (пяти с открытой карточкой): в первой вид и весь отбор, во второй поиск, группировка, сохранённые виды, «Найти», «Поток» и «Архив». Отбор остаётся на виду; его быстрые условия — от «Горит» до «Дольше обещанного» — теперь переключатели, включённый залит и отмечен галочкой. Тема и плотность — за именем.</li>
+<li><strong>В выгрузке карточек — заявки и описание.</strong> На листе <strong>Данные</strong> (и в CSV, и в JSON) появились <strong>Заявки</strong> — RDS, ЗНО, ЗНИ и проблемы одной ячейкой — и последним столбцом <strong>Описание</strong> целиком. В JSON — список <code>refs</code> и поле <code>description</code>.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

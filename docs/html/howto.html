@@ -285,7 +285,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>When someone asks you to &#34;send a spreadsheet&#34;, open the <strong>Reports</strong> tab. Choose the <strong>Period</strong> — two dates, or <strong>30 days</strong>, <strong>90 days</strong>, <strong>This quarter</strong>, <strong>Last quarter</strong> — and narrow it down if you need to: <strong>Boards</strong>, <strong>Subdivisions</strong> (a subdivision includes the ones nested in it), <strong>Assignees</strong>, <strong>Labels</strong>, <strong>Priority</strong>, <strong>State</strong>, and an <strong>Iteration</strong> once a single board is chosen. Empty means &#34;any&#34;. A card is included if it was alive during the period: created before the period ended and not finished before it began. Its state and age are as of today.</p>
 <p>Below the selection you see how many cards match. Then download:</p>
 <ul>
-<li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion and a breakdown by subdivision. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables. Everything on the summary is counted from those same rows.</li>
+<li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion and a breakdown by subdivision. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables: among them <strong>Tickets</strong> — the card&#39;s RDS, service requests, change requests and problems in one cell, <code>RDS 12345; Problem PRB-7</code> — and, last, the whole <strong>Description</strong>. Everything on the summary is counted from those same rows.</li>
 <li><strong>CSV</strong> holds the same rows without the summary.</li>
 <li><strong>JSON</strong> is for a program: field names as in the API, values as codes (<code>done</code>, <code>high</code>).</li>
 </ul>
@@ -369,7 +369,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-96-g1bd1eca-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-98-gb771cc0-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

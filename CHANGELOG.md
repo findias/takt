@@ -335,6 +335,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   The filter stays in view; its quick conditions — «Горит» to «Дольше
   обещанного» — are toggles now, a pressed one filled and ticked.
   Theme and density live behind your name.
+- **The card export carries tickets and the description.** The **Data**
+  sheet (and CSV, and JSON) gains **Tickets** — RDS, service requests,
+  change requests and problems in one cell — and, as the last column,
+  the whole **Description**. JSON has `refs` as a list and
+  `description`.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

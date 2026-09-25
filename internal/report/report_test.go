@@ -433,3 +433,59 @@ func TestSlicesAreEachPersonsOwn(t *testing.T) {
 		t.Errorf("срез без названия прошёл: %v", err)
 	}
 }
+
+// Заявки и описание — в выгрузке. Без них файл, который отдают
+// наружу, не отвечает на два первых вопроса о работе: по какой заявке
+// она идёт и что в ней надо сделать (замечено владельцем 25.09.2026).
+func TestExportCarriesTicketsAndDescription(t *testing.T) {
+	f := newFixture(t)
+	id := f.card(spec{title: "Перенести оплату", created: 3, started: 2, finished: -1})
+	f.inTenant(f.owner, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(f.ctx, `update cards set description = $2 where id = $1`,
+			id, "Шлюз меняется до 15 октября.\nВозвраты — отдельно."); err != nil {
+			return err
+		}
+		_, err := tx.Exec(f.ctx, `
+			insert into card_refs (org_id, card_id, kind, ref, created_at)
+			values ($1, $2, 'rds', '12345', now() - interval '1 hour'),
+			       ($1, $2, 'problem', 'PRB-7', now())`, f.orgID, id)
+		return err
+	})
+
+	got := f.export(f.owner, period(30))
+	if len(got.rows) != 1 {
+		t.Fatalf("строк %d, ожидалась одна", len(got.rows))
+	}
+	row := got.rows[0]
+	if !slices.Equal(row.Refs, []Ref{{Kind: "rds", Ref: "12345"}, {Kind: "problem", Ref: "PRB-7"}}) {
+		t.Errorf("заявки %+v", row.Refs)
+	}
+	if row.Description != "Шлюз меняется до 15 октября.\nВозвраты — отдельно." {
+		t.Errorf("описание %q", row.Description)
+	}
+
+	var buf bytes.Buffer
+	flt := period(30)
+	if err := f.svc.Export(f.ctx, f.orgID, f.owner, flt, func() (Sink, error) {
+		return NewXLSX(i18n.WithLang(f.ctx, i18n.RU), &buf, flt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	table, _, _, err := importer.Read(buf.Bytes(), "Данные")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cell := func(name string) string {
+		i := slices.Index(table.Headers, name)
+		if i < 0 {
+			t.Fatalf("нет столбца %q в %v", name, table.Headers)
+		}
+		return table.Rows[0][i]
+	}
+	if got := cell("Заявки"); got != "RDS 12345; Проблема PRB-7" {
+		t.Errorf("столбец «Заявки»: %q", got)
+	}
+	if got := cell("Описание"); !strings.HasPrefix(got, "Шлюз меняется до 15 октября.") {
+		t.Errorf("столбец «Описание»: %q", got)
+	}
+}
