@@ -329,9 +329,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   into one surface.
 - **The side panel makes room** instead of covering the board's
   controls.
-- **The board header is one line**: views, search, «Отбор» with the
-  number of active conditions, grouping, saved views; theme and density
-  moved out of it, behind your name.
+- **The board's tools are two lines instead of three** (five with a
+  card open): the view and the whole filter on the first, search,
+  grouping, saved views, «Найти», «Поток» and «Архив» on the second.
+  The filter stays in view; its quick conditions — «Горит» to «Дольше
+  обещанного» — are toggles now, a pressed one filled and ticked.
+  Theme and density live behind your name.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

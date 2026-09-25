@@ -3,7 +3,7 @@ import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
 import { groupByOrigin, labelTitle, chipClass } from '../../entities/label/model.ts'
 import { epicTone } from '../../entities/card/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
-import { CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
+import { CheckIcon, CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
 import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
 import type { Filters } from './filters.ts'
 import { t } from '../../shared/i18n/index.ts'
@@ -200,61 +200,75 @@ export function FilterBar({
             остальных отборов, поэтому он стоит отбором, а не выбором
             уровня: «покажи низкие» не спрашивает никто. Горит — это
             верх шкалы, высокий и наивысший вместе. */}
-        <label className="row row--tight small">
-          <input
-            type="checkbox"
-            checked={filters.urgent}
-            onChange={(e) => onChange({ ...filters, urgent: e.target.checked })}
-          />
-          <span>{t.filters.urgent}</span>
-        </label>
+        <QuickToggle
+          checked={filters.urgent}
+          onChange={(on) => onChange({ ...filters, urgent: on })}
+          label={t.filters.urgent}
+        />
 
         {/* «Срок подходит» — про обещанное наружу, а «Дольше
             обещанного» — про обещание доски. Это разные вопросы,
             и складывать их в один отбор нельзя. */}
-        <label className="row row--tight small">
-          <input
-            type="checkbox"
-            checked={filters.due}
-            onChange={(e) => onChange({ ...filters, due: e.target.checked })}
-          />
-          <span>{t.filters.dueSoon}</span>
-        </label>
+        <QuickToggle
+          checked={filters.due}
+          onChange={(on) => onChange({ ...filters, due: on })}
+          label={t.filters.dueSoon}
+        />
 
-        <label className="row row--tight small">
-          <input
-            type="checkbox"
-            checked={filters.blocked}
-            onChange={(e) => onChange({ ...filters, blocked: e.target.checked })}
-          />
-          <span>{t.filters.blocked}</span>
-        </label>
+        <QuickToggle
+          checked={filters.blocked}
+          onChange={(on) => onChange({ ...filters, blocked: on })}
+          label={t.filters.blocked}
+        />
 
         {/* Рядом с «Заблокированными»: это те из них, что снимутся сами
             в ближайшие сутки. Уведомлений продукт не шлёт — этот отбор
             и отвечает на «что вот-вот пойдёт». */}
         {(hasBlockDeadlines || filters.expiring) && (
-        <label className="row row--tight small">
-          <input
-            type="checkbox"
-            checked={filters.expiring}
-            onChange={(e) => onChange({ ...filters, expiring: e.target.checked })}
-          />
-          <span>{t.filters.expiring}</span>
-        </label>
+        <QuickToggle
+          checked={filters.expiring}
+          onChange={(on) => onChange({ ...filters, expiring: on })}
+          label={t.filters.expiring}
+        />
         )}
 
-        <label className="row row--tight small">
-          <input
-            type="checkbox"
-            checked={filters.aging}
-            onChange={(e) => onChange({ ...filters, aging: e.target.checked })}
-          />
-          <span>{t.filters.aging}</span>
-        </label>
+        <QuickToggle
+          checked={filters.aging}
+          onChange={(on) => onChange({ ...filters, aging: on })}
+          label={t.filters.aging}
+        />
 
       </div>
     </div>
+  )
+}
+
+/**
+ * Быстрый отбор — кнопка-переключатель поверх настоящего флажка.
+ *
+ * Флажок остаётся флажком: диктор читает «флажок, отмечен», пробел
+ * переключает, сценарии находят его по роли. Меняется только вид —
+ * пять квадратов с подписями читались как анкета, а не как отборы,
+ * и занимали место, которого строке не хватает (решение владельца
+ * 25.09.2026: отбор на виду, но компактно). Включённый отличается
+ * не одним цветом: заливка, полужирная подпись и галочка — последние
+ * две видны и в режиме высокой контрастности, где заливки нет.
+ */
+function QuickToggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (on: boolean) => void
+  label: string
+}) {
+  return (
+    <label className={checked ? 'filter-toggle filter-toggle--on' : 'filter-toggle'}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {checked && <CheckIcon size={14} />}
+      <span>{label}</span>
+    </label>
   )
 }
 

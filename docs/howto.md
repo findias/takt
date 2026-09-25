@@ -28,8 +28,10 @@ shows less than everything, and says so in the column.
    labels, **Urgent**, **Due soon**, **Blocked**, **Longer than
    promised**, iteration. Next to them you see how many cards are hidden
    and **Show all**. On a narrow screen the row is folded under
-   **Filter**, which shows how many conditions are on. **Find a card**,
-   below the row, searches by title and number.
+   **Filter**, which shows how many conditions are on. The quick
+   conditions, from **Urgent** to **Longer than promised**, are toggles:
+   a pressed one is filled and ticked. **Find a card**, at the start of
+   the second row, searches by title and number.
 2. To share the result, copy the page address — the filter lives in it.
 3. To come back to a filter later, press **Save view** and give it a name.
 

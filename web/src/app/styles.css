@@ -3425,15 +3425,22 @@ textarea.description {
   flex: none;
 }
 
-/* Строка инструментов доски — одна (разбор 21.09.2026): вид, поиск,
-   «Отбор», группировка, виды; справа — палитра, «Поток», «Архив».
-   Не помещается — переносится целиком, а не сжимает подписи. */
+/* Строк инструментов доски две (решение владельца 25.09.2026):
+   первая — вид и весь отбор, вторая — поиск, группировка, виды,
+   справа палитра, «Поток», «Архив». Не помещается — переносится
+   по элементу, а не сжимает подписи. */
 .board-tools-line {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
   padding-block: var(--space-2);
+}
+.board-tools-line--second {
+  padding-top: 0;
+}
+.board-tools-line--second > .filters-search {
+  flex: 0 1 20rem;
 }
 .board-tools-line > .board-tools {
   margin-left: auto;
@@ -3480,14 +3487,6 @@ textarea.description {
     max-inline-size: 12.5rem;
     text-overflow: ellipsis;
   }
-}
-/* Поиск — строкой под отбором. */
-.board-search-line {
-  display: flex;
-  padding-bottom: var(--space-2);
-}
-.board-search-line .filters-search {
-  flex: 0 1 28rem;
 }
 /* Сколько отборов включено — плашкой на кнопке: видно и тогда, когда
    сама подпись «Отбор» на телефоне спрятана в значок. */
@@ -3542,6 +3541,66 @@ textarea.description {
   border: none;
   font: inherit;
   min-height: var(--target);
+}
+/* Быстрый отбор — пилюля-переключатель (решение владельца 25.09.2026:
+   отбор на виду, но компактно). Флажок внутри настоящий, но спрятан:
+   нажимают всю пилюлю, а состояние видно по ней самой. Граница —
+   `rule-strong`, как у любого элемента управления: 3:1 к фону. */
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+/* Флажок — прозрачным слоем поверх всей пилюли, а не точкой в пиксель:
+   нажатие приходится в него самого, и сценарии, отмечающие флажок
+   (`check()`), и вспомогательные технологии попадают в тот же
+   элемент, что и мышь. Спрятанный в пиксель, он оказывался под
+   подписью, и нажать по нему было нельзя. */
+.filter-toggle > input[type='checkbox'] {
+  position: absolute;
+  /* С рамкой: иначе флажок на два пикселя ниже пилюли и мельче
+     цели нажатия (a11y.spec это меряет). */
+  inset: -1px;
+  inline-size: calc(100% + 2px);
+  block-size: calc(100% + 2px);
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.filter-toggle:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.filter-toggle:active {
+  background: var(--surface-2);
+}
+.filter-toggle:has(> input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Включённый отличается не одним цветом: заливка, полужирная подпись
+   и галочка — две последние остаются и там, где заливку съедает
+   режим высокой контрастности. */
+.filter-toggle--on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.filter-toggle--on:active {
+  background: var(--accent-soft);
+  filter: brightness(0.95);
 }
 
 /* Метки на карточке. Цвет приходит именем оттенка, а не значением:
