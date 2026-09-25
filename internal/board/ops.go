@@ -684,11 +684,20 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 		}); err != nil {
 		return Patch{}, err
 	}
+	// Сделанная карточка отпускает тех, кто её ждал.
+	var released []Card
+	if to.IsFinishedPoint && !from.IsFinishedPoint {
+		if released, err = releaseHeldBy(ctx, tx, orgID, actorID, boardID, c.ID); err != nil {
+			return Patch{}, err
+		}
+	}
 	// Пересечение точки финиша делает часть сделанной — значит, доля
 	// разбиения у родителя изменилась, и он едет вместе с ней. Иначе
 	// полоса на родителе оставалась прежней до перезагрузки: часть уже
 	// в «Готово», а над ней по-прежнему «0 из 5».
-	return withParent(ctx, tx, boardID, c)
+	patch, err := withParent(ctx, tx, boardID, c)
+	patch.Cards = appendNew(patch.Cards, released)
+	return patch, err
 }
 
 type updateCardPayload struct {

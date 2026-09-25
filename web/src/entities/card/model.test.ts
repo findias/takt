@@ -12,6 +12,7 @@ import {
   candidatesForSubtask,
   cardDetails,
   childrenOf,
+  dependenciesOf,
   dateWords,
   dueIsBurning,
   dueIsHot,
@@ -423,4 +424,34 @@ test('застрявший внук останавливает корень, и 
   // С застрявшей прямой частью — общим счётом, а не двумя тревогами.
   assert.equal(deepStuckLabel(epic, 1), 'Части заблокированы: 2')
   assert.equal(deepStuckLabel(card('a', 'Фича'), 1), null)
+})
+
+// «Ждёт задачу 2» после того, как задача 2 сделана, — неправда
+// (замечено владельцем 25.09.2026): связь «блокирует» держит, пока
+// обе стороны не сделаны.
+test('сделанная карточка никого не держит, и сделанную не показывают ждущей', () => {
+  const base = state(
+    [
+      card('1', 'Сделанная блокирующая', { outcome: 'done' }),
+      card('2', 'Ждала первую'),
+      card('3', 'Идущая блокирующая'),
+      card('4', 'Ждёт третью'),
+      card('5', 'Ждала чужую'),
+      card('6', 'Сделанная ждущая', { doneAt: '2026-09-25T09:00:00Z' }),
+    ],
+    [
+      { fromCard: '1', toCard: '2', kind: 'blocks' },
+      { fromCard: '3', toCard: '4', kind: 'blocks' },
+      { fromCard: 'x', toCard: '5', kind: 'blocks' },
+      { fromCard: '3', toCard: '6', kind: 'blocks' },
+    ] as Link[],
+    [foreign('x', 'Чужая сделанная', { done: true, outcome: 'done' })],
+  )
+  const { holds, waitsFor } = dependenciesOf(base)
+  assert.equal(waitsFor['2'], undefined, 'ждёт сделанную')
+  assert.equal(holds['1'], undefined, 'сделанная держит')
+  assert.equal(waitsFor['5'], undefined, 'ждёт сделанную чужую')
+  assert.equal(waitsFor['6'], undefined, 'сделанная ждёт')
+  assert.deepEqual(waitsFor['4']?.map((r) => r.id), ['3'])
+  assert.deepEqual(holds['3']?.map((r) => r.id), ['4'])
 })

@@ -168,6 +168,12 @@ filter **Block ending** gathers such cards. To move the
 deadline, open the card and press **Move deadline**; to lift the
 block now, press **Lift the block**.
 
+A card can also wait for another card rather than a date: a part that
+holds up its parent, or a **Blocks** link. The board then shows
+**Waits** on one and **Holds** on the other. Both go as soon as the card
+being waited for is done — moved past the finish or marked **Done** —
+and a block held by that card lifts itself; the history says so.
+
 ### Make a column wider
 
 Drag the right edge of the column header. From the keyboard: focus

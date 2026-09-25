@@ -313,6 +313,7 @@ export const en: typeof ru = {
     blockedFor: (reason: string) => `blocked: ${reason}`,
     blocked: 'blocked',
     unblocked: 'block lifted',
+    unblockedReleased: 'block lifted: what it waited for is done',
     blockExpired: 'block lifted by itself: the deadline passed',
     blockUntil: (when: string) => `block deadline: until ${when}`,
     blockOpenEnded: 'block has no deadline now',

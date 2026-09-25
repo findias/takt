@@ -150,11 +150,19 @@ export function dependenciesOf(base: BaseState): {
   for (const link of base.links) {
     if (link.kind !== 'blocks') continue
     // Направление здесь несёт смысл: from держит to.
+    const holder = resolve(base, link.fromCard, 'blocks')
+    const waiter = resolve(base, link.toCard, 'blocks')
+    // Связь держит, пока обе стороны не сделаны: сделанная карточка
+    // никого не держит, а сделанную незачем показывать ждущей. Прежде
+    // «Ждёт задачу 2» висело и после того, как задача 2 была сделана
+    // (замечено владельцем 25.09.2026). Сама связь остаётся в панели —
+    // уходит только пометка на доске.
+    if (holder.done || waiter.done) continue
     if (base.cards[link.fromCard]) {
-      ;(holds[link.fromCard] ??= []).push(resolve(base, link.toCard, 'blocks'))
+      ;(holds[link.fromCard] ??= []).push(waiter)
     }
     if (base.cards[link.toCard]) {
-      ;(waitsFor[link.toCard] ??= []).push(resolve(base, link.fromCard, 'blocks'))
+      ;(waitsFor[link.toCard] ??= []).push(holder)
     }
   }
   return { holds, waitsFor }

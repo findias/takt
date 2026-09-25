@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-102-g2ae6e0d-dirty.</p>
+<p>Every section in one file. Version v0.2.3-103-gac24ba7-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -257,6 +257,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong>: a date and a time.</li>
 </ol>
 <p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>.</p>
+<p>A card can also wait for another card rather than a date: a part that holds up its parent, or a <strong>Blocks</strong> link. The board then shows <strong>Waits</strong> on one and <strong>Holds</strong> on the other. Both go as soon as the card being waited for is done — moved past the finish or marked <strong>Done</strong> — and a block held by that card lifts itself; the history says so.</p>
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
@@ -1737,6 +1738,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li>**A team&#39;s task links to an epic from its own board, and an epic finds a task that already exists.<strong> </strong>Link to an existing card** searches every board you can see by number or title, and gains the <strong>Parent</strong> kind, so a task can pick the epic above it. Before, the choice offered only cards of the same board. A task&#39;s <strong>Tasks</strong> tab opens with an <strong>Epic</strong> line: <strong>Choose an epic…</strong> hangs the task under one, and <strong>Remove</strong> takes it off.</li>
 <li><strong>An epic is always the parent.</strong> A subtask of a team&#39;s task can no longer be created on the portfolio, nor an epic linked as a task&#39;s subtask; the refusal says to link from the task with <strong>Parent</strong> instead. Links made before stay as they are.</li>
 <li>**A card keeps its subtasks, block and epic mark after a move or an edit.** Moving a card to another column or renaming it returned the card without them, and the subtask block, the block and the epic&#39;s mark disappeared until the page was reloaded.</li>
+<li><strong>&#34;Waits&#34; goes when what it waits for is done.</strong> A <strong>Blocks</strong> link no longer shows <strong>Waits</strong> and <strong>Holds</strong> once either card is done, and a block held by another card lifts itself when that card is moved past the finish or marked <strong>Done</strong>; the history records it.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1886,6 +1888,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li>**Задача команды связывается с эпиком со своей доски, а эпик находит готовую задачу команды.<strong> </strong>«Связать с существующей карточкой»** ищет по номеру и названию на всех видимых досках и получил вид <strong>«Родитель»</strong>: с задачи можно выбрать эпик над ней. Прежде выбор предлагал карточки только своей доски. Вкладка <strong>«Задачи»</strong> задачи открывается строкой <strong>«Эпик»</strong>: **«Выбрать эпик…»<strong> подвешивает задачу к эпику, </strong>«Убрать»** снимает.</li>
 <li><strong>Эпик всегда родитель.</strong> Подзадачу задачи команды больше нельзя завести на портфеле, а эпик — связать подзадачей задачи; отказ предлагает связать с задачи видом <strong>«Родитель»</strong>. Прежние связи остаются как есть.</li>
 <li>**Карточка сохраняет подзадачи, блокировку и метку эпика после переноса и правки.** Перенос в другую колонку и переименование возвращали карточку без них, и блок подзадач, блокировка и метка эпика пропадали до обновления страницы.</li>
+<li><strong>«Ждёт» уходит, когда то, чего ждали, сделано.</strong> Связь <strong>«Блокирует»</strong> больше не показывает <strong>«Ждёт»</strong> и <strong>«Держит»</strong>, когда одна из карточек сделана, а блокировка, которую держит другая карточка, снимается сама, когда ту переносят за финиш или отмечают <strong>«Сделана»</strong>; история это записывает.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

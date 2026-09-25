@@ -3126,3 +3126,33 @@ test('строка «Эпик» наверху вкладки выбирает �
   await expect(page.getByRole('button', { name: 'Выбрать эпик…' })).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Задача команды').getByRole('button', { name: /Эпик «Генератор данных»/ })).toHaveCount(0)
 })
+
+// «Ждёт задачу 2» уходит, когда задачу 2 сделали (замечено владельцем
+// 25.09.2026): связь «блокирует» держит, пока держащая не сделана.
+test('«Ждёт» пропадает с карточки, когда то, чего она ждёт, сделано', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска ожидания')
+  await addCard(page, 'Очередь', 'Задача 1')
+  await addCard(page, 'Очередь', 'Задача 2')
+
+  await cardIn(page, 'Очередь', 'Задача 2').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByText('Связать с существующей карточкой').click()
+  await page.getByRole('combobox', { name: 'Вид связи' }).selectOption({ label: 'Блокирует' })
+  await page.getByRole('searchbox', { name: 'Карточка для связи' }).fill('Задача 1')
+  await page.getByRole('button', { name: /Задача 1.*На этой доске/ }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  const waiting = cardIn(page, 'Очередь', 'Задача 1')
+  await expect(waiting.locator('.card-waits')).toContainText('Ждёт')
+
+  const holder = cardIn(page, 'Очередь', 'Задача 2')
+  await holder.hover()
+  await holder.getByRole('checkbox', { name: 'Выделить «Задача 2»' }).check()
+  await page.getByRole('status', { name: 'Действия над выделенными' })
+    .getByRole('button', { name: 'Перенести выделенные' }).click()
+  await page.getByRole('menuitem', { name: 'Готово' }).click()
+  await expect(cardIn(page, 'Готово', 'Задача 2')).toBeVisible()
+
+  await expect(waiting.locator('.card-waits')).toHaveCount(0)
+})

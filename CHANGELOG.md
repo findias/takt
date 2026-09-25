@@ -355,6 +355,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   edit.** Moving a card to another column or renaming it returned the
   card without them, and the subtask block, the block and the epic's
   mark disappeared until the page was reloaded.
+- **"Waits" goes when what it waits for is done.** A **Blocks** link no
+  longer shows **Waits** and **Holds** once either card is done, and a
+  block held by another card lifts itself when that card is moved past
+  the finish or marked **Done**; the history records it.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

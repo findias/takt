@@ -605,10 +605,86 @@ func setCardDone(
 	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, kind, nil, nil, nil); err != nil {
 		return Patch{}, err
 	}
+	var released []Card
+	if *p.Done {
+		if released, err = releaseHeldBy(ctx, tx, orgID, actorID, boardID, c.ID); err != nil {
+			return Patch{}, err
+		}
+	}
+	if err := completeCard(ctx, tx, &c); err != nil {
+		return Patch{}, err
+	}
 
 	// Родитель приезжает вместе с ней: доля разбиения у него только что
 	// изменилась, а узнаёт он об этом ниоткуда — связь не его поле.
-	return withParent(ctx, tx, boardID, c)
+	patch, err := withParent(ctx, tx, boardID, c)
+	patch.Cards = appendNew(patch.Cards, released)
+	return patch, err
+}
+
+// appendNew дописывает карточки, которых в списке ещё нет. Держащая —
+// часто подзадача, а ждущая — её родитель: он приезжает и родителем,
+// и освобождённой, и дважды одна карточка в патче ни к чему.
+func appendNew(cards, more []Card) []Card {
+	seen := make(map[string]bool, len(cards))
+	for _, c := range cards {
+		seen[c.ID] = true
+	}
+	for _, c := range more {
+		if !seen[c.ID] {
+			cards = append(cards, c)
+			seen[c.ID] = true
+		}
+	}
+	return cards
+}
+
+// releaseHeldBy снимает блокировки, которые держала эта карточка, —
+// в момент, когда её сделали.
+//
+// Блокировка с держащей карточкой означает «ждём её». Сделанную ждать
+// нечего, а карточка оставалась «Заблокирована: ждёт задачу 2» и после
+// того, как задачу 2 сделали, пока кто-нибудь не снимал блокировку руками
+// (замечено владельцем 25.09.2026). Снятие пишется обычным «unblocked»
+// от имени того, кто сделал держащую, — его действие её и сняло, — с
+// пометкой, какая карточка отпустила.
+//
+// Возвращает освобождённые карточки этой доски — для патча; на чужих
+// досках их перечитают по событию.
+func releaseHeldBy(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, cardID string) ([]Card, error) {
+	rows, err := tx.Query(ctx, `
+		update card_blocks b
+		   set unblocked_at = now(), unblocked_by = $2
+		  from cards c
+		 where b.blocking_card = $1 and b.unblocked_at is null
+		   and c.id = b.card_id and c.archived_at is null
+		returning b.card_id, c.board_id`, cardID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	type held struct{ card, board string }
+	list, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (held, error) {
+		var h held
+		return h, r.Scan(&h.card, &h.board)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out []Card
+	for _, h := range list {
+		if err := logEvent(ctx, tx, orgID, h.board, h.card, actorID, "unblocked", nil, nil,
+			map[string]any{"releasedBy": cardID}); err != nil {
+			return nil, err
+		}
+		if h.board == boardID {
+			c, err := readCard(ctx, tx, boardID, h.card)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, c)
+		}
+	}
+	return out, nil
 }
 
 // withParent добавляет к патчу предков этой карточки, если она чья-то

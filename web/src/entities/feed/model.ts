@@ -88,8 +88,11 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return t.feed.undone
     case 'blocked':
       return typeof p.reason === 'string' ? t.feed.blockedFor(p.reason) : t.feed.blocked
+    // Снята тем, что сделали держащую карточку: автор — тот, кто её
+    // сделал, но блокировку он не трогал, и строка говорит, почему она
+    // ушла.
     case 'unblocked':
-      return t.feed.unblocked
+      return typeof p.releasedBy === 'string' ? t.feed.unblockedReleased : t.feed.unblocked
     // Автора у снятия по сроку нет, и строка читается как строка без
     // автора: «сама» говорит, почему подписи нет.
     case 'block_expired':

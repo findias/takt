@@ -318,6 +318,7 @@ export const ru = {
     blockedFor: (reason: string) => `заблокирована: ${reason}`,
     blocked: 'заблокирована',
     unblocked: 'блокировка снята',
+    unblockedReleased: 'блокировка снята: то, чего ждали, сделано',
     blockExpired: 'блокировка снята сама: вышел срок',
     blockUntil: (when: string) => `срок блокировки: до ${when}`,
     blockOpenEnded: 'блокировка стала бессрочной',
