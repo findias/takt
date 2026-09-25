@@ -8,6 +8,7 @@ import type { BaseState } from '../../entities/board/model.ts'
 import { cardDetails, epicTone, progressRatio, refKindName } from '../../entities/card/model.ts'
 import type { CardDetails, Related } from '../../entities/card/model.ts'
 import { t } from '../../shared/i18n/index.ts'
+import { boardPath, navigate } from '../../shared/router/index.ts'
 
 /**
  * Вкладка «Задачи» карточки: заявки сервис-деска, родитель, подзадачи
@@ -266,6 +267,18 @@ function RelatedRow({
           <button className="link related-open" onClick={() => onOpen(related.id)}>
             {title}
           </button>
+        ) : related.boardId ? (
+          // Чужая, но видимая — открывается на своей доске.
+          <a
+            className="link related-open"
+            href={boardPath(related.boardId, related.id)}
+            onClick={(e) => {
+              e.preventDefault()
+              navigate(boardPath(related.boardId!, related.id))
+            }}
+          >
+            {title}
+          </a>
         ) : (
           <span>{title}</span>
         )}

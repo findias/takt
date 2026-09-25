@@ -187,6 +187,10 @@ holds up its parent, or a **Blocks** link. The board then shows
 being waited for is done — moved past the finish or marked **Done** —
 and a block held by that card lifts itself; the history says so.
 
+The other card may live on another board: find it by name in **Link to
+an existing card**, which searches every board you can see. Its name on
+the card and in the panel then leads to it on its own board.
+
 ### Make a column wider
 
 Drag the right edge of the column header. From the keyboard: focus

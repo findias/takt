@@ -3491,3 +3491,45 @@ test('карточка, изменённая другим, подсвечена,
   await expect(lit).toHaveCount(0)
 })
 
+// Связи «блокирует» и «связана с» — через доски (владелец 25.09.2026,
+// пункт 12 списка): карточку соседей находят поиском, и связь видна
+// с обеих сторон.
+test('связи «блокирует» и «связана с» заводятся с карточкой другой доски', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска ждущих')
+  await addCard(page, 'Очередь', 'Ждёт соседей')
+  await addCard(page, 'Очередь', 'Похожа на соседскую')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Доска держащих')
+  await addCard(page, 'Очередь', 'Держит соседей')
+
+  await cardIn(page, 'Очередь', 'Держит соседей').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  const panel = page.getByLabel(/Карточка .* «Держит соседей»/)
+  await panel.getByText('Связать с существующей карточкой').click()
+  await panel.getByLabel('Вид связи').selectOption('blocks')
+  await panel.getByLabel('Карточка для связи').fill('Ждёт соседей')
+  await panel.getByRole('button', { name: /Ждёт соседей.*Доска ждущих/ }).click()
+  await panel.getByLabel('Вид связи').selectOption('relates')
+  await panel.getByLabel('Карточка для связи').fill('Похожа на соседскую')
+  await panel.getByRole('button', { name: /Похожа на соседскую.*Доска ждущих/ }).click()
+  await expect(panel.getByText('Ждёт соседей')).toBeVisible()
+  await expect(panel.getByText('Похожа на соседскую')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+  await expect(cardIn(page, 'Очередь', 'Держит соседей').getByText('Держит:')).toBeVisible()
+
+  // С другой стороны: ждущая знает, кто её держит, и связанная — с кем связана.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Доска ждущих')
+  const waiting = cardIn(page, 'Очередь', 'Ждёт соседей')
+  await expect(waiting.getByText('Ждёт:')).toBeVisible()
+  await cardIn(page, 'Очередь', 'Похожа на соседскую').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await expect(page.getByLabel(/Карточка .* «Похожа на соседскую»/).getByRole('link', { name: 'Держит соседей' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  // Связь проходится: название чужой карточки ведёт на её доску, к ней.
+  await waiting.getByRole('link', { name: 'Держит соседей' }).click()
+  await expect(page.getByRole('heading', { name: 'Доска держащих' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Держит соседей' })).toBeVisible()
+})

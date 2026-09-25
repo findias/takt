@@ -997,9 +997,23 @@ function Dependency({
         <button className="link" onClick={() => onOpen(first.id)}>
           {first.title}
         </button>
+      ) : first.boardId ? (
+        // Связанная работа на чужой видимой доске открывается там, на
+        // своей доске: связь через доски должна проходиться так же, как
+        // своя (владелец 25.09.2026), а не только называться.
+        <a
+          className="link"
+          href={boardPath(first.boardId, first.id)}
+          title={first.where}
+          onClick={(e) => {
+            e.preventDefault()
+            navigate(boardPath(first.boardId!, first.id))
+          }}
+        >
+          {first.title}
+        </a>
       ) : (
-        // Связанная работа на чужой доске: назвать можем, открыть
-        // отсюда — нет.
+        // Доска не видна: назвать можем, открыть — нет.
         <span className="muted small" title={first.where}>
           {first.title}
         </span>

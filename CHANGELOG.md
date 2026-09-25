@@ -400,6 +400,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A link to a card on another board can be followed.** «Waits» /
+  «Holds» on a card and the rows of «Tasks» used to only name a card on
+  another board; its name now opens it on its own board (when you can
+  see that board).
 - **Cards changed by others while you were away are marked.** A dot
   next to the card number, with who and when in the tooltip; it goes
   out once you open the card, your own changes never light up, and a

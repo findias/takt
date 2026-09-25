@@ -47,6 +47,8 @@ export type Related = {
   reachable: boolean
   /** Своя карточка открывается на этой же доске. */
   onThisBoard: boolean
+  /** Доска чужой, но видимой карточки: туда и ведёт её название. */
+  boardId?: string
   /** Кто делает именно эту часть. Части одной карточки почти всегда
    *  лежат на разных людях, и до сих пор доска отвечала «работа
    *  разбита», молча о том, кого спрашивать. */
@@ -234,6 +236,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       blockedReason: null,
       reachable: true,
       onThisBoard: false,
+      boardId: foreign.boardId,
       assignees: NO_ONE,
       replies: 0,
     }
