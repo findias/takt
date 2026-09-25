@@ -513,6 +513,10 @@ type createCardPayload struct {
 	ColumnID  string `json:"columnId"`
 	Title     string `json:"title"`
 	Placement        // place + afterCardId
+	// Итерация, в которую карточка ложится сразу. Пусто — ни в какую.
+	// Экран присылает её, когда доска отобрана по итерации: иначе
+	// новая карточка заводилась вне итерации и тут же пропадала из вида.
+	IterationID string `json:"iterationId"`
 }
 
 func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -535,6 +539,11 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	c, err := insertCard(ctx, tx, orgID, actorID, boardID, col, p.Title, p.Placement)
 	if err != nil {
 		return Patch{}, err
+	}
+	if p.IterationID != "" {
+		if err := putInIteration(ctx, tx, orgID, actorID, boardID, p.IterationID, c.ID); err != nil {
+			return Patch{}, err
+		}
 	}
 	return Patch{Cards: []Card{c}}, nil
 }

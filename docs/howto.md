@@ -356,7 +356,8 @@ Deleting for good asks for confirmation and cannot be undone.
 
 1. In the strip above the board press **+ iteration**.
 2. Set a name, a start and an end, press **Create iteration**.
-3. On cards, pick the iteration (**Work** tab).
+3. On cards, pick the iteration (**Work** tab). While the board is
+   filtered by an iteration, a new card goes straight into it.
 4. When the time is up press **Close iteration**. It asks first, because
    closing freezes what the iteration contains for good, and the button
    stays inactive until you type the iteration's name — a stray click

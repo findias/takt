@@ -380,6 +380,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   panel they used to wrap below the card's title, among its fields; now
   every panel — card, «Поток», «Архив», access — starts with them,
   right-aligned, and Tab reaches «Закрыть» before the content.
+- **A card created on a board filtered by an iteration goes into it.**
+  Before, it was created outside and vanished from the filtered board at
+  once. `CREATE_CARD` takes an optional `iterationId`; a closed
+  iteration refuses, and then no card is created.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

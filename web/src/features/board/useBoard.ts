@@ -417,11 +417,6 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // в зависимости обработчика.
   const titleOf = useCallback((cardId: string) => titles.current.get(cardId) ?? null, [])
 
-  const createCard = useCallback(
-    (columnId: string, title: string) =>
-      run('CREATE_CARD', { columnId, title, place: 'end' }, t.ops.createCard),
-    [run],
-  )
   const renameCard = useCallback(
     (cardId: string, title: string) =>
       patchCard(
@@ -857,6 +852,17 @@ export function useBoard(boardId: string | null, notify: Notify) {
       reload()
     },
     [run, reload],
+  )
+  // Итерация — когда доска отобрана по ней: новая карточка ложится туда
+  // же, иначе она заводилась вне итерации и тут же пропадала из вида
+  // (владелец 25.09.2026). Принадлежность к итерации патч не несёт,
+  // поэтому такая карточка — с перечитыванием доски.
+  const createCard = useCallback(
+    (columnId: string, title: string, iterationId?: string) =>
+      iterationId
+        ? runAndReload('CREATE_CARD', { columnId, title, place: 'end', iterationId }, t.ops.createCard)
+        : run('CREATE_CARD', { columnId, title, place: 'end' }, t.ops.createCard),
+    [run, runAndReload],
   )
 
   // Итерация не меняет ни порядок карточек, ни версию доски, но меняет

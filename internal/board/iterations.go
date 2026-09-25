@@ -309,8 +309,16 @@ func addToIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID stri
 	if err != nil {
 		return Patch{}, err
 	}
-	if err := requireOpenIteration(ctx, tx, boardID, p.IterationID); err != nil {
-		return Patch{}, err
+	return Patch{}, putInIteration(ctx, tx, orgID, actorID, boardID, p.IterationID, p.CardID)
+}
+
+// putInIteration кладёт карточку в открытую итерацию и пишет событие.
+// Отдельно от addToIteration, потому что в итерацию кладёт и заведение
+// карточки: при отборе по итерации новая карточка ложится в неё той же
+// транзакцией (владелец 25.09.2026).
+func putInIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, iterationID, cardID string) error {
+	if err := requireOpenIteration(ctx, tx, boardID, iterationID); err != nil {
+		return err
 	}
 
 	tag, err := tx.Exec(ctx, `
@@ -319,9 +327,9 @@ func addToIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID stri
 		 where exists (select 1 from cards
 		                where id = $3 and board_id = $5 and archived_at is null)
 		on conflict (iteration_id, card_id) where removed_at is null do nothing`,
-		orgID, p.IterationID, p.CardID, actorID, boardID)
+		orgID, iterationID, cardID, actorID, boardID)
 	if err != nil {
-		return Patch{}, translateIteration(err)
+		return translateIteration(err)
 	}
 	if tag.RowsAffected() == 0 {
 		// Либо карточки нет, либо она уже в этой итерации. Второе —
@@ -331,14 +339,11 @@ func addToIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID stri
 		// без указания индекса проглотил бы и второе ограничение — то,
 		// которое не пускает карточку в две итерации сразу, — и запрет
 		// молча превратился бы в бездействие.
-		return Patch{}, nil
+		return nil
 	}
 
-	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "iteration_added",
-		nil, nil, map[string]any{"iterationId": p.IterationID}); err != nil {
-		return Patch{}, err
-	}
-	return Patch{}, nil
+	return logEvent(ctx, tx, orgID, boardID, cardID, actorID, "iteration_added",
+		nil, nil, map[string]any{"iterationId": iterationID})
 }
 
 func removeFromIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw []byte) (Patch, error) {

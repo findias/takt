@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-108-gbf5351a-dirty.</p>
+<p>Every section in one file. Version v0.2.3-109-g8287e67-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -317,7 +317,7 @@ color:var(--ink-3);font-size:.85rem}
 <ol>
 <li>In the strip above the board press <strong>+ iteration</strong>.</li>
 <li>Set a name, a start and an end, press <strong>Create iteration</strong>.</li>
-<li>On cards, pick the iteration (<strong>Work</strong> tab).</li>
+<li>On cards, pick the iteration (<strong>Work</strong> tab). While the board is filtered by an iteration, a new card goes straight into it.</li>
 <li>When the time is up press <strong>Close iteration</strong>. It asks first, because closing freezes what the iteration contains for good, and the button stays inactive until you type the iteration&#39;s name — a stray click cannot close a sprint. A report appears: what made it and what did not.</li>
 </ol>
 <p>A team that does not work in iterations opens <strong>Flow</strong> and clears <strong>We work in iterations</strong> under <strong>How we work</strong>: iterations disappear from the filter, the grouping, the cards, the table and the card panel. Nothing is deleted, so nothing is asked. To bring them back, press <strong>Work in iterations</strong> where the iteration strip used to be, or tick the box again — everything returns, reports included.</p>
@@ -1746,6 +1746,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li>**Subtasks are renamed where they are listed, and any card from its panel.<strong> A subtask on the same board has </strong>Rename** in its parent&#39;s list; the card panel has a pencil next to the title. Before, a card was renamed only from its menu on the board, so a part on another team&#39;s board could not be renamed without going there.</li>
 <li><strong>A block&#39;s reason is edited in place.</strong> <strong>Edit the reason</strong> on the <strong>Work</strong> tab changes it without lifting the block, so the time blocked stays one interval. New operation <code>SET_BLOCK_REASON</code> and webhook event <code>card.block_reason</code>.</li>
 <li><strong>A panel&#39;s mode and «Закрыть» sit above the title.</strong> In the side panel they used to wrap below the card&#39;s title, among its fields; now every panel — card, «Поток», «Архив», access — starts with them, right-aligned, and Tab reaches «Закрыть» before the content.</li>
+<li><strong>A card created on a board filtered by an iteration goes into it.</strong> Before, it was created outside and vanished from the filtered board at once. <code>CREATE_CARD</code> takes an optional <code>iterationId</code>; a closed iteration refuses, and then no card is created.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1901,6 +1902,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li>**Подзадачи переименовываются там, где перечислены, а любая карточка — из панели.** У подзадачи этой доски в списке родителя есть <strong>«Переименовать»</strong>; в панели карточки — карандаш рядом с названием. Прежде карточку переименовывали только из её меню на доске, и часть на доске другой команды нельзя было переименовать, не уйдя туда.</li>
 <li><strong>Причина блокировки правится на месте.</strong> <strong>«Поправить причину»</strong> на вкладке <strong>«Работа»</strong> меняет её, не снимая блокировку, и время в блоке остаётся одним интервалом. Новая операция <code>SET_BLOCK_REASON</code> и событие вебхука <code>card.block_reason</code>.</li>
 <li><strong>Режим панели и «Закрыть» — над названием.</strong> В боковой панели они переносились под название карточки, к её полям; теперь любая панель — карточки, «Поток», «Архив», доступ — начинается с них, прижатых вправо, и Tab доходит до «Закрыть» раньше, чем до содержимого.</li>
+<li><strong>Карточка, заведённая при отборе по итерации, ложится в неё.</strong> Прежде она заводилась вне итерации и тут же пропадала с отобранной доски. <code>CREATE_CARD</code> принимает необязательный <code>iterationId</code>; закрытая итерация отказывает, и тогда карточка не заводится вовсе.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

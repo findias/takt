@@ -26,7 +26,7 @@ import { BoardSkeleton, EmptyState, ErrorState, Skeleton } from '../shared/ui/st
 import { Button } from '../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { CardSearch, FilterBar } from '../features/board/FilterBar.tsx'
-import { EMPTY, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
+import { EMPTY, NO_ITERATION, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
 import { withViewTransition } from '../shared/lib/withViewTransition.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
@@ -1007,6 +1007,12 @@ export function Board({
     ? base.columnIds.filter((id) => id === (visibleColumn ?? base.columnIds[0]))
     : base.columnIds
 
+  // Доска отобрана по открытой итерации — новые карточки заводятся в неё.
+  const intoIteration =
+    filters.iteration && filters.iteration !== NO_ITERATION && openIterations.some((i) => i.id === filters.iteration)
+      ? filters.iteration
+      : undefined
+
   const renderColumns = (
     groupOrder: Record<string, string[]>,
     hidden?: Record<string, number>,
@@ -1056,7 +1062,7 @@ export function Board({
         onOpenCard={showCard}
         onMoveByKeyboard={moveByKeyboard}
         onNavigate={navigateCards}
-        onCreateCard={(title) => void board.createCard(columnId, title)}
+        onCreateCard={(title) => void board.createCard(columnId, title, intoIteration)}
         onRenameColumn={(name) => void board.renameColumn(columnId, name)}
         onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
         onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}

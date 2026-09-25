@@ -3252,3 +3252,29 @@ test('причина блокировки правится, не разрыва�
   await expect(card.getByText('Заблокирована: ждём доступ к хранилищу')).toBeVisible()
   await expect(card.getByText('ждём досуп')).toHaveCount(0)
 })
+
+// При отборе по итерации новая карточка заводится в неё (владелец
+// 25.09.2026): прежде она заводилась вне итерации и тут же пропадала
+// с отобранной доски.
+test('при отборе по итерации карточка заводится в эту итерацию', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска заведения в спринт')
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 40')
+  await page.getByLabel('Начало').fill('2026-09-28')
+  await page.getByLabel('Конец').fill('2026-10-04')
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
+
+  await openFilters(page)
+  await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Неделя 40' })
+  await addCard(page, 'Очередь', 'Заведена в спринте')
+
+  const card = cardIn(page, 'Очередь', 'Заведена в спринте')
+  await expect(card).toBeVisible()
+  await expect(card.getByText('Неделя 40')).toBeVisible()
+
+  // Сохранено, а не только нарисовано: без отбора карточка всё так же в итерации.
+  await page.getByRole('button', { name: 'Показать все' }).click()
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Заведена в спринте').getByText('Неделя 40')).toBeVisible()
+})
