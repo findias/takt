@@ -465,23 +465,34 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 	if err != nil {
 		return Card{}, err
 	}
+	return c, completeCard(ctx, tx, &c)
+}
 
+// completeCard дочитывает то, что живёт не в строке карточки: прогресс
+// подзадач, поддерево, эпик, доли команд и блокировку.
+//
+// Всякая карточка, уходящая в патч, проходит через него. Клиент заменяет
+// карточку тем, что пришло, и перенос с правкой, читавшие одну строку,
+// стирали на экране блок подзадач, блокировку и метку эпика до
+// перезагрузки страницы (замечено владельцем 25.09.2026).
+func completeCard(ctx context.Context, tx pgx.Tx, c *Card) error {
+	cardID := c.ID
 	p, err := progressOf(ctx, tx, cardID)
 	if err != nil {
-		return Card{}, err
+		return err
 	}
 	c.Progress = p
 	if c.Subtree, err = subtreeOf(ctx, tx, cardID); err != nil {
-		return Card{}, err
+		return err
 	}
 	epic, err := epics(ctx, tx, nil, &cardID)
 	if err != nil {
-		return Card{}, err
+		return err
 	}
 	c.Epic = epic[cardID]
 	shares, err := teams(ctx, tx, nil, &cardID)
 	if err != nil {
-		return Card{}, err
+		return err
 	}
 	c.Teams = shares[cardID]
 
@@ -493,11 +504,11 @@ func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, err
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 	case err != nil:
-		return Card{}, err
+		return err
 	default:
 		c.Blocked = &b
 	}
-	return c, nil
+	return nil
 }
 
 // setBlockUntil меняет срок открытой блокировки.

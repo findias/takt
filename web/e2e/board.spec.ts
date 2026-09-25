@@ -3070,3 +3070,29 @@ test('задача команды подвешивается к эпику со 
     ).toBeVisible()
   }
 })
+
+// Карточка с подзадачами после переноса остаётся с подзадачами — без
+// перезагрузки (замечено владельцем 25.09.2026): перенос возвращал
+// карточку без прогресса, и блок пропадал до обновления страницы.
+test('блок подзадач остаётся на карточке после переноса в другую колонку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска переноса с подзадачами')
+  await addCard(page, 'Очередь', 'Разбитая работа')
+  const parent = cardIn(page, 'Очередь', 'Разбитая работа')
+  await parent.hover()
+  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Первая часть')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+
+  await parent.hover()
+  await parent.getByRole('checkbox', { name: 'Выделить «Разбитая работа»' }).check()
+  await page.getByRole('status', { name: 'Действия над выделенными' })
+    .getByRole('button', { name: 'Перенести выделенные' }).click()
+  await page.getByRole('menuitem', { name: 'В работе' }).click()
+
+  const moved = cardIn(page, 'В работе', 'Разбитая работа')
+  await expect(moved).toBeVisible()
+  await expect(moved.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+})

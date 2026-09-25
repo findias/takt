@@ -664,6 +664,9 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 	if err != nil {
 		return Patch{}, err
 	}
+	if err := completeCard(ctx, tx, &c); err != nil {
+		return Patch{}, err
+	}
 
 	// Событие пишется на каждое перемещение, даже внутри одной колонки:
 	// именно из этого журнала потом считаются cycle time и диаграмма потока.
@@ -749,6 +752,9 @@ func updateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, conflictf("", "карточка уже удалена")
 	}
 	if err != nil {
+		return Patch{}, err
+	}
+	if err := completeCard(ctx, tx, &c); err != nil {
 		return Patch{}, err
 	}
 
@@ -861,6 +867,9 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 	card, err := scanCard(tx.QueryRow(ctx,
 		`select `+cardFields+` from cards where id = $1`, p.CardID))
 	if err != nil {
+		return Patch{}, err
+	}
+	if err := completeCard(ctx, tx, &card); err != nil {
 		return Patch{}, err
 	}
 	col, err := loadColumn(ctx, tx, boardID, columnID)

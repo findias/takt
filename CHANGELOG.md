@@ -349,6 +349,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   longer be created on the portfolio, nor an epic linked as a task's
   subtask; the refusal says to link from the task with **Parent**
   instead. Links made before stay as they are.
+- **A card keeps its subtasks, block and epic mark after a move or an
+  edit.** Moving a card to another column or renaming it returned the
+  card without them, and the subtask block, the block and the epic's
+  mark disappeared until the page was reloaded.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

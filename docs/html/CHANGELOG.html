@@ -172,6 +172,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>The card export carries tickets and the description.</strong> The <strong>Data</strong> sheet (and CSV, and JSON) gains <strong>Tickets</strong> — RDS, service requests, change requests and problems in one cell — and, as the last column, the whole <strong>Description</strong>. JSON has <code>refs</code> as a list and <code>description</code>.</li>
 <li>**A team&#39;s task links to an epic from its own board, and an epic finds a task that already exists.<strong> </strong>Link to an existing card** searches every board you can see by number or title, and gains the <strong>Parent</strong> kind, so a task can pick the epic above it. Before, the choice offered only cards of the same board.</li>
 <li><strong>An epic is always the parent.</strong> A subtask of a team&#39;s task can no longer be created on the portfolio, nor an epic linked as a task&#39;s subtask; the refusal says to link from the task with <strong>Parent</strong> instead. Links made before stay as they are.</li>
+<li>**A card keeps its subtasks, block and epic mark after a move or an edit.** Moving a card to another column or renaming it returned the card without them, and the subtask block, the block and the epic&#39;s mark disappeared until the page was reloaded.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -264,7 +265,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-100-g9987d6e-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-101-geac941d-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
