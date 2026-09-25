@@ -384,6 +384,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   Before, it was created outside and vanished from the filtered board at
   once. `CREATE_CARD` takes an optional `iterationId`; a closed
   iteration refuses, and then no card is created.
+- **A card shows its iteration's end, and turns red when it has
+  passed.** "Week 40 · until 4 Oct": the iteration's end is the card's
+  deadline and moves with it to another iteration; the **Commitment**
+  field is not touched. A card not done after its iteration ended shows
+  the iteration in red and says to move it to the next one.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

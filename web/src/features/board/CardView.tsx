@@ -86,6 +86,9 @@ type CardProps = {
   /** Итерация, к которой карточка отнесена сейчас. Название, а не
    *  идентификатор: карточка показывает, а не ищет. */
   iteration?: string
+  /** Итерация кончилась, а карточка не сделана. */
+  iterationLate?: boolean
+  iterationEnd?: string
   /** Подзадачи этой карточки. Раскрываются по кнопке прямо на доске:
    *  до этого разбиение работы было видно только числом «0 из 3»,
    *  а чтобы узнать, на что именно она разбита, карточку приходилось
@@ -146,6 +149,8 @@ function CardViewInner({
   cardLabels,
   parent,
   iteration,
+  iterationLate,
+  iterationEnd,
   subtasks,
   holds,
   waitsFor,
@@ -752,7 +757,10 @@ function CardViewInner({
 
               {/* Итерация — тоже про «к чему привязано». */}
               {iteration && (
-                <span className="mark mark--quiet" title={t.cardView.iteration}>
+                <span
+                  className={iterationLate ? 'mark mark--alarm' : 'mark mark--quiet'}
+                  title={iterationLate && iterationEnd ? t.cardView.iterationLate(iterationEnd) : t.cardView.iteration}
+                >
                   {iteration}
                 </span>
               )}

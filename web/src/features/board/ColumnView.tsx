@@ -82,6 +82,10 @@ type ColumnProps = {
   /** cardId → название его итерации. Названия, а не идентификаторы:
    *  карточка показывает, и разбирать словарь итераций ей незачем. */
   iterations: Record<string, string>
+  /** cardId → итерация кончилась, а карточка не сделана. */
+  iterationLate: Record<string, boolean>
+  /** cardId → когда кончается её итерация, словами — для подсказки. */
+  iterationEnd: Record<string, string>
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
   /** Две стороны связи «блокирует»: кого карточка держит и кто держит
@@ -297,6 +301,8 @@ export function ColumnView(props: ColumnProps) {
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
             parent={props.parents[cardId]}
             iteration={props.iterations[cardId]}
+            iterationLate={props.iterationLate[cardId] ?? false}
+            iterationEnd={props.iterationEnd[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             holds={props.holds[cardId] ?? NO_SUBTASKS}
             waitsFor={props.waitsFor[cardId] ?? NO_SUBTASKS}

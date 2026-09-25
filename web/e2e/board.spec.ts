@@ -3278,3 +3278,26 @@ test('при отборе по итерации карточка заводит�
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'Заведена в спринте').getByText('Неделя 40')).toBeVisible()
 })
+
+// Срок итерации — срок её карточек (владелец 25.09.2026): карточка
+// показывает «до …», а в кончившейся итерации несделанная горит.
+test('карточка показывает срок итерации и горит, если итерация кончилась', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с прошедшим спринтом')
+  await addCard(page, 'Очередь', 'Не успели')
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 36')
+  await page.getByLabel('Начало').fill('2026-09-01')
+  await page.getByLabel('Конец').fill('2026-09-07')
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
+
+  await cardIn(page, 'Очередь', 'Не успели').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByLabel(/Карточка .* «Не успели»/).getByLabel('Итерация карточки').selectOption({ label: 'Неделя 36' })
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  const mark = cardIn(page, 'Очередь', 'Не успели').getByText(/Неделя 36 · до 7 сент/)
+  await expect(mark).toBeVisible()
+  await expect(mark).toHaveClass(/mark--alarm/)
+  await expect(mark).toHaveAttribute('title', /кончилась 7 сент.*перенесите/)
+})

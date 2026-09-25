@@ -39,7 +39,7 @@ import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { useColumnWidths } from '../features/board/columnWidth.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { cardDetails, childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
+import { cardDetails, childrenOf, dateWords, dependenciesOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -901,15 +901,32 @@ export function Board({
 
   /** cardId → название итерации: карточке нужно слово, а не ссылка.
    *  Считается один раз на доску — как и всё, что уходит в карточку. */
-  const cardIterationNames = useMemo(() => {
+  //  Название — вместе со сроком итерации: «Неделя 40 · до 4 окт.».
+  //  Срок итерации и есть срок её карточек (решение владельца 25.09.2026):
+  //  он показывается, но в «Обязательство» не пишется — то остаётся для
+  //  обещаний наружу. Итерация кончилась, а карточка не сделана —
+  //  `late`: пометка горит, карточку пора переносить в следующую.
+  //  Два простых словаря, а не объект на карточку: объект пересоздавался
+  //  бы с каждым снимком и перерисовывал все карточки доски.
+  const { cardIterationNames, cardIterationLate, cardIterationEnd } = useMemo(() => {
     const names: Record<string, string> = {}
-    if (!base || base.info.iterationsEnabled === false) return names
-    const byId = new Map(base.iterations.map((i) => [i.id, i.name]))
-    for (const [cardId, iterationId] of Object.entries(base.cardIterations)) {
-      const name = byId.get(iterationId)
-      if (name) names[cardId] = name
+    const late: Record<string, boolean> = {}
+    const ends: Record<string, string> = {}
+    if (!base || base.info.iterationsEnabled === false) {
+      return { cardIterationNames: names, cardIterationLate: late, cardIterationEnd: ends }
     }
-    return names
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const byId = new Map(base.iterations.map((i) => [i.id, i]))
+    for (const [cardId, iterationId] of Object.entries(base.cardIterations)) {
+      const it = byId.get(iterationId)
+      if (!it) continue
+      names[cardId] = t.cardView.iterationUntil(it.name, dateWords(it.endsOn))
+      ends[cardId] = dateWords(it.endsOn)
+      const card = base.cards[cardId]
+      if (card && it.endsOn < today && card.outcome === null && card.doneAt === null) late[cardId] = true
+    }
+    return { cardIterationNames: names, cardIterationLate: late, cardIterationEnd: ends }
   }, [base])
 
   const columnList = useMemo(
@@ -1045,6 +1062,8 @@ export function Board({
         cardAssignees={base.cardAssignees}
         parents={parents}
         iterations={cardIterationNames}
+        iterationLate={cardIterationLate}
+        iterationEnd={cardIterationEnd}
         holds={dependencies.holds}
         waitsFor={dependencies.waitsFor}
         children={children}
