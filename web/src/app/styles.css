@@ -2497,6 +2497,7 @@ textarea.description {
 .link-picker > div {
   margin-top: var(--space-2);
 }
+.epic-line input[type='search'],
 .link-picker input[type='search'] {
   flex: 1 1 12rem;
   min-width: 0;

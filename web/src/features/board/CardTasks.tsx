@@ -4,7 +4,7 @@ import { PlusIcon } from '../../shared/ui/icons.tsx'
 import { LINK_KIND_NAMES, REF_KINDS, request } from '../../shared/api/index.ts'
 import type { BoardInfo, CardRef, LinkKind, RefKind } from '../../shared/api/index.ts'
 import type { BaseState } from '../../entities/board/model.ts'
-import { cardDetails, progressRatio, refKindName } from '../../entities/card/model.ts'
+import { cardDetails, epicTone, progressRatio, refKindName } from '../../entities/card/model.ts'
 import type { CardDetails, Related } from '../../entities/card/model.ts'
 import { t } from '../../shared/i18n/index.ts'
 
@@ -52,6 +52,20 @@ export function CardTasks({
   const { card } = details
   return (
     <>
+      {/* Эпик — первым: к нему задачу привязывают чаще всего остального
+          на этой вкладке, а внизу, под заявками и подзадачами, строку
+          «Связать с существующей карточкой» не находили (замечено
+          владельцем 25.09.2026). На портфеле строки нет: там сама
+          карточка — эпик. */}
+      {base.info.level !== 'portfolio' && (
+        <EpicLine
+          details={details}
+          canEdit={canEdit}
+          onOpenCard={onOpenCard}
+          onLink={(epicId) => onLink(epicId, card.id, 'subtask')}
+          onUnlink={(epicId) => onUnlink(epicId, card.id, 'subtask')}
+        />
+      )}
       <Refs
         refs={base.cardRefs[card.id] ?? []}
         canEdit={canEdit}
@@ -59,7 +73,9 @@ export function CardTasks({
         onRemove={(refId) => onRemoveRef(card.id, refId)}
       />
 
-      {details.parent && (
+      {/* Родитель-эпик уже назван строкой «Эпик» наверху — второй раз
+          его не повторяем. */}
+      {details.parent && !(base.info.level !== 'portfolio' && details.parent.id === card.epic?.id) && (
         <section className="stack">
           {/* Одно понятие — одно слово: связь называется парой
               «родительская задача» и «подзадача». «Часть задачи»
@@ -432,6 +448,150 @@ type FoundCard = {
 const searchCards = (q: string) =>
   request<{ cards: FoundCard[] }>('GET', `/api/cards/search?q=${encodeURIComponent(q)}`)
 
+/**
+ * Поиск карточек по организации с задержкой в четверть секунды и с двух
+ * знаков: по одной букве находится полорганизации, и выбирать из этого
+ * нечего. `found` пусто, пока искать нечего; ответ на устаревший запрос
+ * отбрасывается.
+ */
+function useCardSearch(query: string) {
+  const [found, setFound] = useState<FoundCard[] | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setFound(null)
+      setFailed(false)
+      return
+    }
+    let stale = false
+    const timer = window.setTimeout(() => {
+      searchCards(q)
+        .then((r) => {
+          if (stale) return
+          setFound(r.cards)
+          setFailed(false)
+        })
+        .catch(() => {
+          if (!stale) setFailed(true)
+        })
+    }, 250)
+    return () => {
+      stale = true
+      window.clearTimeout(timer)
+    }
+  }, [query])
+  return { found, failed }
+}
+
+/**
+ * Эпик карточки — строкой наверху вкладки «Задачи».
+ *
+ * Эпик — ближайший предок на доске-портфеле. Если он прямой родитель,
+ * здесь же его и отвязывают: связь обратима, и спрашивать не о чем.
+ * Если эпик выше, через фичу, — строка называет эту фичу: отвязывать
+ * надо её, а не задачу. Родитель у карточки один, поэтому задача
+ * с родителем-фичей эпика напрямую не получает — строка так и говорит.
+ */
+function EpicLine({
+  details,
+  canEdit,
+  onOpenCard,
+  onLink,
+  onUnlink,
+}: {
+  details: CardDetails
+  canEdit: boolean
+  onOpenCard: (cardId: string) => void
+  onLink: (epicId: string) => void
+  onUnlink: (epicId: string) => void
+}) {
+  const [picking, setPicking] = useState(false)
+  const [query, setQuery] = useState('')
+  const { found, failed } = useCardSearch(picking ? query : '')
+  const { card, parent } = details
+  const epic = card.epic
+  const epics = (found ?? []).filter((c) => c.boardLevel === 'portfolio')
+
+  return (
+    <section className="stack epic-line">
+      <h3 className="section-title">{t.panel.epic}</h3>
+      {epic ? (
+        <div className="row row--tight">
+          <button
+            type="button"
+            className={`chip chip--${epicTone(epic.id)}`}
+            onClick={() => onOpenCard(epic.id)}
+          >
+            {epic.title}
+          </button>
+          {parent && parent.id !== epic.id && (
+            <span className="muted small">{t.panel.epicVia(parent.title)}</span>
+          )}
+          {canEdit && parent?.id === epic.id && (
+            <Button kind="quiet" aria-label={t.panel.epicUnlinkLabel(epic.title)} onClick={() => onUnlink(epic.id)}>
+              {t.panel.epicUnlink}
+            </Button>
+          )}
+        </div>
+      ) : parent ? (
+        <p className="muted small">{t.panel.epicOfParent(parent.title)}</p>
+      ) : picking ? (
+        <>
+          <div className="row row--tight">
+            <input
+              type="search"
+              autoFocus
+              value={query}
+              placeholder={t.panel.epicFind}
+              aria-label={t.panel.epicFind}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && setPicking(false)}
+            />
+            <Button kind="quiet" onClick={() => setPicking(false)}>
+              {t.common.cancel}
+            </Button>
+          </div>
+          {failed && <p className="error small">{t.panel.searchToLinkFailed}</p>}
+          {found !== null && !failed && epics.length === 0 && (
+            <p className="muted small">{t.panel.epicNotFound}</p>
+          )}
+          {epics.length > 0 && (
+            <ul className="link-results">
+              {epics.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    className="link-result"
+                    onClick={() => {
+                      onLink(c.id)
+                      setPicking(false)
+                      setQuery('')
+                    }}
+                  >
+                    <span className="link-result-number">{c.number}</span>
+                    <span className="link-result-title">{c.title}</span>
+                    <span className="muted small">{c.boardName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <div className="row row--tight">
+          <span className="muted small">{t.panel.epicNone}</span>
+          {canEdit && (
+            <Button kind="default" onClick={() => setPicking(true)}>
+              {t.panel.epicPick}
+            </Button>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 /** Вид связи в выборе: серверные виды и «Родитель» — подзадача наоборот. */
 type PickKind = LinkKind | 'parent'
 
@@ -461,33 +621,7 @@ function LinkPicker({
 }) {
   const [kind, setKind] = useState<PickKind>('subtask')
   const [query, setQuery] = useState('')
-  const [found, setFound] = useState<FoundCard[] | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    const q = query.trim()
-    if (q.length < 2) {
-      setFound(null)
-      setFailed(false)
-      return
-    }
-    let stale = false
-    const timer = window.setTimeout(() => {
-      searchCards(q)
-        .then((r) => {
-          if (stale) return
-          setFound(r.cards)
-          setFailed(false)
-        })
-        .catch(() => {
-          if (!stale) setFailed(true)
-        })
-    }, 250)
-    return () => {
-      stale = true
-      window.clearTimeout(timer)
-    }
-  }, [query])
+  const { found, failed } = useCardSearch(query)
 
   if (!details) return null
   // Сама карточка, её подзадачи и её родитель уже связаны — предлагать
@@ -504,7 +638,9 @@ function LinkPicker({
 
   return (
     <details className="link-picker">
-      <summary className="muted small">{t.panel.linkExisting}</summary>
+      {/* Похожа на кнопку, а не на подпись: серую строку мелким текстом
+          за действие не принимали. */}
+      <summary className="btn btn--quiet">{t.panel.linkExisting}</summary>
       <div className="row row--tight">
         <select
           value={kind}

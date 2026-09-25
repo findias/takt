@@ -67,11 +67,15 @@ Create a board with **Epic portfolio** in **How we work**: its columns
 are "Idea", "In progress" and "Done", with a soft limit of 3 on "In
 progress" and no iterations. Every card on it is an epic. Split an
 epic into features on the team boards: open it, **Tasks** tab, pick the
-team's board next to the name, **Subtask**. Work that already exists is
-linked from either side: on the epic, **Link to an existing card** with
-**Subtask**; on the team's task, the same with **Parent**. The search
-there looks through every board you can see — type the number or part
-of the title. An epic is always the parent: a team's task cannot take
+team's board next to the name, **Subtask**.
+
+A task the team created itself is hung under an epic from the task: open
+it, **Tasks** tab, the **Epic** line at the top, **Choose an epic…**,
+type the epic's number or part of its title and press it. The same line
+shows the epic afterwards and **Remove** takes it off. From the epic's
+side, **Link to an existing card** at the bottom of its **Tasks** tab,
+kind **Subtask**, finds a task on any team board. Both searches look
+through every board you can see. An epic is always the parent: a team's task cannot take
 an epic as its subtask, and a subtask of a team's task cannot be created
 on the portfolio. A task on a team board then shows the epic in its path to
 the root, and the **Tree** view gathers the branch across boards.

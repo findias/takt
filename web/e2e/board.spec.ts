@@ -3096,3 +3096,33 @@ test('блок подзадач остаётся на карточке посл�
   await expect(moved).toBeVisible()
   await expect(moved.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
 })
+
+// Эпик — строкой наверху вкладки «Задачи» (владелец 25.09.2026 не нашёл
+// привязку к эпику внизу вкладки): выбрать, увидеть, отвязать.
+test('строка «Эпик» наверху вкладки выбирает эпик и отвязывает его', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Склад')
+  await addCard(page, 'Очередь', 'Задача команды')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByPlaceholder('Название новой доски').fill('Эпики')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await addCard(page, 'Идея', 'Генератор данных')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Склад')
+
+  await cardIn(page, 'Очередь', 'Задача команды').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await expect(page.getByText('Не задан.')).toBeVisible()
+  await page.getByRole('button', { name: 'Выбрать эпик…' }).click()
+  await page.getByRole('searchbox', { name: 'Номер или название эпика' }).fill('генератор')
+  await page.getByRole('button', { name: /Генератор данных.*Эпики/ }).click()
+
+  const unlink = page.getByRole('button', { name: 'Убрать эпик «Генератор данных» у этой карточки' })
+  await expect(unlink).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Задача команды').getByRole('button', { name: /Эпик «Генератор данных»/ })).toBeVisible()
+
+  await unlink.click()
+  await expect(page.getByRole('button', { name: 'Выбрать эпик…' })).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Задача команды').getByRole('button', { name: /Эпик «Генератор данных»/ })).toHaveCount(0)
+})

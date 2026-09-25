@@ -344,7 +344,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   finds a task that already exists.** **Link to an existing card**
   searches every board you can see by number or title, and gains the
   **Parent** kind, so a task can pick the epic above it. Before, the
-  choice offered only cards of the same board.
+  choice offered only cards of the same board. A task's **Tasks** tab
+  opens with an **Epic** line: **Choose an epic…** hangs the task under
+  one, and **Remove** takes it off.
 - **An epic is always the parent.** A subtask of a team's task can no
   longer be created on the portfolio, nor an epic linked as a task's
   subtask; the refusal says to link from the task with **Parent**
