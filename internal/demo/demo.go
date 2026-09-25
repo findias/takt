@@ -1026,6 +1026,44 @@ func (f *filler) fillPlatforma(b board.Info) error {
 
 // --- отметки времени ---
 
+// renewBlockDeadline возвращает стенду блокировку со сроком, если все
+// заведённые при наполнении истекли сами. Сроки считаются от момента
+// наполнения, и через двое суток стенд не проходил собственную сверку,
+// хотя его никто не трогал: 25.09.2026 так упала выкладка стенда,
+// наполненного 22.09. Действующая блокировка со сроком есть — долив
+// ничего не делает.
+func (f *filler) renewBlockDeadline() error {
+	var active, blocked bool
+	var boardID, cardID string
+	err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `
+			select exists (select 1 from card_blocks
+			                where unblocked_at is null and blocked_until is not null)`).Scan(&active); err != nil || active {
+			return err
+		}
+		return tx.QueryRow(f.ctx, `
+			select c.board_id::text, c.id::text,
+			       exists (select 1 from card_blocks b where b.card_id = c.id and b.unblocked_at is null)
+			  from cards c join boards bd on bd.id = c.board_id
+			 where bd.key = $1 and c.title = $2 and c.archived_at is null
+			 limit 1`, f.w("ПОСТ"), f.w("Обновить регламент приёмки")).Scan(&boardID, &cardID, &blocked)
+	})
+	if err != nil || active {
+		return err
+	}
+	if blocked {
+		// Заблокирована без срока — руками, при проходе глазами. Срок
+		// ей не ставим: чужую блокировку долив не переписывает.
+		return fmt.Errorf("блокировка со сроком: карточка %q уже заблокирована без срока", f.w("Обновить регламент приёмки"))
+	}
+	_, err = f.apply(boardID, "BLOCK_CARD", map[string]any{
+		"cardId": cardID,
+		"reason": f.w("ждём подписанный акт от склада"),
+		"until":  time.Now().Add(48 * time.Hour).Truncate(time.Hour).Format(time.RFC3339),
+	})
+	return err
+}
+
 // blockDeadlines заводит блокировки со сроком: одну через два дня,
 // одну, истекающую сегодня, и одну, уже снятую сроком в прошлом. Без
 // них ни подпись срока на карточке, ни отбор «истекает», ни строка

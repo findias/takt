@@ -267,6 +267,9 @@ func TopUp(ctx context.Context, db *store.Store) error {
 	if err := f.imported(); err != nil {
 		return err
 	}
+	if err := f.renewBlockDeadline(); err != nil {
+		return err
+	}
 	return f.epic()
 }
 
@@ -283,6 +286,9 @@ func TopUpEnglish(ctx context.Context, db *store.Store) error {
 	f.english = true
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
 	if err := f.imported(); err != nil {
+		return err
+	}
+	if err := f.renewBlockDeadline(); err != nil {
 		return err
 	}
 	return f.epic()
