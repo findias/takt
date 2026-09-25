@@ -203,6 +203,7 @@ export function ColumnView(props: ColumnProps) {
       ref={sectionRef}
       className={`column${over ? ' column--over' : ''}${props.collapsed ? ' column--collapsed' : ''}`}
       aria-label={props.name}
+      data-column-id={props.columnId}
       style={
         props.width === null || props.collapsed
           ? undefined

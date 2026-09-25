@@ -244,6 +244,18 @@ While a board has a promise, every card in progress carries a thin line
 along its bottom edge: how much of the promise it has used. Past the
 promise the line is full and amber.
 
+### See what is stuck
+
+To the right of the columns, **Needs attention** lists what keeps work
+from moving: blocked cards with their reasons, work running longer than
+the board's promise, columns over their limit, and cards whose
+iteration has ended. A card is listed once, for its most serious
+reason. Press a line to open the card or to bring the column into view;
+**All board metrics** opens **Flow**. The arrow in its header folds it
+into a narrow strip with the count, and your browser remembers that.
+When nothing is stuck, the panel is not shown at all; it also steps
+aside while a card is open on the side and on narrow screens.
+
 ### See what others changed while you were away
 
 A card that someone else changed since you last opened the board has a

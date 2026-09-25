@@ -189,6 +189,8 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="promise">Promise how long work takes</h3>
 <p>Open <strong>Flow</strong> and find <strong>Board promise</strong>. Press <strong>Take from history</strong>: the promise becomes the number of days in which most of the board&#39;s finished work passed it. From then on, a card running longer than the promise is marked right on the board, and the <strong>Longer than promised</strong> filter gathers such cards. <strong>Drop the promise</strong> removes it.</p>
 <p>While a board has a promise, every card in progress carries a thin line along its bottom edge: how much of the promise it has used. Past the promise the line is full and amber.</p>
+<h3 id="see-what-is-stuck">See what is stuck</h3>
+<p>To the right of the columns, <strong>Needs attention</strong> lists what keeps work from moving: blocked cards with their reasons, work running longer than the board&#39;s promise, columns over their limit, and cards whose iteration has ended. A card is listed once, for its most serious reason. Press a line to open the card or to bring the column into view; <strong>All board metrics</strong> opens <strong>Flow</strong>. The arrow in its header folds it into a narrow strip with the count, and your browser remembers that. When nothing is stuck, the panel is not shown at all; it also steps aside while a card is open on the side and on narrow screens.</p>
 <h3 id="see-what-others-changed-while-you-were-away">See what others changed while you were away</h3>
 <p>A card that someone else changed since you last opened the board has a small dot next to its number. Hover it for who and when. The dot goes out once you open the card; your own changes never light up. A change made while you are looking at the board lights up at once. The first time you open a board, the last day counts.</p>
 <h3 id="appearance">Switch to the dark theme or a denser board</h3>
@@ -382,7 +384,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-121-g0c16d90-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-122-g70f020f-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

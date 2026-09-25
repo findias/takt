@@ -3551,6 +3551,105 @@ textarea.description {
    доска: колонки во всю высоту. Когда есть — дорожки идут одна
    под другой, и высота у колонок по содержимому, иначе на экран
    помещалась бы ровно одна группа. */
+/* Поле доски: дорожки слева, «Требует внимания» справа (шаг 5 нового
+   дизайна). Поле забирает всю оставшуюся высоту экрана, как прежде
+   забирала одна дорожка. */
+.board-field {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.board-lanes {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.attention {
+  flex: none;
+  inline-size: 18rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 1px solid var(--rule);
+  background: var(--surface);
+  overflow-y: auto;
+}
+.attention--collapsed {
+  inline-size: auto;
+  padding: var(--space-3) var(--space-1);
+  align-items: center;
+}
+.attention-expand {
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.attention-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.attention-head .btn {
+  margin-left: auto;
+}
+.attention-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.attention-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.attention-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-1);
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.attention-item:hover {
+  background: var(--surface-2);
+}
+.attention-item .mark {
+  flex: none;
+}
+.attention-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.attention-flow {
+  align-self: flex-start;
+  margin-top: auto;
+}
+/* Открыта карточка сбоку — ей уступают место, и панель прячется;
+   на планшете и уже колонкам нужна вся ширина. */
+.board-screen:has(.panel-side) .attention {
+  display: none;
+}
+@media (max-width: 64rem) {
+  .attention {
+    display: none;
+  }
+}
+
 .swimlane {
   display: flex;
   flex-direction: column;
@@ -3566,7 +3665,9 @@ textarea.description {
   flex: 1;
   min-height: 0;
 }
-.board-screen:has(.swimlane + .swimlane) {
+/* Листается поле дорожек, а не весь экран: справа от него стоит
+   «Требует внимания», и уезжать вместе с дорожками ей незачем. */
+.board-lanes:has(.swimlane + .swimlane) {
   overflow-y: auto;
 }
 /* Дорожка не сжимается. Экран доски — колонка высотой ровно в окно,

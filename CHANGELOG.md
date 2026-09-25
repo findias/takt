@@ -400,6 +400,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **«Needs attention» to the right of the columns.** Blocked cards with
+  their reasons, work longer than the promise, columns over their limit
+  and cards of an ended iteration — one line per card, for its most
+  serious reason; a line opens the card or brings the column into view.
+  It folds into a strip with the count (remembered by the browser),
+  is absent when nothing is stuck, and steps aside for a side panel and
+  on narrow screens. The board's controls above the columns are
+  unchanged.
 - **A card in progress shows how much of the promise it has used.** A
   thin line along the card's bottom edge, full and amber past the
   board's promise. It adds no height and appears only when the board

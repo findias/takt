@@ -3559,3 +3559,35 @@ test('шапка колонки показывает полосу лимита �
   await expect(bar).toHaveClass(/column-gauge-bar--over/)
   await expect(bar.locator('span')).toHaveCount(3)
 })
+
+// «Требует внимания» (шаг 5 нового дизайна доски): что стоит и почему —
+// одним списком справа от колонок; строка ведёт к карточке, панель
+// сворачивается в полосу со счётчиком и так и остаётся.
+test('«Требует внимания» собирает то, что стоит, и сворачивается', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с вниманием')
+  await addCard(page, 'Очередь', 'Всё идёт')
+  // Пусто — панели нет: «всё хорошо» места не занимает.
+  await expect(page.getByRole('complementary', { name: 'Требует внимания' })).toHaveCount(0)
+
+  await addCard(page, 'Очередь', 'Ждёт смежников')
+  const card = cardIn(page, 'Очередь', 'Ждёт смежников')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
+  await card.getByLabel('Причина блокировки').fill('нет доступа к стенду')
+  await card.getByLabel('Причина блокировки').press('Enter')
+
+  const rail = page.getByRole('complementary', { name: 'Требует внимания' })
+  await expect(rail.getByText('нет доступа к стенду')).toBeVisible()
+  await rail.getByRole('button', { name: /Ждёт смежников/ }).click()
+  await expect(page.getByRole('heading', { name: 'Ждёт смежников' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  await rail.getByRole('button', { name: 'Свернуть «Требует внимания»' }).click()
+  await expect(rail.getByRole('button', { name: 'Требует внимания: 1 — развернуть' })).toBeVisible()
+  await page.reload()
+  await expect(
+    page.getByRole('complementary', { name: 'Требует внимания' }).getByRole('button', { name: /развернуть/ }),
+  ).toBeVisible()
+})

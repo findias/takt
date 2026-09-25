@@ -11,7 +11,9 @@ import {
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { flowIssues, withoutParts } from '../entities/board/model.ts'
+import { agingLabel, flowIssues, withoutParts } from '../entities/board/model.ts'
+import { AttentionRail } from '../features/board/AttentionRail.tsx'
+import type { AttentionItem } from '../features/board/AttentionRail.tsx'
 import { api } from '../shared/api/index.ts'
 import { useDocumentTitle } from '../shared/lib/useDocumentTitle.ts'
 import type {
@@ -957,6 +959,49 @@ export function Board({
     return { cardIterationNames: names, cardIterationLate: late, cardIterationEnd: ends }
   }, [base])
 
+  // «Требует внимания» (шаг 5 нового дизайна): что стоит и почему.
+  // Порядок — от того, что работу остановило, к тому, что её тормозит:
+  // блокировка, дольше обещанного, переполненная колонка, кончившаяся
+  // итерация. У карточки одна причина — старшая, как одна тревога
+  // на самой карточке.
+  const attention = useMemo<AttentionItem[]>(() => {
+    if (!base) return []
+    const blocked: AttentionItem[] = []
+    const aging: AttentionItem[] = []
+    const late: AttentionItem[] = []
+    for (const card of Object.values(base.cards)) {
+      if (card.doneAt || card.finishedAt || card.outcome) continue
+      const common = { cardId: card.id, number: card.number, title: card.title }
+      if (card.blocked) {
+        blocked.push({ kind: 'blocked', ...common, note: card.blocked.reason })
+        continue
+      }
+      const long = agingLabel(card, base.info.sleDays)
+      if (long) {
+        aging.push({ kind: 'aging', ...common, note: long })
+        continue
+      }
+      if (cardIterationLate[card.id]) {
+        const it = base.iterations.find((i) => i.id === base.cardIterations[card.id])
+        late.push({ kind: 'late', ...common, note: t.attention.lateText(it?.name ?? '') })
+      }
+    }
+    const limits: AttentionItem[] = []
+    for (const id of base.columnIds) {
+      const column = base.columns[id]
+      const count = base.order[id]?.length ?? 0
+      if (column.wipLimit !== null && count > column.wipLimit) {
+        limits.push({ kind: 'limit', columnId: id, note: t.attention.limitText(column.name, count, column.wipLimit) })
+      }
+    }
+    return [...blocked, ...aging, ...limits, ...late]
+  }, [base, cardIterationLate])
+  const showColumn = useCallback((columnId: string) => {
+    document
+      .querySelector(`[data-column-id="${columnId}"]`)
+      ?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }, [])
+
   const columnList = useMemo(
     () => (columnIds && columnsById ? columnIds.map((id) => columnsById[id]) : []),
     [columnIds, columnsById],
@@ -1415,7 +1460,8 @@ export function Board({
         />
         </Suspense>
       ) : (
-        <>
+        <div className="board-field">
+        <div className="board-lanes">
       {/* Доска прокручивается вбок сама, когда карточку подносят к краю:
           иначе перетащить в дальнюю колонку можно только в два приёма —
           бросить, прокрутить, взять снова. */}
@@ -1449,7 +1495,18 @@ export function Board({
           </div>
         </div>
       ))}
-        </>
+        </div>
+        {/* На узком экране панели нет: там одна колонка с переключателем,
+            и треть экрана под список — это полдоски. */}
+        {!narrow && (
+          <AttentionRail
+            items={attention}
+            onOpenCard={showCard}
+            onShowColumn={showColumn}
+            onFlow={() => setShowFlow(true)}
+          />
+        )}
+        </div>
       )}
 
       {showFlow && (
