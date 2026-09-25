@@ -1051,7 +1051,8 @@ test('зависимость видна с обеих сторон и прохо
   const panel = page.getByLabel(/Карточка .* «Держит других»/)
   await panel.getByText('Связать с существующей карточкой').click()
   await panel.getByLabel('Вид связи').selectOption('blocks')
-  await panel.getByLabel('Карточка для связи').selectOption({ label: 'Ждёт очереди' })
+  await panel.getByLabel('Карточка для связи').fill('Ждёт очереди')
+  await panel.getByRole('button', { name: /Ждёт очереди.*На этой доске/ }).click()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Держащая называет, какую именно работу она держит, и переход
@@ -3160,4 +3161,39 @@ test('«Ждёт» пропадает с карточки, когда то, че
   await expect(cardIn(page, 'Готово', 'Задача 2')).toBeVisible()
 
   await expect(waiting.locator('.card-waits')).toHaveCount(0)
+})
+
+// Карточку с незакрытыми подзадачами в «Готово» — только спросив
+// (решение владельца 25.09.2026): эпик, закрытый при открытых задачах,
+// говорит неправду о работе.
+test('карточка с незакрытыми подзадачами уходит в «Готово», только если согласились', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска закрытия с хвостом')
+  await addCard(page, 'Очередь', 'Большая работа')
+  const parent = cardIn(page, 'Очередь', 'Большая работа')
+  await parent.hover()
+  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Незакрытая часть')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+
+  const moveToDone = async () => {
+    await parent.hover()
+    await parent.getByRole('checkbox', { name: 'Выделить «Большая работа»' }).check()
+    await page.getByRole('status', { name: 'Действия над выделенными' })
+      .getByRole('button', { name: 'Перенести выделенные' }).click()
+    await page.getByRole('menuitem', { name: 'Готово' }).click()
+  }
+
+  await moveToDone()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('У «Большая работа» не закрыто 1 из 1:')).toBeVisible()
+  await expect(dialog.getByText('Незакрытая часть')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  await expect(cardIn(page, 'Очередь', 'Большая работа')).toBeVisible()
+
+  await moveToDone()
+  await dialog.getByRole('button', { name: 'Перенести всё равно' }).click()
+  await expect(cardIn(page, 'Готово', 'Большая работа')).toBeVisible()
 })

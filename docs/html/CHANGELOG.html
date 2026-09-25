@@ -175,6 +175,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>**A card keeps its subtasks, block and epic mark after a move or an edit.** Moving a card to another column or renaming it returned the card without them, and the subtask block, the block and the epic&#39;s mark disappeared until the page was reloaded.</li>
 <li><strong>&#34;Waits&#34; goes when what it waits for is done.</strong> A <strong>Blocks</strong> link no longer shows <strong>Waits</strong> and <strong>Holds</strong> once either card is done, and a block held by another card lifts itself when that card is moved past the finish or marked <strong>Done</strong>; the history records it.</li>
 <li><strong>Closing an iteration asks for its name.</strong> The confirmation&#39;s button stays inactive until the iteration&#39;s name is typed, as when deleting a board: two clicks in the same place used to close a sprint for good.</li>
+<li><strong>Closing a card with open subtasks asks first.</strong> Moving an epic or any card with subtasks to the finish, or marking it <strong>Done</strong>, while some subtasks are open names how many and lists them before it goes; the subtasks stay open. The owner chose to ask rather than forbid: a tail is sometimes dropped on purpose.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -267,7 +268,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-104-g3319535-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-105-gb957245-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

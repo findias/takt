@@ -362,6 +362,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
 - **Closing an iteration asks for its name.** The confirmation's button
   stays inactive until the iteration's name is typed, as when deleting
   a board: two clicks in the same place used to close a sprint for good.
+- **Closing a card with open subtasks asks first.** Moving an epic or
+  any card with subtasks to the finish, or marking it **Done**, while
+  some subtasks are open names how many and lists them before it goes;
+  the subtasks stay open. The owner chose to ask rather than forbid:
+  a tail is sometimes dropped on purpose.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

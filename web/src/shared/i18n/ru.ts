@@ -1008,6 +1008,13 @@ export const ru = {
     closeIterationType: 'Чтобы закрыть, наберите её название: так случайное нажатие итерацию не закроет.',
     closeIterationConfirmName: 'Название итерации для подтверждения',
     closeIterationPlaceholder: 'название итерации',
+    closingOpenTitle: 'Закрыть при незакрытых подзадачах?',
+    closingOpenOne: (title: string, open: number, total: number) =>
+      `У «${title}» не закрыто ${open} из ${total}:`,
+    closingOpenMore: (n: number) => `и ещё ${n}`,
+    closingOpenStays: 'Они останутся открытыми и продолжат идти в работе. Вернуть карточку в работу можно в любой момент.',
+    closingMoveAnyway: 'Перенести всё равно',
+    closingDoneAnyway: 'Отметить сделанной всё равно',
     closed: 'Закрытые:',
     addIteration: '+ итерация',
     iterationsOn: 'Работать итерациями',

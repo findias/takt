@@ -39,7 +39,7 @@ import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { useColumnWidths } from '../features/board/columnWidth.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
+import { cardDetails, childrenOf, dependenciesOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -272,7 +272,49 @@ export function Board({
     setFiltersNow.current({ ...f, epic: f.epic === epicId ? null : epicId })
   }, [])
 
-  const { base, order: fullOrder, moveCard } = board
+  const { base, order: fullOrder, moveCard: moveCardNow } = board
+
+  // Карточка с незакрытыми подзадачами уходит в «Готово» только спросив
+  // (решение владельца 25.09.2026, этап 34, пункт 11). Правило «обратимое
+  // не спрашивает» здесь нарушено сознательно: перенос обратим, но эпик,
+  // закрытый при открытых задачах, говорит неправду о состоянии работы,
+  // а замечают это поздно. Спрашивает, а не запрещает: хвост бывает
+  // брошен намеренно. Доска читается через ref, чтобы обёртки не меняли
+  // тождество с каждым снимком и не перерисовывали колонки.
+  const baseForClose = useRef(base)
+  baseForClose.current = base
+  const [closing, setClosing] = useState<Closing | null>(null)
+  const openPartsOf = (cardId: string): ClosingItem | null => {
+    const current = baseForClose.current
+    const d = current ? cardDetails(current, cardId) : null
+    if (!d) return null
+    const open = d.subtasks.filter((s) => !s.done)
+    return open.length > 0
+      ? { title: d.card.title, open: open.map((s) => s.title), total: d.subtasks.length }
+      : null
+  }
+  const closesIt = (cardId: string, columnId: string) => {
+    const current = baseForClose.current
+    const card = current?.cards[cardId]
+    if (!current || !card) return false
+    return (
+      !!current.columns[columnId]?.isFinishedPoint &&
+      !current.columns[card.columnId]?.isFinishedPoint
+    )
+  }
+  const moveCard = useCallback(
+    (cardId: string, columnId: string, placement: Parameters<typeof moveCardNow>[2]) => {
+      const parts = closesIt(cardId, columnId) ? openPartsOf(cardId) : null
+      if (!parts) return moveCardNow(cardId, columnId, placement)
+      setClosing({
+        items: [parts],
+        confirm: t.screen.closingMoveAnyway,
+        go: () => moveCardNow(cardId, columnId, placement),
+      })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- доска читается через ref
+    [moveCardNow],
+  )
   // Кусок панели карточки — сразу за доской, а не по нажатию: см. довод
   // у loadCardPanel.
   // Повторный вызов с каждым новым снимком ничего не стоит: сборщик
@@ -703,7 +745,16 @@ export function Board({
   )
   const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])
   const markDone = useCallback(
-    (cardId: string, done: boolean) => void markDoneAction(cardId, done),
+    (cardId: string, done: boolean) => {
+      const parts = done ? openPartsOf(cardId) : null
+      if (!parts) return void markDoneAction(cardId, done)
+      setClosing({
+        items: [parts],
+        confirm: t.screen.closingDoneAnyway,
+        go: () => void markDoneAction(cardId, done),
+      })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- доска читается через ref
     [markDoneAction],
   )
   const addSubtask = useCallback(
@@ -1018,6 +1069,7 @@ export function Board({
       className={chosen.length > 0 ? 'board-screen board-screen--picking' : 'board-screen'}
       tabIndex={-1}
     >
+      <ClosingDialog closing={closing} onDone={() => setClosing(null)} />
       <header className="board-header">
         <button className="btn btn--quiet" onClick={onBack}>
           <ChevronLeftIcon />
@@ -1352,7 +1404,17 @@ export function Board({
             onMove={(columnId) => {
               const ids = chosen
               clearPicked()
-              void board.moveMany(ids, columnId)
+              const items = ids
+                .filter((id) => closesIt(id, columnId))
+                .map(openPartsOf)
+                .filter((x): x is ClosingItem => x !== null)
+              if (items.length === 0) void board.moveMany(ids, columnId)
+              else
+                setClosing({
+                  items,
+                  confirm: t.screen.closingMoveAnyway,
+                  go: () => void board.moveMany(ids, columnId),
+                })
             }}
             onPrioritise={(priority) => {
               const ids = chosen
@@ -1542,5 +1604,42 @@ function FlowHint({ columns }: { columns: Column[] }) {
         </p>
       ))}
     </div>
+  )
+}
+
+/** Карточка, которую закрывают при незакрытых подзадачах. */
+type ClosingItem = { title: string; open: string[]; total: number }
+/** Что спросить и что сделать, если согласились. */
+type Closing = { items: ClosingItem[]; confirm: string; go: () => void }
+
+/** Вопрос перед закрытием карточки с незакрытыми подзадачами. */
+function ClosingDialog({ closing, onDone }: { closing: Closing | null; onDone: () => void }) {
+  return (
+    <ConfirmDialog
+      open={closing !== null}
+      title={t.screen.closingOpenTitle}
+      confirmLabel={closing?.confirm ?? ''}
+      onCancel={onDone}
+      onConfirm={() => {
+        const go = closing?.go
+        onDone()
+        go?.()
+      }}
+    >
+      {closing?.items.map((item) => (
+        <div key={item.title}>
+          <p>{t.screen.closingOpenOne(item.title, item.open.length, item.total)}</p>
+          {/* Пять названий, дальше числом: список на двадцать строк
+              закрывал бы кнопки диалога. */}
+          <ul className="small">
+            {item.open.slice(0, 5).map((title, i) => (
+              <li key={i}>{title}</li>
+            ))}
+            {item.open.length > 5 && <li className="muted">{t.screen.closingOpenMore(item.open.length - 5)}</li>}
+          </ul>
+        </div>
+      ))}
+      <p className="muted small">{t.screen.closingOpenStays}</p>
+    </ConfirmDialog>
   )
 }

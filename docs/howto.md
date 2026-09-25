@@ -80,6 +80,12 @@ an epic as its subtask, and a subtask of a team's task cannot be created
 on the portfolio. A task on a team board then shows the epic in its path to
 the root, and the **Tree** view gathers the branch across boards.
 
+An epic — or any card with subtasks — moved to the finish or marked
+**Done** while some of its subtasks are still open asks first: it names
+how many are not done and lists them. **Move anyway** or **Mark done
+anyway** closes it, and the subtasks stay open; **Cancel** leaves it
+where it was.
+
 Each board counts its own flow, so epics never mix with tasks: the
 portfolio shows how long epics take and how many run at once, the team
 boards show their own work. On a team board every card that belongs to

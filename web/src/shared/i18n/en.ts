@@ -1002,6 +1002,13 @@ export const en: typeof ru = {
     closeIterationType: 'To close it, type its name: a stray click then cannot close the iteration.',
     closeIterationConfirmName: 'Iteration name to confirm',
     closeIterationPlaceholder: 'iteration name',
+    closingOpenTitle: 'Close with open subtasks?',
+    closingOpenOne: (title: string, open: number, total: number) =>
+      `«${title}» has ${open} of ${total} not done:`,
+    closingOpenMore: (n: number) => `and ${n} more`,
+    closingOpenStays: 'They stay open and keep counting as work in progress. The card can go back into work at any time.',
+    closingMoveAnyway: 'Move anyway',
+    closingDoneAnyway: 'Mark done anyway',
     closed: 'Closed:',
     addIteration: '+ iteration',
     iterationsOn: 'Work in iterations',
