@@ -367,6 +367,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   some subtasks are open names how many and lists them before it goes;
   the subtasks stay open. The owner chose to ask rather than forbid:
   a tail is sometimes dropped on purpose.
+- **Subtasks are renamed where they are listed, and any card from its
+  panel.** A subtask on the same board has **Rename** in its parent's
+  list; the card panel has a pencil next to the title. Before, a card
+  was renamed only from its menu on the board, so a part on another
+  team's board could not be renamed without going there.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

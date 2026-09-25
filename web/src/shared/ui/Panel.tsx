@@ -39,6 +39,7 @@ export function Panel({
   mode,
   onMode,
   title,
+  heading,
   eyebrow,
   label,
   onClose,
@@ -48,6 +49,8 @@ export function Panel({
   mode: PanelMode
   onMode: (mode: PanelMode) => void
   title: string
+  /** Правимый заголовок вместо текста; пусто — просто `title`. */
+  heading?: React.ReactNode
   /** Строка над заголовком: чем эта панель открыта — номер задачи,
    *  например. Тише заголовка и не спорит с ним за место. */
   eyebrow?: React.ReactNode
@@ -109,7 +112,12 @@ export function Panel({
             как служебная метка. */}
         <div className="panel-heading">
           {eyebrow}
-          <h2 className="panel-title">{title}</h2>
+          {/* Заголовок можно отдать правимым: название карточки правят
+              прямо здесь, а не только из меню карточки на доске. Кнопка
+              правки — рядом с заголовком, а не им самим: заголовок-кнопка
+              звучал бы с диктора «кнопка «Фича»» и спорил бы с кнопками
+              подзадач того же имени. */}
+          {heading ?? <h2 className="panel-title">{title}</h2>}
         </div>
         <div className="row row--tight">
           {actions}

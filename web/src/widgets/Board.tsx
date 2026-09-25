@@ -1503,6 +1503,7 @@ export function Board({
       {openCard && base.cards[openCard] && (
         <Suspense fallback={null}>
           <CardPanel
+            onRename={renameCard}
             base={base}
             boardId={boardId}
             cardId={openCard}

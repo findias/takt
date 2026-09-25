@@ -1,9 +1,11 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
+import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { EstimateStepper } from '../../shared/ui/EstimateStepper.tsx'
 import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
-import { Button } from '../../shared/ui/Button.tsx'
+import { Button, IconButton } from '../../shared/ui/Button.tsx'
+import { EditIcon } from '../../shared/ui/icons.tsx'
 import { api } from '../../shared/api/index.ts'
 import type {
   BoardEvent,
@@ -109,6 +111,7 @@ export function CardPanel({
   onSetBlockUntil,
   onUnblock,
   onMarkDone,
+  onRename,
   onIteration,
   onField,
   onAddRef,
@@ -148,6 +151,8 @@ export function CardPanel({
   onUnblock: (cardId: string) => void
   /** Отметить работу сделанной, не двигая её по доске. */
   onMarkDone: (cardId: string, done: boolean) => void
+  /** Переименовать карточку этой доски — открытую или её подзадачу. */
+  onRename: (cardId: string, title: string) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
@@ -156,6 +161,9 @@ export function CardPanel({
   onRemoveRef: (cardId: string, refId: string) => void
 }) {
   const [mode, setMode] = usePanelMode()
+  const [renamingTitle, setRenamingTitle] = useState(false)
+  // Другая карточка — правка названия прежней не переезжает на неё.
+  useEffect(() => setRenamingTitle(false), [cardId])
   const [tab, setTab] = useState<TabId>(FIRST_TAB)
   const ids = useTabIds()
   // Какой частью сейчас объявляют блокировку. Причину всё равно пишут
@@ -198,6 +206,32 @@ export function CardPanel({
       mode={mode}
       onMode={setMode}
       title={card.title}
+      // Название правится здесь же: подзадачу на доске другой команды
+      // иначе было не переименовать, не уходя на её доску (замечено
+      // владельцем 25.09.2026).
+      heading={
+        renamingTitle ? (
+          <h2 className="panel-title">
+            <EditableText
+              value={card.title}
+              autoFocus
+              label={t.cardView.titleLabel}
+              onSave={(next) => {
+                onRename(card.id, next)
+                setRenamingTitle(false)
+              }}
+              onCancel={() => setRenamingTitle(false)}
+            />
+          </h2>
+        ) : canEdit ? (
+          <div className="row row--tight panel-title-row">
+            <h2 className="panel-title">{card.title}</h2>
+            <IconButton label={t.panel.renameOf(card.title)} onClick={() => setRenamingTitle(true)}>
+              <EditIcon />
+            </IconButton>
+          </div>
+        ) : undefined
+      }
       // Номер над названием: открыв карточку по ссылке из переписки,
       // первым делом сверяют, та ли это задача.
       // Над номером — путь до корня: «Эпик › Фича». Открытая часть
@@ -419,6 +453,7 @@ export function CardPanel({
               onSubtask={onSubtask}
               onLink={onLink}
               onUnlink={onUnlink}
+              onRename={onRename}
               onMarkDone={onMarkDone}
               onAddRef={onAddRef}
               onRemoveRef={onRemoveRef}

@@ -296,6 +296,10 @@ password there, not here.
 3. Press **Subtask**. To give the part to another team, pick their board
    in the list next to the name first.
 
+To fix a part's name, press **Rename** next to it in the list; a part on
+another team's board is renamed by opening it. Any open card is renamed
+with the pencil next to its title in the panel.
+
 A part is an ordinary card: it can live on a different board if a
 different team does the work. The parent card grows a "so many of so
 many" bar.

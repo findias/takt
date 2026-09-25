@@ -916,6 +916,7 @@ export const en: typeof ru = {
     linkCard: 'Card to link',
     pickCard: 'Pick a card…',
     linkParent: 'Parent',
+    renameOf: (title: string) => `Rename «${title}»`,
     epic: 'Epic',
     epicNone: 'None.',
     epicPick: 'Choose an epic…',

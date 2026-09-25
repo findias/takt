@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../shared/ui/Button.tsx'
+import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { PlusIcon } from '../../shared/ui/icons.tsx'
 import { LINK_KIND_NAMES, REF_KINDS, request } from '../../shared/api/index.ts'
 import type { BoardInfo, CardRef, LinkKind, RefKind } from '../../shared/api/index.ts'
@@ -28,6 +29,7 @@ export function CardTasks({
   onSubtask,
   onLink,
   onUnlink,
+  onRename,
   onMarkDone,
   onAddRef,
   onRemoveRef,
@@ -43,6 +45,7 @@ export function CardTasks({
   onSubtask: (parentCardId: string, title: string, boardId?: string) => void
   onLink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
+  onRename: (cardId: string, title: string) => void
   onMarkDone: (cardId: string, done: boolean) => void
   onAddRef: (cardId: string, kind: RefKind, ref: string) => void
   onRemoveRef: (cardId: string, refId: string) => void
@@ -122,6 +125,9 @@ export function CardTasks({
             canEdit={canEdit}
             onOpen={onOpenCard}
             onRemove={() => onUnlink(card.id, s.id, 'subtask')}
+            // Переименовать отсюда — только свою: операция идёт в эту
+            // доску. Чужую переименовывают, открыв её.
+            onRename={s.onThisBoard ? (title) => onRename(s.id, title) : undefined}
             onMarkDone={onMarkDone}
             // Часть может держать саму задачу, и говорят об этом
             // отсюда: у родителя, где видно и остальные части.
@@ -197,6 +203,7 @@ function RelatedRow({
   onRemove,
   onMarkDone,
   onHold,
+  onRename,
 }: {
   related: Related
   canEdit: boolean
@@ -210,7 +217,11 @@ function RelatedRow({
   /** Объявить, что эта часть держит задачу. Пусто — предлагать нечего:
    *  задача уже заблокирована, часть сделана или прав нет. */
   onHold?: () => void
+  /** Переименовать подзадачу прямо в строке (владелец 25.09.2026:
+   *  «подзадачи нельзя переименовать»). Пусто — чужая или без прав. */
+  onRename?: (title: string) => void
 }) {
+  const [renaming, setRenaming] = useState(false)
   // Флажок и галочка отвечают на один вопрос, поэтому вместе их нет:
   // где отметку можно поставить, состояние показывает сам флажок.
   const markable = Boolean(onMarkDone) && canEdit && related.onThisBoard
@@ -240,7 +251,18 @@ function RelatedRow({
         </button>
       )}
       <div className="member-who">
-        {related.onThisBoard && onOpen ? (
+        {renaming && onRename ? (
+          <EditableText
+            value={related.title}
+            autoFocus
+            label={t.cardView.titleLabel}
+            onSave={(next) => {
+              onRename(next)
+              setRenaming(false)
+            }}
+            onCancel={() => setRenaming(false)}
+          />
+        ) : related.onThisBoard && onOpen ? (
           <button className="link related-open" onClick={() => onOpen(related.id)}>
             {title}
           </button>
@@ -264,6 +286,11 @@ function RelatedRow({
         // «держит» там и «держит» здесь — про одно и то же.
         <button className="link" onClick={onHold}>
           {t.panel.holds}
+        </button>
+      )}
+      {canEdit && onRename && !renaming && (
+        <button className="link" aria-label={t.panel.renameOf(related.title)} onClick={() => setRenaming(true)}>
+          {t.cardView.rename}
         </button>
       )}
       {canEdit && related.reachable && (

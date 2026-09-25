@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-105-gb957245-dirty.</p>
+<p>Every section in one file. Version v0.2.3-106-g7af3589-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -299,6 +299,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
 <li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
+<p>To fix a part&#39;s name, press <strong>Rename</strong> next to it in the list; a part on another team&#39;s board is renamed by opening it. Any open card is renamed with the pencil next to its title in the panel.</p>
 <p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
@@ -1742,6 +1743,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>&#34;Waits&#34; goes when what it waits for is done.</strong> A <strong>Blocks</strong> link no longer shows <strong>Waits</strong> and <strong>Holds</strong> once either card is done, and a block held by another card lifts itself when that card is moved past the finish or marked <strong>Done</strong>; the history records it.</li>
 <li><strong>Closing an iteration asks for its name.</strong> The confirmation&#39;s button stays inactive until the iteration&#39;s name is typed, as when deleting a board: two clicks in the same place used to close a sprint for good.</li>
 <li><strong>Closing a card with open subtasks asks first.</strong> Moving an epic or any card with subtasks to the finish, or marking it <strong>Done</strong>, while some subtasks are open names how many and lists them before it goes; the subtasks stay open. The owner chose to ask rather than forbid: a tail is sometimes dropped on purpose.</li>
+<li>**Subtasks are renamed where they are listed, and any card from its panel.<strong> A subtask on the same board has </strong>Rename** in its parent&#39;s list; the card panel has a pencil next to the title. Before, a card was renamed only from its menu on the board, so a part on another team&#39;s board could not be renamed without going there.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1894,6 +1896,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>«Ждёт» уходит, когда то, чего ждали, сделано.</strong> Связь <strong>«Блокирует»</strong> больше не показывает <strong>«Ждёт»</strong> и <strong>«Держит»</strong>, когда одна из карточек сделана, а блокировка, которую держит другая карточка, снимается сама, когда ту переносят за финиш или отмечают <strong>«Сделана»</strong>; история это записывает.</li>
 <li><strong>Закрытие итерации просит её название.</strong> Кнопка в подтверждении неактивна, пока название итерации не набрано, — как при удалении доски: два щелчка в одном месте закрывали спринт навсегда.</li>
 <li><strong>Закрытие карточки с открытыми подзадачами спрашивает.</strong> Перенос эпика или любой карточки с подзадачами за финиш и отметка <strong>«Сделана»</strong>, пока часть подзадач открыта, сперва называют, сколько не закрыто, и перечисляют их; подзадачи остаются открытыми. Владелец выбрал спрашивать, а не запрещать: хвост иногда бросают намеренно.</li>
+<li>**Подзадачи переименовываются там, где перечислены, а любая карточка — из панели.** У подзадачи этой доски в списке родителя есть <strong>«Переименовать»</strong>; в панели карточки — карандаш рядом с названием. Прежде карточку переименовывали только из её меню на доске, и часть на доске другой команды нельзя было переименовать, не уйдя туда.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

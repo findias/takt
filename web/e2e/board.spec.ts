@@ -2915,7 +2915,7 @@ test('вид «Дерево» показывает эпик с фичами и �
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Фича')
   await page.getByRole('button', { name: 'Подзадача' }).click()
-  await page.getByLabel('Задачи', { exact: true }).getByRole('button', { name: 'Фича' }).click()
+  await page.getByLabel('Задачи', { exact: true }).getByRole('button', { name: 'Фича', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Задача')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -3196,4 +3196,36 @@ test('карточка с незакрытыми подзадачами уход
   await moveToDone()
   await dialog.getByRole('button', { name: 'Перенести всё равно' }).click()
   await expect(cardIn(page, 'Готово', 'Большая работа')).toBeVisible()
+})
+
+// Подзадачу переименовывают из панели родителя, а любую карточку —
+// по названию в её панели (владелец 25.09.2026: «подзадачи нельзя
+// переименовать»).
+test('подзадача переименовывается из панели родителя, карточка — по названию в панели', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска переименований')
+  await addCard(page, 'Очередь', 'Родитель')
+  await cardIn(page, 'Очередь', 'Родитель').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Черновое название')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+
+  await page.getByRole('button', { name: 'Переименовать «Черновое название»' }).click()
+  const field = page.getByRole('textbox', { name: 'Название карточки' })
+  await field.fill('Точное название')
+  await field.press('Enter')
+  await expect(page.getByRole('tabpanel').getByRole('button', { name: 'Точное название', exact: true })).toBeVisible()
+
+  // Название самой открытой карточки — карандашом рядом с заголовком.
+  await page.getByRole('button', { name: 'Переименовать «Родитель»' }).click()
+  await page.getByRole('textbox', { name: 'Название карточки' }).fill('Родитель, переименован')
+  await page.getByRole('textbox', { name: 'Название карточки' }).press('Enter')
+  await expect(page.getByRole('heading', { name: 'Родитель, переименован' })).toBeVisible()
+
+  // И то и другое сохранено, а не только нарисовано.
+  await page.reload()
+  await cardIn(page, 'Очередь', 'Родитель, переименован').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await expect(page.getByRole('tabpanel').getByRole('button', { name: 'Точное название', exact: true })).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Родитель, переименован')).toBeVisible()
 })

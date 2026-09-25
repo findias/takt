@@ -922,6 +922,7 @@ export const ru = {
     linkCard: 'Карточка для связи',
     pickCard: 'Выбрать карточку…',
     linkParent: 'Родитель',
+    renameOf: (title: string) => `Переименовать «${title}»`,
     epic: 'Эпик',
     epicNone: 'Не задан.',
     epicPick: 'Выбрать эпик…',
