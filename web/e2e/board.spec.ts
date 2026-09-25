@@ -3402,3 +3402,25 @@ test('колонка упорядочивается по итерации', asyn
   await page.reload()
   await expect(titles).toHaveText(['На эту', 'На следующую', 'Когда-нибудь'])
 })
+
+// Колонка переставляется вместе с карточками (владелец 25.09.2026):
+// прежде переставить её было нельзя вовсе.
+test('колонка переставляется вместе с карточками', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с перестановкой')
+  await addCard(page, 'Очередь', 'Едет с колонкой')
+
+  const order = () => page.locator('section.column .column-title')
+  await expect(order()).toHaveText(['Очередь', 'В работе', 'Готово'])
+
+  await page.getByRole('button', { name: 'Разметка колонки «Очередь»' }).click()
+  // Левее некуда — кнопка есть, но не нажимается.
+  await expect(page.getByRole('button', { name: 'Сдвинуть «Очередь» левее' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Сдвинуть «Очередь» правее' }).click()
+  await expect(order()).toHaveText(['В работе', 'Очередь', 'Готово'])
+  await expect(cardIn(page, 'Очередь', 'Едет с колонкой')).toBeVisible()
+
+  await page.reload()
+  await expect(order()).toHaveText(['В работе', 'Очередь', 'Готово'])
+  await expect(cardIn(page, 'Очередь', 'Едет с колонкой')).toBeVisible()
+})

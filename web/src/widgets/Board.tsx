@@ -1085,6 +1085,19 @@ export function Board({
         onRenameColumn={(name) => void board.renameColumn(columnId, name)}
         onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
         onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}
+        onMoveLeft={
+          canEdit && base.columnIds.indexOf(columnId) > 0
+            ? () => {
+                const i = base.columnIds.indexOf(columnId)
+                void board.moveColumn(columnId, i >= 2 ? base.columnIds[i - 2] : null)
+              }
+            : undefined
+        }
+        onMoveRight={
+          canEdit && base.columnIds.indexOf(columnId) < base.columnIds.length - 1
+            ? () => void board.moveColumn(columnId, base.columnIds[base.columnIds.indexOf(columnId) + 1])
+            : undefined
+        }
         onSortByIteration={
           iterationsOn && base.iterations.length > 0 ? () => void board.sortColumn(columnId) : undefined
         }

@@ -400,6 +400,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A column can be moved, cards and all.** **Markup** → **← Left** /
+  **Right →**. Before, a column could be created and renamed but not
+  moved. The new operation `MOVE_COLUMN` `{columnId, place: start|end|after,
+  afterColumnId}` places it like a card; its cards and their history do
+  not change.
 - **A column can be put in sprint order.** **Markup** on the column →
   **Order by iteration**: earlier iterations on top, cards without one
   at the end, the order within an iteration kept. It is a one-off

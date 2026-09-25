@@ -138,11 +138,15 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
   }
 
   for (const column of patchColumns) {
-    const isNew = !columns[column.id]
+    const previous = columns[column.id]
     columns[column.id] = column
-    if (isNew) {
+    if (!previous) {
       touch(column.id)
       columnIds = [...columnIds, column.id].sort((a, b) => byPosition(columns[a], columns[b]))
+    } else if (previous.position !== column.position) {
+      // Колонку переставили: порядок колонок пересобирается, карточки
+      // её остаются при ней.
+      columnIds = [...columnIds].sort((a, b) => byPosition(columns[a], columns[b]))
     }
   }
 

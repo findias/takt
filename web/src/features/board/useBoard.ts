@@ -1006,6 +1006,16 @@ export function useBoard(boardId: string | null, notify: Notify) {
 
   // Упорядочивание переставляет всю колонку разом — с перечитыванием,
   // как и прочие операции, что трогают много карточек.
+  // Колонку ставят в начало или сразу за другой — как карточку.
+  const moveColumn = useCallback(
+    (columnId: string, afterColumnId: string | null) =>
+      run(
+        'MOVE_COLUMN',
+        afterColumnId ? { columnId, place: 'after', afterColumnId } : { columnId, place: 'start' },
+        t.ops.moveColumn,
+      ),
+    [run],
+  )
   const sortColumn = useCallback(
     (columnId: string) =>
       runAndReload('SORT_COLUMN', { columnId, by: 'iteration' }, t.ops.sortColumn),
@@ -1063,6 +1073,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     renameColumn,
     updateColumn,
     sortColumn,
+    moveColumn,
     setColumnLimit,
   }
 }

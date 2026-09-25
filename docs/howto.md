@@ -192,6 +192,14 @@ to the usual width.
 The width is remembered in this browser, for you only: a colleague's
 board stays as it was.
 
+### Move a column
+
+In the column header press **Markup**, then **← Left** or **Right →**
+next to **Place**. The cards go with the column, and their history does
+not change. The new order is the board's, for everyone. To put a
+queue in sprint order instead, see **Order by iteration** under
+[iterations](#iterations).
+
 <!-- anchor: columns -->
 ### Mark up a column and set its limit
 

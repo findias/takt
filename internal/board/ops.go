@@ -476,6 +476,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return renameColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "UPDATE_COLUMN":
 		return updateColumn(ctx, tx, orgID, boardID, req.Payload)
+	case "MOVE_COLUMN":
+		return moveColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "SORT_COLUMN":
 		return sortColumn(ctx, tx, orgID, boardID, req.Payload)
 	case "CREATE_SUBTASK":

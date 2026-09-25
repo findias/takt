@@ -113,6 +113,9 @@ type ColumnProps = {
   onRenameColumn: (name: string) => void
   onSetLimit: (limit: number | null) => void
   onUpdateColumn: (patch: ColumnPatch) => void
+  /** Нет — колонка уже крайняя с этой стороны. */
+  onMoveLeft?: () => void
+  onMoveRight?: () => void
   /** Нет — на доске не работают итерациями, упорядочивать не по чему. */
   onSortByIteration?: () => void
   onRenameCard: (cardId: string, title: string) => void
@@ -268,6 +271,8 @@ export function ColumnView(props: ColumnProps) {
           column={props.column}
           onUpdate={props.onUpdateColumn}
           onSetLimit={props.onSetLimit}
+          onMoveLeft={props.onMoveLeft}
+          onMoveRight={props.onMoveRight}
           onSortByIteration={
             // Упорядочивать нечего, пока ни одна карточка не в итерации:
             // кнопка, которая ничего не сдвинет, выглядела бы сломанной.
@@ -560,6 +565,8 @@ function ColumnSettings({
   column,
   onUpdate,
   onSetLimit,
+  onMoveLeft,
+  onMoveRight,
   onSortByIteration,
 }: {
   column: Column
@@ -568,6 +575,8 @@ function ColumnSettings({
    *  задайте лимит» стояло там, где задать его было нечем, и человек
    *  шёл искать поле. */
   onSetLimit: (limit: number | null) => void
+  onMoveLeft?: () => void
+  onMoveRight?: () => void
   onSortByIteration?: () => void
 }) {
   const [policy, setPolicy] = useState(column.policy)
@@ -597,6 +606,32 @@ function ColumnSettings({
           <option value="done">{t.column.kindDone}</option>
         </select>
       </label>
+
+      {/* Место колонки — кнопками, а не перетаскиванием заголовка:
+          перетаскивание колонки спорило бы с перетаскиванием карточек
+          и ширины и не работало бы с клавиатуры. Карточки едут вместе
+          с колонкой. Вопроса нет — переставить обратно так же просто. */}
+      {(onMoveLeft || onMoveRight) && (
+        <div className="row row--tight">
+          <span className="muted small">{t.column.place}</span>
+          <button
+            className="btn btn--quiet"
+            disabled={!onMoveLeft}
+            aria-label={t.column.moveLeftOf(column.name)}
+            onClick={onMoveLeft}
+          >
+            {t.column.moveLeft}
+          </button>
+          <button
+            className="btn btn--quiet"
+            disabled={!onMoveRight}
+            aria-label={t.column.moveRightOf(column.name)}
+            onClick={onMoveRight}
+          >
+            {t.column.moveRight}
+          </button>
+        </div>
+      )}
 
       {/* «?» — рядом с подписью, а не внутри неё: кнопка внутри
           `label` делила бы нажатие с флажком. */}
