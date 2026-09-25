@@ -400,6 +400,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A card in progress shows how much of the promise it has used.** A
+  thin line along the card's bottom edge, full and amber past the
+  board's promise. It adds no height and appears only when the board
+  has a promise.
 - **A column header shows its limit as a bar and its average age.**
   One segment per place in the limit, amber and longer when over it;
   below, «waiting N d on average» in a queue and «N d on average ·

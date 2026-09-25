@@ -8,7 +8,7 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { ageLabel, agingLabel } from '../../entities/board/model.ts'
+import { ageDays, ageLabel, agingLabel } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
@@ -246,6 +246,11 @@ function CardViewInner({
   // получает третью метку. Считается на отрисовке: хранить «просрочена»
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
+  // Сколько обещания уже прожито — для кромки возраста (шаг 4 нового
+  // дизайна доски). Только у начатой и не доведённой работы и только
+  // если доска что-то обещает: без обещания мерить не с чем.
+  const workDays = card && !card.doneAt && !card.finishedAt ? ageDays(card) : null
+  const promiseUsed = sleDays && workDays !== null ? workDays / sleDays : null
   // Сколько идёт — у каждой начатой карточки, тихо. Неначатая
   // не стареет, она ждёт, и числа у неё нет.
   const age = card ? ageLabel(card) : null
@@ -986,6 +991,19 @@ function CardViewInner({
           )}
 
         </>
+      )}
+      {/* Кромка возраста — не поле, а нижний край карточки: бюджет
+          полей карточки занят блокировкой и прогрессом, а эта полоса
+          высоты не добавляет. Длина — сколько обещания доски уже
+          прожито, после обещания — вся и цветом «осторожно». Число
+          возраста написано на карточке, поэтому для диктора кромка
+          скрыта. */}
+      {promiseUsed !== null && (
+        <span
+          className={`card-age-strip${promiseUsed > 1 ? ' card-age-strip--late' : ''}`}
+          style={{ '--used': Math.min(promiseUsed, 1) } as React.CSSProperties}
+          aria-hidden="true"
+        />
       )}
     </article>
   )

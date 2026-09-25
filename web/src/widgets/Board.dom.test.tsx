@@ -715,6 +715,28 @@ describe('одна тревога на карточке', () => {
     // Возраст ушёл в панель и в отборы: пометка одна.
     expect(screen.queryByTitle('Возраст считается от начала работы')).toBeNull()
   })
+
+  // Кромка возраста (шаг 4 нового дизайна): сколько обещания прожито.
+  // Десять дней при обещанных трёх — кромка во всю ширину и янтарная.
+  it('кромка возраста показывает прожитое обещание', async () => {
+    snapshot.mockResolvedValue(aging(null))
+    const { container } = show()
+
+    await screen.findByTitle('Возраст считается от начала работы')
+    const strip = container.querySelector<HTMLElement>('.card-age-strip')
+    expect(strip).not.toBeNull()
+    expect(strip!.className).toContain('card-age-strip--late')
+    expect(strip!.style.getPropertyValue('--used')).toBe('1')
+  })
+
+  it('без обещания доски кромки нет: мерить не с чем', async () => {
+    const snap = aging(null)
+    snapshot.mockResolvedValue({ ...snap, board: { ...snap.board, sleDays: null } })
+    const { container } = show()
+
+    await screen.findAllByText('старая')
+    expect(container.querySelector('.card-age-strip')).toBeNull()
+  })
 })
 
 describe('отметка «сделано» у части работы', () => {

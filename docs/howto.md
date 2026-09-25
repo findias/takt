@@ -240,6 +240,10 @@ finished work passed it. From then on, a card running longer than the
 promise is marked right on the board, and the **Longer than promised**
 filter gathers such cards. **Drop the promise** removes it.
 
+While a board has a promise, every card in progress carries a thin line
+along its bottom edge: how much of the promise it has used. Past the
+promise the line is full and amber.
+
 ### See what others changed while you were away
 
 A card that someone else changed since you last opened the board has a

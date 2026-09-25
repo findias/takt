@@ -3102,6 +3102,29 @@ textarea.description {
 .card-line-end .card-age {
   margin-left: 0;
 }
+/* Кромка возраста (шаг 4 нового дизайна): тонкая полоса по нижнему
+   краю карточки, в её отступе, — высоты не добавляет. */
+.card-age-strip {
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: 3px;
+  block-size: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  pointer-events: none;
+}
+.card-age-strip::after {
+  content: '';
+  display: block;
+  block-size: 100%;
+  /* Доля прожитого обещания приходит из разметки; без неё — пусто. */
+  inline-size: calc(var(--used, 0) * 100%);
+  background: var(--rule-strong);
+}
+.card-age-strip--late::after {
+  background: var(--caution);
+}
 /* Кнопки по наведению — поверх правого нижнего угла, на подложке
    карточки: в строке под них пришлось бы держать место всегда. Внизу,
    а не вверху: вверху справа стоят люди, и нажать по стопке, чтобы
