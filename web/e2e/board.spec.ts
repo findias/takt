@@ -567,7 +567,11 @@ test('метка заводится прямо с карточки', async ({ pa
   await page.keyboard.press('Enter')
 
   await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeVisible()
-  // Фокус вернулся туда, откуда открывали.
+  // Выбор продолжается (владелец 25.09.2026: несколько меток за один
+  // раз): окно открыто у новой кнопки, фокус — в поиске. Escape
+  // закрывает его и возвращает фокус на кнопку, откуда выбирали.
+  await expect(page.getByRole('combobox', { name: 'Найти или завести метку' })).toBeFocused()
+  await page.keyboard.press('Escape')
   await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeFocused()
 
   // Набрали то же в другом регистре — предложена существующая, второй
@@ -2811,9 +2815,22 @@ test('вкладка «Задачи» собирает карточки чело
   await expect(table.getByText('Не моя задача')).toHaveCount(0)
   await expect(table.getByRole('button', { name: 'Первая доска' })).toBeVisible()
 
+  // Задача открывается здесь же, сбоку, как на доске (владелец
+  // 25.09.2026): список и отбор остаются на месте.
   await table.getByRole('button', { name: 'Моя задача' }).click()
-  await expect(page).toHaveURL(/\/board\/.+\/card\//)
   await expect(page.getByRole('heading', { name: 'Моя задача' })).toBeVisible()
+  await expect(page).toHaveURL(/\/tasks\?.*open=/)
+  await expect(table).toBeVisible()
+  // Правка в панели видна в списке после закрытия.
+  await page.getByRole('complementary').getByRole('button', { name: 'Переименовать «Моя задача»' }).click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.type('Моя задача, поправленная')
+  await page.keyboard.press('Enter')
+  await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(table.getByRole('button', { name: 'Моя задача, поправленная' })).toBeVisible()
+  // На доску — по названию доски.
+  await table.getByRole('button', { name: 'Первая доска' }).click()
+  await expect(page).toHaveURL(/\/board\//)
 })
 
 test('выгрузка называет число карточек до файла и отдаёт те же строки', async ({ page }) => {
@@ -3590,4 +3607,49 @@ test('«Требует внимания» собирает то, что стои
   await expect(
     page.getByRole('complementary', { name: 'Требует внимания' }).getByRole('button', { name: /развернуть/ }),
   ).toBeVisible()
+})
+
+// Открытая карточка не сбрасывает отбор (владелец 25.09.2026: «при
+// выборе задачи сбрасывается фильтрация»): отбор живёт в адресе,
+// и переход к карточке раньше шёл на голый адрес.
+test('открытие карточки не сбрасывает отбор доски', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с отбором')
+  await addCard(page, 'Очередь', 'Договор аренды')
+  await addCard(page, 'Очередь', 'Согласовать смету')
+  await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('договор')
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+
+  await cardIn(page, 'Очередь', 'Договор аренды').locator('.card-title').click()
+  await expect(page.getByRole('heading', { name: 'Договор аренды' })).toBeVisible()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+  await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
+  await expect(page.getByRole('searchbox', { name: 'Найти карточку' })).toHaveValue('договор')
+})
+
+// Несколько меток — за один раз (владелец 25.09.2026: «нельзя поставить
+// несколько меток на одну задачу»): окно выбора после метки
+// не закрывается, а после первой метки карточки открывается заново там,
+// куда переехала кнопка.
+test('на карточку ставят несколько меток, не открывая выбор заново', async ({ page }) => {
+  await register(page)
+  await page.getByRole('button', { name: 'Команда' }).click()
+  for (const n of ['Срочно', 'Важное', 'Риск']) {
+    await page.getByPlaceholder('Название метки').fill(n)
+    await page.getByRole('button', { name: 'Завести метку' }).click()
+    await expect(page.getByText(n, { exact: true })).toBeVisible()
+  }
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await createBoard(page, 'Доска с метками подряд')
+  await addCard(page, 'Очередь', 'Три метки')
+
+  const card = cardIn(page, 'Очередь', 'Три метки')
+  await card.hover()
+  await card.getByRole('button', { name: 'Метки: ни одной' }).click()
+  for (const n of ['Срочно', 'Важное', 'Риск']) {
+    await labelChoice(page).getByRole('option', { name: new RegExp(`^${n}`) }).click()
+  }
+  await expect(card.getByRole('button', { name: /^Метки: / })).toHaveAttribute('aria-label', /Срочно/)
+  await expect(card.locator('.card-labels .chip')).toHaveCount(3)
 })

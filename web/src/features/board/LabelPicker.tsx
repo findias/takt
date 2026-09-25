@@ -128,9 +128,10 @@ export function LabelCombobox({
         }
         onToggle(id, true)
       }
+      // Список не сворачивается: следующую метку выбирают здесь же,
+      // не открывая его заново.
       setText('')
       setActive(0)
-      setBrowsing(false)
       onDone?.()
     } catch (e) {
       // Отказ сервера называет, где метка уже есть или кто может её
@@ -293,12 +294,18 @@ function ItemText({ item, marked }: { item: PickerItem; marked: boolean }) {
  * действий над выделенными. Поведение — как у меню: открывается
  * нажатием, закрывается Escape и щелчком вне, фокус возвращается
  * на кнопку.
+ *
+ * После выбора окно остаётся открытым (владелец 25.09.2026: «нельзя
+ * поставить несколько меток на одну задачу»). Меток на карточке обычно
+ * две-три, и закрываться после первой значило открывать окно заново
+ * на каждую следующую — выглядело так, будто вторую поставить нельзя.
  */
 export function LabelPickerButton({
   label,
   className,
   align = 'right',
   drop = 'down',
+  startOpen = false,
   children,
   ...choice
 }: LabelChoiceProps & {
@@ -307,9 +314,12 @@ export function LabelPickerButton({
   className: string
   align?: 'left' | 'right'
   drop?: 'down' | 'up'
+  /** Открыться сразу: выбор продолжается в кнопке, которая только что
+   *  заменила собой другую (первая метка карточки). */
+  startOpen?: boolean
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(startOpen)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const floatRef = useRef<HTMLDivElement>(null)
@@ -369,7 +379,7 @@ export function LabelPickerButton({
         >
           <LabelCombobox
             {...choice}
-            onDone={() => close()}
+            onDone={() => floatRef.current?.querySelector('input')?.focus({ preventScroll: true })}
             onEscape={() => close()}
           />
         </div>

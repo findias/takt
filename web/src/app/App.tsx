@@ -315,7 +315,11 @@ function Screens() {
         key={session}
         boardId={route.boardId}
         cardId={route.cardId}
-        onCard={(cardId) => navigate(boardPath(route.boardId, cardId))}
+        // Отбор, группировка и вид живут в строке запроса, и открытие
+        // карточки их не сбрасывает (владелец 25.09.2026: «при выборе
+        // задачи сбрасывается фильтрация»). Прежде переход шёл на голый
+        // адрес карточки, и отобранная доска разворачивалась целиком.
+        onCard={(cardId) => navigate(boardPath(route.boardId, cardId) + window.location.search)}
         unit={principal.estimateUnit}
         meId={principal.id}
         isOwner={principal.role === 'owner'}

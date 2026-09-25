@@ -7,6 +7,7 @@ import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.
 import { ScreenError } from '../shared/ui/Field.tsx'
 import { Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
+import { Board } from './Board.tsx'
 import { t } from '../shared/i18n/index.ts'
 import { DUES, STATUSES, filterTasks, isFiltered, labelsOf, parseTaskFilter } from './tasksFilter.ts'
 
@@ -41,6 +42,18 @@ export function Tasks({ principal }: { principal: Principal }) {
   const [people, setPeople] = useState<Member[]>([])
   const [list, setList] = useState<{ tasks: Task[]; truncated: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Перечитать список после правок в панели: название, колонка, метки
+  // в таблице должны быть теми, что человек только что поставил.
+  const [reloadKey, setReloadKey] = useState(0)
+  // Открытая задача — в адресе, как на доске: «доска:карточка».
+  const [openBoard, openCard] = (query.get('open') ?? '').split(':')
+  // Доска открытой задачи остаётся подключённой и после закрытия панели:
+  // правка, сделанная перед самым закрытием, подтверждается уже после
+  // него, и список должен узнать об этом — а узнаёт он от доски.
+  const [panelBoard, setPanelBoard] = useState<string | null>(null)
+  useEffect(() => {
+    if (openBoard) setPanelBoard(openBoard)
+  }, [openBoard])
 
   useEffect(() => {
     api
@@ -61,6 +74,20 @@ export function Tasks({ principal }: { principal: Principal }) {
     }
   }, [user, withDone, principal.id, s])
 
+  // Правка в открытой сбоку задаче — список перечитывается тихо, без
+  // заглушки: таблица под панелью не должна мигать на каждую правку.
+  useEffect(() => {
+    if (reloadKey === 0) return
+    let current = true
+    loadTasks(user === principal.id ? undefined : user, withDone)
+      .then((r) => current && setList(r))
+      .catch(() => {})
+    return () => {
+      current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- повод перечитать только правка; смену человека и отбора ведёт эффект выше
+  }, [reloadKey])
+
   const set = (key: string, value: string | null, also: Record<string, null> = {}) => {
     const next = new URLSearchParams(query)
     for (const [k, v] of Object.entries({ ...also, [key]: value })) {
@@ -75,7 +102,7 @@ export function Tasks({ principal }: { principal: Principal }) {
   const now = Date.now()
 
   return (
-    <div className="stack">
+    <div className="stack tasks-screen">
       <div className="row tasks-head">
         <label className="row row--tight">
           <span className="small">{s.whose}</span>
@@ -172,7 +199,11 @@ export function Tasks({ principal }: { principal: Principal }) {
                 <tr key={task.id}>
                   <td className="mono muted small">{task.number}</td>
                   <td>
-                    <button className="link table-title" onClick={() => navigate(boardPath(task.boardId, task.id))}>
+                    {/* Задача открывается здесь же, сбоку, как на доске
+                        (владелец 25.09.2026): уход на доску терял и список,
+                        и отбор. На доску ведёт её название в соседнем
+                        столбце. */}
+                    <button className="link table-title" onClick={() => set('open', `${task.boardId}:${task.id}`)}>
                       {task.title}
                     </button>
                     {task.blocked && <span className="mark mark--alarm tasks-mark">{s.blocked}</span>}
@@ -205,6 +236,23 @@ export function Tasks({ principal }: { principal: Principal }) {
         </div>
       )}
       {list?.truncated && <p className="muted small">{s.truncated(list.tasks.length)}</p>}
+      {panelBoard && (
+        <Board
+          key={panelBoard}
+          boardId={panelBoard}
+          cardId={openBoard === panelBoard && openCard ? openCard : null}
+          onCard={(cardId) => {
+            set('open', cardId ? `${panelBoard}:${cardId}` : null)
+          }}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          unit={principal.estimateUnit}
+          meId={principal.id}
+          isOwner={principal.role === 'owner'}
+          canEdit={principal.role !== 'viewer'}
+          onBack={() => set('open', null)}
+          panelOnly
+        />
+      )}
     </div>
   )
 }

@@ -144,6 +144,8 @@ export function Board({
   sandboxExpiresAt,
   account,
   onBack,
+  panelOnly = false,
+  onChanged,
 }: {
   boardId: string
   /** Какая карточка открыта — приходит из адреса, а не хранится здесь:
@@ -169,6 +171,14 @@ export function Board({
    *  об этом незачем. */
   account?: React.ReactNode
   onBack: () => void
+  /** Только панель карточки, без самой доски: так задачу открывают
+   *  с экрана «Задачи», не уходя с него (владелец 25.09.2026). Вся
+   *  логика доски — правки, вопросы, отмена — та же самая, потому что
+   *  это та же доска; не рисуется лишь поле. */
+  panelOnly?: boolean
+  /** Доска подтвердила правку (выросла её версия): экран, который
+   *  показывает эту карточку по-своему, перечитывает себя. */
+  onChanged?: () => void
 }) {
   const notify = useToast()
   const board = useBoard(boardId, notify)
@@ -335,6 +345,17 @@ export function Board({
   // карточка важнее доски — на неё и смотрят, когда её держат открытой.
   const открытая = openCard ? base?.cards[openCard] : undefined
   useDocumentTitle(открытая ? `${открытая.number} ${открытая.title}` : (base?.info.name ?? null))
+
+  // Версия доски выросла — правка принята сервером. Сообщаем об этом
+  // тому, кто показывает карточку у себя (экран «Задачи»): перечитывать
+  // по закрытию панели рано — правка могла ещё не доехать.
+  const version = base?.info.version
+  const seenVersion = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (version === undefined) return
+    if (seenVersion.current !== undefined && version !== seenVersion.current) onChanged?.()
+    seenVersion.current = version
+  }, [version, onChanged])
 
   /**
    * Зеркало доски для обработчиков.
@@ -1031,6 +1052,7 @@ export function Board({
   // словами и дать то единственное, что здесь делают. Прежде такая
   // ссылка отвечала «доска не найдена», и человек шёл искать поломку
   // там, где её нет.
+  if (panelOnly && (board.archived || board.loadError || !base)) return null
   if (board.archived) {
     return (
       <div className="board-screen">
@@ -1180,6 +1202,65 @@ export function Board({
         onDeleteCard={isOwner ? askDelete : undefined}
       />
     ))
+
+  const cardPanel = openCard && base.cards[openCard] && (
+    <Suspense fallback={null}>
+      <CardPanel
+        onRename={renameCard}
+        base={base}
+        boardId={boardId}
+        cardId={openCard}
+        unit={unit}
+        meId={meId}
+        canEdit={canEdit}
+        onClose={() => setOpenCard(null)}
+        onDescribe={(id, text) => void board.describeCard(id, text)}
+        onEstimate={estimateCard}
+        onOpenCard={showCard}
+        onAssign={assignCard}
+        onLabel={toggleLabel}
+        onPrioritise={prioritiseCard}
+        onDue={commitCard}
+        // С доски команды портфель не предлагается: подзадача там
+        // была бы эпиком под задачей, а эпик всегда родитель
+        // (сервер такое откажет — здесь просто не предлагаем).
+        subtaskBoards={subtaskBoards.filter(
+          (b) => base.info.level === 'portfolio' || b.level !== 'portfolio',
+        )}
+        onSubtask={(parentCardId, title, toBoard) =>
+          void board.createSubtask(parentCardId, title, undefined, toBoard)
+        }
+        onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
+        onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
+        onBlock={blockCard}
+        onSetBlockUntil={setBlockUntil}
+        onSetBlockReason={setBlockReason}
+        onUnblock={unblockCard}
+        onMarkDone={markDone}
+        onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
+        onAddRef={(id, kind, ref) => void board.addCardRef(id, kind, ref)}
+        onRemoveRef={(id, refId) => void board.removeCardRef(id, refId)}
+        onIteration={(id, iterationId) => {
+          const current = base.cardIterations[id]
+          // Перенос — это выход из одного и вход в другой, и оба факта
+          // остаются в истории: карточка не может идти в двух сразу.
+          // Из закрытой не выходят: перенос в открытую сам закроет
+          // участие в ней, не трогая её отчёт.
+          const closed = base.iterations.find((i) => i.id === current)?.closedAt
+          if (current && !closed) void board.removeFromIteration(id, current)
+          if (iterationId) void board.addToIteration(id, iterationId)
+        }}
+      />
+    </Suspense>
+  )
+
+  if (panelOnly)
+    return (
+      <div className="board-panel-only">
+        <ClosingDialog closing={closing} onDone={() => setClosing(null)} />
+        {cardPanel}
+      </div>
+    )
 
   return (
     // `tabIndex` — чтобы экрану можно было отдать фокус, когда
@@ -1643,56 +1724,7 @@ export function Board({
         </Suspense>
       )}
 
-      {openCard && base.cards[openCard] && (
-        <Suspense fallback={null}>
-          <CardPanel
-            onRename={renameCard}
-            base={base}
-            boardId={boardId}
-            cardId={openCard}
-            unit={unit}
-            meId={meId}
-            canEdit={canEdit}
-            onClose={() => setOpenCard(null)}
-            onDescribe={(id, text) => void board.describeCard(id, text)}
-            onEstimate={estimateCard}
-            onOpenCard={showCard}
-            onAssign={assignCard}
-            onLabel={toggleLabel}
-            onPrioritise={prioritiseCard}
-            onDue={commitCard}
-            // С доски команды портфель не предлагается: подзадача там
-            // была бы эпиком под задачей, а эпик всегда родитель
-            // (сервер такое откажет — здесь просто не предлагаем).
-            subtaskBoards={subtaskBoards.filter(
-              (b) => base.info.level === 'portfolio' || b.level !== 'portfolio',
-            )}
-            onSubtask={(parentCardId, title, toBoard) =>
-              void board.createSubtask(parentCardId, title, undefined, toBoard)
-            }
-            onLink={(from, to, kind) => void board.linkCards(from, to, kind)}
-            onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
-            onBlock={blockCard}
-            onSetBlockUntil={setBlockUntil}
-            onSetBlockReason={setBlockReason}
-            onUnblock={unblockCard}
-            onMarkDone={markDone}
-            onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
-            onAddRef={(id, kind, ref) => void board.addCardRef(id, kind, ref)}
-            onRemoveRef={(id, refId) => void board.removeCardRef(id, refId)}
-            onIteration={(id, iterationId) => {
-              const current = base.cardIterations[id]
-              // Перенос — это выход из одного и вход в другой, и оба факта
-              // остаются в истории: карточка не может идти в двух сразу.
-              // Из закрытой не выходят: перенос в открытую сам закроет
-              // участие в ней, не трогая её отчёт.
-              const closed = base.iterations.find((i) => i.id === current)?.closedAt
-              if (current && !closed) void board.removeFromIteration(id, current)
-              if (iterationId) void board.addToIteration(id, iterationId)
-            }}
-          />
-        </Suspense>
-      )}
+      {cardPanel}
 
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announcement}

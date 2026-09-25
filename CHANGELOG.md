@@ -400,6 +400,15 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **Opening a card keeps the board's filter.** The filter, grouping and
+  view live in the address, and opening a card used to go to its bare
+  address — the filtered board unfolded in full.
+- **Several labels in one go.** The label choice stays open after a
+  label is picked; after a card's first label it reopens by itself
+  where the button moved. In the card panel the list stays open too.
+- **A task opens on the side on «Tasks».** The list and its filters stay
+  put and follow the changes made in the panel; the board's name opens
+  the board.
 - **«Needs attention» to the right of the columns.** Blocked cards with
   their reasons, work longer than the promise, columns over their limit
   and cards of an ended iteration — one line per card, for its most

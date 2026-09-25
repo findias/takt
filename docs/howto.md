@@ -628,8 +628,9 @@ The **Tasks** tab lists the cards where a person is an assignee, on
 every board you can see — your own by default. Pick someone else in
 **Whose tasks**, or press **Tasks** next to their name under **Team**.
 The list is a table: number, task, board, column, due date, priority,
-labels and how long it has been in progress; the task opens its card on
-its board. **Show finished** adds finished work. The row below narrows
+labels and how long it has been in progress. The task opens its card
+on the side, right here, as on a board — the list and its filters stay
+put and follow the changes you make; the board's name opens the board. **Show finished** adds finished work. The row below narrows
 the list: **Status** (not started, in progress, done — by the kind of
 column, since boards name their columns differently — or blocked),
 **Due** (overdue, within 3 days, no due date) and **Label** (only the

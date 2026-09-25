@@ -263,11 +263,19 @@ function CardViewInner({
   // Первая метка переносит выбор из верхней строки в строку меток:
   // кнопка «+ метка» исчезает, а фокус обязан вернуться туда, откуда
   // открывали, — на новую кнопку, а не на `body`.
+  //
+  // Больше того: выбор продолжается — окно у новой кнопки открывается
+  // само, и вторую метку ставят, не открывая его заново.
   const labelsFrom = useRef(false)
+  const [continueLabels, setContinueLabels] = useState(false)
   useEffect(() => {
-    if (!labelsFrom.current || own.length === 0) return
+    if (own.length === 0) {
+      setContinueLabels(false)
+      return
+    }
+    if (!labelsFrom.current) return
     labelsFrom.current = false
-    ref.current?.querySelector<HTMLElement>('.field.card-labels')?.focus()
+    setContinueLabels(true)
   }, [own.length])
 
   /**
@@ -535,6 +543,8 @@ function CardViewInner({
             {own.length > 0 &&
               (canEdit ? (
                 <LabelPickerButton
+                  key={continueLabels ? 'continue' : 'idle'}
+                  startOpen={continueLabels}
                   label={t.cardView.labelsOf(own.map((l) => l.name).join(', '))}
                   className="field card-labels"
                   align="left"

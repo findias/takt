@@ -1700,7 +1700,8 @@ select:disabled {
    в экран, и уступить ей нечего — она перекрывает доску, как
    перекрывала. Порог — там, где доске остаётся больше самой панели. */
 @media (min-width: 60rem) {
-  .board-screen:has(.panel-side) {
+  .board-screen:has(.panel-side),
+  .tasks-screen:has(.panel-side) {
     padding-inline-end: var(--panel-side-width);
   }
   /* Сообщения — у правого края, а их слой выше панели: без сдвига
@@ -2344,6 +2345,15 @@ textarea.description {
 }
 .column-gauge-bar--over > span {
   background: var(--caution);
+}
+/* На телефоне видна одна колонка, и строка под названием отодвигала
+   первую карточку за середину экрана (проверка «шапка доски не съедает
+   экран»). Полоса остаётся — она в четыре пикселя, — а среднее
+   видно в «Потоке». */
+@media (max-width: 40rem) {
+  .column-gauge > span {
+    display: none;
+  }
 }
 .column-settings {
   margin: var(--space-1) 0 var(--space-2);
