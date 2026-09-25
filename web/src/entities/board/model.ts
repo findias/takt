@@ -13,6 +13,7 @@ import type {
   BoardLabel,
   BoardInfo,
   Card,
+  CardChange,
   CardField,
   CardRef,
   Column,
@@ -44,6 +45,9 @@ export type BaseState = {
   fields: CardField[]
   fieldValues: Record<string, FieldValue[]>
   cardRefs: Record<string, CardRef[]>
+  /** cardId → последнее изменение: из снимка, а пока доска открыта —
+   *  и из чужих правок, приехавших потоком. */
+  recentChanges?: Record<string, CardChange>
   /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
   /** Словарь меток и то, что чем помечено. */
@@ -101,6 +105,7 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     fields: snap.fields,
     fieldValues: snap.fieldValues,
     cardRefs: snap.cardRefs,
+    recentChanges: snap.recentChanges ?? {},
   }
 }
 

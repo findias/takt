@@ -2140,6 +2140,16 @@ textarea.description {
 /* Номер набран цифровым шрифтом и не переносится: его сверяют посимвольно
    с тем, что прислали в переписке, а разорванный по строкам ПРО-142
    сверять нельзя. */
+/* Менялась без смотрящего: точка акцентом у номера. Акцент, а не
+   тревожный цвет: это новость, а не беда. */
+.card-changed {
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
 .card-number {
   flex: none;
   font-size: var(--text-sm);

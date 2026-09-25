@@ -230,6 +230,14 @@ finished work passed it. From then on, a card running longer than the
 promise is marked right on the board, and the **Longer than promised**
 filter gathers such cards. **Drop the promise** removes it.
 
+### See what others changed while you were away
+
+A card that someone else changed since you last opened the board has a
+small dot next to its number. Hover it for who and when. The dot goes
+out once you open the card; your own changes never light up. A change
+made while you are looking at the board lights up at once. The first
+time you open a board, the last day counts.
+
 <!-- anchor: appearance -->
 ### Switch to the dark theme or a denser board
 

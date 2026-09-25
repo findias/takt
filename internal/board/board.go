@@ -379,6 +379,19 @@ type Snapshot struct {
 	// установка рассчитана на сотню человек, — и он нужен на каждой доске:
 	// без него исполнитель на карточке остался бы идентификатором.
 	People []Person `json:"people"`
+	// Последнее изменение каждой карточки за неделю: когда и кто
+	// (ROADMAP 34.14). Клиент подсвечивает то, что меняли другие после
+	// прошлого захода смотрящего на доску; кто когда заходил, сервер
+	// не хранит — это дело браузера смотрящего. Неделя — потому что
+	// дольше «что тут поменялось, пока меня не было» не спрашивают.
+	RecentChanges map[string]CardChange `json:"recentChanges"`
+}
+
+// CardChange — последнее событие карточки. Автора нет у того, что
+// сделал сам сервер (блокировка снялась по сроку).
+type CardChange struct {
+	At      time.Time `json:"at"`
+	ActorID *string   `json:"actorId"`
 }
 
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
@@ -696,6 +709,9 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 		if err := loadIterations(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
+		if err := loadRecentChanges(ctx, tx, boardID, &snap); err != nil {
+			return err
+		}
 		if err := loadPeople(ctx, tx, orgID, &snap); err != nil {
 			return err
 		}
@@ -983,6 +999,30 @@ func loadIterations(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapsh
 		snap.CardIterations[cardID] = iterationID
 	}
 	return memberRows.Err()
+}
+
+// loadRecentChanges — одно последнее событие на карточку за неделю,
+// по индексу событий доски по времени.
+func loadRecentChanges(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) error {
+	rows, err := tx.Query(ctx, `
+		select distinct on (card_id) card_id, at, actor_id::text
+		  from card_events
+		 where board_id = $1 and at > now() - interval '7 days'
+		 order by card_id, at desc`, boardID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	snap.RecentChanges = map[string]CardChange{}
+	for rows.Next() {
+		var cardID string
+		var c CardChange
+		if err := rows.Scan(&cardID, &c.At, &c.ActorID); err != nil {
+			return err
+		}
+		snap.RecentChanges[cardID] = c
+	}
+	return rows.Err()
 }
 
 // CardOrder — текущий порядок колонки, который возвращается клиенту

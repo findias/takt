@@ -86,6 +86,8 @@ type ColumnProps = {
   iterationLate: Record<string, boolean>
   /** cardId → когда кончается её итерация, словами — для подсказки. */
   iterationEnd: Record<string, string>
+  /** cardId → подпись «кто и когда менял без вас». */
+  changed: Record<string, string>
   /** cardId → её подзадачи, если работа разбита. */
   children: Record<string, Related[]>
   /** Две стороны связи «блокирует»: кого карточка держит и кто держит
@@ -317,6 +319,7 @@ export function ColumnView(props: ColumnProps) {
             iteration={props.iterations[cardId]}
             iterationLate={props.iterationLate[cardId] ?? false}
             iterationEnd={props.iterationEnd[cardId]}
+            changed={props.changed[cardId]}
             subtasks={props.children[cardId] ?? NO_SUBTASKS}
             holds={props.holds[cardId] ?? NO_SUBTASKS}
             waitsFor={props.waitsFor[cardId] ?? NO_SUBTASKS}

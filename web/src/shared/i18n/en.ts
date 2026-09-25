@@ -769,6 +769,8 @@ export const en: typeof ru = {
     priorityOf: (short: string, full: string) => `Priority: ${short} — ${full}`,
     iteration: 'Iteration',
     iterationUntil: (name: string, when: string) => `${name} · until ${when}`,
+    changedBy: (who: string, when: string) => `Changed while you were away: ${who}, ${when}`,
+    changedByServer: (when: string) => `Changed by itself: ${when}`,
     iterationLate: (when: string) => `The iteration ended ${when} and the card is not done — move it to the next one`,
     estimateOf: (value: number, unit: string) => `Estimate: ${value} ${unit}`,
     runningSinceStart: 'Running since work started',

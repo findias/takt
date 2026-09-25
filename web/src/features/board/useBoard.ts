@@ -216,6 +216,9 @@ export function useBoard(boardId: string | null, notify: Notify) {
     for (const card of Object.values(base.cards)) titles.current.set(card.id, card.title)
   }, [base])
 
+  // Кто сделал последнее чужое изменение — из потока: патчи автора
+  // не несут, а подсветке он нужен, чтобы не светить своё же.
+  const lastActor = useRef<string | null>(null)
   const catchUp = useCallback(async () => {
     if (!boardId) return
     const from = latest.current
@@ -232,9 +235,22 @@ export function useBoard(boardId: string | null, notify: Notify) {
         // на собственную операцию мог прийти раньше. Применяем только
         // то, чего у нас ещё нет, — по версии, названной сервером.
         let next = current
+        const touched = new Set<string>()
         for (const result of catchup.results) {
           if (result.version <= next.info.version) continue
           next = applyPatch(next, result)
+          for (const card of result.patch.cards ?? []) touched.add(card.id)
+          for (const id of Object.keys(result.patch.cardLabels ?? {})) touched.add(id)
+          for (const id of Object.keys(result.patch.cardAssignees ?? {})) touched.add(id)
+        }
+        // Догоняют только чужое — своё приходит ответом на операцию.
+        // Помечаем тронутое сейчас, чтобы подсветка появилась, не
+        // дожидаясь перечитывания доски.
+        if (touched.size > 0) {
+          const at = new Date().toISOString()
+          const recentChanges = { ...next.recentChanges }
+          for (const id of touched) recentChanges[id] = { at, actorId: lastActor.current }
+          next = { ...next, recentChanges }
         }
         return next
       })
@@ -262,6 +278,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
             version: number
             actorId: string
           }
+          lastActor.current = change.actorId || null
           setBase((current) => {
             if (!current) return current
             // Версия не новее нашей — новость уже учтена.

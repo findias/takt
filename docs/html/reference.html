@@ -203,6 +203,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Actions follow the same rule: green adds something, grey removes something that can be brought back, red cannot be undone and always asks first.</p>
 <h2 id="what-is-remembered-in-the-browser">What is remembered in the browser</h2>
 <p>Theme, density and column widths are personal and stay in the browser where they were set: the board of a colleague does not change, and on another computer you start with the defaults.</p>
+<p>The browser also remembers when you last opened each board: that is what &#34;changed while you were away&#34; is counted from. The server does not keep it. On another computer, or in a private window, the last day counts.</p>
 <h2 id="groupings">Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority, by parent, by epic.</p>
 <h2 id="labels">Labels</h2>
@@ -291,7 +292,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-115-gb8b028a-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-116-g732bfb3-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

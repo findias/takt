@@ -809,6 +809,9 @@ export type Snapshot = {
   fieldValues: Record<string, FieldValue[]>
   /** cardId → ссылки на заявки внешних систем, в порядке появления. */
   cardRefs: Record<string, CardRef[]>
+  /** cardId → последнее изменение за неделю: когда и кто. Автора нет
+   *  у того, что сделал сам сервер. */
+  recentChanges?: Record<string, CardChange>
   /** Кого можно назначить. Приезжает со снимком: иначе исполнитель
    *  на карточке остался бы идентификатором. */
   people: Person[]
@@ -867,6 +870,8 @@ export type ManagedLabel = Label & { canManage: boolean }
  *  на подразделение наследуются вниз по дереву. */
 export type LabelPlace = { scope: LabelScope; id?: string; name: string }
 export type LabelTone = 'slate' | 'green' | 'blue' | 'violet' | 'rose' | 'amber' | 'teal' | 'brown'
+
+export type CardChange = { at: string; actorId: string | null }
 
 export const TONE_NAMES = live(() => t.api.tones) as Record<LabelTone, string>
 

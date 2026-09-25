@@ -400,6 +400,13 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **Cards changed by others while you were away are marked.** A dot
+  next to the card number, with who and when in the tooltip; it goes
+  out once you open the card, your own changes never light up, and a
+  change arriving while you watch lights up at once. When you last
+  opened a board is kept by your browser, not the server; the board
+  snapshot now carries each card's last change of the past week
+  (`recentChanges`).
 - **A label can be recoloured.** **Team** → **Labels**: a colour list
   next to each label you may manage. Before, the colour was chosen only
   when creating a label there, and a label created from a card got one

@@ -908,6 +908,34 @@ export function Board({
   //  `late`: пометка горит, карточку пора переносить в следующую.
   //  Два простых словаря, а не объект на карточку: объект пересоздавался
   //  бы с каждым снимком и перерисовывал все карточки доски.
+  // Подсветка чужих правок (владелец 25.09.2026, «как в Планке»):
+  // карточки, которые другие меняли после прошлого захода смотрящего
+  // на эту доску. Когда он заходил, знает только его браузер — сервер
+  // этого не хранит, и хранить незачем: это удобство смотрящего,
+  // а не данные доски. Первый заход — окно в сутки. Открытая карточка
+  // гаснет: её уже посмотрели.
+  const [seenSince] = useState(() => lastVisit(boardId))
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
+  useEffect(() => {
+    if (cardId) setOpened((prev) => (prev.has(cardId) ? prev : new Set(prev).add(cardId)))
+  }, [cardId])
+  const changedCards = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [id, change] of Object.entries(base?.recentChanges ?? {})) {
+      if (change.at <= seenSince || change.actorId === meId || opened.has(id)) continue
+      const when = new Date(change.at).toLocaleString(locale(), {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      out[id] = change.actorId
+        ? t.cardView.changedBy(base?.people[change.actorId] ?? '—', when)
+        : t.cardView.changedByServer(when)
+    }
+    return out
+  }, [base?.recentChanges, base?.people, seenSince, meId, opened])
+
   const { cardIterationNames, cardIterationLate, cardIterationEnd } = useMemo(() => {
     const names: Record<string, string> = {}
     const late: Record<string, boolean> = {}
@@ -1064,6 +1092,7 @@ export function Board({
         iterations={cardIterationNames}
         iterationLate={cardIterationLate}
         iterationEnd={cardIterationEnd}
+        changed={changedCards}
         holds={dependencies.holds}
         waitsFor={dependencies.waitsFor}
         children={children}
@@ -1704,4 +1733,22 @@ function ClosingDialog({ closing, onDone }: { closing: Closing | null; onDone: (
       <p className="muted small">{t.screen.closingOpenStays}</p>
     </ConfirmDialog>
   )
+}
+
+/**
+ * Когда смотрящий в прошлый раз открывал доску, — и отметка «сейчас»
+ * на следующий раз. Хранится в браузере: не вышло прочитать или
+ * записать (приватное окно) — подсветка просто берёт сутки.
+ */
+function lastVisit(boardId: string): string {
+  const key = `board-seen:${boardId}`
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  let previous: string | null = null
+  try {
+    previous = localStorage.getItem(key)
+    localStorage.setItem(key, new Date().toISOString())
+  } catch {
+    // без памяти браузера — сутки
+  }
+  return previous ?? dayAgo
 }

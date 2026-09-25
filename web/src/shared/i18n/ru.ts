@@ -775,6 +775,8 @@ export const ru = {
     priorityOf: (short: string, full: string) => `Приоритет: ${short} — ${full}`,
     iteration: 'Итерация',
     iterationUntil: (name: string, when: string) => `${name} · до ${when}`,
+    changedBy: (who: string, when: string) => `Изменено без вас: ${who}, ${when}`,
+    changedByServer: (when: string) => `Изменилась сама: ${when}`,
     iterationLate: (when: string) => `Итерация кончилась ${when}, а карточка не сделана — перенесите её в следующую`,
     estimateOf: (value: number, unit: string) => `Оценка: ${value} ${unit}`,
     runningSinceStart: 'Идёт от начала работы',

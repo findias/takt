@@ -109,6 +109,11 @@ Theme, density and column widths are personal and stay in the browser
 where they were set: the board of a colleague does not change, and on
 another computer you start with the defaults.
 
+The browser also remembers when you last opened each board: that is
+what "changed while you were away" is counted from. The server does not
+keep it. On another computer, or in a private window, the last day
+counts.
+
 ## Groupings
 
 None, by assignee, by label, by iteration, by priority, by parent, by epic.

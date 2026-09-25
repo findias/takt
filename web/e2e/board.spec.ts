@@ -3443,3 +3443,51 @@ test('метка перекрашивается', async ({ page }) => {
   await expect(page.locator('.member-list .chip', { hasText: 'Срочно' })).toHaveClass(/chip--rose/)
   await expect(page.getByLabel('Оттенок метки «Срочно»')).toHaveValue('rose')
 })
+
+// Чужие правки подсвечиваются (владелец 25.09.2026, «как в Планке»):
+// карточка, которую менял другой, пока вы не смотрели, помечена точкой
+// с именем и временем; открытая карточка гаснет, своё не светится.
+test('карточка, изменённая другим, подсвечена, пока её не открыли', async ({ page, browser }) => {
+  await register(page)
+  await createBoard(page, 'Доска с новостями')
+  await addCard(page, 'Очередь', 'Тронет коллега')
+  await addCard(page, 'Очередь', 'Никто не тронет')
+
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page
+    .getByRole('textbox', { name: 'Почта коллеги' })
+    .fill(`kollega-${Math.random().toString(36).slice(2, 8)}@example.test`)
+  await page.getByRole('button', { name: 'Пригласить', exact: true }).click()
+  const invite = await page.locator('input[readonly]').first().inputValue()
+
+  const second = await browser.newContext()
+  const other = await second.newPage()
+  await other.goto(invite.trim())
+  await other.getByLabel('Как вас зовут').fill('Иван Петров')
+  await other.getByLabel('Пароль').fill('parol12345')
+  await other.getByRole('button', { name: /Принять|Присоединиться/ }).click()
+
+  // Своё не светится: карточки завёл сам смотрящий.
+  await page.getByRole('button', { name: 'Доски' }).click()
+  await openBoard(page, 'Доска с новостями')
+  await expect(page.locator('.card-changed')).toHaveCount(0)
+
+  // Коллега переносит одну — у смотрящего она загорается без перезагрузки.
+  await openBoard(other, 'Доска с новостями')
+  const moved = cardIn(other, 'Очередь', 'Тронет коллега')
+  await moved.hover()
+  await moved.getByRole('button', { name: /Действия карточки/ }).click()
+  await other.getByRole('menuitem', { name: 'Перенести в «В работе»' }).click()
+  await second.close()
+
+  const lit = cardIn(page, 'В работе', 'Тронет коллега').locator('.card-changed')
+  await expect(lit).toHaveAttribute('title', /Изменено без вас: Иван Петров/)
+  await expect(cardIn(page, 'Очередь', 'Никто не тронет').locator('.card-changed')).toHaveCount(0)
+
+  // Открыли — погасла.
+  await cardIn(page, 'В работе', 'Тронет коллега').click()
+  await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(lit).toHaveCount(0)
+})
+
