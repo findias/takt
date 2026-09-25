@@ -109,6 +109,7 @@ export function CardPanel({
   onUnlink,
   onBlock,
   onSetBlockUntil,
+  onSetBlockReason,
   onUnblock,
   onMarkDone,
   onRename,
@@ -148,6 +149,7 @@ export function CardPanel({
    *  не имеет, а «ждём согласования сметы» имеет — и по ней ходят. */
   onBlock: (cardId: string, reason: string, blockingCard?: string, until?: string) => void
   onSetBlockUntil: (cardId: string, until: string | null) => void
+  onSetBlockReason: (cardId: string, reason: string) => void
   onUnblock: (cardId: string) => void
   /** Отметить работу сделанной, не двигая её по доске. */
   onMarkDone: (cardId: string, done: boolean) => void
@@ -162,8 +164,12 @@ export function CardPanel({
 }) {
   const [mode, setMode] = usePanelMode()
   const [renamingTitle, setRenamingTitle] = useState(false)
+  const [editingReason, setEditingReason] = useState(false)
   // Другая карточка — правка названия прежней не переезжает на неё.
-  useEffect(() => setRenamingTitle(false), [cardId])
+  useEffect(() => {
+    setRenamingTitle(false)
+    setEditingReason(false)
+  }, [cardId])
   const [tab, setTab] = useState<TabId>(FIRST_TAB)
   const ids = useTabIds()
   // Какой частью сейчас объявляют блокировку. Причину всё равно пишут
@@ -269,7 +275,30 @@ export function CardPanel({
               <div className="blocked">
                 <div className="stack">
                   <strong>{t.panel.blocked}</strong>
-                  <span className="small">{card.blocked.reason}</span>
+                  {/* Причину правят на месте (владелец 25.09.2026): прежде
+                      опечатку исправляли снятием и новой блокировкой,
+                      и время в блоке разрывалось надвое. */}
+                  {editingReason ? (
+                    <EditableText
+                      value={card.blocked.reason}
+                      autoFocus
+                      label={t.panel.blockReasonField}
+                      onSave={(next) => {
+                        onSetBlockReason(card.id, next)
+                        setEditingReason(false)
+                      }}
+                      onCancel={() => setEditingReason(false)}
+                    />
+                  ) : (
+                    <span className="small">
+                      {card.blocked.reason}{' '}
+                      {canEdit && (
+                        <button className="link" onClick={() => setEditingReason(true)}>
+                          {t.panel.blockReasonEdit}
+                        </button>
+                      )}
+                    </span>
+                  )}
                   {/* Кто держит — строкой с переходом: «ждём вот эту
                       работу» без пути к ней отправляет искать её
                       поиском по доске. */}
@@ -288,11 +317,12 @@ export function CardPanel({
                       )}
                     </span>
                   )}
-                  {/* Держащая уже сделана — значит блокировка пережила
-                      свою причину. Само оно не снимется: время в блоке
-                      считается из интервала, и закрывать его выведенным
-                      признаком значит портить единственную честную меру.
-                      Но сказать об этом обязаны. */}
+                  {/* Держащая уже сделана, а блокировка открыта: так
+                      бывает только с блокировками старше 25.09.2026 —
+                      с тех пор сделанная держащая снимает свою блокировку
+                      сама, в момент, когда её сделали, и интервал
+                      закрывается честно (решение владельца, этап 34,
+                      пункт 8). Для старых — сказать. */}
                   {blocker?.done && (
                     <span className="small">{t.panel.holderDone}</span>
                   )}

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-106-g7af3589-dirty.</p>
+<p>Every section in one file. Version v0.2.3-107-gd448087-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -257,7 +257,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Write what you are waiting for.</li>
 <li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong>: a date and a time.</li>
 </ol>
-<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>.</p>
+<p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>. To fix the reason — a typo, or what you wait for has changed — press <strong>Edit the reason</strong> next to it on the <strong>Work</strong> tab: the block stays the same one, and the time it has lasted is not split in two.</p>
 <p>A card can also wait for another card rather than a date: a part that holds up its parent, or a <strong>Blocks</strong> link. The board then shows <strong>Waits</strong> on one and <strong>Holds</strong> on the other. Both go as soon as the card being waited for is done — moved past the finish or marked <strong>Done</strong> — and a block held by that card lifts itself; the history says so.</p>
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
@@ -1744,6 +1744,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>Closing an iteration asks for its name.</strong> The confirmation&#39;s button stays inactive until the iteration&#39;s name is typed, as when deleting a board: two clicks in the same place used to close a sprint for good.</li>
 <li><strong>Closing a card with open subtasks asks first.</strong> Moving an epic or any card with subtasks to the finish, or marking it <strong>Done</strong>, while some subtasks are open names how many and lists them before it goes; the subtasks stay open. The owner chose to ask rather than forbid: a tail is sometimes dropped on purpose.</li>
 <li>**Subtasks are renamed where they are listed, and any card from its panel.<strong> A subtask on the same board has </strong>Rename** in its parent&#39;s list; the card panel has a pencil next to the title. Before, a card was renamed only from its menu on the board, so a part on another team&#39;s board could not be renamed without going there.</li>
+<li><strong>A block&#39;s reason is edited in place.</strong> <strong>Edit the reason</strong> on the <strong>Work</strong> tab changes it without lifting the block, so the time blocked stays one interval. New operation <code>SET_BLOCK_REASON</code> and webhook event <code>card.block_reason</code>.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -1897,6 +1898,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>Закрытие итерации просит её название.</strong> Кнопка в подтверждении неактивна, пока название итерации не набрано, — как при удалении доски: два щелчка в одном месте закрывали спринт навсегда.</li>
 <li><strong>Закрытие карточки с открытыми подзадачами спрашивает.</strong> Перенос эпика или любой карточки с подзадачами за финиш и отметка <strong>«Сделана»</strong>, пока часть подзадач открыта, сперва называют, сколько не закрыто, и перечисляют их; подзадачи остаются открытыми. Владелец выбрал спрашивать, а не запрещать: хвост иногда бросают намеренно.</li>
 <li>**Подзадачи переименовываются там, где перечислены, а любая карточка — из панели.** У подзадачи этой доски в списке родителя есть <strong>«Переименовать»</strong>; в панели карточки — карандаш рядом с названием. Прежде карточку переименовывали только из её меню на доске, и часть на доске другой команды нельзя было переименовать, не уйдя туда.</li>
+<li><strong>Причина блокировки правится на месте.</strong> <strong>«Поправить причину»</strong> на вкладке <strong>«Работа»</strong> меняет её, не снимая блокировку, и время в блоке остаётся одним интервалом. Новая операция <code>SET_BLOCK_REASON</code> и событие вебхука <code>card.block_reason</code>.</li>
 <li><strong>Красный значит «стоит».</strong> Только блокировка, просроченное обязательство, ошибка и необратимое действие; «стоит взглянуть» — теперь янтарём. Действия, которые убирают обратимое, — серые, а не зелёные.</li>
 <li><strong>Два действия теперь спрашивают</strong>, потому что ни одно не отменить: отзыв ключа для интеграции и удаление своей реплики.</li>
 <li><strong>«Структура»: одно меню ⋮ у строки</strong> вместо четырёх видимых действий; «Закрыть итерацию» названо полностью.</li>

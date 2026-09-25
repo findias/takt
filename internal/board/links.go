@@ -552,6 +552,44 @@ func setBlockUntil(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID strin
 	return Patch{Cards: []Card{c}}, nil
 }
 
+// setBlockReason меняет причину открытой блокировки.
+//
+// Отдельной операцией, как и срок: прежде опечатку или устаревшую
+// причину исправляли снятием и новой блокировкой, и время в блоке
+// разрывалось надвое — метрики видели два коротких простоя вместо
+// одного долгого (замечено владельцем 25.09.2026). Интервал остаётся
+// тем же, меняется только текст.
+func setBlockReason(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
+	var p blockPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор SET_BLOCK_REASON: %v", err)
+	}
+	p.Reason = strings.TrimSpace(p.Reason)
+	if p.Reason == "" {
+		return Patch{}, badRequestf("у блокировки должна быть причина")
+	}
+	tag, err := tx.Exec(ctx, `
+		update card_blocks set reason = $3
+		 where card_id = $1 and unblocked_at is null
+		   and exists (select 1 from cards where id = $1 and board_id = $2)`,
+		p.CardID, boardID, p.Reason)
+	if err != nil {
+		return Patch{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return Patch{}, conflictf("", "карточка не заблокирована — причину ставят вместе с блокировкой")
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, p.CardID, actorID, "block_reason", nil, nil,
+		map[string]any{"reason": p.Reason}); err != nil {
+		return Patch{}, err
+	}
+	c, err := readCard(ctx, tx, boardID, p.CardID)
+	if err != nil {
+		return Patch{}, err
+	}
+	return withParent(ctx, tx, boardID, c)
+}
+
 // --- отметка «сделано» ---
 
 type setCardDonePayload struct {

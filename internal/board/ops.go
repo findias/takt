@@ -263,7 +263,7 @@ func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) 
 	// за лишний запрос и лишний замок незачем.
 	switch req.Type {
 	case "MOVE_CARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
-		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD", "SET_BLOCK_UNTIL":
+		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD", "SET_BLOCK_UNTIL", "SET_BLOCK_REASON":
 	default:
 		return "", nil
 	}
@@ -500,6 +500,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return unblockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_BLOCK_UNTIL":
 		return setBlockUntil(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_BLOCK_REASON":
+		return setBlockReason(ctx, tx, orgID, actorID, boardID, req.Payload)
 	default:
 		return Patch{}, badRequestf("неизвестный тип операции %q", req.Type)
 	}

@@ -97,6 +97,8 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
     // автора: «сама» говорит, почему подписи нет.
     case 'block_expired':
       return t.feed.blockExpired
+    case 'block_reason':
+      return typeof p.reason === 'string' ? t.feed.blockReasonTo(p.reason) : t.feed.blockReasonChanged
     case 'block_until':
       return typeof p.until === 'string'
         ? t.feed.blockUntil(blockUntilWords(p.until))

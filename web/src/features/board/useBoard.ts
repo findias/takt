@@ -965,6 +965,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload('SET_BLOCK_UNTIL', { cardId, until }, t.ops.blockUntil),
     [runAndReload],
   )
+  // Причину правят во время блокировки: опечатка, уточнили, чего ждём.
+  // Интервал тот же — снятие и новая блокировка разорвали бы его.
+  const setBlockReason = useCallback(
+    (cardId: string, reason: string) =>
+      runAndReload('SET_BLOCK_REASON', { cardId, reason }, t.ops.blockReason),
+    [runAndReload],
+  )
   const unblockCard = useCallback(
     (cardId: string) => runAndReload('UNBLOCK_CARD', { cardId }, t.ops.unblock),
     [runAndReload],
@@ -1018,6 +1025,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     setCardDone,
     blockCard,
     setBlockUntil,
+    setBlockReason,
     unblockCard,
     setCardField,
     addCardRef,

@@ -217,6 +217,7 @@
           "card.moved",
           "card.blocked",
           "card.block_until",
+          "card.block_reason",
           "card.unblocked",
           "card.block_expired",
           "card.linked",
@@ -258,7 +259,7 @@
       "Operation": {
         "type": "object",
         "required": ["operationId", "type", "payload"],
-        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз. У блокировки может быть срок: BLOCK_CARD принимает необязательный `until` — момент ISO 8601 с зоной, позже текущего; SET_BLOCK_UNTIL меняет его у открытой блокировки, `until: null` делает её бессрочной. Вышедший срок снимает сам сервер — событием card.block_expired без автора.",
+        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз. У блокировки может быть срок: BLOCK_CARD принимает необязательный `until` — момент ISO 8601 с зоной, позже текущего; SET_BLOCK_UNTIL меняет его у открытой блокировки, `until: null` делает её бессрочной; SET_BLOCK_REASON меняет причину открытой блокировки, не разрывая её интервал (событие card.block_reason). Вышедший срок снимает сам сервер — событием card.block_expired без автора.",
         "properties": {
           "operationId": { "type": "string", "format": "uuid" },
           "type": {
@@ -284,6 +285,7 @@
               "BLOCK_CARD",
               "UNBLOCK_CARD",
               "SET_BLOCK_UNTIL",
+              "SET_BLOCK_REASON",
               "SET_CARD_FIELD",
               "ADD_CARD_REF",
               "REMOVE_CARD_REF",

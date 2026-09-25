@@ -1625,7 +1625,7 @@ test('подзадача заводится из карточки одним п�
   // Связь проходится в обе стороны: из родителя — в подзадачу,
   // из подзадачи — обратно. До этого связь было видно, но пройти по ней
   // можно было только поиском по доске.
-  await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты' }).click()
+  await page.getByRole('complementary').getByRole('button', { name: 'Прогнать тесты', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Прогнать тесты' })).toBeVisible()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   // Со вкладки «Задачи», а не с пути до корня над номером: там та же
@@ -3228,4 +3228,27 @@ test('подзадача переименовывается из панели р
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await expect(page.getByRole('tabpanel').getByRole('button', { name: 'Точное название', exact: true })).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Родитель, переименован')).toBeVisible()
+})
+
+// Причину блокировки правят на месте, не снимая блокировку (владелец
+// 25.09.2026).
+test('причина блокировки правится, не разрывая блокировку', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска правки причины')
+  await addCard(page, 'Очередь', 'Ждёт доступ')
+  const card = cardIn(page, 'Очередь', 'Ждёт доступ')
+  await card.hover()
+  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
+  await card.getByLabel('Причина блокировки').fill('ждём досуп')
+  await card.getByLabel('Причина блокировки').press('Enter')
+  await expect(card.getByText('Заблокирована: ждём досуп')).toBeVisible()
+
+  await card.click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  await page.getByRole('button', { name: 'Поправить причину' }).click()
+  await page.getByRole('textbox', { name: 'Причина блокировки' }).fill('ждём доступ к хранилищу')
+  await page.getByRole('textbox', { name: 'Причина блокировки' }).press('Enter')
+  await expect(card.getByText('Заблокирована: ждём доступ к хранилищу')).toBeVisible()
+  await expect(card.getByText('ждём досуп')).toHaveCount(0)
 })

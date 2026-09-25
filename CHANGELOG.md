@@ -372,6 +372,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   list; the card panel has a pencil next to the title. Before, a card
   was renamed only from its menu on the board, so a part on another
   team's board could not be renamed without going there.
+- **A block's reason is edited in place.** **Edit the reason** on the
+  **Work** tab changes it without lifting the block, so the time blocked
+  stays one interval. New operation `SET_BLOCK_REASON` and webhook event
+  `card.block_reason`.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

@@ -172,7 +172,10 @@ At that moment the block lifts itself: nobody has to come back to the
 card. The day before, the line under the card becomes bold, and the
 filter **Block ending** gathers such cards. To move the
 deadline, open the card and press **Move deadline**; to lift the
-block now, press **Lift the block**.
+block now, press **Lift the block**. To fix the reason — a typo, or what
+you wait for has changed — press **Edit the reason** next to it on the
+**Work** tab: the block stays the same one, and the time it has lasted
+is not split in two.
 
 A card can also wait for another card rather than a date: a part that
 holds up its parent, or a **Blocks** link. The board then shows

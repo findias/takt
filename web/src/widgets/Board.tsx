@@ -711,6 +711,7 @@ export function Board({
     commitCard: commit,
     unblockCard: unblock,
     setBlockUntil: blockUntil,
+    setBlockReason: blockReason,
     setCardDone: markDoneAction,
     createSubtask: subtaskAction,
   } = board
@@ -742,6 +743,10 @@ export function Board({
   const setBlockUntil = useCallback(
     (cardId: string, until: string | null) => void blockUntil(cardId, until),
     [blockUntil],
+  )
+  const setBlockReason = useCallback(
+    (cardId: string, reason: string) => void blockReason(cardId, reason),
+    [blockReason],
   )
   const unblockCard = useCallback((cardId: string) => void unblock(cardId), [unblock])
   const markDone = useCallback(
@@ -1531,6 +1536,7 @@ export function Board({
             onUnlink={(from, to, kind) => void board.unlinkCards(from, to, kind)}
             onBlock={blockCard}
             onSetBlockUntil={setBlockUntil}
+            onSetBlockReason={setBlockReason}
             onUnblock={unblockCard}
             onMarkDone={markDone}
             onField={(id, fieldId, value) => void board.setCardField(id, fieldId, value)}
