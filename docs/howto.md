@@ -344,9 +344,11 @@ Deleting for good asks for confirmation and cannot be undone.
 1. In the strip above the board press **+ iteration**.
 2. Set a name, a start and an end, press **Create iteration**.
 3. On cards, pick the iteration (**Work** tab).
-4. When the time is up press **Close iteration**. It asks first, because closing freezes what the
-   iteration contains for good. A report appears: what made it and
-   what did not.
+4. When the time is up press **Close iteration**. It asks first, because
+   closing freezes what the iteration contains for good, and the button
+   stays inactive until you type the iteration's name — a stray click
+   cannot close a sprint. A report appears: what made it and what did
+   not.
 
 A team that does not work in iterations opens **Flow** and clears **We
 work in iterations** under **How we work**: iterations disappear from

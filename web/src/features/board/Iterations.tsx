@@ -40,6 +40,11 @@ export function Iterations({
   // единственным на всё приложение: он выглядит чужим и, в отличие
   // от своего диалога, останавливает страницу целиком.
   const [toClose, setToClose] = useState<Iteration | null>(null)
+  // Закрытие необратимо, и одного подтверждения мало: «Закрыть итерацию»
+  // и «Закрыть итерацию» в диалоге стоят в одном месте, и два щелчка
+  // подряд закрывали спринт (замечено владельцем 25.09.2026). Как
+  // у удаления доски — название набирается руками.
+  const [typed, setTyped] = useState('')
   const open = iterations.filter((i) => i.closedAt === null)
   // Закрытые не пропадают с экрана. Итерация закрывается ради ответа
   // «что было в спринте на момент закрытия» — а до сих пор в этот момент
@@ -63,6 +68,7 @@ export function Iterations({
         // «заморозить состав навсегда».
         confirmLabel={t.screen.closeIteration}
         danger
+        confirmDisabled={typed.trim() !== toClose?.name}
         onCancel={() => setToClose(null)}
         onConfirm={() => {
           const it = toClose
@@ -71,6 +77,20 @@ export function Iterations({
         }}
       >
         <p>{t.screen.closeIterationBody(toClose?.name ?? '')}</p>
+        <p className="muted small">{t.screen.closeIterationType}</p>
+        {/* В подсказке — слово, а не само название: заминка задумана,
+            и ответ прямо в поле её отменил бы. */}
+        {/* Поле — только в открытом диалоге: закрытый <dialog> остаётся
+            в разметке, и второе поле «название» спорило бы с формой
+            новой итерации рядом. */}
+        {toClose && (
+          <input
+            value={typed}
+            aria-label={t.screen.closeIterationConfirmName}
+            placeholder={t.screen.closeIterationPlaceholder}
+            onChange={(e) => setTyped(e.target.value)}
+          />
+        )}
       </ConfirmDialog>
       <div className="row row--tight">
         {/* «Итераций нет» — только когда их нет вовсе. Рядом со списком
@@ -87,7 +107,10 @@ export function Iterations({
               <button
                 className="link"
                 aria-label={t.screen.closeIterationOf(i.name)}
-                onClick={() => setToClose(i)}
+                onClick={() => {
+                  setTyped('')
+                  setToClose(i)
+                }}
               >
                 {/* Полностью: одинокое «закрыть» у плашки читалось как
                     «убрать плашку», а действие необратимое — состав

@@ -359,6 +359,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   longer shows **Waits** and **Holds** once either card is done, and a
   block held by another card lifts itself when that card is moved past
   the finish or marked **Done**; the history records it.
+- **Closing an iteration asks for its name.** The confirmation's button
+  stays inactive until the iteration's name is typed, as when deleting
+  a board: two clicks in the same place used to close a sprint for good.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

@@ -1857,7 +1857,12 @@ test('закрытая итерация остаётся на экране и о
   // В диалоге кнопка называет то, что случится: «Закрыть» рядом
   // с «Закрыть» панели означало бы то «уйти отсюда», то «заморозить
   // состав навсегда».
-  await page.locator('dialog').getByRole('button', { name: 'Закрыть итерацию' }).click()
+  // Необратимое — с заминкой: пока название не набрано, закрыть нельзя,
+  // и два щелчка подряд спринт больше не закрывают.
+  const closeIt = page.locator('dialog').getByRole('button', { name: 'Закрыть итерацию' })
+  await expect(closeIt).toBeDisabled()
+  await page.locator('dialog').getByLabel('Название итерации для подтверждения').fill('Неделя 34')
+  await closeIt.click()
   await expect(page.getByText('Закрытые:')).toBeVisible()
 
   await page.getByRole('button', { name: 'Неделя 34', exact: true }).click()
