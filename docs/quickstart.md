@@ -60,8 +60,8 @@ explanation answers no question at all. If you know when the wait
 ends, fill in **Lifts itself (optional)** — the block lifts
 itself at that moment.
 
-To mark what kind of work it is, add a label: press **+ label** on the
-card and type. A label that does not exist yet is created right there —
+To mark what kind of work it is, add a label: hover the card, press the
+label icon in its bottom right corner and type. A label that does not exist yet is created right there —
 for this board, a subdivision, or the whole organisation.
 
 ## 5. Carry it to the end

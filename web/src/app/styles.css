@@ -2065,7 +2065,7 @@ textarea.description {
    ужимается родитель. */
 .card-meta {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-1);
   min-width: 0;
   /* Высота строки задана и не зависит от того, что в ней сейчас видно.
@@ -2082,14 +2082,17 @@ textarea.description {
    разлинованный список, а не как работа. Размер флажка растит общее
    правило — цель нажатия одна на все флажки в приложении, и здесь
    мельче она быть не может, даже если набор рисует 13 пикселей. */
+/* Место под флажком занято всегда, а сам он виден по наведению: флажок
+   стоит в строке названия, и появись он из ничего — название стало бы
+   уже, перенеслось бы, и карточка выросла бы под курсором. */
 .card-check {
-  display: none;
+  visibility: hidden;
 }
 .card:hover .card-check,
 .card:focus-within .card-check,
 .card-check:checked,
 .board-screen--picking .card-check {
-  display: inline-block;
+  visibility: visible;
 }
 /* Отмеченная сделанной: приглушённое зачёркнутое название — так же,
    как строка сделанной части. Своей пометки в ряду у неё нет намеренно
@@ -3040,6 +3043,64 @@ textarea.description {
   }
 }
 
+/* Плотная карточка в две строки (новый дизайн доски, шаг 2). Первая —
+   номер и название, название занимает всё, что осталось, и переносится.
+   Вторая — эпик, родитель, метки и пометки одним потоком с переносом,
+   а справа то, что сравнивают по колонке сверху вниз: возраст, люди,
+   меню. Пометки внутри второй строки — её прямые соседи, без своей
+   обёртки: иначе они уходили бы отдельным рядом. */
+.card-meta .card-title {
+  flex: 1;
+  min-width: 0;
+}
+.card-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--target);
+  min-width: 0;
+}
+.card-line > .card-marks {
+  display: contents;
+}
+.card .card-line .card-labels {
+  margin-top: 0;
+}
+.card-line-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.card-line-end .card-age {
+  margin-left: 0;
+}
+/* Кнопки по наведению — поверх правого нижнего угла, на подложке
+   карточки: в строке под них пришлось бы держать место всегда. Внизу,
+   а не вверху: вверху справа стоят люди, и нажать по стопке, чтобы
+   сменить исполнителя, стало бы нельзя; внизу справа — возраст, его
+   не нажимают. Пока
+   идёт выделение, флажок виден у всех карточек, и название уступает
+   ему место справа — это смена режима, а не наведение. */
+.card-tools {
+  position: absolute;
+  inset-block-end: var(--space-1);
+  inset-inline-end: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius);
+}
+.card:hover .card-tools,
+.card:focus-within .card-tools {
+  background: var(--surface);
+  box-shadow: 0 0 0 var(--space-1) var(--surface);
+}
+.board-screen--picking .card-line {
+  padding-inline-end: calc(var(--target) + var(--space-1));
+}
+
 /* Заголовок и стопка исполнителей — одна строка: «что за работа»
    и «кого спрашивать» читают вместе. Заголовок занимает всё, что
    осталось, и переносится; стопка не ужимается. */
@@ -3170,36 +3231,36 @@ textarea.description {
 /* Пустое поле — место, которого не видно, пока на карточку не смотрят.
    Доска из пятисот неоценённых карточек иначе превращается в пятьсот
    приглашений что-то заполнить. Тем же живёт и меню действий. */
+/* Прячется видимостью, а не выключением: место под «…» занято всегда,
+   иначе его появление переносило бы вторую строку карточки. */
 .card-slot,
 .menu:has(> .card-slot) {
-  display: none;
+  visibility: hidden;
 }
 .card:hover .card-slot,
-.card:focus-within .card-slot {
-  display: flex;
-}
+.card:focus-within .card-slot,
 .card:hover .menu:has(> .card-slot),
 .card:focus-within .menu:has(> .card-slot) {
-  display: inline-flex;
+  visibility: visible;
 }
 /* Открытое меню видно, даже когда на карточку не наведены и фокус ушёл.
    Без этого правила так: список ушёл в верхний слой, наведение на него
    на карточку больше не переходит, обёртка прячется — а вместе с ней
    браузер убирает и список, потому что в дереве он ей потомок.
    Щелчок, начатый на пункте, заканчивался на карточке под ним. */
-.menu--open:has(> .card-slot) {
-  display: inline-flex;
+.menu--open:has(> .card-slot),
+.menu--open > .card-slot {
+  visibility: visible;
 }
 /* На телефоне наведения нет, и спрятанное «по наведению» там просто
    недостижимо: показываем всегда. Правило стоит здесь, а не в общем
    блоке про указатель, — там оно проигрывало бы правилу выше
    по порядку в файле. */
 @media (pointer: coarse) {
-  .card-slot {
-    display: flex;
-  }
-  .menu:has(> .card-slot) {
-    display: inline-flex;
+  .card-slot,
+  .menu:has(> .card-slot),
+  .card-check {
+    visibility: visible;
   }
 }
 

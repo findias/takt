@@ -44,6 +44,8 @@ import {
   MoreIcon,
   MoveIcon,
   PlusIcon,
+  PeopleIcon,
+  TagIcon,
   TrashIcon,
 } from '../../shared/ui/icons.tsx'
 import { t } from '../../shared/i18n/index.ts'
@@ -379,6 +381,38 @@ function CardViewInner({
     onOpen(cardId)
   }
 
+  // Кто делает — правится нажатием по самой стопке. Пункт на человека,
+  // и он же снимает: два списка «назначить» и «снять» вдвое длиннее
+  // и заставляют помнить, кто где. Назначенные стоят в строке названия,
+  // пустое «+ кто» — значком среди кнопок по наведению.
+  const assigneePicker = canEdit ? (
+    <Menu
+      label={
+        assignees.length > 0
+          ? t.cardView.assigneesOf(assignees.map((id) => people[id] ?? t.common.someone).join(', '))
+          : t.cardView.noAssignees
+      }
+      className={assignees.length === 0 ? 'btn btn--icon btn--quiet card-slot' : 'field'}
+      align="right"
+      items={Object.entries(people).map(([id, name]) => ({
+        label: name,
+        checked: assignees.includes(id),
+        onSelect: () => onAssign(cardId, id, !assignees.includes(id)),
+      }))}
+    >
+      {assignees.length === 0 ? (
+        <PeopleIcon />
+      ) : (
+        <span className="avatars">
+          {shownAssignees.map((id) => (
+            <Avatar key={id} name={people[id] ?? t.common.someone} />
+          ))}
+          {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}
+        </span>
+      )}
+    </Menu>
+  ) : null
+
   return (
     <article
       ref={ref}
@@ -412,35 +446,11 @@ function CardViewInner({
         />
       ) : (
         <>
-          {/* Номер и чья это часть — над названием, а не под ним:
-              сначала «что это и где я», потом «что делать». Про родителя
-              раньше можно было узнать, только открыв карточку, и
-              подзадача на доске выглядела самостоятельной работой. */}
+          {/* Первая строка — номер и название (шаг 2 нового дизайна):
+              номер отдельной строкой над названием стоил строки на каждой
+              карточке доски ради подписи, которую читают изредка. Чья это
+              часть и эпик — во второй строке, рядом с метками. */}
           <div className="card-meta">
-            {/* Флажок выделения. Виден по наведению и пока выделение
-                идёт — на доске в пятьсот карточек пятьсот флажков
-                читаются как разлинованный список, а не как работа.
-                Родной флажок, а не своя картинка: он умеет пробел,
-                читается диктором и уже растянут до цели нажатия
-                общим правилом. */}
-            {canEdit && (
-            <input
-              type="checkbox"
-              className="card-check"
-              checked={selected}
-              aria-label={t.cardView.select(title)}
-              // Выделение снимается с нажатия, а не с изменения: shift
-              // живёт в событии мыши, а `change` у флажка модификаторов
-              // не несёт вовсе — на этом диапазон и не работал. Пробел
-              // с клавиатуры тоже приходит нажатием, только без shift,
-              // и остаётся обычным переключением.
-              onClick={(e) => onSelect(cardId, e.currentTarget.checked, e.shiftKey)}
-              // Управляемому полю нужен обработчик изменения, иначе React
-              // ругается на «поле только для чтения»; сама правка идёт
-              // выше, по нажатию.
-              onChange={() => {}}
-            />
-            )}
             {card && (
               // Не кнопка и не ссылка: номер выделяют и копируют,
               // а нажатие на карточку и так её открывает.
@@ -455,6 +465,25 @@ function CardViewInner({
               </span>
             )}
 
+            {/* Заголовок — кнопка: у нажимаемой карточки должна быть
+                явная цель и для скринридера, и для клавиатуры. Двойного
+                клика для переименования больше нет — он спорил
+                с открытием; переименование осталось в меню и на «E». */}
+            <button className="card-title" onClick={() => onOpen(cardId)}>
+              {title}
+            </button>
+            {/* Кто делает — справа от названия, как в макете плотной
+                доски: «что за работа» и «кого спрашивать» читают вместе. */}
+            {assignees.length > 0 && assigneePicker}
+          </div>
+
+          {/* Вторая строка — всё, что о карточке известно, кроме её
+              названия (новый дизайн доски, шаг 2: «плотная карточка
+              в две строки»). Прежде номер, название, метки и пометки
+              шли четырьмя рядами, и колонка вмещала вдвое меньше работы.
+              Строка есть всегда: исполнители и меню стоят в ней справа,
+              и появление «…» по наведению не меняет высоту карточки. */}
+          <div className="card-line">
             {/* Метка эпика (этап 33.3): цвет из эпика, одинаковый у всех его
                 задач, название обрезается, полное — в подсказке. Нажатие
                 отбирает доску по эпику: «что ещё идёт ради него». */}
@@ -493,302 +522,127 @@ function CardViewInner({
               </span>
             )}
 
-            {/* Метки, которых ещё нет, заводятся отсюда же: «+ метка»
-                в верхней строке. Висящие — своей строкой под названием,
-                текстом (ниже). Выбор с поиском, а не список: в нём же
-                заводят новую метку, не уходя с доски. */}
-            {canEdit && own.length === 0 && (
-              <LabelPickerButton
-                label={t.cardView.noLabels}
-                className="field label-field field--empty"
-                align="right"
-                boardId={boardId}
-                labels={labels}
-                hung={cardLabels}
-                canEdit={canEdit}
-                onToggle={(labelId, on) => {
-                  labelsFrom.current = on
-                  onLabel(cardId, labelId, on)
-                }}
-              >
-                {t.cardView.addLabel}
-              </LabelPickerButton>
-            )}
-            {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
-                не помещались и обрезались до «Откры», «Переиме», «Удалит».
-                Осталось в нём то, у чего на карточке нет своего места:
-                люди, метки и уровень ушли к самим людям, меткам
-                и уровню. Перенос стоит здесь — это не удобство,
-                а требование WCAG 2.5.7: клавиатурного эквивалента
-                недостаточно, нужен путь, выполнимый одним нажатием.
-
-                Стоит меню в верхней строке, а не отдельным рядом внизу,
-                и это не про красоту. Ряд, появляющийся по наведению,
-                менял высоту карточки — и соседние карточки уезжали
-                из-под курсора между нажатием и отпусканием: попасть
-                по флажку соседа было нельзя. Здесь строка уже занята
-                и её высота от наведения не зависит. */}
-            {canEdit && (
-            <Menu
-              label={t.cardView.actions(title)}
-              className="btn btn--icon btn--quiet card-slot"
-              items={[
-                { label: t.cardView.rename, icon: <EditIcon />, onSelect: () => setEditing(true) },
-                // Верх шкалы переключается прямо с доски: «это горит»
-                // говорят чаще, чем меняют что-либо ещё, а вся шкала
-                // живёт в панели.
-                card?.priority === 'highest'
-                  ? {
-                      label: t.cardView.backToMedium,
-                      icon: <ClockIcon />,
-                      onSelect: () => onPrioritise(cardId, 'medium'),
-                    }
-                  : {
-                      label: t.cardView.toHighest,
-                      icon: <ClockIcon />,
-                      onSelect: () => onPrioritise(cardId, 'highest'),
-                    },
-                // Отметка о готовности доступна не только частям:
-                // связь могут снять, и снимать отметку после этого
-                // было бы неоткуда. Слово «сделана» — про работу,
-                // а не про переезд: колонка карточки не меняется.
-                card?.doneAt
-                  ? {
-                      label: t.cardView.unmarkDone,
-                      icon: <CheckIcon />,
-                      onSelect: () => onMarkDone(cardId, false),
-                    }
-                  : {
-                      label: t.cardView.markDone,
-                      icon: <CheckIcon />,
-                      onSelect: () => onMarkDone(cardId, true),
-                    },
-                {
-                  label: t.cardView.addSubtask,
-                  icon: <PlusIcon />,
-                  onSelect: () => {
-                    setOpen(true)
-                    setAdding(true)
-                  },
-                },
-                card?.blocked
-                  ? {
-                      label: t.cardView.unblock,
-                      icon: <BlockedIcon />,
-                      onSelect: () => onUnblock(cardId),
-                    }
-                  : {
-                      // Причину пишут словами: список готовых
-                      // формулировок отвечает не на тот вопрос — важно,
-                      // чего ждём именно здесь.
-                      label: t.cardView.block,
-                      icon: <BlockedIcon />,
-                      onSelect: () => setBlocking(true),
-                    },
-                ...columns
-                  .filter((c) => c.id !== columnId)
-                  .map((c) => ({
-                    label: t.cardView.moveTo(c.name),
-                    icon: <MoveIcon />,
-                    onSelect: () => onMoveToColumn(cardId, c.id),
-                  })),
-                {
-                  label: t.cardView.archive,
-                  icon: <ArchiveIcon />,
-                  danger: true,
-                  onSelect: () => onArchive(cardId),
-                },
-                // Необратимое стоит последним и спрашивает подтверждение
-                // — в отличие от архивации, которая не спрашивает ничего
-                // и предлагает вернуть.
-                ...(onDelete
-                  ? [
-                      {
-                        label: t.cardView.deleteForever,
-                        icon: <TrashIcon />,
-                        danger: true,
-                        onSelect: () => onDelete(cardId, title),
-                      },
-                    ]
-                  : []),
-              ]}
-            >
-              <MoreIcon />
-            </Menu>
-            )}
-          </div>
-
-          {/* Обе стороны зависимости — одинаковыми строками. Раньше
-              держащая сообщала только число, и «какую именно задачу
-              она держит» приходилось выяснять, открыв карточку:
-              то есть ровно тем способом, от которого эта строка
-              и должна избавлять. */}
-          <Dependency label={t.cardView.waits} cards={waitsFor} onOpen={onOpen} />
-          <Dependency label={t.cardView.holds} cards={holds} onOpen={onOpen} />
-
-          {/* Заголовок и кто делает — одна строка: «что за работа»
-              и «кого спрашивать» читают вместе, и второй ряд ради
-              стопки аватаров стоил бы четырёх пикселей на каждой
-              карточке доски. */}
-          <div className="card-head">
-            {/* Заголовок — кнопка: у нажимаемой карточки должна быть
-                явная цель и для скринридера, и для клавиатуры. Двойного
-                клика для переименования больше нет — он спорил
-                с открытием; переименование осталось в меню и на «E». */}
-            <button className="card-title" onClick={() => onOpen(cardId)}>
-              {title}
-            </button>
-
-            {/* Кто делает — правится нажатием по самой стопке. Пункт
-                на человека, и он же снимает: два списка «назначить»
-                и «снять» вдвое длиннее и заставляют помнить, кто где. */}
-            {canEdit && (
-            <Menu
-              label={
-                assignees.length > 0
-                  ? t.cardView.assigneesOf(assignees.map((id) => people[id] ?? t.common.someone).join(', '))
-                  : t.cardView.noAssignees
-              }
-              className={`field${assignees.length === 0 ? ' field--empty' : ''}`}
-              align="right"
-              items={Object.entries(people).map(([id, name]) => ({
-                label: name,
-                checked: assignees.includes(id),
-                onSelect: () => onAssign(cardId, id, !assignees.includes(id)),
-              }))}
-            >
-              {assignees.length === 0 ? (
-                t.cardView.addAssignee
-              ) : (
-                <span className="avatars">
-                  {shownAssignees.map((id) => (
-                    <Avatar key={id} name={people[id] ?? t.common.someone} />
-                  ))}
-                  {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}
-                </span>
-              )}
-            </Menu>
-            )}
-          </div>
-          {/* Метки — текстом (просьба владельца 22.09.2026: «текст меток
-              должен отображаться»). Прежде стояли точки: цвет читается
-              быстрее, но что за метка, по точке не узнать, а на доске
-              после переноса меток десятки. Три — и «+N»: строка чипов
-              не должна вырастать в абзац. Нажатие правит метки. */}
-          {own.length > 0 &&
-            (canEdit ? (
-              <LabelPickerButton
-                label={t.cardView.labelsOf(own.map((l) => l.name).join(', '))}
-                className="field card-labels"
-                align="left"
-                boardId={boardId}
-                labels={labels}
-                hung={cardLabels}
-                canEdit={canEdit}
-                onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
-              >
-                <LabelChips labels={own} />
-              </LabelPickerButton>
-            ) : (
-              <div className="card-labels">
-                <LabelChips labels={own} />
-              </div>
-            ))}
-          {card &&
-            (alarm ||
-              iteration ||
-              due ||
-              age ||
-              card.priority !== 'medium' ||
-              card.estimate !== null) && (
-            <div className="card-marks">
-              {/* Старшая тревога — одна и всегда первой: она отвечает
-                  на вопрос «почему эта работа не идёт», а он важнее
-                  остальных. */}
-              {alarm && (
-                <span
-                  className={`mark mark--alarm${alarm.kind === 'aging' ? ' mark--aging' : ''}`}
-                  title={alarm.title}
-                >
-                  {alarm.text}
-                </span>
-              )}
-              {/* Срок — своей строкой под тревогой, а не её хвостом:
-                  пометка держит две строки, и хвост уходил в многоточие
-                  ровно там, где он нужен. */}
-              {until && (
-                <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
-                  {until.expired ? until.text : t.cardView.liftsIn(until.text)}
-                </span>
-              )}
-
-              {/* Приоритет — решение человека, и регистр цвета у него
-                  свой: тёмное поставил кто-то, кирпичное случилось
-                  само. Легенды для этого не нужно.
-                  Средний уровень не пишется вовсе — ни словом,
-                  ни местом под него: умолчание у каждой второй карточки
-                  не информация. Такой карточке уровень ставят из меню
-                  «…» и из панели. */}
-              {card.priority !== 'medium' && (
-                <Menu
-                  // Видимое слово стоит в имени первым: голосовое
-                  // управление ищет по тому, что человек прочёл
-                  // (WCAG 2.5.3). Полное имя рядом — чтобы диктору
-                  // было понятно, о какой шкале речь.
-                  label={t.cardView.priorityOf(
-                    priorityShort(card.priority),
-                    priorityLabel(card.priority).toLowerCase(),
-                  )}
-                  className="field"
+            {/* Метки — текстом (просьба владельца 22.09.2026: «текст меток
+                должен отображаться»). Прежде стояли точки: цвет читается
+                быстрее, но что за метка, по точке не узнать, а на доске
+                после переноса меток десятки. Три — и «+N»: строка чипов
+                не должна вырастать в абзац. Нажатие правит метки. */}
+            {own.length > 0 &&
+              (canEdit ? (
+                <LabelPickerButton
+                  label={t.cardView.labelsOf(own.map((l) => l.name).join(', '))}
+                  className="field card-labels"
                   align="left"
-                  items={PRIORITIES.map((level) => ({
-                    label: PRIORITY_NAMES[level],
-                    checked: card.priority === level,
-                    onSelect: () => onPrioritise(cardId, level),
-                  }))}
+                  boardId={boardId}
+                  labels={labels}
+                  hung={cardLabels}
+                  canEdit={canEdit}
+                  onToggle={(labelId, on) => onLabel(cardId, labelId, on)}
                 >
-                  <span className={`priority-mark priority-mark--${card.priority}`}>
-                    {priorityShort(card.priority)}
+                  <LabelChips labels={own} />
+                </LabelPickerButton>
+              ) : (
+                <div className="card-labels">
+                  <LabelChips labels={own} />
+                </div>
+              ))}
+            {card &&
+              (alarm ||
+                iteration ||
+                due ||
+                card.priority !== 'medium' ||
+                card.estimate !== null) && (
+              <div className="card-marks">
+                {/* Старшая тревога — одна и всегда первой: она отвечает
+                    на вопрос «почему эта работа не идёт», а он важнее
+                    остальных. */}
+                {alarm && (
+                  <span
+                    className={`mark mark--alarm${alarm.kind === 'aging' ? ' mark--aging' : ''}`}
+                    title={alarm.title}
+                  >
+                    {alarm.text}
                   </span>
-                </Menu>
-              )}
+                )}
+                {/* Срок — своей строкой под тревогой, а не её хвостом:
+                    пометка держит две строки, и хвост уходил в многоточие
+                    ровно там, где он нужен. */}
+                {until && (
+                  <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
+                    {until.expired ? until.text : t.cardView.liftsIn(until.text)}
+                  </span>
+                )}
 
-              {/* Срок, который ещё не жмёт, — тихая пометка: он отвечает
-                  на «к чему это привязано», а не «почему это горит».
-                  Не показывается только тогда, когда он сам стал
-                  тревогой: повторять его дважды в одном ряду незачем.
-                  А вот у заблокированной карточки срок остаётся здесь,
-                  даже горящий: тревога занята блокировкой, но знать,
-                  что при этом горит дата, важно именно ей. */}
-              {due && alarm?.kind !== 'due' && (
-                <span className="card-due" title={t.cardView.commitmentDate}>
-                  {t.cardView.dueWord} {due.text}
-                </span>
-              )}
+                {/* Приоритет — решение человека, и регистр цвета у него
+                    свой: тёмное поставил кто-то, кирпичное случилось
+                    само. Легенды для этого не нужно.
+                    Средний уровень не пишется вовсе — ни словом,
+                    ни местом под него: умолчание у каждой второй карточки
+                    не информация. Такой карточке уровень ставят из меню
+                    «…» и из панели. */}
+                {card.priority !== 'medium' && (
+                  <Menu
+                    // Видимое слово стоит в имени первым: голосовое
+                    // управление ищет по тому, что человек прочёл
+                    // (WCAG 2.5.3). Полное имя рядом — чтобы диктору
+                    // было понятно, о какой шкале речь.
+                    label={t.cardView.priorityOf(
+                      priorityShort(card.priority),
+                      priorityLabel(card.priority).toLowerCase(),
+                    )}
+                    className="field"
+                    align="left"
+                    items={PRIORITIES.map((level) => ({
+                      label: PRIORITY_NAMES[level],
+                      checked: card.priority === level,
+                      onSelect: () => onPrioritise(cardId, level),
+                    }))}
+                  >
+                    <span className={`priority-mark priority-mark--${card.priority}`}>
+                      {priorityShort(card.priority)}
+                    </span>
+                  </Menu>
+                )}
 
-              {/* Итерация — тоже про «к чему привязано». */}
-              {iteration && (
-                <span
-                  className={iterationLate ? 'mark mark--alarm' : 'mark mark--quiet'}
-                  title={iterationLate && iterationEnd ? t.cardView.iterationLate(iterationEnd) : t.cardView.iteration}
-                >
-                  {iteration}
-                </span>
-              )}
+                {/* Срок, который ещё не жмёт, — тихая пометка: он отвечает
+                    на «к чему это привязано», а не «почему это горит».
+                    Не показывается только тогда, когда он сам стал
+                    тревогой: повторять его дважды в одном ряду незачем.
+                    А вот у заблокированной карточки срок остаётся здесь,
+                    даже горящий: тревога занята блокировкой, но знать,
+                    что при этом горит дата, важно именно ей. */}
+                {due && alarm?.kind !== 'due' && (
+                  <span className="card-due" title={t.cardView.commitmentDate}>
+                    {t.cardView.dueWord} {due.text}
+                  </span>
+                )}
 
-              {/* Оценка — цифра, и тихая: она нужна в разговоре
-                  о загрузке, а не при поиске работы глазами. Единица
-                  одна на всю доску, и повторять её триста раз незачем
-                  — она в подсказке. */}
-              {card.estimate !== null && (
-                <span
-                  className="card-estimate"
-                  title={t.cardView.estimateOf(card.estimate, unitLabel(card.estimate, unit))}
-                >
-                  {card.estimate}
-                </span>
-              )}
+                {/* Итерация — тоже про «к чему привязано». */}
+                {iteration && (
+                  <span
+                    className={iterationLate ? 'mark mark--alarm' : 'mark mark--quiet'}
+                    title={iterationLate && iterationEnd ? t.cardView.iterationLate(iterationEnd) : t.cardView.iteration}
+                  >
+                    {iteration}
+                  </span>
+                )}
 
+                {/* Оценка — цифра, и тихая: она нужна в разговоре
+                    о загрузке, а не при поиске работы глазами. Единица
+                    одна на всю доску, и повторять её триста раз незачем
+                    — она в подсказке. */}
+                {card.estimate !== null && (
+                  <span
+                    className="card-estimate"
+                    title={t.cardView.estimateOf(card.estimate, unitLabel(card.estimate, unit))}
+                  >
+                    {card.estimate}
+                  </span>
+                )}
+
+              </div>
+            )}
+            <span className="card-line-end">
               {/* Сколько идёт — последним и у самого края: это число
                   ищут взглядом по колонке, сравнивая карточки между
                   собой, а не читают в строке слева направо. У края
@@ -802,8 +656,174 @@ function CardViewInner({
                   {age}
                 </span>
               )}
-            </div>
-          )}
+              {/* Кнопки, которые нужны по наведению, — «+ метка»,
+                  флажок выделения и «…», — ложатся поверх правого нижнего угла
+                  карточки, а не в строку: место под ними в строке съедало
+                  треть ширины и уносило возраст и людей на третий ряд.
+                  Поверх — значит, высота карточки от наведения не меняется,
+                  и соседние карточки не уезжают из-под курсора. */}
+              <span className="card-tools">
+                {/* Никого нет — «+ кто» значком по наведению, как «+ метка». */}
+                {assignees.length === 0 && assigneePicker}
+                {/* Метки, которых ещё нет, заводятся отсюда же — значком
+                    рядом с меню: он появляется по наведению вместе с «…»,
+                    и место под ним занято всегда. Текстом «+ метка» в начале
+                    второй строки он сдвигал вправо всё, что в ней стоит. */}
+                {canEdit && own.length === 0 && (
+                  <LabelPickerButton
+                    label={t.cardView.noLabels}
+                    className="btn btn--icon btn--quiet card-slot"
+                    align="right"
+                    boardId={boardId}
+                    labels={labels}
+                    hung={cardLabels}
+                    canEdit={canEdit}
+                    onToggle={(labelId, on) => {
+                      labelsFrom.current = on
+                      onLabel(cardId, labelId, on)
+                    }}
+                  >
+                    <TagIcon />
+                  </LabelPickerButton>
+                )}
+                {/* Флажок выделения. Виден по наведению и пока выделение
+                    идёт — на доске в пятьсот карточек пятьсот флажков
+                    читаются как разлинованный список, а не как работа.
+                    Родной флажок, а не своя картинка: он умеет пробел,
+                    читается диктором и уже растянут до цели нажатия
+                    общим правилом. */}
+                {canEdit && (
+                <input
+                  type="checkbox"
+                  className="card-check"
+                  checked={selected}
+                  aria-label={t.cardView.select(title)}
+                  // Выделение снимается с нажатия, а не с изменения: shift
+                  // живёт в событии мыши, а `change` у флажка модификаторов
+                  // не несёт вовсе — на этом диапазон и не работал. Пробел
+                  // с клавиатуры тоже приходит нажатием, только без shift,
+                  // и остаётся обычным переключением.
+                  onClick={(e) => onSelect(cardId, e.currentTarget.checked, e.shiftKey)}
+                  // Управляемому полю нужен обработчик изменения, иначе React
+                  // ругается на «поле только для чтения»; сама правка идёт
+                  // выше, по нажатию.
+                  onChange={() => {}}
+                />
+                )}
+                {/* Одно меню вместо ряда кнопок: три подписи в ширину колонки
+                    не помещались и обрезались до «Откры», «Переиме», «Удалит».
+                    Осталось в нём то, у чего на карточке нет своего места:
+                    люди, метки и уровень ушли к самим людям, меткам
+                    и уровню. Перенос стоит здесь — это не удобство,
+                    а требование WCAG 2.5.7: клавиатурного эквивалента
+                    недостаточно, нужен путь, выполнимый одним нажатием.
+
+                    Стоит меню в верхней строке, а не отдельным рядом внизу,
+                    и это не про красоту. Ряд, появляющийся по наведению,
+                    менял высоту карточки — и соседние карточки уезжали
+                    из-под курсора между нажатием и отпусканием: попасть
+                    по флажку соседа было нельзя. Здесь строка уже занята
+                    и её высота от наведения не зависит. */}
+                {canEdit && (
+                <Menu
+                  label={t.cardView.actions(title)}
+                  className="btn btn--icon btn--quiet card-slot"
+                  items={[
+                    { label: t.cardView.rename, icon: <EditIcon />, onSelect: () => setEditing(true) },
+                    // Верх шкалы переключается прямо с доски: «это горит»
+                    // говорят чаще, чем меняют что-либо ещё, а вся шкала
+                    // живёт в панели.
+                    card?.priority === 'highest'
+                      ? {
+                          label: t.cardView.backToMedium,
+                          icon: <ClockIcon />,
+                          onSelect: () => onPrioritise(cardId, 'medium'),
+                        }
+                      : {
+                          label: t.cardView.toHighest,
+                          icon: <ClockIcon />,
+                          onSelect: () => onPrioritise(cardId, 'highest'),
+                        },
+                    // Отметка о готовности доступна не только частям:
+                    // связь могут снять, и снимать отметку после этого
+                    // было бы неоткуда. Слово «сделана» — про работу,
+                    // а не про переезд: колонка карточки не меняется.
+                    card?.doneAt
+                      ? {
+                          label: t.cardView.unmarkDone,
+                          icon: <CheckIcon />,
+                          onSelect: () => onMarkDone(cardId, false),
+                        }
+                      : {
+                          label: t.cardView.markDone,
+                          icon: <CheckIcon />,
+                          onSelect: () => onMarkDone(cardId, true),
+                        },
+                    {
+                      label: t.cardView.addSubtask,
+                      icon: <PlusIcon />,
+                      onSelect: () => {
+                        setOpen(true)
+                        setAdding(true)
+                      },
+                    },
+                    card?.blocked
+                      ? {
+                          label: t.cardView.unblock,
+                          icon: <BlockedIcon />,
+                          onSelect: () => onUnblock(cardId),
+                        }
+                      : {
+                          // Причину пишут словами: список готовых
+                          // формулировок отвечает не на тот вопрос — важно,
+                          // чего ждём именно здесь.
+                          label: t.cardView.block,
+                          icon: <BlockedIcon />,
+                          onSelect: () => setBlocking(true),
+                        },
+                    ...columns
+                      .filter((c) => c.id !== columnId)
+                      .map((c) => ({
+                        label: t.cardView.moveTo(c.name),
+                        icon: <MoveIcon />,
+                        onSelect: () => onMoveToColumn(cardId, c.id),
+                      })),
+                    {
+                      label: t.cardView.archive,
+                      icon: <ArchiveIcon />,
+                      danger: true,
+                      onSelect: () => onArchive(cardId),
+                    },
+                    // Необратимое стоит последним и спрашивает подтверждение
+                    // — в отличие от архивации, которая не спрашивает ничего
+                    // и предлагает вернуть.
+                    ...(onDelete
+                      ? [
+                          {
+                            label: t.cardView.deleteForever,
+                            icon: <TrashIcon />,
+                            danger: true,
+                            onSelect: () => onDelete(cardId, title),
+                          },
+                        ]
+                      : []),
+                  ]}
+                >
+                  <MoreIcon />
+                </Menu>
+                )}
+              </span>
+            </span>
+          </div>
+
+          {/* Обе стороны зависимости — одинаковыми строками. Раньше
+              держащая сообщала только число, и «какую именно задачу
+              она держит» приходилось выяснять, открыв карточку:
+              то есть ровно тем способом, от которого эта строка
+              и должна избавлять. */}
+          <Dependency label={t.cardView.waits} cards={waitsFor} onOpen={onOpen} />
+          <Dependency label={t.cardView.holds} cards={holds} onOpen={onOpen} />
+
           {blocking && (
             <EditableText
               value=""

@@ -128,8 +128,9 @@ sorted list can be sent to someone.
 
 ### Put a label on a card
 
-1. On the card press **+ label** (or the labels themselves, shown by
-   name under the title, when it has some), or open the card and find
+1. Hover the card and press the label icon in its bottom right corner
+   (or the labels themselves, shown by name in the card's second line,
+   when it has some), or open the card and find
    **Labels** on the **Work** tab. A card shows three labels and the number
    of the rest.
 2. Start typing. The list offers the labels that apply on this board;

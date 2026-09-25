@@ -535,6 +535,9 @@ test('метка заводится в организации и вешаетс�
 
   // И снимается тем же меню, что вешалась.
   await toggleLabel(page, cardIn(page, 'Очередь', 'Пометить меня'), 'Срочно')
+  // Кнопка «+ метка» — среди кнопок по наведению: видна, когда на
+  // карточку навели.
+  await cardIn(page, 'Очередь', 'Пометить меня').hover()
   await expect(
     cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Метки: ни одной' }),
   ).toBeVisible()
@@ -936,6 +939,7 @@ test('shift берёт диапазон, а полоса делает всё с�
   await expect(cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: /Метки: Разобрать/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Снять', exact: true }).last().click()
+  await cardIn(page, 'Очередь', 'Вторая').hover()
   await expect(
     cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: 'Метки: ни одной' }),
   ).toBeVisible()
@@ -2570,7 +2574,9 @@ test('таблица переезжает на доску: предпросмо�
 
   // Перенесённое помечено: в истории карточки и в отчёте потока,
   // где его можно отключить.
-  await cardIn(page, 'В работе', 'Сверить остатки').click()
+  // По названию, а не в середину: в плотной карточке посередине стоят
+  // метки, и нажатие туда открывает их выбор.
+  await cardIn(page, 'В работе', 'Сверить остатки').locator('.card-title').click()
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByText('перенесена из таблицы')).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()

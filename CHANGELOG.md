@@ -400,6 +400,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A denser card: two lines instead of four.** The number now sits
+  on the title's line with the assignees to its right; the epic, the
+  parent, labels and marks share the second line, with the age at its
+  right. The label icon, the selection box and «…» appear over the
+  card's bottom right corner on hover, so the card never changes height
+  under the pointer. «+ label» and «+ who» became icons among them.
 - **A link to a card on another board can be followed.** «Waits» /
   «Holds» on a card and the rows of «Tasks» used to only name a card on
   another board; its name now opens it on its own board (when you can

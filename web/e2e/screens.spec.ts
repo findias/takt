@@ -105,14 +105,14 @@ test('снимки экранов', async ({ page, browser }) => {
 
   // Метка человека, которого перенос не нашёл (ROADMAP 23.6): контур
   // рядом с настоящими метками — не должна спорить с ними.
-  await page.getByRole('group', { name: /Перенести справочник поставщиков/ }).click()
+  await page.getByRole('group', { name: /Перенести справочник поставщиков/ }).locator('.card-title').click()
   await page.getByRole('tab', { name: 'Работа' }).click()
   await page.waitForTimeout(400)
   await page.screenshot({ path: `${SHOTS}/36-метка-человека.png` })
   await page.goto(boardUrl)
 
   // История задачи в YouGile — блоком «До переноса» (ROADMAP 23.7).
-  await page.getByRole('group', { name: /Согласовать график поставок/ }).click()
+  await page.getByRole('group', { name: /Согласовать график поставок/ }).locator('.card-title').click()
   await page.getByRole('tab', { name: 'История' }).click()
   await page.getByText(/До переноса, в YouGile/).waitFor()
   await page.screenshot({ path: `${SHOTS}/40-история-до-переноса.png` })
@@ -120,7 +120,7 @@ test('снимки экранов', async ({ page, browser }) => {
 
   // Заявки сервис-деска на вкладке «Задачи»: номер текстом, адрес
   // ссылкой, все четыре вида — и длинный адрес не должен распирать панель.
-  await page.getByRole('group', { name: /Разобрать обращения за неделю/ }).click()
+  await page.getByRole('group', { name: /Разобрать обращения за неделю/ }).locator('.card-title').click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByText('ЗНО-10492').waitFor()
   await page.screenshot({ path: `${SHOTS}/41-заявки-карточки.png` })
