@@ -3539,3 +3539,23 @@ test('связи «блокирует» и «связана с» заводят�
   await expect(page.getByRole('heading', { name: 'Доска держащих' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Держит соседей' })).toBeVisible()
 })
+
+// Шапка колонки: полоса лимита и средний возраст (шаг 3 нового дизайна
+// доски). Перегруз виден длиной и цветом полосы, а не только числом.
+test('шапка колонки показывает полосу лимита и средний возраст', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с полосой')
+  for (const title of ['Первая', 'Вторая', 'Третья']) {
+    await addCard(page, 'Очередь', title)
+  }
+  const queue = page.getByRole('region', { name: 'Очередь' })
+  await expect(queue.getByText('ждут в среднем меньше дня')).toBeVisible()
+  await expect(queue.locator('.column-gauge-bar')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Разметка колонки «Очередь»' }).click()
+  await page.getByLabel(/^Лимит карточек в колонке «Очередь»/).fill('2')
+  await page.getByLabel(/^Лимит карточек в колонке «Очередь»/).blur()
+  const bar = queue.locator('.column-gauge-bar')
+  await expect(bar).toHaveClass(/column-gauge-bar--over/)
+  await expect(bar.locator('span')).toHaveCount(3)
+})

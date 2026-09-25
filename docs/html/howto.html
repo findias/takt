@@ -185,7 +185,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Type a <strong>Limit</strong> — how many cards the column should hold at once.</li>
 <li>Tick <strong>Hard limit</strong> if a full column must refuse another card.</li>
 </ol>
-<p>Over an ordinary limit the counter in the header turns amber, and a card can still be moved in: the limit is there to make overload visible. A hard limit refuses the move and says to make room first. The field below the limit holds the column&#39;s entry rule — what must be done before a card comes here.</p>
+<p>Under the column&#39;s name a thin bar shows the limit, one segment per place; over the limit it grows by a segment per extra card and turns amber, and so does the counter. A card can still be moved in: the limit is there to make overload visible. Next to the bar the column says how long its work has been there on average — how long cards wait in a queue, how long work has been going in a work column, with the board&#39;s promise beside it. A hard limit refuses the move and says to make room first. The field below the limit holds the column&#39;s entry rule — what must be done before a card comes here.</p>
 <h3 id="promise">Promise how long work takes</h3>
 <p>Open <strong>Flow</strong> and find <strong>Board promise</strong>. Press <strong>Take from history</strong>: the promise becomes the number of days in which most of the board&#39;s finished work passed it. From then on, a card running longer than the promise is marked right on the board, and the <strong>Longer than promised</strong> filter gathers such cards. <strong>Drop the promise</strong> removes it.</p>
 <h3 id="see-what-others-changed-while-you-were-away">See what others changed while you were away</h3>
@@ -381,7 +381,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-119-gbaf9fad-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-120-gdf03ae4-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

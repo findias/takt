@@ -220,8 +220,13 @@ queue in sprint order instead, see **Order by iteration** under
 3. Type a **Limit** — how many cards the column should hold at once.
 4. Tick **Hard limit** if a full column must refuse another card.
 
-Over an ordinary limit the counter in the header turns amber, and a card
-can still be moved in: the limit is there to make overload visible.
+Under the column's name a thin bar shows the limit, one segment per
+place; over the limit it grows by a segment per extra card and turns
+amber, and so does the counter. A card can still be moved in: the limit
+is there to make overload visible. Next to the bar the column says how
+long its work has been there on average — how long cards wait in a
+queue, how long work has been going in a work column, with the board's
+promise beside it.
 A hard limit refuses the move and says to make room first. The field
 below the limit holds the column's entry rule — what must be done before
 a card comes here.

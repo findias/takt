@@ -412,6 +412,41 @@ export function ageLabel(
 }
 
 /**
+ * Сколько в среднем стоит работа в колонке (шаг 3 нового дизайна доски).
+ *
+ * Шапка колонки отвечает не только «сколько тут», но и «как давно»:
+ * очередь из пяти карточек по дню и очередь из пяти по три недели — две
+ * разные беды, а счётчик у них один. Очередь меряется временем в самой
+ * колонке — работа там ещё не начата, и «возраст работы» у неё пуст.
+ * Колонка работы — возрастом работы, тем же числом, что на карточках,
+ * чтобы среднее сверялось с ними глазами. У «Готово» среднего нет:
+ * там возраст ничего не говорит.
+ */
+export function columnAverageAge(
+  kind: Column['kind'],
+  cards: Pick<Card, 'startedAt' | 'finishedAt' | 'columnEnteredAt'>[],
+  now: number = Date.now(),
+): number | null {
+  if (kind === 'done' || cards.length === 0) return null
+  const days: number[] = []
+  for (const card of cards) {
+    if (kind === 'queue') {
+      days.push((now - Date.parse(card.columnEnteredAt)) / 86_400_000)
+    } else {
+      const d = ageDays(card, now)
+      if (d !== null && !card.finishedAt) days.push(d)
+    }
+  }
+  if (days.length === 0) return null
+  return days.reduce((a, b) => a + b, 0) / days.length
+}
+
+/** Дни словами — как у возраста карточки: до десяти с десятой долей. */
+export function daysWords(days: number): string {
+  return t.model.days(days < 10 ? days.toFixed(1) : Math.round(days))
+}
+
+/**
  * Возраст карточки против обещания доски.
  *
  * Kanban Guide требует не давать работе стареть незаметно и сравнивать

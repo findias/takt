@@ -400,6 +400,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A column header shows its limit as a bar and its average age.**
+  One segment per place in the limit, amber and longer when over it;
+  below, «waiting N d on average» in a queue and «N d on average ·
+  promised M» in a work column. Under a day reads as «under a day».
 - **A denser card: two lines instead of four.** The number now sits
   on the title's line with the assignees to its right; the epic, the
   parent, labels and marks share the second line, with the age at its

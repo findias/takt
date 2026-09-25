@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { flowMarks, limitLabel, parseLimitDraft } from '../../entities/board/model.ts'
+import { columnAverageAge, daysWords, flowMarks, limitLabel, parseLimitDraft } from '../../entities/board/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type {
+  Card,
   Column,
   ColumnKind,
   EstimateUnit,
@@ -256,6 +257,15 @@ export function ColumnView(props: ColumnProps) {
         </div>
       </header>
 
+      {!props.collapsed && (
+        <ColumnGauge
+          kind={props.column.kind}
+          count={props.cardIds.length + props.partsInside}
+          limit={props.column.wipLimit}
+          cards={props.cardIds.map((id) => props.cards[id]).filter(Boolean)}
+          sleDays={props.sleDays}
+        />
+      )}
       {!props.collapsed && flowMarks(props.column).length > 0 && (
         <div className="card-marks">
           {flowMarks(props.column).map((m) => (
@@ -498,6 +508,62 @@ function NewCardForm({
  *  команда видела перегрузку. Запрещает превышение только жёсткий лимит,
  *  и отказывает в этом сервер — здесь запрета нет намеренно.
  *  Пустое поле снимает лимит. */
+/**
+ * Полоса лимита и средний возраст — под названием колонки (шаг 3 нового
+ * дизайна доски, направление В).
+ *
+ * Число «3/4» отвечает на вопрос, только если его прочесть; полоса
+ * из делений видна краем глаза, по всей доске сразу, и переполненная
+ * колонка выделяется цветом, а не цифрой. Делений столько, сколько
+ * лимит, а сверх него — по одному на лишнюю карточку, все цветом
+ * «осторожно»: перегруз должен быть виден длиной, а не только цветом.
+ * Для диктора полоса скрыта — то же число уже сказано счётчиком.
+ */
+function ColumnGauge({
+  kind,
+  count,
+  limit,
+  cards,
+  sleDays,
+}: {
+  kind: Column['kind']
+  count: number
+  limit: number | null
+  cards: Card[]
+  sleDays: number | null
+}) {
+  const average = columnAverageAge(kind, cards)
+  // Меньше суток — словами: «0.0 дн.» читается как поломка счёта.
+  const averageText = average === null ? '' : average < 1 ? t.column.underADay : daysWords(average)
+  if (limit === null && average === null) return null
+  const over = limit !== null && count > limit
+  const segments = limit === null ? 0 : Math.max(limit, count)
+  return (
+    <div className="column-gauge">
+      {segments > 0 && (
+        <div
+          className={`column-gauge-bar${over ? ' column-gauge-bar--over' : ''}`}
+          aria-hidden="true"
+          style={{ gridTemplateColumns: `repeat(${segments}, minmax(0, 1fr))` }}
+        >
+          {Array.from({ length: segments }, (_, i) => (
+            <span key={i} className={i < count ? 'column-gauge-full' : undefined} />
+          ))}
+        </div>
+      )}
+      {average !== null && (
+        <span className="muted small">
+          {kind === 'queue'
+            ? t.column.averageWaiting(averageText)
+            : sleDays
+              ? t.column.averageWorkingPromised(averageText, sleDays)
+              : t.column.averageWorking(averageText)}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function ColumnCount({
   count,
   limit,

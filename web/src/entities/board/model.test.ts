@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  columnAverageAge,
   agingLabel,
   applyPatch,
   flowIssues,
@@ -389,4 +390,24 @@ test('патч дополняет словарь меток: метку, зав�
     again.labels.map((l) => l.name),
     ['Переименованная'],
   )
+})
+
+// Средний возраст колонки (шаг 3 нового дизайна): очередь — временем
+// в колонке, работа — возрастом работы, у «Готово» среднего нет.
+test('средний возраст колонки считается по её виду', () => {
+  const now = Date.parse('2026-09-25T12:00:00Z')
+  const day = 86_400_000
+  const at = (daysAgo: number) => new Date(now - daysAgo * day).toISOString()
+  const waiting = [
+    { startedAt: null, finishedAt: null, columnEnteredAt: at(2) },
+    { startedAt: null, finishedAt: null, columnEnteredAt: at(4) },
+  ]
+  assert.equal(columnAverageAge('queue', waiting, now), 3)
+  const working = [
+    { startedAt: at(6), finishedAt: null, columnEnteredAt: at(1) },
+    { startedAt: at(2), finishedAt: null, columnEnteredAt: at(1) },
+  ]
+  assert.equal(columnAverageAge('in_progress', working, now), 4)
+  assert.equal(columnAverageAge('done', working, now), null)
+  assert.equal(columnAverageAge('queue', [], now), null)
 })

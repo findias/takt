@@ -2319,6 +2319,32 @@ textarea.description {
 
 /* --- Разметка колонки --- */
 
+/* Полоса лимита и средний возраст под названием колонки. Деления —
+   сеткой, по одному на место в лимите; полные — акцентом, а при
+   перегрузе все цветом «осторожно». Высота 4 пикселя: это краем глаза,
+   а не график. */
+.column-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Подпись — на одной вертикали с названием колонки. */
+  padding-inline: var(--space-1);
+}
+.column-gauge-bar {
+  display: grid;
+  gap: 2px;
+  block-size: 4px;
+}
+.column-gauge-bar > span {
+  border-radius: 1px;
+  background: var(--surface-2);
+}
+.column-gauge-bar > .column-gauge-full {
+  background: var(--accent);
+}
+.column-gauge-bar--over > span {
+  background: var(--caution);
+}
 .column-settings {
   margin: var(--space-1) 0 var(--space-2);
   padding: var(--space-2) var(--space-3);

@@ -688,6 +688,10 @@ export const en: typeof ru = {
   column: {
     markupOf: (name: string) => `Markup of column “${name}”`,
     markup: 'Markup',
+    averageWaiting: (days: string) => `waiting ${days} on average`,
+    underADay: 'under a day',
+    averageWorking: (days: string) => `${days} on average`,
+    averageWorkingPromised: (days: string, promised: number) => `${days} on average · promised ${promised}`,
     sortByIteration: 'Order by iteration',
     place: 'Place',
     moveLeft: '← Left',

@@ -694,6 +694,10 @@ export const ru = {
   column: {
     markupOf: (name: string) => `Разметка колонки «${name}»`,
     markup: 'Разметка',
+    averageWaiting: (days: string) => `ждут в среднем ${days}`,
+    underADay: 'меньше дня',
+    averageWorking: (days: string) => `в среднем ${days}`,
+    averageWorkingPromised: (days: string, promised: number) => `в среднем ${days} · обещано ${promised}`,
     sortByIteration: 'Упорядочить по итерации',
     place: 'Место',
     moveLeft: '← Левее',
