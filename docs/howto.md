@@ -67,9 +67,12 @@ Create a board with **Epic portfolio** in **How we work**: its columns
 are "Idea", "In progress" and "Done", with a soft limit of 3 on "In
 progress" and no iterations. Every card on it is an epic. Split an
 epic into features on the team boards: open it, **Tasks** tab, pick the
-team's board next to the name, **Subtask**. A task on a team board
-then shows the epic in its path to the root, and the **Tree** view
-gathers the branch across boards.
+team's board next to the name, **Subtask**. Work that already exists is
+linked from either side: on the epic, **Link to an existing card** with
+**Subtask**; on the team's task, the same with **Parent**. The search
+there looks through every board you can see — type the number or part
+of the title. A task on a team board then shows the epic in its path to
+the root, and the **Tree** view gathers the branch across boards.
 
 Each board counts its own flow, so epics never mix with tasks: the
 portfolio shows how long epics take and how many run at once, the team

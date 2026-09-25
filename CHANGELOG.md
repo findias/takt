@@ -340,6 +340,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   change requests and problems in one cell — and, as the last column,
   the whole **Description**. JSON has `refs` as a list and
   `description`.
+- **A team's task links to an epic from its own board, and an epic
+  finds a task that already exists.** **Link to an existing card**
+  searches every board you can see by number or title, and gains the
+  **Parent** kind, so a task can pick the epic above it. Before, the
+  choice offered only cards of the same board.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

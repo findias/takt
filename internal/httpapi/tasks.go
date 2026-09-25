@@ -28,6 +28,18 @@ func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request, p auth.Prin
 	}
 }
 
+// Поиск карточек по всем видимым доскам (board.SearchCards) — чтобы
+// связать задачу команды с эпиком портфеля и наоборот: выбор связи
+// прежде предлагал только карточки своей доски.
+func (s *Server) handleSearchCards(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	found, err := s.boards.SearchCards(r.Context(), p.OrgID, p.ID, r.URL.Query().Get("q"))
+	if err != nil {
+		s.fail(w, "поиск карточек", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"cards": found})
+}
+
 // Путь карточки до корня дерева — для строки «Эпик › Фича» в панели.
 // Отдельным запросом, а не в снимке доски: предки бывают на других
 // досках, и считать путь каждой из пятисот карточек ради той, что

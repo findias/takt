@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../../shared/ui/Button.tsx'
 import { PlusIcon } from '../../shared/ui/icons.tsx'
-import { LINK_KIND_NAMES, REF_KINDS } from '../../shared/api/index.ts'
+import { LINK_KIND_NAMES, REF_KINDS, request } from '../../shared/api/index.ts'
 import type { BoardInfo, CardRef, LinkKind, RefKind } from '../../shared/api/index.ts'
 import type { BaseState } from '../../entities/board/model.ts'
-import { candidatesForSubtask, cardDetails, progressRatio, refKindName } from '../../entities/card/model.ts'
+import { cardDetails, progressRatio, refKindName } from '../../entities/card/model.ts'
 import type { CardDetails, Related } from '../../entities/card/model.ts'
 import { t } from '../../shared/i18n/index.ts'
 
@@ -127,9 +127,13 @@ export function CardTasks({
             непонятное место. */}
         {canEdit && (
           <LinkPicker
-            base={base}
+            boardId={base.info.id}
             details={details}
-            onPick={(toCard, kind) => onLink(card.id, toCard, kind)}
+            onPick={(picked, kind) =>
+              // «Родитель» — та же связь «подзадача», только в обратную
+              // сторону: выбранная карточка встаёт над этой.
+              kind === 'parent' ? onLink(picked, card.id, 'subtask') : onLink(card.id, picked, kind)
+            }
           />
         )}
       </section>
@@ -414,24 +418,80 @@ function Refs({
   )
 }
 
+/** Карточка из поиска по организации (`GET /api/cards/search`). */
+type FoundCard = {
+  id: string
+  number: string
+  title: string
+  boardId: string
+  boardName: string
+  boardLevel: 'team' | 'portfolio'
+}
+
+const searchCards = (q: string) =>
+  request<{ cards: FoundCard[] }>('GET', `/api/cards/search?q=${encodeURIComponent(q)}`)
+
+/** Вид связи в выборе: серверные виды и «Родитель» — подзадача наоборот. */
+type PickKind = LinkKind | 'parent'
+
 /**
- * Связать с существующей карточкой. Предлагаются только карточки этой доски:
- * связать с чужой можно, но выбирать её здесь не из чего — для этого
- * нужен поиск по организации, а его ещё нет.
+ * Связать с существующей карточкой — с любой доски, которую видно.
+ *
+ * Прежде выбор предлагал только карточки этой доски, и задачу команды
+ * нельзя было подвесить к эпику портфеля, а к эпику — готовую задачу
+ * команды (замечено владельцем 25.09.2026): сервер такую связь делал
+ * всегда, выбрать было не из чего. Теперь — поиск по номеру и названию
+ * на всех видимых досках, и вид «Родитель», чтобы с задачи выбрать
+ * то, что над ней.
+ *
+ * Поиск с задержкой в четверть секунды и с двух знаков: по одной букве
+ * находится полорганизации, и выбирать из этого нечего.
  */
 function LinkPicker({
-  base,
+  boardId,
   details,
   onPick,
 }: {
-  base: BaseState
+  boardId: string
   details: ReturnType<typeof cardDetails>
-  onPick: (toCard: string, kind: LinkKind) => void
+  onPick: (picked: string, kind: PickKind) => void
 }) {
-  const [kind, setKind] = useState<LinkKind>('subtask')
+  const [kind, setKind] = useState<PickKind>('subtask')
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<FoundCard[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setFound(null)
+      setFailed(false)
+      return
+    }
+    let stale = false
+    const timer = window.setTimeout(() => {
+      searchCards(q)
+        .then((r) => {
+          if (stale) return
+          setFound(r.cards)
+          setFailed(false)
+        })
+        .catch(() => {
+          if (!stale) setFailed(true)
+        })
+    }, 250)
+    return () => {
+      stale = true
+      window.clearTimeout(timer)
+    }
+  }, [query])
+
   if (!details) return null
-  const candidates = candidatesForSubtask(base, details)
-  if (candidates.length === 0) return null
+  // Сама карточка, её подзадачи и её родитель уже связаны — предлагать
+  // их снова значит предлагать повтор.
+  const taken = new Set<string>([details.card.id, ...details.subtasks.map((s) => s.id)])
+  if (details.parent) taken.add(details.parent.id)
+  const options = (found ?? []).filter((c) => !taken.has(c.id))
 
   return (
     <details className="link-picker">
@@ -439,7 +499,7 @@ function LinkPicker({
       <div className="row row--tight">
         <select
           value={kind}
-          onChange={(e) => setKind(e.target.value as LinkKind)}
+          onChange={(e) => setKind(e.target.value as PickKind)}
           aria-label={t.panel.linkKind}
         >
           {(Object.keys(LINK_KIND_NAMES) as LinkKind[]).map((k) => (
@@ -447,20 +507,43 @@ function LinkPicker({
               {LINK_KIND_NAMES[k]}
             </option>
           ))}
+          <option value="parent">{t.panel.linkParent}</option>
         </select>
-        <select
-          value=""
+        <input
+          type="search"
+          value={query}
+          placeholder={t.panel.findToLink}
           aria-label={t.panel.linkCard}
-          onChange={(e) => e.target.value && onPick(e.target.value, kind)}
-        >
-          <option value="">{t.panel.pickCard}</option>
-          {candidates.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.title}
-            </option>
-          ))}
-        </select>
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
+      {failed && <p className="error small">{t.panel.searchToLinkFailed}</p>}
+      {found !== null && !failed && options.length === 0 && (
+        <p className="muted small">{t.panel.nothingToLink}</p>
+      )}
+      {options.length > 0 && (
+        <ul className="link-results">
+          {options.map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                className="link-result"
+                onClick={() => {
+                  onPick(c.id, kind)
+                  setQuery('')
+                }}
+              >
+                <span className="link-result-number">{c.number}</span>
+                <span className="link-result-title">{c.title}</span>
+                <span className="muted small">
+                  {c.boardId === boardId ? t.panel.onThisBoard : c.boardName}
+                  {c.boardLevel === 'portfolio' ? ` · ${t.panel.portfolioBoard}` : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </details>
   )
 }

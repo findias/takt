@@ -3023,3 +3023,46 @@ test('эпик портфеля говорит, где его работа, а �
   await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Большой переезд' })).toBeVisible()
 })
+
+// Связь с эпиком — с любой стороны (замечено владельцем 25.09.2026):
+// прежде задачу с эпиком можно было только завести с доски эпиков,
+// а готовую задачу команды к эпику не подвесить — выбор связи предлагал
+// карточки только своей доски.
+test('задача команды подвешивается к эпику со своей доски, а эпик находит готовую задачу команды', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Склад')
+  await addCard(page, 'Очередь', 'Готовая задача')
+  await addCard(page, 'Очередь', 'Вторая задача')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await page.getByPlaceholder('Название новой доски').fill('Эпики')
+  await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
+  await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
+  await addCard(page, 'Идея', 'Большой переезд')
+
+  // С эпика: найти готовую задачу на доске команды.
+  await cardIn(page, 'Идея', 'Большой переезд').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByText('Связать с существующей карточкой').click()
+  await page.getByRole('searchbox', { name: 'Карточка для связи' }).fill('Вторая')
+  await page.getByRole('button', { name: /Вторая задача.*Склад/ }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  // С задачи команды: выбрать эпик родителем.
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await openBoard(page, 'Склад')
+  await cardIn(page, 'Очередь', 'Готовая задача').click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByText('Связать с существующей карточкой').click()
+  await page.getByRole('combobox', { name: 'Вид связи' }).selectOption({ label: 'Родитель' })
+  await page.getByRole('searchbox', { name: 'Карточка для связи' }).fill('переезд')
+  await page.getByRole('button', { name: /Большой переезд.*Эпики · портфель/ }).click()
+  await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+
+  // Обе задачи несут метку эпика — связь та же, что у заведённых с портфеля.
+  await page.reload()
+  for (const title of ['Готовая задача', 'Вторая задача']) {
+    await expect(
+      cardIn(page, 'Очередь', title).getByRole('button', { name: /Эпик «Большой переезд»/ }),
+    ).toBeVisible()
+  }
+})

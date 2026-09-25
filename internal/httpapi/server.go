@@ -132,6 +132,7 @@ func (s *Server) Handler() http.Handler {
 	// Задачи человека со всех видимых досок — тоже про людей, ключу
 	// не открыты.
 	mux.HandleFunc("GET /api/tasks", s.human(s.handleTasks))
+	mux.HandleFunc("GET /api/cards/search", s.human(s.handleSearchCards))
 	mux.HandleFunc("GET /api/cards/{id}/path", s.human(s.handleCardPath))
 	mux.HandleFunc("GET /api/cards/{id}/tree", s.human(s.handleCardTree))
 	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
