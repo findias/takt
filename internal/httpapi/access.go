@@ -46,6 +46,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/labels", s.authed(s.handleCreateLabel))
 	mux.HandleFunc("DELETE /api/labels/{id}", s.authed(s.handleArchiveLabel))
 	mux.HandleFunc("POST /api/labels/{id}/restore", s.authed(s.handleRestoreLabel))
+	mux.HandleFunc("PATCH /api/labels/{id}", s.authed(s.handleRecolorLabel))
 	mux.HandleFunc("GET /api/boards/{id}/views", s.authed(s.handleListViews))
 	mux.HandleFunc("POST /api/boards/{id}/views", s.authed(s.handleSaveView))
 	mux.HandleFunc("DELETE /api/views/{id}", s.authed(s.handleDeleteView))
@@ -472,6 +473,26 @@ func (s *Server) handleRestoreLabel(w http.ResponseWriter, r *http.Request, p au
 	}
 	if s.failLabel(w, "возврат метки",
 		s.boards.RestoreLabel(r.Context(), p.OrgID, p.ID, r.PathValue("id"))) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Перекрасить метку. Меняется у всех карточек сразу — это свойство
+// метки, а не её появления на карточке.
+func (s *Server) handleRecolorLabel(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Tone string `json:"tone"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	if s.failLabel(w, "перекраска метки",
+		s.boards.RecolorLabel(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Tone)) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -182,3 +182,22 @@ func TestLabelChangeTravelsInThePatch(t *testing.T) {
 		t.Errorf("патч снятия: %+v", res.Patch)
 	}
 }
+
+// Метку перекрашивают после заведения (ROADMAP 34.13): оттенок метки,
+// заведённой с карточки, выбирался сам, и поменять его было негде.
+func TestLabelIsRecoloured(t *testing.T) {
+	f := newFixture(t)
+	l := f.label("Срочно")
+	if err := f.svc.RecolorLabel(f.ctx, f.orgID, f.actorID, l.ID, "rose"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.boardLabel(l.ID).Tone; got != "rose" {
+		t.Errorf("оттенок после перекраски: %q", got)
+	}
+	if err := f.svc.RecolorLabel(f.ctx, f.orgID, f.actorID, l.ID, "plaid"); err == nil {
+		t.Error("незнакомый оттенок принят")
+	}
+	if err := f.svc.RecolorLabel(f.ctx, f.orgID, f.actorID, "00000000-0000-0000-0000-000000000000", "rose"); !errors.Is(err, ErrLabelNotFound) {
+		t.Errorf("перекраска несуществующей метки: %v, ждали ErrLabelNotFound", err)
+	}
+}

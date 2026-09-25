@@ -15,6 +15,7 @@ export const labelsAdmin: typeof ru = {
     restoreFromArchive: 'Restore from archive',
     labelName: 'Label name',
     labelTone: 'Label colour',
+    toneOf: (name: string) => `Colour of label “${name}”`,
     labelPlace: 'Where the label applies',
     placeOrg: 'Organisation',
     placeTeam: 'Subdivision',

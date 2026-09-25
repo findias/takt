@@ -400,6 +400,11 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
   instead of refusing; taking a card out of a closed iteration is still
   refused.
+- **A label can be recoloured.** **Team** → **Labels**: a colour list
+  next to each label you may manage. Before, the colour was chosen only
+  when creating a label there, and a label created from a card got one
+  by itself with no way to change it. `PATCH /api/labels/{id}` with
+  `{tone}`.
 - **A column can be moved, cards and all.** **Markup** → **← Left** /
   **Right →**. Before, a column could be created and renamed but not
   moved. The new operation `MOVE_COLUMN` `{columnId, place: start|end|after,

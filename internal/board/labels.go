@@ -446,6 +446,37 @@ func (s *Service) setLabelArchived(ctx context.Context, orgID, actorID, labelID 
 	})
 }
 
+// RecolorLabel меняет оттенок метки (ROADMAP 34.13). Оттенок выбирали
+// только при заведении в разделе меток, а метке, заведённой с карточки,
+// он доставался сам — и поменять его было негде. Кто может убрать метку,
+// тот может и перекрасить: это та же ответственность за её область.
+func (s *Service) RecolorLabel(ctx context.Context, orgID, actorID, labelID, tone string) error {
+	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var exists bool
+		if err := tx.QueryRow(ctx, `select exists (select 1 from labels where id = $1)`, labelID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrLabelNotFound
+		}
+		// Чужую, но видимую метку политика не даст тронуть: update
+		// не найдёт строку, и это отличается от «метки нет» только здесь.
+		tag, err := tx.Exec(ctx, `update labels set tone = $2 where id = $1`, labelID, tone)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return ErrLabelNotYours
+		}
+		return nil
+	})
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.ConstraintName == "labels_tone_valid" {
+		return badRequestf("незнакомый оттенок метки")
+	}
+	return err
+}
+
 func deref(s *string) string {
 	if s == nil {
 		return ""

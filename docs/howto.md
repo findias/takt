@@ -160,6 +160,10 @@ picker offers that label instead of a second one, and an archived one
 is offered back from the archive. Colours, archiving and the full list
 live on **Team**, in the **Labels** section.
 
+To change a label's colour, pick another one in the list next to it
+under **Labels** on **Team**. The colour changes on every card at once.
+Whoever may archive the label may recolour it.
+
 <!-- anchor: block -->
 ### Block work until a date
 

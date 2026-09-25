@@ -14,6 +14,7 @@ export const labelsAdmin = {
     restoreFromArchive: 'Вернуть из архива',
     labelName: 'Название метки',
     labelTone: 'Оттенок метки',
+    toneOf: (name: string) => `Оттенок метки «${name}»`,
     labelPlace: 'Где действует метка',
     placeOrg: 'Организация',
     placeTeam: 'Подразделение',

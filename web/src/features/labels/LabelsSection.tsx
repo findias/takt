@@ -71,7 +71,25 @@ export function LabelsSection() {
             <ul className="member-list">
               {group.labels.map((label) => (
                 <li key={label.id}>
-                  <span className={chipClass(label)}>{label.name}</span>
+                  <span className="row row--tight">
+                    <span className={chipClass(label)}>{label.name}</span>
+                    {/* Оттенок меняется здесь же, у метки: заведённой
+                        с карточки он доставался сам, и поменять его было
+                        негде. Меняется сразу на всех карточках. */}
+                    {label.canManage && (
+                      <select
+                        value={label.tone}
+                        aria-label={t.labelsAdmin.toneOf(label.name)}
+                        onChange={(e) => act(api.recolorLabel(label.id, e.target.value as LabelTone))}
+                      >
+                        {(Object.keys(TONE_NAMES) as LabelTone[]).map((tone) => (
+                          <option key={tone} value={tone}>
+                            {TONE_NAMES[tone]}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </span>
                   {label.canManage && (
                     <button
                       className="link link--remove"

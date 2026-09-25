@@ -3424,3 +3424,22 @@ test('колонка переставляется вместе с карточк
   await expect(order()).toHaveText(['В работе', 'Очередь', 'Готово'])
   await expect(cardIn(page, 'Очередь', 'Едет с колонкой')).toBeVisible()
 })
+
+// Метку перекрашивают после заведения (владелец 25.09.2026): прежде
+// оттенок выбирался только при заведении, а у метки с карточки — сам.
+test('метка перекрашивается', async ({ page }) => {
+  await register(page)
+  await page.getByRole('button', { name: 'Команда' }).click()
+  await page.getByPlaceholder('Название метки').fill('Срочно')
+  await page.getByRole('button', { name: 'Завести метку' }).click()
+  const chip = page.locator('.member-list .chip', { hasText: 'Срочно' })
+  await expect(chip).toHaveClass(/chip--green/)
+
+  await page.getByLabel('Оттенок метки «Срочно»').selectOption('rose')
+  await expect(chip).toHaveClass(/chip--rose/)
+
+  // Сохранено, а не только нарисовано.
+  await page.reload()
+  await expect(page.locator('.member-list .chip', { hasText: 'Срочно' })).toHaveClass(/chip--rose/)
+  await expect(page.getByLabel('Оттенок метки «Срочно»')).toHaveValue('rose')
+})

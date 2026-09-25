@@ -1180,6 +1180,7 @@ export const api = {
     }),
   archiveLabel: (id: string) => request<void>('DELETE', `/api/labels/${id}`),
   restoreLabel: (id: string) => request<void>('POST', `/api/labels/${id}/restore`),
+  recolorLabel: (id: string, tone: LabelTone) => request<void>('PATCH', `/api/labels/${id}`, { tone }),
 
   /** Догнать пропущенное патчами вместо целого снимка. */
   changes: (boardId: string, since: number) =>
