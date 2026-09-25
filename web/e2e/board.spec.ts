@@ -3301,3 +3301,63 @@ test('карточка показывает срок итерации и гор�
   await expect(mark).toHaveClass(/mark--alarm/)
   await expect(mark).toHaveAttribute('title', /кончилась 7 сент.*перенесите/)
 })
+
+// Незакрытое из закрытой итерации переносят в идущую (владелец
+// 25.09.2026): по одной из панели карточки или все разом из отчёта.
+// Отчёт закрытой при этом не меняется — он считается на момент закрытия.
+test('незакрытые карточки переносятся из закрытой итерации в открытую', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с переносом')
+  for (const title of ['Сделали', 'Перенесём руками', 'Перенесём отчётом']) {
+    await addCard(page, 'Очередь', title)
+  }
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 37')
+  await page.getByLabel('Начало').fill('2026-09-08')
+  await page.getByLabel('Конец').fill('2026-09-14')
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Неделя 37 ·/ })).toBeVisible()
+
+  for (const title of ['Сделали', 'Перенесём руками', 'Перенесём отчётом']) {
+    await cardIn(page, 'Очередь', title).click()
+    await page.getByRole('tab', { name: 'Работа' }).click()
+    await page.getByLabel('Итерация карточки').selectOption({ label: 'Неделя 37' })
+    await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
+  }
+  const done = cardIn(page, 'Очередь', 'Сделали')
+  await done.hover()
+  await done.getByRole('button', { name: /Действия карточки/ }).click()
+  await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
+  await expect(page.getByRole('region', { name: 'Готово' }).getByText('Сделали')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Закрыть итерацию «Неделя 37»' }).click()
+  await page.locator('dialog').getByLabel('Название итерации для подтверждения').fill('Неделя 37')
+  await page.locator('dialog').getByRole('button', { name: 'Закрыть итерацию' }).click()
+  await expect(page.getByText('Закрытые:')).toBeVisible()
+
+  await page.getByRole('button', { name: '+ итерация' }).click()
+  await page.getByPlaceholder('Название').fill('Неделя 38')
+  await page.getByLabel('Начало').fill('2026-09-15')
+  await page.getByLabel('Конец').fill('2026-09-21')
+  await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Неделя 38 ·/ })).toBeVisible()
+
+  // Из панели: закрытая итерация названа, «без итерации» не предлагается —
+  // только перенос в открытую.
+  await cardIn(page, 'Очередь', 'Перенесём руками').click()
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText(/Неделя 37 — закрыта/)).toBeVisible()
+  await panel.getByLabel('Перенести в').selectOption({ label: 'Неделя 38' })
+  await expect(panel.getByLabel('Итерация карточки')).toHaveValue(/.+/)
+  await panel.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(cardIn(page, 'Очередь', 'Перенесём руками').getByText(/Неделя 38/)).toBeVisible()
+
+  // Из отчёта: переносится только то, что ещё числится за закрытой.
+  await page.getByRole('button', { name: 'Неделя 37', exact: true }).click()
+  const carry = panel.getByRole('button', { name: 'Перенести незакрытые (1) в «Неделя 38»' })
+  await carry.click()
+  await expect(panel.getByRole('status')).toContainText('1 карточка перенесена в «Неделя 38»')
+  await expect(panel.getByText('1 из 3')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Перенесём отчётом').getByText(/Неделя 38/)).toBeVisible()
+})

@@ -367,6 +367,11 @@ Deleting for good asks for confirmation and cannot be undone.
    stays inactive until you type the iteration's name — a stray click
    cannot close a sprint. A report appears: what made it and what did
    not.
+5. Move what was not finished into the next iteration: all at once with
+   the move-unfinished button in the closed iteration's report, or
+   one card at a time with **Move to** on its **Work** tab. The closed
+   iteration's report stays as it was — the moved cards remain in it as
+   not done.
 
 A team that does not work in iterations opens **Flow** and clears **We
 work in iterations** under **How we work**: iterations disappear from

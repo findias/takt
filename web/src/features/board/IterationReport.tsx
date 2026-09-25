@@ -24,12 +24,20 @@ export function IterationReport({
   unit,
   onOpenCard,
   onClose,
+  carry,
 }: {
   boardId: string
   iteration: Iteration
   unit: EstimateUnit
   onOpenCard: (cardId: string) => void
   onClose: () => void
+  /** Перенос незакрытых в открытую итерацию; нет — закрытой нет, прав
+   *  нет или переносить некуда. */
+  carry?: {
+    targets: Iteration[]
+    stillIn: (cardId: string) => boolean
+    onCarry: (cardIds: string[], iterationId: string) => Promise<void>
+  }
 }) {
   const [report, setReport] = useState<Report | null>(null)
   const [failed, setFailed] = useState(false)
@@ -106,6 +114,15 @@ export function IterationReport({
             )}
           </section>
 
+          {carry && closed && (
+            <CarryOver
+              cardIds={report.cards
+                .filter((c) => !c.done && !c.dropped && !c.archived && carry.stillIn(c.id))
+                .map((c) => c.id)}
+              {...carry}
+            />
+          )}
+
           <section className="stack">
             <ul className="member-list">
               {report.cards.map((c) => (
@@ -125,6 +142,58 @@ export function IterationReport({
         </>
       )}
     </Panel>
+  )
+}
+
+/**
+ * Перенос незакрытого в идущую итерацию.
+ *
+ * Отчёт закрытой при этом не меняется — он считается на момент
+ * закрытия, и перенесённые остаются в нём несделанными: так честно.
+ * Вопроса нет: перенос обратим, карточку можно вернуть в любую
+ * открытую из её панели.
+ */
+function CarryOver({
+  cardIds,
+  targets,
+  onCarry,
+}: {
+  cardIds: string[]
+  targets: Iteration[]
+  onCarry: (cardIds: string[], iterationId: string) => Promise<void>
+}) {
+  const [target, setTarget] = useState(targets[0].id)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<string | null>(null)
+  const chosen = targets.find((i) => i.id === target) ?? targets[0]
+
+  if (done) return <p className="muted small" role="status">{done}</p>
+  if (cardIds.length === 0) return null
+
+  return (
+    <section className="row row--tight">
+      {targets.length > 1 && (
+        <select value={chosen.id} aria-label={t.flowReport.carryWhere} onChange={(e) => setTarget(e.target.value)}>
+          {targets.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.name}
+            </option>
+          ))}
+        </select>
+      )}
+      <button
+        className="btn"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true)
+          await onCarry(cardIds, chosen.id)
+          setBusy(false)
+          setDone(t.flowReport.carried(cardIds.length, chosen.name))
+        }}
+      >
+        {t.flowReport.carry(cardIds.length, chosen.name)}
+      </button>
+    </section>
   )
 }
 

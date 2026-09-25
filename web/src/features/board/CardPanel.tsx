@@ -531,17 +531,33 @@ function IterationPicker({
     )
   }
 
-  // Карточку из закрытой итерации не вынуть и в другую не переложить:
-  // закрытая итерация — утверждение о том, что было сделано. Раньше
-  // список всё равно предлагал выбор, и он кончался двумя отказами
-  // подряд — «итерация закрыта», а следом «карточка уже в другой
-  // итерации», причём второй был лишь следствием первого. Дверь,
-  // которой нет, не предлагаем: говорим словами, почему.
+  // Из закрытой итерации карточку не вынуть — закрытая итерация
+  // утверждение о том, что было сделано, и отчёт по ней замер. Но
+  // незакрытую работу переносят в следующую (владелец 25.09.2026):
+  // поэтому предлагается только перенос в открытую, а «без итерации»
+  // не предлагается вовсе — такой двери нет, и отказ был бы загадкой.
   if (currentIteration?.closedAt) {
     return (
-      <p className="muted small">
-        {t.panel.iterationClosed(currentIteration.name)}
-      </p>
+      <div className="stack stack--tight">
+        <p className="muted small">{t.panel.iterationClosed(currentIteration.name)}</p>
+        {open.length > 0 && (
+          <label className="row row--tight">
+            <span className="muted small">{t.panel.carryTo}</span>
+            <select
+              value=""
+              aria-label={t.panel.carryTo}
+              onChange={(e) => e.target.value && onChange(e.target.value)}
+            >
+              <option value="">{t.panel.carryChoose}</option>
+              {open.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
     )
   }
 

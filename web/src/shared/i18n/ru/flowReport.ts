@@ -31,6 +31,10 @@ export const flowReport = {
     doneLabel: 'сделано',
     doneWeight: (unit: string) => `сделано ${unit}`,
     ofTotal: (done: string | number, total: string | number) => `${done} из ${total}`,
+    carry: (count: number, name: string) => `Перенести незакрытые (${count}) в «${name}»`,
+    carried: (count: number, name: string) =>
+      `${count} ${plural(count, 'карточка перенесена', 'карточки перенесены', 'карточек перенесено')} в «${name}». Отчёт этой итерации не изменился.`,
+    carryWhere: 'Куда перенести',
     lateAdded: 'пришло после начала',
     dropped: 'убрано по дороге',
     unestimated:

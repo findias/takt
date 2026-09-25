@@ -321,6 +321,34 @@ func putInIteration(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, ite
 		return err
 	}
 
+	// Из закрытой итерации карточка переходит, а не застревает: хвост
+	// спринта переносят в следующий (решение владельца 25.09.2026).
+	// Участие в закрытой закрывается сейчас, то есть после момента её
+	// закрытия, — поэтому отчёт закрытой, считанный на тот момент, не
+	// меняется: карточка в нём по-прежнему «не успели». Из открытой
+	// итерации карточку по-прежнему сперва убирают — это решение
+	// о другом спринте, а не перенос хвоста.
+	moved, err := tx.Query(ctx, `
+		update iteration_cards ic
+		   set removed_at = now(), removed_by = $2
+		  from iterations i
+		 where ic.card_id = $1 and ic.removed_at is null
+		   and i.id = ic.iteration_id and i.closed_at is not null
+		returning ic.iteration_id`, cardID, actorID)
+	if err != nil {
+		return err
+	}
+	from, err := pgx.CollectRows(moved, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	for _, closed := range from {
+		if err := logEvent(ctx, tx, orgID, boardID, cardID, actorID, "iteration_removed", nil, nil,
+			map[string]any{"iterationId": closed, "movedTo": iterationID}); err != nil {
+			return err
+		}
+	}
+
 	tag, err := tx.Exec(ctx, `
 		insert into iteration_cards (org_id, iteration_id, card_id, added_by)
 		select $1, $2, $3, $4

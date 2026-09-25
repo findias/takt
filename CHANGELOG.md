@@ -389,6 +389,14 @@ the branch adds. It cannot be combined with `DEMO=on`.
   deadline and moves with it to another iteration; the **Commitment**
   field is not touched. A card not done after its iteration ended shows
   the iteration in red and says to move it to the next one.
+- **Unfinished work moves out of a closed iteration.** One card from
+  its panel (**Move to** under the closed iteration's name), or all at
+  once from the closed iteration's report (**Move unfinished (N) to
+  "…"**). The closed iteration's report does not change: it is counted
+  as of closing, and the moved cards stay in it as not done.
+  `ADD_TO_ITERATION` on a card held by a closed iteration now moves it
+  instead of refusing; taking a card out of a closed iteration is still
+  refused.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

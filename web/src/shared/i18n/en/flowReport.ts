@@ -30,6 +30,10 @@ export const flowReport: typeof ru = {
     doneLabel: 'done',
     doneWeight: (unit: string) => `done, ${unit}`,
     ofTotal: (done: string | number, total: string | number) => `${done} of ${total}`,
+    carry: (count: number, name: string) => `Move unfinished (${count}) to “${name}”`,
+    carried: (count: number, name: string) =>
+      `${count} ${count === 1 ? 'card' : 'cards'} moved to “${name}”. This iteration's report stays as it was.`,
+    carryWhere: 'Move to',
     lateAdded: 'added after the start',
     dropped: 'dropped along the way',
     unestimated:

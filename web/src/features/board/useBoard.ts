@@ -893,6 +893,18 @@ export function useBoard(boardId: string | null, notify: Notify) {
       runAndReload('ADD_TO_ITERATION', { cardId, iterationId }, t.ops.iterationAdd),
     [runAndReload],
   )
+  // Перенос незакрытых из закрытой итерации — по одной операции на
+  // карточку, но с одним перечитыванием в конце: иначе доска мигала бы
+  // столько раз, сколько карточек переносят.
+  const carryOver = useCallback(
+    async (cardIds: string[], iterationId: string) => {
+      for (const cardId of cardIds) {
+        await run('ADD_TO_ITERATION', { cardId, iterationId }, t.ops.iterationAdd)
+      }
+      reload()
+    },
+    [run, reload],
+  )
   const removeFromIteration = useCallback(
     (cardId: string, iterationId: string) =>
       runAndReload(
@@ -1037,6 +1049,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     addCardRef,
     removeCardRef,
     addToIteration,
+    carryOver,
     removeFromIteration,
     createColumn,
     renameColumn,

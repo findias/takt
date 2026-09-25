@@ -1497,6 +1497,17 @@ export function Board({
             showCard(cardId)
           }}
           onClose={() => setReportOf(null)}
+          carry={
+            canEdit && reportOf.closedAt && openIterations.length > 0
+              ? {
+                  targets: openIterations,
+                  // В отчёте карточки на момент закрытия; переносить есть
+                  // смысл только те, что всё ещё числятся за этой итерацией.
+                  stillIn: (cardId) => base.cardIterations[cardId] === reportOf.id,
+                  onCarry: board.carryOver,
+                }
+              : undefined
+          }
         />
         </Suspense>
       )}
@@ -1571,7 +1582,10 @@ export function Board({
               const current = base.cardIterations[id]
               // Перенос — это выход из одного и вход в другой, и оба факта
               // остаются в истории: карточка не может идти в двух сразу.
-              if (current) void board.removeFromIteration(id, current)
+              // Из закрытой не выходят: перенос в открытую сам закроет
+              // участие в ней, не трогая её отчёт.
+              const closed = base.iterations.find((i) => i.id === current)?.closedAt
+              if (current && !closed) void board.removeFromIteration(id, current)
               if (iterationId) void board.addToIteration(id, iterationId)
             }}
           />
