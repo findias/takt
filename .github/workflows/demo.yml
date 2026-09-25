@@ -126,17 +126,24 @@ jobs:
           URL: ${{ secrets.DEMO_URL }}
         run: |
           jar=$(mktemp)
+          body=$(mktemp)
+          # Отказ печатается кодом и началом ответа: пустая версия
+          # двадцать минут подряд не говорит, что именно не так, — адрес
+          # скрыт как секрет, а ошибки curl раньше уходили в никуда.
           for i in $(seq 1 60); do
             if [ ! -s "$jar" ] || ! grep -q board_session "$jar"; then
-              curl -fsS -c "$jar" -X POST "$URL/api/demo/sandbox" > /dev/null 2>&1 || true
+              made=$(curl -sS -m 60 -c "$jar" -o "$body" -w '%{http_code}' -X POST "$URL/api/demo/sandbox" 2>&1 || true)
+              if [ "$made" != "200" ]; then
+                echo "песочница: $made $(head -c 200 "$body" | tr '\n' ' ')"
+              fi
             fi
-            got=$(curl -fsS -b "$jar" "$URL/api/me" 2>/dev/null \
-              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("version", ""))' 2>/dev/null || true)
+            seen=$(curl -sS -m 30 -b "$jar" -o "$body" -w '%{http_code}' "$URL/api/me" 2>&1 || true)
+            got=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("version", ""))' "$body" 2>/dev/null || true)
             if [ "$got" = "$VERSION" ]; then
               echo "демо отвечает версией $got"
               exit 0
             fi
-            echo "пока отвечает «$got», ждём $VERSION"
+            echo "пока отвечает «$got» (/api/me: $seen $(head -c 120 "$body" | tr '\n' ' ')), ждём $VERSION"
             sleep 20
           done
           echo "::error::за 20 минут демо так и не ответило версией $VERSION"
