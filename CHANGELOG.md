@@ -376,6 +376,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   **Work** tab changes it without lifting the block, so the time blocked
   stays one interval. New operation `SET_BLOCK_REASON` and webhook event
   `card.block_reason`.
+- **A panel's mode and «Закрыть» sit above the title.** In the side
+  panel they used to wrap below the card's title, among its fields; now
+  every panel — card, «Поток», «Архив», access — starts with them,
+  right-aligned, and Tab reaches «Закрыть» before the content.
 - **Red means "stopped".** Blocks, overdue commitments, errors and
   irreversible actions only; "worth a look" is now amber. Actions that
   remove something reversible are grey, not green.

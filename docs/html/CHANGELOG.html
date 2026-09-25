@@ -178,6 +178,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>Closing a card with open subtasks asks first.</strong> Moving an epic or any card with subtasks to the finish, or marking it <strong>Done</strong>, while some subtasks are open names how many and lists them before it goes; the subtasks stay open. The owner chose to ask rather than forbid: a tail is sometimes dropped on purpose.</li>
 <li>**Subtasks are renamed where they are listed, and any card from its panel.<strong> A subtask on the same board has </strong>Rename** in its parent&#39;s list; the card panel has a pencil next to the title. Before, a card was renamed only from its menu on the board, so a part on another team&#39;s board could not be renamed without going there.</li>
 <li><strong>A block&#39;s reason is edited in place.</strong> <strong>Edit the reason</strong> on the <strong>Work</strong> tab changes it without lifting the block, so the time blocked stays one interval. New operation <code>SET_BLOCK_REASON</code> and webhook event <code>card.block_reason</code>.</li>
+<li><strong>A panel&#39;s mode and «Закрыть» sit above the title.</strong> In the side panel they used to wrap below the card&#39;s title, among its fields; now every panel — card, «Поток», «Архив», access — starts with them, right-aligned, and Tab reaches «Закрыть» before the content.</li>
 <li><strong>Red means &#34;stopped&#34;.</strong> Blocks, overdue commitments, errors and irreversible actions only; &#34;worth a look&#34; is now amber. Actions that remove something reversible are grey, not green.</li>
 <li><strong>Two actions now ask first</strong>, because neither can be undone: revoking an integration key and deleting your own reply.</li>
 <li><strong>«Структура»: one ⋮ menu per row</strong> instead of four visible actions; «Закрыть итерацию» is named in full.</li>
@@ -270,7 +271,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-107-gd448087-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-108-gbf5351a-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
