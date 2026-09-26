@@ -371,6 +371,7 @@ export const ru = {
       users: 'Личность',
       password_links: 'Ссылка для входа',
       export: 'Выгрузка данных',
+      team_admins: 'Владелец подразделения',
     } as Record<string, string>,
     noActor: 'без подписи',
     linkSubtask: 'подзадача',

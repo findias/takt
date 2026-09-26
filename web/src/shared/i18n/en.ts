@@ -366,6 +366,7 @@ export const en: typeof ru = {
       users: 'Identity',
       password_links: 'Sign-in link',
       export: 'Data export',
+      team_admins: 'Subdivision owner',
     } as Record<string, string>,
     noActor: 'unsigned',
     linkSubtask: 'subtask',

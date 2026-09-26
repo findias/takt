@@ -186,11 +186,14 @@ do not.
 
 The audit log is written by **database triggers**, not by application
 code: membership, invitations, subdivisions, board membership,
-observers, and the creation, deletion and visibility changes of boards.
-A code path cannot forget to write it, and a policy prevents an actor
-from signing someone else's name. It is read by an owner and by an
-observer of the whole organisation; to anyone else the log looks empty
-rather than forbidden.
+observers, subdivision owners, and the creation, deletion and visibility
+changes of boards. A code path cannot forget to write it, and a policy
+prevents an actor from signing someone else's name. It is read in full
+by an owner and by an observer of the whole organisation. A subdivision
+owner reads the part about their subtree — its subdivisions, members,
+observers, invitations, owners and non-private boards — and their own
+actions; organisation-level entries stay hidden from them. To anyone
+else the log looks empty rather than forbidden.
 
 The application log goes to standard output as JSON, one line per
 request: method, path, status, milliseconds. No bodies, no headers, no

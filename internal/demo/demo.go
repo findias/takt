@@ -59,6 +59,11 @@ var People = []Person{
 	{Email: "boris@example.test", Name: "Борис Дятлов", Role: auth.RoleMember},
 	{Email: "vera@example.test", Name: "Вера Соколова", Role: auth.RoleMember},
 	{Email: "gleb@example.test", Name: "Глеб Тишин", Role: auth.RoleViewer},
+	// Дмитрий состоит только в «Ядре» — внутри поддерева Бориса. На нём
+	// видно, что владелец подразделения стирает данные своих людей
+	// (этап 31): без такого человека кнопки не было бы ни на стенде,
+	// ни в снимках.
+	{Email: "dmitry@example.test", Name: "Дмитрий Орлов", Role: auth.RoleMember},
 }
 
 // OrgName — название демонстрационной организации.
@@ -410,6 +415,10 @@ func (f *filler) structure() error {
 	}
 	if err := f.teams.AddMember(f.ctx, f.orgID, f.owner(), prodazhi.ID,
 		f.people["vera@example.test"]); err != nil {
+		return err
+	}
+	if err := f.teams.AddMember(f.ctx, f.orgID, f.owner(), yadro.ID,
+		f.people["dmitry@example.test"]); err != nil {
 		return err
 	}
 	// Борис отвечает за «Платформу» целиком, Глеб наблюдает за всей
@@ -1022,7 +1031,15 @@ func (f *filler) fillPlatforma(b board.Info) error {
 			return err
 		}
 	}
-	return nil
+	// Убранная карточка на доске подразделения Бориса: в её архиве
+	// владелец подразделения видит «Удалить насовсем» (этап 31).
+	res, err := f.apply(b.ID, "CREATE_CARD", map[string]any{
+		"columnId": snap.Columns[0].ID, "title": f.w("Черновик схемы кеша"), "place": "end"})
+	if err != nil {
+		return err
+	}
+	_, err = f.apply(b.ID, "ARCHIVE_CARD", map[string]any{"cardId": res.Patch.Cards[0].ID})
+	return err
 }
 
 // --- отметки времени ---

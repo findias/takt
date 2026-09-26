@@ -28,6 +28,7 @@ var english = map[string]string{
 	"Борис Дятлов":         "Boris Dale",
 	"Вера Соколова":        "Vera Scott",
 	"Глеб Тишин":           "Gleb Turner",
+	"Дмитрий Орлов":        "Dmitry Owen",
 	"Северный проект":      "Northern Project",
 	"Обмен со складом":     "Warehouse sync",
 	"Оповещение дежурного": "On-call alert",
@@ -104,5 +105,6 @@ var english = map[string]string{
 	// Карточки «Платформы».
 	"Вынести очередь в отдельный сервис":  "Move the queue into its own service",
 	"Обновить базу до 16-й версии":        "Upgrade the database to version 16",
+	"Черновик схемы кеша":                 "Cache layout draft",
 	"Разобраться с ростом времени ответа": "Find out why response times are growing",
 }

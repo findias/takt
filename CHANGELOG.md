@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Twenty-three migrations, all safe for the running version.** `0052` gives
+**Twenty-four migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -35,14 +35,15 @@ portfolio), `0071` lets the server close iterations whose last day has
 passed, `0072` gives an invitation an optional subdivision and moves
 the right to invite into the database, `0073` lets a subdivision owner
 appoint owners below their own node, `0074` lets them delete their
-boards and cards for good and erase people wholly inside their subtree.
-They
+boards and cards for good and erase people wholly inside their subtree,
+`0075` writes appointments of subdivision owners to the audit log and
+lets a subdivision owner read the log of their subtree. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 
 **A subdivision administrator is now a subdivision owner, and invites
-people.** Same appointment, new name, three more powers. They appoint and
+people.** Same appointment, new name, four more powers. They appoint and
 remove owners of the nodes strictly below their own — never their own
 node or above, so an owner below cannot remove the one above. They invite
 members or viewers into their own subtree, see and revoke only those
@@ -52,7 +53,11 @@ only one who can invite an owner or into no subdivision. And they
 delete boards and cards of their subtree for good (the same archive and
 typed-name safeguards) and erase the data of a person who belongs only
 to subdivisions of their subtree — not an organisation owner, not
-someone who also belongs elsewhere, not themselves. Who may invite,
+someone who also belongs elsewhere, not themselves. They read the
+audit log of their subtree and their own actions under «Команда» →
+«Что происходило»; organisation-level entries stay with the owner.
+Appointing and removing subdivision owners is now written to the audit
+log, which it was not before. Who may invite,
 appoint, delete and erase is now decided by the database, not by the
 handler. Check who is
 appointed in «Структура» → «Кто за что отвечает» after the upgrade:
