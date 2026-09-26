@@ -84,7 +84,7 @@
 
 | № | Требование | Чем закреплено |
 | --- | --- | --- |
-| П8 | Организации изолированы политиками базы, а не проверками в коде | `internal/store/isolation_test.go`, `internal/store/identity_boundary_test.go` |
+| П8 | Организации изолированы политиками базы, а не проверками в коде | `internal/store/isolation_test.go`, `internal/store/identity_boundary_test.go`, `internal/store/stranger_matrix_test.go` (посторонний против каждой таблицы: чтение, правка, удаление, вставка) |
 | П9 | Отказ объясняет, что делать, и различается кодом, а не текстом | `internal/httpapi/contract_drift_test.go`, `web/src/app/forms.test.ts` |
 | П10 | Необратимое спрашивает, обратимое — нет; у обратимого есть отмена | `web/e2e/board.spec.ts`, `web/src/app/layers.test.ts` |
 | П11 | Всё делается с клавиатуры: перенос карточки, формы, меню | `web/e2e/a11y.spec.ts`, `web/src/shared/ui/Field.dom.test.tsx` |

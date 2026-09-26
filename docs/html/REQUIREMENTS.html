@@ -173,7 +173,7 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>№</th><th>Требование</th><th>Чем закреплено</th></tr></thead>
 <tbody>
-<tr><td>П8</td><td>Организации изолированы политиками базы, а не проверками в коде</td><td><code>internal/store/isolation_test.go</code>, <code>internal/store/identity_boundary_test.go</code></td></tr>
+<tr><td>П8</td><td>Организации изолированы политиками базы, а не проверками в коде</td><td><code>internal/store/isolation_test.go</code>, <code>internal/store/identity_boundary_test.go</code>, <code>internal/store/stranger_matrix_test.go</code> (посторонний против каждой таблицы: чтение, правка, удаление, вставка)</td></tr>
 <tr><td>П9</td><td>Отказ объясняет, что делать, и различается кодом, а не текстом</td><td><code>internal/httpapi/contract_drift_test.go</code>, <code>web/src/app/forms.test.ts</code></td></tr>
 <tr><td>П10</td><td>Необратимое спрашивает, обратимое — нет; у обратимого есть отмена</td><td><code>web/e2e/board.spec.ts</code>, <code>web/src/app/layers.test.ts</code></td></tr>
 <tr><td>П11</td><td>Всё делается с клавиатуры: перенос карточки, формы, меню</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/shared/ui/Field.dom.test.tsx</code></td></tr>
@@ -257,7 +257,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-131-g3c70528-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-133-gf7ad214-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
