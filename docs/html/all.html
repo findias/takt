@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-133-gf7ad214-dirty.</p>
+<p>Every section in one file. Version v0.2.3-134-g47ce65a-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1670,6 +1670,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <tr><td>Б13</td><td>Отчёты сканеров отдаются машинным форматом, включая заявление о недостижимости уязвимого кода</td><td><code>Makefile</code>, цель security-report (SARIF, OpenVEX, JSON)</td></tr>
 <tr><td>Б14</td><td>Всякий ответ несёт заголовки безопасности: политику содержимого, запрет рамки и угадывания типа; HSTS — там, где https</td><td><code>internal/httpapi/headers_test.go</code></td></tr>
 <tr><td>Б15</td><td>Бинарник выпускается отдельным файлом с суммой, и пересборка того же тега даёт те же байты</td><td><code>Makefile</code>, цели tarball и binary; шаг сверки в выпуске</td></tr>
+<tr><td>Б16</td><td>Журнал действий пишется базой у каждой таблицы под ним, не содержит секретов и каждая запись названа на экране в обоих языках</td><td><code>internal/store/audit_triggers_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="совместимость">Совместимость</h2>
