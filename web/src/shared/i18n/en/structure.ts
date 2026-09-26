@@ -61,7 +61,7 @@ export const structure: typeof ru = {
     grant: 'Grant',
     whoRuns: 'Who runs what',
     whoRunsExplain:
-      'A subdivision owner creates departments under it, adds and invites people, appoints observers and runs the boards of their area. Top-level subdivisions, observation of the whole organisation and appointing subdivision owners stay with the organisation owner.',
+      'A subdivision owner creates departments under it, adds and invites people, appoints observers, appoints owners of the departments below and runs the boards of their area. Top-level subdivisions and observation of the whole organisation stay with the organisation owner.',
     nobodyAppointed: 'Nobody appointed.',
     revokeAdminOf: (name: string) => `Revoke powers: ${name}`,
     revokeAdmin: 'Revoke powers',

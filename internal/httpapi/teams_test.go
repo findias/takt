@@ -396,6 +396,9 @@ func TestAreaAdminRunsTheirAreaAndNothingElse(t *testing.T) {
 	admin.mustDo("PUT", "/api/teams/"+dept+"/members/"+newbie.userID, nil, http.StatusNoContent)
 	admin.mustDo("POST", "/api/observers",
 		map[string]any{"userId": newbie.userID, "teamId": dept}, http.StatusCreated)
+	// И назначить владельца отдела ниже своего узла.
+	admin.mustDo("POST", "/api/team-admins",
+		map[string]any{"userId": newbie.userID, "teamId": dept}, http.StatusCreated)
 
 	// Убрать и вернуть — тоже своё: иначе «Убрать» было бы дорогой
 	// в один конец, а правило проекта требует обратного.
@@ -442,8 +445,10 @@ func TestAreaAdminRunsTheirAreaAndNothingElse(t *testing.T) {
 		// Надзор за организацией целиком не имеет области, внутри
 		// которой полномочие кончалось бы, — и потому только владельцу.
 		{"надзор за организацией", "POST", "/api/observers", map[string]any{"userId": newbie.userID}, http.StatusForbidden},
-		// Полномочие, размножающее само себя, перестаёт быть ограниченным.
-		{"назначить администратора", "POST", "/api/team-admins", map[string]any{"userId": newbie.userID, "teamId": dept}, http.StatusForbidden},
+		// Владельцев назначает только строго ниже себя (0073): свой узел
+		// и соседа — нет, иначе область росла бы сама.
+		{"назначить владельца своего узла", "POST", "/api/team-admins", map[string]any{"userId": newbie.userID, "teamId": area}, http.StatusForbidden},
+		{"назначить владельца соседа", "POST", "/api/team-admins", map[string]any{"userId": newbie.userID, "teamId": other}, http.StatusForbidden},
 	} {
 		if code, body := admin.do(probe.method, probe.path, probe.body); code != probe.want {
 			t.Errorf("%s: код %d, ожидался %d; тело: %s", probe.what, code, probe.want, body)

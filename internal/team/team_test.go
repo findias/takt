@@ -334,10 +334,11 @@ func TestSubtreeAdminManagesOnlyItsOwnBranch(t *testing.T) {
 		t.Errorf("администратор завёл корневое подразделение: %v", err)
 	}
 
-	// И не раздаёт полномочия дальше: иначе власть размножала бы сама себя.
+	// Владельцев назначает только ниже себя (0073): в свой узел — нет,
+	// иначе область росла бы сама. Подробная матрица — appoint_test.go.
 	other := f.user("member")
-	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, head, other, platform.ID); !errors.Is(err, ErrForbidden) {
-		t.Errorf("администратор назначил администратора: %v", err)
+	if _, err := f.svc.GrantAdmin(f.ctx, f.orgID, head, other, dev.ID); !errors.Is(err, ErrAppointNotYours) {
+		t.Errorf("владелец подразделения назначил владельца своего же узла: %v", err)
 	}
 
 	// Наблюдение за всей организацией шире любой области и остаётся

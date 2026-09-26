@@ -71,6 +71,7 @@
               "already_member",
               "invite_not_yours",
               "team_gone",
+              "appoint_not_yours",
               "password_wrong",
               "password_same",
               "signup_closed",

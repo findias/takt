@@ -91,6 +91,14 @@ export function Structure({
     admins.filter((a) => a.userId === principal.id).map((a) => a.teamId),
   )
   const canManage = (teamId: string) => isOwner || managed.has(teamId)
+  // Владельца узла назначает тот, кто распоряжается его родителем:
+  // строго ниже своего узла (0073). Свой узел и корни — владелец.
+  const parentOf = new Map(teams.map((tm) => [tm.id, tm.parentId]))
+  const canAppoint = (teamId: string) => {
+    if (isOwner) return true
+    const parent = parentOf.get(teamId)
+    return parent != null && managed.has(parent)
+  }
 
   return (
     <div className="stack">
@@ -126,7 +134,7 @@ export function Structure({
         admins={admins}
         teams={teams}
         people={people}
-        isOwner={isOwner}
+        canAppoint={canAppoint}
         onAct={act}
       />
 
@@ -700,25 +708,26 @@ function Observation({
  *
  * Владелец подразделения заводит команды под собой, вписывает в них
  * людей, ставит наблюдателей за своим поддеревом и распоряжается досками
- * своей области — и не трогает соседнюю. Раздаёт это только владелец
- * организации: полномочие, размножающее само себя, перестаёт быть
- * ограниченным.
+ * своей области — и не трогает соседнюю. Назначает владельцев владелец
+ * организации и владелец узла выше — строго ниже своего: полномочие,
+ * расширяющее само себя, перестало бы быть ограниченным.
  */
 function Administration({
   admins,
   teams,
   people,
-  isOwner,
+  canAppoint,
   onAct,
 }: {
   admins: TeamAdmin[]
   teams: Team[]
   people: Member[]
-  isOwner: boolean
+  canAppoint: (teamId: string) => boolean
   onAct: (p: Promise<unknown>) => void
 }) {
   const [userId, setUserId] = useState('')
   const [teamId, setTeamId] = useState('')
+  const appointable = teams.filter((tm) => canAppoint(tm.id))
 
   return (
     <section className="stack">
@@ -738,7 +747,7 @@ function Administration({
                 <span>{a.name}</span>
                 <span className="muted small">{t.structure.teamOf(a.teamName)}</span>
               </div>
-              {isOwner && (
+              {canAppoint(a.teamId) && (
                 <button
                   className="link link--remove"
                   aria-label={t.structure.revokeAdminOf(a.name)}
@@ -752,7 +761,7 @@ function Administration({
         </ul>
       )}
 
-      {isOwner && people.length > 0 && teams.length > 0 && (
+      {people.length > 0 && appointable.length > 0 && (
         <form
           className="row"
           onSubmit={(e) => {
@@ -773,7 +782,7 @@ function Administration({
           </select>
           <select value={teamId} onChange={(e) => setTeamId(e.target.value)} aria-label={t.structure.forWhat}>
             <option value="">{t.structure.forWhichTeam}</option>
-            {teams.map((t) => (
+            {appointable.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>

@@ -16,11 +16,11 @@ in the English interface.
 | **Member** | yes | yes | no |
 | **Viewer** | yes | no | no |
 
-Beyond roles, the owner appoints:
+Beyond roles, the owner appoints (and a subdivision owner, below their own node):
 
 | Appointment | What it grants |
 | --- | --- |
-| Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers |
+| Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers; appoints and removes owners of the nodes below their own |
 | Area observer | reads everything in their subtree |
 
 ## Board visibility

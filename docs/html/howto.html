@@ -344,7 +344,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>The <strong>Structure</strong> tab.</li>
 <li>Press <strong>New subdivision</strong>, enter a name.</li>
 <li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>Create a department…</strong>, <strong>Rename…</strong>, <strong>Move…</strong>, <strong>Remove subdivision</strong>. A question opens a field right under the row.</li>
-<li>Appoint a subdivision owner in <strong>Who runs what</strong> — they will run their own subtree and invite people into it.</li>
+<li>Appoint a subdivision owner in <strong>Who runs what</strong> — they will run their own subtree and invite people into it. A subdivision owner appoints owners of the nodes below their own the same way, but not of their own node and not above it.</li>
 </ol>
 <p>A removed subdivision is not gone: it waits under <strong>Removed subdivisions</strong> and comes back with <strong>Restore</strong>.</p>
 <h2 id="integrations">Integrations</h2>
@@ -385,7 +385,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-124-g85ab3bf-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-125-gbd96fca-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

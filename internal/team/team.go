@@ -43,6 +43,13 @@ var (
 	// искать не то: ищут подразделение или запись, а не сходится человек.
 	// Так же отвечает и назначение исполнителя на доске.
 	ErrNotOrgMember = errors.New("это может быть только участник организации")
+	// ErrAppointNotYours — назначать и снимать владельца этого узла
+	// спрашивающий не вправе. Отказ называет, кто вправе: общий «может
+	// владелец этого подразделения» здесь ложен — владелец узла сам себя
+	// не назначает и старшего не снимает.
+	ErrAppointNotYours = errors.New(
+		"назначить или снять владельца подразделения может владелец организации " +
+			"или владелец подразделения выше — не в своём узле и не выше него")
 )
 
 // BadRequest — просьба не годится сама по себе, и отказ об этом говорит.
@@ -523,6 +530,10 @@ func (s *Service) GrantAdmin(ctx context.Context, orgID, actorID, userID, teamID
 			insert into team_admins (org_id, user_id, team_id, granted_by)
 			values ($1, $2, $3, $4) returning id`,
 			orgID, userID, teamID, actorID).Scan(&a.ID)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "42501" {
+			return ErrAppointNotYours
+		}
 		if err != nil {
 			return err
 		}
@@ -537,8 +548,18 @@ func (s *Service) GrantAdmin(ctx context.Context, orgID, actorID, userID, teamID
 	return a, translate(err)
 }
 
+// RevokeAdmin снимает владельца подразделения. Кто вправе — политика
+// dismisses (0073): владелец организации и владелец узла выше.
 func (s *Service) RevokeAdmin(ctx context.Context, orgID, actorID, adminID string) error {
-	return s.exec(ctx, orgID, actorID, `delete from team_admins where id = $1`, adminID)
+	err := s.exec(ctx, orgID, actorID, `delete from team_admins where id = $1`, adminID)
+	// Записи видны всем, поэтому ноль удалённых при видимой записи —
+	// это права, а не отсутствие.
+	err = s.explain(ctx, orgID, actorID, err,
+		`select exists (select 1 from team_admins where id = $1)`, adminID)
+	if errors.Is(err, ErrForbidden) {
+		return ErrAppointNotYours
+	}
+	return err
 }
 
 // --- служебное ---

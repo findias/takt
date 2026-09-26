@@ -10,7 +10,7 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
-**Twenty-one migrations, all safe for the running version.** `0052` gives
+**Twenty-two migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo
 sandboxes and lets an organisation be deleted as a whole, `0056` stores
@@ -33,18 +33,21 @@ lets a subtask see its link to a parent on a hidden board, `0069` adds a
 board's iterations switch, `0070` adds a board's level (team or epic
 portfolio), `0071` lets the server close iterations whose last day has
 passed, `0072` gives an invitation an optional subdivision and moves
-the right to invite into the database. They
+the right to invite into the database, `0073` lets a subdivision owner
+appoint owners below their own node. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
 schema, and `helm rollback` of the pods needs nothing else.
 
 **A subdivision administrator is now a subdivision owner, and invites
-people.** Same appointment, new name, one more power: they invite
+people.** Same appointment, new name, two more powers. They appoint and
+remove owners of the nodes strictly below their own — never their own
+node or above, so an owner below cannot remove the one above. They invite
 members or viewers into their own subtree, see and revoke only those
 invitations, and the invited person joins that subdivision on
 accepting. The organisation owner still invites anywhere and is the
 only one who can invite an owner or into no subdivision. Who may invite
-is now decided by a database policy, not by the handler. Check who is
+and appoint is now decided by database policies, not by the handler. Check who is
 appointed in «Структура» → «Кто за что отвечает» after the upgrade:
 each of them can now bring people into the organisation.
 

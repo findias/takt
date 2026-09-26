@@ -311,6 +311,9 @@ var en = map[string]string{
 	"подразделение, внутрь которого вы заводите, не найдено: обновите структуру":                                                                                      "the subdivision you are creating inside was not found: refresh the structure",
 	"parentId — это идентификатор старшего подразделения или null для корневого":                                                                                      "parentId is the id of the parent subdivision, or null for a top-level one",
 	"не указан человек": "no person given",
+	"назначить или снять владельца подразделения может владелец организации " +
+		"или владелец подразделения выше — не в своём узле и не выше него": "a subdivision owner can be appointed or removed by the organisation owner " +
+		"or by the owner of a subdivision above — not in their own node and not above it",
 	"это может владелец организации или владелец этого подразделения": "the organisation owner or the owner of this subdivision can do this",
 	"это может быть только участник организации":                      "only an organisation member can be given this",
 	"нужны человек и подразделение":                                   "a person and a subdivision are required",

@@ -764,6 +764,8 @@ If someone left but the work must stay traceable, the first is enough.
    **Rename…**, **Move…**, **Remove subdivision**. A question opens a
    field right under the row.
 4. Appoint a subdivision owner in **Who runs what** — they will run their own subtree and invite people into it.
+   A subdivision owner appoints owners of the nodes below their own the same way,
+   but not of their own node and not above it.
 
 A removed subdivision is not gone: it waits under **Removed subdivisions** and comes back with
 **Restore**.

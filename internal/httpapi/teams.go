@@ -48,8 +48,10 @@ func (s *Server) registerTeamRoutes(mux *http.ServeMux) {
 	// в них те же люди с почтами. Дерево без людей ключ читает
 	// описанным /api/v1/teams.
 	mux.HandleFunc("GET /api/team-admins", s.human(s.handleListAdmins))
-	mux.HandleFunc("POST /api/team-admins", s.owner(s.handleGrantAdmin))
-	mux.HandleFunc("DELETE /api/team-admins/{id}", s.owner(s.handleRevokeAdmin))
+	// Владельцев подразделений назначает владелец организации и владелец
+	// узла выше — строго ниже своего; решает политика (0073).
+	mux.HandleFunc("POST /api/team-admins", s.authed(s.handleGrantAdmin))
+	mux.HandleFunc("DELETE /api/team-admins/{id}", s.authed(s.handleRevokeAdmin))
 
 	mux.HandleFunc("GET /api/observers", s.human(s.handleListObservers))
 	// Наблюдение за поддеревом выдаёт и снимает администратор этого
@@ -260,6 +262,8 @@ func (s *Server) failTeam(w http.ResponseWriter, what string, err error) bool {
 	switch {
 	case err == nil:
 		return false
+	case errors.Is(err, team.ErrAppointNotYours):
+		writeCoded(w, http.StatusForbidden, "appoint_not_yours", err.Error())
 	case errors.Is(err, team.ErrForbidden):
 		// Отказ называет того, кто может: администратор подразделения
 		// распоряжается своей областью, и «только владелец» отправило бы
