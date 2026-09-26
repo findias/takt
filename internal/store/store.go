@@ -177,14 +177,41 @@ func (s *Store) EnsureTenantIsolation(ctx context.Context) error {
 	return nil
 }
 
+// migrateLock — ключ рекомендательной блокировки на время миграций.
+// Число произвольное, но постоянное: по нему два прохода узнают друг друга.
+const migrateLock int64 = 0x74616b74 // «takt»
+
 // Migrate применяет неприменённые миграции по порядку имён.
 //
 // Вызывается отдельным шагом (в compose — командой `migrate`, в Kubernetes —
 // Job с хуком pre-upgrade), а не при старте приложения. Миграции в entrypoint
 // работают на одной реплике и разносят базу на двух, когда обе стартуют
 // одновременно.
+//
+// Но и отдельный шаг бывает запущен дважды: задача, перезапущенная
+// кластером, пока прежняя ещё идёт, или `takt migrate` руками во время
+// выкладки. Два прохода разом падали на `create table if not exists`
+// (гонка в каталоге) и на миграции, которую оба видели неприменённой, —
+// выкладка краснела без поломки. Поэтому весь проход держит
+// рекомендательную блокировку базы на одном соединении: второй ждёт
+// первого, видит всё применённым и выходит без ошибки
+// (TestTwoMigrationRunsAtOnceBothSucceed).
 func (s *Store) Migrate(ctx context.Context) ([]string, error) {
-	_, err := s.Pool.Exec(ctx, `
+	conn, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("соединение для миграций: %w", err)
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, `select pg_advisory_lock($1)`, migrateLock); err != nil {
+		return nil, fmt.Errorf("блокировка миграций: %w", err)
+	}
+	// Отпускается и при ошибке: соединение возвращается в пул, и
+	// взятая на нём блокировка иначе пережила бы проход.
+	defer func() {
+		_, _ = conn.Exec(context.Background(), `select pg_advisory_unlock($1)`, migrateLock)
+	}()
+
+	_, err = conn.Exec(ctx, `
 		create table if not exists schema_migrations (
 			name       text primary key,
 			applied_at timestamptz not null default now()
@@ -208,7 +235,7 @@ func (s *Store) Migrate(ctx context.Context) ([]string, error) {
 	var applied []string
 	for _, name := range names {
 		var exists bool
-		err := s.Pool.QueryRow(ctx,
+		err := conn.QueryRow(ctx,
 			`select exists (select 1 from schema_migrations where name = $1)`, name).Scan(&exists)
 		if err != nil {
 			return applied, fmt.Errorf("проверка миграции %s: %w", name, err)
@@ -222,7 +249,7 @@ func (s *Store) Migrate(ctx context.Context) ([]string, error) {
 			return applied, fmt.Errorf("чтение миграции %s: %w", name, err)
 		}
 
-		tx, err := s.Pool.Begin(ctx)
+		tx, err := conn.Begin(ctx)
 		if err != nil {
 			return applied, err
 		}

@@ -47,6 +47,14 @@ applies the new migrations, runs the old binary on the new schema, the
 new one on the old data and the old one again as a rollback, and
 counts the rows (`make upgrade-check`).
 
+**Two `takt migrate` at once no longer fail.** A migration job
+restarted by the cluster while the previous one still runs, or a
+manual `takt migrate` during a rollout, used to make the second run
+fail on objects the first had just created — a red rollout with nothing
+broken. Migrations now hold a database advisory lock: the second run
+waits, finds everything applied and exits cleanly. Nothing to do on
+upgrade.
+
 **A subdivision administrator is now a subdivision owner, and invites
 people.** Same appointment, new name, four more powers. They appoint and
 remove owners of the nodes strictly below their own — never their own

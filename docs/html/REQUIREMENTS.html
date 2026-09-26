@@ -203,6 +203,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>У12</td><td>Лицензия дословная, чужой код в поставке назван и не расходится со сборкой</td><td><code>internal/license</code></td></tr>
 <tr><td>У13</td><td>Документация на двух языках, и перевод не отстаёт от оригинала</td><td><code>internal/translation</code></td></tr>
 <tr><td>У14</td><td>Обновление с предыдущего выпуска проходит без ручных действий: старая версия работает на новой схеме, новая — на старых данных, откат возможен</td><td><code>scripts/upgrade-check.sh</code>, <code>.github/workflows/upgrade.yml</code>, <code>.github/workflows/release.yml</code></td></tr>
+<tr><td>У15</td><td>Два прохода миграций разом не мешают друг другу: второй ждёт первого и выходит без ошибки</td><td><code>internal/store/migrate_concurrent_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="безопасность">Безопасность</h2>
@@ -260,7 +261,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-135-g1299736-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-136-g8b96247-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
