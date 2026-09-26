@@ -257,6 +257,9 @@ func оболочка(с Страница, язык string, готово соб�
 	fmt.Fprintf(&b, "<!doctype html>\n<html lang=%q>\n<head>\n<meta charset=\"utf-8\">\n", язык)
 	b.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">` + "\n")
 	fmt.Fprintf(&b, "<title>%s · %s</title>\n", html.EscapeString(готово.заголовок), w.справка)
+	// Значок вкладки — тот же, что у приложения: справку открывают
+	// рядом с доской, и две вкладки одного продукта должны узнаваться.
+	b.WriteString("<link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\">\n")
 	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<div class=\"help\">\n", Стили())
 
 	fmt.Fprintf(&b, "<aside class=\"help-side\" aria-label=%q>\n", w.разделы)

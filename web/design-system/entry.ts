@@ -13,6 +13,7 @@ export { EditableText } from '../src/shared/ui/EditableText.tsx'
 export { EstimateStepper } from '../src/shared/ui/EstimateStepper.tsx'
 export { PickList } from '../src/shared/ui/PickList.tsx'
 export { CopyButton } from '../src/shared/ui/CopyButton.tsx'
+export { Mark } from '../src/shared/ui/Mark.tsx'
 export { EmptyState, ErrorState, Skeleton } from '../src/shared/ui/states.tsx'
 export * as icons from '../src/shared/ui/icons.tsx'
 

@@ -12,6 +12,7 @@ import { BoardList } from '../widgets/BoardList.tsx'
 import { Account } from '../features/account/Account.tsx'
 import { StandBar } from '../features/stand/StandBar.tsx'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
+import { Mark } from '../shared/ui/Mark.tsx'
 import { Bell } from '../features/notifications/Bell.tsx'
 import { isHelpKey, openHelp, useHelpTopic } from '../shared/lib/help.ts'
 import { Skeleton } from '../shared/ui/states.tsx'
@@ -289,7 +290,17 @@ function Screens() {
     )
   }
 
-  if (checking) return <div className="centered">{t.app.checkingSession}</div>
+  // Первая загрузка — знак с качающимся маятником: скелета здесь не из
+  // чего строить, экрана ещё нет, а текст один читается как зависание.
+  if (checking)
+    return (
+      <div className="centered">
+        <div className="boot" role="status">
+          <Mark size={40} swing />
+          <span>{t.app.checkingSession}</span>
+        </div>
+      </div>
+    )
   if (!principal)
     return (
       <Auth
@@ -436,6 +447,7 @@ function OrgHeader({
   return (
     <header className="org-header">
       <div className="org-row">
+        <Mark size={24} />
         {orgs.length > 1 ? (
           <select
             className="org-select"

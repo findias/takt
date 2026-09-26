@@ -412,6 +412,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ghcr.io`. Now: `skopeo copy` into your registry and
   `--set image.repository=` pointing at it; the same for upgrades.
   Installations that already mirror the image are unaffected.
+- **Takt has a mark.** A metronome: the body holds the shape, the cut-out
+  pendulum sets the rhythm. It stands in the header before the
+  organisation's name, above the sign-in form, swings its pendulum
+  while the app first loads (and fades in instead for those who asked
+  for less motion), and marks the browser tab of the app, the help and
+  the API page. Its colour follows the theme.
 - **YouGile history without dots.** The first real import showed
   «Before the import, in YouGile» as a column of dots with dates: YouGile's
   system messages came with «.» as their text. An event is now read from

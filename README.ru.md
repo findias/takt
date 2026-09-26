@@ -1,3 +1,5 @@
+<img src="web/public/takt-mark.svg" width="64" height="64" alt="">
+
 # Takt
 
 **Канбан-доска с метриками потока для одной команды.** Ставится
@@ -389,4 +391,4 @@ Apache License 2.0 — [`LICENSE`](LICENSE). Кратко: пользовать�
 не переписывается руками задним числом: проверка `internal/license`
 берёт то, что линкуется в `cmd/takt`, и требует строку на каждый модуль.
 
-<!-- перевод: README.md sha256:ac0f30d3ec4b -->
+<!-- перевод: README.md sha256:40dd9b13d8f4 -->

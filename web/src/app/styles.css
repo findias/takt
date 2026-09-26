@@ -658,6 +658,59 @@ input[type='radio'] {
   padding: var(--space-8) var(--space-4);
 }
 
+/* Знак Takt (shared/ui/Mark.tsx). Класс — `takt-mark`, а не `mark`:
+   `.mark` — таблетка-отметка на карточке, и знак в шапке стал серым
+   кружком с крошечным метрономом внутри. Цвет — accent темы, вырез — маска:
+   сквозь маятник виден фон, поэтому знак верен на любой поверхности. */
+.takt-mark {
+  flex: none;
+  display: block;
+}
+.takt-mark-body {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+/* Ожидание первой загрузки: маятник качается ±15° от вертикали — в покое
+   он уже отклонён на 15° вправо, отсюда 0 → −30°. Период — тот же, что
+   у мерцания скелетов, `--motion-pending`: ожидание в продукте одно. */
+.takt-mark--swing .takt-mark-pendulum {
+  transform-box: view-box;
+  transform-origin: 24px 36px;
+  animation: takt-mark-swing calc(var(--motion-pending) / 2) ease-in-out infinite alternate;
+}
+@keyframes takt-mark-swing {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-30deg);
+  }
+}
+/* Меньше движения — знак не качается, а проявляется: ожидание всё равно
+   видно, а движения нет. */
+@media (prefers-reduced-motion: reduce) {
+  .takt-mark--swing .takt-mark-pendulum {
+    animation: none;
+  }
+  .takt-mark--swing {
+    transition: opacity var(--motion-pending) ease;
+  }
+  @starting-style {
+    .takt-mark--swing {
+      opacity: 0;
+    }
+  }
+}
+.boot {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+/* Знак в шапке — малый, 24 пикселя, перед названием организации. */
+.org-row > .takt-mark {
+  margin-inline-end: var(--space-1);
+}
+
 /* Текст упавшей отрисовки. Моноширинный и с переносом: сообщения
    бывают длинными, а обрезанное сообщение бесполезно ровно той частью,
    которую обрезали. Выделяется и копируется — за этим его и показывают. */

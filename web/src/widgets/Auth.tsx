@@ -3,6 +3,7 @@ import { ApiError, MIN_PASSWORD, api } from '../shared/api/index.ts'
 import type { AuthMethods, Principal } from '../shared/api/index.ts'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
 import { t } from '../shared/i18n/index.ts'
+import { Mark } from '../shared/ui/Mark.tsx'
 
 export function Auth({
   onSignedIn,
@@ -118,6 +119,9 @@ export function Auth({
   return (
     <div className="centered">
       <form className="panel" ref={form.ref} noValidate onSubmit={submit}>
+        {/* Знак — полный, 56 пикселей: вход — первая встреча с продуктом,
+            и узнать его здесь важнее, чем где-либо ещё. */}
+        <Mark size={56} />
         {/* Заголовку можно отдать фокус: возвращать его после подмены
             экрана некуда, а `body` значит «обход с начала страницы». */}
         <h1 ref={heading} tabIndex={-1}>

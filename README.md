@@ -1,3 +1,5 @@
+<img src="web/public/takt-mark.svg" width="64" height="64" alt="">
+
 # Takt
 
 **A self-hosted kanban board with flow metrics, for one team.** It runs
