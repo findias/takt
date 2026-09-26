@@ -4,15 +4,15 @@
 inside your own perimeter: one process, one PostgreSQL database, no
 internet access needed to install it or to run it.
 
-[![Check](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
-[![End-to-end](https://github.com/findias/takt/actions/workflows/e2e.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/e2e.yml)
-[![Upgrade](https://github.com/findias/takt/actions/workflows/upgrade.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/upgrade.yml)
-[![SAST](https://github.com/findias/takt/actions/workflows/sast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sast.yml)
-[![CodeQL](https://github.com/findias/takt/actions/workflows/codeql.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/codeql.yml)
-[![SCA](https://github.com/findias/takt/actions/workflows/sca.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sca.yml)
-[![Secrets](https://github.com/findias/takt/actions/workflows/secrets.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/secrets.yml)
-[![DAST](https://github.com/findias/takt/actions/workflows/dast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/dast.yml)
-[![Image](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
+[![Check](https://img.shields.io/github/actions/workflow/status/findias/takt/check.yml?branch=master&label=Check&logo=github)](https://github.com/findias/takt/actions/workflows/check.yml)
+[![End-to-end](https://img.shields.io/github/actions/workflow/status/findias/takt/e2e.yml?branch=master&label=End-to-end&logo=github)](https://github.com/findias/takt/actions/workflows/e2e.yml)
+[![Upgrade](https://img.shields.io/github/actions/workflow/status/findias/takt/upgrade.yml?branch=master&label=Upgrade&logo=github)](https://github.com/findias/takt/actions/workflows/upgrade.yml)
+[![SAST](https://img.shields.io/github/actions/workflow/status/findias/takt/sast.yml?branch=master&label=SAST&logo=github)](https://github.com/findias/takt/actions/workflows/sast.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/findias/takt/codeql.yml?branch=master&label=CodeQL&logo=github)](https://github.com/findias/takt/actions/workflows/codeql.yml)
+[![SCA](https://img.shields.io/github/actions/workflow/status/findias/takt/sca.yml?branch=master&label=SCA&logo=github)](https://github.com/findias/takt/actions/workflows/sca.yml)
+[![Secrets](https://img.shields.io/github/actions/workflow/status/findias/takt/secrets.yml?branch=master&label=Secrets&logo=github)](https://github.com/findias/takt/actions/workflows/secrets.yml)
+[![DAST](https://img.shields.io/github/actions/workflow/status/findias/takt/dast.yml?branch=master&label=DAST&logo=github)](https://github.com/findias/takt/actions/workflows/dast.yml)
+[![Image](https://img.shields.io/github/actions/workflow/status/findias/takt/security.yml?branch=master&label=Image&logo=github)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/findias/takt?label=release)](https://github.com/findias/takt/releases)
 

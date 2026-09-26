@@ -400,3 +400,38 @@ func TestОбъявленныеВходыИспользуются(t *testing.T) 
 		}
 	}
 }
+
+// Значки проверок в английском README подписаны по-английски.
+//
+// Родной значок GitHub (`…/badge.svg`) подписан именем рабочего процесса,
+// а процессы названы по-русски — и английская титульная страница
+// показывала «Проверка», «Сквозные сценарии», «Обновление» (владелец,
+// 26.09.2026). Текст в квадратных скобках значка — только подпись для
+// диктора, картинку он не меняет. Английский README берёт значки
+// shields.io с подписью `label=`; у каждой обязательной проверки значок
+// есть. Русскому README родные значки подходят как есть.
+func TestЗначкиАнглийскогоREADMEПодписаныПоАнглийски(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(каталог(t), "..", "..", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	текст := string(raw)
+	if strings.Contains(текст, "/badge.svg") {
+		t.Error("README.md: родной значок GitHub подписан русским именем процесса — нужен shields.io с label=")
+	}
+	значок := regexp.MustCompile(`img\.shields\.io/github/actions/workflow/status/findias/takt/([a-z0-9]+\.yml)\?[^)]*label=([^&)]+)`)
+	есть := map[string]string{}
+	for _, m := range значок.FindAllStringSubmatch(текст, -1) {
+		есть[m[1]] = m[2]
+	}
+	for файл := range обязательные {
+		подпись, ok := есть[файл]
+		if !ok {
+			t.Errorf("README.md: у обязательной проверки %s нет значка", файл)
+			continue
+		}
+		if regexp.MustCompile(`[А-Яа-яЁё]`).MatchString(подпись) {
+			t.Errorf("README.md: значок %s подписан по-русски: %s", файл, подпись)
+		}
+	}
+}
