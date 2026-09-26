@@ -412,6 +412,12 @@ the branch adds. It cannot be combined with `DEMO=on`.
   `ghcr.io`. Now: `skopeo copy` into your registry and
   `--set image.repository=` pointing at it; the same for upgrades.
   Installations that already mirror the image are unaffected.
+- **YouGile history without dots.** The first real import showed
+  «Before the import, in YouGile» as a column of dots with dates: YouGile's
+  system messages came with «.» as their text. An event is now read from
+  whichever of its fields says something, and one that says nothing is
+  not carried over; entries already carried as dots no longer show on
+  the card.
 - **Demo card history runs in order.** Events on the demo stand used to
   shuffle — a commitment set before the card was created, an edit hours
   in the future; now they go from creation to now, as they happened.

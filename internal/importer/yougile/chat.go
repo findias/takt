@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/findias/takt/internal/importer"
 	"github.com/findias/takt/internal/importer/pack"
 )
 
@@ -62,7 +63,7 @@ func (c *Client) TaskChat(ctx context.Context, taskID string, known map[string]b
 			if human[m.ID] || m.Deleted {
 				continue
 			}
-			if text := messageText(m); text != "" {
+			if text := systemText(m); text != "" {
 				out.History = append(out.History, entry(m, text, known))
 			}
 		}
@@ -81,6 +82,24 @@ func messageText(m message) string {
 		text = strings.TrimSpace(html.UnescapeString(tags.ReplaceAllString(breaks.ReplaceAllString(m.TextHTML, "\n"), "")))
 	}
 	return text
+}
+
+// systemText — текст системного сообщения. Первый настоящий перенос
+// (26.09.2026) показал, что `text` у них бывает «.»: смысл, значит,
+// лежит в другом поле. Берётся первое, где есть хоть буква или цифра:
+// `text`, затем разметка, затем `label`. Ни в одном — сообщения для
+// истории нет.
+func systemText(m message) string {
+	candidates := []string{strings.TrimSpace(m.Text), "", strings.TrimSpace(m.Label)}
+	if m.TextHTML != "" {
+		candidates[1] = strings.TrimSpace(html.UnescapeString(tags.ReplaceAllString(breaks.ReplaceAllString(m.TextHTML, "\n"), "")))
+	}
+	for _, c := range candidates {
+		if importer.Meaningful(c) {
+			return c
+		}
+	}
+	return ""
 }
 
 func entry(m message, text string, known map[string]bool) pack.Comment {

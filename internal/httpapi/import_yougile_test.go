@@ -156,7 +156,15 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 				{"id": chatAt + 30_000, "fromUserId": "u-gone", "text": "Сверку закончил не я"}}
 			if r.URL.Query().Get("includeSystem") == "true" {
 				items = append(items, map[string]any{"id": chatAt + 60_000, "fromUserId": "u-1",
-					"text": "Задача перемещена в колонку «Нужно сделать»"})
+					"text": "Задача перемещена в колонку «Нужно сделать»"},
+					// Так системные сообщения пришли при первом настоящем
+					// переносе (26.09.2026): в `text` — точка. Смысл, если
+					// он есть, — в другом поле; если нет нигде — это
+					// не история, и карточка его не показывает.
+					map[string]any{"id": chatAt + 90_000, "fromUserId": "u-1",
+						"text": ".", "label": "Срок изменён на 1 октября"},
+					map[string]any{"id": chatAt + 120_000, "fromUserId": "u-1",
+						"text": ".", "textHtml": "<p>.</p>"})
 			}
 			list(items...)
 		default:
@@ -386,7 +394,7 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	if !job.Finished || job.Failed != "" || job.Done != 1 || job.Skipped != 1 ||
-		job.Comments != 2 || job.History != 1 {
+		job.Comments != 2 || job.History != 2 {
 		t.Fatalf("задание: %+v", job)
 	}
 
@@ -408,8 +416,9 @@ func TestYougileHistoryArrivesInTheBackground(t *testing.T) {
 		}
 		_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID+"/cards/"+c.ID, nil, http.StatusOK), &detail)
 		h := detail.SourceHistory
-		if h.Source != "yougile" || h.Pending || len(h.Entries) != 1 ||
-			h.Entries[0].Text != "Задача перемещена в колонку «Нужно сделать»" || detail.Comments != 2 {
+		if h.Source != "yougile" || h.Pending || len(h.Entries) != 2 ||
+			h.Entries[0].Text != "Задача перемещена в колонку «Нужно сделать»" ||
+			h.Entries[1].Text != "Срок изменён на 1 октября" || detail.Comments != 2 {
 			t.Fatalf("история карточки: %+v, реплик %d", h, detail.Comments)
 		}
 		var comments struct {

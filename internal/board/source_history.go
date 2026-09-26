@@ -55,6 +55,11 @@ func readSourceHistory(ctx context.Context, tx pgx.Tx, cardID string) (*SourceHi
 		if err := rows.Scan(&e.At, &e.Author, &e.Text); err != nil {
 			return nil, err
 		}
+		// Перенесённое до 26.09.2026 могло сохранить «.» вместо события:
+		// такие записи в базе остаются, но на карточку не выходят.
+		if !importer.Meaningful(e.Text) {
+			continue
+		}
 		out.Entries = append(out.Entries, e)
 	}
 	return out, rows.Err()
@@ -69,11 +74,17 @@ func writeSourceHistory(ctx context.Context, tx pgx.Tx, orgID, boardID, cardID s
 	var ats []time.Time
 	var authors, texts []string
 	for _, e := range entries {
+		if !importer.Meaningful(e.Text) {
+			continue
+		}
 		at := e.At
 		if at.IsZero() {
 			at = time.Now()
 		}
 		ats, authors, texts = append(ats, at), append(authors, e.AuthorName), append(texts, e.Text)
+	}
+	if len(texts) == 0 {
+		return nil
 	}
 	_, err := tx.Exec(ctx, `
 		insert into card_source_history (org_id, board_id, card_id, at, author, text)

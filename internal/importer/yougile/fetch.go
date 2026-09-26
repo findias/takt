@@ -27,6 +27,7 @@ type message struct {
 	FromUserID string `json:"fromUserId"`
 	Text       string `json:"text"`
 	TextHTML   string `json:"textHtml"`
+	Label      string `json:"label"`
 	Timestamp  int64  `json:"timestamp"`
 	Deleted    bool   `json:"deleted"`
 }
