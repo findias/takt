@@ -29,9 +29,10 @@ func main() {
 	email := flag.String("email", "anna@example.test", "почта владельца демо")
 	password := flag.String("password", "parol12345", "пароль")
 	label := flag.String("label", "", "как назвать созданную карточку")
+	deep := flag.Bool("deep", false, "обойти всё, что новый выпуск читает из старых данных")
 	flag.Parse()
 
-	if err := run(*url, *email, *password, *label); err != nil {
+	if err := run(*url, *email, *password, *label, *deep); err != nil {
 		fmt.Fprintln(os.Stderr, "дымовая проверка:", err)
 		os.Exit(1)
 	}
@@ -42,7 +43,7 @@ type client struct {
 	http *http.Client
 }
 
-func run(base, email, password, label string) error {
+func run(base, email, password, label string, deep bool) error {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return err
@@ -114,6 +115,59 @@ func run(base, email, password, label string) error {
 
 	fmt.Printf("ok: досок %d, на «%s» карточек %d, людей %d\n",
 		len(boards), boards[0].Name, len(snap.Cards), len(team.Members))
+
+	if deep {
+		return c.deep(boards)
+	}
+	return nil
+}
+
+// deep обходит то, что новый выпуск читает из строк, заведённых
+// прошлым: каждый снимок доски, путь и дерево каждой карточки, доступ
+// доски, «Задачи», отчёт, уведомления, журнал, структуру. Старая
+// строка с пустым там, где новый код ждёт значение, отвечает здесь 500,
+// а не у заказчика. Только для нового бинарника: прошлый этих путей
+// не знает.
+func (c client) deep(boards []board) error {
+	cards := 0
+	for _, b := range boards {
+		var snap struct {
+			Cards []struct {
+				ID string `json:"id"`
+			} `json:"cards"`
+		}
+		if err := c.get("/api/boards/"+b.ID, &snap); err != nil {
+			return fmt.Errorf("снимок «%s»: %w", b.Name, err)
+		}
+		if err := c.get("/api/boards/"+b.ID+"/access", nil); err != nil {
+			return fmt.Errorf("доступ «%s»: %w", b.Name, err)
+		}
+		for _, card := range snap.Cards {
+			for _, what := range []string{"path", "tree"} {
+				if err := c.get("/api/cards/"+card.ID+"/"+what, nil); err != nil {
+					return fmt.Errorf("%s карточки %s на «%s»: %w", what, card.ID, b.Name, err)
+				}
+			}
+			cards++
+		}
+	}
+	today := time.Now().Format(time.DateOnly)
+	yearAgo := time.Now().AddDate(-1, 0, 0).Format(time.DateOnly)
+	for _, path := range []string{
+		"/api/tasks",
+		"/api/reports/cards?format=json&from=" + yearAgo + "&to=" + today,
+		"/api/reports/cards/count?from=" + yearAgo + "&to=" + today,
+		"/api/notifications",
+		"/api/audit",
+		"/api/teams",
+		"/api/boards/archived",
+	} {
+		if err := c.get(path, nil); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+	}
+	fmt.Printf("ok, глубоко: досок %d, карточек с путём и деревом %d, сводные экраны прочитаны\n",
+		len(boards), cards)
 	return nil
 }
 

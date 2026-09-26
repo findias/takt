@@ -120,7 +120,8 @@ DATABASE_URL="$URL" LISTEN_ADDR=":$PORT" BASE_URL="http://127.0.0.1:$PORT" SIGNU
   WEB_DIR=web/dist "$TMP/takt" serve >"$TMP/new.log" 2>&1 &
 NEW_PID=$!
 wait_ready || { tail -20 "$TMP/new.log"; exit 1; }
-go run ./cmd/upgrade-smoke -url "http://127.0.0.1:$PORT" -label "новый"
+go run ./cmd/upgrade-smoke -url "http://127.0.0.1:$PORT" -label "новый" -deep \
+  || { tail -30 "$TMP/new.log"; exit 1; }
 kill "$NEW_PID"; wait "$NEW_PID" 2>/dev/null || true; NEW_PID=""
 
 say "6. откат: старый бинарник снова на новой схеме"
