@@ -197,6 +197,22 @@ func TestTopUpPutsAScrambledHistoryInOrder(t *testing.T) {
 			            then e.at - interval '1 day' else now() + interval '1 hour' end
 			  from card_events e where e.type = 'created'
 			 order by e.id limit 2`)
+		if err != nil {
+			return err
+		}
+		// И как у карточек, заведённых на стенде переносом и сценариями:
+		// событие создания — не первое по номеру. Переложить его в конец
+		// журнала, с временем впереди.
+		_, err = tx.Exec(ctx, `
+			with gone as (
+			  delete from card_events
+			   where id = (select e.id from card_events e
+			                where e.type = 'created'
+			                  and (select count(*) from card_events x where x.card_id = e.card_id) > 1
+			                order by e.id desc limit 1)
+			  returning org_id, board_id, card_id, actor_id, type, payload)
+			insert into card_events (org_id, board_id, card_id, actor_id, type, payload, at)
+			select org_id, board_id, card_id, actor_id, type, payload, now() + interval '2 hours' from gone`)
 		return err
 	}); err != nil {
 		t.Fatalf("перемешать историю: %v", err)

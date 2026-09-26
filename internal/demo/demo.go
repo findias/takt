@@ -1327,15 +1327,29 @@ func respreadEvents(ctx context.Context, tx pgx.Tx) error {
 	// у английской копии обязательство стояло раньше создания
 	// карточки, а у только что заведённой события уходили в будущее
 	// (проход по дизайну 26.09.2026).
+	//
+	// Создание — всегда первое, остальные по номеру: у карточек, заведённых
+	// переносом или сценариями на стенде, событие создания бывает не первым
+	// по номеру, и раскладка «по номеру» ставила его в середину — первая
+	// выкладка staging с доливом так и не прошла сверку. Отсчёт — от
+	// меньшего из «создана» и «сейчас», шаг не отрицательный: иначе
+	// карточка, чьё время создания впереди, уводила бы события в будущее.
 	rows, err := tx.Query(ctx, `
-		select e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
-		       e.from_column, e.to_column, e.payload,
-		       c.created_at
-		         + (row_number() over (partition by e.card_id order by e.id) - 1)
-		         * least(interval '1 hour',
-		                 (now() - c.created_at) / count(*) over (partition by e.card_id))
-		  from card_events e join cards c on c.id = e.card_id
-		 order by 9, e.id`)
+		select org_id, board_id, card_id, actor_id, type, from_column, to_column, payload,
+		       base + (n - 1) * step
+		  from (
+		    select e.id, e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
+		           e.from_column, e.to_column, e.payload,
+		           least(c.created_at, now()) as base,
+		           row_number() over (partition by e.card_id
+		                              order by (e.type <> 'created'), e.id) as n,
+		           greatest(interval '0',
+		                    least(interval '1 hour',
+		                          (now() - least(c.created_at, now()))
+		                            / count(*) over (partition by e.card_id))) as step
+		      from card_events e join cards c on c.id = e.card_id
+		  ) x
+		 order by 9, card_id, n`)
 	if err != nil {
 		return err
 	}
@@ -1391,7 +1405,29 @@ func (f *filler) orderHistory() error {
 		if !broken {
 			return nil
 		}
-		return respreadEvents(f.ctx, tx)
+		if err := respreadEvents(f.ctx, tx); err != nil {
+			return err
+		}
+		// Раскладка обязана починить; не починила — назвать карточку
+		// и события, а не оставить выкладке одно «стенд неполон».
+		var number, what string
+		err := tx.QueryRow(f.ctx, `
+			select coalesce(k.number, k.id::text),
+			       string_agg(e.type || ' ' || to_char(e.at, 'DD.MM HH24:MI:SS'), ', ' order by e.id)
+			  from card_events e
+			  join cards k on k.id = e.card_id
+			 where e.card_id = (
+			         select e2.card_id from card_events e2
+			           join card_events c on c.card_id = e2.card_id and c.type = 'created'
+			          where e2.at < c.at or e2.at > now() limit 1)
+			 group by k.number, k.id`).Scan(&number, &what)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("история карточки %s не выстроилась и после раскладки: %s", number, what)
 	})
 }
 
