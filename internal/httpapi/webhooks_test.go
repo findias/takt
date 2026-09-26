@@ -592,3 +592,67 @@ func TestOnlyOwnerManagesWebhooks(t *testing.T) {
 		t.Errorf("подписка без событий принята: код %d", code)
 	}
 }
+
+// Четыре события выпуска v0.3.0 доходят до подписчика (PROMPT-TESTING.md,
+// уровень 5). CHANGELOG обещает их тем, кто ставит: card.block_until,
+// card.block_expired, card.ref_added, card.ref_removed. Список событий
+// сверяет TestSubscriptionTakesOnlyEventsThatExist, но что каждое из них
+// порождается и доставляется, до 26.09.2026 не проверял ни один тест.
+func TestReleaseEventsReachTheirSubscriber(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("События выпуска")
+	target := newReceiver(t)
+	want := []string{"card.block_until", "card.block_expired", "card.ref_added", "card.ref_removed"}
+	owner.mustDo("POST", "/api/webhooks", map[string]any{
+		"name": "Сервис-деск", "url": target.server.URL, "events": want,
+	}, http.StatusCreated)
+
+	boardID := owner.board("Заявки")
+	card := owner.cardOn(boardID, "С заявкой и сроком")
+	op := func(kind string, payload map[string]any) {
+		owner.op(boardID, uuid.NewString(), kind, payload)
+	}
+	op("BLOCK_CARD", map[string]any{"cardId": card, "reason": "ждём поставку"})
+	op("SET_BLOCK_UNTIL", map[string]any{
+		"cardId": card, "until": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)})
+	op("ADD_CARD_REF", map[string]any{"cardId": card, "kind": "zno", "ref": "ЗНО-77"})
+
+	var snap struct {
+		CardRefs map[string][]struct{ ID string } `json:"cardRefs"`
+	}
+	if err := json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap); err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.CardRefs[card]) == 0 {
+		t.Fatal("заявка не завелась")
+	}
+	op("REMOVE_CARD_REF", map[string]any{"cardId": card, "refId": snap.CardRefs[card][0].ID})
+
+	// Срок вышел: переносим его в прошлое в обход сервера (сервер
+	// прошлого срока не примет) и зовём проход по срокам.
+	orgID, _ := field(t, owner.mustDo("GET", "/api/me", nil, http.StatusOK), "orgId").(string)
+	if err := a.impl.db.InTenant(context.Background(), orgID, owner.userID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			update card_blocks set blocked_until = now() - interval '1 minute'
+			 where card_id = $1 and unblocked_at is null`, card)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.impl.boards.ExpireBlocks(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	await(t, "не все события выпуска доехали", func() bool {
+		got := map[string]bool{}
+		for _, r := range target.received() {
+			got[r.event] = true
+		}
+		for _, e := range want {
+			if !got[e] {
+				return false
+			}
+		}
+		return true
+	})
+}

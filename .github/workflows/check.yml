@@ -26,6 +26,29 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # История нужна предупреждению о коммитах без проверок:
+          # оно смотрит каждый коммит пуша, а не только последний.
+          fetch-depth: 0
+
+      # Коммит, меняющий код без изменения проверок, — предупреждение,
+      # а не отказ (PROMPT-TESTING.md, уровень 5): правке комментария
+      # смотреть нечего, но пропуск должен быть виден.
+      - name: Коммиты с кодом без проверок
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            range="origin/$BASE_REF..HEAD"
+          elif [ -n "$BEFORE" ] && [ "${BEFORE#0000000}" = "$BEFORE" ]; then
+            range="$BEFORE..$SHA"
+          else
+            exit 0
+          fi
+          ./scripts/tests-touched.sh "$range"
 
       - uses: actions/setup-go@v5
         with:

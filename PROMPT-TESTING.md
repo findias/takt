@@ -226,6 +226,14 @@
 
 ### Уровень 5. Сквозные сценарии по каждому изменению
 
+**Сделано 26.09.2026:** матрица в приложении заполнена по всем 65
+изменениям; при заполнении найдено два пробела — четыре события подписок
+выпуска (закрыт TestReleaseEventsReachTheirSubscriber) и путь до корня,
+записанный по догадке (исправлен по коду). Предупреждение о коммитах
+с кодом без проверок — `scripts/tests-touched.sh` в «Проверке»; за выпуск
+их 10, список — в выводе скрипта. Только глазом держатся плотная
+карточка и экраны владельца подразделения — до уровня 6.
+
 Матрица «изменение → сценарий» — приложение к этому файлу, заполнить
 до конца. Источник строк — 65 заголовков `CHANGELOG.md` за `v0.3.0`
 и блоки «How to check» коммитов `v0.2.3..HEAD`. Для каждой строки —
@@ -336,49 +344,110 @@
 
 ## Приложение. Матрица «изменение → чем закреплено»
 
-Заполняется на уровне 5. Строки — заголовки `CHANGELOG.md` за v0.3.0,
-сгруппированы по области; в графе «закреплено» — отметка по правилу
-уровня 5. Пустая графа — работа не сделана.
+Заполнена 26.09.2026 по 65 заголовкам `CHANGELOG.md` за v0.3.0 и тестам
+на тот день (982 названия: Go, DOM, сквозные). Каждая строка проверена
+поиском по названиям и по телам тестов, спорные — чтением коммита.
+Отметки: `go:` — тест сервера, `dom:` — тест клиента без браузера,
+`e2e:` — сквозной сценарий, `глаз:` — держится только снимком и чтением.
+Пробелов, найденных при заполнении, было два; оба закрыты тем же
+уровнем — отмечены ✚.
 
-**Обновление и настройки**
-- Двадцать четыре миграции, безопасные для работающей версии — `go:store:TestMigrationsStayCompatibleWithThePreviousVersion` (текст) + `scripts/upgrade-check.sh` (настоящий прогон, `upgrade.yml`)
-- Сервер сам снимает блокировки, закрывает итерации, пишет уведомления по времени —
-- Четыре новых события подписок —
-- Контракт растёт, ничего не убрано — `go:httpapi:contract_*`
-- Операции и снимок доски впятеро быстрее — `e2e:perf.spec.ts`
-- Сервер отвечает на языке запроса — `go:i18n:TestEveryMessageHasEnglish` (наличие), отдача —
-- `takt-fetch` отдельным файлом выпуска — `release.yml` (`make fetch-release`); проверка скачиванием —
-- `YOUGILE_URL`, `DEMO`, `STAND` —
+**Обновление, фон и настройки**
+| Изменение | Закреплено |
+| --- | --- |
+| 24 миграции, безопасные для работающей версии | go:store TestMigrationsStayCompatibleWithThePreviousVersion; `scripts/upgrade-check.sh` (уровень 1) |
+| Два `takt migrate` разом | go:store TestTwoMigrationRunsAtOnceBothSucceed |
+| Сервер снимает блокировки по сроку | go:board TestExpiredBlockIsClosedAtItsDeadline, TestSweepClosesInEveryOrganisationAndOnPrivateBoards |
+| Уведомления по времени | go:httpapi notifications_test (NotifyDue); go:board TestBackgroundTasksRunOnSeveralReplicasAtOnce |
+| Итерация закрывается сама | go:board TestIterationClosesItselfAfterItsLastDay |
+| Четыре новых события подписок | ✚ go:httpapi TestReleaseEventsReachTheirSubscriber |
+| Контракт растёт, ничего не убрано | go:httpapi contract_paths_test, contract_drift_test, contract_codes_test |
+| Операции и снимок впятеро быстрее | e2e:perf.spec.ts; go:board TestPoliciesAreEvaluatedOncePerQuery |
+| Сервер отвечает на языке запроса | go:httpapi TestRefusalSpeaksTheLanguageOfTheRequest, TestRefusalsSpeakTheLanguageOfThePerson |
+| Файл, обрезанный своей выгрузкой, назван | go:importer TestFileCutAtAKnownExportLimitIsNamed |
+| `takt-fetch` отдельным файлом | go:cmd/takt-fetch (4 файла); выпуск — `make fetch-release` в release.yml |
+| `YOUGILE_URL`, `DEMO`, `STAND` | go:config TestStandAndDemoDoNotMix, TestStandIsOffUnlessAskedFor; go:httpapi TestYougileCanBeSwitchedOff, demo_test |
+| Корпоративный вход не привязывается по введённой почте | go:httpapi TestSelfSetEmailDoesNotBindCorporateSignIn |
 
-**Языки и справка**
-- Интерфейс по-английски — `app/i18n.test.ts`; снимки `en/`
-- Справка в приложении, «?» у понятий — `go:help:TestEveryScreenLeadsToAnExistingSection`, `TestSearchFindsSectionsAndLeadsToThem`
-- Личные настройки за именем, смена почты —
+**Языки, справка, личное**
+| Изменение | Закреплено |
+| --- | --- |
+| Интерфейс по-английски | dom:app/i18n.test.ts; e2e:a11y «по-английски»; e2e:screens.en.spec.ts |
+| Справка в приложении | go:help TestEveryScreenLeadsToAnExistingSection, TestSearchFindsSectionsAndLeadsToThem, TestWhatsNewShowsTheUserPartOfTheRunningVersion |
+| «?» у понятий | dom:Hint.dom.test.tsx; go:help TestEveryScreenLeadsToAnExistingSection |
+| Личные настройки за именем | go:httpapi account_lang_test |
+| Смена почты | go:httpapi email_test (4 теста) |
+| Ссылки для входа | go:httpapi password_link_test; e2e «ссылка для входа задаёт пароль один раз» |
 
 **Перенос**
-- Из таблицы, из YouGile, пакетами; выбор по каждому человеку; никто не исчезает; история и обсуждения YouGile; занятый YouGile ждём —
+| Изменение | Закреплено |
+| --- | --- |
+| Из таблицы | go:httpapi import_test (предпросмотр, повтор, большие таблицы) |
+| Выбор по каждому человеку | go:httpapi TestImportPeopleMatchCreateSkip, TestImportPeopleRefusals |
+| Никто не исчезает с карточек | go:httpapi TestMissingPeopleBecomePersonLabels |
+| Из YouGile | go:httpapi import_yougile_test (5 тестов) |
+| Занятый YouGile ждём | go:cmd/takt-fetch main_test (Retry-After); go:httpapi TestYougileRefusalsCarryTheirCodes (yougile_busy) |
+| История и обсуждения YouGile | go:httpapi TestYougileHistoryArrivesInTheBackground |
+| Пакеты `.takt` | go:httpapi import_package_test; go:importer/pack |
 
-**Уведомления**
-- Колокольчик, счётчик, упоминания, поводы по времени — `e2e:board.spec.ts` (упомянули — счётчик — ноль)
-
-**Отчёты**
-- Вкладка «Отчёты», срезы, XLSX/JSON/CSV — `go:report`, `e2e/xlsx.ts`
+**Уведомления и отчёты**
+| Изменение | Закреплено |
+| --- | --- |
+| Уведомления: колокольчик, упоминания, поводы | go:httpapi notifications_test (6 тестов); e2e «упомянули — счётчик — ноль» |
+| Вкладка «Отчёты», срезы, XLSX/JSON/CSV | go:report; go:httpapi reports; e2e:xlsx.ts |
+| Выгрузка карточки несёт заявки и описание | go:report report_test (коммит 72ae512) |
 
 **Иерархия и портфель**
-- Дорожки по дереву, прогресс одной полосой, путь до корня, шаблоны и итерации, эпики на портфеле, эпик всегда родитель, связи через доски — `go:board:subtree_test`, `epic_test`, `links_test`; `e2e-stand`
+| Изменение | Закреплено |
+| --- | --- |
+| Дорожки по дереву | dom:grouping.test.ts; go:board hierarchy_test |
+| Прогресс по поддереву одной полосой | go:board subtree_test; dom:card model.test.ts |
+| Путь до корня | go:board TestCardPathGoesFromRootToParent, TestCardPathNamesTheHiddenLink |
+| Шаблоны досок и переключатель итераций | go:board template_test |
+| Эпики на портфеле, эпик всегда родитель | go:board portfolio_test, epic_parent_test TestEpicCannotBecomeASubtaskOfATask; go:httpapi TestPackageEpicsLandOnPortfolioInEitherOrder |
+| Ссылка на карточку чужой доски | e2e «связи … с карточкой другой доски»; dom:grouping.test.ts |
+
+**Задачи**
+| Изменение | Закреплено |
+| --- | --- |
+| Вкладка «Задачи» | go:httpapi TestTasksOfAPersonAcrossBoards; e2e «вкладка «Задачи» собирает карточки человека» |
+| Отборы на «Задачах» | dom:tasksFilter.test.ts |
+| Вкладка «Задачи» у карточки | e2e board.spec.ts (заявки, подзадачи); dom:Board.dom «заявки внешних систем» |
+| Задача открывается сбоку | e2e board.spec.ts («сбоку, как на доске») |
 
 **Итерации**
-- Закрытие спрашивает имя; закрывается сама; незакрытое переносится; карточка в отборе заводится в итерацию; сортировка по итерации —
+| Изменение | Закреплено |
+| --- | --- |
+| Закрытие спрашивает имя | e2e «закрытая итерация остаётся на экране и отвечает отчётом» |
+| Незакрытое переносится | e2e «незакрытые карточки переносятся из закрытой итерации» |
+| Карточка в отборе итерации заводится в неё | e2e «при отборе по итерации карточка заводится в эту итерацию» |
+| Порядок колонки по итерации | go:board TestColumnIsOrderedByIteration; e2e |
 
-**Доска и карточка (дизайн)**
-- Плотная карточка; шапка колонки; полоска возраста; «Требует внимания»; инструменты в две строки; ширина колонки мышью; панель освобождает место; метки на карточке, три области, из карточки, несколько разом, цвет; блокировка со сроком и правкой причины; «Ждёт» уходит; перенос колонок; отметка изменённых другими; ссылка на чужую доску; красное — «остановлено»; открытие карточки хранит отбор; задача сбоку на «Задачах» — `dom:Board.renders.dom.test.tsx` (часть); остальное — **глаз** до уровня 6
+**Доска и карточка**
+| Изменение | Закреплено |
+| --- | --- |
+| Инструменты в две строки, быстрые отборы | e2e «шапка доски не съедает экран»; dom:FilterBar.dom.test.tsx |
+| Плотная карточка в две строки | глаз: снимки доски; e2e:perf.spec.ts (размер) |
+| Шапка колонки: лимит полосой, средний возраст | dom:Board.dom «шапка колонки» (2); e2e «шапка колонки показывает полосу лимита» |
+| Кромка возраста | dom:Board.dom «кромка возраста» (3); dom:board model.test.ts |
+| «Требует внимания» | dom:Board.dom; e2e «собирает то, что стоит, и сворачивается» |
+| Метки на карточке, три области, из карточки, несколько разом, цвет | go:board labels_test, labels_scope_test; dom:LabelPicker.dom.test.tsx; e2e «несколько меток» |
+| Блокировка со сроком, правка причины | go:board block_until_test, block_reason_test |
+| «Ждёт» уходит, когда сделано | e2e «„Ждёт“ пропадает с карточки» |
+| Закрытие с открытыми частями спрашивает | e2e board.spec.ts (коммит 7af3589) |
+| Режим панели и «Закрыть» над названием | e2e board.spec.ts («Как показывать панель») |
+| Открытие карточки хранит отбор | e2e board.spec.ts (коммит 85ab3bf) |
+| Ширина колонки мышью, панель освобождает место | dom:ColumnResizer.dom.test.tsx, columnWidth.test.ts; e2e «панель над доской не обрезается» |
+| Перенос колонки с карточками | go:board TestColumnMovesWithItsCards |
+| Отметка изменённых другими | go:board TestSnapshotCarriesRecentChanges; e2e «изменённая другим подсвечена» |
+| Красное — «остановлено» | dom:app/tokens.test.ts |
 
-**Права (этап 31)**
-- Приглашение в подразделение — `go:org:subdivision_invite_test`
-- Назначение ниже себя — `go:team:appoint_test`
-- Удаление и стирание в поддереве — `go:board:subdivision_purge_test`, `go:org:subdivision_erase_test`
-- Журнал поддерева — `go:httpapi:subtree_audit_test`
-- Экраны «Команда» и «Структура» глазами владельца подразделения — **глаз**: `20г`, `20д`
+**Права и структура**
+| Изменение | Закреплено |
+| --- | --- |
+| Владелец подразделения: приглашения, назначения, необратимое, журнал | go:org subdivision_invite_test, subdivision_erase_test; go:team appoint_test; go:board subdivision_purge_test; go:httpapi subtree_audit_test, contract_codes_test |
+| «Структура»: одно меню ⋮, два действия спрашивают | dom:Structure.dom.test.tsx; dom:app/actions.test.ts |
+| Экраны «Команда» и «Структура» глазами владельца подразделения | глаз: снимки 20г, 20д |
 
-**Структура**
-- Одно меню ⋮ на строку; два действия спрашивают первыми —
+**Держится только глазом:** плотная карточка и экраны владельца
+подразделения — до визуальных эталонов уровня 6.
