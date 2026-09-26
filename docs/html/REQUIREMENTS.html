@@ -182,6 +182,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>П14</td><td>Страница не листается вбок на узком экране и не теряет содержимое при двойном размере текста</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
 <tr><td>П15</td><td>Просьба меньше движения заменяет движение, а не выключает объяснение перемещения</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/app/motion.test.ts</code></td></tr>
 <tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски</td><td>не закреплено: проверяется чтением, машинной проверки на «сказано по-русски и понятно» у нас нет</td></tr>
+<tr><td>П19</td><td>Фоновые задачи (снятие блокировок по сроку, уведомления по времени, закрытие итераций) безопасны на нескольких репликах: без ошибок и без двойников</td><td><code>internal/board/replicas_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="установка-и-обновление">Установка и обновление</h2>
@@ -224,6 +225,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Б14</td><td>Всякий ответ несёт заголовки безопасности: политику содержимого, запрет рамки и угадывания типа; HSTS — там, где https</td><td><code>internal/httpapi/headers_test.go</code></td></tr>
 <tr><td>Б15</td><td>Бинарник выпускается отдельным файлом с суммой, и пересборка того же тега даёт те же байты</td><td><code>Makefile</code>, цели tarball и binary; шаг сверки в выпуске</td></tr>
 <tr><td>Б16</td><td>Журнал действий пишется базой у каждой таблицы под ним, не содержит секретов и каждая запись названа на экране в обоих языках</td><td><code>internal/store/audit_triggers_test.go</code></td></tr>
+<tr><td>Б17</td><td>Функция политик не отвечает «неизвестно» (NULL) ни на каком входе: под not() это стало бы пропуском</td><td><code>internal/store/policy_nulls_test.go</code></td></tr>
 </tbody>
 </table></div>
 <h2 id="совместимость">Совместимость</h2>
@@ -258,7 +260,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-134-g47ce65a-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-135-g1299736-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
