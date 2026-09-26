@@ -106,7 +106,9 @@ operator and leaves no processor on our side; under GDPR the same shape
 means there is no transfer to a third party to legitimise.
 
 **Erasure.** `DELETE /api/members/{userId}/identity` (**Erase data**
-for an owner) anonymises a person: the name becomes `Удалённый
+for the organisation owner, and for a subdivision owner when the person
+belongs only to subdivisions of their subtree — the database decides,
+function `app_can_erase`) anonymises a person: the name becomes `Удалённый
 участник`, the e-mail becomes an address in the reserved `.invalid`
 domain, the password hash and the OIDC binding are emptied, sessions, sign-in
 links and invitations addressed to them are deleted, and the fact itself is

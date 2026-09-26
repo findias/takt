@@ -933,7 +933,7 @@ func deleteCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return Patch{}, badRequestf("разбор DELETE_CARD: %v", err)
 	}
-	if err := requireOwner(ctx, tx); err != nil {
+	if err := requireRunsBoard(ctx, tx, boardID); err != nil {
 		return Patch{}, err
 	}
 
@@ -959,16 +959,17 @@ func deleteCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	return Patch{RemovedCardIDs: []string{id}}, nil
 }
 
-// requireOwner спрашивает у базы, а не у переданной роли: политики
-// удаления опираются на ту же функцию, и разойтись этим двум ответам
-// негде.
-func requireOwner(ctx context.Context, tx pgx.Tx) error {
-	var owner bool
-	if err := tx.QueryRow(ctx, `select app_is_owner()`).Scan(&owner); err != nil {
+// requireRunsBoard спрашивает у базы, а не у переданной роли: политики
+// удаления опираются на ту же функцию (app_runs_board, 0074), и
+// разойтись этим двум ответам негде. Отказ до удаления нужен ради
+// объяснения: сама политика ответила бы молчаливым «ноль строк».
+func requireRunsBoard(ctx context.Context, tx pgx.Tx, boardID string) error {
+	var runs bool
+	if err := tx.QueryRow(ctx, `select app_runs_board($1)`, boardID).Scan(&runs); err != nil {
 		return err
 	}
-	if !owner {
-		return ErrOwnerOnly
+	if !runs {
+		return ErrPurgeNotYours
 	}
 	return nil
 }

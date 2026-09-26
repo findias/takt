@@ -232,6 +232,20 @@ export function Team({ principal }: { principal: Principal }) {
                     {t.team.erase}
                   </button>
                 </div>
+              ) : m.erasable ? (
+                /* Владелец подразделения стирает того, кто весь внутри его
+                   поддерева: остальное с человеком — роль, исключение,
+                   почта — остаётся за владельцем организации. */
+                <div className="row">
+                  <span className="role-chip">{ROLE_NAMES[m.role]}</span>
+                  <button
+                    className="link link--danger"
+                    onClick={() => setToErase(m)}
+                    aria-label={t.team.eraseOf(m.name)}
+                  >
+                    {t.team.erase}
+                  </button>
+                </div>
               ) : (
                 <span className="role-chip">{ROLE_NAMES[m.role]}</span>
               )}

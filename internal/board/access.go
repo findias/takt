@@ -528,7 +528,7 @@ var ErrBoardNotArchived = errors.New("удалить можно только д�
 // здесь: базе не с чем сравнивать намерение.
 func (s *Service) Delete(ctx context.Context, orgID, actorID, boardID, confirmName string) error {
 	return translateAccess(s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		if err := requireOwner(ctx, tx); err != nil {
+		if err := requireRunsBoard(ctx, tx, boardID); err != nil {
 			return err
 		}
 
@@ -691,7 +691,8 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 		rows, err := tx.Query(ctx, `
 			select `+boardFields+`, visibility, team_id,
 			       (select count(*) from cards c
-			         where c.board_id = boards.id and c.archived_at is null)
+			         where c.board_id = boards.id and c.archived_at is null),
+			       app_runs_board(boards.id)
 			  from boards
 			 where archived_at is not null
 			 order by archived_at desc`)
@@ -704,13 +705,15 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var visibility string
 			var teamID *string
 			var cards int
+			var runs bool
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &visibility, &teamID, &cards, &runs); err != nil {
 				return err
 			}
 			b.Visibility = &visibility
 			b.TeamID = teamID
 			b.Cards = &cards
+			b.CanPurge = &runs
 			out = append(out, b)
 		}
 		return rows.Err()

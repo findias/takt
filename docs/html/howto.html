@@ -233,7 +233,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>A card holds as many tickets as it needs: work often answers three service requests and ships with one change request. The list is ordered by kind; an address opens in a new browser tab, a number stays text. <strong>Remove</strong> takes a ticket off. Both show on the card&#39;s <strong>History</strong> tab. Below the tickets, <strong>Tasks</strong> holds the parent, the subtasks and the links to other cards.</p>
 <h3 id="archive">Take a card off the board</h3>
 <p>Hover the card, open the <strong>…</strong> menu and choose <strong>Archive</strong>. A message appears with a <strong>Restore</strong> button, in case that was the wrong card.</p>
-<p>Archived cards sit in <strong>Archive</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone.</p>
+<p>Archived cards sit in <strong>Archive</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone. It is offered to the organisation owner and to the owner of the board&#39;s subdivision.</p>
 <h3 id="iterations">Run a sprint or a release</h3>
 <ol>
 <li>In the strip above the board press <strong>+ iteration</strong>.</li>
@@ -339,6 +339,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>Erase data</strong> — name and e-mail are erased, the traces of their work remain unnamed. Irreversible, and asked about separately.</li>
 </ul>
 <p>If someone left but the work must stay traceable, the first is enough.</p>
+<p>A subdivision owner sees <strong>Erase data</strong> too, but only next to people who belong solely to subdivisions of their subtree; everything else about a person stays with the organisation owner.</p>
 <h3 id="structure">Set up subdivisions</h3>
 <ol>
 <li>The <strong>Structure</strong> tab.</li>
@@ -385,7 +386,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-125-gbd96fca-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-126-g5da27e3-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

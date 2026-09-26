@@ -395,7 +395,9 @@ Hover the card, open the **…** menu and choose **Archive**. A message appears 
 case that was the wrong card.
 
 Archived cards sit in **Archive** and come back from there at any time.
-Deleting for good asks for confirmation and cannot be undone.
+Deleting for good asks for confirmation and cannot be undone. It is
+offered to the organisation owner and to the owner of the board's
+subdivision.
 
 <!-- anchor: iterations -->
 ### Run a sprint or a release
@@ -753,6 +755,10 @@ Pick one of two; they do different things:
   separately.
 
 If someone left but the work must stay traceable, the first is enough.
+
+A subdivision owner sees **Erase data** too, but only next to people
+who belong solely to subdivisions of their subtree; everything else
+about a person stays with the organisation owner.
 
 <!-- anchor: structure -->
 ### Set up subdivisions

@@ -254,8 +254,8 @@ func (s *Server) handleDeleteBoard(w http.ResponseWriter, r *http.Request, p aut
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
-	case errors.Is(err, board.ErrOwnerOnly):
-		writeError(w, http.StatusForbidden, board.ErrOwnerOnly.Error())
+	case errors.Is(err, board.ErrPurgeNotYours):
+		writeCoded(w, http.StatusForbidden, "purge_not_yours", board.ErrPurgeNotYours.Error())
 	case errors.Is(err, board.ErrBoardNotArchived):
 		writeError(w, http.StatusConflict, board.ErrBoardNotArchived.Error())
 	case errors.Is(err, board.ErrNameMismatch):

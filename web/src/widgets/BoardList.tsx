@@ -192,13 +192,11 @@ export function BoardList({
             .then((r) => setArchived(r.boards))
             .catch((e) => setError(e instanceof Error ? e.message : t.boards.restoreFailed))
         }
-        // Удалять насовсем может один владелец: действие необратимо,
-        // и уносит оно работу целой команды.
-        onDelete={
-          principal.role === 'owner'
-            ? (board) => setToDelete(board)
-            : undefined
-        }
+        // Удалять насовсем может тот, кто доской распоряжается: владелец
+        // организации или владелец её подразделения. Кому можно, сервер
+        // говорит у каждой доски (canPurge); старый сервер — по роли.
+        onDelete={(board) => setToDelete(board)}
+        canPurge={(board) => board.canPurge ?? principal.role === 'owner'}
       />
 
       {/* Название набирают руками, а не просто подтверждают. Вопрос
@@ -387,6 +385,7 @@ function Archive({
   onOpen,
   onRestore,
   onDelete,
+  canPurge,
 }: {
   boards: BoardInfo[] | null
   teams: Team[]
@@ -395,6 +394,7 @@ function Archive({
   onRestore: (id: string) => void
   /** Пусто — удалять насовсем нельзя: так у всех, кроме владельца. */
   onDelete?: (board: BoardInfo) => void
+  canPurge: (board: BoardInfo) => boolean
 }) {
   if (boards === null) {
     return (
@@ -433,7 +433,7 @@ function Archive({
                 {t.boards.restore}
               </button>
             )}
-            {onDelete && (
+            {onDelete && canPurge(b) && (
               <button
                 className="link link--danger"
                 aria-label={t.boards.deleteForeverOf(b.name)}

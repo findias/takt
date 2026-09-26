@@ -383,6 +383,10 @@ export function Board({
   // целиком (этап 32.4): из отбора, группировки, карточек и таблицы.
   // Данные не трогаются, включение вернёт всё как было.
   const iterationsOn = base?.info.iterationsEnabled !== false
+  // Удалить насовсем может тот, кто доской распоряжается: владелец
+  // организации или владелец её подразделения. Отвечает сервер;
+  // старый сервер поля не знает — тогда, как прежде, по роли.
+  const canPurge = base?.info.canPurge ?? isOwner
   const { order, partIds, hidden } = useMemo(() => {
     if (!base)
       return {
@@ -1199,7 +1203,7 @@ export function Board({
         }
         onRenameCard={renameCard}
         onArchiveCard={archiveCard}
-        onDeleteCard={isOwner ? askDelete : undefined}
+        onDeleteCard={canPurge ? askDelete : undefined}
       />
     ))
 
@@ -1660,7 +1664,7 @@ export function Board({
         <Suspense fallback={<Skeleton lines={3} />}>
         <CardArchive
           boardId={boardId}
-          canDelete={isOwner}
+          canDelete={canPurge}
           reloadKey={archiveKey}
           onRestored={board.reload}
           onDelete={askDelete}

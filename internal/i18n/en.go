@@ -94,7 +94,10 @@ var en = map[string]string{
 		"владелец подразделения приглашает участником или наблюдателем в своё подразделение": "only the organisation owner can invite into the whole organisation or as an owner; " +
 		"a subdivision owner invites members or viewers into their own subdivision",
 	"это приглашение может отозвать владелец организации или владелец его подразделения": "this invite can be revoked by the organisation owner or the owner of its subdivision",
-	"подразделение убрано в архив или не найдено — выберите другое":                      "the subdivision is archived or does not exist — choose another one",
+	"стереть данные этого человека может владелец организации; владелец подразделения — " +
+		"только того, кто состоит лишь в подразделениях его поддерева": "the organisation owner can erase this person's data; a subdivision owner only " +
+		"someone who belongs solely to subdivisions of their subtree",
+	"подразделение убрано в архив или не найдено — выберите другое": "the subdivision is archived or does not exist — choose another one",
 	"организация не найдена":                              "organisation not found",
 	"себя обезличить нельзя":                              "you cannot anonymise yourself",
 	"участник не найден":                                  "member not found",
@@ -133,13 +136,13 @@ var en = map[string]string{
 	"раздел %s: %s":                                            "section %s: %s",
 
 	// --- Доски и доступ ---
-	"доска не найдена":                                             "board not found",
-	"доска в архиве":                                               "the board is archived",
-	"доска доступна вам только для чтения":                         "you have read-only access to this board",
-	"удалить насовсем может только владелец организации":           "only the organisation owner can delete for good",
-	"ключ доски — от двух до шести букв или цифр, начиная с буквы": "a board key is two to six letters or digits, starting with a letter",
-	"такой ключ уже занят другой доской":                           "another board already uses this key",
-	"у доски должно быть название":                                 "the board needs a name",
+	"доска не найдена":                     "board not found",
+	"доска в архиве":                       "the board is archived",
+	"доска доступна вам только для чтения": "you have read-only access to this board",
+	"удалить насовсем может владелец организации или владелец подразделения этой доски": "the organisation owner or the owner of this board's subdivision can delete for good",
+	"ключ доски — от двух до шести букв или цифр, начиная с буквы":                      "a board key is two to six letters or digits, starting with a letter",
+	"такой ключ уже занят другой доской":                                                "another board already uses this key",
+	"у доски должно быть название":                                                      "the board needs a name",
 	"Проекты":  "Projects",
 	"Очередь":  "Queue",
 	"В работе": "In progress",

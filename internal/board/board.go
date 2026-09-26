@@ -37,11 +37,11 @@ var ErrArchivedBoard = errors.New("доска в архиве")
 // несуществующую поломку.
 var ErrReadOnlyBoard = errors.New("доска доступна вам только для чтения")
 
-// ErrOwnerOnly — действие необратимо, и потому доступно одному владельцу
-// организации. Администратор подразделения сюда не допущен намеренно:
-// его полномочие про то, как идёт работа, а не про то, чтобы стереть
-// её следы.
-var ErrOwnerOnly = errors.New("удалить насовсем может только владелец организации")
+// ErrPurgeNotYours — удалить насовсем может тот, кто распоряжается
+// доской: владелец организации или владелец подразделения, которому она
+// принадлежит (этап 31, 0074). Прежде — один владелец организации.
+var ErrPurgeNotYours = errors.New(
+	"удалить насовсем может владелец организации или владелец подразделения этой доски")
 
 // ErrBadKey — ключ доски не годится в префикс номера. ErrKeyTaken — годится,
 // но уже занят. Разные ошибки потому, что и поправить их нужно по-разному:
@@ -99,6 +99,10 @@ type Info struct {
 	// команде». Без него строка списка отвечает «своей» тому, кто
 	// состоит в трёх подразделениях сразу, и ответом это не является.
 	TeamID *string `json:"teamId,omitempty"`
+	// CanPurge — может ли спрашивающий удалить доску или её карточку
+	// насовсем (app_runs_board, 0074). Отвечает база, а не роль: клиент
+	// не показывает кнопку, ведущую в отказ. Пусто там, где не спрашивали.
+	CanPurge *bool `json:"canPurge,omitempty"`
 }
 
 // boardFields — общий список полей доски, по тем же соображениям, что
@@ -639,6 +643,13 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 			select `+boardFields+` from boards
 			 where id = $1 and archived_at is null`, boardID))
 		snap.Board = info
+		if err == nil {
+			var runs bool
+			if err := tx.QueryRow(ctx, `select app_runs_board($1)`, boardID).Scan(&runs); err != nil {
+				return err
+			}
+			snap.Board.CanPurge = &runs
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Доска чужой организации неотличима от несуществующей —
 			// и это правильный ответ: подтверждать её существование

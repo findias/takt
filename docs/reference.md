@@ -20,7 +20,7 @@ Beyond roles, the owner appoints (and a subdivision owner, below their own node)
 
 | Appointment | What it grants |
 | --- | --- |
-| Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers; appoints and removes owners of the nodes below their own |
+| Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers; appoints and removes owners of the nodes below their own; deletes its boards and cards for good and erases people who belong only to it |
 | Area observer | reads everything in their subtree |
 
 ## Board visibility

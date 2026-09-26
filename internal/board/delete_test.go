@@ -105,7 +105,7 @@ func TestDeleteCardIsOwnerOnly(t *testing.T) {
 		Type:        "DELETE_CARD",
 		Payload:     mustJSON(t, map[string]any{"cardId": id}),
 	})
-	if !errors.Is(err, ErrOwnerOnly) {
+	if !errors.Is(err, ErrPurgeNotYours) {
 		t.Fatalf("ожидался отказ по праву, получено %v", err)
 	}
 	if n := f.countRows(`select count(*) from cards where id = $1`, id); n != 1 {
@@ -134,7 +134,7 @@ func TestDeleteBoardRequiresArchiveOwnerAndName(t *testing.T) {
 
 	// Не тот человек.
 	member := addMember(t, f.svc.db, f.orgID, "member")
-	if err := f.svc.Delete(f.ctx, f.orgID, member, f.boardID, name); !errors.Is(err, ErrOwnerOnly) {
+	if err := f.svc.Delete(f.ctx, f.orgID, member, f.boardID, name); !errors.Is(err, ErrPurgeNotYours) {
 		t.Fatalf("удалить смог не владелец: %v", err)
 	}
 

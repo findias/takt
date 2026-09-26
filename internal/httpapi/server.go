@@ -149,7 +149,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/members/{userId}", s.owner(s.handleRemoveMember))
 	// Исключение и обезличивание — разные действия и потому разные пути:
 	// первое обратимо приглашением, второе не обратимо ничем.
-	mux.HandleFunc("DELETE /api/members/{userId}/identity", s.owner(s.handleEraseMember))
+	// Стирает владелец организации или владелец подразделения — того,
+	// кто весь внутри его поддерева; решает база (app_can_erase, 0074).
+	mux.HandleFunc("DELETE /api/members/{userId}/identity", s.authed(s.handleEraseMember))
 
 	// Приглашение открывают по секретной ссылке — до входа и до аккаунта.
 	//
@@ -720,6 +722,14 @@ func (s *Server) handleTeam(w http.ResponseWriter, r *http.Request, p auth.Princ
 		s.fail(w, "состав команды", err)
 		return
 	}
+	erasable, err := s.orgs.ErasableBy(r.Context(), p.OrgID, p.ID)
+	if err != nil {
+		s.fail(w, "кого можно стереть", err)
+		return
+	}
+	for i := range members {
+		members[i].Erasable = erasable[members[i].UserID]
+	}
 	body := map[string]any{"members": members, "invites": []any{}}
 	// Приглашения видит тот, кто вправе их делать: владелец — все,
 	// владелец подразделения — в своё поддерево, прочие — ни одного.
@@ -837,6 +847,8 @@ func (s *Server) handleEraseMember(w http.ResponseWriter, r *http.Request, p aut
 	switch {
 	case errors.Is(err, org.ErrSharedIdentity), errors.Is(err, org.ErrServiceIdentity):
 		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, org.ErrEraseNotYours):
+		writeCoded(w, http.StatusForbidden, "erase_not_yours", err.Error())
 	default:
 		s.writeMembershipResult(w, err, "обезличивание участника")
 	}
@@ -1056,8 +1068,8 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrBadRequest):
 		writeError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, board.ErrOwnerOnly):
-		writeError(w, http.StatusForbidden, board.ErrOwnerOnly.Error())
+	case errors.Is(err, board.ErrPurgeNotYours):
+		writeCoded(w, http.StatusForbidden, "purge_not_yours", board.ErrPurgeNotYours.Error())
 	case errors.Is(err, board.ErrIterationClosed),
 		errors.Is(err, board.ErrCardInAnotherIteration):
 		// Не сбой и не ошибка запроса: правило итерации, о котором надо

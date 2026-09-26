@@ -44,6 +44,12 @@ var (
 	ErrRevokeNotYours = errors.New(
 		"это приглашение может отозвать владелец организации или владелец его подразделения")
 
+	// ErrEraseNotYours — стереть этого человека спрашивающий не вправе:
+	// человек не весь внутри его поддерева (app_can_erase, 0074).
+	ErrEraseNotYours = errors.New(
+		"стереть данные этого человека может владелец организации; владелец подразделения — " +
+			"только того, кто состоит лишь в подразделениях его поддерева")
+
 	// ErrInviteTeamGone — узел приглашения убран в архив или не существует.
 	ErrInviteTeamGone = errors.New("подразделение убрано в архив или не найдено — выберите другое")
 
@@ -89,6 +95,36 @@ type Member struct {
 	// а пароль он ещё не задал: ему нужна ссылка (IssuePasswordLink).
 	// Выпустить её можно тем же, кому можно сменить почту.
 	AwaitingPassword bool `json:"awaitingPassword"`
+	// Erasable — может ли спрашивающий стереть данные этого человека
+	// (app_can_erase, 0074). Заполняет ErasableBy; клиент не показывает
+	// кнопку, ведущую в отказ.
+	Erasable bool `json:"erasable"`
+}
+
+// ErasableBy — кого из организации человек вправе стереть. Отвечает
+// та же функция базы, что держит стирание и приглашения.
+func (s *Service) ErasableBy(ctx context.Context, orgID, userID string) (map[string]bool, error) {
+	out := map[string]bool{}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			select m.user_id from memberships m
+			  join users u on u.id = m.user_id
+			 where m.org_id = $1 and u.kind = 'person' and u.anonymized_at is null
+			   and m.user_id <> $2 and app_can_erase(m.user_id)`, orgID, userID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			out[id] = true
+		}
+		return rows.Err()
+	})
+	return out, err
 }
 
 // KindService — личность, за которой стоит ключ интеграции, а не человек.
@@ -281,8 +317,21 @@ func (s *Service) Remove(ctx context.Context, orgID, actorID, userID string) err
 // обезличить человека, состоящего не только здесь (см. ErrSharedIdentity).
 // Такие приглашения убирает срок хранения: месяц после того, как
 // перестали действовать.
+//
+// Кто вправе, решает база (app_can_erase, 0074): владелец организации —
+// любого, владелец подразделения — того, кто весь внутри его поддерева.
+// Таблицы личности без политик, поэтому функция спрашивается здесь;
+// приглашения этого человека вне области стирающего политика managed
+// открывает той же функцией.
 func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) error {
 	return s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var may bool
+		if err := tx.QueryRow(ctx, `select app_can_erase($1)`, userID).Scan(&may); err != nil {
+			return err
+		}
+		if !may {
+			return ErrEraseNotYours
+		}
 		if err := ensureOtherOwnerExists(ctx, tx, orgID, userID); err != nil {
 			return err
 		}
@@ -302,14 +351,10 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			return err
 		}
 
-		// Участие снимается первым: его удаление пишется в журнал
-		// триггером, и в журнале это видно как отдельный факт.
-		if _, err := tx.Exec(ctx,
-			`delete from memberships where org_id = $1 and user_id = $2`,
-			orgID, userID); err != nil {
-			return err
-		}
-
+		// Приглашения убираются до участия: приглашения вне области
+		// владельца подразделения открывает ему app_can_erase, а она
+		// узнаёт человека по участию — снятое участие спрятало бы их.
+		//
 		// Приглашения этого человека убираются здесь же, а не ждут своего
 		// месяца в уборке: строка приглашения хранит почту, а обещано,
 		// что персональных данных не останется. Ищем и по адресу, и по
@@ -325,6 +370,15 @@ func (s *Service) Erase(ctx context.Context, orgID, actorID, userID string) erro
 			userID, email); err != nil {
 			return err
 		}
+
+		// Участие снимается отдельным шагом: его удаление пишется
+		// в журнал триггером, и в журнале это видно как отдельный факт.
+		if _, err := tx.Exec(ctx,
+			`delete from memberships where org_id = $1 and user_id = $2`,
+			orgID, userID); err != nil {
+			return err
+		}
+
 		if _, err := tx.Exec(ctx, `delete from sessions where user_id = $1`, userID); err != nil {
 			return err
 		}
