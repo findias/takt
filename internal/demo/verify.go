@@ -262,6 +262,16 @@ func TopUp(ctx context.Context, db *store.Store) error {
 	if err != nil {
 		return err
 	}
+	return TopUpOrg(ctx, db, orgID, ownerID)
+}
+
+// TopUpOrg доливает названную организацию, наполненную демо, — стенд
+// или песочницу. Отдельный вход нужен проверкам: долив проверяется
+// на своей песочнице, а не на стенде общей базы разработки — прежде
+// каждый make check сдвигал идущую итерацию стенда в прошлое и оставлял
+// на нём ещё одну закрытую «Неделю 39» (найдено 26.09.2026 на
+// визуальных эталонах: их было четырнадцать).
+func TopUpOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error {
 	f := newFiller(ctx, db)
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
 	if err := f.imported(); err != nil {

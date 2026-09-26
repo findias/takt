@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -110,19 +111,14 @@ func TestTopUpRenewsBlockDeadlinesThatRanOut(t *testing.T) {
 func TestTopUpRenewsTheRunningIterationThatEnded(t *testing.T) {
 	ctx := context.Background()
 	db := testdb.Open(t)
-	err := Fill(ctx, db)
-	if err != nil && !errors.Is(err, ErrAlreadyFilled) {
-		t.Fatalf("наполнение: %v", err)
+	// Своя песочница, а не стенд: проверка сдвигает итерации в прошлое,
+	// и на стенде общей базы каждый прогон оставлял лишнюю закрытую.
+	box, err := FillSandbox(ctx, db, time.Hour)
+	if err != nil {
+		t.Fatalf("песочница: %v", err)
 	}
-	var orgID, ownerID string
-	if err := db.Pool.QueryRow(ctx, `
-		select o.id, u.id from orgs o
-		  join memberships m on m.org_id = o.id
-		  join users u on u.id = m.user_id
-		 where o.name = $1 and lower(u.email) = $2`, OrgName, People[0].Email).
-		Scan(&orgID, &ownerID); err != nil {
-		t.Fatalf("организация стенда: %v", err)
-	}
+	t.Cleanup(func() { _ = RemoveSandbox(context.Background(), db, box.OrgID) })
+	orgID, ownerID := box.OrgID, box.OwnerID
 	// Время прошло: идущая итерация кончилась позавчера, заведена
 	// до своего конца, а карточки в неё положили тогда же.
 	if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
@@ -144,14 +140,14 @@ func TestTopUpRenewsTheRunningIterationThatEnded(t *testing.T) {
 	if _, err := board.New(db).CloseDueIterations(ctx); err != nil {
 		t.Fatalf("закрытие по календарю: %v", err)
 	}
-	if err := Verify(ctx, db); err == nil {
+	if err := VerifyOrg(ctx, db, orgID, ownerID); err == nil {
 		t.Fatal("сверка прошла без идущей итерации — проверка ничего не проверяет")
 	}
 
-	if err := TopUp(ctx, db); err != nil {
+	if err := TopUpOrg(ctx, db, orgID, ownerID); err != nil {
 		t.Fatalf("долив: %v", err)
 	}
-	if err := Verify(ctx, db); err != nil {
+	if err := VerifyOrg(ctx, db, orgID, ownerID); err != nil {
 		t.Errorf("после долива: %v", err)
 	}
 	var carried int
