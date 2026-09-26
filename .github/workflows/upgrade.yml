@@ -1,0 +1,39 @@
+# Обновление с прошлого выпуска — по-настоящему (PROMPT-TESTING.md,
+# уровень 1; REQUIREMENTS У14). Проверка совместимости миграций в
+# `make check` читает SQL глазами регулярных выражений и не видит, как
+# старый бинарник ведёт себя на новой схеме; этот прогон запускает его.
+#
+# Отдельно от «Проверки» потому, что нужна сеть: образ прошлого выпуска
+# тянется из реестра. Выпуск гоняет то же самое сам (release.yml).
+name: Обновление
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: обновление-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Тег прошлого выпуска ищется по истории.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Обновление с прошлого выпуска
+        run: make upgrade-check

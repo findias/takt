@@ -492,7 +492,12 @@ kubectl exec deploy/takt -- /app/takt doctor
    serving, but the rollout hangs.
 2. **Migrations run before pods are replaced,** as the `takt-migrate`
    job with a `pre-upgrade` hook. Until it passes, no new pod starts; a
-   failed job stays in the cluster, and that is what you read.
+   failed job stays in the cluster, and that is what you read. Between
+   the end of the job and the rollout the previous version runs on the
+   new schema; every release is checked for exactly that before it is
+   published — the previous release's binary on the new schema, the new
+   one on the old data, and the old one again as a rollback
+   (`make upgrade-check`).
 3. **`--reuse-values` is mandatory** if anything was set at install
    time. Without it `helm upgrade` takes the chart defaults, and
    `signup`, `oidc` and the rest quietly revert.

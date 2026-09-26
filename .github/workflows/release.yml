@@ -68,8 +68,27 @@ jobs:
   # заказчику, собирается тем же Dockerfile у него самого:
   # `make image BASE=своё RUNTIME_BASE=...` — заводить его именем
   # в общей сборке незачем.
+  # Обновление с прошлого выпуска — до сборки образов: выпуск, который
+  # ломает старую версию в окне pre-upgrade, не должен попасть в реестр.
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # Прошлый выпуск — тег перед собираемым, а не последний вообще:
+      # последний вообще — это сам собираемый.
+      - name: Обновление с прошлого выпуска
+        run: make upgrade-check PREVIOUS="$(git describe --tags --abbrev=0 "${TAG}^")"
+
   images:
-    needs: check
+    needs: [check, upgrade]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -248,7 +267,7 @@ jobs:
             .
 
   artifacts:
-    needs: check
+    needs: [check, upgrade]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

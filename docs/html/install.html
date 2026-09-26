@@ -337,7 +337,7 @@ helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;new version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <ol>
 <li><strong>The image travels first, the release is upgraded second.</strong> An upgrade to an image that is not in the mirror leaves pods in <code>ImagePullBackOff</code>; with <code>maxUnavailable: 0</code> the old ones keep serving, but the rollout hangs.</li>
-<li><strong>Migrations run before pods are replaced,</strong> as the <code>takt-migrate</code> job with a <code>pre-upgrade</code> hook. Until it passes, no new pod starts; a failed job stays in the cluster, and that is what you read.</li>
+<li><strong>Migrations run before pods are replaced,</strong> as the <code>takt-migrate</code> job with a <code>pre-upgrade</code> hook. Until it passes, no new pod starts; a failed job stays in the cluster, and that is what you read. Between the end of the job and the rollout the previous version runs on the new schema; every release is checked for exactly that before it is published — the previous release&#39;s binary on the new schema, the new one on the old data, and the old one again as a rollback (<code>make upgrade-check</code>).</li>
 <li><strong><code>--reuse-values</code> is mandatory</strong> if anything was set at install time. Without it <code>helm upgrade</code> takes the chart defaults, and <code>signup</code>, <code>oidc</code> and the rest quietly revert.</li>
 <li><strong><code>doctor</code> afterwards</strong> answers what readiness does not: right schema, right address, provider reachable, notifications arriving.</li>
 </ol>
@@ -356,7 +356,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.2.3-127-g6d7ad8c-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-131-g3c70528-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

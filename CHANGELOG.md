@@ -40,7 +40,12 @@ boards and cards for good and erase people wholly inside their subtree,
 lets a subdivision owner read the log of their subtree. They
 run in the
 `pre-upgrade` hook as usual; pods of v0.2.3 keep working on the new
-schema, and `helm rollback` of the pods needs nothing else.
+schema, and `helm rollback` of the pods needs nothing else. This is now
+checked, not promised: before every release an automated run takes a
+database created and filled by the previous release's own binary,
+applies the new migrations, runs the old binary on the new schema, the
+new one on the old data and the old one again as a rollback, and
+counts the rows (`make upgrade-check`).
 
 **A subdivision administrator is now a subdivision owner, and invites
 people.** Same appointment, new name, four more powers. They appoint and

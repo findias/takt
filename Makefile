@@ -290,6 +290,17 @@ load: db migrate ## Поведение под нагрузкой (идёт ми�
 	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \
 	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit' ./internal/board/ ./internal/httpapi/ ./internal/report/
 
+# Обновление с прошлого выпуска — по-настоящему: база и данные заводятся
+# бинарником прошлого выпуска из его образа, поверх идут наши миграции,
+# затем старый бинарник работает на новой схеме (окно pre-upgrade),
+# новый — на старых данных, старый — после отката. Нужна сеть ради
+# образа, поэтому не в check; workflow «Обновление» и выпуск гоняют его сами.
+PREVIOUS ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+.PHONY: upgrade-check
+upgrade-check: db ## Обновление с прошлого выпуска: старый бинарник на новой схеме, новый на старых данных, откат
+	PREVIOUS="$(PREVIOUS)" ADMIN_DB_URL="$(DEV_ADMIN_DB_URL)" APP_DB_URL="$(DEV_DB_URL)" \
+	  NEW_LDFLAGS="$(VERSION_LDFLAGS)" ./scripts/upgrade-check.sh
+
 .PHONY: check
 check: ## Форматирование, vet и все тесты (кроме сквозных и нагрузочных)
 	gofmt -l . | tee /dev/stderr | (! read)
