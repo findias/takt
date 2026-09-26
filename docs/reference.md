@@ -20,7 +20,7 @@ Beyond roles, the owner appoints:
 
 | Appointment | What it grants |
 | --- | --- |
-| Subdivision administrator | runs their own subtree: membership, nested nodes, boards |
+| Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers |
 | Area observer | reads everything in their subtree |
 
 ## Board visibility

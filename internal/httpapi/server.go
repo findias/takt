@@ -135,8 +135,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/cards/search", s.human(s.handleSearchCards))
 	mux.HandleFunc("GET /api/cards/{id}/path", s.human(s.handleCardPath))
 	mux.HandleFunc("GET /api/cards/{id}/tree", s.human(s.handleCardTree))
-	mux.HandleFunc("POST /api/invites", s.owner(s.handleInvite))
-	mux.HandleFunc("DELETE /api/invites/{id}", s.owner(s.handleRevokeInvite))
+	// Приглашает владелец организации или владелец подразделения —
+	// в своё поддерево; кто вправе, решает политика (0072), а не роль.
+	mux.HandleFunc("POST /api/invites", s.authed(s.handleInvite))
+	mux.HandleFunc("DELETE /api/invites/{id}", s.authed(s.handleRevokeInvite))
 	mux.HandleFunc("PUT /api/members/{userId}/role", s.owner(s.handleSetRole))
 	mux.HandleFunc("PUT /api/members/{userId}/email", s.owner(s.handleSetMemberEmail))
 	mux.HandleFunc("POST /api/members/{userId}/password-link", s.owner(s.handleIssuePasswordLink))
@@ -719,10 +721,11 @@ func (s *Server) handleTeam(w http.ResponseWriter, r *http.Request, p auth.Princ
 		return
 	}
 	body := map[string]any{"members": members, "invites": []any{}}
-	// Список приглашений — сведения для администрирования, рядовым
-	// участникам он не нужен.
-	if p.CanAdmin() {
-		invites, err := s.orgs.PendingInvites(r.Context(), p.OrgID)
+	// Приглашения видит тот, кто вправе их делать: владелец — все,
+	// владелец подразделения — в своё поддерево, прочие — ни одного.
+	// Отбор в политике, поэтому спрашивается всегда.
+	{
+		invites, err := s.orgs.PendingInvites(r.Context(), p.OrgID, p.ID)
 		if err != nil {
 			s.fail(w, "список приглашений", err)
 			return
@@ -734,8 +737,9 @@ func (s *Server) handleTeam(w http.ResponseWriter, r *http.Request, p auth.Princ
 
 func (s *Server) handleInvite(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	var req struct {
-		Email string `json:"email"`
-		Role  string `json:"role"`
+		Email  string `json:"email"`
+		Role   string `json:"role"`
+		TeamID string `json:"teamId"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -743,10 +747,14 @@ func (s *Server) handleInvite(w http.ResponseWriter, r *http.Request, p auth.Pri
 	if req.Role == "" {
 		req.Role = auth.RoleMember
 	}
-	invite, err := s.orgs.Invite(r.Context(), p.OrgID, p.ID, req.Email, req.Role, s.cfg.BaseURL)
+	invite, err := s.orgs.Invite(r.Context(), p.OrgID, p.ID, req.Email, req.Role, req.TeamID, s.cfg.BaseURL)
 	switch {
 	case errors.Is(err, org.ErrAlreadyMember):
 		writeCoded(w, http.StatusConflict, "already_member", "этот человек уже в команде")
+	case errors.Is(err, org.ErrInviteNotYours):
+		writeCoded(w, http.StatusForbidden, "invite_not_yours", err.Error())
+	case errors.Is(err, org.ErrInviteTeamGone):
+		writeCoded(w, http.StatusConflict, "team_gone", err.Error())
 	case err != nil && !errors.Is(err, org.ErrNotFound):
 		if isUserError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
@@ -762,6 +770,10 @@ func (s *Server) handleRevokeInvite(w http.ResponseWriter, r *http.Request, p au
 	err := s.orgs.RevokeInvite(r.Context(), p.OrgID, p.ID, r.PathValue("id"))
 	if errors.Is(err, org.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "приглашение не найдено")
+		return
+	}
+	if errors.Is(err, org.ErrRevokeNotYours) {
+		writeCoded(w, http.StatusForbidden, "invite_not_yours", err.Error())
 		return
 	}
 	if err != nil {

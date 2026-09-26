@@ -98,7 +98,7 @@ export const ru = {
     throughput: 'Пропускная способность',
     forecast: 'Прогноз',
     roles: 'Роли',
-    subdivisionAdmin: 'Администратор подразделения',
+    subdivisionAdmin: 'Владелец подразделения',
     keyScopes: 'Разрешения ключа',
     subscription: 'Подписка на события',
     export: 'Выгрузка',

@@ -685,11 +685,17 @@ the message brings it back.
 ### Invite someone
 
 1. **Team** tab → **Invite** section.
-2. Enter an e-mail, pick a role, press **Invite**.
+2. Enter an e-mail, pick a role and a subdivision, press **Invite**.
 3. Send the link to the person.
 
 The link lasts a week, is bound to that address, and is shown once. If
 it gets lost, revoke the invitation and create a new one.
+
+The person joins the organisation and the chosen subdivision at once.
+A subdivision owner sees this section too: they invite members or
+viewers into their own subtree and see only their own invitations.
+Inviting into the whole organisation, or as an owner, is up to the
+organisation owner.
 
 ### Correct someone's email
 
@@ -757,7 +763,7 @@ If someone left but the work must stay traceable, the first is enough.
    of its row: **Create a department…**,
    **Rename…**, **Move…**, **Remove subdivision**. A question opens a
    field right under the row.
-4. Appoint a subdivision administrator in **Who runs what** — they will run their own subtree.
+4. Appoint a subdivision owner in **Who runs what** — they will run their own subtree and invite people into it.
 
 A removed subdivision is not gone: it waits under **Removed subdivisions** and comes back with
 **Restore**.

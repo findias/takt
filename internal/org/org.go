@@ -33,6 +33,20 @@ var (
 	ErrAlreadyMember = errors.New("этот человек уже в команде")
 	ErrLastOwner     = errors.New("в организации должен остаться хотя бы один владелец")
 
+	// ErrInviteNotYours — приглашать сюда этот человек не вправе. Отказ
+	// называет оба законных пути: выбрать своё подразделение или
+	// попросить владельца организации.
+	ErrInviteNotYours = errors.New(
+		"приглашать в организацию целиком и владельцем может только владелец организации; " +
+			"владелец подразделения приглашает участником или наблюдателем в своё подразделение")
+
+	// ErrRevokeNotYours — приглашение живое, но не в области отзывающего.
+	ErrRevokeNotYours = errors.New(
+		"это приглашение может отозвать владелец организации или владелец его подразделения")
+
+	// ErrInviteTeamGone — узел приглашения убран в архив или не существует.
+	ErrInviteTeamGone = errors.New("подразделение убрано в архив или не найдено — выберите другое")
+
 	// ErrSharedIdentity — личность живёт не только здесь. Обезличить её
 	// из одной организации значило бы стереть человека там, где о его
 	// удалении никто не просил.
@@ -86,6 +100,10 @@ type Invite struct {
 	Role      string    `json:"role"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	CreatedAt time.Time `json:"createdAt"`
+	// TeamID — узел, в который человек войдёт вместе с организацией;
+	// пусто — в организацию без узла.
+	TeamID   *string `json:"teamId"`
+	TeamName *string `json:"teamName"`
 	// Link заполняется только в ответе на создание: токен в базе не хранится,
 	// поэтому показать ссылку повторно невозможно.
 	Link string `json:"link,omitempty"`
@@ -500,7 +518,12 @@ func (s *Service) SetEstimateUnit(ctx context.Context, orgID, actorID, unit stri
 
 // Invite создаёт приглашение и возвращает ссылку. Ссылка показывается
 // один раз: в базе лежит только хеш токена.
-func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, baseURL string) (Invite, error) {
+//
+// Кто вправе звать и кем, решает политика `managed` (0072), а не
+// вызывающий: владелец организации — куда угодно и кем угодно,
+// владелец подразделения — в своё поддерево участником или
+// наблюдателем. Пустой teamID — приглашение без узла.
+func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, teamID, baseURL string) (Invite, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if !strings.Contains(email, "@") {
 		return Invite{}, fmt.Errorf("укажите почту")
@@ -526,15 +549,40 @@ func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, bas
 		return Invite{}, err
 	}
 
+	var team *string
+	if teamID != "" {
+		team = &teamID
+	}
+
 	var inv Invite
 	err = s.db.InTenant(ctx, orgID, invitedBy, func(tx pgx.Tx) error {
+		if team != nil {
+			// Узел проверяется до вставки: убранный в архив узел выпал бы
+			// из области владельца подразделения, и отказ «не вправе»
+			// отправил бы искать несуществующую поломку прав.
+			var alive bool
+			err := tx.QueryRow(ctx,
+				`select exists (select 1 from teams where id = $1 and archived_at is null)`,
+				*team).Scan(&alive)
+			if err != nil {
+				return err
+			}
+			if !alive {
+				return ErrInviteTeamGone
+			}
+		}
 		return tx.QueryRow(ctx, `
-			insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
-			values ($1, $2, $3, $4, $5, $6)
-			returning id, email, role, expires_at, created_at`,
-			orgID, email, role, hashToken(token), invitedBy, time.Now().Add(InviteTTL)).
-			Scan(&inv.ID, &inv.Email, &inv.Role, &inv.ExpiresAt, &inv.CreatedAt)
+			insert into invites (org_id, email, role, token_hash, invited_by, expires_at, team_id)
+			values ($1, $2, $3, $4, $5, $6, $7)
+			returning id, email, role, expires_at, created_at, team_id,
+			          (select name from teams where id = team_id)`,
+			orgID, email, role, hashToken(token), invitedBy, time.Now().Add(InviteTTL), team).
+			Scan(&inv.ID, &inv.Email, &inv.Role, &inv.ExpiresAt, &inv.CreatedAt,
+				&inv.TeamID, &inv.TeamName)
 	})
+	if policyRefused(err) {
+		return Invite{}, ErrInviteNotYours
+	}
 	if err != nil {
 		return Invite{}, err
 	}
@@ -542,22 +590,25 @@ func (s *Service) Invite(ctx context.Context, orgID, invitedBy, email, role, bas
 	return inv, nil
 }
 
-// PendingInvites возвращает неиспользованные приглашения организации.
-func (s *Service) PendingInvites(ctx context.Context, orgID string) ([]Invite, error) {
+// PendingInvites возвращает неиспользованные приглашения, которые
+// человек вправе видеть: владельцу — все, владельцу подразделения —
+// в его поддерево, остальным — ни одного. Отбирает политика.
+func (s *Service) PendingInvites(ctx context.Context, orgID, userID string) ([]Invite, error) {
 	out := []Invite{}
-	err := s.db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			select id, email, role, expires_at, created_at
-			  from invites
-			 where accepted_at is null and revoked_at is null and expires_at > now()
-			 order by created_at desc`)
+			select i.id, i.email, i.role, i.expires_at, i.created_at, i.team_id, t.name
+			  from invites i left join teams t on t.id = i.team_id
+			 where i.accepted_at is null and i.revoked_at is null and i.expires_at > now()
+			 order by i.created_at desc`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var i Invite
-			if err := rows.Scan(&i.ID, &i.Email, &i.Role, &i.ExpiresAt, &i.CreatedAt); err != nil {
+			if err := rows.Scan(&i.ID, &i.Email, &i.Role, &i.ExpiresAt, &i.CreatedAt,
+				&i.TeamID, &i.TeamName); err != nil {
 				return err
 			}
 			out = append(out, i)
@@ -576,10 +627,29 @@ func (s *Service) RevokeInvite(ctx context.Context, orgID, actorID, inviteID str
 			return err
 		}
 		if tag.RowsAffected() == 0 {
+			// Ноль строк — либо приглашения нет (или оно уже принято),
+			// либо оно вне области отзывающего: политика прячет чужие.
+			// Видимое значит своё, и тогда это «не найдено»; невидимое
+			// у не владельца — «не вправе», у владельца видно всё.
+			var visible, owner bool
+			if err := tx.QueryRow(ctx, `
+				select exists (select 1 from invites where id = $1), app_is_owner()`,
+				inviteID).Scan(&visible, &owner); err != nil {
+				return err
+			}
+			if !visible && !owner {
+				return ErrRevokeNotYours
+			}
 			return ErrNotFound
 		}
 		return nil
 	})
+}
+
+// policyRefused — запись не прошла политику строк (insufficient_privilege).
+func policyRefused(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "42501"
 }
 
 // InviteInfo — то, что можно показать по ссылке до входа в систему.
@@ -628,10 +698,11 @@ func (s *Service) Accept(ctx context.Context, token, userID string) (auth.Member
 	var m auth.Membership
 	err := s.db.InScope(ctx, store.Scope{InviteToken: hashToken(token)}, func(tx pgx.Tx) error {
 		var inviteID, orgID, role string
+		var teamID *string
 		err := tx.QueryRow(ctx, `
-			select id, org_id, role from invites
+			select id, org_id, role, team_id from invites
 			 where accepted_at is null and revoked_at is null and expires_at > now()
-			 for update`).Scan(&inviteID, &orgID, &role)
+			 for update`).Scan(&inviteID, &orgID, &role, &teamID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrInviteInvalid
 		}
@@ -656,6 +727,21 @@ func (s *Service) Accept(ctx context.Context, token, userID string) (auth.Member
 			on conflict (org_id, user_id) do nothing`, orgID, userID, role)
 		if err != nil {
 			return err
+		}
+
+		// Узел приглашения: человек входит в него сам (политика
+		// joins_by_invite). Узел, убранный в архив после приглашения,
+		// пропускается — в организацию человек всё равно входит, а узел
+		// ему назначат живой.
+		if teamID != nil {
+			_, err = tx.Exec(ctx, `
+				insert into team_members (org_id, team_id, user_id)
+				select $1, t.id, $3 from teams t
+				 where t.id = $2 and t.archived_at is null
+				on conflict (team_id, user_id) do nothing`, orgID, *teamID, userID)
+			if err != nil {
+				return err
+			}
 		}
 
 		_, err = tx.Exec(ctx,

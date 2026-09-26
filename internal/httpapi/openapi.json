@@ -69,6 +69,8 @@
               "password_link_elsewhere",
               "password_link_federated",
               "already_member",
+              "invite_not_yours",
+              "team_gone",
               "password_wrong",
               "password_same",
               "signup_closed",

@@ -163,9 +163,9 @@ func TestInviteTokenScopeOpensSingleRow(t *testing.T) {
 
 	insert := func(orgID, userID, hash string) {
 		t.Helper()
-		// Приглашение заводится в области организации без личности: оно
-		// адресовано тому, кого в организации ещё нет.
-		err := db.InOrg(ctx, orgID, func(tx pgx.Tx) error {
+		// Приглашение заводит владелец: приглашать без личности политика
+		// managed (0072) не даёт — право звать людей держит база.
+		err := db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `
 				insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 				values ($1, $2, 'member', $3, $4, now() + interval '1 day')`,

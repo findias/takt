@@ -476,6 +476,14 @@ test('снимки экранов', async ({ page, browser }) => {
   })
   await areaPage.waitForTimeout(400)
   await areaPage.screenshot({ path: `${SHOTS}/20г-структура-администратора.png`, fullPage: true })
+
+  // Тот же Борис на «Команде»: владелец подразделения приглашает
+  // в своё поддерево, и список подразделений в форме — только его.
+  await areaPage.getByRole('button', { name: 'Команда' }).click()
+  await expect(areaPage.getByRole('combobox', { name: 'Подразделение' })).toBeVisible({
+    timeout: 10_000,
+  })
+  await areaPage.screenshot({ path: `${SHOTS}/20д-команда-владельца-подразделения.png`, fullPage: true })
   await area.close()
 
   // Приглашение — единственный экран, который видит не хозяин стенда,

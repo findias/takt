@@ -30,6 +30,7 @@ import { locale, t } from '../shared/i18n/index.ts'
 import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
 import { navigate } from '../shared/router/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
+import { buildTree, invitableTeams } from '../entities/team/model.ts'
 
 export function Team({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -37,6 +38,26 @@ export function Team({ principal }: { principal: Principal }) {
   const [error, setError] = useState<string | null>(null)
   const [freshLink, setFreshLink] = useState<string | null>(null)
   const isOwner = principal.role === 'owner'
+  // Куда этот человек может позвать: владелец — всюду, владелец
+  // подразделения — в своё поддерево. Пустой список — формы нет.
+  const [targets, setTargets] = useState<ReturnType<typeof invitableTeams>>([])
+
+  useEffect(() => {
+    Promise.all([api.listTeams(), api.listAdmins()])
+      .then(([tm, adm]) =>
+        setTargets(
+          invitableTeams(
+            buildTree(tm.teams),
+            isOwner,
+            adm.admins.filter((a) => a.userId === principal.id).map((a) => a.teamId),
+          ),
+        ),
+      )
+      // Без дерева владелец всё равно зовёт в организацию целиком,
+      // а владельцу подразделения форма не покажется — и это честнее
+      // отказа после нажатия.
+      .catch(() => setTargets([]))
+  }, [isOwner, principal.id])
 
   const load = useCallback(() => {
     api
@@ -233,10 +254,13 @@ export function Team({ principal }: { principal: Principal }) {
         )}
       </section>
 
-      {isOwner && (
+      {(isOwner || targets.length > 0) && (
         <section className="stack">
           <h2 className="section-title">{t.team.invite}</h2>
+          {!isOwner && <p className="muted small">{t.team.inviteSubtree}</p>}
           <InviteForm
+            isOwner={isOwner}
+            targets={targets}
             onCreated={(invite) => {
               setFreshLink(invite.link ?? null)
               load()
@@ -276,6 +300,7 @@ export function Team({ principal }: { principal: Principal }) {
                           ROLE_NAMES[i.role],
                           new Date(i.expiresAt).toLocaleDateString(locale()),
                         )}
+                        {i.teamName && t.team.intoTeam(i.teamName)}
                       </span>
                     </div>
                     <button
@@ -797,9 +822,26 @@ function AuditFeed({ people }: { people: Member[] }) {
   )
 }
 
-function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
+function InviteForm({
+  isOwner,
+  targets,
+  onCreated,
+}: {
+  isOwner: boolean
+  targets: ReturnType<typeof invitableTeams>
+  onCreated: (invite: Invite) => void
+}) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<Role>('member')
+  // Владелец может звать и без узла; владельцу подразделения узел
+  // обязателен, и первым предлагается его собственный.
+  const [teamId, setTeamId] = useState<string>('')
+  const team = isOwner ? teamId : teamId || (targets[0]?.id ?? '')
+  // Владельца организации из подразделения не выдают (0072).
+  const roles = (Object.keys(ROLE_NAMES) as Role[]).filter((r) => isOwner || r !== 'owner')
+  // Отступ считается от самого мелкого узла списка: у владельца
+  // подразделения список начинается не с корня.
+  const base = Math.min(...targets.map((n) => n.level))
   const [busy, setBusy] = useState(false)
   const form = useFormErrors()
 
@@ -818,7 +860,7 @@ function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
         setBusy(true)
         form.clear()
         api
-          .invite(email.trim(), role)
+          .invite(email.trim(), role, team || null)
           .then((invite) => {
             setEmail('')
             onCreated(invite)
@@ -847,12 +889,24 @@ function InviteForm({ onCreated }: { onCreated: (invite: Invite) => void }) {
         )}
       </Field>
       <select value={role} onChange={(e) => setRole(e.target.value as Role)} aria-label={t.team.role}>
-        {(Object.keys(ROLE_NAMES) as Role[]).map((r) => (
+        {roles.map((r) => (
           <option key={r} value={r}>
             {ROLE_NAMES[r]}
           </option>
         ))}
       </select>
+      {targets.length > 0 && (
+        <select value={team} onChange={(e) => setTeamId(e.target.value)} aria-label={t.team.inviteInto}>
+          {isOwner && <option value="">{t.team.inviteNoTeam}</option>}
+          {targets.map((n) => (
+            <option key={n.id} value={n.id}>
+              {/* Отступ неразрывными пробелами: у option нет своей
+                  разметки, а глубина без отступа теряется. */}
+              {'\u00a0\u00a0'.repeat(n.level - base) + n.name}
+            </option>
+          ))}
+        </select>
+      )}
       {/* Кнопка гаснет только на время запроса: про пустое поле скажет
           отказ у поля, а погашенная кнопка молчит о том, чего ждёт. */}
       <button type="submit" disabled={busy}>

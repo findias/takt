@@ -123,6 +123,9 @@ export type Invite = {
   role: Role
   expiresAt: string
   createdAt: string
+  /** Узел, в который человек войдёт вместе с организацией. */
+  teamId: string | null
+  teamName: string | null
   /** Приходит только в ответе на создание: в базе лежит лишь хеш токена. */
   link?: string
 }
@@ -1087,7 +1090,8 @@ export const api = {
     request<Principal>('PUT', '/api/org/estimate-unit', { unit }),
 
   team: () => request<{ members: Member[]; invites: Invite[] }>('GET', '/api/team'),
-  invite: (email: string, role: Role) => request<Invite>('POST', '/api/invites', { email, role }),
+  invite: (email: string, role: Role, teamId: string | null) =>
+    request<Invite>('POST', '/api/invites', { email, role, teamId: teamId ?? '' }),
   revokeInvite: (id: string) => request<void>('DELETE', `/api/invites/${id}`),
   /** История источника у карточки: приходит в полных данных карточки,
    *  остальное оттуда панели не нужно — у неё есть снимок доски. */

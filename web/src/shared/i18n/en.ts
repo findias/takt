@@ -99,7 +99,7 @@ export const en: typeof ru = {
     throughput: 'Throughput',
     forecast: 'Forecast',
     roles: 'Roles',
-    subdivisionAdmin: 'Subdivision administrator',
+    subdivisionAdmin: 'Subdivision owner',
     keyScopes: 'Key scopes',
     subscription: 'Event subscription',
     export: 'Export',

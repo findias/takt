@@ -48,7 +48,7 @@ documentation use, and what each of them means in Takt.
 | Owner | Reads, changes work and runs the organisation |
 | Member | Reads and changes work |
 | Viewer | Only reads |
-| Subdivision administrator | Runs their own subtree: who is in it, nested subdivisions, boards |
+| Subdivision owner | Runs their own subtree: who is in it, nested subdivisions, boards; invites people into it |
 | Area observer | Reads everything in their subtree |
 | Board visibility | Who sees a board: the whole organisation, its own subdivision, or listed people only |
 | Integration key | Access for another system, limited to the scopes it was given; revoked in one action |

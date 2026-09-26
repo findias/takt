@@ -71,6 +71,34 @@ export function managedIds(tree: TreeNode[], adminRoots: string[]): Set<string> 
   return out
 }
 
+/**
+ * Куда человек может позвать нового коллегу — узлы в порядке дерева,
+ * с глубиной для отступа в списке.
+ *
+ * Владельцу организации — всё дерево; владельцу подразделения — его
+ * поддерево; прочим — ничего, и тогда формы приглашения нет вовсе:
+ * кнопка, ведущая в отказ, хуже отсутствующей. Решает всё равно база
+ * (0072), список лишь не предлагает заведомо отказанного.
+ */
+export function invitableTeams(
+  tree: TreeNode[],
+  isOwner: boolean,
+  adminRoots: string[],
+): { id: string; name: string; level: number }[] {
+  const managed = isOwner ? null : managedIds(tree, adminRoots)
+  const out: { id: string; name: string; level: number }[] = []
+  const walk = (nodes: TreeNode[], level: number) => {
+    for (const node of nodes) {
+      if (managed === null || managed.has(node.id)) {
+        out.push({ id: node.id, name: node.name, level })
+      }
+      walk(node.children, level + 1)
+    }
+  }
+  walk(tree, 0)
+  return out
+}
+
 /** Все узлы поддерева, включая корень: перенос запрещён внутрь себя. */
 export function subtreeIds(node: TreeNode): string[] {
   return [node.id, ...node.children.flatMap(subtreeIds)]

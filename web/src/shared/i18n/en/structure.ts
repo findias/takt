@@ -28,7 +28,7 @@ export const structure: typeof ru = {
       'Nobody here. A member of a subdivision also works in every department under it, and the lead is whoever runs the subdivision.',
     boardsSeenAbove: ' The subdivision keeps its boards: those higher up the tree see them.',
     boardsUnseen:
-      ' The subdivision keeps its boards, but ordinary members cannot see them right now: a subdivision board is visible to its own people, and there are none here or above. The owner, the administrator of this area and its observer still have access.',
+      ' The subdivision keeps its boards, but ordinary members cannot see them right now: a subdivision board is visible to its own people, and there are none here or above. The owner, the owner of this subdivision and its observer still have access.',
     lead: 'Lead',
     removeMemberOf: (name: string) => `Remove from members: ${name}`,
     removeMember: 'Remove from members',
@@ -61,7 +61,7 @@ export const structure: typeof ru = {
     grant: 'Grant',
     whoRuns: 'Who runs what',
     whoRunsExplain:
-      'A subdivision administrator creates departments under it, adds people, appoints observers and runs the boards of their area. Top-level subdivisions, observation of the whole organisation and handing out powers stay with the organisation owner.',
+      'A subdivision owner creates departments under it, adds and invites people, appoints observers and runs the boards of their area. Top-level subdivisions, observation of the whole organisation and appointing subdivision owners stay with the organisation owner.',
     nobodyAppointed: 'Nobody appointed.',
     revokeAdminOf: (name: string) => `Revoke powers: ${name}`,
     revokeAdmin: 'Revoke powers',

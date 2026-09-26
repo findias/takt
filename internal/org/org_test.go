@@ -35,12 +35,12 @@ func newFixture(t *testing.T) *fixture {
 	return &fixture{svc: New(db), db: db, ctx: ctx, t: t}
 }
 
-// inOrg выполняет запрос в области организации. Без неё политики
-// не пропустят ни чтения приглашений, ни записи: приглашение видно
-// либо своей организации, либо тому, кто предъявил токен.
-func (f *fixture) inOrg(orgID string, fn func(pgx.Tx) error) {
+// as выполняет запрос от имени человека. Приглашения читает и пишет
+// тот, кто вправе приглашать (политика managed, 0072): одной области
+// организации для них мало.
+func (f *fixture) as(orgID, userID string, fn func(pgx.Tx) error) {
 	f.t.Helper()
-	if err := f.db.InOrg(f.ctx, orgID, fn); err != nil {
+	if err := f.db.InTenant(f.ctx, orgID, userID, fn); err != nil {
 		f.t.Fatal(err)
 	}
 }
@@ -259,7 +259,7 @@ func TestInviteLinkIsShownOnceAndOnlyHashIsStored(t *testing.T) {
 	org, ownerID := f.org("Компания")
 
 	invite, err := f.svc.Invite(f.ctx, org.OrgID, ownerID,
-		"НовыЙ@Example.test", auth.RoleMember, "http://example.test")
+		"НовыЙ@Example.test", auth.RoleMember, "", "http://example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestInviteLinkIsShownOnceAndOnlyHashIsStored(t *testing.T) {
 
 	raw := token(invite.Link)
 	var stored string
-	f.inOrg(org.OrgID, func(tx pgx.Tx) error {
+	f.as(org.OrgID, ownerID, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
 			`select token_hash from invites where id = $1`, invite.ID).Scan(&stored)
 	})
@@ -283,7 +283,7 @@ func TestInviteLinkIsShownOnceAndOnlyHashIsStored(t *testing.T) {
 	}
 
 	// В списке ожидающих ссылки уже нет.
-	pending, err := f.svc.PendingInvites(f.ctx, org.OrgID)
+	pending, err := f.svc.PendingInvites(f.ctx, org.OrgID, ownerID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,10 +296,10 @@ func TestInviteIsValidated(t *testing.T) {
 	f := newFixture(t)
 	org, ownerID := f.org("Компания")
 
-	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, "не почта", auth.RoleMember, ""); err == nil {
+	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, "не почта", auth.RoleMember, "", ""); err == nil {
 		t.Error("приглашение без почты принято")
 	}
-	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, "кто@то.test", "начальник", ""); err == nil {
+	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, "кто@то.test", "начальник", "", ""); err == nil {
 		t.Error("приглашение с выдуманной ролью принято")
 	}
 
@@ -309,7 +309,7 @@ func TestInviteIsValidated(t *testing.T) {
 		`select email from users where id = $1`, ownerID).Scan(&ownerEmail); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, ownerEmail, auth.RoleMember, ""); !errors.Is(err, ErrAlreadyMember) {
+	if _, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, ownerEmail, auth.RoleMember, "", ""); !errors.Is(err, ErrAlreadyMember) {
 		t.Errorf("повторное приглашение участника: %v", err)
 	}
 }
@@ -321,7 +321,7 @@ func TestInviteIsAcceptedOnceAndTellsWhoItIsFor(t *testing.T) {
 	org, ownerID := f.org("Компания")
 	guestID, guestEmail := f.user("Гость")
 
-	invite, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, guestEmail, auth.RoleViewer, "http://example.test")
+	invite, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, guestEmail, auth.RoleViewer, "", "http://example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +379,7 @@ func TestAcceptDoesNotDowngradeExistingMember(t *testing.T) {
 	// база между прогонами не чистится.
 	raw := "прямой-" + uuid.NewString()
 	var inviteID string
-	f.inOrg(org.OrgID, func(tx pgx.Tx) error {
+	f.as(org.OrgID, ownerID, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
 			insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 			values ($1, $2, 'viewer', $3, $4, now() + interval '1 day')
@@ -401,7 +401,7 @@ func TestRevokedAndExpiredInvitesDoNotWork(t *testing.T) {
 	org, ownerID := f.org("Компания")
 	guestID, guestEmail := f.user("Гость")
 
-	invite, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, guestEmail, auth.RoleMember, "http://example.test")
+	invite, err := f.svc.Invite(f.ctx, org.OrgID, ownerID, guestEmail, auth.RoleMember, "", "http://example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,7 +418,7 @@ func TestRevokedAndExpiredInvitesDoNotWork(t *testing.T) {
 	// Просроченное — тоже недействительно, и проверяет это база, а не код.
 	expired := "протухший-" + uuid.NewString()
 	var expiredID string
-	f.inOrg(org.OrgID, func(tx pgx.Tx) error {
+	f.as(org.OrgID, ownerID, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
 			insert into invites (org_id, email, role, token_hash, invited_by, expires_at)
 			values ($1, $2, 'member', $3, $4, now() - interval '1 hour')
@@ -442,12 +442,12 @@ func TestInviteTokenOpensOnlyItsOwnRow(t *testing.T) {
 	second, secondOwner := f.org("Вторая")
 	_, guestEmail := f.user("Гость")
 
-	mine, err := f.svc.Invite(f.ctx, first.OrgID, firstOwner, guestEmail, auth.RoleMember, "http://example.test")
+	mine, err := f.svc.Invite(f.ctx, first.OrgID, firstOwner, guestEmail, auth.RoleMember, "", "http://example.test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.svc.Invite(f.ctx, second.OrgID, secondOwner,
-		uuid.NewString()+"@example.test", auth.RoleMember, "http://example.test"); err != nil {
+		uuid.NewString()+"@example.test", auth.RoleMember, "", "http://example.test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -494,7 +494,7 @@ func TestInviteTokenOpensNothingBesidesItsInvite(t *testing.T) {
 	guest, guestOwner := f.org("Гости")
 	_, guestEmail := f.user("Званый")
 
-	mine, err := f.svc.Invite(f.ctx, guest.OrgID, guestOwner, guestEmail, auth.RoleMember, "http://example.test")
+	mine, err := f.svc.Invite(f.ctx, guest.OrgID, guestOwner, guestEmail, auth.RoleMember, "", "http://example.test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -56,7 +56,7 @@ func TestSubtreeAdminRevokesWhatItGranted(t *testing.T) {
 	if code != http.StatusForbidden {
 		t.Fatalf("посторонний снял наблюдение: код %d, тело: %s", code, raw)
 	}
-	if text, _ := field(t, raw, "error").(string); !strings.Contains(text, "администратор") {
+	if text, _ := field(t, raw, "error").(string); !strings.Contains(text, "владелец этого подразделения") {
 		t.Errorf("отказ не называет, кто может: %s", raw)
 	}
 

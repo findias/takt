@@ -13,6 +13,7 @@ import {
   canNestInside,
   counters,
   height,
+  invitableTeams,
   managedIds,
   subtreeIds,
 } from './model.ts'
@@ -149,4 +150,26 @@ test('без записи администратора область пуста
   // Один человек бывает администратором двух ветвей сразу: полномочие
   // это запись об узле, а не роль, и записей бывает несколько.
   assert.deepEqual([...managedIds(tree, ['sales', 'platform'])].sort(), ['core', 'platform', 'sales'])
+})
+
+test('позвать можно туда, где распоряжаешься: владелец — всюду, прочие — ничего', () => {
+  const tree = buildTree(FLAT)
+
+  // Владелец подразделения — своё поддерево в порядке дерева, с глубиной
+  // для отступа; старший и сосед в список не попадают.
+  const mine = invitableTeams(tree, false, ['dev'])
+  assert.deepEqual(
+    mine.map((n) => [n.id, n.level]),
+    [
+      ['dev', 1],
+      ['platform', 2],
+      ['core', 3],
+    ],
+  )
+
+  // Владельцу организации — всё дерево.
+  assert.equal(invitableTeams(tree, true, []).length, FLAT.length)
+
+  // Без записи администратора — пусто: формы приглашения не будет.
+  assert.equal(invitableTeams(tree, false, []).length, 0)
 })

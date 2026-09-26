@@ -309,10 +309,11 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="invite-someone">Invite someone</h3>
 <ol>
 <li><strong>Team</strong> tab → <strong>Invite</strong> section.</li>
-<li>Enter an e-mail, pick a role, press <strong>Invite</strong>.</li>
+<li>Enter an e-mail, pick a role and a subdivision, press <strong>Invite</strong>.</li>
 <li>Send the link to the person.</li>
 </ol>
 <p>The link lasts a week, is bound to that address, and is shown once. If it gets lost, revoke the invitation and create a new one.</p>
+<p>The person joins the organisation and the chosen subdivision at once. A subdivision owner sees this section too: they invite members or viewers into their own subtree and see only their own invitations. Inviting into the whole organisation, or as an owner, is up to the organisation owner.</p>
 <h3 id="correct-someone-s-email">Correct someone&#39;s email</h3>
 <p>An owner can change a member&#39;s email: a typo, an old address, someone added under the wrong one. <strong>Team</strong> tab → <strong>Email…</strong> next to the person → the new address → <strong>Change email</strong>. They sign in with the new address from then on; takt sends no emails, so tell them yourself.</p>
 <p><strong>Email…</strong> is offered only where the owner may use it. Your own email is changed behind your name. Someone who is also a member of another organisation changes their email themselves: it is their sign-in name in both. When the email is managed by the company identity provider or directory, it is changed there. The change shows in the audit log as «email: old → new».</p>
@@ -343,7 +344,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>The <strong>Structure</strong> tab.</li>
 <li>Press <strong>New subdivision</strong>, enter a name.</li>
 <li>Everything else about a subdivision is in the <strong>⋮</strong> menu at the end of its row: <strong>Create a department…</strong>, <strong>Rename…</strong>, <strong>Move…</strong>, <strong>Remove subdivision</strong>. A question opens a field right under the row.</li>
-<li>Appoint a subdivision administrator in <strong>Who runs what</strong> — they will run their own subtree.</li>
+<li>Appoint a subdivision owner in <strong>Who runs what</strong> — they will run their own subtree and invite people into it.</li>
 </ol>
 <p>A removed subdivision is not gone: it waits under <strong>Removed subdivisions</strong> and comes back with <strong>Restore</strong>.</p>
 <h2 id="integrations">Integrations</h2>
@@ -384,7 +385,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-123-ge66746e-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-124-g85ab3bf-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

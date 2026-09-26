@@ -84,4 +84,9 @@ export const team: typeof ru = {
     inviteFailed: 'Could not invite',
     colleagueEmail: 'Colleague’s e-mail',
     role: 'Role',
+    inviteInto: 'Subdivision',
+    inviteNoTeam: 'No subdivision',
+    inviteSubtree:
+      'You own a subdivision: you invite people into it as members or viewers. Inviting into the whole organisation, or as an owner, is up to the organisation owner.',
+    intoTeam: (team: string) => ` · into “${team}”`,
 }
