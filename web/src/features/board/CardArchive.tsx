@@ -124,7 +124,7 @@ export function CardArchive({
                   </span>
                 )}
               </div>
-              <div className="row row--tight">
+              <div className="archive-actions">
                 {c.restorable && (
                   <button className="link" onClick={() => restore(c)}>
                     {t.parts.restore}

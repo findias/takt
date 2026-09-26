@@ -212,6 +212,19 @@ func VerifyOrg(ctx context.Context, db *store.Store, orgID, ownerID string) erro
 			`select exists (select 1 from card_events
 			                 where org_id = $1 and at < now() - interval '14 days')`,
 		},
+		{
+			// История карточки читается сверху вниз как рассказ: правка
+			// раньше создания или событие позже «сейчас» — это сбой,
+			// а не прошлое. Так и было, пока сдвиг брал `id % 7` часов.
+			"история каждой карточки идёт от создания и не забегает вперёд",
+			`select not exists (
+			          select 1 from card_events e
+			            join card_events c on c.card_id = e.card_id and c.type = 'created'
+			           where e.org_id = $1 and e.at < c.at)
+			    and not exists (
+			          select 1 from card_events
+			           where org_id = $1 and at > now())`,
+		},
 	}
 
 	// Всё остальное читается от имени владельца: у таблиц включён force

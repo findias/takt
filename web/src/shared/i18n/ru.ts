@@ -126,6 +126,8 @@ export const ru = {
     andMore: (n: number) => `и ещё ${n}`,
     confirm: 'Подтвердить',
     copy: 'Скопировать',
+    chooseFile: 'Выбрать файл',
+    noFileChosen: 'Файл не выбран',
     copyWhat: (what: string) => `Скопировать ${what}`,
     copyRefused: (what: string) =>
       `Браузер не дал скопировать ${what} — выделите поле и скопируйте вручную.`,

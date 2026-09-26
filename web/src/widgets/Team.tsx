@@ -426,7 +426,9 @@ function Clients() {
             <li key={c.id}>
               <div className="member-who">
                 <span>{c.name}</span>
-                <span className="muted small">
+                {/* Переносится: разрешения — то, что ключ может, и за
+                    многоточием на телефоне оставались все, кроме первого. */}
+                <span className="muted small related-note">
                   {c.prefix}… · {c.scopes.map((s) => SCOPE_NAMES[s] ?? s).join(', ')}
                   {c.lastUsedAt
                     ? t.team.usedOn(new Date(c.lastUsedAt).toLocaleDateString(locale()))

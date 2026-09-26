@@ -877,11 +877,12 @@ input[type='radio'] {
    поднимает отвергнутое поле над остальными — ряд ломается ровно
    в тот момент, когда на него смотрят. Видно это только на снимке
    заполненной формы. Место под отказ ряд занимает целиком и только
-   когда отказ есть. */
+   когда отказ есть. Выведен и пустой: в потоке он добавлял полю
+   отступ столбца, и поля стояли выше соседнего выбора без подписи. */
 .form-row .form-field {
   position: relative;
 }
-.form-row .form-error:not(:empty) {
+.form-row .form-error {
   position: absolute;
   top: 100%;
   inset-inline-start: 0;
@@ -965,6 +966,12 @@ input[type='radio'] {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+/* Промежутки в стопке задаёт её просвет, а не поля абзаца: во флексе
+   поля не схлопываются, и абзац под заголовком раздела отодвигался
+   на 29 пикселей — дальше, чем соседний раздел (замер 26.09.2026). */
+.stack > p {
+  margin: 0;
 }
 /* Кнопка в вертикальной стопке иначе растягивается во всю ширину,
    а её подпись встаёт по центру — и действие читается как заголовок
@@ -1059,6 +1066,22 @@ input[type='radio'] {
 .member-list li:last-child {
   border-bottom: none;
 }
+/* Имя не отдаёт место действиям: на 360 выбор роли и три действия
+   сжимали его до «Борис Д…» и «Вера…», а почту — до «vera…», и понять,
+   чью роль меняешь, было нельзя (проход по дизайну 26.09.2026). Блоку
+   с именем — основа, и действия, не вставшие рядом с ней, уходят под
+   него строкой. На широком экране всё как прежде: место есть. */
+.member-list li {
+  flex-wrap: wrap;
+}
+.member-list li > .member-who {
+  flex: 1 1 12rem;
+}
+/* Действие — одной строкой: «Убрать в / архив» и «Отозвать / ключ»
+   в два этажа читались двумя разными надписями. */
+.member-list li button.link {
+  white-space: nowrap;
+}
 /* Подписка занимает не строку, а блок: под ней раскрывается журнал
    доставок, и строка списка людей такому не подходит. */
 .hook-list {
@@ -1121,6 +1144,20 @@ input[type='radio'] {
   white-space: normal;
   overflow: visible;
 }
+/* Действия над карточкой архива — столбцом и по своей ширине. В ряду
+   они сжимались, и «Удалить навсегда» рвалось на две строки по центру
+   узкой колонки (русский, 360): необратимое действие читалось хуже
+   обратимого рядом. Сжимается название слева — оно переносится. */
+.archive-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  flex: none;
+}
+.archive-actions > button {
+  white-space: nowrap;
+}
 
 /* Строка доставки: слева событие с подробностями, справа «повторить».
    Ужимается текст, а не кнопка, — и отказ получателя переносится
@@ -1134,10 +1171,14 @@ input[type='radio'] {
   overflow: visible;
 }
 
+/* Высота — как у поля ввода: строка body (1.6), отступы и рамка.
+   Высоту строки выбору не задать — Chrome держит у него `normal`, — и он
+   выходил на два пикселя ниже поля: в ряду «название, ключ, шаблон»
+   стоял ступенькой. */
 select {
   font: inherit;
   padding: var(--space-1) var(--space-2);
-  min-height: var(--target);
+  min-height: max(var(--target), calc(1.6em + 2 * var(--space-1) + 2px));
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1777,6 +1818,15 @@ select:disabled {
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+}
+/* Перед разделом с заголовком — больше, чем внутри раздела: иначе
+   заголовок стоит ближе к кнопке предыдущего раздела, чем к своему
+   содержимому, и читается его продолжением. Раздел без заголовка —
+   продолжение предыдущего («Уровень доски» под «Как работаем»),
+   и его не отрываем. Панель карточки кладёт разделы во вкладку,
+   «Поток» и отчёты — прямо в панель. */
+:is(.panel-body, .panel-card) > section + section:has(> .section-title, > .section-head, > .row > .section-title) {
+  margin-top: var(--space-3);
 }
 /* Прокручиваемой области нужен фокус, но рамка вокруг всего содержимого
    панели читается как ошибка: показываем её только тогда, когда фокус
@@ -2560,11 +2610,14 @@ textarea.description {
   align-items: center;
   flex-wrap: nowrap;
 }
+/* Ширина — по подписи: растянутая, она вставала по центру панели
+   (`.btn` центрует содержимое) и читалась заголовком, а не действием. */
 .link-picker > summary {
   cursor: pointer;
   min-height: var(--target);
   display: flex;
   align-items: center;
+  width: fit-content;
 }
 .link-picker > div {
   margin-top: var(--space-2);
@@ -2700,10 +2753,15 @@ textarea.description {
   .board-tools-line > .board-tools {
     margin-left: 0;
   }
-  /* Сжимается, но не растёт: выросшая, она занимала строку целиком
-     и сталкивала «Поток» и «Архив» на следующую. */
+  /* Не растёт: выросшая, она занимала строку целиком и сталкивала
+     «Поток» и «Архив» на следующую. И не сжимается: сжатая до 8rem,
+     она показывала «Без группиро…» — подпись выбора, которую читают,
+     а не угадывают. Сжимается ряд сохранённых видов рядом. */
   .board-tools-line .grouping {
-    flex: 0 1 8rem;
+    flex: none;
+  }
+  .board-tools-line > .views {
+    flex: 0 1 auto;
     min-width: 0;
   }
   /* Остальные отборы — под кнопкой. Раскрытые ложатся столбцом:
@@ -2717,6 +2775,13 @@ textarea.description {
   .panel-card {
     width: 100vw;
     border-left: none;
+  }
+  /* Здесь панель во весь экран при любом выборе, и «Сбоку» или
+     «По центру» ничего не меняли — выбор без последствий только
+     отнимал место у «Закрыть». Сам выбор сохраняется: на широком
+     экране он прежний. */
+  .panel-mode {
+    display: none;
   }
   .tabs {
     flex-wrap: wrap;
@@ -4273,6 +4338,44 @@ textarea.description {
 .import-file input,
 .import-file select {
   font-weight: 400;
+}
+/* Выбор файла: видимые кнопка и имя — отражение спрятанного поля
+   (shared/ui/FilePick.tsx). Фокус и «нельзя» поля показаны на кнопке:
+   само поле глазу не видно, и без этого фокус с клавиатуры пропадал бы. */
+.file-pick {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-weight: 400;
+  cursor: pointer;
+}
+.file-pick-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.file-pick:hover .file-pick-button {
+  border-color: var(--accent);
+}
+.file-pick:has(input:focus-visible) .file-pick-button {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.file-pick:has(input:disabled) {
+  cursor: not-allowed;
+}
+.file-pick:has(input:disabled) .file-pick-button {
+  opacity: 0.5;
+}
+.file-pick-name {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
 }
 /* Откуда — в строку: два коротких варианта столбцом читались бы
    двумя пунктами формы, а это один выбор. */

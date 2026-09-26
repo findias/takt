@@ -133,7 +133,9 @@ export function IterationReport({
                       {c.done && <span className="sr-only">{t.flowReport.doneSr}</span>}
                       {c.number} · {c.title}
                     </button>
-                    <span className="muted small">{marks(c, unit) || ' '}</span>
+                    {/* Переносится, а не обрезается: вес стоит последним
+                        и первым уходил за многоточие (английский, 360). */}
+                    <span className="muted small related-note">{marks(c, unit) || ' '}</span>
                   </div>
                 </li>
               ))}
@@ -205,7 +207,9 @@ function marks(c: Report['cards'][number], unit: EstimateUnit): string {
   if (c.dropped) out.push(t.flowReport.cardDropped)
   if (c.lateAdd) out.push(t.flowReport.cardLate)
   if (c.archived) out.push(t.flowReport.cardArchived)
-  if (c.estimate !== null) out.push(`${num(c.estimate)} ${UNIT_SHORT[unit]}`)
+  // Число с единицей не разрываются: «3» в конце строки и «pts» в начале
+  // следующей читаются как два разных знака.
+  if (c.estimate !== null) out.push(`${num(c.estimate)}\u00a0${UNIT_SHORT[unit]}`)
   return out.join(' · ')
 }
 

@@ -127,6 +127,8 @@ export const en: typeof ru = {
     andMore: (n: number) => `and ${n} more`,
     confirm: 'Confirm',
     copy: 'Copy',
+    chooseFile: 'Choose file',
+    noFileChosen: 'No file chosen',
     copyWhat: (what: string) => `Copy ${what}`,
     copyRefused: (what: string) =>
       `The browser did not let us copy ${what} — select the field and copy it by hand.`,

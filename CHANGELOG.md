@@ -391,6 +391,23 @@ the branch adds. It cannot be combined with `DEMO=on`.
   name — with settings and sign-out behind it — used to slide off the
   right edge of the board screen; now visibility and help show as icons
   there and everything stays reachable, without pushing the board down.
+- **The file picker speaks the interface language.** On the import
+  screen the browser used to label it in its own language — «Выберите
+  файл» on an English screen; now it says «Choose file» and shows the
+  chosen file's name. On a phone the board's grouping reads in full
+  instead of «No group…», and drop-downs stand level with the fields
+  beside them.
+- **Phone screens show names and actions whole.** On «Team» and
+  «Structure» a person's name and e-mail are no longer cut to «Boris D…»
+  — the role and actions move under them; «Archive», «Revoke key» and
+  «Delete for good» stay on one line; the iteration report no longer
+  hides a card's points behind «…», and a key's permissions are listed
+  in full. In a card and in «Flow» sections stand further apart from
+  each other than their parts do, and the «Side / Centre» choice is
+  gone where the panel always fills the screen.
+- **Demo card history runs in order.** Events on the demo stand used to
+  shuffle — a commitment set before the card was created, an edit hours
+  in the future; now they go from creation to now, as they happened.
 - **The board's toolbar is rebuilt.** The view (Board, Table, Changes)
   is a list at the left; the filter is the main panel and stays open
   on a wide screen (on a narrow one it is folded under «Отбор» as

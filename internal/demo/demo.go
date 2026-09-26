@@ -1314,12 +1314,21 @@ func (f *filler) backdate() error {
 			payload          []byte
 			at               time.Time
 		}
+		// События карточки ложатся от её создания к «сейчас» в том порядке,
+		// в каком случились, — не дальше часа друг от друга и не позже
+		// текущего момента. Прежний сдвиг на `id % 7` часов перемешивал их:
+		// у английской копии обязательство стояло раньше создания
+		// карточки, а у только что заведённой события уходили в будущее
+		// (проход по дизайну 26.09.2026).
 		rows, err := tx.Query(f.ctx, `
 			select e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
 			       e.from_column, e.to_column, e.payload,
-			       c.created_at + (e.id % 7 || ' hours')::interval
+			       c.created_at
+			         + (row_number() over (partition by e.card_id order by e.id) - 1)
+			         * least(interval '1 hour',
+			                 (now() - c.created_at) / count(*) over (partition by e.card_id))
 			  from card_events e join cards c on c.id = e.card_id
-			 order by 9`)
+			 order by 9, e.id`)
 		if err != nil {
 			return err
 		}

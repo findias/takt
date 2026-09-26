@@ -6,6 +6,7 @@ import { FormError } from '../../shared/ui/Field.tsx'
 import { toBase64 } from './file.ts'
 import { Mapping } from './Mapping.tsx'
 import { Done, Preview, hasWork } from './Preview.tsx'
+import { FilePick } from '../../shared/ui/FilePick.tsx'
 import { TargetPicker, boardIdOf } from './Target.tsx'
 import type { Target } from './Target.tsx'
 
@@ -152,15 +153,12 @@ export function TableSource({ boards }: { boards: BoardInfo[] }) {
         <span className="muted"> — {t.imports.sampleHint}</span>
       </p>
 
-      <label className="import-file">
-        <span>{t.imports.file}</span>
-        <input
-          type="file"
-          accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          disabled={busy === 'applying'}
-          onChange={(e) => choose(e.target.files?.[0])}
-        />
-      </label>
+      <FilePick
+        label={t.imports.file}
+        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        disabled={busy === 'applying'}
+        onChoose={choose}
+      />
       {busy === 'reading' && <p className="muted small">{t.imports.reading}</p>}
 
       {answer && answer.sheets.length > 1 && (

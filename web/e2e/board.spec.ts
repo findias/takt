@@ -103,6 +103,18 @@ function cardIn(page: Page, column: string, title: string) {
  * поля правятся нажатием по ним самим, и пункт меню один на человека —
  * он же назначает, он же снимает.
  */
+// Меню карточки видно под мышью. Под нагрузкой полного прогона доска
+// дорисовывает строку над колонкой уже после загрузки, карточка съезжает
+// из-под курсора, и кнопка прячется между наведением и нажатием: так
+// моргали два сценария (26.09.2026). Навести и нажать — одним шагом,
+// который повторяется, пока меню не откроется.
+async function openCardMenu(card: ReturnType<typeof cardIn>) {
+  await expect(async () => {
+    await card.hover()
+    await card.getByRole('button', { name: /Действия карточки/ }).click({ timeout: 1_000 })
+  }).toPass({ timeout: 10_000 })
+}
+
 async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
   await card.hover()
   await card.getByRole('button', { name: /Исполнител/ }).click()
@@ -641,8 +653,7 @@ test('оценка ставится шагами в панели, блокиро
 
   // Блокировка ставится с доски и причиной, написанной словами.
   const again = cardIn(page, 'Очередь', 'Оценить меня')
-  await again.hover()
-  await again.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(again)
   await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
   await again.getByLabel('Причина блокировки').fill('ждём смежников')
   await again.getByLabel('Причина блокировки').press('Enter')
@@ -651,8 +662,7 @@ test('оценка ставится шагами в панели, блокиро
   // Снимается тем же меню. Правки причины поверх открытой блокировки
   // нет намеренно: блокировка — интервал, и вторая поверх первой
   // посчитала бы время в блоке дважды.
-  await again.hover()
-  await again.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(again)
   await page.getByRole('menuitem', { name: 'Снять блокировку' }).click()
   await expect(again.getByText(/Заблокирована/)).toHaveCount(0)
 })
@@ -842,8 +852,7 @@ test('приоритет виден, отбирается и не трогает
   await addCard(page, 'Очередь', 'Вторая по порядку')
 
   const second = cardIn(page, 'Очередь', 'Вторая по порядку')
-  await second.hover()
-  await second.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(second)
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
   // В меню уровень назван полно, на карточке — коротко: в плашке место
   // меряется знаками. Слова разные намеренно, см. `priorityShort`.
@@ -875,8 +884,7 @@ test('приоритет виден, отбирается и не трогает
   // к нему — меню «…» или панель.
   const first = cardIn(page, 'Очередь', 'Первая по порядку')
   await expect(first.getByRole('button', { name: /Приоритет:/ })).toHaveCount(0)
-  await first.hover()
-  await first.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(first)
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
   await first.getByRole('button', { name: /Приоритет:/ }).click()
   await page.getByRole('menuitemcheckbox', { name: 'Высокий' }).click()
@@ -1196,8 +1204,7 @@ test('группировка раскладывает доску по дорож
   // выше «Наивысшего», и читать их сверху вниз стало бы нечем.
   // «Без уровня» дорожки нет — уровень есть у каждой карточки.
   const urgent = cardIn(page, 'Очередь', 'Моя работа')
-  await urgent.hover()
-  await urgent.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(urgent)
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
   await page.getByLabel('Группировка').selectOption('priority')
   await expect(page.locator('.swimlane-title')).toHaveText(['Наивысший', 'Средний'])
@@ -1484,8 +1491,7 @@ test('часть заводится прямо с доски — кнопкой 
 
   // Первая часть — пунктом меню: списка ещё нет, и кнопке в нём взяться
   // неоткуда.
-  await parent.hover()
-  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(parent)
   await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Свести цифры')
   await parent.getByLabel('Название подзадачи').press('Enter')
@@ -1516,8 +1522,7 @@ test('полоса разбиения заливается, а не только
   await addCard(page, 'Очередь', 'Собрать отчёт')
   const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
 
-  await parent.hover()
-  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(parent)
   await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Свести цифры')
   await parent.getByLabel('Название подзадачи').press('Enter')
@@ -1589,8 +1594,7 @@ test('нажатие открывает карточку, а нажатие на
 
   // У кнопки внутри карточки своё действие, и оно не должно тонуть
   // в открытии: до этой проверки меню открывалось вместе с панелью.
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await expect(page.getByRole('menuitem', { name: 'Переименовать' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Открыться по нажатию' })).toHaveCount(0)
 })
@@ -1783,8 +1787,7 @@ test('работу можно поставить на доску соседей,
   await expect(theirs.getByText('ПЛАТ-1')).toBeVisible()
 
   // Соседи работу не берут.
-  await theirs.hover()
-  await theirs.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(theirs)
   await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
 
   // Отказ читается отказом, а не отсутствием доступа: раньше архивная
@@ -1804,8 +1807,7 @@ test('удаление насовсем спрашивает и называет
   await addCard(page, 'Очередь', 'Дубль сметы')
 
   const card = cardIn(page, 'Очередь', 'Дубль сметы')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
 
   // Подтверждение называет то, что исчезнет: вопрос «вы уверены?»
@@ -1817,8 +1819,7 @@ test('удаление насовсем спрашивает и называет
   await dialog.getByRole('button', { name: 'Отмена' }).click()
   await expect(card).toBeVisible()
 
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
   await dialog.getByRole('button', { name: 'Удалить навсегда' }).click()
   await expect(card).toHaveCount(0)
@@ -1854,8 +1855,7 @@ test('закрытая итерация остаётся на экране и о
 
   // Одна доведена до конца.
   const card = cardIn(page, 'Очередь', 'Смета по объекту')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(page.getByRole('region', { name: 'Готово' }).getByText('Смета по объекту')).toBeVisible()
 
@@ -1892,8 +1892,7 @@ test('убранная карточка достижима из архива и 
   await addCard(page, 'Очередь', 'Отменённая закупка')
 
   const card = cardIn(page, 'Очередь', 'Отменённая закупка')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
   await expect(cardIn(page, 'Очередь', 'Отменённая закупка')).toHaveCount(0)
 
@@ -1993,8 +1992,7 @@ test('видно, сколько на ком висит', async ({ page }) => {
 
   // Сделанное не считается нагрузкой: это уже не работа.
   const done = cardIn(page, 'Очередь', 'Первая')
-  await done.hover()
-  await done.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(done)
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(load).toContainText('1')
 
@@ -2037,8 +2035,7 @@ test.describe('низ колонки', () => {
     }
 
     const card = cardIn(page, 'Очередь', 'Третья')
-    await card.hover()
-    await card.getByRole('button', { name: /Действия карточки/ }).click()
+    await openCardMenu(card)
 
     const items = page.getByRole('menuitem')
     const count = await items.count()
@@ -2117,8 +2114,7 @@ test('Escape закрывает верхний слой, а не всё разо
   await expect(page.getByRole('complementary')).toBeVisible()
 
   const other = cardIn(page, 'Очередь', 'Договор')
-  await other.hover()
-  await other.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(other)
   await page.getByRole('menuitem', { name: 'Удалить навсегда' }).click()
   const dialog = page.locator('dialog')
   await expect(dialog.getByText(/«Договор» исчезнет/)).toBeVisible()
@@ -2312,8 +2308,7 @@ test('боковая панель не перекрывает управлени
     // Сообщение о действии на доске не ложится поверх панели: у него
     // свой слой, и он выше панели, — значит, место ему нужно рядом.
     const neighbour = cardIn(page, 'Очередь', 'Соседняя')
-    await neighbour.hover()
-    await neighbour.getByRole('button', { name: /Действия карточки/ }).click()
+    await openCardMenu(neighbour)
     await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
     const toast = page.locator('.toast').last()
     await expect(toast).toBeVisible()
@@ -3108,8 +3103,7 @@ test('блок подзадач остаётся на карточке посл�
   await createBoard(page, 'Доска переноса с подзадачами')
   await addCard(page, 'Очередь', 'Разбитая работа')
   const parent = cardIn(page, 'Очередь', 'Разбитая работа')
-  await parent.hover()
-  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(parent)
   await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Первая часть')
   await parent.getByLabel('Название подзадачи').press('Enter')
@@ -3194,8 +3188,7 @@ test('карточка с незакрытыми подзадачами уход
   await createBoard(page, 'Доска закрытия с хвостом')
   await addCard(page, 'Очередь', 'Большая работа')
   const parent = cardIn(page, 'Очередь', 'Большая работа')
-  await parent.hover()
-  await parent.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(parent)
   await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
   await parent.getByLabel('Название подзадачи').fill('Незакрытая часть')
   await parent.getByLabel('Название подзадачи').press('Enter')
@@ -3260,8 +3253,7 @@ test('причина блокировки правится, не разрыва�
   await createBoard(page, 'Доска правки причины')
   await addCard(page, 'Очередь', 'Ждёт доступ')
   const card = cardIn(page, 'Очередь', 'Ждёт доступ')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
   await card.getByLabel('Причина блокировки').fill('ждём досуп')
   await card.getByLabel('Причина блокировки').press('Enter')
@@ -3348,8 +3340,7 @@ test('незакрытые карточки переносятся из закр
     await page.getByRole('complementary').getByRole('button', { name: 'Закрыть', exact: true }).click()
   }
   const done = cardIn(page, 'Очередь', 'Сделали')
-  await done.hover()
-  await done.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(done)
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(page.getByRole('region', { name: 'Готово' }).getByText('Сделали')).toBeVisible()
 
@@ -3499,8 +3490,7 @@ test('карточка, изменённая другим, подсвечена,
   // Коллега переносит одну — у смотрящего она загорается без перезагрузки.
   await openBoard(other, 'Доска с новостями')
   const moved = cardIn(other, 'Очередь', 'Тронет коллега')
-  await moved.hover()
-  await moved.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(moved)
   await other.getByRole('menuitem', { name: 'Перенести в «В работе»' }).click()
   await second.close()
 
@@ -3589,8 +3579,7 @@ test('«Требует внимания» собирает то, что стои
 
   await addCard(page, 'Очередь', 'Ждёт смежников')
   const card = cardIn(page, 'Очередь', 'Ждёт смежников')
-  await card.hover()
-  await card.getByRole('button', { name: /Действия карточки/ }).click()
+  await openCardMenu(card)
   await page.getByRole('menuitem', { name: 'Заблокировать…' }).click()
   await card.getByLabel('Причина блокировки').fill('нет доступа к стенду')
   await card.getByLabel('Причина блокировки').press('Enter')

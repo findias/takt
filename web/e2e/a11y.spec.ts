@@ -1317,3 +1317,156 @@ test('шапка доски на узком экране не уводит сп�
   )
   expect(beyond, 'элементы шапки за правым краем').toEqual([])
 })
+
+/**
+ * Выбор группировки на телефоне читается целиком. Сжатый до 8rem, он
+ * показывал «Без группиро…» — а подпись выбора читают, её не угадывают
+ * (проход по дизайну 26.09.2026). Ширина подписи меряется тем же
+ * шрифтом, что у выбора, с запасом на его стрелку.
+ */
+test('на узком экране выбранная группировка видна целиком', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await signInToDemo(page)
+  await openDemoBoard(page)
+  const grouping = page.getByRole('combobox', { name: 'Группировка' })
+  await expect(grouping).toBeVisible()
+  const { text, room } = await grouping.evaluate((el) => {
+    const s = el as HTMLSelectElement
+    const style = getComputedStyle(s)
+    const ctx = document.createElement('canvas').getContext('2d')!
+    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+    const label = s.options[s.selectedIndex].text
+    const arrow = 20
+    return {
+      text: ctx.measureText(label).width,
+      room: s.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - arrow,
+    }
+  })
+  expect(text, 'подпись шире места под неё').toBeLessThanOrEqual(room)
+})
+
+/**
+ * Разделы карточки отделены друг от друга сильнее, чем части одного
+ * раздела. Было наоборот: абзац под заголовком отодвигался полями на
+ * 29 пикселей, а соседний раздел стоял в 12 — заголовок читался
+ * продолжением чужой кнопки. Там же: «Связать с существующей карточкой»
+ * шириной по подписи, а не по центру панели, и выбора «Сбоку / По
+ * центру» на телефоне нет — панель там во весь экран при любом выборе.
+ */
+test('в карточке разделы отделены сильнее, чем части раздела', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await signInToDemo(page)
+  await openDemoBoard(page)
+  await page.locator('.card').first().getByRole('button').first().click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  const panel = page.locator('.panel-card')
+  await expect(page.getByLabel('Как показывать панель')).toBeHidden()
+  const link = panel.getByText('Связать с существующей карточкой')
+  await expect(link).toBeVisible()
+
+  const { inside, between } = await panel.evaluate((p) => {
+    const sections = [...p.querySelectorAll<HTMLElement>('[role=tabpanel] > section')]
+    const inside: number[] = []
+    const between: number[] = []
+    sections.forEach((s, i) => {
+      const kids = [...s.children] as HTMLElement[]
+      for (let k = 1; k < kids.length; k++) {
+        inside.push(kids[k].getBoundingClientRect().top - kids[k - 1].getBoundingClientRect().bottom)
+      }
+      if (i > 0) between.push(s.getBoundingClientRect().top - sections[i - 1].getBoundingClientRect().bottom)
+    })
+    return { inside, between }
+  })
+  expect(between.length, 'разделов меньше двух — сравнивать нечего').toBeGreaterThan(0)
+  expect(Math.min(...between), `между разделами ${between}, внутри ${inside}`).toBeGreaterThan(Math.max(...inside))
+
+  const section = link.locator('xpath=ancestor::section[1]')
+  const [linkBox, sectionBox] = [await link.boundingBox(), await section.boundingBox()]
+  expect(linkBox!.width, 'действие растянуто на всю ширину раздела').toBeLessThan(sectionBox!.width - 8)
+})
+
+/**
+ * Архив и отчёт итерации на телефоне ничего не прячут и не рвут.
+ * Проход по дизайну 26.09.2026 нашёл в английском отчёте пометки,
+ * обрезанные многоточием ровно на весе карточки, а в русском архиве —
+ * «Удалить навсегда», разорванное на две строки узкой колонкой. Оба
+ * языка: русский длиннее в одном месте, английский — в другом.
+ */
+test('на узком экране архив и отчёт итерации не обрезают и не рвут подписи', async ({ browser }) => {
+  const langs = [
+    { locale: 'ru-RU', email: 'anna@example.test', board: 'Поставки', archive: 'Архив', week: /^Неделя \d+$/ },
+    { locale: 'en-GB', email: 'anna@en.example.test', board: 'Supplies', archive: 'Archive', week: /^Week \d+$/ },
+  ]
+  for (const l of langs) {
+    const context = await browser.newContext({ locale: l.locale, viewport: { width: 360, height: 800 } })
+    const page = await context.newPage()
+    await page.goto('/')
+    await page.locator('input[type=email]').fill(l.email)
+    await page.locator('input[type=password]').fill('parol12345')
+    await page.locator('button[type=submit]').click()
+    await openDemoBoard(page, l.board)
+    const boardUrl = page.url()
+
+    const clipped = () =>
+      page.locator('.panel-card').evaluate((p) =>
+        [...p.querySelectorAll<HTMLElement>('.muted.small')]
+          .filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .map((el) => el.textContent),
+      )
+
+    await page.getByRole('button', { name: l.archive }).click()
+    await expect(page.locator('.panel-card li').first()).toBeVisible()
+    expect(await clipped(), `${l.locale}, архив: обрезано`).toEqual([])
+    const torn = await page.locator('.panel-card li button').evaluateAll((buttons) =>
+      buttons
+        .filter((b) => b.getBoundingClientRect().height > parseFloat(getComputedStyle(b).lineHeight) * 1.5)
+        .map((b) => b.textContent),
+    )
+    expect(torn, `${l.locale}, архив: действие на двух строках`).toEqual([])
+
+    await page.goto(boardUrl)
+    await page.getByRole('button', { name: l.week }).first().click()
+    await expect(page.locator('.panel-card .related-open').first()).toBeVisible()
+    expect(await clipped(), `${l.locale}, отчёт итерации: обрезано`).toEqual([])
+    await context.close()
+  }
+})
+
+/**
+ * «Команда» и «Структура» на телефоне показывают имя целиком.
+ * Выбор роли и три действия в одной строке с именем сжимали его до
+ * «Борис Д…», почту — до «vera…», а разрешения ключа — до первого;
+ * «Убрать в архив» и «Отозвать ключ» рвались в два этажа (проход
+ * по дизайну 26.09.2026).
+ */
+test('на узком экране «Команда» и «Структура» не обрезают имена и не рвут действия', async ({ browser }) => {
+  for (const l of [
+    { locale: 'ru-RU', email: 'anna@example.test' },
+    { locale: 'en-GB', email: 'anna@en.example.test' },
+  ]) {
+    const context = await browser.newContext({ locale: l.locale, viewport: { width: 360, height: 800 } })
+    const page = await context.newPage()
+    await page.goto('/')
+    await page.locator('input[type=email]').fill(l.email)
+    await page.locator('input[type=password]').fill('parol12345')
+    await page.locator('button[type=submit]').click()
+    await expect(page.locator('.board-list, .boards').first()).toBeVisible({ timeout: 15_000 })
+    for (const path of ['/team', '/structure']) {
+      await page.goto(path)
+      await expect(page.locator('.member-list li').first()).toBeVisible()
+      const found = await page.locator('.member-list').evaluateAll((lists) => {
+        const clipped = lists
+          .flatMap((l) => [...l.querySelectorAll<HTMLElement>('.member-who > span')])
+          .filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .map((el) => el.textContent)
+        const torn = lists
+          .flatMap((l) => [...l.querySelectorAll<HTMLElement>('li button.link')])
+          .filter((b) => b.getBoundingClientRect().height > parseFloat(getComputedStyle(b).lineHeight) * 1.5)
+          .map((b) => b.textContent)
+        return { clipped, torn }
+      })
+      expect(found, `${l.locale} ${path}`).toEqual({ clipped: [], torn: [] })
+    }
+    await context.close()
+  }
+})

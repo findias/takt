@@ -115,6 +115,7 @@ export function Panel({
         <div className="row row--tight panel-controls">
           {actions}
           <select
+            className="panel-mode"
             value={mode}
             aria-label={t.ui.panelMode}
             onChange={(e) => onMode(e.target.value as PanelMode)}

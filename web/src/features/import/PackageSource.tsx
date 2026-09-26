@@ -7,6 +7,7 @@ import { importApi } from './api.ts'
 import type { PackageSummary } from './api.ts'
 import { toBase64 } from './file.ts'
 import { Done, Preview, hasWork } from './Preview.tsx'
+import { FilePick } from '../../shared/ui/FilePick.tsx'
 import { TargetPicker, boardIdOf } from './Target.tsx'
 import type { Target } from './Target.tsx'
 
@@ -155,10 +156,12 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
           {t.imports.packageHowTo}
         </a>
       </p>
-      <label className="import-file">
-        <span>{t.imports.packageFile}</span>
-        <input type="file" accept=".takt" disabled={busy === 'applying'} onChange={(e) => choose(e.target.files?.[0])} />
-      </label>
+      <FilePick
+        label={t.imports.packageFile}
+        accept=".takt"
+        disabled={busy === 'applying'}
+        onChoose={choose}
+      />
       {busy === 'reading' && <p className="muted small">{t.imports.reading}</p>}
 
       {summary && (
