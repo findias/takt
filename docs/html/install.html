@@ -324,15 +324,18 @@ make bundle BUNDLE_ARCH=arm64   # for another one; needs qemu on the build host<
 <p>Building for a foreign architecture needs qemu on the build host: <code>docker run --privileged --rm tonistiigi/binfmt --install all</code>.</p>
 <p>The bundle travels as a file. On site:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror
-helm install takt takt-*.tgz --set image.tag=&lt;version&gt; \
+# the image goes into the registry your cluster pulls from
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;version&gt;
+helm install takt takt-*.tgz \
+  --set image.repository=registry.internal/takt --set image.tag=&lt;version&gt; \
   --set baseURL=https://takt.example.com --set database.existingSecret=takt-db</code></pre>
+<p><code>registry.internal</code> stands for your registry. Without skopeo: <code>docker load &lt; takt-image.tar.gz</code>, then <code>docker tag takt:&lt;version&gt; registry.internal/takt:&lt;version&gt;</code> and <code>docker push</code>. <code>docker load</code> alone is not enough: it puts the image into the Docker of the machine you ran it on, not into the cluster, and the chart looks for the image at <code>image.repository</code> — <code>ghcr.io/findias/takt</code> by default, which a closed network cannot reach. Pods would hang in <code>ImagePullBackOff</code>.</p>
 <p>The checksums are not a formality: into a closed network the file travels through intermediaries, and &#34;is this the same image&#34; is a question that will be asked. For the same reason the chart lets you refer to the image by digest — a tag in a mirror can be rewritten, a digest cannot.</p>
 <p>Neither the chart nor the application reaches out on its own: the chart has no dependencies and the application calls no external service. The single exception is corporate sign-in, and it talks only to the provider whose address you configured.</p>
 <h2 id="upgrading-in-a-closed-network">Upgrading in a closed network</h2>
 <p>There will be more upgrades than installations. Same bundle, shorter sequence:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;new version&gt;
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;new version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <ol>
@@ -356,7 +359,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.2.3-149-g0b2e7b0-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-155-g7964c18-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

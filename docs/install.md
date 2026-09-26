@@ -458,10 +458,20 @@ The bundle travels as a file. On site:
 
 ```sh
 sha256sum -c SHA256SUMS
-docker load < takt-image.tar.gz        # or skopeo copy into your own mirror
-helm install takt takt-*.tgz --set image.tag=<version> \
+# the image goes into the registry your cluster pulls from
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:<version>
+helm install takt takt-*.tgz \
+  --set image.repository=registry.internal/takt --set image.tag=<version> \
   --set baseURL=https://takt.example.com --set database.existingSecret=takt-db
 ```
+
+`registry.internal` stands for your registry. Without skopeo:
+`docker load < takt-image.tar.gz`, then `docker tag takt:<version>
+registry.internal/takt:<version>` and `docker push`. `docker load`
+alone is not enough: it puts the image into the Docker of the machine
+you ran it on, not into the cluster, and the chart looks for the image
+at `image.repository` — `ghcr.io/findias/takt` by default, which a
+closed network cannot reach. Pods would hang in `ImagePullBackOff`.
 
 The checksums are not a formality: into a closed network the file
 travels through intermediaries, and "is this the same image" is a
@@ -481,7 +491,7 @@ sequence:
 
 ```sh
 sha256sum -c SHA256SUMS
-docker load < takt-image.tar.gz
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:<new version>
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=<new version>
 kubectl exec deploy/takt -- /app/takt doctor
 ```

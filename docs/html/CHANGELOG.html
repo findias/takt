@@ -187,6 +187,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>The board header fits a phone.</strong> At 360 pixels «Help» and your name — with settings and sign-out behind it — used to slide off the right edge of the board screen; now visibility and help show as icons there and everything stays reachable, without pushing the board down.</li>
 <li><strong>The file picker speaks the interface language.</strong> On the import screen the browser used to label it in its own language — «Выберите файл» on an English screen; now it says «Choose file» and shows the chosen file&#39;s name. On a phone the board&#39;s grouping reads in full instead of «No group…», and drop-downs stand level with the fields beside them.</li>
 <li><strong>Phone screens show names and actions whole.</strong> On «Team» and «Structure» a person&#39;s name and e-mail are no longer cut to «Boris D…» — the role and actions move under them; «Archive», «Revoke key» and «Delete for good» stay on one line; the iteration report no longer hides a card&#39;s points behind «…», and a key&#39;s permissions are listed in full. In a card and in «Flow» sections stand further apart from each other than their parts do, and the «Side / Centre» choice is gone where the panel always fills the screen.</li>
+<li><strong>Offline install: the image goes into your registry first.</strong> The instructions said <code>docker load</code>, then <code>helm install</code> — followed word for word, pods hung in <code>ImagePullBackOff</code>, because <code>docker load</code> puts the image into one machine&#39;s Docker and the chart looked for it at <code>ghcr.io</code>. Now: <code>skopeo copy</code> into your registry and <code>--set image.repository=</code> pointing at it; the same for upgrades. Installations that already mirror the image are unaffected.</li>
 <li><strong>Demo card history runs in order.</strong> Events on the demo stand used to shuffle — a commitment set before the card was created, an edit hours in the future; now they go from creation to now, as they happened.</li>
 <li><strong>The board&#39;s toolbar is rebuilt.</strong> The view (Board, Table, Changes) is a list at the left; the filter is the main panel and stays open on a wide screen (on a narrow one it is folded under «Отбор» as before); the card search is a row below.</li>
 <li><strong>Labels are named on the card.</strong> Under the title, as text — three of them and «+N»; they used to be coloured dots with the name only in a tooltip. Pressing them edits the card&#39;s labels.</li>
@@ -314,7 +315,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.2.3-150-gabcda47-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-155-g7964c18-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -324,15 +324,18 @@ make bundle BUNDLE_ARCH=arm64   # под другую; на сборочной �
 <p>Сборка под чужую архитектуру требует qemu на сборочной машине: <code>docker run --privileged --rm tonistiigi/binfmt --install all</code>.</p>
 <p>Комплект увозится файлом. На месте:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz        # либо skopeo copy в своё зеркало
-helm install takt takt-*.tgz --set image.tag=&lt;версия&gt; \
+# образ — в реестр, из которого берёт кластер
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;версия&gt;
+helm install takt takt-*.tgz \
+  --set image.repository=registry.internal/takt --set image.tag=&lt;версия&gt; \
   --set baseURL=https://takt.example.ru --set database.existingSecret=takt-db</code></pre>
+<p><code>registry.internal</code> — ваш реестр. Без skopeo: <code>docker load &lt; takt-image.tar.gz</code>, затем <code>docker tag takt:&lt;версия&gt; registry.internal/takt:&lt;версия&gt;</code> и <code>docker push</code>. Одного <code>docker load</code> мало: он кладёт образ в Docker той машины, где его выполнили, а не в кластер, а чарт ищет образ по <code>image.repository</code> — по умолчанию <code>ghcr.io/findias/takt</code>, до которого из закрытого контура не дотянуться. Поды повиснут в <code>ImagePullBackOff</code>.</p>
 <p>Контрольные суммы здесь не формальность: в закрытый контур файл едет через посредников, и «тот ли это образ» — вопрос, который зададут. По той же причине чарт позволяет ссылаться на образ по digest: тег в зеркале можно переписать, digest — нет.</p>
 <p>Ни чарт, ни приложение никуда не ходят сами: зависимостей у чарта нет, внешних служб приложение не вызывает. Единственное исключение — корпоративный вход, и он обращается только к тому провайдеру, адрес которого указан в настройках.</p>
 <h2 id="обновление-в-закрытом-контуре">Обновление в закрытом контуре</h2>
 <p>Обновлений будет больше, чем установок, а описана была только установка. Порядок тот же комплект, но короче:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz        # или skopeo copy в зеркало
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;новая версия&gt;
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;новая версия&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>Что здесь важно и в каком порядке происходит:</p>
@@ -358,7 +361,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # пакет идёт через стандартный ввод
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; склад.takt</code></pre>
 <p>Без <code>--apply</code> команда только показывает, что будет, — тот же предпросмотр, что на экране. Перенос идёт от имени человека из <code>--as</code> и с его правами: наблюдатель ничего не переносит, доска, в которую он не пишет, отказывает. <code>--board 2</code> выбирает вторую доску пакета, <code>--into</code> — существующую доску, <code>--new-board</code> — название новой, <code>--org</code> — организацию, если человек состоит в нескольких. Люди сопоставляются по почте и по выбору, сделанному на экране для того же источника; команда никого не заводит — сделайте выбор на экране или заведите людей в «Команде».</p>
-<footer>Takt, версия v0.2.3-149-g0b2e7b0-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
+<footer>Takt, версия v0.2.3-155-g7964c18-dirty. Страница собрана из установка.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

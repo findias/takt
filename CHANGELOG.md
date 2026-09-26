@@ -405,6 +405,13 @@ the branch adds. It cannot be combined with `DEMO=on`.
   in full. In a card and in «Flow» sections stand further apart from
   each other than their parts do, and the «Side / Centre» choice is
   gone where the panel always fills the screen.
+- **Offline install: the image goes into your registry first.** The
+  instructions said `docker load`, then `helm install` — followed word
+  for word, pods hung in `ImagePullBackOff`, because `docker load` puts
+  the image into one machine's Docker and the chart looked for it at
+  `ghcr.io`. Now: `skopeo copy` into your registry and
+  `--set image.repository=` pointing at it; the same for upgrades.
+  Installations that already mirror the image are unaffected.
 - **Demo card history runs in order.** Events on the demo stand used to
   shuffle — a commitment set before the card was created, an edit hours
   in the future; now they go from creation to now, as they happened.

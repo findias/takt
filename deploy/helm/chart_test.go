@@ -477,3 +477,42 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 }
 
 var регулярка = regexp.MustCompile(`env\("([A-Z_]+)"`)
+
+// Установка из комплекта кладёт образ туда, откуда его возьмёт кластер.
+//
+// Инструкция говорила `docker load` и `helm install` — и дословно
+// приводила к `ImagePullBackOff`: `docker load` кладёт образ в Docker
+// той машины, где его выполнили, а чарт тянет `ghcr.io/findias/takt`,
+// недоступный из закрытого контура. Нашлось 26.09.2026, когда комплект
+// впервые поставили «как у заказчика». Каждый блок команд с `helm
+// install` или `helm upgrade` из комплекта обязан переложить образ
+// в реестр (skopeo copy или docker push), а установка — ещё и назвать
+// этот реестр чарту.
+func TestOfflineInstallPutsTheImageWhereTheClusterLooks(t *testing.T) {
+	корень := filepath.Join(чарт(t), "..", "..", "..")
+	блоки := 0
+	for _, имя := range []string{"docs/install.md", "docs/ru/установка.md", "docs/howto.md", "docs/ru/как.md", "Makefile"} {
+		raw, err := os.ReadFile(filepath.Join(корень, имя))
+		if err != nil {
+			t.Fatal(err)
+		}
+		текст := string(raw)
+		// Блок — кусок между пустыми строками: в Markdown это блок кода
+		// целиком, в Makefile — подсказка `bundle`.
+		for _, блок := range strings.Split(текст, "\n\n") {
+			if !strings.Contains(блок, "takt-*.tgz") {
+				continue
+			}
+			блоки++
+			if !strings.Contains(блок, "skopeo copy") && !strings.Contains(блок, "docker push") {
+				t.Errorf("%s: образ не кладётся в реестр перед helm:\n%s", имя, блок)
+			}
+			if strings.Contains(блок, "helm install") && !strings.Contains(блок, "image.repository") {
+				t.Errorf("%s: helm install не говорит чарту, где образ, — он пойдёт за ghcr.io:\n%s", имя, блок)
+			}
+		}
+	}
+	if блоки < 5 {
+		t.Fatalf("нашлось %d блоков установки из комплекта — разбор сломан", блоки)
+	}
+}

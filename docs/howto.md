@@ -843,7 +843,7 @@ reachable, database notifications arriving.
 ### Upgrade an installation
 
 ```sh
-docker load < takt-image.tar.gz
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:<version>
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=<version>
 kubectl exec deploy/takt -- /app/takt doctor
 ```

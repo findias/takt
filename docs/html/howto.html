@@ -381,13 +381,13 @@ color:var(--ink-3);font-size:.85rem}
 <pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>It answers as a list: right schema, right address, identity provider reachable, database notifications arriving.</p>
 <h3 id="upgrade-an-installation">Upgrade an installation</h3>
-<pre><code>docker load &lt; takt-image.tar.gz
+<pre><code>skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;version&gt;
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-149-g0b2e7b0-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-155-g7964c18-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

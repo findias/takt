@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-150-gabcda47-dirty.</p>
+<p>Every section in one file. Version v0.2.3-155-g7964c18-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -470,7 +470,7 @@ color:var(--ink-3);font-size:.85rem}
 <pre><code>kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p>It answers as a list: right schema, right address, identity provider reachable, database notifications arriving.</p>
 <h3 id="upgrade-an-installation">Upgrade an installation</h3>
-<pre><code>docker load &lt; takt-image.tar.gz
+<pre><code>skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;version&gt;
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
@@ -1001,15 +1001,18 @@ make bundle BUNDLE_ARCH=arm64   # for another one; needs qemu on the build host<
 <p>Building for a foreign architecture needs qemu on the build host: <code>docker run --privileged --rm tonistiigi/binfmt --install all</code>.</p>
 <p>The bundle travels as a file. On site:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz        # or skopeo copy into your own mirror
-helm install takt takt-*.tgz --set image.tag=&lt;version&gt; \
+# the image goes into the registry your cluster pulls from
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;version&gt;
+helm install takt takt-*.tgz \
+  --set image.repository=registry.internal/takt --set image.tag=&lt;version&gt; \
   --set baseURL=https://takt.example.com --set database.existingSecret=takt-db</code></pre>
+<p><code>registry.internal</code> stands for your registry. Without skopeo: <code>docker load &lt; takt-image.tar.gz</code>, then <code>docker tag takt:&lt;version&gt; registry.internal/takt:&lt;version&gt;</code> and <code>docker push</code>. <code>docker load</code> alone is not enough: it puts the image into the Docker of the machine you ran it on, not into the cluster, and the chart looks for the image at <code>image.repository</code> — <code>ghcr.io/findias/takt</code> by default, which a closed network cannot reach. Pods would hang in <code>ImagePullBackOff</code>.</p>
 <p>The checksums are not a formality: into a closed network the file travels through intermediaries, and &#34;is this the same image&#34; is a question that will be asked. For the same reason the chart lets you refer to the image by digest — a tag in a mirror can be rewritten, a digest cannot.</p>
 <p>Neither the chart nor the application reaches out on its own: the chart has no dependencies and the application calls no external service. The single exception is corporate sign-in, and it talks only to the provider whose address you configured.</p>
 <h2 id="upgrading-in-a-closed-network">Upgrading in a closed network</h2>
 <p>There will be more upgrades than installations. Same bundle, shorter sequence:</p>
 <pre><code>sha256sum -c SHA256SUMS
-docker load &lt; takt-image.tar.gz
+skopeo copy docker-archive:takt-image.tar.gz docker://registry.internal/takt:&lt;new version&gt;
 helm upgrade takt takt-*.tgz --reuse-values --set image.tag=&lt;new version&gt;
 kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <ol>
@@ -1805,6 +1808,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>The board header fits a phone.</strong> At 360 pixels «Help» and your name — with settings and sign-out behind it — used to slide off the right edge of the board screen; now visibility and help show as icons there and everything stays reachable, without pushing the board down.</li>
 <li><strong>The file picker speaks the interface language.</strong> On the import screen the browser used to label it in its own language — «Выберите файл» on an English screen; now it says «Choose file» and shows the chosen file&#39;s name. On a phone the board&#39;s grouping reads in full instead of «No group…», and drop-downs stand level with the fields beside them.</li>
 <li><strong>Phone screens show names and actions whole.</strong> On «Team» and «Structure» a person&#39;s name and e-mail are no longer cut to «Boris D…» — the role and actions move under them; «Archive», «Revoke key» and «Delete for good» stay on one line; the iteration report no longer hides a card&#39;s points behind «…», and a key&#39;s permissions are listed in full. In a card and in «Flow» sections stand further apart from each other than their parts do, and the «Side / Centre» choice is gone where the panel always fills the screen.</li>
+<li><strong>Offline install: the image goes into your registry first.</strong> The instructions said <code>docker load</code>, then <code>helm install</code> — followed word for word, pods hung in <code>ImagePullBackOff</code>, because <code>docker load</code> puts the image into one machine&#39;s Docker and the chart looked for it at <code>ghcr.io</code>. Now: <code>skopeo copy</code> into your registry and <code>--set image.repository=</code> pointing at it; the same for upgrades. Installations that already mirror the image are unaffected.</li>
 <li><strong>Demo card history runs in order.</strong> Events on the demo stand used to shuffle — a commitment set before the card was created, an edit hours in the future; now they go from creation to now, as they happened.</li>
 <li><strong>The board&#39;s toolbar is rebuilt.</strong> The view (Board, Table, Changes) is a list at the left; the filter is the main panel and stays open on a wide screen (on a narrow one it is folded under «Отбор» as before); the card search is a row below.</li>
 <li><strong>Labels are named on the card.</strong> Under the title, as text — three of them and «+N»; they used to be coloured dots with the name only in a tooltip. Pressing them edits the card&#39;s labels.</li>
@@ -2010,6 +2014,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <li><strong>Шапка доски помещается на телефоне.</strong> На 360 пикселях «Справка» и ваше имя — а за ним настройки и выход — уезжали за правый край экрана доски; теперь видимость и справка там значками, и всё доступно, а доска не опускается ниже.</li>
 <li><strong>Выбор файла говорит языком интерфейса.</strong> На экране переноса браузер подписывал его своим языком — «Choose file» на русском экране; теперь там «Выбрать файл» и имя выбранного файла. На телефоне группировка доски читается целиком, а не «Без группиро…», а выпадающие списки стоят вровень с соседними полями.</li>
 <li><strong>На телефоне имена и действия видны целиком.</strong> На «Команде» и «Структуре» имя и почта человека больше не обрезаются до «Борис Д…» — роль и действия уходят под них; «Убрать в архив», «Отозвать ключ» и «Удалить навсегда» стоят одной строкой; отчёт итерации не прячет очки карточки за многоточием, а разрешения ключа перечислены целиком. В карточке и в «Потоке» разделы отделены друг от друга сильнее, чем их части, а выбора «Сбоку / По центру» нет там, где панель всё равно во весь экран.</li>
+<li><strong>Установка без интернета: образ сперва в ваш реестр.</strong> Инструкция говорила <code>docker load</code>, затем <code>helm install</code> — выполненная дословно, она оставляла поды в <code>ImagePullBackOff</code>: <code>docker load</code> кладёт образ в Docker одной машины, а чарт искал его на <code>ghcr.io</code>. Теперь: <code>skopeo copy</code> в ваш реестр и <code>--set image.repository=</code> на него; то же при обновлении. Установок, где образ уже лежит в зеркале, это не касается.</li>
 <li><strong>История демо-карточек идёт по порядку.</strong> События на демо-стенде перемешивались — обязательство раньше создания карточки, правка на несколько часов в будущем; теперь они идут от создания к «сейчас», как случились.</li>
 <li><strong>Инструменты доски — две строки вместо трёх</strong> (пяти с открытой карточкой): в первой вид и весь отбор, во второй поиск, группировка, сохранённые виды, «Найти», «Поток» и «Архив». Отбор остаётся на виду; его быстрые условия — от «Горит» до «Дольше обещанного» — теперь переключатели, включённый залит и отмечен галочкой. Тема и плотность — за именем.</li>
 <li><strong>В выгрузке карточек — заявки и описание.</strong> На листе <strong>Данные</strong> (и в CSV, и в JSON) появились <strong>Заявки</strong> — RDS, ЗНО, ЗНИ и проблемы одной ячейкой — и последним столбцом <strong>Описание</strong> целиком. В JSON — список <code>refs</code> и поле <code>description</code>.</li>
