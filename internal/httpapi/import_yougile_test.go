@@ -29,6 +29,9 @@ type fakeYougile struct {
 	owner string
 	// Колонки отвечают 500: YouGile ответил не так, как ждали.
 	brokenColumns bool
+	// status — ответить им на всё, кроме входа: 429 даёт «занят»,
+	// 404 — «нет такой доски» (contract_codes_test).
+	status int
 }
 
 const (
@@ -63,6 +66,13 @@ func newFakeYougile(t *testing.T) *fakeYougile {
 		f.seen = append(f.seen, r.Method+" "+r.URL.Path)
 		f.mu.Unlock()
 		path := strings.TrimPrefix(r.URL.Path, "/api-v2/")
+		f.mu.Lock()
+		status := f.status
+		f.mu.Unlock()
+		if status != 0 && !strings.HasPrefix(path, "auth/") {
+			w.WriteHeader(status)
+			return
+		}
 		var body map[string]string
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		list := func(items ...map[string]any) {
