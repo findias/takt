@@ -47,21 +47,21 @@ migrate: db ## Применить миграции к локальной баз�
 demo: migrate ## Наполнить базу данными для работы над видом
 	DATABASE_URL="$(DEV_DB_URL)" go run ./cmd/takt demo
 
-# Заметка тестового стенда (ROADMAP 30.7): коммиты ветки поверх master,
+# Заметка тестового стенда (ROADMAP 30.7): коммиты с последнего выпуска,
 # вшиваются в бинарник при сборке. Файлы в .gitignore, поэтому версия
 # не становится «-dirty», а сборка выпуска получает пустую заметку.
 # Разделители — управляющие символы: в сообщении коммита может быть
 # что угодно, кроме них.
 STAND_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
-# От чего считать: у ветки — от master, у самого master — от последнего
-# выпуска. Иначе выложенный master показывал пустую заметку: коммитов
-# поверх себя у него нет, а сделанного с выпуска — десятки.
-# Точку отсчёта можно назвать при выкладке (STAND_BASE=<коммит>): ветка,
-# уже влитая в master, иначе показала бы пустую заметку.
-STAND_BASE ?= $(if $(filter master,$(STAND_BRANCH)),$(shell git describe --tags --abbrev=0 2>/dev/null),origin/master)
+# От чего считать — от последнего выпуска, у любой ветки (решение
+# владельца 26.09.2026). Прежде ветка считалась от master, и влитая
+# ветка показывала пустую заметку, а стенд отвечает на вопрос «что
+# нового с выпуска», а не «что не влито». Точку можно назвать при
+# выкладке (STAND_BASE=<коммит или тег>).
+STAND_BASE ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
 
 .PHONY: stand-notes
-stand-notes: ## Записать заметку тестового стенда: коммиты ветки поверх master, у master — с выпуска
+stand-notes: ## Записать заметку тестового стенда: коммиты с последнего выпуска
 	@printf '%s\n' "$(STAND_BRANCH)" > internal/stand/notes/branch.txt
 	@printf '%s\n' "$(patsubst origin/%,%,$(STAND_BASE))" > internal/stand/notes/base.txt
 	@git log --format='%H%x1f%cI%x1f%B%x1e' $(STAND_BASE)..HEAD > internal/stand/notes/log.txt

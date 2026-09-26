@@ -27,7 +27,7 @@ on:
         description: Ветка, которую выложить на стенд
         required: true
       base:
-        description: От какого коммита считать заметку (пусто — от master, у master — от выпуска)
+        description: От какого коммита или тега считать заметку (пусто — от последнего выпуска)
         required: false
         default: ''
 
@@ -82,12 +82,9 @@ jobs:
       # нечего, — но виден здесь и на самом стенде с пометкой.
       - name: Заметка стенда
         run: |
-          if [ -n "$BASE" ]; then
-            make stand-notes STAND_BRANCH="$BRANCH" STAND_BASE="$BASE"
-          else
-            make stand-notes STAND_BRANCH="$BRANCH"
-          fi
-          for c in $(git rev-list "${BASE:-origin/master}"..HEAD); do
+          base="${BASE:-$(git describe --tags --abbrev=0)}"
+          make stand-notes STAND_BRANCH="$BRANCH" STAND_BASE="$base"
+          for c in $(git rev-list "$base"..HEAD); do
             msg=$(git log -1 --format=%B "$c")
             subject=$(git log -1 --format=%s "$c")
             if ! grep -qx -- '--- ru ---' <<<"$msg"; then

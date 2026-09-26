@@ -105,9 +105,8 @@ function StandDialog({ note, onClose }: { note: StandNote; onClose: () => void }
         </IconButton>
       </div>
       <p className="small">{t.stand.signIn(note.email, note.password)}</p>
-      {/* От чего считали — сказано: у ветки это «поверх master», а у
-          выложенного master — «после выпуска», иначе заметка master
-          была бы пустой при десятках сделанного. */}
+      {/* От чего считали — сказано: обычно «после выпуска», но точку
+          можно назвать при выкладке, и тогда заметка называет её. */}
       {note.commits.length === 0 ? (
         <p className="muted small">
           {note.since && note.since !== 'master' ? t.stand.emptySince(note.since) : t.stand.empty}
