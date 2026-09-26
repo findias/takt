@@ -1287,81 +1287,111 @@ func (f *filler) backdate() error {
 			  from numbered n where n.id = c.id`); err != nil {
 			return err
 		}
-		// Журнал переходов сдвигается следом: лента доски, где всё
-		// произошло в одну минуту, читается как сбой.
-		//
-		// Не `update`: у card_events нет политики на изменение, и это
-		// не упущение — журнал только дописывается. Прежняя версия
-		// обновляла ноль строк и молчала об этом, как всякая правка
-		// данных под RLS; поломку нашла проверка стенда 19 августа,
-		// а глазами она выглядела как «вся история доски случилась
-		// в одну минуту».
-		//
-		// Поэтому строки перекладываются: удалить (владельцу можно)
-		// и вставить заново с нужным временем (дописывать можно тому,
-		// кто пишет в доску). Порядок вставки — по новому времени,
-		// чтобы растущий id шёл в ту же сторону, что и лента.
-		// Читаем, удаляем, вставляем заново — тремя шагами, а не одним
-		// запросом с data-modifying CTE: тот однажды удалил строки
-		// и не вставил их обратно, и понять почему по одному запросу
-		// нельзя. Демонстрационных событий сотня, скорость здесь
-		// не стоит ни одной непонятной строки.
-		type event struct {
-			org, board, card string
-			actor            *string
-			kind             string
-			from, to         *string
-			payload          []byte
-			at               time.Time
-		}
-		// События карточки ложатся от её создания к «сейчас» в том порядке,
-		// в каком случились, — не дальше часа друг от друга и не позже
-		// текущего момента. Прежний сдвиг на `id % 7` часов перемешивал их:
-		// у английской копии обязательство стояло раньше создания
-		// карточки, а у только что заведённой события уходили в будущее
-		// (проход по дизайну 26.09.2026).
-		rows, err := tx.Query(f.ctx, `
-			select e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
-			       e.from_column, e.to_column, e.payload,
-			       c.created_at
-			         + (row_number() over (partition by e.card_id order by e.id) - 1)
-			         * least(interval '1 hour',
-			                 (now() - c.created_at) / count(*) over (partition by e.card_id))
-			  from card_events e join cards c on c.id = e.card_id
-			 order by 9, e.id`)
-		if err != nil {
-			return err
-		}
-		var events []event
-		for rows.Next() {
-			var e event
-			if err := rows.Scan(&e.org, &e.board, &e.card, &e.actor, &e.kind,
-				&e.from, &e.to, &e.payload, &e.at); err != nil {
-				rows.Close()
-				return err
-			}
-			events = append(events, e)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
+		return respreadEvents(f.ctx, tx)
+	})
+}
 
-		if _, err := tx.Exec(f.ctx, `delete from card_events`); err != nil {
+// respreadEvents раскладывает журнал событий карточек организации
+// арендатора от создания каждой карточки к «сейчас» в настоящем порядке.
+func respreadEvents(ctx context.Context, tx pgx.Tx) error {
+	// Журнал переходов сдвигается следом: лента доски, где всё
+	// произошло в одну минуту, читается как сбой.
+	//
+	// Не `update`: у card_events нет политики на изменение, и это
+	// не упущение — журнал только дописывается. Прежняя версия
+	// обновляла ноль строк и молчала об этом, как всякая правка
+	// данных под RLS; поломку нашла проверка стенда 19 августа,
+	// а глазами она выглядела как «вся история доски случилась
+	// в одну минуту».
+	//
+	// Поэтому строки перекладываются: удалить (владельцу можно)
+	// и вставить заново с нужным временем (дописывать можно тому,
+	// кто пишет в доску). Порядок вставки — по новому времени,
+	// чтобы растущий id шёл в ту же сторону, что и лента.
+	// Читаем, удаляем, вставляем заново — тремя шагами, а не одним
+	// запросом с data-modifying CTE: тот однажды удалил строки
+	// и не вставил их обратно, и понять почему по одному запросу
+	// нельзя. Демонстрационных событий сотня, скорость здесь
+	// не стоит ни одной непонятной строки.
+	type event struct {
+		org, board, card string
+		actor            *string
+		kind             string
+		from, to         *string
+		payload          []byte
+		at               time.Time
+	}
+	// События карточки ложатся от её создания к «сейчас» в том порядке,
+	// в каком случились, — не дальше часа друг от друга и не позже
+	// текущего момента. Прежний сдвиг на `id % 7` часов перемешивал их:
+	// у английской копии обязательство стояло раньше создания
+	// карточки, а у только что заведённой события уходили в будущее
+	// (проход по дизайну 26.09.2026).
+	rows, err := tx.Query(ctx, `
+		select e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
+		       e.from_column, e.to_column, e.payload,
+		       c.created_at
+		         + (row_number() over (partition by e.card_id order by e.id) - 1)
+		         * least(interval '1 hour',
+		                 (now() - c.created_at) / count(*) over (partition by e.card_id))
+		  from card_events e join cards c on c.id = e.card_id
+		 order by 9, e.id`)
+	if err != nil {
+		return err
+	}
+	var events []event
+	for rows.Next() {
+		var e event
+		if err := rows.Scan(&e.org, &e.board, &e.card, &e.actor, &e.kind,
+			&e.from, &e.to, &e.payload, &e.at); err != nil {
+			rows.Close()
 			return err
 		}
-		for _, e := range events {
-			if _, err := tx.Exec(f.ctx, `
-				insert into card_events
-					(org_id, board_id, card_id, actor_id, type,
-					 from_column, to_column, payload, at)
-				values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-				e.org, e.board, e.card, e.actor, e.kind,
-				e.from, e.to, e.payload, e.at); err != nil {
-				return err
-			}
+		events = append(events, e)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `delete from card_events`); err != nil {
+		return err
+	}
+	for _, e := range events {
+		if _, err := tx.Exec(ctx, `
+			insert into card_events
+				(org_id, board_id, card_id, actor_id, type,
+				 from_column, to_column, payload, at)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			e.org, e.board, e.card, e.actor, e.kind,
+			e.from, e.to, e.payload, e.at); err != nil {
+			return err
 		}
-		return nil
+	}
+	return nil
+}
+
+// orderHistory — долив для стендов, наполненных до 26.09.2026: тогда
+// события сдвигались на `id % 7` часов, и история перемешивалась —
+// правка раньше создания карточки, событие в будущем. Сверка это теперь
+// ловит, а сносить базу стенда ради порядка в истории демо нельзя: рядом
+// живут настоящие данные. Раскладывает заново только перемешанное — на
+// стенде в порядке не делает ничего.
+func (f *filler) orderHistory() error {
+	return f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		var broken bool
+		if err := tx.QueryRow(f.ctx, `
+			select exists (
+			         select 1 from card_events e
+			           join card_events c on c.card_id = e.card_id and c.type = 'created'
+			          where e.at < c.at)
+			    or exists (select 1 from card_events where at > now())`).Scan(&broken); err != nil {
+			return err
+		}
+		if !broken {
+			return nil
+		}
+		return respreadEvents(f.ctx, tx)
 	})
 }
 

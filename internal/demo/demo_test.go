@@ -163,3 +163,56 @@ func TestTopUpRenewsTheRunningIterationThatEnded(t *testing.T) {
 		t.Error("незакрытое из кончившейся итерации в новую не перенесено")
 	}
 }
+
+// Стенд, наполненный до 26.09.2026, хранит перемешанную историю: события
+// сдвигались на `id % 7` часов — правка раньше создания карточки, событие
+// в будущем. Новая сверка это ловит, и выкладка staging упала на ней же:
+// сносить базу стенда ради порядка в демо нельзя, рядом настоящие данные.
+// Долив обязан разложить историю заново и не потерять ни одного события.
+func TestTopUpPutsAScrambledHistoryInOrder(t *testing.T) {
+	ctx := context.Background()
+	db := testdb.Open(t)
+	box, err := FillSandbox(ctx, db, time.Hour)
+	if err != nil {
+		t.Fatalf("песочница: %v", err)
+	}
+	t.Cleanup(func() { _ = RemoveSandbox(context.Background(), db, box.OrgID) })
+	orgID, ownerID := box.OrgID, box.OwnerID
+
+	count := func() (n int) {
+		if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `select count(*) from card_events`).Scan(&n)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	// Как у старого стенда: у одной карточки правка за сутки до создания,
+	// у другой — событие через час.
+	if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			insert into card_events (org_id, board_id, card_id, actor_id, type, payload, at)
+			select e.org_id, e.board_id, e.card_id, e.actor_id, 'estimated', '{}'::jsonb,
+			       case when row_number() over (order by e.id) = 1
+			            then e.at - interval '1 day' else now() + interval '1 hour' end
+			  from card_events e where e.type = 'created'
+			 order by e.id limit 2`)
+		return err
+	}); err != nil {
+		t.Fatalf("перемешать историю: %v", err)
+	}
+	before := count()
+	if err := VerifyOrg(ctx, db, orgID, ownerID); err == nil {
+		t.Fatal("сверка прошла на перемешанной истории — проверка ничего не проверяет")
+	}
+
+	if err := TopUpOrg(ctx, db, orgID, ownerID); err != nil {
+		t.Fatalf("долив: %v", err)
+	}
+	if err := VerifyOrg(ctx, db, orgID, ownerID); err != nil {
+		t.Errorf("после долива: %v", err)
+	}
+	if after := count(); after != before {
+		t.Errorf("событий было %d, после долива %d — долив их терять не вправе", before, after)
+	}
+}

@@ -296,6 +296,9 @@ func TopUpOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error
 	if err := f.renewRunningIteration(); err != nil {
 		return err
 	}
+	if err := f.orderHistory(); err != nil {
+		return err
+	}
 	return f.epic()
 }
 
