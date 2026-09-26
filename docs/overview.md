@@ -60,6 +60,13 @@ is closed.
 visibilities, invitations by link, an audit log of administrative
 actions.
 
+**Moving in.** From a spreadsheet (CSV, Excel), straight from
+YouGile, or — into a closed network — as a package: the separate
+exporter [`takt-fetch`](takt-fetch.md) builds it outside from YouGile,
+Jira, Kaiten or monday, with subtasks, links and discussions. Every
+import shows what will happen before it writes anything, and names
+what it cannot carry.
+
 **Integrations.** A REST API with a published contract, keys with
 scopes, SCIM 2.0 directory provisioning, event subscriptions signed
 with a key and a delivery log, and a full data export in one file.

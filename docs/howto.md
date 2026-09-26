@@ -595,11 +595,19 @@ An administrator can switch import over the API off altogether with
 <!-- anchor: import-package -->
 ### Import a package from a closed network
 
-A package (`.takt`) carries boards from YouGile, Jira, Trello and other
-trackers into a closed network, together with what a spreadsheet
+A package (`.takt`) carries boards from YouGile, Jira, Kaiten and
+monday into a closed network, together with what a spreadsheet
 loses: subtasks, links between cards and discussions. It is built
 outside, where there is internet, and carried in as a file.
 
+0. **Build the package outside.** Download `takt-fetch` for your system
+   from the latest release (`github.com/findias/takt/releases`) — it is
+   a separate file, not in the installation bundle on purpose: it runs
+   where there is internet — and run, for
+   YouGile: `takt-fetch yougile boards`, then
+   `takt-fetch yougile fetch --board <id> --out warehouse.takt`. Jira,
+   Kaiten and monday work the same way; everything about signing in
+   and choosing boards is on the [takt-fetch](takt-fetch.md#get) page.
 1. **Boards** tab → **Import tasks from a spreadsheet…** → **Import
    package**, and pick the file.
 2. The screen says where the package came from and who built it. If it

@@ -151,7 +151,10 @@ next to it, and nothing crosses the perimeter. Built for
 linux, macOS and Windows,
 with its own SBOM and sum; it is not in the image, the chart or the
 bundle. How to use it is on its own page, `docs/takt-fetch.md`, and in
-`takt-fetch help`, in Russian or English by `TAKT_LANG` / `LANG`.
+`takt-fetch help`, in Russian or English by `TAKT_LANG` / `LANG`; the
+in-app help carries the same page, the «Import package» screen links
+straight to where to get it, and the how-to for importing a package
+starts with building one.
 Jira epics come as a board of their own: the epics of every collected
 board, on it or only linked from it, go into one more board of the
 package, «Эпики», of the epic portfolio level, and their issues on the

@@ -9,7 +9,8 @@ export const imports: typeof ru = {
   fromYougile: 'YouGile',
   fromPackage: 'Import package',
   packageIntro:
-    'An import package is a .takt file built by the takt-fetch exporter where there is internet: boards from YouGile, Jira, Trello and other trackers together with subtasks, links and discussions. A package larger than 50 MB is imported by an administrator with takt import on the server.',
+    'An import package is a .takt file built by the takt-fetch exporter where there is internet: boards from YouGile, Jira, Kaiten and monday together with subtasks, links and discussions. A package larger than 50 MB is imported by an administrator with takt import on the server.',
+  packageHowTo: 'Where to get the exporter and how to build a package',
   packageFile: 'Package file (.takt)',
   packageTooBig: 'The package is larger than 50 MB — an administrator imports such a package with takt import on the server',
   packageFrom: (source: string, account: string, by: string, date: string) =>

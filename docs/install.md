@@ -514,7 +514,7 @@ was declared breaking, `CHANGELOG.md` says so in its own line.
 
 ## Moving boards into a closed network
 
-Boards from YouGile, Jira, Trello and other trackers come into a closed
+Boards from other trackers come into a closed
 network as an [import package](import-package.md) — a `.takt` file
 built outside, where there is internet, by `takt-fetch` from the same
 release (its own page: [takt-fetch](takt-fetch.md)). So far it knows

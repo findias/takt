@@ -9,7 +9,8 @@ export const imports = {
   fromYougile: 'Из YouGile',
   fromPackage: 'Пакет переноса',
   packageIntro:
-    'Пакет переноса — файл .takt, который собирает выгрузчик takt-fetch там, где есть интернет: доски YouGile, Jira, Trello и других трекеров вместе с подзадачами, связями и обсуждением. Пакет больше 50 МБ переносит администратор командой takt import на сервере.',
+    'Пакет переноса — файл .takt, который собирает выгрузчик takt-fetch там, где есть интернет: доски YouGile, Jira, Kaiten и monday вместе с подзадачами, связями и обсуждением. Пакет больше 50 МБ переносит администратор командой takt import на сервере.',
+  packageHowTo: 'Где взять выгрузчик и как собрать пакет',
   packageFile: 'Файл пакета (.takt)',
   packageTooBig: 'Пакет больше 50 МБ — такой переносит администратор командой takt import на сервере',
   packageFrom: (source: string, account: string, by: string, date: string) =>

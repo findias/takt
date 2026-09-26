@@ -121,7 +121,7 @@ color:var(--ink-3);font-size:.85rem}
 <h1>takt-fetch: the exporter for a closed network</h1>
 <p><code>takt-fetch</code> takes boards out of a cloud tracker and writes them into an <a href="import-package.html">import package</a> — a single <code>.takt</code> file that is carried into a closed network and imported into takt there. So far it knows YouGile, Jira — the cloud one and your own installation (Data Center, Server) — Kaiten, cloud or on-premises, and monday; Weeek and Trello come next.</p>
 <p>It is a separate program on purpose. It runs where there is internet — usually on a laptop — and the takt installed inside the closed network does not contain it: the server that holds your boards cannot reach out to anyone&#39;s cloud, and a security review can check that by the list of files alone.</p>
-<h2 id="get-it">Get it</h2>
+<h2 id="get">Get it</h2>
 <p>Every release carries <code>takt-fetch</code> as separate files, one per system:</p>
 <div class="tablewrap"><table>
 <thead><tr><th>System</th><th>File</th></tr></thead>
@@ -236,7 +236,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 </tbody>
 </table></div>
 <p>A chat YouGile does not return does not stop the board: the card comes without it, and the package says how many such chats there were. A «502», «503» or «504» is waited out, not treated as a failure.</p>
-<footer>Takt, version v0.2.3-145-g81cf3cc-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-147-g28225fe-dirty. Built from takt-fetch.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

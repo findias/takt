@@ -28,6 +28,7 @@ export const HELP_TOPICS = {
   import: 'howto#import',
   importYougile: 'howto#import-yougile',
   importPackage: 'howto#import-package',
+  taktFetch: 'takt-fetch#get',
   // Понятия с «?» (ROADMAP 30.4): «Подробнее в справке» ведёт сюда.
   markup: 'howto#columns',
   limit: 'howto#columns',

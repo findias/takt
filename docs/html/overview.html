@@ -144,6 +144,7 @@ color:var(--ink-3);font-size:.85rem}
 <p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
 <p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
 <p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
+<p><strong>Moving in.</strong> From a spreadsheet (CSV, Excel), straight from YouGile, or — into a closed network — as a package: the separate exporter <a href="takt-fetch.html"><code>takt-fetch</code></a> builds it outside from YouGile, Jira, Kaiten or monday, with subtasks, links and discussions. Every import shows what will happen before it writes anything, and names what it cannot carry.</p>
 <p><strong>Integrations.</strong> A REST API with a published contract, keys with scopes, SCIM 2.0 directory provisioning, event subscriptions signed with a key and a delivery log, and a full data export in one file.</p>
 <p><strong>Sign-in.</strong> Password or a corporate identity provider (OIDC).</p>
 <h2 id="what-the-product-does-not-do">What the product does not do</h2>
@@ -151,7 +152,7 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="how-it-is-deployed">How it is deployed</h2>
 <p>One image, one PostgreSQL database. Deploy it with <code>docker compose</code> on a single machine, from a binary under systemd, or with a Helm chart in Kubernetes; a package for an air-gapped network is built with one command and carried in as a file. No internet access is needed either to install or to run.</p>
 <p>Deployment details, including what the installation requires of you, are in the <a href="install.html">installation guide</a>; what the product commits not to break is in the <a href="REQUIREMENTS.html">requirements</a>; what changed between versions is in the <a href="CHANGELOG.html">changelog</a>.</p>
-<footer>Takt, version v0.2.3-145-g81cf3cc-dirty. Built from overview.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-147-g28225fe-dirty. Built from overview.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

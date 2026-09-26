@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BoardInfo, PersonChoice, ImportReport as Report } from '../../shared/api/index.ts'
 import { t, locale } from '../../shared/i18n/index.ts'
-import { useHelpTopic } from '../../shared/lib/help.ts'
+import { helpUrl, useHelpTopic } from '../../shared/lib/help.ts'
 import { FormError } from '../../shared/ui/Field.tsx'
 import { importApi } from './api.ts'
 import type { PackageSummary } from './api.ts'
@@ -148,6 +148,13 @@ export function PackageSource({ boards }: { boards: BoardInfo[] }) {
   return (
     <>
       <p className="small muted">{t.imports.packageIntro}</p>
+      {/* Пакет собирают снаружи, и первый вопрос у экрана — чем. Ответ
+          в справке, на странице выгрузчика; ссылка — прямо туда. */}
+      <p className="small">
+        <a className="link link--alone" href={helpUrl('taktFetch')} target="_blank" rel="noopener">
+          {t.imports.packageHowTo}
+        </a>
+      </p>
       <label className="import-file">
         <span>{t.imports.packageFile}</span>
         <input type="file" accept=".takt" disabled={busy === 'applying'} onChange={(e) => choose(e.target.files?.[0])} />
