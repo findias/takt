@@ -139,7 +139,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Т5</td><td>Метрики потока: время цикла, пропускная способность, накопление, прогноз с перцентилями</td><td><code>internal/metrics</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 <tr><td>Т6</td><td>Архив карточек и досок: убранное возвращается, удалённое насовсем — нет</td><td><code>internal/board/archive_test.go</code>, <code>web/e2e/board.spec.ts</code></td></tr>
 <tr><td>Т7</td><td>Организации, приглашения по ссылке, четыре роли, подразделения деревом</td><td><code>internal/org</code>, <code>internal/team</code>, <code>web/e2e/board.spec.ts</code></td></tr>
-<tr><td>Т8</td><td>Интеграционное API с версией в адресе, кодами вместо текста и безопасным повтором</td><td><code>internal/httpapi/contract_*_test.go</code></td></tr>
+<tr><td>Т8</td><td>Интеграционное API с версией в адресе, кодами вместо текста и безопасным повтором</td><td><code>internal/httpapi/contract_*_test.go</code>, <code>internal/board/replay_all_test.go</code> (повтор каждой из 28 операций без следа)</td></tr>
 <tr><td>Т9</td><td>Подписки на события с подписью, повторами и журналом доставок</td><td><code>internal/httpapi/webhooks_test.go</code></td></tr>
 <tr><td>Т10</td><td>Заведение людей из каталога по SCIM</td><td><code>internal/httpapi/scim_test.go</code></td></tr>
 <tr><td>Т11</td><td>Вход по паролю и через корпоративного провайдера (OIDC)</td><td><code>internal/httpapi/login_test.go</code>, <code>internal/httpapi/oidc_test.go</code></td></tr>
@@ -181,7 +181,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>П13</td><td>Цель нажатия не мельче 24 пикселей (WCAG 2.5.8)</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
 <tr><td>П14</td><td>Страница не листается вбок на узком экране и не теряет содержимое при двойном размере текста</td><td><code>web/e2e/a11y.spec.ts</code></td></tr>
 <tr><td>П15</td><td>Просьба меньше движения заменяет движение, а не выключает объяснение перемещения</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/app/motion.test.ts</code></td></tr>
-<tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски</td><td>не закреплено: проверяется чтением, машинной проверки на «сказано по-русски и понятно» у нас нет</td></tr>
+<tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски, а человеку, выбравшему английский, — по-английски</td><td>язык ответа: <code>internal/httpapi/contract_codes_test.go</code> (TestRefusalsSpeakTheLanguageOfThePerson); «сказано понятно» не закреплено — проверяется чтением, машинной проверки у нас нет</td></tr>
 <tr><td>П19</td><td>Фоновые задачи (снятие блокировок по сроку, уведомления по времени, закрытие итераций) безопасны на нескольких репликах: без ошибок и без двойников</td><td><code>internal/board/replicas_test.go</code></td></tr>
 </tbody>
 </table></div>
@@ -261,7 +261,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-138-g13de3c3-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-139-ged09630-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

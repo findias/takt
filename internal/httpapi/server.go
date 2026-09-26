@@ -698,8 +698,10 @@ func (s *Server) handleSwitchOrg(w http.ResponseWriter, r *http.Request, p auth.
 	}
 	err := auth.SwitchOrg(r.Context(), s.db.Pool, p.SessionID, p.ID, req.OrgID)
 	if errors.Is(err, auth.ErrNoMembership) {
-		// Чужая организация неотличима от несуществующей.
-		writeError(w, http.StatusForbidden, "у вас нет доступа к этой организации")
+		// Чужая организация неотличима от несуществующей. Отказ всё же
+		// говорит, что делать: в организацию входят по приглашению.
+		writeError(w, http.StatusForbidden,
+			"у вас нет доступа к этой организации — войти в неё можно по приглашению её владельца")
 		return
 	}
 	if err != nil {

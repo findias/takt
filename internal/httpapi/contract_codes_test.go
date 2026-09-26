@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/google/uuid"
@@ -139,4 +140,66 @@ func TestDemoRefusalsCarryTheirCodes(t *testing.T) {
 	sandboxLimit = live
 	t.Cleanup(func() { sandboxLimit = restore })
 	refused(t, visitor, "POST", "/api/demo/sandbox", nil, http.StatusServiceUnavailable, "demo_full")
+}
+
+// Отказ приходит на языке человека (PROMPT-TESTING.md, уровень 3).
+//
+// TestEveryMessageHasEnglish проверяет, что у каждого отказа есть
+// перевод в каталоге; что сервер его отдаёт, не проверял никто. Здесь
+// человек выбирает английский, и те же отказы обязаны прийти без единой
+// русской буквы — и с тем же кодом, потому что клиент различает по коду.
+func TestRefusalsSpeakTheLanguageOfThePerson(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Language of refusals")
+	member := owner.join("member")
+	for _, s := range []*session{owner, member} {
+		s.mustDo("PUT", "/api/me/lang", map[string]any{"lang": "en"}, http.StatusNoContent)
+	}
+	cyrillic := regexp.MustCompile(`[А-Яа-яЁё]`)
+	english := func(s *session, method, path string, body any, status int, code string) {
+		t.Helper()
+		got, raw := s.do(method, path, body)
+		if got != status {
+			t.Errorf("%s %s: статус %d, ждали %d; тело: %s", method, path, got, status, raw)
+			return
+		}
+		if c, _ := field(t, raw, "code").(string); c != code {
+			t.Errorf("%s %s: код %q, ждали %q", method, path, c, code)
+		}
+		msg, _ := field(t, raw, "error").(string)
+		if msg == "" || cyrillic.MatchString(msg) {
+			t.Errorf("%s %s: отказ не по-английски: %q", method, path, msg)
+		}
+	}
+
+	english(owner, "POST", "/api/invites",
+		map[string]any{"email": owner.email, "role": "member"}, http.StatusConflict, "already_member")
+	english(member, "POST", "/api/invites",
+		map[string]any{"email": "someone@example.test", "role": "member"}, http.StatusForbidden, "invite_not_yours")
+	gone := owner.team("Archived", nil)
+	owner.mustDo("DELETE", "/api/teams/"+gone, nil, http.StatusNoContent)
+	english(owner, "POST", "/api/invites",
+		map[string]any{"email": "late@example.test", "role": "member", "teamId": gone}, http.StatusConflict, "team_gone")
+	live := owner.team("Live", nil)
+	english(member, "POST", "/api/team-admins",
+		map[string]any{"userId": member.userID, "teamId": live}, http.StatusForbidden, "appoint_not_yours")
+	english(member, "DELETE", "/api/members/"+owner.userID+"/identity", nil, http.StatusForbidden, "erase_not_yours")
+	english(owner, "PUT", "/api/me/password",
+		map[string]any{"current": "parol12345", "next": "parol12345"}, http.StatusBadRequest, "password_same")
+
+	boardID := owner.board("Refusals board")
+	card := owner.cardOn(boardID, "Keep")
+	english(member, "POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(), "type": "DELETE_CARD",
+		"payload": map[string]any{"cardId": card},
+	}, http.StatusForbidden, "purge_not_yours")
+	owner.mustDo("DELETE", "/api/boards/"+boardID, nil, http.StatusNoContent)
+	english(owner, "GET", "/api/boards/"+boardID, nil, http.StatusNotFound, "board_archived")
+
+	slice := map[string]any{"name": "Quarter", "query": "from=2026-07-01&to=2026-09-30"}
+	owner.mustDo("POST", "/api/reports/slices", slice, http.StatusCreated)
+	english(owner, "POST", "/api/reports/slices", slice, http.StatusConflict, "report_slice_taken")
+	english(owner, "POST", "/api/import/table",
+		map[string]any{"file": []byte("Foo,Bar\n1,2\n"), "newBoardName": "Z", "apply": true},
+		http.StatusBadRequest, "import_mapping")
 }

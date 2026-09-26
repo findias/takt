@@ -86,10 +86,10 @@ var en = map[string]string{
 	// --- Организация, люди, приглашения ---
 	"это может только владелец организации": "only the organisation owner can do this",
 	"Моя команда": "My team",
-	"у организации должно быть название":   "the organisation needs a name",
-	"у вас нет доступа к этой организации": "you have no access to this organisation",
-	"этот человек уже в команде":           "this person is already in the team",
-	"приглашение не найдено":               "invite not found",
+	"у организации должно быть название":                                                   "the organisation needs a name",
+	"у вас нет доступа к этой организации — войти в неё можно по приглашению её владельца": "you have no access to this organisation — you can join it by an invitation from its owner",
+	"этот человек уже в команде":                                                           "this person is already in the team",
+	"приглашение не найдено":                                                               "invite not found",
 	"приглашать в организацию целиком и владельцем может только владелец организации; " +
 		"владелец подразделения приглашает участником или наблюдателем в своё подразделение": "only the organisation owner can invite into the whole organisation or as an owner; " +
 		"a subdivision owner invites members or viewers into their own subdivision",
