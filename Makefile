@@ -56,7 +56,9 @@ STAND_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 # От чего считать: у ветки — от master, у самого master — от последнего
 # выпуска. Иначе выложенный master показывал пустую заметку: коммитов
 # поверх себя у него нет, а сделанного с выпуска — десятки.
-STAND_BASE = $(if $(filter master,$(STAND_BRANCH)),$(shell git describe --tags --abbrev=0 2>/dev/null),origin/master)
+# Точку отсчёта можно назвать при выкладке (STAND_BASE=<коммит>): ветка,
+# уже влитая в master, иначе показала бы пустую заметку.
+STAND_BASE ?= $(if $(filter master,$(STAND_BRANCH)),$(shell git describe --tags --abbrev=0 2>/dev/null),origin/master)
 
 .PHONY: stand-notes
 stand-notes: ## Записать заметку тестового стенда: коммиты ветки поверх master, у master — с выпуска

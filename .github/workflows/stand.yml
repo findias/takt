@@ -26,6 +26,10 @@ on:
       branch:
         description: Ветка, которую выложить на стенд
         required: true
+      base:
+        description: От какого коммита считать заметку (пусто — от master, у master — от выпуска)
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +45,7 @@ jobs:
     timeout-minutes: 30
     env:
       BRANCH: ${{ inputs.branch }}
+      BASE: ${{ inputs.base }}
       IMAGE: ghcr.io/${{ github.repository }}-demo
     steps:
       - name: Секреты на месте
@@ -77,8 +82,12 @@ jobs:
       # нечего, — но виден здесь и на самом стенде с пометкой.
       - name: Заметка стенда
         run: |
-          make stand-notes STAND_BRANCH="$BRANCH"
-          for c in $(git rev-list origin/master..HEAD); do
+          if [ -n "$BASE" ]; then
+            make stand-notes STAND_BRANCH="$BRANCH" STAND_BASE="$BASE"
+          else
+            make stand-notes STAND_BRANCH="$BRANCH"
+          fi
+          for c in $(git rev-list "${BASE:-origin/master}"..HEAD); do
             msg=$(git log -1 --format=%B "$c")
             subject=$(git log -1 --format=%s "$c")
             if ! grep -qx -- '--- ru ---' <<<"$msg"; then

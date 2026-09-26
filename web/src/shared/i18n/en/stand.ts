@@ -6,12 +6,14 @@ export const stand: typeof ru = {
     open: 'What is on the stand',
     title: 'What is on the stand',
     signIn: (email: string, password: string) =>
-      `Sign in: ${email}, password ${password}. boris@, vera@ and gleb@ sign in the same way, with the same password.`,
+      `Sign in: ${email}, password ${password}. boris@, vera@, dmitry@ and gleb@ sign in the same way, with the same password.`,
     empty: 'The branch has no commits on top of master: the stand shows the same as the demo.',
     since: (base: string, n: number) =>
       base === 'master'
         ? `On top of master: ${n} ${n === 1 ? 'commit' : 'commits'}, newest first.`
-        : `Done since release ${base}: ${n} ${n === 1 ? 'commit' : 'commits'}, newest first.`,
+        : /^[0-9a-f]{7,40}$/.test(base)
+          ? `Since ${base}: ${n} ${n === 1 ? 'commit' : 'commits'}, newest first.`
+          : `Done since release ${base}: ${n} ${n === 1 ? 'commit' : 'commits'}, newest first.`,
     emptySince: (base: string) => `No commits since release ${base}.`,
     onlyRussian: 'This commit predates English messages — it is shown in Russian.',
     check: 'How to check',
