@@ -179,16 +179,27 @@ func Снимок(язык, имя string) ([]byte, bool) {
 
 type слова struct {
 	справка, назад, разделы, админ, язык, другой, другойКод, подпись string
+	// версия — строка под заголовком справки: номер выпуска, его
+	// изменения и репозиторий (задание владельца 26.09.2026, этап 35.3).
+	версия, изменения, гитхаб string
 }
 
 var словарь = map[string]слова{
 	"ru": {"Справка Takt", "← Вернуться в Takt", "Разделы справки",
 		"Для администратора установки", "Язык справки", "English", "en",
-		"Takt, версия %s. Справка собрана из той же версии, что приложение."},
+		"Takt, версия %s. Справка собрана из той же версии, что приложение.",
+		"Версия %s", "Что нового", "Takt на GitHub"},
 	"en": {"Takt help", "← Back to Takt", "Help sections",
 		"For whoever installs it", "Help language", "Русский", "ru",
-		"Takt, version %s. This help is built from the same version as the app."},
+		"Takt, version %s. This help is built from the same version as the app.",
+		"Version %s", "What’s new", "Takt on GitHub"},
 }
+
+// Стили — ровно то, что стоит внутри <style> каждой страницы справки.
+// Сервер считает от этого текста хеш для политики содержимого: общая
+// политика встроенных стилей не допускает (разбор ZAP, 26.09.2026),
+// а справке разрешён ровно её собственный <style> и ничего больше.
+func Стили() string { return docs.Стиль() + стильСправки }
 
 // Оформление справки поверх оформления документации: оглавление слева,
 // на узком экране — сверху.
@@ -197,6 +208,7 @@ const стильСправки = `
 .help-side{position:sticky;top:0;align-self:start;max-height:100vh;min-height:100vh;overflow:auto;
 padding:1.5rem 1rem;border-right:1px solid var(--rule);background:var(--surface)}
 .help-side nav{display:block;border:0;padding:0;margin:0 0 1.25rem}
+.help-version{font-size:.85rem;color:var(--ink-3);margin:.5rem 0 1rem}
 .help-side nav a{display:block;margin:.1rem 0}
 .help-side .help-sub{margin:.1rem 0 .5rem .75rem;padding-left:.5rem;
 border-left:1px solid var(--rule)}
@@ -245,7 +257,7 @@ func оболочка(с Страница, язык string, готово соб�
 	fmt.Fprintf(&b, "<!doctype html>\n<html lang=%q>\n<head>\n<meta charset=\"utf-8\">\n", язык)
 	b.WriteString(`<meta name="viewport" content="width=device-width, initial-scale=1">` + "\n")
 	fmt.Fprintf(&b, "<title>%s · %s</title>\n", html.EscapeString(готово.заголовок), w.справка)
-	fmt.Fprintf(&b, "<style>%s%s</style>\n</head>\n<body>\n<div class=\"help\">\n", docs.Стиль(), стильСправки)
+	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<div class=\"help\">\n", Стили())
 
 	fmt.Fprintf(&b, "<aside class=\"help-side\" aria-label=%q>\n", w.разделы)
 	fmt.Fprintf(&b, "<a class=\"help-back\" href=\"/\">%s</a>\n", w.назад)
@@ -294,6 +306,12 @@ func оболочка(с Страница, язык string, готово соб�
 		}
 		b.WriteString("</nav>\n")
 	}
+	// Номер выпуска, его изменения и репозиторий — наверху, на виду:
+	// первое, что спрашивают о справке, — к какой она версии, и что
+	// в этой версии нового.
+	fmt.Fprintf(&b, "<p class=\"help-version\">%s · <a href=\"/help/%s/%s\">%s</a> · <a href=\"%s\">%s</a></p>\n",
+		html.EscapeString(fmt.Sprintf(w.версия, версия)), язык, адресНового, w.изменения,
+		"https://github.com/findias/takt", w.гитхаб)
 	fmt.Fprintf(&b, "<p class=\"help-title\">%s</p>\n", w.справка)
 	группа(false)
 	fmt.Fprintf(&b, "<p class=\"help-title\">%s</p>\n", w.админ)

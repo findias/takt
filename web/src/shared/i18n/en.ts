@@ -105,6 +105,9 @@ export const en: typeof ru = {
     export: 'Export',
     savedView: 'Saved view',
     grouping: 'Swimlanes',
+    attention: 'Needs attention',
+    notifications: 'Notifications',
+    tasks: 'A person’s tasks',
   },
   help: {
     button: 'Help',

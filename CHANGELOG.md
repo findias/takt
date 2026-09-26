@@ -10,6 +10,26 @@ otherwise the release gets made and the list gets written «later».
 
 ## v0.3.0 — 21 September 2026
 
+### In short
+
+- The interface speaks English as well as Russian — [how to switch](docs/howto.md#language).
+- Help opens from the header, `F1` or a «?» next to a concept, on the page about the screen you are on — [start here](docs/overview.md).
+- A bell tells you when you are mentioned, assigned or your work is blocked — [notifications](docs/howto.md#notifications).
+- Move in from a spreadsheet, straight from YouGile, or as a package from Jira, Kaiten and monday — [moving in](docs/howto.md#import).
+- The «Reports» tab gives management a spreadsheet of cards and flow for any period — [reports](docs/howto.md#reports).
+- Epics live on a portfolio board above the teams' boards, and the work shows as a tree — [portfolio](docs/howto.md#portfolio), [tree](docs/howto.md#tree).
+- Swimlanes by parent or by the top of the tree — [swimlanes](docs/howto.md#swimlanes).
+- «Tasks» shows one person's cards from every board — [tasks](docs/howto.md#tasks).
+- Iterations follow the calendar, close themselves and hand unfinished work to the next — [iterations](docs/howto.md#iterations).
+- Labels belong to the organisation, a subdivision or one board, and a missing one is created right from the card — [labels](docs/howto.md#label-scope).
+- A block can have a deadline and lifts itself — [blocks](docs/howto.md#block).
+- A denser board: two-line cards, a column shows its limit as a bar and its average age, «Needs attention» collects what is stuck — [the board](docs/howto.md#board).
+- A card in progress shows how much of the board's promise it has used — [promise](docs/howto.md#promise).
+- A subdivision owner invites people, appoints owners below, and reads the log of their subtree — [roles](docs/reference.md#roles).
+- A dark theme and a denser layout behind your name — [appearance](docs/howto.md#appearance).
+
+### For whoever installs and upgrades
+
 **Twenty-four migrations, all safe for the running version.** `0052` gives
 labels a scope, `0053` gives blocks a deadline, `0054` rewrites the
 helper functions behind the access policies, `0055` marks demo

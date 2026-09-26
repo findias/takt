@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { t } from '../../shared/i18n/index.ts'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../shared/ui/icons.tsx'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * «Требует внимания» — справа от колонок (шаг 5 нового дизайна доски,
@@ -70,6 +71,7 @@ export function AttentionRail({
       <div className="attention-head">
         <h2 className="attention-title">{t.attention.title}</h2>
         <span className="count">{items.length}</span>
+        <Hint topic="attention" />
         <button className="btn btn--icon btn--quiet" onClick={() => toggle(true)} aria-label={t.attention.collapse}>
           <ChevronRightIcon />
         </button>

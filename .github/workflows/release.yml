@@ -477,6 +477,11 @@ jobs:
             echo "::error::в CHANGELOG.md нет раздела ${TAG} — выпуск без списка изменений не делаем"
             exit 1
           fi
+          # Перечень «In short» ведёт в документацию ссылками от корня
+          # репозитория (docs/howto.md#…): в файле на GitHub и в справке
+          # приложения они работают, а в заметках к выпуску — нет. Здесь
+          # они становятся полными адресами документации этого же тега.
+          sed -i -E "s#\]\(docs/#](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/#g" dist/ОПИСАНИЕ.md
 
       - name: Выпуск
         uses: softprops/action-gh-release@v2

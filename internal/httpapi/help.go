@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
 
 	"github.com/findias/takt/internal/help"
@@ -11,6 +13,20 @@ import (
 // Справка внутри приложения (ROADMAP 30.3). Без входа: это та же
 // документация, что лежит в открытом репозитории, и открывают её
 // в том числе с экрана входа.
+// helpPolicy — политика содержимого страниц справки. Общая политика
+// встроенных стилей не допускает, а справка несёт свои стили внутри
+// страницы (она открывается и из папки на диске). Поэтому справке
+// разрешён ровно её <style> — по хешу его текста, — скриптов нет вовсе.
+// Без этой строки справка после ужесточения политики 26.09.2026
+// открывалась без оформления; поймано снимком «Что нового».
+var helpPolicy = func() string {
+	сумма := sha256.Sum256([]byte(help.Стили()))
+	return "default-src 'none'; " +
+		"style-src 'sha256-" + base64.StdEncoding.EncodeToString(сумма[:]) + "'; " +
+		"img-src 'self'; form-action 'self'; frame-ancestors 'none'; " +
+		"base-uri 'none'; object-src 'none'"
+}()
+
 func (s *Server) registerHelpRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /help", s.handleHelpRoot)
 	mux.HandleFunc("GET /help/", s.handleHelpRoot)
@@ -40,6 +56,7 @@ func (s *Server) handleHelpPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", helpPolicy)
 	// #nosec G705 -- страница собрана из вшитой документации; язык
 	// и адрес раздела сверены со списком, прежде чем попасть в разметку.
 	_, _ = w.Write([]byte(страница))
@@ -71,6 +88,7 @@ func (s *Server) handleHelpSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", helpPolicy)
 	// #nosec G705 -- запрос попадает в разметку только через
 	// html.EscapeString; враждебный запрос проверяет
 	// TestSearchPageSaysWhatToDoWhenNothingIsFound.

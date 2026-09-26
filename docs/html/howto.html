@@ -287,7 +287,7 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="import-package">Import a package from a closed network</h3>
 <p>A package (<code>.takt</code>) carries boards from YouGile, Jira, Kaiten and monday into a closed network, together with what a spreadsheet loses: subtasks, links between cards and discussions. It is built outside, where there is internet, and carried in as a file.</p>
 <ol>
-<li><strong>Build the package outside.</strong> Download <code>takt-fetch</code> for your system from the latest release (<code>github.com/findias/takt/releases</code>) — it is a separate file, not in the installation bundle on purpose: it runs where there is internet — and run, for YouGile: <code>takt-fetch yougile boards</code>, then <code>takt-fetch yougile fetch --board &lt;id&gt; --out warehouse.takt</code>. Jira, Kaiten and monday work the same way; everything about signing in and choosing boards is on the <a href="takt-fetch.md#get">takt-fetch</a> page.</li>
+<li><strong>Build the package outside.</strong> Download <code>takt-fetch</code> for your system from the latest release (<code>github.com/findias/takt/releases</code>) — it is a separate file, not in the installation bundle on purpose: it runs where there is internet — and run, for YouGile: <code>takt-fetch yougile boards</code>, then <code>takt-fetch yougile fetch --board &lt;id&gt; --out warehouse.takt</code>. Jira, Kaiten and monday work the same way; everything about signing in and choosing boards is on the <a href="takt-fetch.html#get">takt-fetch</a> page.</li>
 <li><strong>Boards</strong> tab → <strong>Import tasks from a spreadsheet…</strong> → **Import package**, and pick the file.</li>
 <li>The screen says where the package came from and who built it. If it carries several boards, pick one in <strong>Package board</strong>: boards are imported one at a time, each with its own preview.</li>
 <li>Choose where to and read <strong>What will happen</strong>: besides cards it counts subtasks, links and discussion replies. A person the source gave no e-mail for (Trello gives e-mails only to an administrator) is listed by name.</li>
@@ -387,7 +387,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-147-g28225fe-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-148-g93c6ccd-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

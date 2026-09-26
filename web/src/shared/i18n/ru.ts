@@ -104,6 +104,9 @@ export const ru = {
     export: 'Выгрузка',
     savedView: 'Сохранённый вид',
     grouping: 'Дорожки',
+    attention: 'Требует внимания',
+    notifications: 'Уведомления',
+    tasks: 'Задачи человека',
   },
   help: {
     button: 'Справка',

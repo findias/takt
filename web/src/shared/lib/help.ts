@@ -49,6 +49,8 @@ export const HELP_TOPICS = {
   export: 'howto#export',
   savedView: 'howto#filter',
   grouping: 'howto#swimlanes',
+  attention: 'howto#board',
+  notifications: 'howto#notifications',
 } as const
 
 export type HelpTopic = keyof typeof HELP_TOPICS

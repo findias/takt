@@ -9,6 +9,7 @@ import { Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { Board } from './Board.tsx'
 import { t } from '../shared/i18n/index.ts'
+import { Hint } from '../shared/ui/Hint.tsx'
 import { DUES, STATUSES, filterTasks, isFiltered, labelsOf, parseTaskFilter } from './tasksFilter.ts'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -171,7 +172,9 @@ export function Tasks({ principal }: { principal: Principal }) {
           </span>
         )}
       </div>
-      <p className="muted small">{s.hint}</p>
+      <p className="muted small">
+        {s.hint} <Hint topic="tasks" />
+      </p>
       <ScreenError>{error}</ScreenError>
       {!list && !error && <Skeleton lines={4} />}
       {list && list.tasks.length === 0 && <p className="muted">{s.empty}</p>}

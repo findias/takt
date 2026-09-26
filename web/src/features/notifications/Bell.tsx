@@ -5,6 +5,7 @@ import { topLayer, useAnchored } from '../../shared/ui/anchored.ts'
 import { BellIcon } from '../../shared/ui/icons.tsx'
 import { boardPath, navigate } from '../../shared/router/index.ts'
 import { locale, t } from '../../shared/i18n/index.ts'
+import { Hint } from '../../shared/ui/Hint.tsx'
 
 /**
  * Колокольчик в шапке (ROADMAP 29.3): счётчик непрочитанного и список
@@ -142,6 +143,7 @@ export function Bell() {
         >
           <div className="bell-head">
             <h2 className="section-title">{t.notifications.title}</h2>
+            <Hint topic="notifications" />
             {unread > 0 && (
               <button type="button" className="link" onClick={readAll}>
                 {t.notifications.readAll}

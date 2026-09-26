@@ -1,7 +1,11 @@
 package httpapi
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -95,3 +99,34 @@ type записанное struct{ header http.Header }
 func (з *записанное) Header() http.Header       { return з.header }
 func (з *записанное) Write([]byte) (int, error) { return 0, nil }
 func (з *записанное) WriteHeader(int)           {}
+
+// Справка несёт свои стили внутри страницы, а общая политика встроенных
+// стилей не допускает. Ей разрешён ровно её <style> — по хешу. Хеш
+// в заголовке обязан совпасть с тем, что в теле: разойдись они — справка
+// открывается без оформления, и об этом не говорит ничто, кроме глаза
+// (так и было 26.09.2026 до этой проверки).
+func TestHelpPolicyAllowsExactlyItsOwnStyle(t *testing.T) {
+	a := newAPI(t)
+	style := regexp.MustCompile(`(?s)<style>(.*?)</style>`)
+	for _, путь := range []string{"/help/ru/howto", "/help/en/whats-new", "/help/ru/search?q=доска"} {
+		resp, err := a.client.Get(a.server.URL + путь)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		политика := resp.Header.Get("Content-Security-Policy")
+		m := style.FindSubmatch(raw)
+		if m == nil {
+			t.Fatalf("%s: в странице нет <style>", путь)
+		}
+		сумма := sha256.Sum256(m[1])
+		хеш := "'sha256-" + base64.StdEncoding.EncodeToString(сумма[:]) + "'"
+		if !strings.Contains(политика, хеш) {
+			t.Errorf("%s: политика не разрешает собственный <style> страницы: %q", путь, политика)
+		}
+		if strings.Contains(политика, "unsafe-inline") || strings.Contains(политика, "script-src 'self'") {
+			t.Errorf("%s: политика справки шире нужного: %q", путь, политика)
+		}
+	}
+}

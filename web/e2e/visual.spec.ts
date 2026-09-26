@@ -67,7 +67,7 @@ for (const { lang, locale, email, board } of LANGS) {
           await settle(page)
           await expect(page, `${lang} ${screen.name} ${width} ${scheme}`).toHaveScreenshot(
             `${lang}-${screen.name}-${width}-${scheme}.png`,
-            { fullPage: true, animations: 'disabled', maxDiffPixelRatio: 0.002 },
+            { fullPage: true, animations: 'disabled', maxDiffPixels: 50, threshold: 0.05 },
           )
         }
         expect(missing, 'запросы, которых нет в записи — перезапишите: make visual-update').toEqual([])

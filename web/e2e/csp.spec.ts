@@ -51,6 +51,12 @@ test('политика содержимого не нарушается на о�
     await page.goto(path)
     await page.waitForLoadState('networkidle')
   }
+  // Справка несёт свои стили внутри страницы и живёт по своей политике:
+  // без неё открывалась без оформления (26.09.2026).
+  for (const path of ['/help/ru/howto', '/help/en/whats-new', '/help/ru/search?q=доска']) {
+    await page.goto(path)
+    await page.waitForLoadState('networkidle')
+  }
   await page.goto('/api/v1/docs')
   await page.waitForLoadState('networkidle')
 
