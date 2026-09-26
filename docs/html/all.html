@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-143-g67203a5-dirty.</p>
+<p>Every section in one file. Version v0.2.3-144-gb56aed8-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1633,6 +1633,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <tr><td>П20</td><td>Доступность держится и по-английски: у каждого элемента есть имя, цели не мельче 24 пикселей, страница не листается вбок — на основных экранах, 360 и 1440 пикселей</td><td><code>web/e2e/a11y.spec.ts</code> («по-английски: …»)</td></tr>
 <tr><td>П21</td><td>Чистые модели клиента покрыты тестами не ниже порога: строки 95 %, ветки 90 %, функции 88 %</td><td><code>web/package.json</code>, скрипт test (порог покрытия node --test)</td></tr>
 <tr><td>П22</td><td>Основные экраны не меняются незаметно: сравнение с эталонами в двух языках, двух ширинах и двух темах</td><td><code>web/e2e/visual.spec.ts</code> (<code>make visual</code>, локально перед выпуском)</td></tr>
+<tr><td>П23</td><td>Расчётный состав (130 человек, три организации, 30 операций в секунду) работает без ошибок и отказов по частоте, не видит чужого, медиана операции ≤ 50 мс, снимка ≤ 100 мс</td><td><code>internal/httpapi/load_test.go</code> (TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated, <code>make load</code>)</td></tr>
 </tbody>
 </table></div>
 <h2 id="установка-и-обновление">Установка и обновление</h2>
