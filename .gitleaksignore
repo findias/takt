@@ -1,0 +1,8 @@
+# Ложные срабатывания gitleaks — каждое с причиной (правило проекта:
+# не замазывать, а объяснять). Отпечаток — коммит:файл:правило:строка.
+#
+# Выдуманные пароли в проверках ссылки для входа: пароль задаётся
+# по ссылке, и тесту нужен настоящий по форме, а не по смыслу.
+1d7016069cdf5bfb9e13dda3ead8aeff274ae99c:internal/httpapi/import_people_test.go:generic-api-key:152
+bed56bfea0bf5ad2c9a9da12e143184cd7cb562c:internal/httpapi/password_link_test.go:generic-api-key:67
+bed56bfea0bf5ad2c9a9da12e143184cd7cb562c:internal/httpapi/password_link_test.go:generic-api-key:82

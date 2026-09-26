@@ -39,7 +39,12 @@ var идентификатор = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]*$`)
 var обязательные = map[string]string{
 	"check.yml":    "обязательная проверка",
 	"e2e.yml":      "сквозные сценарии",
-	"security.yml": "безопасность",
+	"security.yml": "разбор образа",
+	"sast.yml":     "разбор кода",
+	"sca.yml":      "уязвимости зависимостей",
+	"secrets.yml":  "секреты в истории",
+	"upgrade.yml":  "обновление с прошлого выпуска",
+	"dast.yml":     "разбор работающего приложения",
 }
 
 func каталог(t *testing.T) string {

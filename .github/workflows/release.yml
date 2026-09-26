@@ -27,6 +27,10 @@ on:
 permissions:
   contents: write
   packages: write
+  # Подпись без ключа (cosign) и аттестация сборки берут удостоверение
+  # у GitHub: ключа, который можно украсть или потерять, нет вовсе.
+  id-token: write
+  attestations: write
 
 # Тег, из которого собираем: при запуске по тегу — он сам, при запуске
 # рукой — названный во входе.
@@ -263,8 +267,25 @@ jobs:
             --platform "${{ matrix.platforms }}" \
             --build-arg VERSION="${TAG}" \
             --build-arg RUNTIME_BASE="${{ matrix.from }}" \
+            --metadata-file /tmp/meta.json \
             $(cat /tmp/tags) \
             .
+
+      - uses: sigstore/cosign-installer@v3
+
+      # Подпись по дайджесту, а не по тегу: тег можно перевесить, дайджест
+      # — нет. Подписывается каждое имя, под которым образ опубликован,
+      # — проверяющий берёт то, что у него в зеркале. Как проверить —
+      # docs/security-review.md, «Supply chain».
+      - name: Подпись образа
+        run: |
+          set -eu
+          digest=$(python3 -c "import json;print(json.load(open('/tmp/meta.json'))['containerimage.digest'])")
+          # В /tmp/tags метки идут парами: ключ и ссылка на образ; имя
+          # образа — всё до последнего двоеточия ссылки.
+          for repo in $(tr ' ' '\n' < /tmp/tags | grep -vx -- '-t' | grep . | sed 's/:[^:]*$//' | sort -u); do
+            cosign sign --yes "${repo}@${digest}"
+          done
 
   artifacts:
     needs: [check, upgrade]
@@ -383,6 +404,25 @@ jobs:
           find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' \
             | sort | xargs -r sha256sum > SHA256SUMS
 
+      # Происхождение сборки (SLSA provenance): из какого коммита, каким
+      # процессом и на чём собран каждый исполняемый файл и архив.
+      # Проверяется `gh attestation verify <файл> -R findias/takt`.
+      - name: Происхождение сборки
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.bin
+            dist/takt-fetch-*
+
+      - uses: sigstore/cosign-installer@v3
+
+      # Подпись списка сумм: подписан он — подписано всё, что в нём
+      # названо. Без ключа, удостоверением этого процесса; проверка —
+      # в docs/security-review.md.
+      - name: Подпись сумм
+        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+
       - name: Что менялось в этой версии
         # Список изменений — из CHANGELOG.md, а не из заголовков
         # коммитов: он написан для того, кто ставит и обновляет,
@@ -419,6 +459,7 @@ jobs:
             dist/*.tgz
             dist/takt-fetch-*
             dist/SHA256SUMS
+            dist/SHA256SUMS.sigstore.json
             dist/*.cdx.json
             dist/*.sarif
             dist/*.openvex.json

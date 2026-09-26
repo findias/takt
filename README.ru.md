@@ -5,7 +5,14 @@
 не нужен ни при установке, ни в работе.
 
 [![Проверка](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
-[![Безопасность](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
+[![Сквозные сценарии](https://github.com/findias/takt/actions/workflows/e2e.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/e2e.yml)
+[![Обновление](https://github.com/findias/takt/actions/workflows/upgrade.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/upgrade.yml)
+[![SAST](https://github.com/findias/takt/actions/workflows/sast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sast.yml)
+[![CodeQL](https://github.com/findias/takt/actions/workflows/codeql.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/codeql.yml)
+[![SCA](https://github.com/findias/takt/actions/workflows/sca.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sca.yml)
+[![Секреты](https://github.com/findias/takt/actions/workflows/secrets.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/secrets.yml)
+[![DAST](https://github.com/findias/takt/actions/workflows/dast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/dast.yml)
+[![Образ](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Лицензия Apache-2.0](https://img.shields.io/badge/лицензия-Apache--2.0-blue.svg)](LICENSE)
 [![Выпуск](https://img.shields.io/github/v/release/findias/takt?label=выпуск)](https://github.com/findias/takt/releases)
 
@@ -382,4 +389,4 @@ Apache License 2.0 — [`LICENSE`](LICENSE). Кратко: пользовать�
 не переписывается руками задним числом: проверка `internal/license`
 берёт то, что линкуется в `cmd/takt`, и требует строку на каждый модуль.
 
-<!-- перевод: README.md sha256:e18d16e9255e -->
+<!-- перевод: README.md sha256:c72075dd938e -->

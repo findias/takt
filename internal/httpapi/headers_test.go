@@ -20,11 +20,18 @@ func TestSecurityHeadersOnEveryAnswer(t *testing.T) {
 		"Content-Security-Policy": func(v string) bool {
 			return strings.Contains(v, "default-src 'self'") &&
 				strings.Contains(v, "frame-ancestors 'none'") &&
-				strings.Contains(v, "object-src 'none'")
+				strings.Contains(v, "object-src 'none'") &&
+				// Стили только файлами: 'unsafe-inline' не нужен
+				// и разрешал бы внедрённый <style> (разбор ZAP, 26.09.2026).
+				strings.Contains(v, "style-src 'self';") &&
+				!strings.Contains(v, "unsafe-inline")
 		},
-		"X-Content-Type-Options": func(v string) bool { return v == "nosniff" },
-		"X-Frame-Options":        func(v string) bool { return v == "DENY" },
-		"Referrer-Policy":        func(v string) bool { return v != "" },
+		"Cross-Origin-Opener-Policy":   func(v string) bool { return v == "same-origin" },
+		"Cross-Origin-Embedder-Policy": func(v string) bool { return v == "require-corp" },
+		"Cross-Origin-Resource-Policy": func(v string) bool { return v == "same-origin" },
+		"X-Content-Type-Options":       func(v string) bool { return v == "nosniff" },
+		"X-Frame-Options":              func(v string) bool { return v == "DENY" },
+		"Referrer-Policy":              func(v string) bool { return v != "" },
 	}
 
 	// Три разных ответа: удачный, отказ по личности и отказ по адресу.

@@ -1,0 +1,31 @@
+# SAST: статический разбор кода на Go — gosec (make sast). Свои
+# проверки кода (параметры запросов, сырая разметка, секреты в дереве)
+# идут в make check, CodeQL — своим процессом «Разбор кода».
+#
+# Отдельный процесс, а не шаг «Безопасности»: значок в README отвечает
+# на один вопрос — что показал разбор кода, — а не на «что-то красное».
+# По расписанию тоже: правила gosec пополняются без нашей правки.
+name: SAST
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: make sast

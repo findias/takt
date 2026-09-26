@@ -212,8 +212,24 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>тот ли это файл, что у нас работает</td><td>бинарник каждой архитектуры отдельно, рядом с архивом и со своей суммой</td><td><code>takt-vX.Y.Z-linux-amd64.bin</code> в выпуске</td></tr>
 <tr><td>правда ли ваш исходник даёт этот бинарник</td><td>сборка воспроизводима — CGO выключен, пути срезаны <code>-trimpath</code>, версия приходит линковщиком, — и выпуск пересобирает её и сверяет побайтово до публикации</td><td>шаг выпуска, который пересобирает и сверяет</td></tr>
 <tr><td>предлагаются ли обновления</td><td>Dependabot для модулей Go, пакетов npm и самих действий</td><td><code>.github/dependabot.yml</code></td></tr>
+<tr><td>какие лицензии едут в поставке</td><td>каждый модуль и пакет из <code>THIRD-PARTY.md</code> сверяется с настоящим текстом его лицензии и с разрешённым набором (MIT, BSD, Apache-2.0, ISC); копилефт валит проверку</td><td><code>internal/license</code>, часть <code>make check</code></td></tr>
+<tr><td>попадал ли когда-нибудь в репозиторий секрет</td><td><code>gitleaks</code> по всей истории git, а не только по рабочему дереву; ложные срабатывания названы с причиной</td><td><code>make secrets</code>, <code>.gitleaksignore</code></td></tr>
+<tr><td>что отдаёт работающее приложение</td><td>OWASP ZAP baseline против живого сервера: заголовки, политика содержимого, cookie; любое новое предупреждение валит прогон</td><td><code>.github/workflows/dast.yml</code>, <code>.zap/rules.tsv</code></td></tr>
+<tr><td>тот ли это образ и те ли файлы, что мы выпустили</td><td>образы подписаны по дайджесту, а <code>SHA256SUMS</code> — cosign без ключа (удостоверение процесса выпуска на GitHub, терять нечего)</td><td><code>SHA256SUMS.sigstore.json</code> в выпуске</td></tr>
+<tr><td>как собран каждый файл</td><td>происхождение сборки SLSA для архивов, бинарников и <code>takt-fetch</code></td><td>аттестации выпуска на GitHub</td></tr>
+<tr><td>проходит ли обновление с прошлого выпуска</td><td>до публикации бинарник прошлого выпуска работает на новой схеме, новый — на старых данных, и снова старый как откат</td><td><code>make upgrade-check</code>, <code>.github/workflows/upgrade.yml</code></td></tr>
 </tbody>
 </table></div>
+<p>Проверить подписи самому:</p>
+<pre><code>cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp &#39;^https://github.com/findias/takt/.github/workflows/release.yml@&#39; \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c SHA256SUMS
+gh attestation verify takt-vX.Y.Z-linux-amd64.bin -R findias/takt
+cosign verify ghcr.io/findias/takt:vX.Y.Z \
+  --certificate-identity-regexp &#39;^https://github.com/findias/takt/.github/workflows/release.yml@&#39; \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
+<p>У каждого вида проверок свой значок вверху <code>README.ru.md</code> со ссылкой на прогоны: SAST, CodeQL, SCA, секреты, DAST, образ, обновление.</p>
 <p>Замазанное объясняется, а не молчит: исключение <code>gosec</code> пишется как <code>// #nosec G404 -- почему</code>, намеренная склейка запроса — как <code>// #sql-склейка: почему</code>, а маркер без объяснения своя же проверка не принимает.</p>
 <h2 id="работа-с-уязвимостями">Работа с уязвимостями</h2>
 <p>Сообщения идут закрытым каналом GitHub — <strong>Security</strong> → <strong>Report a vulnerability</strong>, — а не публичной задачей. Сроки честные, а не образцовые: пять рабочих дней на подтверждение, десять на разбор, потом выпуск с записью в <code>CHANGELOG.md</code>. Поддерживается последняя версия; переносить исправления в старые некому. Что считается уязвимостью, а что намеренно не считается, расписано в <a href="../SECURITY.html"><code>SECURITY.md</code></a> — включая случай, на котором обычно и держится отчёт сканера: уязвимость в зависимости, которую мы не вызываем.</p>
@@ -245,7 +261,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>утёкший ключ интеграции</td><td>разрешения, необязательный срок, своё ведро частоты; владельцем ключ не становится никогда</td><td><code>clients_test.go</code></td></tr>
 <tr><td>утёкший токен приглашения</td><td>одноразовый, со сроком, открывает ровно свою строку и ничего сверх</td><td><code>org_test.go</code></td></tr>
 <tr><td>подменённый артефакт</td><td>SHA-256 по каждому файлу, состав рядом</td><td><code>SHA256SUMS</code></td></tr>
-<tr><td>уязвимая зависимость</td><td>четыре сканера, заявление VEX, Dependabot</td><td>прогоны <code>security.yml</code> и <code>codeql.yml</code></td></tr>
+<tr><td>уязвимая зависимость</td><td>четыре сканера, заявление VEX, Dependabot</td><td>прогоны <code>sca.yml</code>, <code>security.yml</code> и <code>codeql.yml</code></td></tr>
 <tr><td>сервер заставили обратиться на внутренний адрес</td><td>подписку заводит только владелец; адрес YouGile берётся из настройки, а не у того, кто переносит</td><td><strong>продуктом не держится</strong> — ограничивайте исходящие у себя</td></tr>
 <tr><td>учётные данные YouGile сохранены или утекли</td><td>пароль проходит через сервер один раз — получить ключ API компании, — а ключ живёт во вкладке браузера; ни то ни другое не хранится и не пишется в журнал</td><td><code>import_yougile_test.go</code></td></tr>
 <tr><td>владелец против своей организации</td><td>ничем, по определению роли</td><td>журнал это записывает</td></tr>
@@ -308,7 +324,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> — самая короткая из них и единственная, которую стоит запускать не на клоне, а на самой установке: кроме схемы и изоляции он называет две настройки, о которых проверка спрашивает всегда, — идёт ли связь с базой по сети без TLS и кому позволено заводить организации. Поломкой не объявляется ни то ни другое: и то и другое бывает решением. Но названо и то и другое: молчание здесь читается как «всё в порядке».</p>
 <p>Чтобы увидеть изоляцию своими глазами, подключитесь к базе ролью приложения и посчитайте доски: без контекста арендатора ответ — ноль, на базе с тысячами досок.</p>
 <p>Вопросы, на которые эта страница не отвечает, и сообщения о том, где она отвечает неверно, — по адресу из <a href="../SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, версия v0.2.3-144-gb56aed8-dirty. Страница собрана из проверка-иб.md — правьте исходник, а не её.</footer>
+<footer>Takt, версия v0.2.3-145-g81cf3cc-dirty. Страница собрана из проверка-иб.md — правьте исходник, а не её.</footer>
 </main>
 </body>
 </html>

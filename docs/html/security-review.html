@@ -216,8 +216,24 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>is this the file we are running</td><td>the bare binary for each architecture, next to the archive and with its own sum</td><td><code>takt-vX.Y.Z-linux-amd64.bin</code> in the release</td></tr>
 <tr><td>does your source really produce that binary</td><td>the build is reproducible — <code>CGO_ENABLED=0</code>, <code>-trimpath</code>, the version arriving from the linker — and the release rebuilds it and compares byte for byte before publishing</td><td>the rebuild-and-compare step of the release run</td></tr>
 <tr><td>are updates proposed</td><td>Dependabot for Go modules, npm packages and the actions themselves</td><td><code>.github/dependabot.yml</code></td></tr>
+<tr><td>what licences ship with it</td><td>every module and package in <code>THIRD-PARTY.md</code> is checked against its real licence text and against an allow-list (MIT, BSD, Apache-2.0, ISC); copyleft fails the check</td><td><code>internal/license</code>, part of <code>make check</code></td></tr>
+<tr><td>was a secret ever committed</td><td><code>gitleaks</code> over the whole git history, not only the working tree; false positives listed with a reason</td><td><code>make secrets</code>, <code>.gitleaksignore</code></td></tr>
+<tr><td>what does the running application send</td><td>OWASP ZAP baseline against a live server: headers, content policy, cookies; any new warning fails the run</td><td><code>.github/workflows/dast.yml</code>, <code>.zap/rules.tsv</code></td></tr>
+<tr><td>is this the image and the files we published</td><td>images signed by digest and <code>SHA256SUMS</code> signed with keyless cosign (the release workflow&#39;s GitHub identity, no key to lose)</td><td><code>SHA256SUMS.sigstore.json</code> in the release</td></tr>
+<tr><td>how was each file built</td><td>SLSA build provenance for archives, binaries and <code>takt-fetch</code></td><td>GitHub attestations of the release</td></tr>
+<tr><td>does the upgrade from the previous release work</td><td>before publication the previous release&#39;s binary runs on the new schema, the new one on the old data, and the old one again as a rollback</td><td><code>make upgrade-check</code>, <code>.github/workflows/upgrade.yml</code></td></tr>
 </tbody>
 </table></div>
+<p>Checking the signatures yourself:</p>
+<pre><code>cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp &#39;^https://github.com/findias/takt/.github/workflows/release.yml@&#39; \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c SHA256SUMS
+gh attestation verify takt-vX.Y.Z-linux-amd64.bin -R findias/takt
+cosign verify ghcr.io/findias/takt:vX.Y.Z \
+  --certificate-identity-regexp &#39;^https://github.com/findias/takt/.github/workflows/release.yml@&#39; \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
+<p>Each kind of check has its own badge at the top of <code>README.md</code>, linked to its runs: SAST, CodeQL, SCA, secrets, DAST, image, upgrade.</p>
 <p>Suppressions are explained rather than silent: a <code>gosec</code> exception reads <code>// #nosec G404 -- why</code>, a deliberate SQL concatenation reads <code>// #sql-склейка: why</code>, and a marker without an explanation is not accepted by our own check.</p>
 <h2 id="vulnerability-handling">Vulnerability handling</h2>
 <p>Reports go through GitHub&#39;s private reporting — <strong>Security</strong> → <strong>Report a vulnerability</strong> — and never through a public issue. The timelines are the honest ones rather than the impressive ones: five working days to acknowledge, ten to assess, then a release with an entry in <code>CHANGELOG.md</code>. The supported version is the latest one; there is nobody to backport into older ones. What counts as a vulnerability, and what deliberately does not, is written out in <a href="SECURITY.html"><code>SECURITY.md</code></a> — including the case a scanner report usually rests on: a vulnerability in a dependency we never call.</p>
@@ -249,7 +265,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>a leaked integration key</td><td>scopes, optional expiry, its own rate limit; a key can never be an owner</td><td><code>clients_test.go</code></td></tr>
 <tr><td>a leaked invitation token</td><td>single use, expires, opens exactly one row and nothing beyond it</td><td><code>org_test.go</code></td></tr>
 <tr><td>a tampered artefact</td><td>SHA-256 over every file, SBOM alongside</td><td><code>SHA256SUMS</code></td></tr>
-<tr><td>a vulnerable dependency</td><td>four scanners, a VEX statement, Dependabot</td><td>the runs of <code>security.yml</code> and <code>codeql.yml</code></td></tr>
+<tr><td>a vulnerable dependency</td><td>four scanners, a VEX statement, Dependabot</td><td>the runs of <code>sca.yml</code>, <code>security.yml</code> and <code>codeql.yml</code></td></tr>
 <tr><td>the server made to call an internal address</td><td>only an owner can create a subscription; the YouGile address comes from configuration, never from the person importing</td><td><strong>not held by the product</strong> — restrict egress on your side</td></tr>
 <tr><td>YouGile credentials kept or leaked</td><td>the password passes through the server once, to get the company&#39;s API key, and the key lives in the browser tab; neither is stored or logged</td><td><code>import_yougile_test.go</code></td></tr>
 <tr><td>an owner acting against their own organisation</td><td>nothing, by definition of the role</td><td>the audit log records it</td></tr>
@@ -312,7 +328,7 @@ sha256sum -c SHA256SUMS</code></pre>
 <p><code>takt doctor</code> is the shortest of these and the one worth running on the installation itself rather than on a clone: besides the schema and the isolation it names the two settings a review always asks about — whether the connection to the database is over a network without TLS, and who is allowed to create organisations. Neither is called a failure, because either can be a deliberate decision; both are named, because silence about them reads as “all fine”.</p>
 <p>To see the isolation for yourself, connect to the database as the application role and count boards: the answer is zero without a tenant context, on a database with thousands of them.</p>
 <p>Questions that this page does not answer, and reports of anything it answers wrongly, go to the address in <a href="SECURITY.html"><code>SECURITY.md</code></a>.</p>
-<footer>Takt, version v0.2.3-144-gb56aed8-dirty. Built from security-review.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-145-g81cf3cc-dirty. Built from security-review.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

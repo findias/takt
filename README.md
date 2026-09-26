@@ -5,7 +5,14 @@ inside your own perimeter: one process, one PostgreSQL database, no
 internet access needed to install it or to run it.
 
 [![Check](https://github.com/findias/takt/actions/workflows/check.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/check.yml)
-[![Security](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
+[![End-to-end](https://github.com/findias/takt/actions/workflows/e2e.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/e2e.yml)
+[![Upgrade](https://github.com/findias/takt/actions/workflows/upgrade.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/upgrade.yml)
+[![SAST](https://github.com/findias/takt/actions/workflows/sast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sast.yml)
+[![CodeQL](https://github.com/findias/takt/actions/workflows/codeql.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/codeql.yml)
+[![SCA](https://github.com/findias/takt/actions/workflows/sca.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/sca.yml)
+[![Secrets](https://github.com/findias/takt/actions/workflows/secrets.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/secrets.yml)
+[![DAST](https://github.com/findias/takt/actions/workflows/dast.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/dast.yml)
+[![Image](https://github.com/findias/takt/actions/workflows/security.yml/badge.svg)](https://github.com/findias/takt/actions/workflows/security.yml)
 [![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/findias/takt?label=release)](https://github.com/findias/takt/releases)
 

@@ -47,6 +47,21 @@ applies the new migrations, runs the old binary on the new schema, the
 new one on the old data and the old one again as a rollback, and
 counts the rows (`make upgrade-check`).
 
+**Stricter headers on every answer.** The content policy no longer
+allows inline styles (`style-src 'self'`), and the answers carry
+`Cross-Origin-Opener-Policy: same-origin`,
+`Cross-Origin-Embedder-Policy: require-corp` and
+`Cross-Origin-Resource-Policy: same-origin`. Everything the application
+loads is its own, so nothing changes on screen; a reverse proxy that
+injects its own scripts or styles into pages will now be refused by the
+browser — check it once after the upgrade.
+
+**The release is signed and says how it was built.** Images are signed
+by digest and `SHA256SUMS` is signed with keyless cosign
+(`SHA256SUMS.sigstore.json`); archives, binaries and `takt-fetch` carry
+SLSA build provenance. How to verify is in the security review, «Supply
+chain».
+
 **Two `takt migrate` at once no longer fail.** A migration job
 restarted by the cluster while the previous one still runs, or a
 manual `takt migrate` during a rollout, used to make the second run

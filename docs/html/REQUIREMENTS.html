@@ -231,6 +231,10 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Б15</td><td>Бинарник выпускается отдельным файлом с суммой, и пересборка того же тега даёт те же байты</td><td><code>Makefile</code>, цели tarball и binary; шаг сверки в выпуске</td></tr>
 <tr><td>Б16</td><td>Журнал действий пишется базой у каждой таблицы под ним, не содержит секретов и каждая запись названа на экране в обоих языках</td><td><code>internal/store/audit_triggers_test.go</code></td></tr>
 <tr><td>Б17</td><td>Функция политик не отвечает «неизвестно» (NULL) ни на каком входе: под not() это стало бы пропуском</td><td><code>internal/store/policy_nulls_test.go</code></td></tr>
+<tr><td>Б18</td><td>Лицензии чужого кода в поставке настоящие и из разрешённого набора (без копилефта)</td><td><code>internal/license/allowed_test.go</code></td></tr>
+<tr><td>Б19</td><td>Секретов нет во всей истории git, ложные срабатывания объяснены</td><td><code>Makefile</code>, цель secrets (gitleaks); <code>.gitleaksignore</code></td></tr>
+<tr><td>Б20</td><td>Работающее приложение проходит разбор ZAP без новых предупреждений; стили и скрипты только файлами, изоляция источника включена</td><td><code>.github/workflows/dast.yml</code>, <code>internal/httpapi/headers_test.go</code>, <code>web/e2e/csp.spec.ts</code></td></tr>
+<tr><td>Б21</td><td>Образы и список сумм выпуска подписаны, у файлов выпуска есть происхождение сборки</td><td><code>.github/workflows/release.yml</code> (cosign, attest-build-provenance)</td></tr>
 </tbody>
 </table></div>
 <h2 id="совместимость">Совместимость</h2>
@@ -265,7 +269,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>В5</td><td>Резервная копия базы снимается до обновления</td><td>не закреплено: наша сторона — совместимость миграций, копия чужая; сказано в <code>docs/ru/установка.md</code></td></tr>
 </tbody>
 </table></div>
-<footer>Takt, version v0.2.3-144-gb56aed8-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.2.3-145-g81cf3cc-dirty. Built from REQUIREMENTS.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

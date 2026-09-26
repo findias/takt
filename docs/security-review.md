@@ -245,6 +245,28 @@ means scanning and answering for it forever.
 | is this the file we are running | the bare binary for each architecture, next to the archive and with its own sum | `takt-vX.Y.Z-linux-amd64.bin` in the release |
 | does your source really produce that binary | the build is reproducible — `CGO_ENABLED=0`, `-trimpath`, the version arriving from the linker — and the release rebuilds it and compares byte for byte before publishing | the rebuild-and-compare step of the release run |
 | are updates proposed | Dependabot for Go modules, npm packages and the actions themselves | `.github/dependabot.yml` |
+| what licences ship with it | every module and package in `THIRD-PARTY.md` is checked against its real licence text and against an allow-list (MIT, BSD, Apache-2.0, ISC); copyleft fails the check | `internal/license`, part of `make check` |
+| was a secret ever committed | `gitleaks` over the whole git history, not only the working tree; false positives listed with a reason | `make secrets`, `.gitleaksignore` |
+| what does the running application send | OWASP ZAP baseline against a live server: headers, content policy, cookies; any new warning fails the run | `.github/workflows/dast.yml`, `.zap/rules.tsv` |
+| is this the image and the files we published | images signed by digest and `SHA256SUMS` signed with keyless cosign (the release workflow's GitHub identity, no key to lose) | `SHA256SUMS.sigstore.json` in the release |
+| how was each file built | SLSA build provenance for archives, binaries and `takt-fetch` | GitHub attestations of the release |
+| does the upgrade from the previous release work | before publication the previous release's binary runs on the new schema, the new one on the old data, and the old one again as a rollback | `make upgrade-check`, `.github/workflows/upgrade.yml` |
+
+Checking the signatures yourself:
+
+```sh
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/findias/takt/.github/workflows/release.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum -c SHA256SUMS
+gh attestation verify takt-vX.Y.Z-linux-amd64.bin -R findias/takt
+cosign verify ghcr.io/findias/takt:vX.Y.Z \
+  --certificate-identity-regexp '^https://github.com/findias/takt/.github/workflows/release.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Each kind of check has its own badge at the top of `README.md`, linked
+to its runs: SAST, CodeQL, SCA, secrets, DAST, image, upgrade.
 
 Suppressions are explained rather than silent: a `gosec` exception reads
 `// #nosec G404 -- why`, a deliberate SQL concatenation reads
@@ -290,7 +312,7 @@ usually rests on: a vulnerability in a dependency we never call.
 | a leaked integration key | scopes, optional expiry, its own rate limit; a key can never be an owner | `clients_test.go` |
 | a leaked invitation token | single use, expires, opens exactly one row and nothing beyond it | `org_test.go` |
 | a tampered artefact | SHA-256 over every file, SBOM alongside | `SHA256SUMS` |
-| a vulnerable dependency | four scanners, a VEX statement, Dependabot | the runs of `security.yml` and `codeql.yml` |
+| a vulnerable dependency | four scanners, a VEX statement, Dependabot | the runs of `sca.yml`, `security.yml` and `codeql.yml` |
 | the server made to call an internal address | only an owner can create a subscription; the YouGile address comes from configuration, never from the person importing | **not held by the product** — restrict egress on your side |
 | YouGile credentials kept or leaked | the password passes through the server once, to get the company's API key, and the key lives in the browser tab; neither is stored or logged | `import_yougile_test.go` |
 | an owner acting against their own organisation | nothing, by definition of the role | the audit log records it |

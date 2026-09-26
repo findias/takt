@@ -1,0 +1,37 @@
+# SCA: известные уязвимости зависимостей — govulncheck (вызываем ли мы
+# уязвимое) и npm audit (make sca). Лицензии зависимостей сверяет
+# make check (internal/license): им сеть не нужна.
+#
+# По расписанию, а не только на правках: дыру в зависимости находят
+# не тогда, когда мы её трогаем, а тогда, когда её опубликуют.
+name: SCA
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Зависимости клиента
+        run: cd web && npm ci
+      - run: make sca

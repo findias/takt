@@ -1,0 +1,57 @@
+# DAST: пассивный разбор работающего приложения — OWASP ZAP baseline
+# (PROMPT-TESTING.md, уровень 8). SAST смотрит код, SCA — зависимости;
+# что уходит в браузер — заголовки, политика содержимого, куки, — видно
+# только по ответам живого сервера. Первый прогон 26.09.2026 нашёл
+# 'unsafe-inline' у стилей и отсутствие заголовков изоляции источника —
+# оба закрыты.
+#
+# Любое новое предупреждение валит прогон: известные и объяснённые —
+# в .zap/rules.tsv, каждое с причиной.
+name: DAST
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Зависимости клиента
+        run: cd web && npm ci
+      - name: Стенд
+        run: make demo web
+      - name: Сервер
+        run: |
+          DATABASE_URL="postgres://takt:takt@localhost:55432/takt?sslmode=disable" \
+            LISTEN_ADDR=":8099" BASE_URL="http://localhost:8099" WEB_DIR=web/dist \
+            go run ./cmd/takt serve > /tmp/takt.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8099/readyz && exit 0
+            sleep 2
+          done
+          cat /tmp/takt.log
+          exit 1
+      - name: Разбор ZAP
+        run: |
+          docker run --rm --network host -v "$PWD/.zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:8099 -c rules.tsv

@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types --import ./src/shared/i18n/node-setup.ts --test --experimental-test-coverage --test-coverage-exclude='**/*.test.ts' --test-coverage-exclude='**/node-setup.ts' --test-coverage-exclude='src/shared/i18n/**' --test-coverage-lines=95 --test-coverage-branches=90 --test-coverage-functions=88 'src/**/*.test.ts' && vitest run",
     "test:dom": "vitest run",
-    "test:e2e": "npm run build && playwright test e2e/board.spec.ts e2e/a11y.spec.ts e2e/perf.spec.ts",
+    "test:e2e": "npm run build && playwright test e2e/board.spec.ts e2e/a11y.spec.ts e2e/perf.spec.ts e2e/csp.spec.ts",
     "screens": "npm run build && playwright test e2e/screens.spec.ts e2e/screens.en.spec.ts",
     "preview": "vite preview"
   },
