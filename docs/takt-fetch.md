@@ -13,7 +13,7 @@ does not contain it: the server that holds your boards cannot reach out
 to anyone's cloud, and a security review can check that by the list of
 files alone.
 
-<!-- anchor: get -->
+<a id="get"></a>
 ## Get it
 
 Every release carries `takt-fetch` as separate files, one per system:

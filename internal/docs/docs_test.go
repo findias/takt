@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 // Документация сверяется с продуктом, а не живёт рядом с ним.
@@ -335,5 +336,75 @@ func TestTranslationsAreReachableFromBothSides(t *testing.T) {
 	}
 	if !strings.Contains(русский, "overview.md") {
 		t.Error("русский обзор не ведёт обратно на английскую документацию")
+	}
+}
+
+// Ссылка на раздел работает и на GitHub, а не только у нас.
+//
+// Якорь раздела был комментарием `<!-- anchor: … -->`: его понимали наш
+// отрисовщик и справка, а GitHub строит якорь из текста заголовка. Ссылки
+// «Коротко» из CHANGELOG.md — те же, что уходят в заметки к выпуску, —
+// открывали на GitHub страницу с начала, а не раздел (26.09.2026, перед
+// v0.3.0). Здесь каждая ссылка `docs/….md#якорь` из списка изменений
+// и README на обоих языках сверяется так, как её разрешит GitHub:
+// `<a id="якорь"></a>` в файле или заголовок, чей якорь GitHub совпал.
+func TestSectionLinksResolveOnGitHub(t *testing.T) {
+	root := корень(t)
+	ссылка := regexp.MustCompile(`\]\((docs/[^)#\s]+\.md)#([^)\s]+)\)`)
+	заголовок := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
+	уГитхаба := func(текст string) string {
+		// Алгоритм GitHub: строчные, всё кроме букв, цифр, пробела,
+		// дефиса и подчёркивания — прочь, пробел — дефис.
+		var b strings.Builder
+		for _, r := range strings.ToLower(strings.TrimSpace(текст)) {
+			switch {
+			case unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_':
+				b.WriteRune(r)
+			case r == ' ':
+				b.WriteRune('-')
+			}
+		}
+		return b.String()
+	}
+	проверено := 0
+	for _, имя := range []string{"CHANGELOG.md", "CHANGELOG.ru.md", "README.md", "README.ru.md"} {
+		raw, err := os.ReadFile(filepath.Join(root, имя))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range ссылка.FindAllStringSubmatch(string(raw), -1) {
+			цель, якорь := m[1], m[2]
+			текст, err := os.ReadFile(filepath.Join(root, цель))
+			if err != nil {
+				t.Errorf("%s: ссылка на %s — файла нет", имя, цель)
+				continue
+			}
+			проверено++
+			if strings.Contains(string(текст), `<a id="`+якорь+`"></a>`) {
+				continue
+			}
+			найден := false
+			for _, h := range заголовок.FindAllStringSubmatch(string(текст), -1) {
+				if уГитхаба(h[1]) == якорь {
+					найден = true
+					break
+				}
+			}
+			if !найден {
+				t.Errorf("%s: %s#%s — на GitHub такого якоря нет; поставьте `<a id=\"%s\"></a>` над заголовком", имя, цель, якорь, якорь)
+			}
+		}
+	}
+	if проверено < 10 {
+		t.Fatalf("проверено ссылок на разделы: %d — разбор сломан", проверено)
+	}
+	for _, шаблон := range []string{"docs/*.md", "docs/ru/*.md"} {
+		файлы, _ := filepath.Glob(filepath.Join(root, шаблон))
+		for _, ф := range файлы {
+			raw, _ := os.ReadFile(ф)
+			if strings.Contains(string(raw), "<!-- anchor:") {
+				t.Errorf("%s: якорь комментарием GitHub не видит — нужен `<a id=\"…\"></a>`", ф)
+			}
+		}
 	}
 }

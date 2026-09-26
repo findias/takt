@@ -10,7 +10,7 @@ minutes](quickstart.md) first; the rest will make more sense.
 behind your name in the header. Buttons are named here as they appear
 in the English interface.
 
-<!-- anchor: board -->
+<a id="board"></a>
 ## Working on the board
 
 ### Find a card
@@ -21,7 +21,7 @@ board commands.
 If the card is not found, check the filter: under a filter the board
 shows less than everything, and says so in the column.
 
-<!-- anchor: filter -->
+<a id="filter"></a>
 ### Filter down to what you need
 
 1. Pick your conditions in the filter row above the board: assignee,
@@ -38,7 +38,7 @@ shows less than everything, and says so in the column.
 Labels combine with AND: pick “Urgent” and “External” and you get cards
 carrying both.
 
-<!-- anchor: swimlanes -->
+<a id="swimlanes"></a>
 ### Slice the board into swimlanes
 
 In the **No grouping** list, choose what to slice
@@ -59,7 +59,7 @@ Swimlanes are a slice, not a different board: you cannot drag a card
 between them, because the lane is derived from a property of the card.
 To change the lane, change the property.
 
-<!-- anchor: portfolio -->
+<a id="portfolio"></a>
 ### Keep epics on a portfolio board
 
 Epics live on a board of their own, not in the columns of a team.
@@ -100,7 +100,7 @@ the package, and their issues keep them as parents. An existing board becomes a 
 back) under **How we work** in **Flow** — **Board level**. The board
 list marks portfolios **epic portfolio**.
 
-<!-- anchor: tree -->
+<a id="tree"></a>
 ### See epics, features and tasks as a tree
 
 In the view list, next to **Board** and **Table**, pick **Tree**. Every
@@ -117,7 +117,7 @@ cannot see is named "Card unavailable". Cards with no parent and no parts are fo
 at the bottom. **▾** folds a branch. Filters do not apply to this view:
 a tree with half its branches missing cannot say how far the epic is.
 
-<!-- anchor: table -->
+<a id="table"></a>
 ### Compare cards against each other
 
 Pick **Table** in the list at the left of the board's toolbar. Same set of cards as a
@@ -141,7 +141,7 @@ sorted list can be sent to someone.
 To label several cards at once, select them and use the bar that
 appears at the bottom of the screen.
 
-<!-- anchor: label-scope -->
+<a id="label-scope"></a>
 ### Create a label that does not exist yet
 
 Right from the card: type the new name into the label picker. Under
@@ -165,7 +165,7 @@ To change a label's colour, pick another one in the list next to it
 under **Labels** on **Team**. The colour changes on every card at once.
 Whoever may archive the label may recolour it.
 
-<!-- anchor: block -->
+<a id="block"></a>
 ### Block work until a date
 
 1. Open the card's **…** menu and choose **Block…**,
@@ -209,7 +209,7 @@ not change. The new order is the board's, for everyone. To put a
 queue in sprint order instead, see **Order by iteration** under
 [iterations](#iterations).
 
-<!-- anchor: columns -->
+<a id="columns"></a>
 ### Mark up a column and set its limit
 
 1. In the column header press **Markup**.
@@ -231,7 +231,7 @@ A hard limit refuses the move and says to make room first. The field
 below the limit holds the column's entry rule — what must be done before
 a card comes here.
 
-<!-- anchor: promise -->
+<a id="promise"></a>
 ### Promise how long work takes
 
 Open **Flow** and find **Board promise**. Press **Take from history**:
@@ -264,7 +264,7 @@ out once you open the card; your own changes never light up. A change
 made while you are looking at the board lights up at once. The first
 time you open a board, the last day counts.
 
-<!-- anchor: appearance -->
+<a id="appearance"></a>
 ### Switch to the dark theme or a denser board
 
 1. Click your name in the header — it opens **Personal settings**.
@@ -274,7 +274,7 @@ time you open a board, the last day counts.
 The change applies at once. Theme and density are remembered in this
 browser: on another device they can be different.
 
-<!-- anchor: notifications -->
+<a id="notifications"></a>
 ### Hear when you are needed
 
 The bell in the header counts what is unread. It rings when someone
@@ -291,7 +291,7 @@ and pick the person. Only people who can see the board are offered.
 To stop a kind of notification, click your name, **Notifications** tab,
 and untick it. What is switched off never arrives.
 
-<!-- anchor: language -->
+<a id="language"></a>
 ### Switch the interface language
 
 Click your name, **Language** tab, and choose **Русский** or
@@ -388,7 +388,7 @@ text. **Remove** takes a ticket off. Both show on the card's
 **History** tab. Below the tickets, **Tasks** holds the parent, the
 subtasks and the links to other cards.
 
-<!-- anchor: archive -->
+<a id="archive"></a>
 ### Take a card off the board
 
 Hover the card, open the **…** menu and choose **Archive**. A message appears with a **Restore** button, in
@@ -399,7 +399,7 @@ Deleting for good asks for confirmation and cannot be undone. It is
 offered to the organisation owner and to the owner of the board's
 subdivision.
 
-<!-- anchor: iterations -->
+<a id="iterations"></a>
 ### Run a sprint or a release
 
 1. In the strip above the board press **+ iteration**.
@@ -437,7 +437,7 @@ Nothing is deleted, so nothing is asked. To bring them back, press
 **Work in iterations** where the iteration strip used to be, or tick
 the box again — everything returns, reports included.
 
-<!-- anchor: import -->
+<a id="import"></a>
 ## Moving in
 
 ### Import tasks from a spreadsheet
@@ -547,7 +547,7 @@ saying so — a cloud Jira CSV at 1,000 issues, a monday Excel file at
 imported**: check that everything came, and export the rest as a second
 file.
 
-<!-- anchor: import-yougile -->
+<a id="import-yougile"></a>
 ### Import a board from YouGile
 
 A YouGile board comes over whole through its API: columns, tasks,
@@ -592,7 +592,7 @@ a table in YouGile (Reports → Tables) and import it as a spreadsheet.
 An administrator can switch import over the API off altogether with
 `YOUGILE_URL=off`; for a boxed YouGile, `YOUGILE_URL` holds its address.
 
-<!-- anchor: import-package -->
+<a id="import-package"></a>
 ### Import a package from a closed network
 
 A package (`.takt`) carries boards from YouGile, Jira, Kaiten and
@@ -628,10 +628,10 @@ part did not match. Packages over 50 MB are imported by an
 administrator on the server; the format is described in
 [Import package](import-package.md).
 
-<!-- anchor: team -->
+<a id="team"></a>
 ## The organisation
 
-<!-- anchor: tasks -->
+<a id="tasks"></a>
 ### See someone's tasks on every board
 
 The **Tasks** tab lists the cards where a person is an assignee, on
@@ -648,7 +648,7 @@ labels these tasks carry). **Clear filters** brings everything back. A private b
 have no access to is not shown, even if the person works on it. The
 address keeps the choice, so the list can be sent to someone.
 
-<!-- anchor: reports -->
+<a id="reports"></a>
 ### Export cards for a report
 
 When someone asks you to "send a spreadsheet", open the **Reports**
@@ -738,7 +738,7 @@ need such a link. It is offered for the same people as **Email…**: not
 yourself, not someone who is also a member of another organisation,
 not someone who signs in through the company identity provider.
 
-<!-- anchor: visibility -->
+<a id="visibility"></a>
 ### Close a board to outsiders
 
 1. Open the board and press the visibility button in the header — it
@@ -768,7 +768,7 @@ A subdivision owner sees **Erase data** too, but only next to people
 who belong solely to subdivisions of their subtree; everything else
 about a person stays with the organisation owner.
 
-<!-- anchor: structure -->
+<a id="structure"></a>
 ### Set up subdivisions
 
 1. The **Structure** tab.
@@ -798,7 +798,7 @@ only against `/scim/v2` and gives no access to boards.
 **Revoke key** asks first: the key stops working at once,
 and nothing brings it back — you issue a new one.
 
-<!-- anchor: subscriptions -->
+<a id="subscriptions"></a>
 ### Receive events in your own system
 
 1. **Team** tab → **Event subscriptions**.
@@ -819,7 +819,7 @@ into an avalanche.
 A retry also re-enables the subscription if we disabled it after a long
 run of failures.
 
-<!-- anchor: export -->
+<a id="export"></a>
 ### Take all the organisation's data
 
 **Team** tab → **Export** → **Download file**.

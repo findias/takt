@@ -7,7 +7,7 @@ what. Not read in order — read when needed.
 behind your name in the header. Buttons are named here as they appear
 in the English interface.
 
-<!-- anchor: roles -->
+<a id="roles"></a>
 ## Roles in the organisation
 
 | Role | Reads | Changes work | Runs the organisation |
@@ -149,7 +149,7 @@ hung. Every list that offers a label also says where it comes from.
   longer applies there, the card panel says so, and it can still be
   taken off.
 
-<!-- anchor: flow -->
+<a id="flow"></a>
 ## Metrics in **Flow**
 
 | Metric | What it answers |
@@ -165,7 +165,7 @@ hung. Every list that offers a label also says where it comes from.
 Every board counts its own metrics. Epics live on a portfolio board, so
 their months never mix with a team's days.
 
-<!-- anchor: key-scopes -->
+<a id="key-scopes"></a>
 ## Integration key scopes
 
 | Scope | What it opens |
