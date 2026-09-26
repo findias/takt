@@ -350,7 +350,7 @@ func TestTranslationsAreReachableFromBothSides(t *testing.T) {
 // `<a id="якорь"></a>` в файле или заголовок, чей якорь GitHub совпал.
 func TestSectionLinksResolveOnGitHub(t *testing.T) {
 	root := корень(t)
-	ссылка := regexp.MustCompile(`\]\((docs/[^)#\s]+\.md)#([^)\s]+)\)`)
+	ссылка := regexp.MustCompile(`\]\((?:\.\./)?(docs/[^)#\s]+\.md)#([^)\s]+)\)`)
 	заголовок := regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
 	уГитхаба := func(текст string) string {
 		// Алгоритм GitHub: строчные, всё кроме букв, цифр, пробела,
@@ -367,7 +367,14 @@ func TestSectionLinksResolveOnGitHub(t *testing.T) {
 		return b.String()
 	}
 	проверено := 0
-	for _, имя := range []string{"CHANGELOG.md", "CHANGELOG.ru.md", "README.md", "README.ru.md"} {
+	имена := []string{"CHANGELOG.md", "CHANGELOG.ru.md", "README.md", "README.ru.md"}
+	// Сопровождение выпуска (release/) ссылается на те же разделы
+	// из соседнего каталога — `../docs/…`.
+	выпуск, _ := filepath.Glob(filepath.Join(root, "release", "*.md"))
+	for _, ф := range выпуск {
+		имена = append(имена, filepath.Join("release", filepath.Base(ф)))
+	}
+	for _, имя := range имена {
 		raw, err := os.ReadFile(filepath.Join(root, имя))
 		if err != nil {
 			t.Fatal(err)
