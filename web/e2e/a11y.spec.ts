@@ -1105,7 +1105,7 @@ test('на бумагу уходит документ, а не снимок эк
   // Открытая панель — то, ради чего печатают: доска за ней лишняя.
   await page.emulateMedia({ media: 'screen' })
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
-  await page.getByRole('button', { name: /Неделя 32/ }).first().click()
+  await page.getByRole('button', { name: /^Неделя \d+$/ }).first().click()
   await expect(page.locator('.panel-card')).toBeVisible()
   await page.emulateMedia({ media: 'print' })
   expect(
@@ -1294,4 +1294,26 @@ test('по-английски: имена, цели нажатия и ширин
     }
     await context.close()
   }
+})
+
+/**
+ * Шапка доски на телефоне держит в экране всё, что в ней есть.
+ *
+ * Экран доски обрезает лишнее по ширине, и «Справка» с меню человека
+ * уезжали за правый край незаметно: прокрутки вбок нет, проверка ширины
+ * молчит, а открыть справку, личные настройки или выйти с доски на
+ * телефоне было нельзя (проход по дизайну 26.09.2026).
+ */
+test('шапка доски на узком экране не уводит справку и меню за край', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await signInToDemo(page)
+  await openDemoBoard(page)
+  const header = page.locator('.board-header')
+  await expect(header).toBeVisible()
+  const beyond = await header.evaluate((h) =>
+    [...h.querySelectorAll<HTMLElement>('button, a')]
+      .filter((el) => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().right > window.innerWidth + 1)
+      .map((el) => (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 30)),
+  )
+  expect(beyond, 'элементы шапки за правым краем').toEqual([])
 })

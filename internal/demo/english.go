@@ -94,9 +94,7 @@ var english = map[string]string{
 	"ждали ключи от серверной":                                                                "we were waiting for the server room keys",
 
 	// Итерации и архив.
-	"Неделя 32": "Week 32",
 	"Закрыть июльские хвосты": "Tie up July's loose ends",
-	"Неделя 33": "Week 33",
 	"Неделя %d": "Week %d",
 	"Довести релиз склада до стенда": "Get the warehouse release onto the test rig",
 	"Старый регламент приёмки":       "Old acceptance procedure",

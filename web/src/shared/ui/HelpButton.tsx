@@ -25,7 +25,9 @@ export function HelpButton() {
       onAuxClick={refresh}
     >
       <HelpIcon />
-      {t.help.button}
+      {/* На узком экране — значком, как «Поток» и «Архив»: подпись
+          остаётся именем ссылки для диктора. */}
+      <span className="tool-label">{t.help.button}</span>
     </a>
   )
 }

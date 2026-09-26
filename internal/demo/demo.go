@@ -963,7 +963,7 @@ func (f *filler) epic() error {
 
 func (f *filler) iterations(b board.Info, ids map[string]string) error {
 	past, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), b.ID,
-		f.w("Неделя 32"), f.w("Закрыть июльские хвосты"),
+		f.week(-21), f.w("Закрыть июльские хвосты"),
 		date(-21), date(-15))
 	if err != nil {
 		return err
@@ -985,7 +985,7 @@ func (f *filler) iterations(b board.Info, ids map[string]string) error {
 	}
 
 	now, err := f.boards.CreateIteration(f.ctx, f.orgID, f.owner(), b.ID,
-		f.w("Неделя 33"), f.w("Довести релиз склада до стенда"), date(-4), date(2))
+		f.week(-4), f.w("Довести релиз склада до стенда"), date(-4), date(2))
 	if err != nil {
 		return err
 	}
@@ -1375,6 +1375,14 @@ func ptr[T any](v T) *T { return &v }
 
 // date возвращает день со сдвигом от сегодня в том виде, в каком его
 // принимают итерации.
+// week — название итерации по номеру недели её начала. Даты демо
+// считаются от дня наполнения, и неподвижное «Неделя 33» у итерации
+// 22–28 сентября читалось как ошибка (проход по дизайну 26.09.2026).
+func (f *filler) week(shiftDays int) string {
+	_, n := time.Now().AddDate(0, 0, shiftDays).ISOWeek()
+	return fmt.Sprintf(f.w("Неделя %d"), n)
+}
+
 func date(shiftDays int) string {
 	return time.Now().AddDate(0, 0, shiftDays).Format("2006-01-02")
 }

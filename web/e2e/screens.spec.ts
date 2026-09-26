@@ -284,7 +284,8 @@ test('снимки экранов', async ({ page, browser }) => {
   await backToBoard(page, boardUrl)
 
   // Отчёт по закрытой итерации.
-  await page.getByRole('button', { name: 'Неделя 32', exact: true }).click()
+  // Название — по номеру недели, а он зависит от дня наполнения демо.
+  await page.getByRole('button', { name: /^Неделя \d+$/ }).first().click()
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${SHOTS}/16-отчёт-итерации.png` })
   await backToBoard(page, boardUrl)

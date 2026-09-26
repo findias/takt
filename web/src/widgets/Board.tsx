@@ -1303,6 +1303,7 @@ export function Board({
         <div className="board-header-tail">
           <button
             className="btn btn--quiet"
+            title={visibilityLabel(access)}
             aria-expanded={showAccess}
             onClick={() => {
               setOpenCard(null)
@@ -1311,7 +1312,10 @@ export function Board({
             }}
           >
             <PeopleIcon />
-            {visibilityLabel(access)}
+            {/* На телефоне — значком: хвост шапки встаёт в одну строку,
+                и доска не опускается ниже (проверка «шапка доски
+                не съедает экран»). Имя кнопки для диктора остаётся. */}
+            <span className="tool-label">{visibilityLabel(access)}</span>
           </button>
           <Bell />
           <HelpButton />

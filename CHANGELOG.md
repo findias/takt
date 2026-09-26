@@ -387,6 +387,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
 - **A «Tasks» tab.** A person's cards on every board you can see —
   yours by default, anyone's from the list or from «Tasks» next to their
   name under «Команда». A private board you cannot see stays hidden.
+- **The board header fits a phone.** At 360 pixels «Help» and your
+  name — with settings and sign-out behind it — used to slide off the
+  right edge of the board screen; now visibility and help show as icons
+  there and everything stays reachable, without pushing the board down.
 - **The board's toolbar is rebuilt.** The view (Board, Table, Changes)
   is a list at the left; the filter is the main panel and stays open
   on a wide screen (on a narrow one it is folded under «Отбор» as
