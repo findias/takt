@@ -43,6 +43,41 @@ env:
   TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
+  # Ворота выпуска (PROMPT-TESTING.md, уровень 9): каждый обязательный
+  # прогон для коммита тега уже прошёл на master и зелёный. Повторять их
+  # здесь незачем — сквозные сценарии, разбор кода, зависимостей,
+  # истории, живого сервера и образа идут своими процессами, — но
+  # выпуск не имеет права их не спросить. Идущий прогон ждём до
+  # получаса; красный, отменённый или отсутствующий — выпуска нет.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Обязательные прогоны коммита зелёные
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          sha=$(gh api "repos/$REPO/commits/${TAG}" --jq .sha)
+          echo "коммит тега ${TAG}: $sha"
+          for wf in check.yml e2e.yml upgrade.yml sast.yml sca.yml secrets.yml dast.yml security.yml codeql.yml; do
+            ok=0
+            for i in $(seq 1 60); do
+              state=$(gh api "repos/$REPO/actions/workflows/$wf/runs?head_sha=$sha&per_page=1" \
+                --jq '.workflow_runs[0] | "\(.status) \(.conclusion)"' 2>/dev/null || echo "none")
+              case "$state" in
+                "completed success") echo "$wf: зелёный"; ok=1; break ;;
+                completed*|none|"") echo "::error::$wf для $sha: ${state:-нет прогона} — выпуска не будет"; exit 1 ;;
+                *) echo "$wf: $state, ждём"; sleep 30 ;;
+              esac
+            done
+            if [ "$ok" = 0 ]; then echo "::error::$wf не закончился за полчаса"; exit 1; fi
+          done
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -92,7 +127,7 @@ jobs:
         run: make upgrade-check PREVIOUS="$(git describe --tags --abbrev=0 "${TAG}^")"
 
   images:
-    needs: [check, upgrade]
+    needs: [check, upgrade, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -288,7 +323,7 @@ jobs:
           done
 
   artifacts:
-    needs: [check, upgrade]
+    needs: [check, upgrade, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
