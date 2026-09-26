@@ -897,3 +897,88 @@ describe('заявки внешних систем на вкладке «Зад�
     expect(payload).toEqual({ cardId: 'карточка', kind: 'problem', ref: 'ПРБ-58' })
   })
 })
+
+// Новый дизайн доски (шаги 3 и 5 «смеси А и В»): шапку колонки и панель
+// «Требует внимания» до 26.09.2026 держали только сквозные сценарии,
+// а те падают целиком и не говорят, что именно сломалось
+// (PROMPT-TESTING.md, уровень 4); у кромки возраста проверки были —
+// выше, в «одной тревоге», — здесь добавлена только доля до обещания.
+// Полоса лимита и кромка скрыты от чтеца — смотрятся по разметке;
+// смысл, который читается, — по тексту.
+describe('новый дизайн доски', () => {
+  const days = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
+  const withSle = (snap: Snapshot, sleDays: number | null): Snapshot => ({
+    ...snap,
+    board: { ...snap.board, sleDays },
+  })
+
+  it('шапка колонки: полоса лимита по делениям, переполнение отмечено', async () => {
+    const two = [card('первая', COL_A, 'a0'), card('вторая', COL_A, 'a1')]
+    snapshot.mockResolvedValue(
+      board([...two, card('третья', COL_B, 'a0'), card('четвёртая', COL_B, 'a1'), card('пятая', COL_B, 'a2')], [
+        column(COL_A, 'Очередь', 'a0', { wipLimit: 3 }),
+        column(COL_B, 'В работе', 'a1', { kind: 'in_progress', wipLimit: 2 }),
+      ]),
+    )
+    show()
+
+    const queue = await screen.findByRole('region', { name: 'Очередь' })
+    const bar = queue.querySelector('.column-gauge-bar')
+    expect(bar?.children).toHaveLength(3)
+    expect(bar?.querySelectorAll('.column-gauge-full')).toHaveLength(2)
+    expect(bar?.classList.contains('column-gauge-bar--over')).toBe(false)
+
+    const work = screen.getByRole('region', { name: 'В работе' })
+    const overBar = work.querySelector('.column-gauge-bar')
+    // Сверх лимита делений столько, сколько карточек, — видно насколько.
+    expect(overBar?.children).toHaveLength(3)
+    expect(overBar?.classList.contains('column-gauge-bar--over')).toBe(true)
+  })
+
+  it('шапка колонки: среднее время у очереди и работы, у «Готово» — нет', async () => {
+    const waiting = { ...card('ждёт', COL_A, 'a0'), columnEnteredAt: days(4) }
+    const done = { ...card('сделана', 'col-done', 'a0'), startedAt: days(5), finishedAt: days(1) }
+    snapshot.mockResolvedValue(
+      board([waiting, done], [
+        column(COL_A, 'Очередь', 'a0'),
+        column('col-done', 'Готово', 'a1', { kind: 'done', isFinishedPoint: true }),
+      ]),
+    )
+    show()
+
+    const queue = await screen.findByRole('region', { name: 'Очередь' })
+    expect(queue.textContent).toMatch(/ждут в среднем 4/)
+    const finished = screen.getByRole('region', { name: 'Готово' })
+    expect(finished.textContent).not.toMatch(/в среднем/)
+  })
+
+  it('кромка возраста до обещания показывает его долю и не тревожит', async () => {
+    const cols = [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1', { kind: 'in_progress', isStartedPoint: true })]
+    const young = { ...card('молодая', COL_B, 'a0'), startedAt: days(2) }
+    snapshot.mockResolvedValue(withSle(board([young], cols), 10))
+    show()
+
+    const node = await screen.findByRole('group', { name: /Карточка «молодая»/ })
+    const strip = node.querySelector<HTMLElement>('.card-age-strip')
+    expect(Number(strip?.style.getPropertyValue('--used'))).toBeCloseTo(0.2, 1)
+    expect(strip?.classList.contains('card-age-strip--late')).toBe(false)
+  })
+
+  it('«Требует внимания» собирает стоящее и переполненное, а при порядке его нет', async () => {
+    const stuck = { ...card('стоит', COL_A, 'a0'), blocked: { id: 'b1', reason: 'ждём доступ', blockedAt: days(1) } }
+    snapshot.mockResolvedValue(
+      board([stuck, card('лишняя', COL_A, 'a1')], [column(COL_A, 'Очередь', 'a0', { wipLimit: 1 }), column(COL_B, 'В работе', 'a1')]),
+    )
+    const { unmount } = show()
+
+    const rail = await screen.findByRole('complementary', { name: 'Требует внимания' })
+    expect(rail.textContent).toMatch(/ждём доступ/)
+    expect(rail.textContent).toMatch(/«Очередь»: 2 при лимите 1/)
+    unmount()
+
+    snapshot.mockResolvedValue(board([card('спокойная', COL_A, 'a0')]))
+    show()
+    await screen.findByRole('group', { name: /Карточка «спокойная»/ })
+    expect(screen.queryByRole('complementary', { name: 'Требует внимания' })).toBeNull()
+  })
+})

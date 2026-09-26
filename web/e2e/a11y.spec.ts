@@ -1248,3 +1248,50 @@ test('в архиве название карточки не обрезаетс�
   )
   expect(обрезанные, 'названия в архиве обрезаны').toEqual([])
 })
+
+/**
+ * То же по-английски (PROMPT-TESTING.md, уровень 4).
+ *
+ * Все проверки выше ходят по русскому интерфейсу. Английские подписи
+ * другой длины: «Needs attention» вместо «Требует внимания», «Organisation
+ * membership» вместо «Участие в организации», — и ломают вёрстку там, где
+ * русские помещались (CLAUDE.md, «Язык»). Здесь английская копия демо
+ * на двух ширинах и три свойства на каждом основном экране: у каждого
+ * элемента управления есть имя, цель нажатия не мельче 24 пикселей,
+ * страница не листается вбок.
+ */
+test('по-английски: имена, цели нажатия и ширина на всех основных экранах', async ({ browser }) => {
+  for (const width of [360, 1440]) {
+    const context = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 900 } })
+    const page = await context.newPage()
+    await page.goto('/')
+    await page.getByLabel('E-mail').fill('anna@en.example.test')
+    await page.getByLabel('Password').fill('parol12345')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+
+    const check = async (where: string) => {
+      await page.waitForTimeout(300)
+      const label = `${where}, ${width} px`
+      expect(await namelessControls(page), `${label}: без имени`).toEqual([])
+      expect(await tinyTargets(page), `${label}: мелкие цели`).toEqual([])
+      const scroll = await page.evaluate(() => document.documentElement.scrollWidth)
+      expect(scroll, `${label}: прокрутка вбок`).toBeLessThanOrEqual(width)
+    }
+
+    const board = page.getByRole('button', { name: 'Supplies', exact: true })
+    await expect(board, 'нет английской копии демо — make demo').toBeVisible({ timeout: 10_000 })
+    await check('список досок')
+
+    await board.click()
+    await expect(page.getByRole('region').first()).toBeVisible()
+    await check('доска')
+
+    for (const screen of ['Tasks', 'Reports', 'Team', 'Structure']) {
+      await page.getByRole('button', { name: 'Boards' }).click()
+      await page.getByRole('button', { name: screen, exact: true }).click()
+      await page.waitForLoadState('networkidle')
+      await check(screen)
+    }
+    await context.close()
+  }
+})

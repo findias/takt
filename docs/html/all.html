@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-139-ged09630-dirty.</p>
+<p>Every section in one file. Version v0.2.3-140-g6ed0c0e-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1630,6 +1630,8 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <tr><td>П15</td><td>Просьба меньше движения заменяет движение, а не выключает объяснение перемещения</td><td><code>web/e2e/a11y.spec.ts</code>, <code>web/src/app/motion.test.ts</code></td></tr>
 <tr><td>П16</td><td>Интерфейс, отказы и журнал — по-русски, а человеку, выбравшему английский, — по-английски</td><td>язык ответа: <code>internal/httpapi/contract_codes_test.go</code> (TestRefusalsSpeakTheLanguageOfThePerson); «сказано понятно» не закреплено — проверяется чтением, машинной проверки у нас нет</td></tr>
 <tr><td>П19</td><td>Фоновые задачи (снятие блокировок по сроку, уведомления по времени, закрытие итераций) безопасны на нескольких репликах: без ошибок и без двойников</td><td><code>internal/board/replicas_test.go</code></td></tr>
+<tr><td>П20</td><td>Доступность держится и по-английски: у каждого элемента есть имя, цели не мельче 24 пикселей, страница не листается вбок — на основных экранах, 360 и 1440 пикселей</td><td><code>web/e2e/a11y.spec.ts</code> («по-английски: …»)</td></tr>
+<tr><td>П21</td><td>Чистые модели клиента покрыты тестами не ниже порога: строки 95 %, ветки 90 %, функции 88 %</td><td><code>web/package.json</code>, скрипт test (порог покрытия node --test)</td></tr>
 </tbody>
 </table></div>
 <h2 id="установка-и-обновление">Установка и обновление</h2>
