@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // Каталог шлёт плоские группы, а подразделения у нас — дерево.
@@ -43,8 +45,12 @@ func TestDirectoryGroupsLiveInsideTheTree(t *testing.T) {
 	// в неё участника.
 	owner.mustDo("PATCH", "/api/teams/"+groupID,
 		map[string]any{"parentId": manualID}, http.StatusNoContent)
+	// Адрес свой у каждого прогона: почта уникальна на всю установку,
+	// и «boris@example.test» вписывал в эту организацию Бориса со стенда —
+	// после прогона он входил в «Каталог и дерево» вместо «Северного
+	// проекта» (нашлось 26.09.2026 при записи эталонов).
 	person := dir.must("POST", "/scim/v2/Users",
-		newUserPayload("boris@example.test"), http.StatusCreated)
+		newUserPayload("tree-"+uuid.NewString()[:8]+"@example.test"), http.StatusCreated)
 	owner.mustDo("PUT", "/api/teams/"+groupID+"/members/"+idOf(t, person), nil,
 		http.StatusNoContent)
 
