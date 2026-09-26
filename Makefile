@@ -296,6 +296,22 @@ load: db migrate ## Поведение под нагрузкой (идёт ми�
 # новый — на старых данных, старый — после отката. Нужна сеть ради
 # образа, поэтому не в check; workflow «Обновление» и выпуск гоняют его сами.
 PREVIOUS ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+# Визуальные эталоны основных экранов (PROMPT-TESTING.md, уровень 6).
+# Сравнение идёт на записанных ответах API и остановленных часах —
+# база не нужна, но шрифты системные: эталоны совпадают только на той
+# машине, где сняты. Поэтому это проверка перед выпуском, не CI.
+.PHONY: visual
+visual: ## Сравнить основные экраны с визуальными эталонами (web/e2e/visual.spec.ts-snapshots)
+	cd web && npm run build && npx playwright test e2e/visual.spec.ts
+
+# Перезаписать данные и эталоны — после осознанного визуального изменения,
+# отдельным коммитом. Данные берутся с демо (make demo).
+.PHONY: visual-update
+visual-update: demo ## Записать данные экранов с демо и снять эталоны заново
+	cd web && npm run build && \
+	  TEST_DATABASE_URL="$(DEV_DB_URL)" VISUAL_RECORD=1 npx playwright test e2e/visual.spec.ts && \
+	  npx playwright test e2e/visual.spec.ts --update-snapshots
+
 .PHONY: upgrade-check
 upgrade-check: db ## Обновление с прошлого выпуска: старый бинарник на новой схеме, новый на старых данных, откат
 	PREVIOUS="$(PREVIOUS)" ADMIN_DB_URL="$(DEV_ADMIN_DB_URL)" APP_DB_URL="$(DEV_DB_URL)" \
