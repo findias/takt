@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"os"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -159,6 +160,10 @@ func TestRateLimitStopsARunawayKeyButNotThePeople(t *testing.T) {
 // 265 запросов в секунду при медиане 420 мс — это предел машины, а не
 // поведение команды; его стоит знать, но не краснеть на нём.
 // Длительность — LOAD_DURATION (по умолчанию минута; к выпуску — 10m).
+//
+// И память: сервер, который держит по кусочку от каждого запроса или
+// оставляет за собой горутину, проходит минуту и падает через неделю.
+// Куча и горутины меряются после наполнения, посреди и в конце.
 func TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated(t *testing.T) {
 	duration := time.Minute
 	if v := os.Getenv("LOAD_DURATION"); v != "" {
@@ -209,6 +214,8 @@ func TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated(t *testing.T) {
 		all[i] = o
 	}
 
+	settled := memory(a)
+
 	var (
 		mu                    sync.Mutex
 		opTimes, snapTimes    []time.Duration
@@ -238,6 +245,13 @@ func TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated(t *testing.T) {
 	// разом в первую секунду — это не команда, а залп.
 	period := time.Duration(float64(orgs*(members+1)) / rate * float64(time.Second))
 	deadline := time.Now().Add(duration)
+	// Середину меряем на ходу: рост от середины к концу — это то, что
+	// копится со временем, а не то, что сервер завёл при первом касании.
+	halfway := make(chan footprint, 1)
+	go func() {
+		time.Sleep(duration / 2)
+		halfway <- heapNow()
+	}()
 	var wg sync.WaitGroup
 	for i, o := range all {
 		stranger := all[(i+1)%orgs].boards[0]
@@ -297,6 +311,21 @@ func TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated(t *testing.T) {
 		}
 	}
 	wg.Wait()
+	middle := <-halfway
+	end := memory(a)
+	t.Logf("память сервера: после наполнения %s, в середине %s, в конце %s", settled, middle, end)
+	// Утечка растёт с числом запросов, а не с данными: доски выросли,
+	// но в памяти сервер их не держит. Замер 26.09.2026, минута: 1,9 →
+	// 2,8 → 2,7 МБ, горутин 5 → 5. Порог от середины к концу — 4 МБ:
+	// за 10 минут это утечка от ~500 байт на операцию.
+	const mb = 1 << 20
+	if end.heap > middle.heap+4*mb || end.heap > settled.heap+16*mb {
+		t.Errorf("память сервера растёт с работой: %s → %s → %s", settled, middle, end)
+	}
+	if end.goroutines > settled.goroutines+2 {
+		t.Errorf("горутины копятся: после наполнения %d, в конце %d — где-то их запускают и не останавливают",
+			settled.goroutines, end.goroutines)
+	}
 
 	pct := func(list []time.Duration, q float64) time.Duration {
 		if len(list) == 0 {
@@ -335,4 +364,40 @@ func TestMixedLoadOfThePlannedCrowdStaysFastAndIsolated(t *testing.T) {
 			t.Errorf("%s: 95-й перцентиль %v, порог %v", c.what, p, c.tail)
 		}
 	}
+}
+
+// footprint — сколько держит процесс: живая куча после сборки мусора
+// и горутины. Сервер в тесте живёт в том же процессе, что и клиенты,
+// поэтому перед замером соединения закрываются с обеих сторон: иначе
+// в счёт попадают горутины открытых соединений, а их число зависит
+// от того, сколько клиентов оказалось посередине запроса.
+type footprint struct {
+	heap       uint64
+	goroutines int
+}
+
+func (f footprint) String() string {
+	if f.goroutines == 0 {
+		return fmt.Sprintf("%.1f МБ", float64(f.heap)/(1<<20))
+	}
+	return fmt.Sprintf("%.1f МБ, горутин %d", float64(f.heap)/(1<<20), f.goroutines)
+}
+
+func memory(a *api) footprint {
+	a.server.CloseClientConnections()
+	http.DefaultTransport.(*http.Transport).CloseIdleConnections()
+	time.Sleep(300 * time.Millisecond)
+	f := heapNow()
+	f.goroutines = runtime.NumGoroutine()
+	return f
+}
+
+// heapNow — только куча, без закрытия соединений: так меряют посреди
+// прогона, когда запросы ещё идут. Горутины тут не считаются — их число
+// зависит от того, сколько запросов в полёте.
+func heapNow() footprint {
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return footprint{heap: m.HeapAlloc}
 }
