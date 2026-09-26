@@ -287,6 +287,14 @@ func TopUp(ctx context.Context, db *store.Store) error {
 func TopUpOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error {
 	f := newFiller(ctx, db)
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
+	return f.topUp()
+}
+
+// topUp — сам долив, один на обе организации стенда. Прежде у английской
+// был свой список шагов, копия русского, и новый шаг (orderHistory)
+// попал только в русский: выкладка staging 26.09.2026 прошла русскую
+// сверку и упала на английской.
+func (f *filler) topUp() error {
 	if err := f.imported(); err != nil {
 		return err
 	}
@@ -314,14 +322,5 @@ func TopUpEnglish(ctx context.Context, db *store.Store) error {
 	f := newFiller(i18n.WithLang(ctx, i18n.EN), db)
 	f.english = true
 	f.orgID, f.people[People[0].Email] = orgID, ownerID
-	if err := f.imported(); err != nil {
-		return err
-	}
-	if err := f.renewBlockDeadline(); err != nil {
-		return err
-	}
-	if err := f.renewRunningIteration(); err != nil {
-		return err
-	}
-	return f.epic()
+	return f.topUp()
 }
