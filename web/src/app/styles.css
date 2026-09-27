@@ -3267,17 +3267,23 @@ textarea.description {
    ему место справа — это смена режима, а не наведение. */
 .card-tools {
   position: absolute;
-  inset-block-end: var(--space-1);
-  inset-inline-end: var(--space-1);
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
   display: flex;
   align-items: center;
   gap: 2px;
   border-radius: var(--radius);
 }
+/* Поверх — значит, заметно поверх: рамка и тень, как у меню. Прежде
+   подложка была цвета карточки и без края, и у карточки с тревогой
+   «дольше обещанного» — таблетка на всю ширину — белый квадрат вырезал
+   угол таблетки и кромку возраста под ней: выглядело поломкой вёрстки,
+   а не кнопками. Над кромкой, а не на ней: кромка — тоже показание. */
 .card:hover .card-tools,
 .card:focus-within .card-tools {
+  padding: 2px;
   background: var(--surface);
-  box-shadow: 0 0 0 var(--space-1) var(--surface);
+  box-shadow: 0 0 0 1px var(--rule), var(--shadow-drag);
 }
 .board-screen--picking .card-line {
   padding-inline-end: calc(var(--target) + var(--space-1));
