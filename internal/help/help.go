@@ -260,6 +260,7 @@ func оболочка(с Страница, язык string, готово соб�
 	// Значок вкладки — тот же, что у приложения: справку открывают
 	// рядом с доской, и две вкладки одного продукта должны узнаваться.
 	b.WriteString("<link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\">\n")
+	b.WriteString("<link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">\n")
 	fmt.Fprintf(&b, "<style>%s</style>\n</head>\n<body>\n<div class=\"help\">\n", Стили())
 
 	fmt.Fprintf(&b, "<aside class=\"help-side\" aria-label=%q>\n", w.разделы)
