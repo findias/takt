@@ -660,22 +660,18 @@ input[type='radio'] {
 
 /* Знак Takt (shared/ui/Mark.tsx). Класс — `takt-mark`, а не `mark`:
    `.mark` — таблетка-отметка на карточке, и знак в шапке стал серым
-   кружком с крошечным метрономом внутри. Цвет — accent темы, вырез — маска:
-   сквозь маятник виден фон, поэтому знак верен на любой поверхности. */
+   кружком с крошечным метрономом внутри. Цвета знака — свои, щели и вырезы —
+   маска: сквозь них виден фон, поэтому знак верен на любой поверхности. */
 .takt-mark {
   flex: none;
   display: block;
 }
-.takt-mark-body {
-  fill: var(--accent);
-  stroke: var(--accent);
-}
-/* Ожидание первой загрузки: маятник качается ±15° от вертикали — в покое
-   он уже отклонён на 15° вправо, отсюда 0 → −30°. Период — тот же, что
-   у мерцания скелетов, `--motion-pending`: ожидание в продукте одно. */
+/* Ожидание первой загрузки: маятник качается ±33° от вертикали — в покое
+   он уже отклонён на 33° вправо, отсюда 0 → −66°. Ось — у каждой ступени
+   знака своя, поэтому `transform-origin` стоит на элементе. Период — тот
+   же, что у мерцания скелетов, `--motion-pending`: ожидание в продукте одно. */
 .takt-mark--swing .takt-mark-pendulum {
   transform-box: view-box;
-  transform-origin: 24px 36px;
   animation: takt-mark-swing calc(var(--motion-pending) / 2) ease-in-out infinite alternate;
 }
 @keyframes takt-mark-swing {
@@ -683,7 +679,7 @@ input[type='radio'] {
     transform: rotate(0deg);
   }
   to {
-    transform: rotate(-30deg);
+    transform: rotate(-66deg);
   }
 }
 /* Меньше движения — знак не качается, а проявляется: ожидание всё равно
