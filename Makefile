@@ -303,9 +303,13 @@ security-report: ## Отчёты сканеров машинным формат�
 	  echo "отчёты сканеров: $(REPORT_DIR)"; \
 	  exit $$status
 
+# Предел go test поднят: по умолчанию он 10 минут, а смешанная нагрузка
+# к выпуску сама длится LOAD_DURATION=10m плюс подготовка — прогон,
+# который CLAUDE.md требует перед тегом, обрывался паникой таймаута
+# на 600-й секунде, не дойдя до вердикта.
 .PHONY: load
 load: db migrate ## Поведение под нагрузкой (идёт минуты)
-	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v \
+	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v -timeout 40m \
 	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit|MixedLoad' ./internal/board/ ./internal/httpapi/ ./internal/report/
 
 # Обновление с прошлого выпуска — по-настоящему: база и данные заводятся
