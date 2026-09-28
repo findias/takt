@@ -130,9 +130,13 @@ jobs:
     needs: [check, upgrade, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Свои права заменяют общие, а не дополняют: без id-token здесь
+    # cosign ждёт входа человеком и сдаётся с expired_token — так v0.3.0
+    # вышел с неподписанными образами.
     permissions:
       contents: read
       packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
