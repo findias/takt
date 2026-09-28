@@ -23,6 +23,7 @@ Beyond roles, the owner appoints (and a subdivision owner, below their own node)
 | Subdivision owner | runs their own subtree: membership, nested nodes, boards; invites people into it as members or viewers; appoints and removes owners of the nodes below their own; deletes its boards and cards for good and erases people who belong only to it; reads the audit log of its subtree |
 | Area observer | reads everything in their subtree |
 
+<a id="board-visibility"></a>
 ## Board visibility
 
 | Visibility | Who sees it |
@@ -30,6 +31,12 @@ Beyond roles, the owner appoints (and a subdivision owner, below their own node)
 | **Whole organisation** | everyone in the organisation |
 | **Own subdivision** | people in the subdivision that owns the board |
 | **Listed people only** | those listed by name |
+
+Only someone who can see a board can be assigned to its cards: the
+assignee picker offers just them, and the server refuses anyone else.
+A subtask on a neighbouring team's board is assigned from that board's
+people, or left unassigned. Someone who was assigned before losing
+access stays on the card and can still be removed from it.
 
 ## Keys
 

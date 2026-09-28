@@ -8,7 +8,7 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { ageDays, ageLabel, agingLabel } from '../../entities/board/model.ts'
+import { ageDays, ageLabel, agingLabel, assigneeChoices } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
@@ -75,6 +75,8 @@ type CardProps = {
   flash: boolean
   /** userId → имя: карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
+  /** Кого можно назначить: те, кто видит доску. */
+  assignable: Record<string, string>
   /** Кто делает: идентификаторы в порядке назначения. */
   assignees: string[]
   /** on = назначить, off = снять: исполнителей несколько, и «назначить
@@ -146,6 +148,7 @@ function CardViewInner({
   sleDays,
   flash,
   people,
+  assignable,
   assignees,
   onAssign,
   labels,
@@ -407,7 +410,7 @@ function CardViewInner({
       }
       className={assignees.length === 0 ? 'btn btn--icon btn--quiet card-slot' : 'field'}
       align="right"
-      items={Object.entries(people).map(([id, name]) => ({
+      items={assigneeChoices(people, assignable, assignees).map(([id, name]) => ({
         label: name,
         checked: assignees.includes(id),
         onSelect: () => onAssign(cardId, id, !assignees.includes(id)),

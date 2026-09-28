@@ -1153,6 +1153,7 @@ export function Board({
         unit={unit}
         sleDays={base.info.sleDays}
         people={base.people}
+        assignable={base.assignable}
         onAssign={assignCard}
         justMoved={justMoved}
         labels={base.labels}
@@ -1542,6 +1543,7 @@ export function Board({
           sort={sort}
           onSort={(next) => setQuery(sortToQuery(next, query))}
           people={base.people}
+          assignable={base.assignable}
           labels={base.labels}
           onOpenCard={showCard}
           onMoveToColumn={moveToColumn}
@@ -1621,7 +1623,7 @@ export function Board({
             columns={columnList}
             boardId={boardId}
             labels={base.labels}
-            people={base.people}
+            assignable={base.assignable}
             onMove={(columnId) => {
               const ids = chosen
               clearPicked()

@@ -837,7 +837,9 @@ export type Snapshot = {
   cardAssignees: Record<string, string[]>
 }
 
-export type Person = { userId: string; name: string }
+/** assignable — видит доску, и его можно назначить. Нет поля — можно:
+ *  так отвечал сервер до 0076, и так записаны ответы визуальных эталонов. */
+export type Person = { userId: string; name: string; assignable?: boolean }
 
 /** Сохранённый вид: строка запроса, в которой уже лежат фильтры
  *  и группировка. Вид — это сохранённая ссылка, второго представления

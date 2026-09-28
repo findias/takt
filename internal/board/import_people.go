@@ -240,6 +240,28 @@ func resolvePeople(ctx context.Context, tx pgx.Tx, orgID, actorID string,
 			}
 		}
 	}
+	// Исполнителем становится только тот, кто доску видит (0076), и
+	// перенос не исключение: вставка идёт мимо ASSIGN_CARD. Новая доска
+	// переноса видна всей организации, спрашивать о ней нечего. Не
+	// видящий доску остаётся на своих карточках меткой с именем, как
+	// ненайденный, — дали доступ и перенесли ещё раз, метка сменилась
+	// назначением.
+	if target.BoardID != "" {
+		for _, p := range persons {
+			id, ok := people[p.Key]
+			if !ok {
+				continue
+			}
+			var sees bool
+			if err := tx.QueryRow(ctx, `select app_sees_board_as($1, $2)`, id, target.BoardID).Scan(&sees); err != nil {
+				return nil, err
+			}
+			if !sees {
+				delete(people, p.Key)
+				p.Problem = "не видит доску — на его карточках останется метка с именем; добавьте его в подразделение доски или в участники закрытой доски и перенесите ещё раз"
+			}
+		}
+	}
 	for _, p := range persons {
 		rep.People = append(rep.People, *p)
 	}

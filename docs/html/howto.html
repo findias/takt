@@ -259,6 +259,7 @@ color:var(--ink-3);font-size:.85rem}
 <ul>
 <li><strong>People.</strong> Every assignee and author of the source is listed with the number of their cards, and for each you choose what to do: - <strong>match with a member</strong> — pick the person from the list. Someone with the same email is picked already («found by email»); - <strong>create an account</strong> — owner only. The email comes from the source; when there is none, type it in. After the import each new person gets a one-time sign-in link, shown once, to pass on yourself; with corporate sign-in no link is needed, the first sign-in links the account by email. An address that already belongs to an account outside the organisation cannot be created — invite that person instead; - <strong>leave out</strong> — their cards get a label with their name (their email, if the spreadsheet gives no name), so the work is not lost. The label is technical: drawn as an outline, not offered when labelling by hand, found by the board filter. Two namesakes get two labels.</li>
 </ul>
+<p>  Importing into an existing board, a member who cannot see that board   is treated the same way: the preview says so, and their cards keep   the label with their name. Give them access to the board and import   again — they become the assignee.</p>
 <p>  The choice is remembered for the next import of the same source   («chosen at the previous import»). Import the same board again after   adding people, and the second run adds them as assignees to the cards   that already came — without bringing those cards twice — and removes   their labels; the button then reads <strong>Update the imported cards</strong>.</p>
 <ul>
 <li><strong>Row problems.</strong> A row without a title is not imported; a value that cannot be read (an estimate that is not a number, an unknown priority, a date that is not a date) is dropped, and the rest of the row comes. Rows are numbered as in the file, the way Excel shows them, empty rows included.</li>
@@ -387,7 +388,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.2.3-171-g957683a-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.3.0-2-g5a3ddf4-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

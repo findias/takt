@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.2.3-171-g957683a-dirty.</p>
+<p>Every section in one file. Version v0.3.0-2-g5a3ddf4-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -348,6 +348,7 @@ color:var(--ink-3);font-size:.85rem}
 <ul>
 <li><strong>People.</strong> Every assignee and author of the source is listed with the number of their cards, and for each you choose what to do: - <strong>match with a member</strong> — pick the person from the list. Someone with the same email is picked already («found by email»); - <strong>create an account</strong> — owner only. The email comes from the source; when there is none, type it in. After the import each new person gets a one-time sign-in link, shown once, to pass on yourself; with corporate sign-in no link is needed, the first sign-in links the account by email. An address that already belongs to an account outside the organisation cannot be created — invite that person instead; - <strong>leave out</strong> — their cards get a label with their name (their email, if the spreadsheet gives no name), so the work is not lost. The label is technical: drawn as an outline, not offered when labelling by hand, found by the board filter. Two namesakes get two labels.</li>
 </ul>
+<p>  Importing into an existing board, a member who cannot see that board   is treated the same way: the preview says so, and their cards keep   the label with their name. Give them access to the board and import   again — they become the assignee.</p>
 <p>  The choice is remembered for the next import of the same source   («chosen at the previous import»). Import the same board again after   adding people, and the second run adds them as assignees to the cards   that already came — without bringing those cards twice — and removes   their labels; the button then reads <strong>Update the imported cards</strong>.</p>
 <ul>
 <li><strong>Row problems.</strong> A row without a title is not imported; a value that cannot be read (an estimate that is not a number, an unknown priority, a date that is not a date) is dropped, and the rest of the row comes. Rows are numbered as in the file, the way Excel shows them, empty rows included.</li>
@@ -507,6 +508,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><strong>Listed people only</strong></td><td>those listed by name</td></tr>
 </tbody>
 </table></div>
+<p>Only someone who can see a board can be assigned to its cards: the assignee picker offers just them, and the server refuses anyone else. A subtask on a neighbouring team&#39;s board is assigned from that board&#39;s people, or left unassigned. Someone who was assigned before losing access stays on the card and can still be removed from it.</p>
 <h2 id="keys">Keys</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Keys</th><th>What it does</th></tr></thead>
@@ -1742,6 +1744,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-3-1-28-september-2026">v0.3.1 — 28 September 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>One migration, safe for the running version.</strong> <code>0076</code> adds a function that tells whether a given person can see a given board, by asking the board&#39;s own visibility policy on their behalf. Nothing else changes in the schema; pods of v0.3.0 keep working on it.</p>
+<p><strong>An assignee must be able to see the board.</strong> Until now anyone in the organisation could be assigned, including someone from another subdivision or someone not listed on a private board; they could not find the card, and the notification about it was never shown to them. Now the server refuses such an assignment with an explanation, and an import into an existing board leaves such a person as a label with their name, as it does with someone it did not find. Assignments made before the upgrade stay as they are. After the upgrade, an integration that assigns people through the API may get this refusal where it used to succeed: give the person access to the board.</p>
+<h3 id="for-people-using-the-board">For people using the board</h3>
+<ul>
+<li><strong>Only people who can see the board are offered as assignees</strong> — in the card panel, under «+ who» on the card, in the table&#39;s row menu and in bulk assignment. A subtask on a neighbouring team&#39;s board is assigned from that board&#39;s people or left unassigned. Someone assigned before losing access stays on the card and can be removed from it — <a href="reference.html#board-visibility">who can be assigned</a>.</li>
+<li><strong>A refused board operation is explained in English too.</strong> A refusal such as «invalid operation: …» came in Russian as a whole, even in the English interface and with <code>Accept-Language: en</code>; now both parts are translated.</li>
+</ul>
 <h2 id="v0-3-0-28-september-2026">v0.3.0 — 28 September 2026</h2>
 <h3 id="in-short">In short</h3>
 <ul>
@@ -1943,6 +1954,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-3-1-28-сентября-2026">v0.3.1 — 28 сентября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p><strong>Одна миграция, безопасная для работающей версии.</strong> <code>0076</code> добавляет функцию, которая отвечает, видит ли названный человек названную доску, спрашивая об этом политику видимости самой доски от его имени. Больше в схеме ничего не меняется; поды v0.3.0 на ней работают.</p>
+<p><strong>Исполнитель обязан видеть доску.</strong> До сих пор назначить можно было любого в организации, в том числе человека из другого подразделения или не вписанного в закрытую доску; свою карточку он не находил, а уведомление о ней ему не показывалось. Теперь сервер такое назначение отклоняет и объясняет почему, а перенос в существующую доску оставляет такого человека меткой с именем — так же, как ненайденного. Назначения, сделанные до обновления, остаются как были. После обновления интеграция, назначающая людей через API, может получить этот отказ там, где раньше проходила: дайте человеку доступ к доске.</p>
+<h3 id="для-тех-кто-работает-на-доске">Для тех, кто работает на доске</h3>
+<ul>
+<li><strong>Исполнителем предлагают только тех, кто видит доску</strong> — в панели карточки, в «+ кто» на карточке, в меню строки таблицы и в массовом назначении. Подзадачу на доске соседней команды назначают из людей той доски или оставляют без исполнителя. Назначенный раньше и потерявший доступ остаётся на карточке, и его можно снять — <a href="ru/справочник.html#board-visibility">кого можно назначить</a>.</li>
+<li><strong>Отказ в операции над доской объясняется и по-английски.</strong> Отказ вида «некорректная операция: …» приходил целиком по-русски даже в английском интерфейсе и при <code>Accept-Language: en</code>; теперь переведены обе части.</li>
+</ul>
 <h2 id="v0-3-0-28-сентября-2026">v0.3.0 — 28 сентября 2026</h2>
 <h3 id="коротко">Коротко</h3>
 <ul>

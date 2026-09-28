@@ -281,6 +281,10 @@ var fragments = map[string]bool{
 	"подразделения «%s»": true, // labels.go: TrimPrefix(labelWhere, "у ")
 	"доски «%s»":         true,
 	"организации":        true,
+	// board/ops.go: badRequestf собирает «%w: %s» с ErrBadRequest, и
+	// шаблона целиком в исходниках нет — а без него всякий отказ операции
+	// уходил по-русски.
+	"некорректная операция: %s": true,
 }
 
 // spokenQuiet — строки «тихих» пакетов (version, config), которые

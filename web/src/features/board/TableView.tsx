@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
-import { ageLabel, agingLabel } from '../../entities/board/model.ts'
+import { ageLabel, agingLabel, assigneeChoices } from '../../entities/board/model.ts'
 import {
   UNIT_SHORT,
   cardsLabel,
@@ -46,6 +46,7 @@ export function TableView({
   unit,
   sort,
   people,
+  assignable,
   labels,
   onOpenCard,
   onMoveToColumn,
@@ -59,6 +60,8 @@ export function TableView({
   unit: EstimateUnit
   sort: Sort
   people: Record<string, string>
+  /** Кого можно назначить: те, кто видит доску. */
+  assignable: Record<string, string>
   labels: BoardLabel[]
   onOpenCard: (cardId: string) => void
   onMoveToColumn: (cardId: string, columnId: string) => void
@@ -219,7 +222,7 @@ export function TableView({
                           label: t.talk.moveTo(c.name),
                           onSelect: () => onMoveToColumn(card.id, c.id),
                         })),
-                      ...Object.entries(people).map(([id, name]) => ({
+                      ...assigneeChoices(people, assignable, assignees).map(([id, name]) => ({
                         label: assignees.includes(id) ? t.talk.unassign(name) : t.talk.assignTo(name),
                         onSelect: () => onAssign(card.id, id, !assignees.includes(id)),
                       })),

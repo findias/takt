@@ -723,7 +723,7 @@ func (s *Service) Snapshot(ctx context.Context, orgID, userID, boardID string) (
 		if err := loadRecentChanges(ctx, tx, boardID, &snap); err != nil {
 			return err
 		}
-		if err := loadPeople(ctx, tx, orgID, &snap); err != nil {
+		if err := loadPeople(ctx, tx, orgID, boardID, &snap); err != nil {
 			return err
 		}
 		if err := loadAssignees(ctx, tx, boardID, &snap); err != nil {
@@ -941,24 +941,30 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 // loadPeople отдаёт тех, кого можно назначить. Список маленький —
 // установка рассчитана на сотню человек, — и без него исполнитель
 // на карточке остался бы идентификатором.
-func loadPeople(ctx context.Context, tx pgx.Tx, orgID string, snap *Snapshot) error {
+//
+// Назначить можно только того, кто доску видит (0076). Доску всей
+// организации видят все, и функцию для неё не спрашивают: она ставит
+// запрос на каждого человека, а таких досок большинство.
+func loadPeople(ctx context.Context, tx pgx.Tx, orgID, boardID string, snap *Snapshot) error {
 	snap.People = []Person{}
 	// Ключи интеграций сюда не попадают, хотя состоят в организации
 	// наравне с людьми: работу назначают человеку, а «назначить задачу
 	// ключу» — это предложение, за которым ничего нет. По той же причине
 	// их нет и в отборе по исполнителю.
 	rows, err := tx.Query(ctx, `
-		select u.id, u.name
+		select u.id, u.name,
+		       (select visibility = 'org' from boards where id = $2)
+		       or app_sees_board_as(u.id, $2)
 		  from memberships m join users u on u.id = m.user_id
 		 where m.org_id = $1 and u.kind = 'person'
-		 order by u.name`, orgID)
+		 order by u.name`, orgID, boardID)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var p Person
-		if err := rows.Scan(&p.UserID, &p.Name); err != nil {
+		if err := rows.Scan(&p.UserID, &p.Name, &p.Assignable); err != nil {
 			return err
 		}
 		snap.People = append(snap.People, p)

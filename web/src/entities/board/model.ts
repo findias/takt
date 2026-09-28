@@ -50,6 +50,9 @@ export type BaseState = {
   recentChanges?: Record<string, CardChange>
   /** userId → имя. Карточка хранит идентификатор, показать надо имя. */
   people: Record<string, string>
+  /** Те из people, кто видит доску: назначить можно только их. Имена
+   *  остальных нужны — ими подписаны прежние исполнители. */
+  assignable: Record<string, string>
   /** Словарь меток и то, что чем помечено. */
   labels: BoardLabel[]
   cardLabels: Record<string, string[]>
@@ -86,11 +89,16 @@ export function fromSnapshot(snap: Snapshot): BaseState {
   for (const card of snap.linked) linked[card.id] = card
 
   const people: Record<string, string> = {}
-  for (const person of snap.people) people[person.userId] = person.name
+  const assignable: Record<string, string> = {}
+  for (const person of snap.people) {
+    people[person.userId] = person.name
+    if (person.assignable !== false) assignable[person.userId] = person.name
+  }
 
   return {
     info: snap.board,
     people,
+    assignable,
     labels: snap.labels,
     cardLabels: snap.cardLabels,
     cardAssignees: snap.cardAssignees,
@@ -107,6 +115,19 @@ export function fromSnapshot(snap: Snapshot): BaseState {
     cardRefs: snap.cardRefs,
     recentChanges: snap.recentChanges ?? {},
   }
+}
+
+/**
+ * Кого предложить в выборе исполнителей карточки: видящих доску и уже
+ * назначенных. Второе не лазейка: назначенного, потерявшего доступ,
+ * должно быть можно снять, а пункт меню и снимает, и назначает.
+ */
+export function assigneeChoices(
+  people: Record<string, string>,
+  assignable: Record<string, string>,
+  assigned: readonly string[],
+): [string, string][] {
+  return Object.entries(people).filter(([id]) => id in assignable || assigned.includes(id))
 }
 
 function byPosition(a: { position: string }, b: { position: string }) {

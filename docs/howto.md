@@ -494,6 +494,11 @@ What the preview names, so that nothing is lost silently:
     labelling by hand, found by the board filter. Two namesakes get two
     labels.
 
+  Importing into an existing board, a member who cannot see that board
+  is treated the same way: the preview says so, and their cards keep
+  the label with their name. Give them access to the board and import
+  again — they become the assignee.
+
   The choice is remembered for the next import of the same source
   («chosen at the previous import»). Import the same board again after
   adding people, and the second run adds them as assignees to the cards

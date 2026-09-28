@@ -418,6 +418,7 @@ export function CardPanel({
 
             <Assignees
               people={base.people}
+              assignable={base.assignable}
               assignees={base.cardAssignees[card.id] ?? []}
               canEdit={canEdit}
               onAssign={(userId, on) => onAssign(card.id, userId, on)}
@@ -882,16 +883,18 @@ function BlockForm({
  */
 function Assignees({
   people,
+  assignable,
   assignees,
   canEdit,
   onAssign,
 }: {
   people: Record<string, string>
+  assignable: Record<string, string>
   assignees: string[]
   canEdit: boolean
   onAssign: (userId: string, on: boolean) => void
 }) {
-  const free = Object.entries(people).filter(([id]) => !assignees.includes(id))
+  const free = Object.entries(assignable).filter(([id]) => !assignees.includes(id))
 
   return (
     <section className="stack">

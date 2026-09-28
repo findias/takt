@@ -8,6 +8,39 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.3.1 — 28 September 2026
+
+### For whoever installs and upgrades
+
+**One migration, safe for the running version.** `0076` adds a function
+that tells whether a given person can see a given board, by asking the
+board's own visibility policy on their behalf. Nothing else changes in
+the schema; pods of v0.3.0 keep working on it.
+
+**An assignee must be able to see the board.** Until now anyone in the
+organisation could be assigned, including someone from another
+subdivision or someone not listed on a private board; they could not
+find the card, and the notification about it was never shown to them.
+Now the server refuses such an assignment with an explanation, and an
+import into an existing board leaves such a person as a label with
+their name, as it does with someone it did not find. Assignments made
+before the upgrade stay as they are. After the upgrade, an integration
+that assigns people through the API may get this refusal where it used
+to succeed: give the person access to the board.
+
+### For people using the board
+
+- **Only people who can see the board are offered as assignees** — in
+  the card panel, under «+ who» on the card, in the table's row menu
+  and in bulk assignment. A subtask on a neighbouring team's board is
+  assigned from that board's people or left unassigned. Someone
+  assigned before losing access stays on the card and can be removed
+  from it — [who can be assigned](docs/reference.md#board-visibility).
+- **A refused board operation is explained in English too.** A refusal
+  such as «invalid operation: …» came in Russian as a whole, even in the
+  English interface and with `Accept-Language: en`; now both parts are
+  translated.
+
 ## v0.3.0 — 28 September 2026
 
 ### In short

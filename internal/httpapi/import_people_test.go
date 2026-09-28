@@ -203,3 +203,76 @@ func TestImportPeopleRefusals(t *testing.T) {
 		t.Errorf("сопоставление с чужим: %+v", p)
 	}
 }
+
+// Перенос на доску подразделения назначает только тех, кто её видит
+// (0076): вставка исполнителей идёт мимо ASSIGN_CARD, и без проверки
+// здесь правило обходилось бы переносом. Не видящий доску остаётся
+// меткой с именем и объяснением в предпросмотре.
+func TestImportAssignsOnlyThoseWhoSeeTheBoard(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Перенос по доступу")
+	inside, outside := owner.join("member"), owner.join("member")
+	core := owner.team("Ядро", nil)
+	owner.mustDo("PUT", "/api/teams/"+core+"/members/"+inside.userID, nil, http.StatusNoContent)
+	boardID := owner.board("Ядро: работа")
+	owner.mustDo("PUT", "/api/boards/"+boardID+"/access",
+		map[string]any{"visibility": "team", "teamId": core}, http.StatusNoContent)
+
+	b := pack.Board{
+		ExternalID: "b-1", Title: "Работа",
+		Columns: []pack.Column{{ExternalID: "c-1", Title: "Нужно сделать"}},
+		People: []pack.Person{
+			{ExternalID: "u-1", Email: strp(inside.email), Name: "Свой"},
+			{ExternalID: "u-2", Email: strp(outside.email), Name: "Сосед"},
+		},
+		Cards: []pack.Card{
+			{ExternalID: "t-1", Title: "Своя", Column: "c-1", Assignees: []string{"u-1"}},
+			{ExternalID: "t-2", Title: "Соседская", Column: "c-1", Assignees: []string{"u-2"}},
+		},
+	}
+	var buf bytes.Buffer
+	if err := pack.Write(&buf, pack.Manifest{CreatedBy: "проверка", Source: pack.Source{System: "yougile"}}, []pack.Board{b}); err != nil {
+		t.Fatal(err)
+	}
+
+	preview := owner.importPeople(map[string]any{"file": buf.Bytes(), "boardId": boardID}, http.StatusOK)
+	got := byKey(preview.Report.People)
+	if p := got[inside.email]; p.Problem != "" {
+		t.Errorf("видящему доску приписана претензия: %+v", p)
+	}
+	if p := got[outside.email]; !strings.Contains(p.Problem, "не видит доску") {
+		t.Errorf("предпросмотр не объясняет, почему сосед не станет исполнителем: %+v", p)
+	}
+
+	owner.importPeople(map[string]any{"file": buf.Bytes(), "boardId": boardID, "apply": true}, http.StatusOK)
+	var snap struct {
+		Cards     []struct{ ID, Title string } `json:"cards"`
+		Assignees map[string][]string          `json:"cardAssignees"`
+		Labels    []struct{ ID, Name string }  `json:"labels"`
+		CardLabel map[string][]string          `json:"cardLabels"`
+	}
+	_ = json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap)
+	names := map[string]string{}
+	for _, l := range snap.Labels {
+		names[l.ID] = l.Name
+	}
+	for _, c := range snap.Cards {
+		switch c.Title {
+		case "Своя":
+			if as := snap.Assignees[c.ID]; len(as) != 1 || as[0] != inside.userID {
+				t.Errorf("видящий доску не стал исполнителем: %v", as)
+			}
+		case "Соседская":
+			if as := snap.Assignees[c.ID]; len(as) != 0 {
+				t.Errorf("перенос назначил того, кто доску не видит: %v", as)
+			}
+			found := false
+			for _, id := range snap.CardLabel[c.ID] {
+				found = found || names[id] == "Сосед"
+			}
+			if !found {
+				t.Errorf("у карточки соседа нет метки с его именем: %v", snap.CardLabel[c.ID])
+			}
+		}
+	}
+}

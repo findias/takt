@@ -11,6 +11,7 @@ import {
   columnAverageAge,
   agingLabel,
   applyPatch,
+  assigneeChoices,
   flowIssues,
   flowMarks,
   fromSnapshot,
@@ -410,4 +411,25 @@ test('средний возраст колонки считается по её 
   assert.equal(columnAverageAge('in_progress', working, now), 4)
   assert.equal(columnAverageAge('done', working, now), null)
   assert.equal(columnAverageAge('queue', [], now), null)
+})
+
+// Исполнитель — только тот, кто видит доску (0076). Список людей при
+// этом не сужается: им подписаны и прежние исполнители.
+test('назначить предлагают видящих доску и уже назначенных', () => {
+  const snap = snapshot([])
+  snap.people = [
+    { userId: 'u-anna', name: 'Анна', assignable: true },
+    { userId: 'u-boris', name: 'Борис', assignable: false },
+    { userId: 'u-vera', name: 'Вера', assignable: false },
+    // Ответ без поля — как до 0076 и в записанных эталонах: можно.
+    { userId: 'u-gleb', name: 'Глеб' },
+  ]
+  const base = fromSnapshot(snap)
+  assert.deepEqual(Object.keys(base.people), ['u-anna', 'u-boris', 'u-vera', 'u-gleb'])
+  assert.deepEqual(Object.keys(base.assignable), ['u-anna', 'u-gleb'])
+  // Вера назначена и доступ потеряла: её можно снять, Бориса — не назначить.
+  assert.deepEqual(
+    assigneeChoices(base.people, base.assignable, ['u-vera']).map(([id]) => id),
+    ['u-anna', 'u-vera', 'u-gleb'],
+  )
 })

@@ -82,6 +82,7 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
     fieldValues: {},
     cardRefs: {},
     people: {},
+    assignable: {},
     labels: [],
     cardLabels: {},
     cardAssignees: {},

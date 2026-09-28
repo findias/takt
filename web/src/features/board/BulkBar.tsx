@@ -33,7 +33,7 @@ export function BulkBar({
   columns,
   boardId,
   labels,
-  people,
+  assignable,
   onMove,
   onPrioritise,
   onLabel,
@@ -45,8 +45,8 @@ export function BulkBar({
   columns: Column[]
   boardId: string
   labels: BoardLabel[]
-  /** userId → имя. */
-  people: Record<string, string>
+  /** userId → имя тех, кого можно назначить: видящих доску. */
+  assignable: Record<string, string>
   onMove: (columnId: string) => void
   onPrioritise: (priority: Priority) => void
   onLabel: (labelId: string) => void
@@ -122,7 +122,7 @@ export function BulkBar({
         className="btn"
         align="left"
         drop="up"
-        items={Object.entries(people).map(([id, name]) => ({
+        items={Object.entries(assignable).map(([id, name]) => ({
           label: name,
           icon: <PeopleIcon />,
           onSelect: () => onAssign(id),

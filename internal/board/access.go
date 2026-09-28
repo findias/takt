@@ -79,6 +79,10 @@ type Person struct {
 	UserID string `json:"userId"`
 	Name   string `json:"name"`
 	Email  string `json:"email"`
+	// Assignable — человек видит доску, и его можно назначить. Список
+	// людей снимка шире назначаемых: по нему подписаны и прежние
+	// исполнители, которые доступ потеряли.
+	Assignable bool `json:"assignable"`
 }
 
 type Access struct {

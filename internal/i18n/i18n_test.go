@@ -46,6 +46,11 @@ func TestSay(t *testing.T) {
 			"column “Тест”, where the card was, is archived too — restore it first"},
 		// Составное: подставленное само оказывается сообщением.
 		{"разбор MOVE_CARD: карточка уже удалена", "parsing MOVE_CARD: the card has already been deleted"},
+		// Отказ операции приходит с приставкой ErrBadRequest — и без
+		// шаблона на неё уходил по-русски целиком, вместе с понятной частью.
+		{"некорректная операция: не передан operationId", "invalid operation: operationId is missing"},
+		{"некорректная операция: этот человек не видит доску — назначить можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски",
+			"invalid operation: this person cannot see the board — only someone who can see it can be assigned: add them to the board's subdivision or to the members of the private board"},
 		{"метка «срочно» принадлежит подразделения «Склад» и на этой доске не действует",
 			"label “срочно” belongs to subdivision “Склад” and does not apply on this board"},
 		{"метка «x» уже есть у доски «Пост» и действует здесь же — вторая с тем же названием на одной карточке была бы неотличима",

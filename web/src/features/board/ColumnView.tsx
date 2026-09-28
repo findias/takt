@@ -59,6 +59,7 @@ type ColumnProps = {
   unit: EstimateUnit
   sleDays: number | null
   people: Record<string, string>
+  assignable: Record<string, string>
   /** cardId → исполнители в порядке назначения. */
   cardAssignees: Record<string, string[]>
   onAssign: (cardId: string, userId: string, on: boolean) => void
@@ -320,6 +321,7 @@ export function ColumnView(props: ColumnProps) {
             unit={props.unit}
             sleDays={props.sleDays}
             people={props.people}
+            assignable={props.assignable}
             assignees={props.cardAssignees[cardId] ?? NO_ASSIGNEES}
             onAssign={props.onAssign}
             flash={props.justMoved === cardId}

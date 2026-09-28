@@ -147,6 +147,7 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td><strong>Listed people only</strong></td><td>those listed by name</td></tr>
 </tbody>
 </table></div>
+<p>Only someone who can see a board can be assigned to its cards: the assignee picker offers just them, and the server refuses anyone else. A subtask on a neighbouring team&#39;s board is assigned from that board&#39;s people, or left unassigned. Someone who was assigned before losing access stays on the card and can still be removed from it.</p>
 <h2 id="keys">Keys</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Keys</th><th>What it does</th></tr></thead>
@@ -292,7 +293,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.2.3-171-g957683a-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.3.0-2-g5a3ddf4-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

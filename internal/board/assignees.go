@@ -43,7 +43,7 @@ func parseAssign(raw json.RawMessage, op string) (assignPayload, error) {
 // Проверка «состоит в организации» делается здесь, а не внешним ключом:
 // ключ на memberships пришлось бы каскадно чистить при исключении
 // человека, то есть переписывать историю. Здесь же отказ объясним:
-// назначить можно только того, кто в организации есть.
+// назначить можно только того, кто в организации есть и видит доску.
 //
 // Назначение не событие потока: оно не меняет ни колонку, ни отметки
 // работы, и класть его в журнал переходов значило бы засорять то,
@@ -54,15 +54,21 @@ func assignCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, err
 	}
 
-	var member bool
+	var member, sees bool
 	if err := tx.QueryRow(ctx, `
 		select exists (select 1 from memberships
-		                where org_id = $1 and user_id = $2)`,
-		orgID, p.UserID).Scan(&member); err != nil {
+		                where org_id = $1 and user_id = $2),
+		       app_sees_board_as($2, $3)`,
+		orgID, p.UserID, boardID).Scan(&member, &sees); err != nil {
 		return Patch{}, err
 	}
 	if !member {
 		return Patch{}, badRequestf("назначить можно только участника организации")
+	}
+	// Исполнитель, который доски не видит, не найдёт свою карточку и не
+	// получит известия о ней (0076). Отказ называет, как это исправить.
+	if !sees {
+		return Patch{}, badRequestf("этот человек не видит доску — назначить можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски")
 	}
 
 	// Карточка проверяется тем же запросом, что и вставка: раздельная
