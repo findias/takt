@@ -8,7 +8,7 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
-## v0.3.0 — 21 September 2026
+## v0.3.0 — 28 September 2026
 
 ### In short
 
@@ -417,7 +417,10 @@ the branch adds. It cannot be combined with `DEMO=on`.
   organisation's name, above the sign-in form, swings its pendulum
   while the app first loads (and fades in instead for those who asked
   for less motion), and marks the browser tab of the app, the help and
-  the API page. Its colour follows the theme.
+  the API page. Its colours are its own, not the theme's accent, and
+  stay true on the dark theme; below 32 px it simplifies so the gaps do
+  not clog. Added to a phone's home screen, takt shows the mark rather
+  than a screenshot of the page.
 - **YouGile history without dots.** The first real import showed
   «Before the import, in YouGile» as a column of dots with dates: YouGile's
   system messages came with «.» as their text. An event is now read from
@@ -546,8 +549,9 @@ the branch adds. It cannot be combined with `DEMO=on`.
   on the title's line with the assignees to its right; the epic, the
   parent, labels and marks share the second line, with the age at its
   right. The label icon, the selection box and «…» appear over the
-  card's bottom right corner on hover, so the card never changes height
-  under the pointer. «+ label» and «+ who» became icons among them.
+  card's bottom right corner on hover, as a small framed toolbar above
+  the age strip, so the card never changes height under the pointer.
+  «+ label» and «+ who» became icons among them.
 - **A link to a card on another board can be followed.** «Waits» /
   «Holds» on a card and the rows of «Tasks» used to only name a card on
   another board; its name now opens it on its own board (when you can
