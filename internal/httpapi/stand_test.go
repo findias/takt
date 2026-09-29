@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/findias/takt/internal/config"
+	"github.com/findias/takt/internal/demo"
 )
 
 // Тестовый стенд ветки (ROADMAP 30.7). Как и у демо, главное —
@@ -50,5 +52,28 @@ func TestStandRefusesSubscriptions(t *testing.T) {
 	})
 	if code != http.StatusForbidden || field(t, body, "code") != "demo_disabled" {
 		t.Errorf("подписка на стенде: %d %s, ожидался отказ", code, body)
+	}
+}
+
+// Заметка называет вход на своём языке: у стенда английская копия
+// организации, и английскому читателю русская показала бы русские
+// доски под английскими подписями. Без выбранного языка стенд
+// английский, как и демо.
+func TestStandNoteNamesTheOrganisationOfItsLanguage(t *testing.T) {
+	a := standAPI(t)
+	for _, c := range []struct{ cookie, email string }{
+		{"", demo.EnglishEmail(demo.People[0])},
+		{"en", demo.EnglishEmail(demo.People[0])},
+		{"ru", demo.People[0].Email},
+	} {
+		s := a.session()
+		if c.cookie != "" {
+			u, _ := url.Parse(a.server.URL)
+			s.client.Jar.SetCookies(u, []*http.Cookie{{Name: "lang", Value: c.cookie}})
+		}
+		raw := s.mustDo("GET", "/api/stand", nil, http.StatusOK)
+		if got := field(t, raw, "email"); got != c.email {
+			t.Errorf("cookie %q: заметка зовёт входить как %v, а нужно %s", c.cookie, got, c.email)
+		}
 	}
 }

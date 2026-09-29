@@ -386,6 +386,7 @@ export const en: typeof ru = {
     tryDemo: 'Try it without signing up',
     demoExplain: 'Your own organisation with sample boards for 24 hours. Nobody else can see it.',
     orSignIn: 'or sign in',
+    langSwitch: 'Interface language',
     signInWith: (provider: string) => `Sign in with ${provider}`,
     provider: 'your provider',
     orPassword: 'or with a password',

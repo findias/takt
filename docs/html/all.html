@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.0-2-g5a3ddf4-dirty.</p>
+<p>Every section in one file. Version v0.3.1-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -295,6 +295,7 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="language">Switch the interface language</h3>
 <p>Click your name, <strong>Language</strong> tab, and choose <strong>Русский</strong> or <strong>English</strong>. The page reloads in the chosen language.</p>
 <p>The choice is stored with your account: the next time you sign in on another computer or phone, the interface opens in the same language. Until you choose, the language follows the browser.</p>
+<p>Before signing in, the language is chosen at the bottom of the sign-in screen. In the public demo the choice also decides the language of your sample organisation, and the demo opens in English until you pick another.</p>
 <h3 id="get-help-on-the-screen-you-are-on">Get help on the screen you are on</h3>
 <p>Press <strong>Help</strong> in the header, <code>F1</code> or <code>?</code>. Help opens in a new tab, at the section about the screen you are on — the board, a card, the table, <strong>Flow</strong>, the archive, the team or the structure — and in the language of the interface. It is this same documentation, built from the same version as the application. The search field above the contents finds a section by any word in it, and <strong>What’s new</strong> lists what changed for people using the board in this version.</p>
 <p>Next to some concepts — a column limit, the board&#39;s promise, a block, the flow metrics, roles, key scopes — there is a round <strong>?</strong>. Press it for two or three sentences on what the concept is, with a link to the section of help that explains it in full. <code>Escape</code> closes it.</p>
@@ -625,8 +626,8 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td>credentials at the provider</td></tr>
 <tr><td><code>OIDC_ORG</code></td><td>the organisation a first-time arrival joins</td></tr>
 <tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button; unset, it reads <code>Company account</code> or, in Russian, <code>Корпоративный аккаунт</code>, by the visitor&#39;s language</td></tr>
-<tr><td><code>DEMO</code></td><td><code>on</code> only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours; requires <code>SIGNUP=closed</code>, event subscriptions are switched off. Off by default</td></tr>
-<tr><td><code>STAND</code></td><td><code>staging</code> only for our own test stand of a branch: a strip on every screen and a note of the branch&#39;s commits; event subscriptions are switched off. Cannot be combined with <code>DEMO=on</code>. Off by default</td></tr>
+<tr><td><code>DEMO</code></td><td><code>on</code> only for a public demo: sign-in offers a sandbox organisation with sample data for 24 hours, in the language chosen on the sign-in screen (English unless the visitor picks another); requires <code>SIGNUP=closed</code>, event subscriptions are switched off. Off by default</td></tr>
+<tr><td><code>STAND</code></td><td><code>staging</code> only for our own test stand of a branch: a strip on every screen and a note of the branch&#39;s commits; English unless the visitor picks another, as in the demo; event subscriptions are switched off. Cannot be combined with <code>DEMO=on</code>. Off by default</td></tr>
 </tbody>
 </table></div>
 <h2 id="subcommands">Subcommands</h2>

@@ -794,6 +794,25 @@ input[type='radio'] {
   flex-direction: column;
   gap: var(--space-4);
 }
+/* Язык на экране входа — внизу, по центру, тихо: он нужен раз,
+   но найтись должен без чтения подписей. Выбранный — текстом,
+   а не ссылкой: нажимать на него незачем. */
+.auth-lang {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+}
+.auth-lang button {
+  min-height: 24px;
+}
+.auth-lang button[aria-pressed='true'] {
+  color: var(--ink);
+  font-weight: 600;
+  cursor: default;
+}
+.auth-lang button[aria-pressed='true']:hover {
+  text-decoration: none;
+}
 .panel-header {
   display: flex;
   justify-content: space-between;

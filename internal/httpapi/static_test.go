@@ -198,3 +198,46 @@ func TestBuiltClientTravelsCompressed(t *testing.T) {
 		t.Error("несжатый ответ не совпал с файлом")
 	}
 }
+
+// Демо и стенд назначают клиенту английский по умолчанию cookie
+// `lang_default` — один раз: выбор человека она потом и держит,
+// и сервер его не перезаписывает. У заказчика её нет вовсе: там язык,
+// пока не выбран, по-прежнему решает браузер.
+func TestShowcaseSetsEnglishByDefaultOnce(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "index.html"), "<!doctype html><title>Доска</title>")
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	given := func(cfg config.Config, cookie string) string {
+		cfg.BaseURL, cfg.WebDir = "http://example.test", dir
+		srv := httptest.NewServer(New(cfg, nil, log, nil).Handler())
+		defer srv.Close()
+		req, _ := http.NewRequest("GET", srv.URL+"/", nil)
+		if cookie != "" {
+			req.Header.Set("Cookie", cookie)
+		}
+		res, err := srv.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		for _, c := range res.Cookies() {
+			if c.Name == "lang_default" {
+				return c.Value
+			}
+		}
+		return ""
+	}
+	if got := given(config.Config{Demo: true}, ""); got != "en" {
+		t.Errorf("демо без выбора: lang_default=%q, ожидался en", got)
+	}
+	if got := given(config.Config{Stand: true}, ""); got != "en" {
+		t.Errorf("стенд без выбора: lang_default=%q, ожидался en", got)
+	}
+	if got := given(config.Config{Demo: true}, "lang_default=ru"); got != "" {
+		t.Errorf("демо перезаписало выбор человека на %q", got)
+	}
+	if got := given(config.Config{}, ""); got != "" {
+		t.Errorf("установка заказчика назначает язык %q мимо браузера", got)
+	}
+}

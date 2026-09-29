@@ -301,6 +301,11 @@ The choice is stored with your account: the next time you sign in on
 another computer or phone, the interface opens in the same language.
 Until you choose, the language follows the browser.
 
+Before signing in, the language is chosen at the bottom of the sign-in
+screen. In the public demo the choice also decides the language of
+your sample organisation, and the demo opens in English until you
+pick another.
+
 ### Get help on the screen you are on
 
 Press **Help** in the header, `F1` or `?`. Help opens in a

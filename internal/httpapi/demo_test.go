@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,5 +95,47 @@ func TestSandboxSignsTheVisitorIntoTheirOwnOrganisation(t *testing.T) {
 	})
 	if code != http.StatusForbidden || field(t, body, "code") != "demo_disabled" {
 		t.Errorf("подписка в демо: %d %s, ожидался отказ demo_disabled", code, body)
+	}
+}
+
+// Демо по умолчанию английское, а русский браузер его не перебивает:
+// песочница заводится на языке, который посетитель выбрал на экране
+// входа, а пока не выбрал — по-английски (решение владельца 29.09.2026).
+func TestSandboxSpeaksTheChosenLanguageAndEnglishByDefault(t *testing.T) {
+	a := demoAPI(t)
+	cases := []struct {
+		cookie, accept, board string
+	}{
+		{"", "ru-RU,ru;q=0.9", "Supplies"},
+		{"ru", "", "Поставки"},
+		{"en", "ru", "Supplies"},
+	}
+	for _, c := range cases {
+		visitor := a.session()
+		u, _ := url.Parse(a.server.URL)
+		if c.cookie != "" {
+			visitor.client.Jar.SetCookies(u, []*http.Cookie{{Name: "lang", Value: c.cookie}})
+		}
+		req, _ := http.NewRequest("POST", a.server.URL+"/api/demo/sandbox", nil)
+		if c.accept != "" {
+			req.Header.Set("Accept-Language", c.accept)
+		}
+		resp, err := visitor.client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("песочница: %d", resp.StatusCode)
+		}
+		var me struct{ OrgID string }
+		if err := json.Unmarshal(visitor.mustDo("GET", "/api/me", nil, http.StatusOK), &me); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = demo.RemoveSandbox(context.Background(), a.impl.db, me.OrgID) })
+		boards := string(visitor.mustDo("GET", "/api/boards", nil, http.StatusOK))
+		if !strings.Contains(boards, `"name":"`+c.board+`"`) {
+			t.Errorf("cookie %q, браузер %q: нет доски %q — песочница не на том языке", c.cookie, c.accept, c.board)
+		}
 	}
 }

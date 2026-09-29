@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiError, MIN_PASSWORD, api } from '../shared/api/index.ts'
 import type { AuthMethods, Principal } from '../shared/api/index.ts'
 import { Field, FormError, useFormErrors } from '../shared/ui/Field.tsx'
-import { t } from '../shared/i18n/index.ts'
+import { LANGS, lang, switchLang, t } from '../shared/i18n/index.ts'
 import { Mark } from '../shared/ui/Mark.tsx'
 
 export function Auth({
@@ -274,6 +274,25 @@ export function Auth({
               : t.auth.joinByInvite}
           </p>
         )}
+        {/* Язык — до входа: в демо на нём заводится песочница,
+            а на стенде от него зависит, в какую организацию входить.
+            Названия — каждое на своём языке: не читающий по-русски
+            ищет «English». */}
+        <div className="auth-lang" role="group" aria-label={t.auth.langSwitch}>
+          {LANGS.map((l) => (
+            <button
+              key={l}
+              type="button"
+              className="link"
+              lang={l}
+              aria-pressed={l === lang}
+              disabled={busy}
+              onClick={() => l !== lang && switchLang(l)}
+            >
+              {t.lang[l]}
+            </button>
+          ))}
+        </div>
       </form>
     </div>
   )

@@ -12,9 +12,15 @@ import (
 // передают только ответ — и так в сотне мест. Протащить запрос в каждое
 // значило бы переписать все отказы ради одного слова, и первый же новый
 // обработчик, забывший его передать, отвечал бы по-русски.
-func speaking(next http.Handler) http.Handler {
+//
+// english — демо и стенд: там без названного клиентом языка ответ
+// английский, а не по браузеру (см. showcaseLang).
+func speaking(english bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		l := i18n.FromRequest(r)
+		if _, chosen := i18n.Chosen(r); english && !chosen {
+			l = i18n.EN
+		}
 		next.ServeHTTP(&langWriter{ResponseWriter: w, lang: l}, r.WithContext(i18n.WithLang(r.Context(), l)))
 	})
 }
@@ -72,6 +78,35 @@ func (s *Server) rememberLang(w http.ResponseWriter, lang *string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "lang",
 		Value:    *lang,
+		Path:     "/",
+		MaxAge:   365 * 24 * 60 * 60,
+		Secure:   s.cfg.SecureCookies(),
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// showcaseLang ставит на странице клиента cookie `lang_default=en`
+// в демо и на стенде, если её ещё нет.
+//
+// Демо и стенд смотрят прежде всего те, кто выбирает продукт, и
+// по-английски (решение владельца 29.09.2026): русский браузер больше
+// не решает за посетителя, на каком языке заведётся его песочница.
+// Отдельная cookie, а не `lang`: `lang` клиент пишет при каждой
+// загрузке, и у всякого, кто заходил раньше, она уже есть — по ней
+// не отличить выбранный язык от угаданного. `lang_default` клиент
+// переписывает только выбором человека, и дальше она держит выбор.
+func (s *Server) showcaseLang(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.Demo && !s.cfg.Stand {
+		return
+	}
+	if _, err := r.Cookie("lang_default"); err == nil {
+		return
+	}
+	// #nosec G124 -- без HttpOnly намеренно: её читает клиент до первой
+	// отрисовки; секрета в ней нет.
+	http.SetCookie(w, &http.Cookie{
+		Name:     "lang_default",
+		Value:    string(i18n.EN),
 		Path:     "/",
 		MaxAge:   365 * 24 * 60 * 60,
 		Secure:   s.cfg.SecureCookies(),

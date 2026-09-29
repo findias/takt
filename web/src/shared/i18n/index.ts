@@ -128,10 +128,20 @@ export function preferredLang(): Lang {
   } catch {
     // Хранилище закрыто (частное окно) — дальше cookie и браузер.
   }
-  const cookie = typeof document === 'undefined' ? null : /(?:^|; )lang=(ru|en)(?:;|$)/.exec(document.cookie)
-  if (cookie) return cookie[1] as Lang
+  // Демо и стенд: язык по умолчанию назначил сервер, и браузер его
+  // не перебивает — почему, сказано у `showcaseLang` на сервере.
+  const showcase = cookieLang('lang_default')
+  if (showcase) return showcase
+  const cookie = cookieLang('lang')
+  if (cookie) return cookie
   const wanted = typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]
   return wanted.some((l) => l?.toLowerCase().startsWith('ru')) ? 'ru' : 'en'
+}
+
+function cookieLang(name: string): Lang | null {
+  if (typeof document === 'undefined') return null
+  const found = new RegExp(`(?:^|; )${name}=(ru|en)(?:;|$)`).exec(document.cookie)
+  return found ? (found[1] as Lang) : null
 }
 
 export async function loadLang(next: Lang): Promise<void> {
@@ -158,6 +168,12 @@ export function switchLang(next: Lang) {
     // Не запомнится в хранилище — запомнит cookie ниже.
   }
   document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`
+  // В демо и на стенде выбор держит и `lang_default`: иначе там, где
+  // хранилище закрыто, она перебивала бы выбор, и переход на язык
+  // учётной записи перезагружал бы страницу по кругу.
+  if (cookieLang('lang_default')) {
+    document.cookie = `lang_default=${next}; path=/; max-age=31536000; samesite=lax`
+  }
   location.reload()
 }
 

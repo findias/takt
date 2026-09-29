@@ -391,6 +391,7 @@ export const ru = {
     tryDemo: 'Попробовать без регистрации',
     demoExplain: 'Своя организация с примерами досок на сутки. Никто, кроме вас, её не видит.',
     orSignIn: 'или войти',
+    langSwitch: 'Язык интерфейса',
     signInWith: (provider: string) => `Войти через ${provider}`,
     provider: 'провайдера',
     orPassword: 'или по паролю',

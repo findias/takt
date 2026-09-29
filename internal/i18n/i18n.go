@@ -39,13 +39,22 @@ const (
 // заголовков клиент не поставит. Дальше — Accept-Language: первый
 // из знакомых языков по убыванию веса.
 func FromRequest(r *http.Request) Lang {
+	if l, ok := Chosen(r); ok {
+		return l
+	}
+	return fromAccept(r.Header.Get("Accept-Language"))
+}
+
+// Chosen — язык из cookie `lang`, если она есть: язык, который назвал
+// клиент, а не угаданный по браузеру.
+func Chosen(r *http.Request) (Lang, bool) {
 	if c, err := r.Cookie("lang"); err == nil {
 		switch Lang(c.Value) {
 		case RU, EN:
-			return Lang(c.Value)
+			return Lang(c.Value), true
 		}
 	}
-	return fromAccept(r.Header.Get("Accept-Language"))
+	return "", false
 }
 
 func fromAccept(header string) Lang {

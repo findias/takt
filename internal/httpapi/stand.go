@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/findias/takt/internal/demo"
+	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/stand"
 	"github.com/findias/takt/internal/version"
 )
@@ -31,7 +32,18 @@ func (s *Server) handleStand(w http.ResponseWriter, r *http.Request) {
 		"since":    note.Since,
 		"version":  say(w, version.Строка()),
 		"commits":  note.Commits,
-		"email":    demo.People[0].Email,
+		"email":    standEmail(w),
 		"password": demo.Password,
 	})
+}
+
+// standEmail — как войти на языке заметки. У стенда две организации
+// с одними данными: русская и её английская копия. Английскому
+// читателю русская организация показала бы русские доски под
+// английскими подписями.
+func standEmail(w http.ResponseWriter) string {
+	if langOf(w) == i18n.EN {
+		return demo.EnglishEmail(demo.People[0])
+	}
+	return demo.People[0].Email
 }

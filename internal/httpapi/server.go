@@ -205,7 +205,7 @@ func (s *Server) Handler() http.Handler {
 	// щелью ровно там, где её ищут.
 	//
 	// Язык — снаружи всех: отказ может родиться в любом слое.
-	return speaking(logRequests(s.log,
+	return speaking(s.cfg.Demo || s.cfg.Stand, logRequests(s.log,
 		secureHeaders(s.cfg.SecureCookies(), versioned(s.limited(mux)))))
 }
 
@@ -1149,6 +1149,7 @@ func (s *Server) staticHandler() http.Handler {
 		// её сверяют с сервером. Это и нужно: index.html весит меньше
 		// килобайта, а сверка возвращает 304 без тела.
 		w.Header().Set("Cache-Control", "no-cache")
+		s.showcaseLang(w, r)
 		http.ServeFile(w, r, index)
 	})
 }

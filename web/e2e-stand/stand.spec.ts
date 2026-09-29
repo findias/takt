@@ -7,14 +7,27 @@ import type { Page } from '@playwright/test'
 // люди на стенде общие с теми, кто проверяет его руками. Поэтому язык
 // учётной записи перед русскими проверками ставится явно: человек мог
 // переключить его на английский, и русские подписи бы не нашлись.
+//
+// Экран входа без выбора стенд показывает по-английски, поэтому язык
+// до входа тоже задаётся явно — так же, как выбирает человек: cookie
+// `lang_default`. Английские сценарии входят в английскую организацию
+// (`…@en.example.test`): в русской английский экран показал бы
+// русские доски.
 
 const PASSWORD = 'parol12345'
 
+async function chooseLang(page: Page, lang: 'ru' | 'en') {
+  const url = process.env.STAND_URL!.replace(/\/$/, '')
+  await page.context().addCookies(
+    ['lang', 'lang_default'].map((name) => ({ name, value: lang, url })),
+  )
+}
+
 async function signIn(page: Page, who: string, lang: 'ru' | 'en' = 'ru') {
+  await chooseLang(page, lang)
   await page.goto('/')
-  // Подписи — на языке, который выберет экран входа: он смотрит
-  // на браузер и cookie, а не на учётную запись.
-  await page.getByLabel(/^(Почта|E-mail)$/).fill(`${who}@example.test`)
+  const domain = lang === 'ru' ? 'example.test' : 'en.example.test'
+  await page.getByLabel(/^(Почта|E-mail)$/).fill(`${who}@${domain}`)
   await page.getByLabel(/^(Пароль|Password)$/).fill(PASSWORD)
   await page.getByRole('button', { name: /^(Войти|Sign in)$/ }).click()
   await expect(page.getByRole('button', { name: /^(Личные настройки|Personal settings)/ })).toBeVisible()
@@ -35,6 +48,7 @@ async function signIn(page: Page, who: string, lang: 'ru' | 'en' = 'ru') {
 }
 
 test('полоса стенда называет ветку, заметка — коммиты и как войти', async ({ page }) => {
+  await chooseLang(page, 'ru')
   await page.goto('/')
   const bar = page.locator('.stand-bar')
   await expect(bar).toContainText('Тестовый стенд: ветка')
@@ -113,20 +127,17 @@ test('участник заводит доску и карточку, а дос�
 test('по-английски: экран и заметка стенда на английском', async ({ page }) => {
   await signIn(page, 'vera', 'en')
   await expect(page.getByPlaceholder('New board name')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Supplies', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'What is on the stand' }).click()
   await expect(page.getByRole('dialog', { name: 'What is on the stand' })).toContainText(
-    'anna@example.test',
+    'anna@en.example.test',
   )
   await page.keyboard.press('Escape')
-  // Вернуть русский: вера — общий человек стенда, и следующий, кто
-  // войдёт под ней руками, ждёт привычного экрана.
-  const back = await page.evaluate(async () => {
-    const r = await fetch('/api/me/lang', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-      body: JSON.stringify({ lang: 'ru' }),
-    })
-    return r.status
-  })
-  expect(back).toBe(204)
+})
+
+test('без выбора экран входа английский, и выбор языка его меняет', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+  await page.getByRole('group', { name: 'Interface language' }).getByRole('button', { name: 'Русский' }).click()
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible()
 })
