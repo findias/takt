@@ -487,59 +487,75 @@ export function agingLabel(
   return t.model.aging(Math.floor(days), sleDays)
 }
 
+/** Родитель пункта на этой доске — или `undefined`, если карточка
+ *  не пункт (см. `withoutParts`). */
+export function itemParent(base: BaseState, cardId: string): string | undefined {
+  for (const link of base.links) {
+    if (link.kind === 'subtask' && link.toCard === cardId && base.cards[link.fromCard]) return link.fromCard
+  }
+  return undefined
+}
+
+export function isItem(base: BaseState, cardId: string): boolean {
+  return itemParent(base, cardId) !== undefined
+}
+
+/** Где работа стоит: у пункта — колонка родителя, своя ничего не значит. */
+export function homeColumn(base: BaseState, cardId: string): string {
+  const parent = itemParent(base, cardId)
+  return base.cards[parent ?? cardId].columnId
+}
+
 /**
- * Порядок колонок без тех карточек, которые видны как чьи-то части.
+ * Порядок колонок, где пункты родителей стоят там, где их видно.
  *
- * Подзадача у нас — обычная карточка: только так её можно отдать другой
- * команде, оценить, обсудить и провести по потоку. Но на доске родителя
- * она стояла дважды — своей строкой в колонке и списком внутри
- * родителя, — и колонка из трёх задач выглядела колонкой из десяти.
- * Часть перестала читаться частью.
+ * Подзадача с той же доски — пункт родителя (решение владельца
+ * 06.10.2026, сервер — `board.IsItem`): строка списка внутри его
+ * карточки, а не работа в колонке. Своя колонка у пункта в базе есть,
+ * но ничего не значит — ни лимит, ни счётчик, ни метрики его не считают.
+ * Прежде он был спрятанной карточкой со своей колонкой: отмеченный
+ * сделанным, оставался в «В работе», занимал лимит, и вынести его
+ * оттуда было нечем.
  *
- * Прячется только та часть, чей родитель на этом же экране виден:
- * иначе работа исчезла бы совсем. Отбор, спрятавший родителя, возвращает
- * часть в колонку — она уже никуда не вложена, и её строка называет
- * родителя сама.
+ * Где родитель на этом же виде показан — пункт внутри него, и в колонке
+ * его нет. Где родителя не видно — его спрятал отбор или он в другой
+ * дорожке, — пункт стоит отдельной карточкой в колонке родителя:
+ * иначе работа исчезла бы совсем («мои карточки», когда родитель
+ * чужой), а своя колонка пункта соврала бы, где эта работа.
  *
- * Счётчик колонки и лимит одновременной работы считают по-прежнему всё:
- * спрятанная часть — идущая работа, и вычесть её из ограничения значило
- * бы сломать главный механизм канбана ради вида.
+ * Родитель не на доске (в архиве или на чужой) — подзадача не пункт,
+ * а обычная карточка в своей колонке.
  */
 export function withoutParts(
   base: BaseState,
   order: Record<string, string[]>,
-): {
-  order: Record<string, string[]>
-  parts: Record<string, number>
-  /** Сами спрятанные части, колонка → id. Нужны дорожкам: части
-   *  раскладываются по ним так же, как карточки, иначе счётчик каждой
-   *  дорожки показывал бы все части доски разом. */
-  partIds: Record<string, string[]>
-} {
+): { order: Record<string, string[]> } {
   const parentOf = new Map<string, string>()
   for (const link of base.links) {
-    if (link.kind === 'subtask' && base.cards[link.toCard]) {
+    if (link.kind === 'subtask' && base.cards[link.toCard] && base.cards[link.fromCard]) {
       parentOf.set(link.toCard, link.fromCard)
     }
   }
-  if (parentOf.size === 0) return { order, parts: {}, partIds: {} }
+  if (parentOf.size === 0) return { order }
 
   const shown = new Set<string>()
   for (const ids of Object.values(order)) for (const id of ids) shown.add(id)
 
   const next: Record<string, string[]> = {}
-  const parts: Record<string, number> = {}
-  const partIds: Record<string, string[]> = {}
+  const moved: Record<string, string[]> = {}
   for (const [columnId, ids] of Object.entries(order)) {
-    const kept = ids.filter((id) => {
+    next[columnId] = ids.filter((id) => {
       const parent = parentOf.get(id)
-      return parent === undefined || !shown.has(parent)
+      if (parent === undefined) return true
+      if (!shown.has(parent)) {
+        const home = base.cards[parent].columnId
+        ;(moved[home] ??= []).push(id)
+      }
+      return false
     })
-    next[columnId] = kept
-    if (kept.length !== ids.length) {
-      parts[columnId] = ids.length - kept.length
-      partIds[columnId] = ids.filter((id) => !kept.includes(id))
-    }
   }
-  return { order: next, parts, partIds }
+  for (const [columnId, ids] of Object.entries(moved)) {
+    next[columnId] = [...(next[columnId] ?? []), ...ids]
+  }
+  return { order: next }
 }

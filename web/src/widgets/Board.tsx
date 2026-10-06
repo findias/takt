@@ -11,7 +11,7 @@ import {
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { agingLabel, flowIssues, withoutParts } from '../entities/board/model.ts'
+import { agingLabel, flowIssues, homeColumn, isItem, withoutParts } from '../entities/board/model.ts'
 import { AttentionRail } from '../features/board/AttentionRail.tsx'
 import type { AttentionItem } from '../features/board/AttentionRail.tsx'
 import { api } from '../shared/api/index.ts'
@@ -47,7 +47,6 @@ import {
   GROUPING_NAMES,
   groupingToQuery,
   groupsOf,
-  byTree,
   parseGrouping,
 } from '../features/board/grouping.ts'
 import type { Group, Grouping } from '../features/board/grouping.ts'
@@ -387,14 +386,12 @@ export function Board({
   // организации или владелец её подразделения. Отвечает сервер;
   // старый сервер поля не знает — тогда, как прежде, по роли.
   const canPurge = base?.info.canPurge ?? isOwner
-  const { order, partIds, hidden } = useMemo(() => {
-    if (!base)
-      return {
-        order: fullOrder,
-        partIds: {} as Record<string, string[]>,
-        hidden: 0,
-      }
-    if (isEmpty(filters)) return { ...withoutParts(base, fullOrder), hidden: 0 }
+  // `filtered` — прошедшее отбор вместе с пунктами родителей: дорожкам
+  // они нужны на своих местах (см. `groups`). `order` — то, что видно
+  // на доске без дорожек.
+  const { filtered, order, hidden } = useMemo(() => {
+    if (!base) return { filtered: fullOrder, order: fullOrder, hidden: 0 }
+    if (isEmpty(filters)) return { filtered: fullOrder, ...withoutParts(base, fullOrder), hidden: 0 }
     // Карточки, у которых стоит часть. Считается один раз на проход
     // отбора: связей у доски единицы на карточку, а спрашивать по одной
     // значило бы обходить их заново для каждой.
@@ -428,7 +425,7 @@ export function Board({
         return ok
       })
     }
-    return { ...withoutParts(base, next), hidden }
+    return { filtered: next, ...withoutParts(base, next), hidden }
   }, [base, fullOrder, filters, iterationsOn])
 
   // Группировка — тоже состояние адреса: сгруппированный вид посылают
@@ -444,43 +441,20 @@ export function Board({
     [query],
   )
   /**
-   * Дорожки — и спрятанные части по дорожкам.
-   *
-   * Часть, показанная внутри родителя, из колонки убрана, но из счёта
-   * не выкинута: сервер считает её в лимите так же. При дорожках счёт
-   * был общий на доску — «Очередь 3» и «здесь только части задач, всего
-   * 3» стояло в каждой дорожке, включая те, где не было ни одной части.
-   *
-   * Раскладываются части вместе с карточками, одним проходом: дорожка,
-   * в которой нет ничего, кроме спрятанной части, обязана существовать —
-   * иначе работа пропадает с доски совсем.
+   * Дорожки. Пункт родителя раскладывается по дорожкам наравне
+   * с карточками, а прячется внутрь родителя уже в своей дорожке:
+   * родитель в другой дорожке — пункт стоит в этой отдельной карточкой
+   * в колонке родителя. Иначе при раскладке по исполнителю работа Веры
+   * внутри задачи Анны пропадала бы с доски совсем.
    */
-  const { groups, partsIn } = useMemo(() => {
-    if (!base) return { groups: [] as Group[], partsIn: {} as Record<string, Record<string, number>> }
-    const вместе: Record<string, string[]> = {}
-    for (const [columnId, ids] of Object.entries(order)) вместе[columnId] = [...ids]
-    for (const [columnId, ids] of Object.entries(partIds)) {
-      вместе[columnId] = [...(вместе[columnId] ?? []), ...ids]
-    }
-    // По дереву части не прячутся: дорожка родителя и есть место,
-    // где они видны. Спрятанные внутри карточки, они оставили бы
-    // дорожку пустой.
-    const спрятанные = new Set(byTree(grouping) ? [] : Object.values(partIds).flat())
-    const partsIn: Record<string, Record<string, number>> = {}
-    const groups = groupsOf(base, вместе, grouping).map((group) => {
-      const видимые: Record<string, string[]> = {}
-      const здесь: Record<string, number> = {}
-      let count = 0
-      for (const [columnId, ids] of Object.entries(group.order)) {
-        видимые[columnId] = ids.filter((id) => !спрятанные.has(id))
-        здесь[columnId] = ids.length - видимые[columnId].length
-        count += видимые[columnId].length
-      }
-      partsIn[group.id] = здесь
+  const groups = useMemo(() => {
+    if (!base) return [] as Group[]
+    return groupsOf(base, filtered, grouping).map((group) => {
+      const { order: видимые } = withoutParts(base, group.order)
+      const count = Object.values(видимые).reduce((n, ids) => n + ids.length, 0)
       return { ...group, order: видимые, count }
     })
-    return { groups, partsIn }
-  }, [base, order, partIds, grouping])
+  }, [base, filtered, grouping])
 
   /**
    * Сколько карточек скрыл отбор — по колонке каждой дорожки.
@@ -497,8 +471,11 @@ export function Board({
     const out: Record<string, Record<string, number>> = {}
     for (const group of groupsOf(base, fullOrder, grouping)) {
       const here: Record<string, number> = {}
-      for (const [columnId, ids] of Object.entries(group.order)) {
-        here[columnId] = ids.length - (shown.get(group.id)?.[columnId]?.length ?? 0)
+      // Пункты сравниваются с пунктами: внутри родителя они не скрыты
+      // отбором. Пункт, вынесенный в колонку родителя, когда сам родитель
+      // отбор не прошёл, — лишний против полного счёта, отсюда нижний ноль.
+      for (const [columnId, ids] of Object.entries(withoutParts(base, group.order).order)) {
+        here[columnId] = Math.max(0, ids.length - (shown.get(group.id)?.[columnId]?.length ?? 0))
       }
       out[group.id] = here
     }
@@ -516,7 +493,7 @@ export function Board({
       // Номер в приписке, а не только в поиске: его называют вслух
       // и им же ищут — «посмотри ПОСТ-4», — и увидеть, что нашлось
       // именно оно, человек должен глазами.
-      hint: `${card.number} · ${base.columns[card.columnId]?.name ?? ''}`,
+      hint: `${card.number} · ${base.columns[homeColumn(base, card.id)]?.name ?? ''}`,
       search: card.description,
       icon: <OpenIcon />,
       run: () => {
@@ -994,6 +971,10 @@ export function Board({
     const blocked: AttentionItem[] = []
     const aging: AttentionItem[] = []
     const late: AttentionItem[] = []
+    // Пункт родителя по колонкам не ходит: его «дольше обещанного»
+    // и место в лимите ничего не значат. Блокировка — значит: она
+    // держит родителя.
+    const items = new Set(Object.keys(base.cards).filter((id) => isItem(base, id)))
     for (const card of Object.values(base.cards)) {
       if (card.doneAt || card.finishedAt || card.outcome) continue
       const common = { cardId: card.id, number: card.number, title: card.title }
@@ -1001,7 +982,7 @@ export function Board({
         blocked.push({ kind: 'blocked', ...common, note: card.blocked.reason })
         continue
       }
-      const long = agingLabel(card, base.info.sleDays)
+      const long = items.has(card.id) ? null : agingLabel(card, base.info.sleDays)
       if (long) {
         aging.push({ kind: 'aging', ...common, note: long })
         continue
@@ -1014,7 +995,7 @@ export function Board({
     const limits: AttentionItem[] = []
     for (const id of base.columnIds) {
       const column = base.columns[id]
-      const count = base.order[id]?.length ?? 0
+      const count = (base.order[id] ?? []).filter((cardId) => !items.has(cardId)).length
       if (column.wipLimit !== null && count > column.wipLimit) {
         limits.push({ kind: 'limit', columnId: id, note: t.attention.limitText(column.name, count, column.wipLimit) })
       }
@@ -1129,11 +1110,7 @@ export function Board({
       ? filters.iteration
       : undefined
 
-  const renderColumns = (
-    groupOrder: Record<string, string[]>,
-    hidden?: Record<string, number>,
-    parts?: Record<string, number>,
-  ) =>
+  const renderColumns = (groupOrder: Record<string, string[]>, hidden?: Record<string, number>) =>
     shownColumns.map((columnId) => (
       <ColumnView
         key={columnId}
@@ -1143,7 +1120,6 @@ export function Board({
         columnId={columnId}
         column={base.columns[columnId]}
         cardIds={groupOrder[columnId] ?? []}
-        partsInside={parts?.[columnId] ?? 0}
         hiddenByFilter={hidden?.[columnId] ?? 0}
         collapsed={collapsed.has(columnId)}
         onToggleCollapsed={() => toggleColumn(columnId)}
@@ -1504,13 +1480,7 @@ export function Board({
                 onClick={() => setVisibleColumn(columnId)}
               >
                 {base.columns[columnId].name}
-                {/* Число то же, что в шапке колонки: части, спрятанные
-                    внутрь родителей, считаются и там и здесь. Иначе
-                    на одном экране стояли рядом «Очередь 2»
-                    в переключателе и «Очередь 5» в самой колонке. */}
-                <span className="muted small">
-                  {(order[columnId] ?? []).length + (partIds[columnId] ?? []).length}
-                </span>
+                <span className="muted small">{(order[columnId] ?? []).length}</span>
               </button>
             )
           })}
@@ -1579,7 +1549,7 @@ export function Board({
             </div>
           )}
           <div className="columns" ref={columnsRef}>
-            {renderColumns(group.order, hiddenIn[group.id], partsIn[group.id])}
+            {renderColumns(group.order, hiddenIn[group.id])}
             {grouping === 'none' && canEdit && (
               <NewColumn onCreate={(name) => void board.createColumn(name)} />
             )}

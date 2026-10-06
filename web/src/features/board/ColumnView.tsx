@@ -51,10 +51,6 @@ type ColumnProps = {
   /** Сколько карточек этой колонки скрыл отбор — счётчик, а не признак:
    *  пустая колонка называет число, иначе «Пусто» врёт. */
   hiddenByFilter: number
-  /** Сколько карточек колонки показаны как части своих задач, а не
-   *  своей строкой. В счёт колонки они входят: это идущая работа,
-   *  и лимит одновременной работы считает её на сервере так же. */
-  partsInside: number
   cards: BaseState['cards']
   unit: EstimateUnit
   sleDays: number | null
@@ -228,7 +224,7 @@ export function ColumnView(props: ColumnProps) {
         <div className="row row--tight">
           <EditableText value={props.name} onSave={props.onRenameColumn} className="column-title" />
           <ColumnCount
-            count={props.cardIds.length + props.partsInside}
+            count={props.cardIds.length}
             limit={props.column.wipLimit}
             hard={props.column.wipLimitHard}
             onSetLimit={props.onSetLimit}
@@ -262,7 +258,7 @@ export function ColumnView(props: ColumnProps) {
       {!props.collapsed && (
         <ColumnGauge
           kind={props.column.kind}
-          count={props.cardIds.length + props.partsInside}
+          count={props.cardIds.length}
           limit={props.column.wipLimit}
           cards={props.cardIds.map((id) => props.cards[id]).filter(Boolean)}
           sleDays={props.sleDays}
@@ -375,16 +371,7 @@ export function ColumnView(props: ColumnProps) {
             Перетащите карточку сюда» при скрытых отбором — враньё:
             человек идёт искать поломку, которой нет, а карточки лежат
             на месте. Кнопка названа та самая, что вернёт их. */}
-        {/* Колонка, в которой остались одни части, не пустая: работа
-            в ней идёт, просто показана внутри своих задач. «Пусто»
-            здесь было бы враньём. */}
-        {props.cardIds.length === 0 && props.hiddenByFilter === 0 && props.partsInside > 0 && (
-          <p className="empty">
-            {t.column.onlyParts(props.partsInside)}
-          </p>
-        )}
         {props.cardIds.length === 0 &&
-          props.partsInside === 0 &&
           (props.hiddenByFilter > 0 ? (
             <p className="empty">
               {t.column.filteredOut(props.hiddenByFilter)}

@@ -323,28 +323,23 @@ test('часть не стоит в колонке отдельной карто
   // команде и не провести по потоку. Но на доске родителя она стояла
   // дважды: своей строкой в колонке и списком внутри родителя.
   const base = {
-    cards: { p: {}, a: {}, b: {} },
+    cards: { p: { columnId: 'work' }, a: { columnId: 'queue' }, b: { columnId: 'queue' } },
     links: [
       { fromCard: 'p', toCard: 'a', kind: 'subtask' },
       { fromCard: 'p', toCard: 'b', kind: 'subtask' },
     ],
   } as unknown as BaseState
 
-  const order = { queue: ['p', 'a', 'b'], work: [] as string[] }
-  // Спрятанные части считаются: в счёт колонки они входят, потому что
-  // лимит одновременной работы считает их на сервере так же.
-  assert.deepEqual(withoutParts(base, order), {
-    order: { queue: ['p'], work: [] },
-    parts: { queue: 2 },
-    partIds: { queue: ['a', 'b'] },
+  // Родитель виден — пункты внутри него, в колонках их нет, и в счёт
+  // колонки они не входят: лимит на сервере их тоже не считает.
+  assert.deepEqual(withoutParts(base, { queue: ['a', 'b'], work: ['p'] }), {
+    order: { queue: [], work: ['p'] },
   })
 
-  // Родителя не видно — часть возвращается в колонку: иначе работа
-  // исчезла бы совсем.
+  // Родителя не видно — пункт стоит карточкой в колонке родителя,
+  // а не в своей: своя у пункта ничего не значит.
   assert.deepEqual(withoutParts(base, { queue: ['a', 'b'], work: [] }), {
-    order: { queue: ['a', 'b'], work: [] },
-    parts: {},
-    partIds: {},
+    order: { queue: [], work: ['a', 'b'] },
   })
 
   // Часть на чужой доске в наших колонках и так не стоит.
@@ -352,11 +347,14 @@ test('часть не стоит в колонке отдельной карто
     cards: { p: {} },
     links: [{ fromCard: 'p', toCard: 'x', kind: 'subtask' }],
   } as unknown as BaseState
-  assert.deepEqual(withoutParts(foreign, { queue: ['p'] }), {
-    order: { queue: ['p'] },
-    parts: {},
-    partIds: {},
-  })
+  assert.deepEqual(withoutParts(foreign, { queue: ['p'] }), { order: { queue: ['p'] } })
+
+  // Родитель не на доске (убран в архив) — подзадача обычная карточка.
+  const orphan = {
+    cards: { a: { columnId: 'queue' } },
+    links: [{ fromCard: 'p', toCard: 'a', kind: 'subtask' }],
+  } as unknown as BaseState
+  assert.deepEqual(withoutParts(orphan, { queue: ['a'] }), { order: { queue: ['a'] } })
 })
 
 test('патч дополняет словарь меток: метку, заведённую у соседа, есть чем показать', () => {

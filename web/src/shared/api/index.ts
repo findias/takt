@@ -454,6 +454,10 @@ export type Task = {
   columnEnteredAt: string
   outcome: string | null
   blocked: boolean
+  /** Номер родителя, если задача — его пункт: колонка тогда родителя. */
+  parent: string | null
+  /** Отмечена сделанной руками — у пункта это и есть «закончена». */
+  done: boolean
   labels: Label[]
 }
 

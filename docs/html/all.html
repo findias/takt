@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.1-4-g1a67750-dirty.</p>
+<p>Every section in one file. Version v0.3.1-5-ge2c50b3-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -224,7 +224,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Labels combine with AND: pick “Urgent” and “External” and you get cards carrying both.</p>
 <h3 id="swimlanes">Slice the board into swimlanes</h3>
 <p>In the <strong>No grouping</strong> list, choose what to slice by: assignee, label, iteration or priority.</p>
-<p><strong>By parent</strong> gives every parent its own lane with its subtasks — the lane is titled with the parent&#39;s number, name and how much of it is done, and opens the parent. <strong>By epic</strong> gives every epic of a portfolio board its lane, however deep its tasks sit, and puts the rest in <strong>No epic</strong>. A parent on another board still gets a lane, and its title says whose board it is. Work with no parent sits in <strong>No parent</strong>, which stays even when empty. In these two groupings subtasks are shown in the columns rather than folded inside their parent&#39;s card, since the lane is where they belong. The choice is kept in a saved view like the filters.</p>
+<p><strong>By parent</strong> gives a lane to every parent on another board — the work that board ordered from yours — and its title says whose board it is. <strong>By epic</strong> gives every epic of a portfolio board its lane, however deep its tasks sit, and puts the rest in <strong>No epic</strong>. Work with no parent elsewhere sits in <strong>No parent</strong>, which stays even when empty. A subtask on this board is an item inside its parent&#39;s card and travels in the parent&#39;s lane; when its parent is in another lane, the item is shown there as a card in its parent&#39;s column. The choice is kept in a saved view like the filters.</p>
 <p>Swimlanes are a slice, not a different board: you cannot drag a card between them, because the lane is derived from a property of the card. To change the lane, change the property.</p>
 <h3 id="portfolio">Keep epics on a portfolio board</h3>
 <p>Epics live on a board of their own, not in the columns of a team. Create a board with <strong>Epic portfolio</strong> in <strong>How we work</strong>: its columns are &#34;Idea&#34;, &#34;In progress&#34; and &#34;Done&#34;, with a soft limit of 3 on &#34;In progress&#34; and no iterations. Every card on it is an epic. Split an epic into features on the team boards: open it, <strong>Tasks</strong> tab, pick the team&#39;s board next to the name, <strong>Subtask</strong>.</p>
@@ -314,7 +314,8 @@ color:var(--ink-3);font-size:.85rem}
 <li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
 <p>To fix a part&#39;s name, press <strong>Rename</strong> next to it in the list; a part on another team&#39;s board is renamed by opening it. Any open card is renamed with the pencil next to its title in the panel.</p>
-<p>A part is an ordinary card: it can live on a different board if a different team does the work. The parent card grows a &#34;so many of so many&#34; bar.</p>
+<p>A part on the same board is an item of its parent: a line in the parent&#39;s card, not a card in a column. Tick it when it is done — that is all it needs. Items take no room under a column&#39;s limit, are not counted in the column, and the flow metrics count the parent, not its items. A part on another team&#39;s board is an ordinary card in their columns, moved by them. Either way the parent card grows a &#34;so many of so many&#34; bar.</p>
+<p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
 <h3 id="tie-a-card-to-service-desk-tickets">Tie a card to service-desk tickets</h3>
@@ -719,7 +720,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td>Hard limit</td><td>A limit that does refuse: a card is not moved into a full column, and the refusal says to make room first</td></tr>
 <tr><td>Board promise</td><td>How many days work usually takes to cross the board, and with what probability — &#34;usually 8 days with 85% probability&#34;. Cards running longer show up under <strong>Longer than promised</strong></td></tr>
 <tr><td>Block</td><td>A card that is waiting for something, always with a reason. A block may have a deadline, after which it lifts itself</td></tr>
-<tr><td>Subtask</td><td>A part of a card. It is an ordinary card and may live on another team&#39;s board; the parent shows &#34;so many of so many&#34;</td></tr>
+<tr><td>Subtask</td><td>A part of a card. On the same board it is an item — a line in the parent, ticked when done, outside columns and their limits; on another team&#39;s board it is an ordinary card in their columns. The parent shows &#34;so many of so many&#34;</td></tr>
 <tr><td>Epic, portfolio</td><td>An epic is a card on a portfolio board — a board of level <strong>Epic portfolio</strong>. Its parts, the features, live on team boards. Epics have their own flow and limits, and do not mix with tasks in metrics</td></tr>
 <tr><td>Root, leaf</td><td>The top of a tree of subtasks — an epic, say — and the cards at its bottom that have no parts of their own. The progress bar of a card with grandchildren counts its leaves; <strong>By epic</strong> puts a task into its epic&#39;s lane</td></tr>
 <tr><td>Board template</td><td><strong>Blank</strong>, <strong>Kanban</strong>, <strong>Scrum</strong> or <strong>Epic portfolio</strong> when a board is created. It sets only the start and is not kept: afterwards the board is like any other</td></tr>

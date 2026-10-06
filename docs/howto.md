@@ -44,16 +44,15 @@ carrying both.
 In the **No grouping** list, choose what to slice
 by: assignee, label, iteration or priority.
 
-**By parent** gives every parent its own lane with its subtasks — the
-lane is titled with the parent's number, name and how much of it is
-done, and opens the parent. **By epic** gives every epic of a portfolio
-board its lane, however deep its tasks sit, and puts the rest in **No
-epic**. A parent on another board still gets
-a lane, and its title says whose board it is. Work with no parent sits
-in **No parent**, which stays even when empty. In these two groupings
-subtasks are shown in the columns rather than folded inside their
-parent's card, since the lane is where they belong. The choice is kept
-in a saved view like the filters.
+**By parent** gives a lane to every parent on another board — the work
+that board ordered from yours — and its title says whose board it is.
+**By epic** gives every epic of a portfolio board its lane, however deep
+its tasks sit, and puts the rest in **No epic**. Work with no parent
+elsewhere sits in **No parent**, which stays even when empty. A subtask
+on this board is an item inside its parent's card and travels in the
+parent's lane; when its parent is in another lane, the item is shown
+there as a card in its parent's column. The choice is kept in a saved
+view like the filters.
 
 Swimlanes are a slice, not a different board: you cannot drag a card
 between them, because the lane is derived from a property of the card.
@@ -366,9 +365,18 @@ To fix a part's name, press **Rename** next to it in the list; a part on
 another team's board is renamed by opening it. Any open card is renamed
 with the pencil next to its title in the panel.
 
-A part is an ordinary card: it can live on a different board if a
-different team does the work. The parent card grows a "so many of so
-many" bar.
+A part on the same board is an item of its parent: a line in the
+parent's card, not a card in a column. Tick it when it is done — that
+is all it needs. Items take no room under a column's limit, are not
+counted in the column, and the flow metrics count the parent, not its
+items. A part on another team's board is an ordinary card in their
+columns, moved by them. Either way the parent card grows a "so many of
+so many" bar.
+
+When a filter or a swimlane hides the parent, its item is shown as a
+card in the parent's column, so your share of the work does not
+vanish. On **Tasks** an item shows its parent's column and the parent's
+number; a ticked item counts as finished.
 
 Parts can have parts of their own — an epic, its features, the tasks
 under them, up to five levels. The bar on a card with grandchildren

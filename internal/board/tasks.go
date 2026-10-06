@@ -34,7 +34,14 @@ type Task struct {
 	ColumnEnteredAt time.Time  `json:"columnEnteredAt"`
 	Outcome         *string    `json:"outcome"`
 	Blocked         bool       `json:"blocked"`
-	Labels          []Label    `json:"labels"`
+	// Parent — номер родителя, если задача — его пункт (IsItem). Тогда
+	// Column и ColumnKind — родителя: своя колонка у пункта ничего
+	// не значит, а «где эта работа» отвечает тот, в ком она лежит.
+	Parent *string `json:"parent"`
+	// Done — отмечена сделанной руками. У пункта это и есть «закончена»:
+	// финиша у него нет, Outcome остаётся пустым.
+	Done   bool    `json:"done"`
+	Labels []Label `json:"labels"`
 }
 
 // TaskList — задачи и то, всё ли показано.
@@ -46,6 +53,8 @@ type TaskList struct {
 
 // Tasks — карточки, где personID исполнитель, на досках, которые видит
 // viewerID. withDone — и законченные; без него — только идущая работа.
+// Законченная — прошедшая финиш или отмеченная сделанной: отмеченный
+// пункт родителя иначе висел бы в списке «моих» вечно, финиша у него нет.
 // Порядок: сначала то, у чего есть срок, по сроку; затем по важности.
 func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, withDone bool) (TaskList, error) {
 	out := TaskList{Tasks: []Task{}}
@@ -62,18 +71,30 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			return ErrNotFound
 		}
 		rows, err := tx.Query(ctx, `
-			select c.id, c.number, c.title, b.id, b.name, col.name, col.kind,
+			select c.id, c.number, c.title, b.id, b.name, col.name,
+			       -- Отбор «Сделаны» идёт по виду колонки, а колонка у пункта —
+			       -- родителя: отмеченный пункт в идущем родителе иначе
+			       -- числился бы «в работе».
+			       case when item.number is not null and c.done_at is not null
+			            then 'done' else col.kind end,
 			       c.priority, to_char(c.due_on, 'YYYY-MM-DD'), c.started_at,
 			       c.column_entered_at, c.outcome,
 			       exists (select 1 from card_blocks k
-			                where k.card_id = c.id and k.unblocked_at is null)
+			                where k.card_id = c.id and k.unblocked_at is null),
+			       item.number, c.done_at is not null
 			  from card_assignees a
 			  join cards c on c.id = a.card_id
 			  join boards b on b.id = c.board_id
-			  join board_columns col on col.id = c.column_id
+			  left join lateral (
+			        select p.number, p.column_id from card_links l
+			          join cards p on p.id = l.from_card
+			         where l.to_card = c.id and l.kind = 'subtask'
+			           and p.board_id = c.board_id and p.archived_at is null
+			         limit 1) item on true
+			  join board_columns col on col.id = coalesce(item.column_id, c.column_id)
 			 where a.user_id = $1
 			   and c.archived_at is null and b.archived_at is null
-			   and ($2 or c.outcome is null)
+			   and ($2 or (c.outcome is null and c.done_at is null))
 			 order by c.due_on nulls last,
 			          case c.priority when 'highest' then 0 when 'high' then 1
 			                          when 'medium' then 2 else 3 end,
@@ -88,7 +109,7 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			var t Task
 			if err := rows.Scan(&t.ID, &t.Number, &t.Title, &t.BoardID, &t.BoardName,
 				&t.Column, &t.ColumnKind, &t.Priority, &t.DueOn, &t.StartedAt,
-				&t.ColumnEnteredAt, &t.Outcome, &t.Blocked); err != nil {
+				&t.ColumnEnteredAt, &t.Outcome, &t.Blocked, &t.Parent, &t.Done); err != nil {
 				rows.Close()
 				return err
 			}

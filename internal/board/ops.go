@@ -1188,8 +1188,9 @@ func enforceWIP(ctx context.Context, tx pgx.Tx, col Column) error {
 	}
 	var count int
 	err := tx.QueryRow(ctx, `
-		select count(*) from cards
-		 where column_id = $1 and archived_at is null`, col.ID).Scan(&count)
+		select count(*) from cards c
+		 where c.column_id = $1 and c.archived_at is null
+		   and not `+IsItem("c"), col.ID).Scan(&count)
 	if err != nil {
 		return err
 	}

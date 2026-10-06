@@ -573,7 +573,6 @@ export const ru = {
     noEpic: 'Без эпика',
     unknownParent: 'Недоступная карточка',
     parentOnBoard: (board: string) => `на доске «${board}»`,
-    parentProgress: (progress: string) => `готово ${progress}`,
   },
   parts: {
     bulkActions: 'Действия над выделенными',
@@ -730,8 +729,6 @@ export const ru = {
     expand: (name: string) => `Развернуть «${name}»`,
     collapse: (name: string) => `Свернуть «${name}»`,
     moreCards: (n: number) => `Ещё ${n}: прокрутите, чтобы показать`,
-    onlyParts: (n: number) =>
-      `Здесь только части задач — они показаны внутри самих задач. Всего в колонке: ${n}.`,
     filteredOut: (n: number) => `Под отбор ничего не подошло: скрыто ${n}. Вернёт кнопка «Показать все».`,
     emptyLane:
       'Пусто: в этой дорожке в колонке ничего нет. Дорожка меняется не переносом, а полем карточки.',

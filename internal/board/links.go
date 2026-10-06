@@ -221,8 +221,12 @@ func createSubtask(
 	if err != nil {
 		return Patch{}, err
 	}
-	if err := enforceWIP(ctx, tx, col); err != nil {
-		return Patch{}, err
+	// Пункт своей доски в колонку не входит (IsItem), и упираться
+	// в её лимит ему нечем. Работа соседям — входит.
+	if target != parentBoard {
+		if err := enforceWIP(ctx, tx, col); err != nil {
+			return Patch{}, err
+		}
 	}
 
 	card, err := insertCard(ctx, tx, orgID, actorID, target, col, p.Title, Placement{Place: "end"})

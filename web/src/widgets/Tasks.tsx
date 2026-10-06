@@ -210,14 +210,20 @@ export function Tasks({ principal }: { principal: Principal }) {
                       {task.title}
                     </button>
                     {task.blocked && <span className="mark mark--alarm tasks-mark">{s.blocked}</span>}
-                    {task.outcome && <span className="mark tasks-mark">{s.done}</span>}
+                    {(task.outcome || task.done) && <span className="mark tasks-mark">{s.done}</span>}
                   </td>
                   <td className="small">
                     <button className="link" onClick={() => navigate(boardPath(task.boardId))}>
                       {task.boardName}
                     </button>
                   </td>
-                  <td className="muted small">{task.column}</td>
+                  <td className="muted small">
+                    {task.column}
+                    {/* Пункт своей колонки не имеет: он там, где родитель,
+                        и это надо назвать, иначе «В работе» читается
+                        как место самого пункта. */}
+                    {task.parent && <div>{s.itemOf(task.parent)}</div>}
+                  </td>
                   <td className="small">{task.dueOn ? dateWords(task.dueOn) : '—'}</td>
                   <td className="small">{PRIORITY_NAMES[task.priority]}</td>
                   <td>

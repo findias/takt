@@ -297,23 +297,28 @@ describe('пустая колонка дорожки', () => {
 // колонки входит — так же, как её считает сервер в лимите. При дорожках
 // счёт был общий на доску: «здесь только части задач, всего 1» стояло
 // в каждой дорожке, включая те, где не было ни одной части.
-describe('части при дорожках', () => {
-  it('считаются в своей дорожке, а не во всех сразу', async () => {
+describe('пункты при дорожках', () => {
+  it('пункт в чужой дорожке стоит карточкой, в дорожке родителя — внутри него', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const родитель = card('родитель', COL_A, 'a0')
-    const часть = { ...card('часть', COL_A, 'a1'), priority: 'high' as const }
+    // Своя колонка пункта ничего не значит: показан он в колонке родителя.
+    const часть = { ...card('часть', COL_B, 'a1'), priority: 'high' as const }
     const снимок = board([родитель, часть])
     снимок.links = [{ fromCard: 'родитель', toCard: 'часть', kind: 'subtask' }]
     snapshot.mockResolvedValue(снимок)
     show()
     await screen.findByRole('group', { name: /Карточка «родитель»/ })
+    // Без дорожек пункт — только внутри родителя.
+    expect(screen.queryByRole('group', { name: /Карточка «часть»/ })).toBeNull()
 
     await user.selectOptions(screen.getByLabelText('Группировка'), 'priority')
 
-    // Дорожек две — «Высокий» с одной спрятанной частью и «Средний»
-    // с самим родителем. Про части говорит ровно одна.
-    const про = await screen.findAllByText(/только части задач/)
-    expect(про).toHaveLength(1)
+    // Дорожек две — «Высокий» с пунктом и «Средний» с родителем.
+    // В «Высоком» родителя нет, и пункт стоит карточкой — один раз
+    // и в колонке родителя, а не в своей.
+    const карточки = await screen.findAllByRole('group', { name: /Карточка «часть»/ })
+    expect(карточки).toHaveLength(1)
+    expect(карточки[0].closest('[data-column-id]')?.getAttribute('data-column-id')).toBe(COL_A)
   })
 })
 

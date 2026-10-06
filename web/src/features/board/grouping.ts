@@ -1,4 +1,4 @@
-import { priorityLabel, priorityRank, progressLabel } from '../../entities/card/model.ts'
+import { priorityLabel, priorityRank } from '../../entities/card/model.ts'
 import type { BaseState } from '../../entities/board/model.ts'
 import type { Priority } from '../../shared/api/index.ts'
 import { live, locale, t } from '../../shared/i18n/index.ts'
@@ -21,13 +21,6 @@ import { live, locale, t } from '../../shared/i18n/index.ts'
 export type Grouping = 'none' | 'assignee' | 'label' | 'iteration' | 'priority' | 'parent' | 'epic'
 
 const GROUPINGS: Grouping[] = ['assignee', 'label', 'iteration', 'priority', 'parent', 'epic']
-
-/** Группировка по родителю: в ней подзадача стоит в дорожке своего
- *  родителя, а не прячется внутри его карточки. По эпику части остаются
- *  внутри родителя — они в той же дорожке, что и он. */
-export function byTree(grouping: Grouping): boolean {
-  return grouping === 'parent'
-}
 
 export const GROUPING_NAMES = live(() => t.board.grouping) as Record<Grouping, string>
 
@@ -110,20 +103,23 @@ export function groupsOf(
   // Родитель каждой карточки — одним обходом связей, как childrenOf:
   // спрашивать по карточке значило бы обходить связи пятьсот раз.
   const parentOf = new Map<string, string>()
-  if (byTree(grouping)) {
+  if (grouping === 'parent') {
     for (const link of base.links) if (link.kind === 'subtask') parentOf.set(link.toCard, link.fromCard)
   }
+  /**
+   * Дорожка «по родителю» — родитель с другой доски: тот, кто эту работу
+   * заказал. Родитель с этой доски дорожки не заводит: его подзадачи —
+   * пункты внутри его карточки (`withoutParts`), и едут они туда же,
+   * куда он сам, — поэтому карточка поднимается по родителям этой доски
+   * до верхнего и берёт его дорожку. Глубина дерева ограничена сервером
+   * (пять уровней), цикла связи не допускают.
+   */
+  const laneKey = (cardId: string): string | undefined => {
+    let id = cardId
+    for (let parent = parentOf.get(id); parent && base.cards[parent]; parent = parentOf.get(id)) id = parent
+    return parentOf.get(id)
+  }
   const lane = (parentId: string) => {
-    const own = base.cards[parentId]
-    if (own) {
-      const group = ensure(parentId, `${own.number} ${own.title}`)
-      group.cardId = parentId
-      // Прогресс словами «готово …»: голое «0 из 3» рядом со счётчиком
-      // дорожки читалось бы одним числом с ним.
-      const progress = progressLabel(own)
-      group.note = progress ? t.board.parentProgress(progress) : undefined
-      return group
-    }
     const foreign = base.linked[parentId]
     const group = ensure(parentId, foreign ? foreign.title : t.board.unknownParent)
     // Чья доска — словами: дорожку чужой карточки не открыть здесь,
@@ -154,7 +150,7 @@ export function groupsOf(
           if (label) keys.push([label.id, label.name])
         }
       } else if (grouping === 'parent') {
-        const parentId = parentOf.get(cardId)
+        const parentId = laneKey(cardId)
         keys.push(parentId ? [lane(parentId).id, ''] : ['none', emptyTitle])
       } else if (grouping === 'epic') {
         // Эпик приносит сервер: он на другой доске, и подниматься к нему

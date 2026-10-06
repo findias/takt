@@ -257,3 +257,42 @@ func TestMetricsOfForeignBoardAreNotFound(t *testing.T) {
 		t.Errorf("метрики чужой доски: %v", err)
 	}
 }
+
+// Пункт родителя — подзадача с той же доски — по колонкам не ходит,
+// и его отметки начала и финиша о потоке ничего не говорят. Считай
+// метрики их, родитель с тремя пунктами давал бы четыре «сделанных»
+// и четыре «в работе» вместо одного.
+func TestItemsOfAParentAreNotFlow(t *testing.T) {
+	f := newFixture(t)
+	parent := f.card("Родитель", 6, nil, nil)
+	finished := f.card("Пункт сделан", 5, days(1), done())
+	going := f.card("Пункт идёт", 4, nil, nil)
+	f.inTenant(func(tx pgx.Tx) error {
+		for _, part := range []string{finished, going} {
+			if _, err := tx.Exec(f.ctx, `
+				insert into card_links (org_id, from_card, to_card, kind)
+				values ($1, $2, $3, 'subtask')`, f.orgID, parent, part); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	report, err := f.svc.Report(f.ctx, f.orgID, f.userID, f.boardID, 90)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.CycleTime != nil {
+		t.Errorf("время цикла посчитано по пункту родителя: %+v", report.CycleTime)
+	}
+	if report.WIP != 1 || report.Aging[0].ID != parent {
+		t.Errorf("в работе должен быть один родитель, а не его пункты: %+v", report.Aging)
+	}
+	var total int
+	for _, w := range report.Throughput {
+		total += w.Count
+	}
+	if total != 0 {
+		t.Errorf("пропускная способность посчитала пункт: %d", total)
+	}
+}

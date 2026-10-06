@@ -16,7 +16,7 @@ documentation use, and what each of them means in Takt.
 | Hard limit | A limit that does refuse: a card is not moved into a full column, and the refusal says to make room first |
 | Board promise | How many days work usually takes to cross the board, and with what probability — "usually 8 days with 85% probability". Cards running longer show up under **Longer than promised** |
 | Block | A card that is waiting for something, always with a reason. A block may have a deadline, after which it lifts itself |
-| Subtask | A part of a card. It is an ordinary card and may live on another team's board; the parent shows "so many of so many" |
+| Subtask | A part of a card. On the same board it is an item — a line in the parent, ticked when done, outside columns and their limits; on another team's board it is an ordinary card in their columns. The parent shows "so many of so many" |
 | Epic, portfolio | An epic is a card on a portfolio board — a board of level **Epic portfolio**. Its parts, the features, live on team boards. Epics have their own flow and limits, and do not mix with tasks in metrics |
 | Root, leaf | The top of a tree of subtasks — an epic, say — and the cards at its bottom that have no parts of their own. The progress bar of a card with grandchildren counts its leaves; **By epic** puts a task into its epic's lane |
 | Board template | **Blank**, **Kanban**, **Scrum** or **Epic portfolio** when a board is created. It sets only the start and is not kept: afterwards the board is like any other |

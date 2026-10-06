@@ -20,6 +20,8 @@ const task = (id: string, over: Partial<Task> = {}): Task => ({
   columnEnteredAt: '2026-09-01T00:00:00Z',
   outcome: null,
   blocked: false,
+  parent: null,
+  done: false,
   labels: [],
   ...over,
 })

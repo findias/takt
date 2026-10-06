@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/store"
 )
 
@@ -188,6 +189,9 @@ func (s *Service) ReportWith(ctx context.Context, orgID, userID, boardID string,
 	return report, nil
 }
 
+// Пункты родителя (board.IsItem) метрики не считают нигде: по колонкам
+// они не ходят, и их отметки начала и финиша ничего не говорят о потоке.
+// Единица потока — родитель.
 func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days int, lived bool, out *Report) error {
 	var p Percentiles
 	// Считается только по доведённому до конца: выброшенная карточка
@@ -199,12 +203,13 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 		       coalesce(percentile_cont(0.95) within group (order by d), 0),
 		       count(*)
 		  from (
-			select extract(epoch from (finished_at - started_at)) / 86400.0 as d
-			  from cards
-			 where board_id = $1 and outcome = 'done'
-			   and started_at is not null and finished_at is not null
-			   and finished_at >= now() - make_interval(days => $2)
-			   and (not $3 or external_source is null)
+			select extract(epoch from (c.finished_at - c.started_at)) / 86400.0 as d
+			  from cards c
+			 where c.board_id = $1 and c.outcome = 'done'
+			   and c.started_at is not null and c.finished_at is not null
+			   and c.finished_at >= now() - make_interval(days => $2)
+			   and (not $3 or c.external_source is null)
+			   and not `+board.IsItem("c")+`
 		  ) t`, boardID, days, lived).Scan(&p.P50, &p.P85, &p.P95, &p.Count)
 	if err != nil {
 		return err
@@ -214,10 +219,11 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	}
 
 	if err := tx.QueryRow(ctx, `
-		select count(*) from cards
-		 where board_id = $1 and outcome = 'discarded'
-		   and updated_at >= now() - make_interval(days => $2)
-		   and (not $3 or external_source is null)`,
+		select count(*) from cards c
+		 where c.board_id = $1 and c.outcome = 'discarded'
+		   and c.updated_at >= now() - make_interval(days => $2)
+		   and (not $3 or c.external_source is null)
+		   and not `+board.IsItem("c"),
 		boardID, days, lived).Scan(&out.Discarded); err != nil {
 		return err
 	}
@@ -225,15 +231,16 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 	// Точки той же выборки, что и процентили: разойтись им негде,
 	// потому что условие одно и то же.
 	rows, err := tx.Query(ctx, `
-		select id, title, to_char(finished_at, 'YYYY-MM-DD'),
-		       extract(epoch from (finished_at - started_at)) / 86400.0,
-		       external_source is not null
-		  from cards
-		 where board_id = $1 and outcome = 'done'
-		   and started_at is not null and finished_at is not null
-		   and finished_at >= now() - make_interval(days => $2)
-		   and (not $3 or external_source is null)
-		 order by finished_at`, boardID, days, lived)
+		select c.id, c.title, to_char(c.finished_at, 'YYYY-MM-DD'),
+		       extract(epoch from (c.finished_at - c.started_at)) / 86400.0,
+		       c.external_source is not null
+		  from cards c
+		 where c.board_id = $1 and c.outcome = 'done'
+		   and c.started_at is not null and c.finished_at is not null
+		   and c.finished_at >= now() - make_interval(days => $2)
+		   and (not $3 or c.external_source is null)
+		   and not `+board.IsItem("c")+`
+		 order by c.finished_at`, boardID, days, lived)
 	if err != nil {
 		return err
 	}
@@ -265,6 +272,7 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 		    on c.board_id = $1
 		   and date_trunc('week', c.finished_at) = w.week
 		   and (not $3 or c.external_source is null)
+		   and not `+board.IsItem("c")+`
 		 group by w.week
 		 order by w.week`, boardID, days, lived)
 	if err != nil {
@@ -293,6 +301,7 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, lived bo
 		 where c.board_id = $1 and c.archived_at is null
 		   and c.started_at is not null and c.finished_at is null
 		   and (not $2 or c.external_source is null)
+		   and not `+board.IsItem("c")+`
 		 order by c.started_at`, boardID, lived)
 	if err != nil {
 		return err
@@ -317,10 +326,11 @@ func (s *Service) aging(ctx context.Context, tx pgx.Tx, boardID string, lived bo
 // «посчитано без 40 перенесённых» говорит, сколько отброшено.
 func (s *Service) imported(ctx context.Context, tx pgx.Tx, boardID string, days int, out *Report) error {
 	return tx.QueryRow(ctx, `
-		select count(*) from cards
-		 where board_id = $1 and external_source is not null
-		   and (finished_at >= now() - make_interval(days => $2)
-		        or (archived_at is null and started_at is not null and finished_at is null))`,
+		select count(*) from cards c
+		 where c.board_id = $1 and c.external_source is not null
+		   and (c.finished_at >= now() - make_interval(days => $2)
+		        or (c.archived_at is null and c.started_at is not null and c.finished_at is null))
+		   and not `+board.IsItem("c"),
 		boardID, days).Scan(&out.Imported)
 }
 
@@ -350,6 +360,7 @@ func (s *Service) flow(ctx context.Context, tx pgx.Tx, boardID string, days int,
 		  from days d
 		  left join cards c on c.board_id = $1 and c.archived_at is null
 		                   and (not $3 or c.external_source is null)
+		                   and not `+board.IsItem("c")+`
 		 group by d.day
 		 order by d.day`, boardID, days, lived)
 	if err != nil {

@@ -215,19 +215,15 @@ function tree() {
 const lanes = (groups: ReturnType<typeof groupsOf>) =>
   Object.fromEntries(groups.map((g) => [g.id, g.order[COL]]))
 
-test('по родителю: дорожка у каждого родителя, и сам родитель в ней не повторяется', () => {
+test('по родителю: дорожка — родитель с другой доски; свои подзадачи едут с родителем', () => {
   const base = tree()
-  const groups = groupsOf(base, base.order, 'parent')
-  const by = lanes(groups)
-  assert.deepEqual(by['фича'], ['задача-1', 'задача-2'])
-  assert.deepEqual(by['эпик'], ['фича'])
+  const by = lanes(groupsOf(base, base.order, 'parent'))
+  // Подзадачи этой доски — пункты своих родителей: дорожки у родителя
+  // с этой доски нет, они в дорожке его верхнего предка.
+  assert.deepEqual(by['none'], ['эпик', 'фича', 'задача-1', 'задача-2', 'сама-по-себе'])
   assert.deepEqual(by['чужая-фича'], ['задача-3'])
-  assert.deepEqual(by['none'], ['эпик', 'сама-по-себе'])
-  const epic = groups.find((g) => g.id === 'эпик')!
-  assert.equal(epic.title, 'ДОСК-эпик Переезд склада')
-  assert.equal(epic.cardId, 'эпик')
-  // Одна полоса — по листьям всего поддерева (этап 33.4).
-  assert.equal(epic.note, 'готово 1 из 4')
+  assert.equal(by['фича'], undefined)
+  assert.equal(by['эпик'], undefined)
 })
 
 test('родитель с чужой доски — дорожка есть, и сказано, чья это доска', () => {
@@ -257,7 +253,7 @@ test('«Без родителя» держится и пустой — там т
   const groups = groupsOf(base, base.order, 'parent')
   assert.deepEqual(
     groups.map((g) => [g.id, g.count]),
-    [['a', 1], ['none', 0]],
+    [['none', 1]],
   )
 })
 

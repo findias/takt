@@ -567,7 +567,6 @@ export const en: typeof ru = {
     noEpic: 'No epic',
     unknownParent: 'Unavailable card',
     parentOnBoard: (board: string) => `on the “${board}” board`,
-    parentProgress: (progress: string) => `${progress} done`,
   },
   parts: {
     bulkActions: 'Actions on selected cards',
@@ -724,8 +723,6 @@ export const en: typeof ru = {
     expand: (name: string) => `Expand “${name}”`,
     collapse: (name: string) => `Collapse “${name}”`,
     moreCards: (n: number) => `${n} more: scroll to show them`,
-    onlyParts: (n: number) =>
-      `Only parts of tasks are here — they are shown inside their tasks. In the column: ${n}.`,
     filteredOut: (n: number) => `Nothing matches the filter: ${n} hidden. “Show all” brings them back.`,
     emptyLane:
       'Empty: nothing in this lane of the column. A card changes lane by a field, not by moving.',

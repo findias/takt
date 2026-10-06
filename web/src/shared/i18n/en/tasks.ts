@@ -32,6 +32,7 @@ export const tasks: typeof ru = {
     days: (n: number) => `${n} d`,
     blocked: 'blocked',
     done: 'finished',
+    itemOf: (parent: string) => `item of ${parent}`,
     empty: 'No tasks on the boards you can see.',
     loadFailed: 'Could not load the tasks',
     hint: 'Cards where the person is an assignee, on every board you can see. Private boards you have no access to are not here.',
