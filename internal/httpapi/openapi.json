@@ -118,7 +118,7 @@
               "type": "object",
               "required": ["kind", "ref"],
               "properties": {
-                "kind": { "type": "string", "enum": ["rds", "zno", "zni", "problem"] },
+                "kind": { "type": "string", "enum": ["external", "rds", "zno", "zni", "problem"] },
                 "ref": { "type": "string", "description": "Номер или адрес заявки, как его вписали." }
               }
             }

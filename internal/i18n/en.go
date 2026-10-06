@@ -276,11 +276,11 @@ var en = map[string]string{
 
 	// --- Ссылки на заявки ---
 	"нужна карточка": "a card is required",
-	"неизвестный вид ссылки %s: бывают rds, zno, zni, problem":  "unknown reference kind %s: use rds, zno, zni or problem",
-	"впишите номер заявки или её адрес":                         "enter the ticket number or its address",
-	"ссылка длиннее 500 знаков — похоже, вставлен не тот текст": "the reference is longer than 500 characters — it looks like the wrong text was pasted",
-	"эта заявка уже есть на карточке":                           "this ticket is already on the card",
-	"нужны карточка и ссылка":                                   "a card and a reference are required",
+	"неизвестный вид ссылки %s: бывают external, rds, zno, zni, problem": "unknown reference kind %s: use external, rds, zno, zni or problem",
+	"впишите номер заявки или её адрес":                                  "enter the ticket number or its address",
+	"ссылка длиннее 500 знаков — похоже, вставлен не тот текст":          "the reference is longer than 500 characters — it looks like the wrong text was pasted",
+	"эта заявка уже есть на карточке":                                    "this ticket is already on the card",
+	"нужны карточка и ссылка":                                            "a card and a reference are required",
 
 	// --- Итерации ---
 	"итерация закрыта":                                 "the iteration is closed",
@@ -574,11 +574,12 @@ var en = map[string]string{
 	"Цикл, 85-я":          "Cycle, 85th",
 	"Без подразделения":   "No subdivision",
 	"Эпик":                "Epic",
-	"Заявки":              "Tickets",
+	"Внешние номера":      "External numbers",
 	"Описание":            "Description",
 	"ЗНО":                 "Service request",
 	"ЗНИ":                 "Change request",
 	"Проблема":            "Problem",
+	"Внешняя задача":      "External task",
 	"Идея":                "Idea",
 	"шаблон доски бывает empty, kanban, scrum или portfolio": "the board template is empty, kanban, scrum or portfolio",
 	"уровень доски бывает team или portfolio":                "the board level is team or portfolio",

@@ -958,7 +958,25 @@ func (f *filler) epic() error {
 		_, err = f.apply(portfolio, "LINK_CARDS", map[string]any{
 			"fromCard": epicID, "toCard": shelving, "kind": "subtask"})
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// Внешние номера (0077): у эпика — номером, у фичи — адресом. Номер
+	// и адрес на карточке доски выглядят по-разному, и без обоих этого
+	// не увидеть. Повторная заливка натыкается на «уже есть» — это не
+	// ошибка, а то, что номер уже стоит.
+	for _, r := range []struct{ boardID, cardID, ref string }{
+		{portfolio, epicID, "PRJ-482"},
+		{postavki, features["Выпустить релиз склада"], "https://tracker.example.test/browse/PRJ-517"},
+	} {
+		_, err := f.apply(r.boardID, "ADD_CARD_REF", map[string]any{
+			"cardId": r.cardID, "kind": "external", "ref": r.ref})
+		var conflict *board.ConflictError
+		if err != nil && !errors.As(err, &conflict) {
+			return fmt.Errorf("внешний номер %s: %w", r.ref, err)
+		}
+	}
+	return nil
 }
 
 func (f *filler) iterations(b board.Info, ids map[string]string) error {

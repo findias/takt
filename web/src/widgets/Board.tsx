@@ -494,7 +494,9 @@ export function Board({
       // и им же ищут — «посмотри ПОСТ-4», — и увидеть, что нашлось
       // именно оно, человек должен глазами.
       hint: `${card.number} · ${base.columns[homeColumn(base, card.id)]?.name ?? ''}`,
-      search: card.description,
+      // Внешний номер ищется наравне с описанием: работу называют
+      // им, придя из другого трекера.
+      search: [card.description, ...(base.cardRefs[card.id] ?? []).map((r) => r.ref)].join(' '),
       icon: <OpenIcon />,
       run: () => {
         setShowFlow(false)
@@ -1135,6 +1137,7 @@ export function Board({
         labels={base.labels}
         boardId={boardId}
         cardLabels={base.cardLabels}
+        cardRefs={base.cardRefs}
         cardAssignees={base.cardAssignees}
         parents={parents}
         iterations={cardIterationNames}

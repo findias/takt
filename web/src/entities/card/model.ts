@@ -393,6 +393,24 @@ export function priorityLabel(priority: Priority): string {
 /** Название вида заявки. Неизвестный вид — как есть, по той же
  *  причине, что и у приоритета: разошедшиеся клиент и сервер не должны
  *  ронять строку. */
+/**
+ * Как внешний номер читается на карточке доски. Номер — как дали.
+ * Адрес — последним куском пути: «…/browse/PRJ-517» на карточке
+ * шириной в колонку был бы одним «https://tracker.ex…», а номер
+ * в конце адреса и есть то, по чему работу называют. Полный адрес —
+ * в подсказке и по нажатию.
+ */
+export function externalRefLabel(ref: string): string {
+  if (!/^https?:\/\//i.test(ref)) return ref
+  try {
+    const url = new URL(ref)
+    const tail = url.pathname.split('/').filter(Boolean).pop()
+    return tail ? decodeURIComponent(tail) : url.host
+  } catch {
+    return ref
+  }
+}
+
 export function refKindName(kind: unknown): string {
   if (typeof kind !== 'string') return ''
   return (t.panel.refKinds as Record<string, string>)[kind] ?? kind

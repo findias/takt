@@ -402,10 +402,27 @@ board and opens it there. A parent on a board you cannot see is named
 than it is; its name and board stay closed. A path longer than three
 links folds its middle into "…", and the whole chain is in the tooltip.
 
+### Give a card its number from another tracker
+
+When the same work is also registered in another tracker — an epic,
+say, that gets its own number there — write that number on the card:
+
+1. Open the card, **Tasks** tab.
+2. Under **External numbers**, pick **External task** and type the
+   number or paste the address.
+3. Press **Add**.
+
+The number then shows on the card on the board, in its second line: a
+number as it is, an address by its last part (`PRJ-517` for
+`…/browse/PRJ-517`), which opens the other tracker in a new tab. The
+full value is in the tooltip; when there are several, the card shows
+the first and «+1». **Ctrl K** finds the card by this number too. Any
+card can have one — an epic, a team's task, a subtask.
+
 ### Tie a card to service-desk tickets
 
 1. Open the card, **Tasks** tab.
-2. Under **Tickets**, pick the kind — **RDS**, **Service request**,
+2. Under **External numbers**, pick the kind — **RDS**, **Service request**,
    **Change request** or **Problem** — and type the ticket number or
    paste its address.
 3. Press **Add**.
@@ -414,7 +431,7 @@ A card holds as many tickets as it needs: work often answers three
 service requests and ships with one change request. The list is
 ordered by kind; an address opens in a new browser tab, a number stays
 text. **Remove** takes a ticket off. Both show on the card's
-**History** tab. Below the tickets, **Tasks** holds the parent, the
+**History** tab. Below the numbers, **Tasks** holds the parent, the
 subtasks and the links to other cards.
 
 <a id="archive"></a>
@@ -702,8 +719,9 @@ Below the selection you see how many cards match. Then download:
   and age (median and 85th percentile), throughput by week and a
   cumulative flow diagram — both with charts — iteration completion and
   a breakdown by subdivision. The **Data** sheet has one row per card
-  with every field, ready for pivot tables: among them **Tickets** — the
-  card's RDS, service requests, change requests and problems in one
+  with every field, ready for pivot tables: among them **External
+  numbers** — the card's external task numbers, RDS, service requests,
+  change requests and problems in one
   cell, `RDS 12345; Problem PRB-7` — and, last, the whole
   **Description**. Everything on the summary is counted from those
   same rows.

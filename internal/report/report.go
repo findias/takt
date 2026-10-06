@@ -159,7 +159,7 @@ type Row struct {
 	Description string `json:"description"`
 }
 
-// Ref — одна заявка карточки: вид (rds, zno, zni, problem) и номер
+// Ref — одна заявка карточки: вид (external, rds, zno, zni, problem) и номер
 // или адрес, как его вписали.
 type Ref struct {
 	Kind string `json:"kind"`

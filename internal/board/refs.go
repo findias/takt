@@ -22,11 +22,16 @@ const (
 	RefZNO     = "zno"
 	RefZNI     = "zni"
 	RefProblem = "problem"
+	// RefExternal — номер этой же работы в другом трекере (0077).
+	// Не заявка, а сама работа под другим номером, поэтому первой
+	// в списке и видна на карточке доски.
+	RefExternal = "external"
 )
 
-// RefKinds — виды в том порядке, в каком их показывают: от запроса
-// к изменению и проблеме.
-var RefKinds = []string{RefRDS, RefZNO, RefZNI, RefProblem}
+// RefKinds — виды в том порядке, в каком их показывают: сначала
+// внешний номер самой работы, затем заявки — от запроса к изменению
+// и проблеме.
+var RefKinds = []string{RefExternal, RefRDS, RefZNO, RefZNI, RefProblem}
 
 // refLimit — длина ссылки. Адрес заявки с параметрами бывает длинным,
 // но пятьсот знаков — уже не ссылка, а вставленный по ошибке текст.
@@ -55,7 +60,7 @@ func addCardRef(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		return Patch{}, badRequestf("нужна карточка")
 	}
 	if !validRefKind(p.Kind) {
-		return Patch{}, badRequestf("неизвестный вид ссылки %q: бывают rds, zno, zni, problem", p.Kind)
+		return Patch{}, badRequestf("неизвестный вид ссылки %q: бывают external, rds, zno, zni, problem", p.Kind)
 	}
 	if p.Ref == "" {
 		return Patch{}, badRequestf("впишите номер заявки или её адрес")

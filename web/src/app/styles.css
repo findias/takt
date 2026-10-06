@@ -5547,6 +5547,26 @@ span.tree-toggle {
 .team-share--stuck {
   color: var(--warn);
 }
+/* Внешний номер — машинное обозначение, как ключ доски: моноширинный
+   и тихий, чтобы не спорить с названием. Выделяется мышью — его
+   копируют в другой трекер. Адрес — ссылка, но в цвет номера: синяя
+   ссылка в каждой карточке перетянула бы взгляд с работы на номер. */
+.card-external {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  user-select: text;
+}
+a.card-external {
+  text-decoration: underline dotted;
+}
+a.card-external:hover {
+  color: var(--ink);
+}
 .card-epic {
   max-width: 12rem;
   overflow: hidden;

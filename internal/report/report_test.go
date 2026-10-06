@@ -482,8 +482,8 @@ func TestExportCarriesTicketsAndDescription(t *testing.T) {
 		}
 		return table.Rows[0][i]
 	}
-	if got := cell("Заявки"); got != "RDS 12345; Проблема PRB-7" {
-		t.Errorf("столбец «Заявки»: %q", got)
+	if got := cell("Внешние номера"); got != "RDS 12345; Проблема PRB-7" {
+		t.Errorf("столбец «Внешние номера»: %q", got)
 	}
 	if got := cell("Описание"); !strings.HasPrefix(got, "Шлюз меняется до 15 октября.") {
 		t.Errorf("столбец «Описание»: %q", got)

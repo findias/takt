@@ -20,13 +20,15 @@ func TestRefsAreAddedListedAndRemoved(t *testing.T) {
 		{RefZNI, "https://sm.example.test/changes/771"},
 		{RefProblem, "PRB-12"},
 		{RefRDS, "RDS-3"},
+		// Внешний номер (0077) — тем же списком: другой трекер, та же ссылка.
+		{RefExternal, "PRJ-482"},
 	} {
 		f.mustApply("ADD_CARD_REF", map[string]any{"cardId": card, "kind": r.kind, "ref": r.ref})
 	}
 
 	refs := f.snapshot().CardRefs[card]
-	if len(refs) != 5 {
-		t.Fatalf("ссылок %d, ожидалось 5: %+v", len(refs), refs)
+	if len(refs) != 6 {
+		t.Fatalf("ссылок %d, ожидалось 6: %+v", len(refs), refs)
 	}
 	// Порядок — порядок появления, пробелы по краям срезаны.
 	if refs[1].Kind != RefZNO || refs[1].Ref != "ЗНО-10517" {
@@ -36,8 +38,8 @@ func TestRefsAreAddedListedAndRemoved(t *testing.T) {
 	f.mustApply("REMOVE_CARD_REF", map[string]any{"cardId": card, "refId": refs[0].ID})
 	// Повтор — не ошибка: ссылки уже нет, и этого и хотели.
 	f.mustApply("REMOVE_CARD_REF", map[string]any{"cardId": card, "refId": refs[0].ID})
-	if got := len(f.snapshot().CardRefs[card]); got != 4 {
-		t.Errorf("после снятия ссылок %d, ожидалось 4", got)
+	if got := len(f.snapshot().CardRefs[card]); got != 5 {
+		t.Errorf("после снятия ссылок %d, ожидалось 5", got)
 	}
 
 	// И добавление, и снятие видны в истории — с тем, что именно было.
@@ -48,8 +50,8 @@ func TestRefsAreAddedListedAndRemoved(t *testing.T) {
 			       count(*) filter (where type = 'ref_removed' and payload->>'ref' = 'ЗНО-10492')
 			  from card_events where card_id = $1`, card).Scan(&added, &removed)
 	})
-	if added != 5 || removed != 1 {
-		t.Errorf("событий: добавлено %d, снято %d; ожидалось 5 и 1", added, removed)
+	if added != 6 || removed != 1 {
+		t.Errorf("событий: добавлено %d, снято %d; ожидалось 6 и 1", added, removed)
 	}
 }
 

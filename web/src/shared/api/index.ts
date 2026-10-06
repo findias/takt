@@ -802,10 +802,12 @@ export type CardField = {
 
 export type FieldValue = { fieldId: string; value: string | number | boolean }
 
-/** Вид заявки внешней системы. Перечень закрыт — его держит база. */
-export type RefKind = 'rds' | 'zno' | 'zni' | 'problem'
+/** Вид ссылки на внешнюю систему. Перечень закрыт — его держит база.
+ *  `external` — номер этой же работы в другом трекере (0077), прочие —
+ *  заявки сервис-деска. */
+export type RefKind = 'external' | 'rds' | 'zno' | 'zni' | 'problem'
 
-export const REF_KINDS: RefKind[] = ['rds', 'zno', 'zni', 'problem']
+export const REF_KINDS: RefKind[] = ['external', 'rds', 'zno', 'zni', 'problem']
 
 /** Ссылка карточки на заявку: номер или адрес, как его дали. */
 export type CardRef = { id: string; kind: RefKind; ref: string }

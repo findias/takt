@@ -6,6 +6,7 @@ import { columnAverageAge, daysWords, flowMarks, limitLabel, parseLimitDraft } f
 import type { BaseState } from '../../entities/board/model.ts'
 import type {
   Card,
+  CardRef,
   Column,
   ColumnKind,
   EstimateUnit,
@@ -27,6 +28,7 @@ import { Hint } from '../../shared/ui/Hint.tsx'
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
 const NO_LABELS: string[] = []
+const NO_REFS: CardRef[] = []
 /** По той же причине — общий пустой список исполнителей. */
 const NO_ASSIGNEES: string[] = []
 
@@ -75,6 +77,7 @@ type ColumnProps = {
    *  вовсе, а не «есть, но откажут». */
   canEdit: boolean
   cardLabels: Record<string, string[]>
+  cardRefs: Record<string, CardRef[]>
   /** cardId → родительская задача, если карточка чья-то подзадача. */
   parents: Record<string, { id: string; title: string; onThisBoard: boolean }>
   /** cardId → название его итерации. Названия, а не идентификаторы:
@@ -324,6 +327,7 @@ export function ColumnView(props: ColumnProps) {
             labels={props.labels}
             boardId={props.boardId}
             cardLabels={props.cardLabels[cardId] ?? NO_LABELS}
+            refs={props.cardRefs[cardId] ?? NO_REFS}
             parent={props.parents[cardId]}
             iteration={props.iterations[cardId]}
             iterationLate={props.iterationLate[cardId] ?? false}

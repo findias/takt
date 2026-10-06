@@ -893,8 +893,8 @@ describe('заявки внешних систем на вкладке «Зад�
     show('карточка')
 
     await user.click(await screen.findByRole('tab', { name: 'Задачи' }))
-    await user.selectOptions(screen.getByLabelText('Вид заявки'), 'problem')
-    await user.type(screen.getByLabelText('Номер или адрес заявки'), '  ПРБ-58 ')
+    await user.selectOptions(screen.getByLabelText('Вид номера'), 'problem')
+    await user.type(screen.getByLabelText('Номер или адрес'), '  ПРБ-58 ')
     await user.click(screen.getByRole('button', { name: 'Добавить' }))
 
     await waitFor(() => expect(operation).toHaveBeenCalled())

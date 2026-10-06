@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { blockUntilLabel } from './model.ts'
+import { blockUntilLabel, externalRefLabel } from './model.ts'
 import {
   candidatesForSubtask,
   cardDetails,
@@ -455,4 +455,13 @@ test('сделанная карточка никого не держит, и с�
   assert.equal(waitsFor['6'], undefined, 'сделанная ждёт')
   assert.deepEqual(waitsFor['4']?.map((r) => r.id), ['3'])
   assert.deepEqual(holds['3']?.map((r) => r.id), ['4'])
+})
+
+test('внешний номер на карточке: номер как есть, адрес — хвостом пути', () => {
+  assert.equal(externalRefLabel('PRJ-482'), 'PRJ-482')
+  assert.equal(externalRefLabel('https://tracker.example.test/browse/PRJ-517'), 'PRJ-517')
+  assert.equal(externalRefLabel('https://tracker.example.test/browse/PRJ-517/'), 'PRJ-517')
+  // Пути нет — остаётся хотя бы чья это система.
+  assert.equal(externalRefLabel('https://tracker.example.test'), 'tracker.example.test')
+  assert.equal(externalRefLabel('https://tracker.example.test/task/%D0%97-1'), 'З-1')
 })

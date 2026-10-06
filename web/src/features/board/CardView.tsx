@@ -23,11 +23,11 @@ import {
   progressRatio,
   directPartsLabel,
   deepStuckLabel,
-  unitLabel, epicTone } from '../../entities/card/model.ts'
+  unitLabel, epicTone, externalRefLabel } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
 import { labelTitle, chipClass } from '../../entities/label/model.ts'
 import { LabelPickerButton } from './LabelPicker.tsx'
-import type { BoardLabel, Card, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
+import type { BoardLabel, Card, CardRef, Column, EstimateUnit, Priority } from '../../shared/api/index.ts'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
@@ -85,6 +85,10 @@ type CardProps = {
   labels: BoardLabel[]
   boardId: string
   cardLabels: string[]
+  /** Ссылки карточки. На карточке видны только внешние номера: по ним
+   *  работу называют в другом трекере, и открывать ради них панель
+   *  незачем. Заявки сервис-деска остаются в панели. */
+  refs: CardRef[]
   /** Родительская задача, если карточка — чья-то подзадача. */
   parent?: { id: string; title: string; onThisBoard: boolean }
   /** Итерация, к которой карточка отнесена сейчас. Название, а не
@@ -154,6 +158,7 @@ function CardViewInner({
   labels,
   boardId,
   cardLabels,
+  refs,
   parent,
   iteration,
   iterationLate,
@@ -335,6 +340,7 @@ function CardViewInner({
   // порядке. Считается из своих подзадач, а не из снимка доски:
   // частей у карточки единицы, а знание о снимке сломало бы memo.
   const subtaskAssignees = [...new Set(subtasks.flatMap((s) => s.assignees))]
+  const external = refs.filter((r) => r.kind === 'external')
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     // Клавиши карточки работают, только когда выделена сама карточка.
@@ -500,6 +506,10 @@ function CardViewInner({
               Строка есть всегда: исполнители и меню стоят в ней справа,
               и появление «…» по наведению не меняет высоту карточки. */}
           <div className="card-line">
+            {/* Внешний номер — первым: это второе имя самой работы, его
+                называют вслух («что там с PRJ-482»). Один на карточке,
+                прочие — в подсказке: бюджет полей карточки жёсткий. */}
+            {external.length > 0 && <ExternalRef refs={external} />}
             {/* Метка эпика (этап 33.3): цвет из эпика, одинаковый у всех его
                 задач, название обрезается, полное — в подсказке. Нажатие
                 отбирает доску по эпику: «что ещё идёт ради него». */}
@@ -1112,5 +1122,34 @@ function LabelChips({ labels }: { labels: BoardLabel[] }) {
         </span>
       )}
     </>
+  )
+}
+
+/** Внешний номер на карточке доски. Адрес открывается в новой вкладке
+ *  и не открывает карточку: нажатие по нему — переход в другой трекер. */
+function ExternalRef({ refs }: { refs: CardRef[] }) {
+  const first = refs[0].ref
+  const all = t.cardView.externalOf(refs.map((r) => r.ref).join(', '))
+  const label = externalRefLabel(first) + (refs.length > 1 ? ` +${refs.length - 1}` : '')
+  if (/^https?:\/\//i.test(first)) {
+    return (
+      <a
+        className="card-external"
+        href={first}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={all}
+        aria-label={all}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {label}
+      </a>
+    )
+  }
+  return (
+    <span className="card-external" title={all}>
+      <span className="sr-only">{all}</span>
+      <span aria-hidden="true">{label}</span>
+    </span>
   )
 }
