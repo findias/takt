@@ -52,6 +52,14 @@ RUN set -eu; \
     if command -v apk >/dev/null 2>&1; then \
       apk upgrade --no-cache; \
       apk add --no-cache ca-certificates tzdata; \
+    # Debian-подобным ставить нечего, но исправления нужны и им: в тот же
+    # день debian:12-slim нёс perl-base deb12u3 с тремя CRITICAL, а u4
+    # уже был в репозитории, и выпуск v0.4.0 остался без образа debian.
+    # Списки пакетов удаляются в том же слое — иначе они едут в образе.
+    elif command -v apt-get >/dev/null 2>&1; then \
+      apt-get update; \
+      DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends; \
+      rm -rf /var/lib/apt/lists/*; \
     fi; \
     # Пользователь: busybox adduser и shadow useradd — разные команды
     # с несовместимыми ключами, и есть они в разных системах.

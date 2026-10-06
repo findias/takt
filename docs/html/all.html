@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.1-12-g51ab493-dirty.</p>
+<p>Every section in one file. Version v0.4.0-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1758,6 +1758,9 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-4-1-6-october-2026">v0.4.1 — 6 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>The debian image is back.</strong> v0.4.0 was published without <code>:v0.4.0-debian</code>: the <code>debian:12-slim</code> base still carried <code>perl-base</code> 5.36.0-7+deb12u3 with three critical and four high advisories, and the image scan stopped it. The image now takes its branch&#39;s fixes while it is built, as the alpine one already did in v0.4.0, and has deb12u4. Nothing else changes against v0.4.0 — no migration, the same binary behaviour; whoever runs the alpine image of v0.4.0 has nothing to do.</p>
 <h2 id="v0-4-0-6-october-2026">v0.4.0 — 6 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>One migration, safe for the running version.</strong> <code>0077</code> widens the allowed kinds of card references by one, <code>external</code>. Nothing else changes in the schema; pods of v0.3.1 keep working on it, read such a reference without a kind name and cannot create one.</p>
@@ -1985,6 +1988,9 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-4-1-6-октября-2026">v0.4.1 — 6 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p><strong>Образ на debian вернулся.</strong> v0.4.0 вышла без <code>:v0.4.0-debian</code>: в основании <code>debian:12-slim</code> ещё лежал <code>perl-base</code> 5.36.0-7+deb12u3 с тремя критическими и четырьмя серьёзными уязвимостями, и разбор образа его остановил. Теперь образ при сборке берёт исправления своей ветки, как образ на alpine уже в v0.4.0, и в нём deb12u4. Больше против v0.4.0 ничего не меняется — ни миграции, ни поведения; тем, у кого образ v0.4.0 на alpine, делать ничего не нужно.</p>
 <h2 id="v0-4-0-6-октября-2026">v0.4.0 — 6 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p><strong>Одна миграция, безопасная для работающей версии.</strong> <code>0077</code> добавляет к видам ссылок карточки ещё один, <code>external</code>. Больше в схеме ничего не меняется; поды v0.3.1 на ней работают, такую ссылку читают без названия вида и завести не могут.</p>

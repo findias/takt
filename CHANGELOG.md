@@ -8,6 +8,18 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.4.1 — 6 October 2026
+
+### For whoever installs and upgrades
+
+**The debian image is back.** v0.4.0 was published without
+`:v0.4.0-debian`: the `debian:12-slim` base still carried `perl-base`
+5.36.0-7+deb12u3 with three critical and four high advisories, and the
+image scan stopped it. The image now takes its branch's fixes while it
+is built, as the alpine one already did in v0.4.0, and has deb12u4.
+Nothing else changes against v0.4.0 — no migration, the same binary
+behaviour; whoever runs the alpine image of v0.4.0 has nothing to do.
+
 ## v0.4.0 — 6 October 2026
 
 ### For whoever installs and upgrades
