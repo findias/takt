@@ -68,7 +68,10 @@ reads the export by column name has to use the new name.
 
 ### Dependencies
 
-`github.com/pb33f/libopenapi` 0.40.1.
+`github.com/pb33f/libopenapi` 0.40.1. In the client's build and test
+tools, `undici` 8.11.2 (through `jsdom`) and `source-map-js` 1.2.2
+(through `vite`), both for advisories rated high; neither ships in the
+binary or the image.
 
 ## v0.3.1 — 28 September 2026
 
