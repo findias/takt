@@ -137,7 +137,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>The demo and the stand open in English</strong>, and the sign-in screen has a «Русский / English» switch on every installation. Customer installations still follow the browser until the person chooses.</li>
 </ul>
 <h3 id="dependencies">Dependencies</h3>
-<p><code>github.com/pb33f/libopenapi</code> 0.40.1. In the client&#39;s build and test tools, <code>undici</code> 8.11.2 (through <code>jsdom</code>) and <code>source-map-js</code> 1.2.2 (through <code>vite</code>), both for advisories rated high; neither ships in the binary or the image.</p>
+<p><code>github.com/pb33f/libopenapi</code> 0.40.1. In the client&#39;s build and test tools, <code>undici</code> 8.11.2 (through <code>jsdom</code>) and <code>source-map-js</code> 1.2.2 (through <code>vite</code>), both for advisories rated high; neither ships in the binary or the image. The alpine image now takes the branch&#39;s security fixes while it is built: <code>alpine:3.21</code> still carried openssl 3.3.7-r1 with two high advisories, the image has 3.3.7-r2.</p>
 <h2 id="v0-3-1-28-september-2026">v0.3.1 — 28 September 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>One migration, safe for the running version.</strong> <code>0076</code> adds a function that tells whether a given person can see a given board, by asking the board&#39;s own visibility policy on their behalf. Nothing else changes in the schema; pods of v0.3.0 keep working on it.</p>
@@ -343,7 +343,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.3.1-11-gf10fa45-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.3.1-12-g51ab493-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

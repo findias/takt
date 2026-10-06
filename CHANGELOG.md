@@ -71,7 +71,9 @@ reads the export by column name has to use the new name.
 `github.com/pb33f/libopenapi` 0.40.1. In the client's build and test
 tools, `undici` 8.11.2 (through `jsdom`) and `source-map-js` 1.2.2
 (through `vite`), both for advisories rated high; neither ships in the
-binary or the image.
+binary or the image. The alpine image now takes the branch's security
+fixes while it is built: `alpine:3.21` still carried openssl 3.3.7-r1
+with two high advisories, the image has 3.3.7-r2.
 
 ## v0.3.1 — 28 September 2026
 
