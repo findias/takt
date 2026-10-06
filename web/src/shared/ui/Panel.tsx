@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEscape } from '../lib/useEscape.ts'
 import { t } from '../i18n/index.ts'
+import { PanelResizer, showPanelWidth } from './PanelResizer.tsx'
+import { usePanelWidth } from './panelWidth.ts'
 
 /**
  * Панель в трёх режимах.
@@ -61,8 +63,17 @@ export function Panel({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const modal = mode !== 'side'
+  const [width, setWidth] = usePanelWidth()
 
   useEscape(onClose)
+
+  // Своя ширина действует, пока боковая панель открыта: закрыли — доска
+  // возвращает себе место по умолчанию, а не держит пустую полосу.
+  useEffect(() => {
+    if (modal) return
+    showPanelWidth(width)
+    return () => showPanelWidth(null)
+  }, [modal, width])
 
   // Фокус запирается только в модальном режиме: в боковой панели доска
   // остаётся рабочей, и запирать его там значило бы отнять её.
@@ -147,7 +158,13 @@ export function Panel({
     </div>
   )
 
-  if (!modal) return <aside className="panel-side">{body}</aside>
+  if (!modal)
+    return (
+      <aside className="panel-side">
+        <PanelResizer width={width} onCommit={setWidth} />
+        {body}
+      </aside>
+    )
 
   return (
     <div className="panel-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

@@ -218,7 +218,7 @@
   /* Ширина боковой панели — одна на три места: сама панель, место,
      которое ей уступает доска, и сдвиг сообщений. Числом в трёх
      местах она разошлась бы при первой правке. */
-  --panel-side-width: min(26rem, 100vw);
+  --panel-side-width: min(var(--panel-side-size, 26rem), 100vw);
   --layer-raised: 2;
   --layer-notice: 10;
   --layer-panel: 20;
@@ -1809,6 +1809,11 @@ select:disabled {
    в экран, и уступить ей нечего — она перекрывает доску, как
    перекрывала. Порог — там, где доске остаётся больше самой панели. */
 @media (min-width: 60rem) {
+  /* Растянутая панель оставляет доске хотя бы колонку: иначе «растянул
+     и потерял доску», а для этого есть режим «Во весь экран». */
+  :root {
+    --panel-side-width: min(var(--panel-side-size, 26rem), 100vw - 20rem);
+  }
   .board-screen:has(.panel-side),
   .tasks-screen:has(.panel-side) {
     padding-inline-end: var(--panel-side-width);
@@ -1825,6 +1830,33 @@ select:disabled {
   right: 0;
   bottom: 0;
   z-index: calc(var(--layer-panel) + 1);
+}
+/* Ручка ширины — на левой кромке панели, половиной наружу, как у
+   колонки: видимая полоса тонкая, зона нажатия — во всю цель. */
+.panel-resizer {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(-0.5 * var(--target));
+  inline-size: var(--target);
+  z-index: var(--layer-raised);
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(50% - 1px);
+  inline-size: 2px;
+  background: transparent;
+}
+.panel-resizer:hover::after,
+.panel-resizer:active::after,
+.panel-resizer:focus-visible::after {
+  background: var(--accent);
+}
+.panel-resizer:focus-visible {
+  outline: none;
 }
 .panel-backdrop {
   position: fixed;
@@ -2848,7 +2880,8 @@ textarea.description {
      «По центру» ничего не меняли — выбор без последствий только
      отнимал место у «Закрыть». Сам выбор сохраняется: на широком
      экране он прежний. */
-  .panel-mode {
+  .panel-mode,
+  .panel-resizer {
     display: none;
   }
   .tabs {
@@ -5359,7 +5392,8 @@ textarea.description {
     border: none;
   }
   /* Управление панели — «Закрыть» и соседи — на бумаге не нужно. */
-  .panel-head .row--tight {
+  .panel-head .row--tight,
+  .panel-resizer {
     display: none;
   }
 

@@ -151,6 +151,7 @@ export const ru = {
     panelFull: 'Во весь экран',
     panelMode: 'Как показывать панель',
     columnWidth: (name: string) => `Ширина колонки «${name}»`,
+    panelWidth: 'Ширина панели',
     fillIn: 'Заполните',
     urlScheme: 'Адрес начинается с http:// или https://',
     emailTypo: 'Похоже, в адресе опечатка: нужен вид имя@домен',

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.1-dirty.</p>
+<p>Every section in one file. Version v0.3.1-2-g2dbd44f-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -265,6 +265,9 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
+<h3 id="make-the-card-panel-wider">Make the card panel wider</h3>
+<p>When a card is open at the side of the board, drag the panel&#39;s left edge to the left. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width. The board always keeps at least one column in view; to give the card the whole screen, choose <strong>Full screen</strong> above the panel.</p>
+<p>The width is remembered in this browser, for you only, and is the same on every board.</p>
 <h3 id="move-a-column">Move a column</h3>
 <p>In the column header press <strong>Markup</strong>, then <strong>← Left</strong> or <strong>Right →</strong> next to <strong>Place</strong>. The cards go with the column, and their history does not change. The new order is the board&#39;s, for everyone. To put a queue in sprint order instead, see <strong>Order by iteration</strong> under <a href="#iterations">iterations</a>.</p>
 <h3 id="columns">Mark up a column and set its limit</h3>
@@ -522,6 +525,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><code>Escape</code></td><td>close a panel, a menu or the palette</td></tr>
 <tr><td><code>F1</code> or <code>?</code></td><td>help on the screen you are on, in a new tab</td></tr>
 <tr><td>Arrows on a column&#39;s edge</td><td>widen or narrow the column; double-click the edge to reset</td></tr>
+<tr><td>Arrows on the card panel&#39;s left edge</td><td>widen or narrow the panel; double-click the edge to reset</td></tr>
 </tbody>
 </table></div>
 <h2 id="filters">Filters</h2>
@@ -565,7 +569,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <p>Actions follow the same rule: green adds something, grey removes something that can be brought back, red cannot be undone and always asks first.</p>
 <h2 id="what-is-remembered-in-the-browser">What is remembered in the browser</h2>
-<p>Theme, density and column widths are personal and stay in the browser where they were set: the board of a colleague does not change, and on another computer you start with the defaults.</p>
+<p>Theme, density, column widths and the card panel&#39;s width are personal and stay in the browser where they were set: the board of a colleague does not change, and on another computer you start with the defaults.</p>
 <p>The browser also remembers when you last opened each board: that is what &#34;changed while you were away&#34; is counted from. The server does not keep it. On another computer, or in a private window, the last day counts.</p>
 <h2 id="groupings">Groupings</h2>
 <p>None, by assignee, by label, by iteration, by priority, by parent, by epic.</p>

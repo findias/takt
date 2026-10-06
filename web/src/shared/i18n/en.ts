@@ -152,6 +152,7 @@ export const en: typeof ru = {
     panelFull: 'Full screen',
     panelMode: 'How to show the panel',
     columnWidth: (name: string) => `Width of column “${name}”`,
+    panelWidth: 'Panel width',
     fillIn: 'Fill this in',
     urlScheme: 'The address starts with http:// or https://',
     emailTypo: 'Looks like a typo in the address: it should look like name@domain',

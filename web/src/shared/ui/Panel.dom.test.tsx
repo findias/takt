@@ -6,7 +6,7 @@
 // вид, что разница только в ширине, — обычный способ получить панель,
 // из которой не выбраться с клавиатуры, и заметить это глазами нельзя.
 
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Panel, usePanelMode } from './Panel.tsx'
@@ -111,5 +111,51 @@ describe('память о режиме', () => {
 
     const second = renderHook(() => usePanelMode())
     expect(second.result.current[0]).toBe('full')
+  })
+})
+
+describe('ширина боковой панели', () => {
+  const size = () => document.documentElement.style.getPropertyValue('--panel-side-size')
+
+  it('у боковой панели есть ручка ширины, у перекрывающей — нет', () => {
+    const side = show('side')
+    const handle = screen.getByRole('separator', { name: 'Ширина панели' })
+    expect(handle.getAttribute('aria-valuenow')).toBe('26')
+    side.unmount()
+    show('center')
+    expect(screen.queryByRole('separator')).toBeNull()
+  })
+
+  it('ручку ведут влево — панель шире; сохраняется на отпускании', () => {
+    const view = show('side')
+    const handle = screen.getByRole('separator', { name: 'Ширина панели' })
+    fireEvent.pointerDown(handle, { clientX: 500, pointerId: 1, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 340, pointerId: 1 })
+    expect(size()).toBe('36rem')
+    expect(localStorage.getItem('panel-side-width')).toBeNull()
+    fireEvent.pointerUp(handle, { clientX: 340, pointerId: 1 })
+    expect(localStorage.getItem('panel-side-width')).toBe('36')
+
+    // Закрыли панель — доска забирает место обратно.
+    view.unmount()
+    expect(size()).toBe('')
+
+    // Открыли снова — ширина та же.
+    show('side')
+    expect(size()).toBe('36rem')
+  })
+
+  it('стрелки двигают шагом, двойной щелчок возвращает исходную', async () => {
+    const user = userEvent.setup()
+    show('side')
+    const handle = screen.getByRole('separator', { name: 'Ширина панели' })
+    handle.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(handle.getAttribute('aria-valuenow')).toBe('28')
+    await user.keyboard('{ArrowRight}{ArrowRight}')
+    expect(handle.getAttribute('aria-valuenow')).toBe('24')
+    await user.dblClick(handle)
+    expect(handle.getAttribute('aria-valuenow')).toBe('26')
+    expect(localStorage.getItem('panel-side-width')).toBeNull()
   })
 })

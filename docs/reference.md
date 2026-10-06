@@ -50,6 +50,7 @@ access stays on the card and can still be removed from it.
 | `Escape` | close a panel, a menu or the palette |
 | `F1` or `?` | help on the screen you are on, in a new tab |
 | Arrows on a column's edge | widen or narrow the column; double-click the edge to reset |
+| Arrows on the card panel's left edge | widen or narrow the panel; double-click the edge to reset |
 
 ## Filters
 
@@ -112,9 +113,9 @@ asks first.
 
 ## What is remembered in the browser
 
-Theme, density and column widths are personal and stay in the browser
-where they were set: the board of a colleague does not change, and on
-another computer you start with the defaults.
+Theme, density, column widths and the card panel's width are personal
+and stay in the browser where they were set: the board of a colleague
+does not change, and on another computer you start with the defaults.
 
 The browser also remembers when you last opened each board: that is
 what "changed while you were away" is counted from. The server does not
