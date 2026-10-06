@@ -203,14 +203,15 @@ board stays as it was.
 
 ### Make the card panel wider
 
-When a card is open at the side of the board, drag the panel's left
-edge to the left. From the keyboard: focus the edge with `Tab` and use
-the arrows. Double-click the edge to return to the usual width. The
-board always keeps at least one column in view; to give the card the
-whole screen, choose **Full screen** above the panel.
+When a card is open at the side of the board or of the **Tasks** list,
+drag the panel's left edge to the left. From the keyboard: focus the
+edge with `Tab` and use the arrows. Double-click the edge to return to
+the usual width. The board or the list always keeps at least 20rem in
+view; to give the card the whole screen, choose **Full screen** above
+the panel.
 
 The width is remembered in this browser, for you only, and is the same
-on every board.
+everywhere.
 
 ### Move a column
 

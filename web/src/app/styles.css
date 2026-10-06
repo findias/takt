@@ -1814,8 +1814,16 @@ select:disabled {
   :root {
     --panel-side-width: min(var(--panel-side-size, 26rem), 100vw - 20rem);
   }
-  .board-screen:has(.panel-side),
-  .tasks-screen:has(.panel-side) {
+  .board-screen:has(.panel-side) {
+    padding-inline-end: var(--panel-side-width);
+  }
+  /* «Задачи» живут в странице предельной ширины, стоящей посередине.
+     Полоса, отнятая у самого экрана, отнималась от этих 64rem, а не
+     от окна: на 1920 таблице доставалось 560px из нужных 786, и столбцы
+     ужимались при пустой половине экрана слева. Отнятая у всего
+     приложения, она сдвигает страницу, а ширину ей оставляет, пока
+     хватает окна. */
+  .app:has(.tasks-screen .panel-side) {
     padding-inline-end: var(--panel-side-width);
   }
   /* Сообщения — у правого края, а их слой выше панели: без сдвига
