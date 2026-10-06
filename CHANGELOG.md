@@ -8,6 +8,68 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.4.0 — 6 October 2026
+
+### For whoever installs and upgrades
+
+**One migration, safe for the running version.** `0077` widens the
+allowed kinds of card references by one, `external`. Nothing else
+changes in the schema; pods of v0.3.1 keep working on it, read such a
+reference without a kind name and cannot create one.
+
+**A subtask on the same board no longer counts as work in a column.**
+A subtask whose parent sits on the same board is now an item of that
+parent, not a card in a column. Hard column limits, column counts,
+«Needs attention» and the flow metrics — cycle time, throughput,
+ageing, the flow chart — no longer count such items; the parent is the
+unit of flow. After the upgrade, columns holding parents with items
+show smaller counts, a hard limit that was full may have room again,
+and throughput for past weeks drops by the items that had been moved
+to the finish. Subtasks on another team's board are unchanged.
+
+**«Tickets» is now «External numbers»** — the section of the card
+panel and the column of the report export (XLSX, CSV). A script that
+reads the export by column name has to use the new name.
+
+### For people using the board
+
+- **A subtask on the same board is an item of its parent.** Tick it
+  when it is done; there is nothing to move. Until now a ticked subtask
+  stayed in «In progress», took room under its limit and could not be
+  dragged out, since the board showed it only inside its parent. When a
+  filter or a swimlane hides the parent, the item stands as a card in
+  the parent's column. On Tasks an item shows its parent's column and
+  number, and a ticked item counts as finished. **By parent** now gives
+  lanes only to parents on other boards —
+  [split work into parts](docs/howto.md#subtasks).
+- **A card carries its number from another tracker.** A new kind of
+  reference, **External task**, takes a number or an address in any
+  other system. It shows on the board card next to the epic, an address
+  by its last part, opening the other tracker in a new tab; **Ctrl K**
+  finds a card by it —
+  [give a card its number](docs/howto.md#external-number).
+- **One line per subtask in the card panel.** Its tick, name, replies
+  and people; **Rename**, **Holds the task up…** and **Remove** moved
+  to a **⋮** menu at the end of the line, and own subtasks are no
+  longer signed «On this board».
+- **The card panel at the side can be made wider** by dragging its
+  left edge, on a board and on Tasks; arrows on the edge work too, and
+  a double-click returns the usual width. The width is remembered in
+  this browser — [make the card panel wider](docs/howto.md#panel-width).
+- **Tasks no longer squeezes its table** when a card is open at the
+  side: the page moves aside and keeps its width while the window
+  allows.
+- **Board columns stand in the middle of a wide screen** when they fit,
+  instead of hugging the left edge. A board grouped into lanes keeps
+  them on the left, so lanes stay lined up.
+- **The demo and the stand open in English**, and the sign-in screen
+  has a «Русский / English» switch on every installation. Customer
+  installations still follow the browser until the person chooses.
+
+### Dependencies
+
+`github.com/pb33f/libopenapi` 0.40.1.
+
 ## v0.3.1 — 28 September 2026
 
 ### For whoever installs and upgrades

@@ -121,6 +121,23 @@ color:var(--ink-3);font-size:.85rem}
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-4-0-6-october-2026">v0.4.0 — 6 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>One migration, safe for the running version.</strong> <code>0077</code> widens the allowed kinds of card references by one, <code>external</code>. Nothing else changes in the schema; pods of v0.3.1 keep working on it, read such a reference without a kind name and cannot create one.</p>
+<p><strong>A subtask on the same board no longer counts as work in a column.</strong> A subtask whose parent sits on the same board is now an item of that parent, not a card in a column. Hard column limits, column counts, «Needs attention» and the flow metrics — cycle time, throughput, ageing, the flow chart — no longer count such items; the parent is the unit of flow. After the upgrade, columns holding parents with items show smaller counts, a hard limit that was full may have room again, and throughput for past weeks drops by the items that had been moved to the finish. Subtasks on another team&#39;s board are unchanged.</p>
+<p><strong>«Tickets» is now «External numbers»</strong> — the section of the card panel and the column of the report export (XLSX, CSV). A script that reads the export by column name has to use the new name.</p>
+<h3 id="for-people-using-the-board">For people using the board</h3>
+<ul>
+<li><strong>A subtask on the same board is an item of its parent.</strong> Tick it when it is done; there is nothing to move. Until now a ticked subtask stayed in «In progress», took room under its limit and could not be dragged out, since the board showed it only inside its parent. When a filter or a swimlane hides the parent, the item stands as a card in the parent&#39;s column. On Tasks an item shows its parent&#39;s column and number, and a ticked item counts as finished. <strong>By parent</strong> now gives lanes only to parents on other boards — <a href="howto.html#subtasks">split work into parts</a>.</li>
+<li><strong>A card carries its number from another tracker.</strong> A new kind of reference, <strong>External task</strong>, takes a number or an address in any other system. It shows on the board card next to the epic, an address by its last part, opening the other tracker in a new tab; <strong>Ctrl K</strong> finds a card by it — <a href="howto.html#external-number">give a card its number</a>.</li>
+<li><strong>One line per subtask in the card panel.</strong> Its tick, name, replies and people; <strong>Rename</strong>, <strong>Holds the task up…</strong> and <strong>Remove</strong> moved to a <strong>⋮</strong> menu at the end of the line, and own subtasks are no longer signed «On this board».</li>
+<li><strong>The card panel at the side can be made wider</strong> by dragging its left edge, on a board and on Tasks; arrows on the edge work too, and a double-click returns the usual width. The width is remembered in this browser — <a href="howto.html#panel-width">make the card panel wider</a>.</li>
+<li><strong>Tasks no longer squeezes its table</strong> when a card is open at the side: the page moves aside and keeps its width while the window allows.</li>
+<li><strong>Board columns stand in the middle of a wide screen</strong> when they fit, instead of hugging the left edge. A board grouped into lanes keeps them on the left, so lanes stay lined up.</li>
+<li><strong>The demo and the stand open in English</strong>, and the sign-in screen has a «Русский / English» switch on every installation. Customer installations still follow the browser until the person chooses.</li>
+</ul>
+<h3 id="dependencies">Dependencies</h3>
+<p><code>github.com/pb33f/libopenapi</code> 0.40.1.</p>
 <h2 id="v0-3-1-28-september-2026">v0.3.1 — 28 September 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>One migration, safe for the running version.</strong> <code>0076</code> adds a function that tells whether a given person can see a given board, by asking the board&#39;s own visibility policy on their behalf. Nothing else changes in the schema; pods of v0.3.0 keep working on it.</p>
@@ -326,7 +343,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.3.1-8-g10f436b-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.3.1-10-g9de88ee-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

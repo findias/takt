@@ -176,7 +176,7 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
-<h3 id="make-the-card-panel-wider">Make the card panel wider</h3>
+<h3 id="panel-width">Make the card panel wider</h3>
 <p>When a card is open at the side of the board or of the <strong>Tasks</strong> list, drag the panel&#39;s left edge to the left. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width. The board or the list always keeps at least 20rem in view; to give the card the whole screen, choose <strong>Full screen</strong> above the panel.</p>
 <p>The width is remembered in this browser, for you only, and is the same everywhere.</p>
 <h3 id="move-a-column">Move a column</h3>
@@ -218,7 +218,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Your email is the name you sign in with. Under <strong>Email</strong>, enter the new address and your password and press <strong>Change</strong>; from then on you sign in with the new address. takt sends no emails, so the new address is not confirmed by a letter. For that reason it does not link a company identity provider sign-in to your account; if your organisation signs in that way, ask the owner to set the address instead. When the email is managed by the identity provider or the company directory, the tab says so, and the address is changed there.</p>
 <p>Under <strong>Password</strong>: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
-<h3 id="split-work-into-parts">Split work into parts</h3>
+<h3 id="subtasks">Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>Tasks</strong> tab.</li>
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
@@ -229,7 +229,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
-<h3 id="give-a-card-its-number-from-another-tracker">Give a card its number from another tracker</h3>
+<h3 id="external-number">Give a card its number from another tracker</h3>
 <p>When the same work is also registered in another tracker — an epic, say, that gets its own number there — write that number on the card:</p>
 <ol>
 <li>Open the card, <strong>Tasks</strong> tab.</li>
@@ -401,7 +401,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.3.1-8-g10f436b-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.3.1-10-g9de88ee-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.1-8-g10f436b-dirty.</p>
+<p>Every section in one file. Version v0.3.1-10-g9de88ee-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -265,7 +265,7 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
 <p>The width is remembered in this browser, for you only: a colleague&#39;s board stays as it was.</p>
-<h3 id="make-the-card-panel-wider">Make the card panel wider</h3>
+<h3 id="panel-width">Make the card panel wider</h3>
 <p>When a card is open at the side of the board or of the <strong>Tasks</strong> list, drag the panel&#39;s left edge to the left. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width. The board or the list always keeps at least 20rem in view; to give the card the whole screen, choose <strong>Full screen</strong> above the panel.</p>
 <p>The width is remembered in this browser, for you only, and is the same everywhere.</p>
 <h3 id="move-a-column">Move a column</h3>
@@ -307,7 +307,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Your email is the name you sign in with. Under <strong>Email</strong>, enter the new address and your password and press <strong>Change</strong>; from then on you sign in with the new address. takt sends no emails, so the new address is not confirmed by a letter. For that reason it does not link a company identity provider sign-in to your account; if your organisation signs in that way, ask the owner to set the address instead. When the email is managed by the identity provider or the company directory, the tab says so, and the address is changed there.</p>
 <p>Under <strong>Password</strong>: the current password, the new one, <strong>Change</strong>. Changing the password signs out every other device; to sign them out without changing it, press <strong>Sign out on all devices</strong>. <strong>Sign out</strong> is at the bottom of the window.</p>
 <p>Someone who signs in through the company identity provider changes the password there, not here.</p>
-<h3 id="split-work-into-parts">Split work into parts</h3>
+<h3 id="subtasks">Split work into parts</h3>
 <ol>
 <li>Open the card, <strong>Tasks</strong> tab.</li>
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
@@ -318,7 +318,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
-<h3 id="give-a-card-its-number-from-another-tracker">Give a card its number from another tracker</h3>
+<h3 id="external-number">Give a card its number from another tracker</h3>
 <p>When the same work is also registered in another tracker — an epic, say, that gets its own number there — write that number on the card:</p>
 <ol>
 <li>Open the card, <strong>Tasks</strong> tab.</li>
@@ -1758,6 +1758,23 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-4-0-6-october-2026">v0.4.0 — 6 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>One migration, safe for the running version.</strong> <code>0077</code> widens the allowed kinds of card references by one, <code>external</code>. Nothing else changes in the schema; pods of v0.3.1 keep working on it, read such a reference without a kind name and cannot create one.</p>
+<p><strong>A subtask on the same board no longer counts as work in a column.</strong> A subtask whose parent sits on the same board is now an item of that parent, not a card in a column. Hard column limits, column counts, «Needs attention» and the flow metrics — cycle time, throughput, ageing, the flow chart — no longer count such items; the parent is the unit of flow. After the upgrade, columns holding parents with items show smaller counts, a hard limit that was full may have room again, and throughput for past weeks drops by the items that had been moved to the finish. Subtasks on another team&#39;s board are unchanged.</p>
+<p><strong>«Tickets» is now «External numbers»</strong> — the section of the card panel and the column of the report export (XLSX, CSV). A script that reads the export by column name has to use the new name.</p>
+<h3 id="for-people-using-the-board">For people using the board</h3>
+<ul>
+<li><strong>A subtask on the same board is an item of its parent.</strong> Tick it when it is done; there is nothing to move. Until now a ticked subtask stayed in «In progress», took room under its limit and could not be dragged out, since the board showed it only inside its parent. When a filter or a swimlane hides the parent, the item stands as a card in the parent&#39;s column. On Tasks an item shows its parent&#39;s column and number, and a ticked item counts as finished. <strong>By parent</strong> now gives lanes only to parents on other boards — <a href="howto.html#subtasks">split work into parts</a>.</li>
+<li><strong>A card carries its number from another tracker.</strong> A new kind of reference, <strong>External task</strong>, takes a number or an address in any other system. It shows on the board card next to the epic, an address by its last part, opening the other tracker in a new tab; <strong>Ctrl K</strong> finds a card by it — <a href="howto.html#external-number">give a card its number</a>.</li>
+<li><strong>One line per subtask in the card panel.</strong> Its tick, name, replies and people; <strong>Rename</strong>, <strong>Holds the task up…</strong> and <strong>Remove</strong> moved to a <strong>⋮</strong> menu at the end of the line, and own subtasks are no longer signed «On this board».</li>
+<li><strong>The card panel at the side can be made wider</strong> by dragging its left edge, on a board and on Tasks; arrows on the edge work too, and a double-click returns the usual width. The width is remembered in this browser — <a href="howto.html#panel-width">make the card panel wider</a>.</li>
+<li><strong>Tasks no longer squeezes its table</strong> when a card is open at the side: the page moves aside and keeps its width while the window allows.</li>
+<li><strong>Board columns stand in the middle of a wide screen</strong> when they fit, instead of hugging the left edge. A board grouped into lanes keeps them on the left, so lanes stay lined up.</li>
+<li><strong>The demo and the stand open in English</strong>, and the sign-in screen has a «Русский / English» switch on every installation. Customer installations still follow the browser until the person chooses.</li>
+</ul>
+<h3 id="dependencies">Dependencies</h3>
+<p><code>github.com/pb33f/libopenapi</code> 0.40.1.</p>
 <h2 id="v0-3-1-28-september-2026">v0.3.1 — 28 September 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>One migration, safe for the running version.</strong> <code>0076</code> adds a function that tells whether a given person can see a given board, by asking the board&#39;s own visibility policy on their behalf. Nothing else changes in the schema; pods of v0.3.0 keep working on it.</p>
@@ -1968,6 +1985,23 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-4-0-6-октября-2026">v0.4.0 — 6 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p><strong>Одна миграция, безопасная для работающей версии.</strong> <code>0077</code> добавляет к видам ссылок карточки ещё один, <code>external</code>. Больше в схеме ничего не меняется; поды v0.3.1 на ней работают, такую ссылку читают без названия вида и завести не могут.</p>
+<p><strong>Подзадача на той же доске больше не считается работой в колонке.</strong> Подзадача, чей родитель лежит на той же доске, теперь пункт этого родителя, а не карточка в колонке. Жёсткие лимиты колонок, счёт колонок, «Требует внимания» и метрики потока — время цикла, пропускная способность, старение, диаграмма потока — такие пункты больше не считают; единица потока — родитель. После обновления у колонок с родителями счёт станет меньше, полный жёсткий лимит может снова пропускать, а пропускная способность прошлых недель уменьшится на пункты, которые доводили до финиша. Подзадачи на досках других команд не меняются.</p>
+<p><strong>«Заявки» теперь «Внешние номера»</strong> — и раздел панели карточки, и столбец выгрузки отчёта (XLSX, CSV). Скрипту, который читает выгрузку по имени столбца, нужно новое имя.</p>
+<h3 id="для-тех-кто-работает-на-доске">Для тех, кто работает на доске</h3>
+<ul>
+<li><strong>Подзадача на той же доске — пункт родителя.</strong> Сделана — поставьте галочку, переносить ничего не нужно. До сих пор отмеченная подзадача оставалась в «В работе», занимала место под лимитом, и вытащить её было нельзя: на доске она показывалась только внутри родителя. Когда отбор или дорожка прячет родителя, пункт стоит карточкой в колонке родителя. На «Задачах» у пункта колонка и номер родителя, а отмеченный пункт считается законченным. <strong>По родителю</strong> теперь заводит дорожки только родителям с других досок — <a href="ru/как.html#subtasks">разбить работу на части</a>.</li>
+<li><strong>Карточка хранит свой номер из другого трекера.</strong> Новый вид ссылки, <strong>«Внешняя задача»</strong>, принимает номер или адрес в любой другой системе. Он виден на карточке доски рядом с эпиком, адрес — последним куском, и открывает другой трекер в новой вкладке; по нему находит <strong>Ctrl K</strong> — <a href="ru/как.html#external-number">записать номер</a>.</li>
+<li><strong>Подзадача в панели карточки — одна строка.</strong> Галочка, название, реплики и кто делает; <strong>«Переименовать»</strong>, <strong>«Держит задачу…»</strong> и <strong>«Убрать»</strong> ушли в меню <strong>⋮</strong> в конце строки, а свои подзадачи больше не подписаны «На этой доске».</li>
+<li><strong>Панель карточки сбоку можно сделать шире</strong>, потянув её левый край, на доске и на «Задачах»; работают и стрелки на краю, двойной щелчок возвращает обычную ширину. Ширина запоминается в этом браузере — <a href="ru/как.html#panel-width">сделать панель шире</a>.</li>
+<li><strong>«Задачи» больше не ужимают таблицу</strong>, когда карточка открыта сбоку: страница сдвигается и сохраняет ширину, пока хватает окна.</li>
+<li><strong>Колонки доски стоят посередине широкого экрана</strong>, когда помещаются, а не жмутся к левому краю. Доска с дорожками оставляет их слева, чтобы дорожки стояли друг под другом.</li>
+<li><strong>Демо и стенд открываются по-английски</strong>, а на экране входа на любой установке есть переключатель «Русский / English». Установки заказчиков по-прежнему следуют браузеру, пока человек не выберет сам.</li>
+</ul>
+<h3 id="зависимости">Зависимости</h3>
+<p><code>github.com/pb33f/libopenapi</code> 0.40.1.</p>
 <h2 id="v0-3-1-28-сентября-2026">v0.3.1 — 28 сентября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p><strong>Одна миграция, безопасная для работающей версии.</strong> <code>0076</code> добавляет функцию, которая отвечает, видит ли названный человек названную доску, спрашивая об этом политику видимости самой доски от его имени. Больше в схеме ничего не меняется; поды v0.3.0 на ней работают.</p>

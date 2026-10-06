@@ -200,6 +200,7 @@ to the usual width.
 The width is remembered in this browser, for you only: a colleague's
 board stays as it was.
 
+<a id="panel-width"></a>
 ### Make the card panel wider
 
 When a card is open at the side of the board or of the **Tasks** list,
@@ -353,6 +354,7 @@ changing it, press **Sign out on all devices**. **Sign out** is at the bottom of
 Someone who signs in through the company identity provider changes the
 password there, not here.
 
+<a id="subtasks"></a>
 ### Split work into parts
 
 1. Open the card, **Tasks** tab.
@@ -402,6 +404,7 @@ board and opens it there. A parent on a board you cannot see is named
 than it is; its name and board stay closed. A path longer than three
 links folds its middle into "…", and the whole chain is in the tooltip.
 
+<a id="external-number"></a>
 ### Give a card its number from another tracker
 
 When the same work is also registered in another tracker — an epic,
