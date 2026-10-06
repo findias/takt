@@ -3231,7 +3231,9 @@ test('подзадача переименовывается из панели р
   await page.getByLabel('Название подзадачи').fill('Черновое название')
   await page.getByRole('button', { name: 'Подзадача' }).click()
 
-  await page.getByRole('button', { name: 'Переименовать «Черновое название»' }).click()
+  // Действия строки — в её меню ⋮ (владелец 06.10.2026: «громоздко»).
+  await page.getByRole('button', { name: 'Действия карточки «Черновое название»' }).click()
+  await page.getByRole('menuitem', { name: 'Переименовать' }).click()
   const field = page.getByRole('textbox', { name: 'Название карточки' })
   await field.fill('Точное название')
   await field.press('Enter')

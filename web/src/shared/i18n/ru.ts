@@ -901,7 +901,7 @@ export const ru = {
     unmarkDone: 'Снять отметку',
     markDone: 'Отметить сделанной',
     doneOf: (title: string) => `Сделана: ${title}`,
-    holds: 'Держит',
+    holds: 'Держит задачу…',
     remove: 'Убрать',
     iterationIs: (name: string) => `Итерация: ${name}`,
     iterationNone: 'не назначена',

@@ -895,7 +895,7 @@ export const en: typeof ru = {
     unmarkDone: 'Remove the mark',
     markDone: 'Mark done',
     doneOf: (title: string) => `Done: ${title}`,
-    holds: 'Holds up',
+    holds: 'Holds the task up…',
     remove: 'Remove',
     iterationIs: (name: string) => `Iteration: ${name}`,
     iterationNone: 'not set',

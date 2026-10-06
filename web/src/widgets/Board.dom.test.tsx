@@ -808,10 +808,11 @@ describe('часть работы держит саму задачу', () => {
     const user = userEvent.setup()
     show('родитель')
 
-    // Части лежат на «Задачах», а причину пишут на «Работе»: нажатие
-    // «Держит» само переводит туда, где форма.
+    // Части лежат на «Задачах», а причину пишут на «Работе»: пункт
+    // «Держит задачу…» в меню части сам переводит туда, где форма.
     await user.click(await screen.findByRole('tab', { name: 'Задачи' }))
-    await user.click(await screen.findByRole('button', { name: 'Держит' }))
+    await user.click(await screen.findByRole('button', { name: 'Действия карточки «Согласовать смету»' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Держит задачу…' }))
     expect(screen.getByRole('tab', { name: 'Работа' }).getAttribute('aria-selected')).toBe('true')
     await user.type(screen.getByLabelText('Причина блокировки'), 'ждём смету от подрядчика')
     await user.click(screen.getByRole('button', { name: 'Заблокировать' }))

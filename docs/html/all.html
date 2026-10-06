@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.3.1-5-ge2c50b3-dirty.</p>
+<p>Every section in one file. Version v0.3.1-7-g5be3fd8-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -313,7 +313,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
 <li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
-<p>To fix a part&#39;s name, press <strong>Rename</strong> next to it in the list; a part on another team&#39;s board is renamed by opening it. Any open card is renamed with the pencil next to its title in the panel.</p>
+<p>Each part is one line: its tick, its name, who does it and how many replies its discussion has. The rest is in the <strong>⋮</strong> menu at the end of the line: <strong>Rename</strong> (a part on another team&#39;s board is renamed by opening it), <strong>Holds the task up…</strong> — the part stops its parent, and you are asked why — and <strong>Remove</strong>, which unlinks the part and leaves it on its board. Any open card is renamed with the pencil next to its title in the panel.</p>
 <p>A part on the same board is an item of its parent: a line in the parent&#39;s card, not a card in a column. Tick it when it is done — that is all it needs. Items take no room under a column&#39;s limit, are not counted in the column, and the flow metrics count the parent, not its items. A part on another team&#39;s board is an ordinary card in their columns, moved by them. Either way the parent card grows a &#34;so many of so many&#34; bar.</p>
 <p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>

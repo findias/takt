@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
-import { PlusIcon } from '../../shared/ui/icons.tsx'
+import { Avatar, AvatarMore, AVATAR_SMALL } from '../../shared/ui/Avatar.tsx'
+import { CommentIcon, EditIcon, MoreIcon, PlusIcon } from '../../shared/ui/icons.tsx'
+import { Menu } from '../../shared/ui/Menu.tsx'
+import type { MenuItem } from '../../shared/ui/Menu.tsx'
 import { LINK_KIND_NAMES, REF_KINDS, request } from '../../shared/api/index.ts'
 import type { BoardInfo, CardRef, LinkKind, RefKind } from '../../shared/api/index.ts'
 import type { BaseState } from '../../entities/board/model.ts'
@@ -123,6 +126,7 @@ export function CardTasks({
           <RelatedRow
             key={s.id}
             related={s}
+            people={base.people}
             canEdit={canEdit}
             onOpen={onOpenCard}
             onRemove={() => onUnlink(card.id, s.id, 'subtask')}
@@ -198,6 +202,7 @@ export function CardTasks({
  */
 function RelatedRow({
   related,
+  people,
   canEdit,
   showKind,
   onOpen,
@@ -207,6 +212,8 @@ function RelatedRow({
   onRename,
 }: {
   related: Related
+  /** userId → имя. Задан — в хвосте строки видно, на ком часть. */
+  people?: Record<string, string>
   canEdit: boolean
   showKind?: boolean
   onOpen?: (cardId: string) => void
@@ -236,8 +243,36 @@ function RelatedRow({
     </>
   )
 
+  // Действия — в меню ⋮, а не словами в строке (владелец 06.10.2026:
+  // «громоздко, много места занимает»): три ссылки «Держит · Переименовать
+  // · Убрать» в каждой строке занимали треть панели и переносили название
+  // на две строки. Строка остаётся тем, что читают: отметка, название,
+  // на ком она и сколько о ней говорили.
+  const actions: MenuItem[] = []
+  if (onHold && related.reachable) {
+    // Слово то же, что на доске у держащей стороны зависимости:
+    // «держит» там и «держит» здесь — про одно и то же.
+    actions.push({ label: t.panel.holds, onSelect: onHold })
+  }
+  if (canEdit && onRename) {
+    actions.push({ label: t.cardView.rename, icon: <EditIcon />, onSelect: () => setRenaming(true) })
+  }
+  if (canEdit && related.reachable) actions.push({ label: t.panel.remove, onSelect: onRemove })
+  // «На этой доске» ничего не сообщает: своя часть и так здесь. Где
+  // лежит — говорится только о чужой, вместе с тем, что с ней у соседей.
+  const where = related.onThisBoard ? '' : related.where
+  const assignees = people ? related.assignees : []
+
   return (
-    <div className={`related${related.reachable ? '' : ' related--hidden'}`}>
+    <div
+      className={[
+        'related',
+        related.reachable ? '' : 'related--hidden',
+        markable && related.done ? 'related--done' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {markable && (
         <button
           type="button"
@@ -282,10 +317,11 @@ function RelatedRow({
         ) : (
           <span>{title}</span>
         )}
-        <span className="muted small">
-          {showKind ? `${LINK_KIND_NAMES[related.kind]} · ` : ''}
-          {related.where}
-        </span>
+        {(showKind || where) && (
+          <span className="muted small">
+            {[showKind ? LINK_KIND_NAMES[related.kind] : '', where].filter(Boolean).join(' · ')}
+          </span>
+        )}
         {/* Вторая строка — только про чужую работу: что с ней сейчас
             и когда её ждать. Своя видна на самой доске. */}
         {(related.stage || related.promise) && (
@@ -294,22 +330,28 @@ function RelatedRow({
           </span>
         )}
       </div>
-      {onHold && related.reachable && (
-        // Слово то же, что на доске у держащей стороны зависимости:
-        // «держит» там и «держит» здесь — про одно и то же.
-        <button className="link" onClick={onHold}>
-          {t.panel.holds}
-        </button>
+      {(related.replies > 0 || assignees.length > 0) && (
+        <span className="subtask-tail">
+          {related.replies > 0 && (
+            <span className="subtask-replies" title={t.board.replies(related.replies)}>
+              <CommentIcon size={12} />
+              {related.replies}
+            </span>
+          )}
+          {assignees.length > 0 && (
+            <span className="avatars" title={assignees.map((id) => people?.[id] ?? t.common.someone).join(', ')}>
+              {assignees.slice(0, 2).map((id) => (
+                <Avatar key={id} name={people?.[id] ?? t.common.someone} size={AVATAR_SMALL} />
+              ))}
+              {assignees.length > 2 && <AvatarMore count={assignees.length - 2} size={AVATAR_SMALL} />}
+            </span>
+          )}
+        </span>
       )}
-      {canEdit && onRename && !renaming && (
-        <button className="link" aria-label={t.panel.renameOf(related.title)} onClick={() => setRenaming(true)}>
-          {t.cardView.rename}
-        </button>
-      )}
-      {canEdit && related.reachable && (
-        <button className="link link--remove" onClick={onRemove}>
-          {t.panel.remove}
-        </button>
+      {actions.length > 0 && !renaming && (
+        <Menu label={t.cardView.actions(related.title)} items={actions}>
+          <MoreIcon />
+        </Menu>
       )}
     </div>
   )

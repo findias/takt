@@ -361,9 +361,13 @@ password there, not here.
 3. Press **Subtask**. To give the part to another team, pick their board
    in the list next to the name first.
 
-To fix a part's name, press **Rename** next to it in the list; a part on
-another team's board is renamed by opening it. Any open card is renamed
-with the pencil next to its title in the panel.
+Each part is one line: its tick, its name, who does it and how many
+replies its discussion has. The rest is in the **⋮** menu at the end
+of the line: **Rename** (a part on another team's board is renamed by
+opening it), **Holds the task up…** — the part stops its parent, and
+you are asked why — and **Remove**, which unlinks the part and leaves
+it on its board. Any open card is renamed with the pencil next to its
+title in the panel.
 
 A part on the same board is an item of its parent: a line in the
 parent's card, not a card in a column. Tick it when it is done — that
