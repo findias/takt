@@ -10,6 +10,25 @@ import {
 import { t } from '../../shared/i18n/index.ts'
 
 /**
+ * Колонки по центру доски сдвигаются, когда одна из них растёт: кромка
+ * уходит вдвое медленнее мыши и выскальзывает из-под указателя. На время
+ * перетаскивания ряд прибивается к месту, где стоит, а на отпускании
+ * возвращается к центру — один раз, а не на каждом движении.
+ */
+function holdRow(column: HTMLElement | null): () => void {
+  const row = column?.parentElement
+  const first = row?.firstElementChild
+  if (!row || !first || getComputedStyle(row).justifyContent === 'normal') return () => {}
+  const pad = first.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft
+  row.style.justifyContent = 'flex-start'
+  row.style.paddingInlineStart = `${pad}px`
+  return () => {
+    row.style.removeProperty('justify-content')
+    row.style.removeProperty('padding-inline-start')
+  }
+}
+
+/**
  * Ручка ширины колонки.
  *
  * Орган управления, а не декоративная полоска: `separator` с именем
@@ -37,7 +56,13 @@ export function ColumnResizer({
   onCommit: (rem: number | null) => void
 }) {
   const current = width ?? COLUMN_WIDTH_DEFAULT
-  const drag = useRef<{ x: number; from: number; now: number; px: number } | null>(null)
+  const drag = useRef<{
+    x: number
+    from: number
+    now: number
+    px: number
+    release: () => void
+  } | null>(null)
 
   const show = (rem: number) =>
     columnRef.current?.style.setProperty('--column-width', `${rem}rem`)
@@ -79,7 +104,13 @@ export function ColumnResizer({
         // Пиксели в rem — по кеглю корня: ширину хранят в rem, чтобы
         // она росла вместе с текстом.
         const px = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-        drag.current = { x: e.clientX, from: current, now: current, px }
+        drag.current = {
+          x: e.clientX,
+          from: current,
+          now: current,
+          px,
+          release: holdRow(columnRef.current),
+        }
         e.currentTarget.setPointerCapture?.(e.pointerId)
       }}
       onPointerMove={(e) => {
@@ -94,6 +125,7 @@ export function ColumnResizer({
         const d = drag.current
         if (!d) return
         drag.current = null
+        d.release()
         e.currentTarget.releasePointerCapture?.(e.pointerId)
         if (d.now !== d.from) onCommit(d.now)
       }}
@@ -101,7 +133,10 @@ export function ColumnResizer({
         // Отменённое перетаскивание возвращает то, что было.
         const d = drag.current
         drag.current = null
-        if (d) show(d.from)
+        if (d) {
+          d.release()
+          show(d.from)
+        }
       }}
     />
   )
