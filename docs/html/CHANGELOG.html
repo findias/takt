@@ -121,6 +121,14 @@ color:var(--ink-3);font-size:.85rem}
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-6-0-23-october-2026">v0.6.0 — 23 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>One migration, safe for the running version.</strong> <code>0080</code> adds two nullable columns: <code>cards.percent</code> and <code>boards.estimate_unit</code>. Pods of v0.5.x keep working on them and ignore both.</p>
+<h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>Each board can estimate in its own unit</strong> — points, hours or days, or as the organisation does (<strong>Flow</strong> → <strong>Estimate</strong>). Estimates are not converted. The export gains an <strong>Estimate unit</strong> column, and the board snapshot carries <code>estimateUnit</code> and <code>ownEstimateUnit</code>; <code>PUT /api/boards/{id}/estimate-unit</code>.</li>
+<li><strong>A completion percentage on every card</strong> — task, part or epic. Counted from the parts until someone sets it by hand with the slider on the <strong>Work</strong> tab; a part&#39;s percentage now counts toward its parent (a part at 40% is 0.4 of a part, no longer 0). New operation <code>SET_CARD_PERCENT</code>, new event <code>card.percent_set</code>.</li>
+</ul>
 <h2 id="v0-5-1-23-october-2026">v0.5.1 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. <code>CREATE_CARD</code> accepts an optional <code>assigneeIds</code>, and the JSON export&#39;s summary gains <code>people</code>; both are additions, older clients are unaffected.</p>
@@ -367,7 +375,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.4.1-7-gd092a6e-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.0-3-g539d74b-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

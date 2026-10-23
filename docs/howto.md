@@ -403,6 +403,18 @@ epic shows "Part blocked" when a task two levels down is stuck. A
 blocked parent does not stop its parts — they are what people carry on
 with.
 
+### Say how far along a card is
+
+Open the card, **Work** tab, **Complete**: drag the slider (steps of
+5%) and let go — the percentage is saved and the card shows it. Until
+someone moves it, it counts itself: from the parts, a part at 40%
+giving its parent 0.4 of a part, and 100 for a card marked done. A
+percentage set by hand overrides the count on that card, for a task, a
+part or an epic alike; **Count automatically** brings the count back.
+It neither moves the card nor marks it done. A card without parts shows
+its percentage on the board only once it is set by hand. The history
+keeps "40% complete".
+
 An open part shows its path to the root above the number: "Move to the
 new warehouse · Platform › Ship the warehouse release". A link on this
 board opens that card here; a link on another board is signed with the
@@ -504,6 +516,12 @@ the filter, the grouping, the cards, the table and the card panel.
 Nothing is deleted, so nothing is asked. To bring them back, press
 **Work in iterations** where the iteration strip used to be, or tick
 the box again — everything returns, reports included.
+
+Each board can estimate in its own unit: in **Flow**, **Estimate** —
+in points, hours or days, or "as in the organisation". One team counts
+points, another hours, and neither has to pretend. Estimates are not
+converted: a three stays a three, only the label changes. The export
+names the unit in a column of its own.
 
 <a id="import"></a>
 ## Moving in

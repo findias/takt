@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.4.1-7-gd092a6e-dirty.</p>
+<p>Every section in one file. Version v0.5.0-3-g539d74b-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -318,6 +318,8 @@ color:var(--ink-3);font-size:.85rem}
 <p>A part on the same board is an item of its parent: a line in the parent&#39;s card, not a card in a column. Tick it when it is done — that is all it needs. Items take no room under a column&#39;s limit, are not counted in the column, and the flow metrics count the parent, not its items. A part on another team&#39;s board is an ordinary card in their columns, moved by them. Either way the parent card grows a &#34;so many of so many&#34; bar.</p>
 <p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
+<h3 id="say-how-far-along-a-card-is">Say how far along a card is</h3>
+<p>Open the card, <strong>Work</strong> tab, <strong>Complete</strong>: drag the slider (steps of 5%) and let go — the percentage is saved and the card shows it. Until someone moves it, it counts itself: from the parts, a part at 40% giving its parent 0.4 of a part, and 100 for a card marked done. A percentage set by hand overrides the count on that card, for a task, a part or an epic alike; <strong>Count automatically</strong> brings the count back. It neither moves the card nor marks it done. A card without parts shows its percentage on the board only once it is set by hand. The history keeps &#34;40% complete&#34;.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
 <h3 id="external-number">Give a card its number from another tracker</h3>
 <p>When the same work is also registered in another tracker — an epic, say, that gets its own number there — write that number on the card:</p>
@@ -349,6 +351,7 @@ color:var(--ink-3);font-size:.85rem}
 </ol>
 <p>To put a queue in sprint order, open <strong>Markup</strong> on the column and press <strong>Order by iteration</strong>: cards of earlier iterations go on top, cards without an iteration to the end, and within one iteration the order stays as it was. It happens once — after that you move cards by hand as before.</p>
 <p>A team that does not work in iterations opens <strong>Flow</strong> and clears <strong>We work in iterations</strong> under <strong>How we work</strong>: iterations disappear from the filter, the grouping, the cards, the table and the card panel. Nothing is deleted, so nothing is asked. To bring them back, press <strong>Work in iterations</strong> where the iteration strip used to be, or tick the box again — everything returns, reports included.</p>
+<p>Each board can estimate in its own unit: in <strong>Flow</strong>, <strong>Estimate</strong> — in points, hours or days, or &#34;as in the organisation&#34;. One team counts points, another hours, and neither has to pretend. Estimates are not converted: a three stays a three, only the label changes. The export names the unit in a column of its own.</p>
 <h2 id="import">Moving in</h2>
 <h3 id="import-tasks-from-a-spreadsheet">Import tasks from a spreadsheet</h3>
 <p>Tasks from an Excel workbook (<code>.xlsx</code>), Google Sheets or another tracker&#39;s CSV export (Jira, YouGile, Kaiten and others can all save one) become cards on a board.</p>
@@ -632,7 +635,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <h2 id="subscription-events">Subscription events</h2>
-<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, file attached, file removed, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
+<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, file attached, file removed, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, completion changed, archived, restored to the board.</p>
 <h2 id="installation-settings">Installation settings</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
@@ -1767,6 +1770,14 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-6-0-23-october-2026">v0.6.0 — 23 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>One migration, safe for the running version.</strong> <code>0080</code> adds two nullable columns: <code>cards.percent</code> and <code>boards.estimate_unit</code>. Pods of v0.5.x keep working on them and ignore both.</p>
+<h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>Each board can estimate in its own unit</strong> — points, hours or days, or as the organisation does (<strong>Flow</strong> → <strong>Estimate</strong>). Estimates are not converted. The export gains an <strong>Estimate unit</strong> column, and the board snapshot carries <code>estimateUnit</code> and <code>ownEstimateUnit</code>; <code>PUT /api/boards/{id}/estimate-unit</code>.</li>
+<li><strong>A completion percentage on every card</strong> — task, part or epic. Counted from the parts until someone sets it by hand with the slider on the <strong>Work</strong> tab; a part&#39;s percentage now counts toward its parent (a part at 40% is 0.4 of a part, no longer 0). New operation <code>SET_CARD_PERCENT</code>, new event <code>card.percent_set</code>.</li>
+</ul>
 <h2 id="v0-5-1-23-october-2026">v0.5.1 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. <code>CREATE_CARD</code> accepts an optional <code>assigneeIds</code>, and the JSON export&#39;s summary gains <code>people</code>; both are additions, older clients are unaffected.</p>
@@ -2018,6 +2029,14 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-6-0-23-октября-2026">v0.6.0 — 23 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p><strong>Одна миграция, безопасная для работающей версии.</strong> <code>0080</code> добавляет две колонки, допускающие пусто: <code>cards.percent</code> и <code>boards.estimate_unit</code>. Поды v0.5.x на них работают и обе не замечают.</p>
+<h3 id="остальное">Остальное</h3>
+<ul>
+<li><strong>У каждой доски может быть своя единица оценки</strong> — очки, часы или дни либо как в организации (<strong>«Поток»</strong> → <strong>«Оценка»</strong>). Оценки не пересчитываются. В выгрузке появился столбец <strong>«Единица оценки»</strong>, в снимке доски — <code>estimateUnit</code> и <code>ownEstimateUnit</code>; <code>PUT /api/boards/{id}/estimate-unit</code>.</li>
+<li><strong>Процент выполнения у любой карточки</strong> — задачи, части, эпика. Считается из частей, пока его не поставили руками ползунком на вкладке <strong>«Работа»</strong>; процент части теперь входит в счёт родителя (часть на 40% — это 0,4 части, а не ноль). Новая операция <code>SET_CARD_PERCENT</code>, новое событие <code>card.percent_set</code>.</li>
+</ul>
 <h2 id="v0-5-1-23-октября-2026">v0.5.1 — 23 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p>Миграций и новых настроек нет. <code>CREATE_CARD</code> принимает необязательный <code>assigneeIds</code>, в сводке JSON-выгрузки появилось <code>people</code>; оба — добавления, старые клиенты их не заметят.</p>

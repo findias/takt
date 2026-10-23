@@ -7,7 +7,7 @@
 // и требует настоящих событий указателя; клавиатурный путь для WCAG
 // важнее, и он наш.
 
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Card, Column, Snapshot } from '../shared/api/index.ts'
@@ -1091,5 +1091,37 @@ describe('новая карточка с исполнителем', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Что нужно сделать?' }), 'Без исполнителя{Enter}')
     await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
     expect(operation.mock.calls[0][3].assigneeIds).toBeUndefined()
+  })
+})
+
+// Процент выполнения руками (ROADMAP 38): ползунок на «Работе» уходит
+// одной операцией, когда его отпустили, а не на каждом шаге.
+describe('процент выполнения', () => {
+  it('ползунок ставит процент одной операцией при отпускании', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    const user = userEvent.setup()
+    show('первая')
+    await user.click(await screen.findByRole('tab', { name: 'Работа' }))
+    const slider = await screen.findByRole('slider', { name: 'Выполнено' })
+    fireEvent.change(slider, { target: { value: '30' } })
+    fireEvent.change(slider, { target: { value: '40' } })
+    expect(operation).not.toHaveBeenCalled()
+    fireEvent.pointerUp(slider)
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('SET_CARD_PERCENT')
+    expect(payload).toMatchObject({ cardId: 'первая', percent: 40 })
+  })
+
+  it('ручной процент можно вернуть счёту', async () => {
+    snapshot.mockResolvedValue(board([{ ...card('первая', COL_A, 'a0'), percent: 60 }]))
+    const user = userEvent.setup()
+    show('первая')
+    await user.click(await screen.findByRole('tab', { name: 'Работа' }))
+    await user.click(await screen.findByRole('button', { name: 'Считать само' }))
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    expect(operation.mock.calls[0][3]).toMatchObject({ cardId: 'первая', percent: null })
+    // На карточке доски ручной процент без частей — полосой с числом.
+    expect(screen.getAllByText('60%').length).toBeGreaterThan(0)
   })
 })

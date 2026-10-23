@@ -94,7 +94,7 @@ const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView
 // упёрлась в порог размера (web/e2e/perf.spec.ts), а панель нужна только
 // открытой карточке. Загрузка начинается, как только доска нарисована,
 // поэтому к первому нажатию на карточку кусок обычно уже на месте.
-const loadCardPanel = () => import('../features/board/CardPanel.tsx')
+const loadCardPanel = withSections(() => import('../features/board/CardPanel.tsx'), 'completion')
 const CardPanel = lazy(() => loadCardPanel().then((m) => ({ default: m.CardPanel })))
 const Flow = lazy(
   withSections(
@@ -136,7 +136,7 @@ export function Board({
   boardId,
   cardId,
   onCard,
-  unit,
+  unit: orgUnit,
   meId,
   isOwner,
   canEdit,
@@ -284,6 +284,9 @@ export function Board({
   }, [])
 
   const { base, order: fullOrder, moveCard: moveCardNow } = board
+  // Единица оценки — доски, а не организации (ROADMAP 38): у команд
+  // она бывает разной. Старый сервер её не присылает — тогда как раньше.
+  const unit = base?.info.estimateUnit ?? orgUnit
 
   // Карточка с незакрытыми подзадачами уходит в «Готово» только спросив
   // (решение владельца 25.09.2026, этап 34, пункт 11). Правило «обратимое
@@ -712,6 +715,7 @@ export function Board({
     renameCard: rename,
     archiveCard: archive,
     estimateCard: estimate,
+    setCardPercent,
     blockCard: block,
     prioritiseCard: prioritise,
     commitCard: commit,
@@ -1200,6 +1204,7 @@ export function Board({
         onClose={() => setOpenCard(null)}
         onDescribe={(id, text) => void board.describeCard(id, text)}
         onEstimate={estimateCard}
+        onPercent={(cardId, percent) => void setCardPercent(cardId, percent)}
         onOpenCard={showCard}
         onAssign={assignCard}
         onLabel={toggleLabel}
@@ -1581,6 +1586,8 @@ export function Board({
           sleProbability={base.info.sleProbability}
           iterationsEnabled={iterationsOn}
           level={base.info.level === 'portfolio' ? 'portfolio' : 'team'}
+          ownUnit={base.info.ownEstimateUnit ?? null}
+          orgUnit={orgUnit}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

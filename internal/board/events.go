@@ -77,6 +77,9 @@ var EventKinds = []string{
 	"iteration_removed",
 	"done",
 	"undone",
+	// Процент выполнения руками (ROADMAP 38): число в событии, null —
+	// вернули счёт самому себе.
+	"percent_set",
 	"archived",
 	"restored",
 }

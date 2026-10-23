@@ -630,10 +630,25 @@ function number(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))
 }
 
-/** Доля выполненного от нуля до единицы — для полоски. */
-export function progressRatio(card: Card): number {
+/**
+ * Процент выполнения (ROADMAP 38): поставленный руками — он и есть;
+ * иначе из частей (поддерево, если есть внуки), иначе 100 у сделанной.
+ * У неначатой работы без частей процента нет — ноль на каждой карточке
+ * доски был бы шумом, а не сведением.
+ */
+export function completion(card: Card): { percent: number; manual: boolean } | null {
+  if (card.percent !== undefined && card.percent !== null) return { percent: card.percent, manual: true }
   const m = measure(card)
-  return m ? m.done / m.total : 0
+  if (m) return { percent: Math.round((m.done / m.total) * 100), manual: false }
+  if (card.doneAt || card.outcome === 'done') return { percent: 100, manual: false }
+  return null
+}
+
+/** Доля выполненного от нуля до единицы — для полоски. Ручной процент
+ *  перекрывает счёт по частям: его ставят, когда счёт врёт. */
+export function progressRatio(card: Card): number {
+  const c = completion(card)
+  return c ? c.percent / 100 : 0
 }
 
 /**

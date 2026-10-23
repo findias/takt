@@ -192,7 +192,7 @@ block deadline changed, block lifted by its deadline, link added,
 link removed, commented on, file attached, file removed, custom field
 filled, custom field cleared,
 added to an iteration, removed from an iteration, work marked done,
-mark removed, archived, restored to the board.
+mark removed, completion changed, archived, restored to the board.
 
 ## Installation settings
 

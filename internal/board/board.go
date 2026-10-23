@@ -76,6 +76,11 @@ type Info struct {
 	// при создании и не меняется: номер карточки хранится целиком, и
 	// смена ключа развела бы на одной доске два разных префикса.
 	Key string `json:"key"`
+	// Единица оценки доски (ROADMAP 38): очки, часы или дни. EstimateUnit —
+	// действующая (своя или организации), OwnEstimateUnit — своя; пусто —
+	// доска берёт единицу организации и сменится вместе с ней.
+	EstimateUnit    string  `json:"estimateUnit"`
+	OwnEstimateUnit *string `json:"ownEstimateUnit"`
 	// Можно ли в доску писать. Спрашивает список досок — из него выбирают,
 	// куда поставить работу соседям, и предлагать доску, которая откажет,
 	// значит обещать невыполнимое.
@@ -108,11 +113,13 @@ type Info struct {
 // boardFields — общий список полей доски, по тем же соображениям, что
 // columnFields и cardFields ниже: список повторяется в нескольких
 // запросах, и разъехавшийся порядок ловится только в рантайме.
-const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled, level`
+const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled, level,
+	estimate_unit, coalesce(estimate_unit, (select o.estimate_unit from orgs o where o.id = org_id))`
 
 func scanBoard(row pgx.Row) (Info, error) {
 	var b Info
-	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level)
+	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level,
+		&b.OwnEstimateUnit, &b.EstimateUnit)
 	return b, err
 }
 
@@ -186,10 +193,13 @@ type Card struct {
 	// не гоняют по доске, — и входит только в прогресс родителя. Поток
 	// считается по FinishedAt и Outcome, и отметка их не подменяет.
 	DoneAt *time.Time `json:"doneAt"`
+	// Percent — процент выполнения, поставленный руками (ROADMAP 38).
+	// Пусто — считается сам: из частей и отметки «сделано».
+	Percent *int `json:"percent"`
 	// Ниже — вычисляемое, в таблице карточек этого нет.
 
-	// Прогресс по подзадачам. Пусто, если подзадач нет: хранить процент
-	// руками — значит завести поле, которое никто не обновляет.
+	// Прогресс по подзадачам. Пусто, если подзадач нет. Ручной процент
+	// части входит в него долей (cardShare); свой ручной — в Percent.
 	Progress *Progress `json:"progress,omitempty"`
 	// Subtree — счёт по всему поддереву; есть только у карточки с внуками.
 	// У остальных прямые части и есть всё поддерево, и второй счёт
@@ -301,6 +311,12 @@ const (
 // все три запроса читают подзадачу под этим именем.
 const cardDone = `(c.outcome = 'done' or c.done_at is not null)`
 
+// cardShare — доля сделанного в одной части глазами родителя (ROADMAP 38):
+// сделанная — целиком, иначе её ручной процент, иначе ноль. Прежде часть
+// считалась либо сделанной, либо нет, и задача из трёх частей на 90%
+// показывала ноль. Псевдоним `c` — то же требование, что у cardDone.
+const cardShare = `(case when ` + cardDone + ` then 1.0 else coalesce(c.percent, 0) / 100.0 end)`
+
 // IsItem — условие «карточка — пункт своего родителя»: подзадача,
 // чей живой родитель лежит на той же доске.
 //
@@ -332,13 +348,13 @@ const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
 	column_entered_at, started_at, finished_at, estimate, outcome, priority,
-	to_char(due_on, 'YYYY-MM-DD'), done_at`
+	to_char(due_on, 'YYYY-MM-DD'), done_at, percent`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn, &c.DoneAt)
+		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn, &c.DoneAt, &c.Percent)
 	return c, err
 }
 
@@ -490,7 +506,8 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var teamID *string
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &writable, &visibility, &teamID, &cards); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
+				&writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
@@ -777,10 +794,10 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	progressRows, err := tx.Query(ctx, `
 		select l.from_card,
 		       count(*)                                   as total,
-		       count(*) filter (where `+cardDone+`)       as done,
+		       sum(`+cardShare+`)::float8                  as done,
 		       count(*) filter (where c.estimate is null) as unestimated,
 		       coalesce(sum(c.estimate), 0)               as weight,
-		       coalesce(sum(c.estimate) filter (where `+cardDone+`), 0) as weight_done
+		       coalesce(sum(c.estimate * `+cardShare+`), 0)::float8 as weight_done
 		  from card_links l
 		  join cards c on c.id = l.to_card and c.archived_at is null
 		 where l.kind = 'subtask'
@@ -793,13 +810,14 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	defer progressRows.Close()
 	for progressRows.Next() {
 		var id string
-		var total, done, unestimated int
+		var total, unestimated int
+		var done float64
 		var weight, weightDone float64
 		if err := progressRows.Scan(&id, &total, &done, &unestimated,
 			&weight, &weightDone); err != nil {
 			return err
 		}
-		p := Progress{Done: float64(done), Total: float64(total)}
+		p := Progress{Done: done, Total: float64(total)}
 		// Вес берётся, только если оценены все подзадачи. Иначе
 		// неоценённая работа молча исчезла бы из знаменателя.
 		if unestimated == 0 && weight > 0 {
@@ -1224,7 +1242,7 @@ func subtrees(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[stri
 		),
 		nodes as (
 			select distinct on (t.root, c.id) t.root, t.depth, c.id, c.title, c.estimate,
-			       `+cardDone+` as done,
+			       `+cardShare+` as share,
 			       not exists (select 1 from card_links k
 			                     join cards kc on kc.id = k.to_card and kc.archived_at is null
 			                    where k.from_card = c.id and k.kind = 'subtask') as leaf,
@@ -1236,10 +1254,10 @@ func subtrees(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[stri
 		)
 		select root,
 		       count(*) filter (where leaf),
-		       count(*) filter (where leaf and done),
+		       coalesce(sum(share) filter (where leaf), 0)::float8,
 		       count(*) filter (where leaf and estimate is null),
 		       coalesce(sum(estimate) filter (where leaf), 0)::float8,
-		       coalesce(sum(estimate) filter (where leaf and done), 0)::float8,
+		       coalesce(sum(estimate * share) filter (where leaf), 0)::float8,
 		       count(*) filter (where blocked and depth > 1),
 		       coalesce((array_agg(title order by depth, title) filter (where blocked and depth > 1))[1], ''),
 		       coalesce((array_agg(blocked_reason order by depth, title) filter (where blocked and depth > 1))[1], '')
@@ -1252,14 +1270,15 @@ func subtrees(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[stri
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		var total, done, unestimated int
+		var total, unestimated int
+		var done float64
 		var weight, weightDone float64
 		var st Subtree
 		if err := rows.Scan(&id, &total, &done, &unestimated, &weight, &weightDone,
 			&st.Stuck, &st.StuckTitle, &st.StuckReason); err != nil {
 			return nil, err
 		}
-		st.Progress = Progress{Done: float64(done), Total: float64(total)}
+		st.Progress = Progress{Done: done, Total: float64(total)}
 		if unestimated == 0 && weight > 0 {
 			st.Progress = Progress{Done: weightDone, Total: weight, ByWeight: true}
 		}

@@ -8,6 +8,27 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.6.0 — 23 October 2026
+
+### For whoever installs and upgrades
+
+**One migration, safe for the running version.** `0080` adds two
+nullable columns: `cards.percent` and `boards.estimate_unit`. Pods of
+v0.5.x keep working on them and ignore both.
+
+### The rest
+
+- **Each board can estimate in its own unit** — points, hours or days,
+  or as the organisation does (**Flow** → **Estimate**). Estimates are
+  not converted. The export gains an **Estimate unit** column, and the
+  board snapshot carries `estimateUnit` and `ownEstimateUnit`;
+  `PUT /api/boards/{id}/estimate-unit`.
+- **A completion percentage on every card** — task, part or epic.
+  Counted from the parts until someone sets it by hand with the slider on
+  the **Work** tab; a part's percentage now counts toward its parent (a
+  part at 40% is 0.4 of a part, no longer 0). New operation
+  `SET_CARD_PERCENT`, new event `card.percent_set`.
+
 ## v0.5.1 — 23 October 2026
 
 ### For whoever installs and upgrades
