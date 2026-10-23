@@ -38,6 +38,10 @@ const BORIS: Principal = {
  *  человеком в тот же браузер вошёл другой. */
 let signedIn: Principal | null = ANNA
 
+/** Метка среды с сервера: обычная установка её не называет, и полосы
+ *  нет; проверка метки включает её сама. */
+let environment: { enabled: boolean; label?: string } | undefined
+
 function reply(body: unknown, status = 200) {
   return Promise.resolve(
     new Response(JSON.stringify(body), {
@@ -60,6 +64,7 @@ function restore(persisted: boolean) {
 
 beforeEach(() => {
   signedIn = ANNA
+  environment = undefined
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
@@ -74,6 +79,7 @@ beforeEach(() => {
           // ведущей к отказу, быть не должно. Здесь установка открытая:
           // проверяется всё остальное, а закрытая — в `Auth.dom.test.tsx`.
           signup: { enabled: true },
+          environment,
         })
       if (!signedIn) return reply({ error: 'сессия истекла, войдите заново' }, 401)
       if (path === '/api/me' || path === '/api/auth/login') return reply(signedIn)
@@ -312,4 +318,33 @@ it('объяснение снимается: на форме новой орга
 
   await screen.findByText(ANNA.name)
   expect(screen.queryByText(/Сессия истекла/)).toBeNull()
+})
+
+it('метка среды стоит полосой на входе и на доске и первой в заголовке вкладки', async () => {
+  environment = { enabled: true, label: 'ИФТ' }
+  signedIn = null
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Вход' })
+  await screen.findByText('Стенд: ИФТ')
+  await waitFor(() => expect(document.title.startsWith('[ИФТ] ')).toBe(true))
+
+  // Вошли — полоса на месте, заголовок раздела идёт за меткой.
+  signedIn = ANNA
+  await userEvent.type(screen.getByLabelText('Почта'), ANNA.email)
+  await userEvent.type(screen.getByLabelText('Пароль'), 'parol12345')
+  await userEvent.click(screen.getByRole('button', { name: 'Войти' }))
+  await screen.findByText(ANNA.orgName)
+  expect(screen.getByText('Стенд: ИФТ')).toBeTruthy()
+  await waitFor(() => expect(document.title).toMatch(/^\[ИФТ\] .+ · Доска$/))
+})
+
+it('без метки среды полосы нет и заголовок без скобок', async () => {
+  // Заголовок у страницы один на все проверки файла: предыдущая могла
+  // оставить в нём метку.
+  document.title = 'Takt'
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  expect(screen.queryByText(/^Стенд: /)).toBeNull()
+  await waitFor(() => expect(document.title).toMatch(/ · Доска$/))
+  expect(document.title.startsWith('[')).toBe(false)
 })

@@ -122,6 +122,7 @@ export const en: typeof ru = {
   },
   ui: {
     appName: 'Takt',
+    environment: (label: string) => `Environment: ${label}`,
     retry: 'Retry',
     closeMessage: 'Close message',
     andMore: (n: number) => `and ${n} more`,

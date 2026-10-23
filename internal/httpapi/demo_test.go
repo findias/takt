@@ -139,3 +139,29 @@ func TestSandboxSpeaksTheChosenLanguageAndEnglishByDefault(t *testing.T) {
 		}
 	}
 }
+
+// Метка среды едет тем же ответом, что способы входа: она нужна на
+// экране входа, до того как кто-то вошёл.
+func TestEnvironmentLabelTravelsWithAuthMethods(t *testing.T) {
+	var methods map[string]struct {
+		Enabled bool
+		Label   string
+	}
+
+	raw := newAPI(t).session().mustDo("GET", "/api/auth/methods", nil, http.StatusOK)
+	if err := json.Unmarshal(raw, &methods); err != nil {
+		t.Fatal(err)
+	}
+	if methods["environment"].Enabled || methods["environment"].Label != "" {
+		t.Errorf("без STAND_LABEL метка среды появилась сама: %+v", methods["environment"])
+	}
+
+	a := newAPIWith(t, func(c *config.Config) { c.StandLabel = "ИФТ" })
+	raw = a.session().mustDo("GET", "/api/auth/methods", nil, http.StatusOK)
+	if err := json.Unmarshal(raw, &methods); err != nil {
+		t.Fatal(err)
+	}
+	if !methods["environment"].Enabled || methods["environment"].Label != "ИФТ" {
+		t.Errorf("метка среды не доехала до экрана входа: %+v", methods["environment"])
+	}
+}

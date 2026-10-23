@@ -121,6 +121,7 @@ export const ru = {
   },
   ui: {
     appName: 'Доска',
+    environment: (label: string) => `Стенд: ${label}`,
     retry: 'Повторить',
     closeMessage: 'Закрыть сообщение',
     andMore: (n: number) => `и ещё ${n}`,

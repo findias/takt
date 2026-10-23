@@ -142,6 +142,7 @@ on installing without internet access, below, covers it.
 | `OIDC_LABEL` | the caption on the sign-in button; unset, it reads `Company account` or, in Russian, `Корпоративный аккаунт`, by the visitor's language |
 | `DEMO` | leave unset: `on` turns the installation into a public demo where anyone creates a sandbox |
 | `STAND` | leave unset: `staging` is for our own test stand of a branch |
+| `STAND_LABEL` | the environment label shown on every screen and in the tab title — `DEV`, `UAT`, `PROD`; up to 16 characters, unset means no label. Set it where several installations differ only by address, so a screenshot of one is not mistaken for another |
 | `YOUGILE_URL` | where import from YouGile goes: unset is the cloud `https://ru.yougile.com`, a boxed YouGile has its own address, `off` switches import over the API off (importing a spreadsheet always works) |
 
 **Migrations are a separate command,** `takt migrate`, not part of

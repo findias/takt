@@ -58,6 +58,8 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       OIDC_ORG: ${OIDC_ORG:-}
       OIDC_LABEL: ${OIDC_LABEL:-}
+      # Метка среды на каждом экране («DEV», «ИФТ»); пусто — метки нет.
+      STAND_LABEL: ${STAND_LABEL:-}
     ports:
       - "${PORT:-8080}:8080"
     depends_on:

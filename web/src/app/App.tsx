@@ -11,6 +11,7 @@ import { Auth } from '../widgets/Auth.tsx'
 import { BoardList } from '../widgets/BoardList.tsx'
 import { Account } from '../features/account/Account.tsx'
 import { StandBar } from '../features/stand/StandBar.tsx'
+import { EnvironmentBar } from '../features/environment/EnvironmentBar.tsx'
 import { HelpButton } from '../shared/ui/HelpButton.tsx'
 import { Mark } from '../shared/ui/Mark.tsx'
 import { Bell } from '../features/notifications/Bell.tsx'
@@ -87,6 +88,7 @@ export function App() {
     // оставлять на странице слова и кнопку, а не белое поле.
     <ErrorBoundary>
       <ToastHost>
+        <EnvironmentBar />
         <StandBar />
         <Offline />
         <Screens />

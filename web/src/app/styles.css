@@ -4916,6 +4916,14 @@ textarea.description {
   font-size: var(--text-sm);
   border-bottom: 1px solid var(--rule);
 }
+/* Метка среды (ROADMAP 36.3): «DEV», «ИФТ». Тон нейтральный и один на
+   все среды — какая из них боевая, знает тот, кто ставит. */
+.stand-bar--env {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 .stand-dialog {
   width: min(40rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);

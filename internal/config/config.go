@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 // Настройки, которых здесь нет и почему.
@@ -62,6 +63,17 @@ type Config struct {
 	// стенд показывает недопринятое, а демо видят клиенты.
 	Stand bool
 
+	// StandLabel — метка среды на каждом экране: «DEV», «ИФТ», «ПРОМ».
+	//
+	// Не то же, что Stand: тот — про ветку до выпуска, эта — про среду,
+	// в которой стоит выпущенный образ. У заказчика таких сред несколько,
+	// и отличаются они только адресом в строке браузера, — снимок с
+	// одной легко выдать за другую. Пусто — метки нет: установке с
+	// одной средой лишнего видеть незачем. Текст свободный и короткий:
+	// какая среда «опасная», знает только тот, кто ставит, поэтому
+	// второй настройки (цвета) нет — одного нейтрального тона хватает.
+	StandLabel string
+
 	// YougileURL — адрес YouGile, откуда переносят доски по API
 	// (ROADMAP 23.3). Облачный по умолчанию; у коробочного YouGile свой.
 	// Запросы идут только сюда: адрес задаёт тот, кто ставит, а не тот,
@@ -115,6 +127,9 @@ const (
 // YougileOff — перенос из YouGile выключен.
 const YougileOff = "off"
 
+// StandLabelMax — предел длины метки среды в знаках.
+const StandLabelMax = 16
+
 func Load() (Config, error) {
 	c := Config{
 		BaseURL:     env("BASE_URL", "http://localhost:8080"),
@@ -124,6 +139,7 @@ func Load() (Config, error) {
 		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
 		Demo:        env("DEMO", "") == "on",
 		Stand:       env("STAND", "") == "staging",
+		StandLabel:  strings.TrimSpace(env("STAND_LABEL", "")),
 		YougileURL:  strings.TrimRight(env("YOUGILE_URL", "https://ru.yougile.com"), "/"),
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
@@ -174,6 +190,15 @@ func Load() (Config, error) {
 	// код, который ещё не принят, под видом демо.
 	if c.Demo && c.Stand {
 		return c, fmt.Errorf("DEMO=on и STAND=staging вместе не бывают: демо показывает принятое, стенд — ветку")
+	}
+
+	// Метка стоит в шапке и в заголовке вкладки — длинная вытеснит
+	// оттуда то, ради чего они есть; перевод строки сломал бы title.
+	if n := utf8.RuneCountInString(c.StandLabel); n > StandLabelMax {
+		return c, fmt.Errorf("STAND_LABEL=%q: метка среды длиннее %d знаков (%d) — нужно короткое слово вроде DEV или ИФТ", c.StandLabel, StandLabelMax, n)
+	}
+	if strings.ContainsAny(c.StandLabel, "\n\r\t") {
+		return c, fmt.Errorf("STAND_LABEL=%q: метка среды — одна строка без переводов", c.StandLabel)
 	}
 
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")

@@ -8,6 +8,19 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.5.0 — 23 October 2026
+
+### For whoever installs and upgrades
+
+**An environment label on every screen.** A new setting, `STAND_LABEL`
+(`standLabel` in the chart), puts a short word — `DEV`, `UAT`, `PROD` —
+in a bar above every screen, the sign-in page included, and first in
+the browser tab title: `[DEV] POST-14 · Takt`. Several installations
+of the same image differ only by their address, and a screenshot of one
+was easily taken for another. Unset, nothing is shown; longer than 16
+characters or more than one line, the server refuses to start and says
+so. No migration.
+
 ## v0.4.1 — 6 October 2026
 
 ### For whoever installs and upgrades

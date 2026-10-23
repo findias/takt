@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.4.0-dirty.</p>
+<p>Every section in one file. Version v0.4.1-1-g18fa6f5-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -881,6 +881,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>OIDC_LABEL</code></td><td>the caption on the sign-in button; unset, it reads <code>Company account</code> or, in Russian, <code>Корпоративный аккаунт</code>, by the visitor&#39;s language</td></tr>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
 <tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
+<tr><td><code>STAND_LABEL</code></td><td>the environment label shown on every screen and in the tab title — <code>DEV</code>, <code>UAT</code>, <code>PROD</code>; up to 16 characters, unset means no label. Set it where several installations differ only by address, so a screenshot of one is not mistaken for another</td></tr>
 <tr><td><code>YOUGILE_URL</code></td><td>where import from YouGile goes: unset is the cloud <code>https://ru.yougile.com</code>, a boxed YouGile has its own address, <code>off</code> switches import over the API off (importing a spreadsheet always works)</td></tr>
 </tbody>
 </table></div>
@@ -1758,6 +1759,9 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-5-0-23-october-2026">v0.5.0 — 23 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so. No migration.</p>
 <h2 id="v0-4-1-6-october-2026">v0.4.1 — 6 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>The debian image is back.</strong> v0.4.0 was published without <code>:v0.4.0-debian</code>: the <code>debian:12-slim</code> base still carried <code>perl-base</code> 5.36.0-7+deb12u3 with three critical and four high advisories, and the image scan stopped it. The image now takes its branch&#39;s fixes while it is built, as the alpine one already did in v0.4.0, and has deb12u4. Nothing else changes against v0.4.0 — no migration, the same binary behaviour; whoever runs the alpine image of v0.4.0 has nothing to do.</p>
@@ -1988,6 +1992,9 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-5-0-23-октября-2026">v0.5.0 — 23 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p><strong>Метка среды на каждом экране.</strong> Новая настройка <code>STAND_LABEL</code> (<code>standLabel</code> в чарте) ставит короткое слово — <code>DEV</code>, <code>ИФТ</code>, <code>ПРОМ</code> — полосой над каждым экраном, включая вход, и первым в заголовке вкладки: <code>[DEV] ПОСТ-14 · Доска</code>. Несколько установок одного образа различаются только адресом, и снимок с одной легко принимали за другую. Не задана — ничего не показывается; длиннее 16 знаков или не в одну строку — сервер не стартует и говорит почему. Миграций нет.</p>
 <h2 id="v0-4-1-6-октября-2026">v0.4.1 — 6 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p><strong>Образ на debian вернулся.</strong> v0.4.0 вышла без <code>:v0.4.0-debian</code>: в основании <code>debian:12-slim</code> ещё лежал <code>perl-base</code> 5.36.0-7+deb12u3 с тремя критическими и четырьмя серьёзными уязвимостями, и разбор образа его остановил. Теперь образ при сборке берёт исправления своей ветки, как образ на alpine уже в v0.4.0, и в нём deb12u4. Больше против v0.4.0 ничего не меняется — ни миграции, ни поведения; тем, у кого образ v0.4.0 на alpine, делать ничего не нужно.</p>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { t } from '../i18n/index.ts'
+import { withEnvironment } from './environment.ts'
 
 
 /**
@@ -23,7 +24,8 @@ export function useDocumentTitle(what: string | null): void {
   useEffect(() => {
     if (!what) return
     const было = document.title
-    document.title = `${what} · ${t.ui.appName}`
+    // Метка среды — впереди, если установка её назвала (ROADMAP 36.3).
+    document.title = withEnvironment(`${what} · ${t.ui.appName}`)
     // Возврат прежнего важен для карточки: закрыли панель — заголовок
     // обязан вернуться к доске, а не остаться на закрытой карточке.
     return () => {

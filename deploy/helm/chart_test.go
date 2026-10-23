@@ -453,6 +453,8 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 		"--set", "demo=true",
 		// Адрес YouGile передаётся, только когда задан: пусто — облачный.
 		"--set", "yougile.url=https://yougile.example.test",
+		// Метка среды тоже передаётся, только когда задана.
+		"--set", "standLabel=DEV",
 		"--set", "signup=closed",
 	)
 	if err != nil {

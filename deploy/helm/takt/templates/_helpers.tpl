@@ -125,6 +125,10 @@ DATABASE_URL
 - name: YOUGILE_URL
   value: {{ . | quote }}
 {{- end }}
+{{- with .Values.standLabel }}
+- name: STAND_LABEL
+  value: {{ . | quote }}
+{{- end }}
 {{- if .Values.oidc.enabled }}
 - name: OIDC_ISSUER
   value: {{ required "нужен oidc.issuer: адрес провайдера входа" .Values.oidc.issuer | quote }}

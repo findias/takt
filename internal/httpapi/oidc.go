@@ -68,6 +68,11 @@ func (s *Server) handleAuthMethods(w http.ResponseWriter, r *http.Request) {
 		"signup": {Enabled: allowed},
 		// Публичное демо: экран входа предлагает «Попробовать».
 		"demo": {Enabled: s.cfg.Demo},
+		// Метка среды («DEV», «ИФТ») — тем же ответом: она нужна на входе,
+		// до того как кто-то вошёл, и отдельная ручка ради одного слова
+		// была бы вторым запросом на каждом открытии. Задана
+		// администратором, поэтому не переводится — как подпись OIDC.
+		"environment": {Enabled: s.cfg.StandLabel != "", Label: s.cfg.StandLabel},
 	})
 }
 
