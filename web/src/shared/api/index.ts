@@ -260,6 +260,30 @@ export type Comment = {
   mentions: string[]
 }
 
+/** Файл, приложенный к карточке (ROADMAP 36.1). Тела в списке нет —
+ *  оно отдаётся по /api/attachments/{id} вложением. */
+export type Attachment = {
+  id: string
+  cardId: string
+  name: string
+  mediaType: string
+  size: number
+  author: string | null
+  authorId: string | null
+  createdAt: string
+  /** Может ли спрашивающий убрать файл: приложивший или владелец. */
+  deletable: boolean
+}
+
+export type Attachments = {
+  attachments: Attachment[]
+  /** Предел одного файла и карточки целиком, байты — задаёт установка. */
+  maxBytes: number
+  cardBytes: number
+  /** Что прикладывается, расширениями — для поля выбора файла. */
+  extensions: string[]
+}
+
 /** Сервисный клиент: доступ к API не от человека. Токен принадлежит
  *  организации — интеграция живёт дольше того, кто её завёл. */
 export type ApiClient = {
@@ -972,11 +996,13 @@ export async function request<T>(
       method,
       // Язык — выбранный в интерфейсе, а не браузера: сервер называет
       // отказы словами, и они обязаны совпасть с языком экрана.
+      // Форма с файлом уходит как есть: тип с границей частей ставит
+      // браузер, и JSON здесь не при чём.
       headers:
-        body === undefined
+        body === undefined || body instanceof FormData
           ? { 'Accept-Language': lang }
           : { 'Content-Type': 'application/json', 'Accept-Language': lang },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
       signal: controller.signal,
       credentials: 'same-origin',
       keepalive,
@@ -1265,6 +1291,14 @@ export const api = {
     request<void>('PATCH', `/api/comments/${commentId}`, { body }),
   deleteComment: (commentId: string) => request<void>('DELETE', `/api/comments/${commentId}`),
   /** Прежние версии текста: «изменено» без них бесполезно. */
+  attachments: (boardId: string, cardId: string) =>
+    request<Attachments>('GET', `/api/boards/${boardId}/cards/${cardId}/attachments`),
+  attach: (boardId: string, cardId: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file, file.name)
+    return request<Attachment>('POST', `/api/boards/${boardId}/cards/${cardId}/attachments`, form)
+  },
+  deleteAttachment: (id: string) => request<void>('DELETE', `/api/attachments/${id}`),
   commentRevisions: (commentId: string) =>
     request<{ revisions: string[] }>('GET', `/api/comments/${commentId}/revisions`),
 

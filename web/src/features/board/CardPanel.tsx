@@ -38,7 +38,7 @@ import type { Related } from '../../entities/card/model.ts'
 import { labelOrigin, chipClass } from '../../entities/label/model.ts'
 import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
-import { locale, t } from '../../shared/i18n/index.ts'
+import { locale, t, withSections } from '../../shared/i18n/index.ts'
 import { Hint } from '../../shared/ui/Hint.tsx'
 import { Skeleton } from '../../shared/ui/states.tsx'
 
@@ -52,6 +52,11 @@ const CardTasks = lazy(() => loadCardTasks().then((m) => ({ default: m.CardTasks
 // первая загрузка доски стоит у порога размера (web/e2e/perf.spec.ts),
 // а у большинства карточек пути нет.
 const CardPath = lazy(() => import('./CardPath.tsx').then((m) => ({ default: m.CardPath })))
+// Файлы — тоже своим куском и со своим разделом каталога: открывают их
+// не на каждой карточке, а первая загрузка у порога размера.
+const Files = lazy(() =>
+  withSections(() => import('./Files.tsx'), 'files')().then((m) => ({ default: m.Files })),
+)
 
 /**
  * Карточка целиком: описание, подзадачи, связи, блокировка.
@@ -76,12 +81,14 @@ const CardPath = lazy(() => import('./CardPath.tsx').then((m) => ({ default: m.C
  * оценку: у поля и метки есть свой путь с доски, а у разговора — нет,
  * его читают только отсюда.
  */
-type TabId = 'talk' | 'work' | 'history' | 'tasks'
+type TabId = 'talk' | 'work' | 'history' | 'tasks' | 'files'
 
 // «Задачи» собирают в одно место всё, с чем эта работа связана: заявки
 // сервис-деска, родителя, подзадачи и связи. Пока они стояли в хвосте
 // «Работы», под метками и полями, до них листали весь свиток.
-const TAB_IDS: TabId[] = ['talk', 'work', 'history', 'tasks']
+// «Файлы» — последними: ими пользуются реже всего, а порядок первых
+// четырёх держат снимки экранов.
+const TAB_IDS: TabId[] = ['talk', 'work', 'history', 'tasks', 'files']
 const tabs = () => TAB_IDS.map((id) => ({ id, label: t.panel[id] }))
 
 /** С чего открывается карточка. Первая вкладка — она же умолчание:
@@ -461,6 +468,12 @@ export function CardPanel({
             canEdit={canEdit}
             people={base.people}
           />
+        )}
+
+        {tab === 'files' && (
+          <Suspense fallback={<Skeleton lines={3} />}>
+            <Files boardId={boardId} cardId={card.id} canEdit={canEdit} />
+          </Suspense>
         )}
 
         {tab === 'history' && (

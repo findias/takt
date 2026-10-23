@@ -445,6 +445,18 @@ text. **Remove** takes a ticket off. Both show on the card's
 subtasks and the links to other cards.
 
 <a id="archive"></a>
+### Attach a file to a card
+
+Open the card → the **Files** tab → **Attach a file** → choose it. The
+file is sent at once and appears in the list with its size, who
+attached it and when; a click on the name downloads it. The files are
+small by design: the limit per file and per card is written under the
+list (5 MB and 50 MB unless the installation set otherwise), and only
+images, PDF, text and office documents are accepted — installers,
+scripts and archives are refused with the list of what fits. **Remove**
+is offered to whoever attached the file and to the owner; the card's
+history keeps «file attached» and «file removed» with the name.
+
 ### Take a card off the board
 
 Hover the card, open the **…** menu and choose **Archive**. A message appears with a **Restore** button, in

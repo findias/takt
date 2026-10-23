@@ -36,7 +36,7 @@ var нечемПроверить = map[string]string{}
 
 // seedWhatDemoLeavesEmpty кладёт по строке туда, куда демо не пишет:
 // ключи повтора контракта, правки реплик, выбор людей при переносе,
-// приглашения, именованные срезы. Ролью postgres, мимо политик: здесь
+// приглашения, именованные срезы, вложение. Ролью postgres, мимо политик: здесь
 // нужна строка жертвы, а не проверка того, кто вправе её завести.
 // Приглашение — первым делом: его политику меняли в этапе 31.
 func seedWhatDemoLeavesEmpty(t *testing.T, ctx context.Context, admin *pgx.Conn, org, owner string) {
@@ -55,6 +55,11 @@ func seedWhatDemoLeavesEmpty(t *testing.T, ctx context.Context, admin *pgx.Conn,
 		 values ($1, md5(random()::text), 'POST', '/probe', 201)`, only},
 		{`insert into card_comment_revisions (org_id, comment_id, body)
 		 select $1, id, 'прежний текст' from card_comments where org_id = $1 limit 1`, only},
+		// Вложение (0079): демо файлов не кладёт — база демо не место для
+		// байтов, которые никто не откроет.
+		{`insert into card_attachments (org_id, board_id, card_id, author_id, name, media_type, size, body)
+		 select $1, board_id, id, $2, 'проба.txt', 'text/plain; charset=utf-8', 5, 'проба'::bytea
+		   from cards where org_id = $1 limit 1`, both},
 	} {
 		tag, err := admin.Exec(ctx, step.q, step.args...)
 		if err != nil {

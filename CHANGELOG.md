@@ -19,9 +19,25 @@ the browser tab title: `[DEV] POST-14 · Takt`. Several installations
 of the same image differ only by their address, and a screenshot of one
 was easily taken for another. Unset, nothing is shown; longer than 16
 characters or more than one line, the server refuses to start and says
-so. No migration.
+so.
+
+**Files on cards — one migration, safe for the running version.** `0079`
+adds the table `card_attachments`; nothing existing changes, and pods
+of v0.4.x keep working on it. Files are stored in the database — there
+is no volume to mount. A new setting, `ATTACHMENT_MAX_BYTES`
+(`attachments.maxBytes` in the chart), caps one file; unset means 5 MB,
+and a card holds ten times that in total. Count on the database
+growing by what people attach.
 
 ### The rest
+
+- **Files can be attached to a card.** The **Files** tab of the card:
+  images, PDF, text and office documents, small by design — the limit
+  is written under the list; installers, scripts and archives are
+  refused. Downloaded as an attachment, never opened as a page. Removed
+  by whoever attached it or by the owner. The card's history and the
+  webhooks get two new events, `card.attached` and `card.detached`,
+  with the file name.
 
 - **A name can be corrected.** Your own — behind your name, on the
   «Вход» tab, under «Имя»; no password asked, the header shows the new

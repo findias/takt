@@ -189,7 +189,8 @@ their months never mix with a team's days.
 Card: created, renamed, description changed, estimate changed,
 priority changed, due date set or cleared, moved, blocked, unblocked,
 block deadline changed, block lifted by its deadline, link added,
-link removed, commented on, custom field filled, custom field cleared,
+link removed, commented on, file attached, file removed, custom field
+filled, custom field cleared,
 added to an iteration, removed from an iteration, work marked done,
 mark removed, archived, restored to the board.
 

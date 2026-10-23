@@ -58,6 +58,10 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return t.feed.unlinked(linkKind(p.kind))
     case 'commented':
       return t.feed.commented
+    case 'attached':
+      return typeof p.name === 'string' ? t.feed.attached(p.name) : t.feed.attached('')
+    case 'detached':
+      return typeof p.name === 'string' ? t.feed.detached(p.name) : t.feed.detached('')
     case 'iteration_added':
       return t.feed.iterationAdded
     case 'iteration_removed':

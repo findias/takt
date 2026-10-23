@@ -178,6 +178,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerReportRoutes(mux)
 	s.registerStreamRoutes(mux)
 	s.registerExportRoutes(mux)
+	s.registerAttachmentRoutes(mux)
 	s.registerOIDCRoutes(mux)
 	s.registerDemoRoutes(mux)
 	s.registerStandRoutes(mux)

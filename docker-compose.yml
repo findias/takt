@@ -60,6 +60,8 @@ services:
       OIDC_LABEL: ${OIDC_LABEL:-}
       # Метка среды на каждом экране («DEV», «ИФТ»); пусто — метки нет.
       STAND_LABEL: ${STAND_LABEL:-}
+      # Предел одного вложения к карточке в байтах; пусто — 5 МБ.
+      ATTACHMENT_MAX_BYTES: ${ATTACHMENT_MAX_BYTES:-}
     ports:
       - "${PORT:-8080}:8080"
     depends_on:

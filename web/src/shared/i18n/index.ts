@@ -33,6 +33,7 @@ import type { passwordLink } from './ru/passwordLink.ts'
 import type { tasks } from './ru/tasks.ts'
 import type { reports } from './ru/reports.ts'
 import type { tree } from './ru/tree.ts'
+import type { files } from './ru/files.ts'
 
 /**
  * Разделы, которые едут со своим экраном, а не при открытии.
@@ -58,6 +59,7 @@ type Lazy = {
   tasks: typeof tasks
   reports: typeof reports
   tree: typeof tree
+  files: typeof files
 }
 export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
@@ -85,6 +87,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
   tasks: { ru: () => import('./ru/tasks.ts'), en: () => import('./en/tasks.ts') },
   reports: { ru: () => import('./ru/reports.ts'), en: () => import('./en/reports.ts') },
   tree: { ru: () => import('./ru/tree.ts'), en: () => import('./en/tree.ts') },
+  files: { ru: () => import('./ru/files.ts'), en: () => import('./en/files.ts') },
 }
 
 /** Подгрузить разделы на выбранном языке. Повторная загрузка ничего

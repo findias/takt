@@ -143,6 +143,7 @@ on installing without internet access, below, covers it.
 | `DEMO` | leave unset: `on` turns the installation into a public demo where anyone creates a sandbox |
 | `STAND` | leave unset: `staging` is for our own test stand of a branch |
 | `STAND_LABEL` | the environment label shown on every screen and in the tab title — `DEV`, `UAT`, `PROD`; up to 16 characters, unset means no label. Set it where several installations differ only by address, so a screenshot of one is not mistaken for another |
+| `ATTACHMENT_MAX_BYTES` | the limit for one file attached to a card, in bytes; unset means 5 MB (5242880), a card holds ten times that in total. Files are stored in the database, so there is no volume to mount |
 | `YOUGILE_URL` | where import from YouGile goes: unset is the cloud `https://ru.yougile.com`, a boxed YouGile has its own address, `off` switches import over the API off (importing a spreadsheet always works) |
 
 **Migrations are a separate command,** `takt migrate`, not part of

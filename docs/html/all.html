@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.4.1-2-gdf0039f-dirty.</p>
+<p>Every section in one file. Version v0.4.1-3-g22e46d0-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -334,7 +334,9 @@ color:var(--ink-3);font-size:.85rem}
 <li>Press <strong>Add</strong>.</li>
 </ol>
 <p>A card holds as many tickets as it needs: work often answers three service requests and ships with one change request. The list is ordered by kind; an address opens in a new browser tab, a number stays text. <strong>Remove</strong> takes a ticket off. Both show on the card&#39;s <strong>History</strong> tab. Below the numbers, <strong>Tasks</strong> holds the parent, the subtasks and the links to other cards.</p>
-<h3 id="archive">Take a card off the board</h3>
+<h3 id="archive">Attach a file to a card</h3>
+<p>Open the card → the <strong>Files</strong> tab → <strong>Attach a file</strong> → choose it. The file is sent at once and appears in the list with its size, who attached it and when; a click on the name downloads it. The files are small by design: the limit per file and per card is written under the list (5 MB and 50 MB unless the installation set otherwise), and only images, PDF, text and office documents are accepted — installers, scripts and archives are refused with the list of what fits. <strong>Remove</strong> is offered to whoever attached the file and to the owner; the card&#39;s history keeps «file attached» and «file removed» with the name.</p>
+<h3 id="take-a-card-off-the-board">Take a card off the board</h3>
 <p>Hover the card, open the <strong>…</strong> menu and choose <strong>Archive</strong>. A message appears with a <strong>Restore</strong> button, in case that was the wrong card.</p>
 <p>Archived cards sit in <strong>Archive</strong> and come back from there at any time. Deleting for good asks for confirmation and cannot be undone. It is offered to the organisation owner and to the owner of the board&#39;s subdivision.</p>
 <h3 id="iterations">Run a sprint or a release</h3>
@@ -628,7 +630,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <h2 id="subscription-events">Subscription events</h2>
-<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
+<p>Card: created, renamed, description changed, estimate changed, priority changed, due date set or cleared, moved, blocked, unblocked, block deadline changed, block lifted by its deadline, link added, link removed, commented on, file attached, file removed, custom field filled, custom field cleared, added to an iteration, removed from an iteration, work marked done, mark removed, archived, restored to the board.</p>
 <h2 id="installation-settings">Installation settings</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Variable</th><th>What it sets</th></tr></thead>
@@ -885,6 +887,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
 <tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
 <tr><td><code>STAND_LABEL</code></td><td>the environment label shown on every screen and in the tab title — <code>DEV</code>, <code>UAT</code>, <code>PROD</code>; up to 16 characters, unset means no label. Set it where several installations differ only by address, so a screenshot of one is not mistaken for another</td></tr>
+<tr><td><code>ATTACHMENT_MAX_BYTES</code></td><td>the limit for one file attached to a card, in bytes; unset means 5 MB (5242880), a card holds ten times that in total. Files are stored in the database, so there is no volume to mount</td></tr>
 <tr><td><code>YOUGILE_URL</code></td><td>where import from YouGile goes: unset is the cloud <code>https://ru.yougile.com</code>, a boxed YouGile has its own address, <code>off</code> switches import over the API off (importing a spreadsheet always works)</td></tr>
 </tbody>
 </table></div>
@@ -1764,8 +1767,12 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
 <h2 id="v0-5-0-23-october-2026">v0.5.0 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
-<p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so. No migration.</p>
+<p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so.</p>
+<p><strong>Files on cards — one migration, safe for the running version.</strong> <code>0079</code> adds the table <code>card_attachments</code>; nothing existing changes, and pods of v0.4.x keep working on it. Files are stored in the database — there is no volume to mount. A new setting, <code>ATTACHMENT_MAX_BYTES</code> (<code>attachments.maxBytes</code> in the chart), caps one file; unset means 5 MB, and a card holds ten times that in total. Count on the database growing by what people attach.</p>
 <h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>Files can be attached to a card.</strong> The <strong>Files</strong> tab of the card: images, PDF, text and office documents, small by design — the limit is written under the list; installers, scripts and archives are refused. Downloaded as an attachment, never opened as a page. Removed by whoever attached it or by the owner. The card&#39;s history and the webhooks get two new events, <code>card.attached</code> and <code>card.detached</code>, with the file name.</li>
+</ul>
 <ul>
 <li><strong>A name can be corrected.</strong> Your own — behind your name, on the «Вход» tab, under «Имя»; no password asked, the header shows the new name at once. A member&#39;s — by the owner, «Имя…» under «Команда», on the same terms as «Почта…». Both show in the audit log as «name: old → new». A name managed by the identity provider or directory is changed there. Until now a name was set once, at registration or invitation, and a typo in it lived forever.</li>
 </ul>
@@ -2001,8 +2008,12 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
 <h2 id="v0-5-0-23-октября-2026">v0.5.0 — 23 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
-<p><strong>Метка среды на каждом экране.</strong> Новая настройка <code>STAND_LABEL</code> (<code>standLabel</code> в чарте) ставит короткое слово — <code>DEV</code>, <code>ИФТ</code>, <code>ПРОМ</code> — полосой над каждым экраном, включая вход, и первым в заголовке вкладки: <code>[DEV] ПОСТ-14 · Доска</code>. Несколько установок одного образа различаются только адресом, и снимок с одной легко принимали за другую. Не задана — ничего не показывается; длиннее 16 знаков или не в одну строку — сервер не стартует и говорит почему. Миграций нет.</p>
+<p><strong>Метка среды на каждом экране.</strong> Новая настройка <code>STAND_LABEL</code> (<code>standLabel</code> в чарте) ставит короткое слово — <code>DEV</code>, <code>ИФТ</code>, <code>ПРОМ</code> — полосой над каждым экраном, включая вход, и первым в заголовке вкладки: <code>[DEV] ПОСТ-14 · Доска</code>. Несколько установок одного образа различаются только адресом, и снимок с одной легко принимали за другую. Не задана — ничего не показывается; длиннее 16 знаков или не в одну строку — сервер не стартует и говорит почему.</p>
+<p><strong>Файлы в карточках — одна миграция, безопасная для работающей версии.</strong> <code>0079</code> добавляет таблицу <code>card_attachments</code>; существующее не меняется, поды v0.4.x на ней работают. Файлы лежат в базе — том монтировать не нужно. Новая настройка <code>ATTACHMENT_MAX_BYTES</code> (<code>attachments.maxBytes</code> в чарте) ограничивает один файл; не задана — 5 МБ, карточка целиком вмещает в десять раз больше. Рассчитывайте, что база вырастет на то, что люди приложат.</p>
 <h3 id="остальное">Остальное</h3>
+<ul>
+<li><strong>К карточке можно приложить файлы.</strong> Вкладка <strong>«Файлы»</strong> карточки: изображения, PDF, текст и документы офисных форматов, намеренно небольшие — предел написан под списком; установщики, скрипты и архивы отклоняются. Скачиваются вложением, страницей не открываются. Убирает тот, кто приложил, или владелец. В истории карточки и в вебхуках два новых события, <code>card.attached</code> и <code>card.detached</code>, с именем файла.</li>
+</ul>
 <ul>
 <li><strong>Имя можно исправить.</strong> Своё — за своим именем, на вкладке «Вход», в разделе «Имя»; пароля не спрашивают, шапка показывает новое имя сразу. Участнику — владелец, «Имя…» в «Команде», на тех же условиях, что «Почта…». Обе смены видны в журнале как «имя: старое → новое». Имя, которое ведёт провайдер или каталог, меняют там. До этого имя задавалось один раз, при регистрации или приглашении, и опечатка в нём жила вечно.</li>
 </ul>

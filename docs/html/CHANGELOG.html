@@ -123,8 +123,12 @@ color:var(--ink-3);font-size:.85rem}
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
 <h2 id="v0-5-0-23-october-2026">v0.5.0 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
-<p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so. No migration.</p>
+<p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so.</p>
+<p><strong>Files on cards — one migration, safe for the running version.</strong> <code>0079</code> adds the table <code>card_attachments</code>; nothing existing changes, and pods of v0.4.x keep working on it. Files are stored in the database — there is no volume to mount. A new setting, <code>ATTACHMENT_MAX_BYTES</code> (<code>attachments.maxBytes</code> in the chart), caps one file; unset means 5 MB, and a card holds ten times that in total. Count on the database growing by what people attach.</p>
 <h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>Files can be attached to a card.</strong> The <strong>Files</strong> tab of the card: images, PDF, text and office documents, small by design — the limit is written under the list; installers, scripts and archives are refused. Downloaded as an attachment, never opened as a page. Removed by whoever attached it or by the owner. The card&#39;s history and the webhooks get two new events, <code>card.attached</code> and <code>card.detached</code>, with the file name.</li>
+</ul>
 <ul>
 <li><strong>A name can be corrected.</strong> Your own — behind your name, on the «Вход» tab, under «Имя»; no password asked, the header shows the new name at once. A member&#39;s — by the owner, «Имя…» under «Команда», on the same terms as «Почта…». Both show in the audit log as «name: old → new». A name managed by the identity provider or directory is changed there. Until now a name was set once, at registration or invitation, and a typo in it lived forever.</li>
 </ul>
@@ -353,7 +357,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.4.1-2-gdf0039f-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.4.1-3-g22e46d0-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

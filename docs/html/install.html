@@ -189,6 +189,7 @@ make images                   # both at once, with a size table</code></pre>
 <tr><td><code>DEMO</code></td><td>leave unset: <code>on</code> turns the installation into a public demo where anyone creates a sandbox</td></tr>
 <tr><td><code>STAND</code></td><td>leave unset: <code>staging</code> is for our own test stand of a branch</td></tr>
 <tr><td><code>STAND_LABEL</code></td><td>the environment label shown on every screen and in the tab title — <code>DEV</code>, <code>UAT</code>, <code>PROD</code>; up to 16 characters, unset means no label. Set it where several installations differ only by address, so a screenshot of one is not mistaken for another</td></tr>
+<tr><td><code>ATTACHMENT_MAX_BYTES</code></td><td>the limit for one file attached to a card, in bytes; unset means 5 MB (5242880), a card holds ten times that in total. Files are stored in the database, so there is no volume to mount</td></tr>
 <tr><td><code>YOUGILE_URL</code></td><td>where import from YouGile goes: unset is the cloud <code>https://ru.yougile.com</code>, a boxed YouGile has its own address, <code>off</code> switches import over the API off (importing a spreadsheet always works)</td></tr>
 </tbody>
 </table></div>
@@ -360,7 +361,7 @@ sudo -u takt bash -c &#39;set -a; . /etc/takt.env; set +a; /opt/takt/takt import
 # through standard input
 kubectl exec -i deploy/takt -- /app/takt import /dev/stdin --as anna@company.test &lt; warehouse.takt</code></pre>
 <p>Without <code>--apply</code> the command only shows what will happen — the same preview as the screen. The import runs on behalf of the person named in <code>--as</code>, with their rights: a viewer imports nothing, a board they cannot write to is refused. <code>--board 2</code> picks the second board of the package, <code>--into</code> an existing board, <code>--new-board</code> the name of a new one, <code>--org</code> the organisation when the person belongs to several. People are matched by email and by the choices made on the screen for the same source; the command creates nobody — make those choices on the screen with a small board first, or add the people under <strong>Team</strong>.</p>
-<footer>Takt, version v0.4.1-2-gdf0039f-dirty. Built from install.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.4.1-3-g22e46d0-dirty. Built from install.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -455,6 +455,7 @@ func TestChartCoversEverySettingTheAppReads(t *testing.T) {
 		"--set", "yougile.url=https://yougile.example.test",
 		// Метка среды тоже передаётся, только когда задана.
 		"--set", "standLabel=DEV",
+		"--set", "attachments.maxBytes=1048576",
 		"--set", "signup=closed",
 	)
 	if err != nil {

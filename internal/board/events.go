@@ -65,6 +65,10 @@ var EventKinds = []string{
 	"linked",
 	"unlinked",
 	"commented",
+	// Файл приложен и убран — своими видами: лента называет имя файла,
+	// подписчик различает их, не разбирая текст.
+	"attached",
+	"detached",
 	"field_set",
 	"field_cleared",
 	"ref_added",

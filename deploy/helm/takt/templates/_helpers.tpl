@@ -129,6 +129,10 @@ DATABASE_URL
 - name: STAND_LABEL
   value: {{ . | quote }}
 {{- end }}
+{{- with .Values.attachments.maxBytes }}
+- name: ATTACHMENT_MAX_BYTES
+  value: {{ . | quote }}
+{{- end }}
 {{- if .Values.oidc.enabled }}
 - name: OIDC_ISSUER
   value: {{ required "нужен oidc.issuer: адрес провайдера входа" .Values.oidc.issuer | quote }}

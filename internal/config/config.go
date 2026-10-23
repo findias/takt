@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -14,10 +15,11 @@ import (
 // Настройки, которых здесь нет и почему.
 //
 // `STORAGE` был и убран: он читался и не использовался никем — вложений
-// в продукте нет. Настройка без поведения хуже отсутствующей: она
+// тогда не было. Настройка без поведения хуже отсутствующей: она
 // обещает возможность, отвечает на вопрос «а куда складываются файлы»
 // и заставляет заказчика монтировать том, который никому не нужен.
-// Вернётся вместе с вложениями, а не раньше.
+// Вложения появились (ROADMAP 36.1) и лежат в базе — тома по-прежнему
+// нет, а предел размера задаёт ATTACHMENT_MAX_BYTES.
 
 type Config struct {
 	// BaseURL — адрес, по которому приложение открывают в браузере.
@@ -73,6 +75,12 @@ type Config struct {
 	// какая среда «опасная», знает только тот, кто ставит, поэтому
 	// второй настройки (цвета) нет — одного нейтрального тона хватает.
 	StandLabel string
+
+	// AttachmentMaxBytes — предел одного вложения к карточке (ROADMAP 36.1).
+	// Файлы лежат в базе, и предел бережёт её от превращения в файловый
+	// архив: сюда кладут снимок экрана и документ, а не сборку. Общий
+	// предел карточки — в десять раз больше (AttachmentCardBytes).
+	AttachmentMaxBytes int64
 
 	// YougileURL — адрес YouGile, откуда переносят доски по API
 	// (ROADMAP 23.3). Облачный по умолчанию; у коробочного YouGile свой.
@@ -130,17 +138,38 @@ const YougileOff = "off"
 // StandLabelMax — предел длины метки среды в знаках.
 const StandLabelMax = 16
 
+// AttachmentMaxDefault — предел вложения, если не задан: 5 МБ. Хватает
+// снимку экрана, PDF и таблице; архивы сюда не кладут вовсе.
+const AttachmentMaxDefault = 5 << 20
+
+// AttachmentMaxCeiling — выше не настроить: тело запроса целиком идёт в
+// память агента и в одну строку базы.
+const AttachmentMaxCeiling = 64 << 20
+
+// AttachmentLimit — предел одного вложения; незаполненная конфигурация
+// (собранная не через Load) получает умолчание, а не ноль.
+func (c Config) AttachmentLimit() int64 {
+	if c.AttachmentMaxBytes <= 0 {
+		return AttachmentMaxDefault
+	}
+	return c.AttachmentMaxBytes
+}
+
+// AttachmentCardBytes — сколько всего поместится к одной карточке.
+func (c Config) AttachmentCardBytes() int64 { return c.AttachmentLimit() * 10 }
+
 func Load() (Config, error) {
 	c := Config{
-		BaseURL:     env("BASE_URL", "http://localhost:8080"),
-		DatabaseURL: env("DATABASE_URL", ""),
-		ListenAddr:  env("LISTEN_ADDR", ":8080"),
-		WebDir:      env("WEB_DIR", "./web/dist"),
-		Signup:      SignupMode(env("SIGNUP", string(SignupFirst))),
-		Demo:        env("DEMO", "") == "on",
-		Stand:       env("STAND", "") == "staging",
-		StandLabel:  strings.TrimSpace(env("STAND_LABEL", "")),
-		YougileURL:  strings.TrimRight(env("YOUGILE_URL", "https://ru.yougile.com"), "/"),
+		BaseURL:            env("BASE_URL", "http://localhost:8080"),
+		DatabaseURL:        env("DATABASE_URL", ""),
+		ListenAddr:         env("LISTEN_ADDR", ":8080"),
+		WebDir:             env("WEB_DIR", "./web/dist"),
+		Signup:             SignupMode(env("SIGNUP", string(SignupFirst))),
+		Demo:               env("DEMO", "") == "on",
+		Stand:              env("STAND", "") == "staging",
+		StandLabel:         strings.TrimSpace(env("STAND_LABEL", "")),
+		AttachmentMaxBytes: AttachmentMaxDefault,
+		YougileURL:         strings.TrimRight(env("YOUGILE_URL", "https://ru.yougile.com"), "/"),
 		OIDC: OIDCConfig{
 			Issuer:       strings.TrimRight(env("OIDC_ISSUER", ""), "/"),
 			ClientID:     env("OIDC_CLIENT_ID", ""),
@@ -199,6 +228,14 @@ func Load() (Config, error) {
 	}
 	if strings.ContainsAny(c.StandLabel, "\n\r\t") {
 		return c, fmt.Errorf("STAND_LABEL=%q: метка среды — одна строка без переводов", c.StandLabel)
+	}
+	if raw := env("ATTACHMENT_MAX_BYTES", ""); raw != "" {
+		n, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || n <= 0 || n > AttachmentMaxCeiling {
+			return c, fmt.Errorf("ATTACHMENT_MAX_BYTES=%q: нужно число байт от 1 до %d (по умолчанию %d)",
+				raw, AttachmentMaxCeiling, AttachmentMaxDefault)
+		}
+		c.AttachmentMaxBytes = n
 	}
 
 	c.BaseURL = strings.TrimRight(c.BaseURL, "/")

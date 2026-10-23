@@ -15,6 +15,8 @@ import type { Card, Column, Snapshot } from '../shared/api/index.ts'
 const snapshot = vi.fn<() => Promise<Snapshot>>()
 const operation = vi.fn()
 const changes = vi.fn()
+const attachments = vi.fn()
+const attach = vi.fn()
 
 vi.mock('../shared/api', async (importOriginal) => {
   const real = await importOriginal<typeof import('../shared/api')>()
@@ -30,6 +32,9 @@ vi.mock('../shared/api', async (importOriginal) => {
       events: vi.fn().mockResolvedValue({ events: [], next: null }),
       metrics: vi.fn().mockResolvedValue({}),
       comments: vi.fn().mockResolvedValue({ comments: [] }),
+      attachments,
+      attach,
+      deleteAttachment: vi.fn().mockResolvedValue(undefined),
     },
   }
 })
@@ -986,5 +991,61 @@ describe('новый дизайн доски', () => {
     show()
     await screen.findByRole('group', { name: /Карточка «спокойная»/ })
     expect(screen.queryByRole('complementary', { name: 'Требует внимания' })).toBeNull()
+  })
+})
+
+// Файлы карточки (ROADMAP 36.1): список с размером и автором, выбор
+// файла отправляет его сразу, предел назван до выбора.
+describe('файлы карточки', () => {
+  const limits = { maxBytes: 5 * 1024 * 1024, cardBytes: 50 * 1024 * 1024, extensions: ['.pdf', '.png'] }
+
+  it('вкладка «Файлы» показывает вложения и принимает файл', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    attachments.mockResolvedValue({
+      ...limits,
+      attachments: [
+        {
+          id: 'a1',
+          cardId: 'первая',
+          name: 'отчёт.pdf',
+          mediaType: 'application/pdf',
+          size: 2048,
+          author: 'Анна',
+          authorId: 'я',
+          createdAt: '2026-08-15T12:00:00Z',
+          deletable: true,
+        },
+      ],
+    })
+    attach.mockResolvedValue({})
+    const user = userEvent.setup()
+    show('первая')
+
+    await user.click(await screen.findByRole('tab', { name: 'Файлы' }))
+    const link = await screen.findByRole('link', { name: 'отчёт.pdf' })
+    expect(link.getAttribute('href')).toBe('/api/attachments/a1')
+    expect(link.getAttribute('download')).toBe('отчёт.pdf')
+    expect(screen.getByText(/2 КБ · Анна/)).toBeTruthy()
+    expect(screen.getByText(/До 5 МБ на файл и 50 МБ на карточку/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Убрать файл отчёт.pdf' })).toBeTruthy()
+
+    await user.upload(screen.getByLabelText(/Приложить файл/), new File(['png'], 'снимок.png', { type: 'image/png' }))
+    await waitFor(() => expect(attach).toHaveBeenCalledWith('board', 'первая', expect.any(File)))
+    // После загрузки список перечитан.
+    await waitFor(() => expect(attachments).toHaveBeenCalledTimes(2))
+  })
+
+  it('файл больше предела отклоняется до отправки', async () => {
+    snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+    attachments.mockResolvedValue({ ...limits, maxBytes: 10, attachments: [] })
+    attach.mockClear()
+    const user = userEvent.setup()
+    show('первая')
+
+    await user.click(await screen.findByRole('tab', { name: 'Файлы' }))
+    await screen.findByText('Файлов пока нет.')
+    await user.upload(screen.getByLabelText(/Приложить файл/), new File(['больше десяти байт'], 'большой.png'))
+    expect(await screen.findByText('Файл больше 10 Б — предел на одно вложение.')).toBeTruthy()
+    expect(attach).not.toHaveBeenCalled()
   })
 })

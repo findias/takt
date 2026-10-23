@@ -58,3 +58,26 @@ func TestStandLabelIsShortAndSingleLine(t *testing.T) {
 		t.Errorf("метка появилась сама: %q", c.StandLabel)
 	}
 }
+
+// Предел вложения: умолчание 5 МБ, своё значение — число байт в пределах
+// потолка; мусор и ноль не принимаются молча.
+func TestAttachmentLimitIsBoundedAndDefaults(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/takt")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AttachmentMaxBytes != AttachmentMaxDefault || c.AttachmentCardBytes() != 10*AttachmentMaxDefault {
+		t.Errorf("умолчание %d / %d, ожидалось %d / %d", c.AttachmentMaxBytes, c.AttachmentCardBytes(), AttachmentMaxDefault, 10*AttachmentMaxDefault)
+	}
+	t.Setenv("ATTACHMENT_MAX_BYTES", "1048576")
+	if c, err = Load(); err != nil || c.AttachmentMaxBytes != 1<<20 {
+		t.Errorf("предел в мегабайт не принят: %v, %d", err, c.AttachmentMaxBytes)
+	}
+	for _, bad := range []string{"0", "-1", "5MB", "999999999999"} {
+		t.Setenv("ATTACHMENT_MAX_BYTES", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("ATTACHMENT_MAX_BYTES=%q принят молча", bad)
+		}
+	}
+}
