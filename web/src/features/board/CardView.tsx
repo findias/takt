@@ -459,6 +459,7 @@ function CardViewInner({
           value={title}
           autoFocus
           label={t.cardView.titleLabel}
+              multiline
           onSave={(next) => {
             onRename(cardId, next)
             setEditing(false)
@@ -857,6 +858,7 @@ function CardViewInner({
               value=""
               autoFocus
               label={t.cardView.blockReason}
+              multiline
               placeholder={t.cardView.waitingFor}
               onSave={(reason) => {
                 // Пустая причина не блокирует: блокировка без причины
@@ -997,6 +999,7 @@ function CardViewInner({
                     value=""
                     autoFocus
                     label={t.cardView.subtaskName}
+              multiline
                     placeholder={t.cardView.whatToDo}
                     onSave={(title) => {
                       if (title.trim()) onSubtask(cardId, title.trim())

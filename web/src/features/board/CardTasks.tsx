@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { TextLine } from '../../shared/ui/TextLine.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Avatar, AvatarMore, AVATAR_SMALL } from '../../shared/ui/Avatar.tsx'
@@ -292,6 +293,7 @@ function RelatedRow({
             value={related.title}
             autoFocus
             label={t.cardView.titleLabel}
+              multiline
             onSave={(next) => {
               onRename(next)
               setRenaming(false)
@@ -378,9 +380,11 @@ function NewSubtask({
   const [title, setTitle] = useState('')
   const [boardId, setBoardId] = useState('')
   const target = boards.find((b) => b.id === boardId)
+  const subtaskForm = useRef<HTMLFormElement>(null)
 
   return (
     <form
+      ref={subtaskForm}
       className="stack stack--tight"
       onSubmit={(e) => {
         e.preventDefault()
@@ -390,11 +394,12 @@ function NewSubtask({
       }}
     >
       <div className="row row--tight">
-        <input
+        <TextLine
           value={title}
           placeholder={t.panel.whatToDo}
-          aria-label={t.panel.subtaskName}
-          onChange={(e) => setTitle(e.target.value)}
+          label={t.panel.subtaskName}
+          onChange={setTitle}
+          onEnter={() => subtaskForm.current?.requestSubmit()}
         />
         {boards.length > 0 && (
           <select

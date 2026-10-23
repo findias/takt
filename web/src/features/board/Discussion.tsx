@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAutoGrow } from '../../shared/lib/useAutoGrow.ts'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { api } from '../../shared/api/index.ts'
 import type { Comment } from '../../shared/api/index.ts'
@@ -143,6 +144,8 @@ function CommentRow({
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(comment.body)
+  const editRef = useRef<HTMLTextAreaElement>(null)
+  useAutoGrow(editRef, draft)
   const [was, setWas] = useState<string[] | null>(null)
   const mine = comment.authorId === meId
 
@@ -187,6 +190,7 @@ function CommentRow({
           }}
         >
           <textarea
+            ref={editRef}
             className="description"
             rows={3}
             autoFocus
@@ -262,6 +266,7 @@ function NewComment({
   const [body, setBody] = useState('')
   const [called, setCalled] = useState<string[]>([])
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  useAutoGrow(fieldRef, body)
   const nameOf = (id: string) => people.find(([pid]) => pid === id)?.[1] ?? ''
   return (
     <form

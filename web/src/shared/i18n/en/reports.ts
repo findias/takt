@@ -4,7 +4,7 @@ import type { reports as ru } from '../ru/reports.ts'
 export const reports: typeof ru = {
     title: 'Card export',
     intro:
-      'Cards matching your selection as one table, plus a flow summary for the period: throughput, cycle time, cumulative flow, iterations and subdivisions.',
+      'Cards matching your selection as one table, plus a flow summary for the period: throughput, cycle time, cumulative flow, iterations, subdivisions and people.',
     period: 'Period',
     from: 'Period start',
     to: 'Period end',
@@ -22,6 +22,18 @@ export const reports: typeof ru = {
     assignees: 'Assignees',
     allAssignees: 'Everyone',
     addAssignee: 'Add an assignee',
+    assigneesNarrowed: 'The list holds the people of the chosen boards and subdivisions.',
+    byPerson: 'By assignee',
+    person: 'Assignee',
+    cards: 'Cards',
+    finished: 'Done',
+    wip: 'In progress',
+    cycleMedian: 'Cycle, median',
+    days: (n: number) => `${n.toLocaleString('en-GB')} d`,
+    noAssignee: 'No assignee',
+    onlyPerson: (name: string) => `Only ${name}: selection and file for this person`,
+    byPersonHint:
+      'For the current selection. A card with several assignees counts for each. Click a name to narrow the selection and the file to that person. The file holds the same breakdown on the Summary sheet.',
     labels: 'Labels',
     allLabels: 'Any',
     addLabel: 'Add a label',

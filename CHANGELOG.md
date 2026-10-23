@@ -8,6 +8,29 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.5.1 — 23 October 2026
+
+### For whoever installs and upgrades
+
+No migration and no new setting. `CREATE_CARD` accepts an optional
+`assigneeIds`, and the JSON export's summary gains `people`; both are
+additions, older clients are unaffected.
+
+### The rest
+
+- **Reports show work per person.** Under the selection, **By
+  assignee**: cards, done, in progress and median cycle time for each
+  person; a click on a name narrows the selection and the file to them.
+  The XLSX summary has the same breakdown.
+- **The assignee list follows the chosen boards and subdivisions** —
+  their people instead of the whole organisation.
+- **A new card can get its assignee at once,** under the title in the
+  create form; the choice stays for the next card.
+- **Long titles and block reasons wrap** while you type them and in the
+  inline editors, instead of running off the edge of a one-line field.
+  Text fields grow with their text in browsers without `field-sizing`
+  too.
+
 ## v0.5.0 — 23 October 2026
 
 ### For whoever installs and upgrades

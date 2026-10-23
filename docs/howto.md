@@ -734,13 +734,24 @@ is included if it was alive during the period: created before the
 period ended and not finished before it began. Its state and age are as
 of today.
 
-Below the selection you see how many cards match. Then download:
+Pick **Boards** or **Subdivisions** and the **Assignees** list narrows
+to their people: a subdivision's members together with its nested
+subdivisions, a board's people who can see it, plus anyone assigned on
+its cards.
+
+Below the selection you see how many cards match, and **By assignee** —
+what each person has under the current selection: cards, done, in
+progress, the median cycle time. A card with several assignees counts
+for each. Click a name and the selection, and the file, become that
+person's. Cards with nobody on them are a row of their own.
+
+Then download:
 
 - **Excel (XLSX)** opens on a **Summary** sheet: what was selected,
   cards done and discarded in the period, work in progress, cycle time
   and age (median and 85th percentile), throughput by week and a
-  cumulative flow diagram — both with charts — iteration completion and
-  a breakdown by subdivision. The **Data** sheet has one row per card
+  cumulative flow diagram — both with charts — iteration completion,
+  a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card
   with every field, ready for pivot tables: among them **External
   numbers** — the card's external task numbers, RDS, service requests,
   change requests and problems in one

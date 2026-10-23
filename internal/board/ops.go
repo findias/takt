@@ -521,6 +521,10 @@ type createCardPayload struct {
 	// Экран присылает её, когда доска отобрана по итерации: иначе
 	// новая карточка заводилась вне итерации и тут же пропадала из вида.
 	IterationID string `json:"iterationId"`
+	// Исполнители, которых назначают сразу (ROADMAP 37.4): заводящий
+	// обычно знает, кто будет делать, и второй заход в карточку ради
+	// этого был лишним шагом на каждую задачу.
+	AssigneeIDs []string `json:"assigneeIds"`
 }
 
 func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage) (Patch, error) {
@@ -549,7 +553,22 @@ func createCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 			return Patch{}, err
 		}
 	}
-	return Patch{Cards: []Card{c}}, nil
+	if len(p.AssigneeIDs) == 0 {
+		return Patch{Cards: []Card{c}}, nil
+	}
+	// Отказ любого назначения откатывает и саму карточку: заведённая
+	// без половины исполнителей карточка выглядела бы целой.
+	for _, userID := range p.AssigneeIDs {
+		if err := addAssignee(ctx, tx, orgID, actorID, boardID, c.ID, userID); err != nil {
+			return Patch{}, err
+		}
+	}
+	patch, err := assigneePatch(ctx, tx, c.ID)
+	if err != nil {
+		return Patch{}, err
+	}
+	patch.Cards = []Card{c}
+	return patch, nil
 }
 
 // insertCard заводит карточку в уже проверенной колонке. Отдельно от

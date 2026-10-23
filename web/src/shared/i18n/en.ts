@@ -716,6 +716,10 @@ export const en: typeof ru = {
     toFlow: 'All board metrics →',
   },
   column: {
+    assignees: 'Assignees of the new card',
+    addAssignee: 'Assignee of the new card',
+    addAssigneePick: 'Assignee…',
+    unassign: (name: string) => `Remove assignee ${name}`,
     markupOf: (name: string) => `Markup of column “${name}”`,
     markup: 'Markup',
     averageWaiting: (days: string) => `waiting ${days} on average`,

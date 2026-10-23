@@ -1,5 +1,7 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
+import { TextLine } from '../../shared/ui/TextLine.tsx'
+import { useAutoGrow } from '../../shared/lib/useAutoGrow.ts'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { EstimateStepper } from '../../shared/ui/EstimateStepper.tsx'
 import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
@@ -229,6 +231,7 @@ export function CardPanel({
               value={card.title}
               autoFocus
               label={t.cardView.titleLabel}
+              multiline
               onSave={(next) => {
                 onRename(card.id, next)
                 setRenamingTitle(false)
@@ -290,6 +293,7 @@ export function CardPanel({
                       value={card.blocked.reason}
                       autoFocus
                       label={t.panel.blockReasonField}
+              multiline
                       onSave={(next) => {
                         onSetBlockReason(card.id, next)
                         setEditingReason(false)
@@ -770,6 +774,8 @@ function Description({
   onSave: (text: string) => void
 }) {
   const [draft, setDraft] = useState(value)
+  const descRef = useRef<HTMLTextAreaElement>(null)
+  useAutoGrow(descRef, draft)
   // Карточку могли изменить и не мы: описание перечитывается, когда
   // пришёл новый снимок, но не затирает то, что человек уже печатает.
   useEffect(() => setDraft(value), [value])
@@ -789,6 +795,7 @@ function Description({
         )
       ) : (
         <textarea
+          ref={descRef}
           className="description"
           rows={4}
           value={draft}
@@ -816,6 +823,7 @@ function BlockForm({
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [until, setUntil] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
   // Форма про часть открыта всегда: её открыло нажатие «Держит»,
   // и вторая кнопка «Заблокировать…» была бы вопросом, на который
@@ -832,6 +840,7 @@ function BlockForm({
 
   return (
     <form
+      ref={formRef}
       // Двумя строками, когда блокирует часть: имя части длинное,
       // и в одном ряду с полем оно сжимает поле до трёх букв.
       className="stack"
@@ -845,14 +854,19 @@ function BlockForm({
       }}
     >
       {holder && <span className="small">{t.panel.heldByAsk(holder)}</span>}
-      <div className="row">
-      <input
+      {/* Причина — во всю ширину и с переносом (ROADMAP 37.3): в одном
+          ряду с полем срока она сжималась до пары слов, и длинную
+          причину набирали, не видя её конца. */}
+      <TextLine
         autoFocus
+        className="block-reason"
         value={reason}
         placeholder={holder ? t.panel.waitingForPart : t.panel.waitingFor}
-        aria-label={t.panel.blockReason}
-        onChange={(e) => setReason(e.target.value)}
+        label={t.panel.blockReason}
+        onChange={setReason}
+        onEnter={() => formRef.current?.requestSubmit()}
       />
+      <div className="row">
       {/* Срок необязателен, и подпись это говорит: пустое поле —
           «пока не снимут», а не недоделка. */}
       <label className="row row--tight small">

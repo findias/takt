@@ -53,28 +53,38 @@ func assignCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 	if err != nil {
 		return Patch{}, err
 	}
+	if err := addAssignee(ctx, tx, orgID, actorID, boardID, p.CardID, p.UserID); err != nil {
+		return Patch{}, err
+	}
+	return assigneePatch(ctx, tx, p.CardID)
+}
 
+// addAssignee — назначение со всеми проверками. Общая часть ASSIGN_CARD
+// и CREATE_CARD с исполнителями: карточку с исполнителем, заведённую
+// сразу, проверяют так же, как назначение на готовую.
+func addAssignee(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, cardID, userID string) error {
+	p := assignPayload{CardID: cardID, UserID: userID}
 	var member, sees bool
 	if err := tx.QueryRow(ctx, `
 		select exists (select 1 from memberships
 		                where org_id = $1 and user_id = $2),
 		       app_sees_board_as($2, $3)`,
 		orgID, p.UserID, boardID).Scan(&member, &sees); err != nil {
-		return Patch{}, err
+		return err
 	}
 	if !member {
-		return Patch{}, badRequestf("назначить можно только участника организации")
+		return badRequestf("назначить можно только участника организации")
 	}
 	// Исполнитель, который доски не видит, не найдёт свою карточку и не
 	// получит известия о ней (0076). Отказ называет, как это исправить.
 	if !sees {
-		return Patch{}, badRequestf("этот человек не видит доску — назначить можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски")
+		return badRequestf("этот человек не видит доску — назначить можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски")
 	}
 
 	// Карточка проверяется тем же запросом, что и вставка: раздельная
 	// проверка дала бы окно, в котором карточку успевают убрать.
 	var addedAt time.Time
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		insert into card_assignees (org_id, card_id, user_id, added_by)
 		select $1, $2, $3, $4
 		 where exists (select 1 from cards
@@ -83,32 +93,29 @@ func assignCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, 
 		returning added_at`,
 		orgID, p.CardID, p.UserID, actorID, boardID).Scan(&addedAt)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return Patch{}, err
+		return err
 	}
 	if err == nil {
 		// Назначили — назначенный узнаёт. Источник — само назначение
 		// с его моментом: сняли и назначили снова — это новое известие.
-		if err := notify(ctx, tx, orgID, boardID, p.CardID, actorID, ReasonAssigned,
+		return notify(ctx, tx, orgID, boardID, p.CardID, actorID, ReasonAssigned,
 			"assign:"+p.CardID+":"+p.UserID+":"+addedAt.UTC().Format(time.RFC3339Nano),
-			[]string{p.UserID}); err != nil {
-			return Patch{}, err
-		}
-	} else {
-		// Либо человек уже назначен — повтор безобиден, — либо карточки
-		// нет. Второе от первого отличает отдельная проверка: молчать
-		// в ответ на «назначил на несуществующее» нельзя.
-		var already bool
-		if err := tx.QueryRow(ctx, `
-			select exists (select 1 from card_assignees
-			                where card_id = $1 and user_id = $2)`,
-			p.CardID, p.UserID).Scan(&already); err != nil {
-			return Patch{}, err
-		}
-		if !already {
-			return Patch{}, conflictf("", "карточки нет на доске")
-		}
+			[]string{p.UserID})
 	}
-	return assigneePatch(ctx, tx, p.CardID)
+	// Либо человек уже назначен — повтор безобиден, — либо карточки
+	// нет. Второе от первого отличает отдельная проверка: молчать
+	// в ответ на «назначил на несуществующее» нельзя.
+	var already bool
+	if err := tx.QueryRow(ctx, `
+		select exists (select 1 from card_assignees
+		                where card_id = $1 and user_id = $2)`,
+		p.CardID, p.UserID).Scan(&already); err != nil {
+		return err
+	}
+	if !already {
+		return conflictf("", "карточки нет на доске")
+	}
+	return nil
 }
 
 // unassignCard снимает исполнителя. Снятие того, кого не назначали, —

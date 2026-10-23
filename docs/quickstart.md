@@ -33,7 +33,9 @@ the board is set up like any other.
 ## 2. Put work on it
 
 1. At the bottom of **Queue**, press **Create card**.
-2. Write what needs doing and press `Enter`.
+2. Write what needs doing and press `Enter`. If you already know who
+   will do it, pick them under the title — **Assignee…**; the choice
+   stays for the next card, so a batch for one person takes one pick.
 
 Create three or four cards: with one, the board shows nothing.
 

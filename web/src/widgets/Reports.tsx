@@ -22,10 +22,23 @@ import type { Format, ReportFilter } from './reportFilter.ts'
 
 type Option = { id: string; name: string }
 type Count = { status: 'counting' } | { status: 'error'; error: string } | { status: 'ready'; total: number; limit: number }
+type PersonRow = {
+  userId: string | null
+  name: string
+  cards: number
+  finished: number
+  wip: number
+  cycleTimeP50: number | null
+  cycleTimeP85: number | null
+}
+type People = { candidates: Option[]; rows: PersonRow[] }
 
-// Вызов — здесь, а не в общем клиенте: экран грузится отдельным куском.
+// Вызовы — здесь, а не в общем клиенте: экран грузится отдельным куском.
 const countCards = (f: ReportFilter) =>
   request<{ total: number; limit: number }>('GET', '/api/reports/cards/count?' + reportQuery(f).toString())
+// Люди под отбор (ROADMAP 37.1–37.2): из кого выбирать исполнителей —
+// люди выбранных досок и подразделений, — и что каждый делал.
+const reportPeople = (f: ReportFilter) => request<People>('GET', '/api/reports/people?' + reportQuery(f).toString())
 
 const FORMATS: Format[] = ['xlsx', 'csv', 'json']
 
@@ -46,7 +59,7 @@ export function Reports() {
 
   const [boards, setBoards] = useState<Option[]>([])
   const [teams, setTeams] = useState<Option[]>([])
-  const [people, setPeople] = useState<Option[]>([])
+  const [people, setPeople] = useState<People | null>(null)
   const [labels, setLabels] = useState<Option[]>([])
   const [iterations, setIterations] = useState<Iteration[]>([])
   const [count, setCount] = useState<Count>({ status: 'counting' })
@@ -56,12 +69,6 @@ export function Reports() {
   useEffect(() => {
     api.listBoards().then((r) => setBoards(r.boards.map((b) => ({ id: b.id, name: b.name })))).catch(() => {})
     api.listTeams().then((r) => setTeams(r.teams.map((x) => ({ id: x.id, name: x.name })))).catch(() => {})
-    api
-      .team()
-      .then((r) =>
-        setPeople(r.members.filter((m) => m.kind === 'person').map((m) => ({ id: m.userId, name: m.name }))),
-      )
-      .catch(() => {})
     api.listLabels().then((r) => setLabels(r.labels.map((l) => ({ id: l.id, name: l.name })))).catch(() => {})
   }, [])
 
@@ -95,6 +102,11 @@ export function Reports() {
       countCards(filter)
         .then((r) => current && setCount({ status: 'ready', ...r }))
         .catch((e) => current && setCount({ status: 'error', error: e instanceof Error ? e.message : s.countFailed }))
+      // Люди — тем же отбором и в тот же момент: выбрали подразделение —
+      // список исполнителей сузился до его людей, разрез пересчитался.
+      reportPeople(filter)
+        .then((r) => current && setPeople(r))
+        .catch(() => current && setPeople(null))
     }, 300)
     return () => {
       current = false
@@ -152,8 +164,12 @@ export function Reports() {
           chosen={f.boards} removeLabel={s.remove} onChange={(v) => change({ boards: v })} />
         <PickList label={s.teams} anyText={s.allTeams} addText={s.addTeam} options={teams}
           chosen={f.teams} removeLabel={s.remove} onChange={(v) => change({ teams: v })} />
-        <PickList label={s.assignees} anyText={s.allAssignees} addText={s.addAssignee} options={people}
+        <PickList label={s.assignees} anyText={s.allAssignees} addText={s.addAssignee}
+          options={people?.candidates ?? []}
           chosen={f.assignees} removeLabel={s.remove} onChange={(v) => change({ assignees: v })} />
+        {(f.boards.length > 0 || f.teams.length > 0) && (
+          <p className="muted small">{s.assigneesNarrowed}</p>
+        )}
         <PickList label={s.labels} anyText={s.allLabels} addText={s.addLabel} options={labels}
           chosen={f.labels} removeLabel={s.remove} onChange={(v) => change({ labels: v })} />
 
@@ -220,6 +236,10 @@ export function Reports() {
                   : s.count(count.total)}
       </p>
 
+      {people && people.rows.length > 0 && !reversed && (
+        <ByPerson rows={people.rows} chosen={f.assignees} onPick={(id) => change({ assignees: [id] })} />
+      )}
+
       <div className="row">
         <span className="small report-name">{s.download}</span>
         {FORMATS.map((format, i) =>
@@ -239,5 +259,57 @@ export function Reports() {
       </div>
       <p className="muted small">{s.formatsHint}</p>
     </div>
+  )
+}
+
+/**
+ * Разрез по исполнителям под нынешний отбор (ROADMAP 37.1): «что делал
+ * Борис» прямо на экране, без файла и фильтра в Excel. Имя — кнопка:
+ * она ставит отбор на этого человека, и выгрузка ниже становится его.
+ * Карточка с двумя исполнителями считается у обоих.
+ */
+function ByPerson({ rows, chosen, onPick }: { rows: PersonRow[]; chosen: string[]; onPick: (id: string) => void }) {
+  const s = t.reports
+  const days = (v: number | null) => (v === null ? '—' : s.days(v))
+  return (
+    <section className="stack reports-group">
+      <h3 className="section-title">{s.byPerson}</h3>
+      <div className="table-wrap">
+        <table className="figures reports-people">
+          <thead>
+            <tr>
+              <th scope="col">{s.person}</th>
+              <th scope="col">{s.cards}</th>
+              <th scope="col">{s.finished}</th>
+              <th scope="col">{s.wip}</th>
+              <th scope="col">{s.cycleMedian}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.userId ?? 'none'}>
+                <th scope="row">
+                  {r.userId === null ? (
+                    <span className="muted">{s.noAssignee}</span>
+                  ) : chosen.length === 1 && chosen[0] === r.userId ? (
+                    <strong>{r.name}</strong>
+                  ) : (
+                    <button type="button" className="link" aria-label={s.onlyPerson(r.name)}
+                      onClick={() => onPick(r.userId!)}>
+                      {r.name}
+                    </button>
+                  )}
+                </th>
+                <td>{r.cards}</td>
+                <td>{r.finished}</td>
+                <td>{r.wip}</td>
+                <td>{days(r.cycleTimeP50)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted small">{s.byPersonHint}</p>
+    </section>
   )
 }

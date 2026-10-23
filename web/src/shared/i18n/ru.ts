@@ -722,6 +722,10 @@ export const ru = {
     toFlow: 'Все метрики доски →',
   },
   column: {
+    assignees: 'Исполнители новой карточки',
+    addAssignee: 'Исполнитель новой карточки',
+    addAssigneePick: 'Исполнитель…',
+    unassign: (name: string) => `Убрать исполнителя ${name}`,
     markupOf: (name: string) => `Разметка колонки «${name}»`,
     markup: 'Разметка',
     averageWaiting: (days: string) => `ждут в среднем ${days}`,

@@ -185,6 +185,9 @@ type Summary struct {
 	Flow       []FlowDay      `json:"flow"`
 	Iterations []IterationRow `json:"iterations"`
 	Teams      []TeamRow      `json:"teams"`
+	// People — разрез по исполнителям (ROADMAP 37.1): «что делал
+	// Борис» без фильтра в Excel.
+	People []PersonRow `json:"people"`
 }
 
 // Chosen — названия выбранного в отборе; пустой список — «любые».
@@ -447,7 +450,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 
 func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 	sum := Summary{Throughput: []WeekCount{}, Flow: []FlowDay{},
-		Iterations: []IterationRow{}, Teams: []TeamRow{}}
+		Iterations: []IterationRow{}, Teams: []TeamRow{}, People: []PersonRow{}}
 	from, next := f.From, f.To.AddDate(0, 0, 1)
 
 	chosen, err := names(ctx, tx, f)
@@ -614,7 +617,12 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		tr.CycleP50, tr.CycleP85 = round2(tr.CycleP50), round2(tr.CycleP85)
 		sum.Teams = append(sum.Teams, tr)
 	}
-	return sum, rows.Err()
+	if err := rows.Err(); err != nil {
+		return sum, err
+	}
+	rows.Close()
+	sum.People, err = personRows(ctx, tx, "report_cards", nil, f)
+	return sum, err
 }
 
 // names — названия выбранного. Невидимое спрашивающему не называется:

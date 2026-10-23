@@ -874,11 +874,21 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // же, иначе она заводилась вне итерации и тут же пропадала из вида
   // (владелец 25.09.2026). Принадлежность к итерации патч не несёт,
   // поэтому такая карточка — с перечитыванием доски.
+  // Исполнители — той же операцией (ROADMAP 37.4): их список патч
+  // несёт целиком, как у ASSIGN_CARD, и перечитывать доску не нужно.
   const createCard = useCallback(
-    (columnId: string, title: string, iterationId?: string) =>
-      iterationId
-        ? runAndReload('CREATE_CARD', { columnId, title, place: 'end', iterationId }, t.ops.createCard)
-        : run('CREATE_CARD', { columnId, title, place: 'end' }, t.ops.createCard),
+    (columnId: string, title: string, iterationId?: string, assigneeIds: string[] = []) => {
+      const payload = {
+        columnId,
+        title,
+        place: 'end',
+        ...(iterationId ? { iterationId } : {}),
+        ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
+      }
+      return iterationId
+        ? runAndReload('CREATE_CARD', payload, t.ops.createCard)
+        : run('CREATE_CARD', payload, t.ops.createCard)
+    },
     [run, runAndReload],
   )
 

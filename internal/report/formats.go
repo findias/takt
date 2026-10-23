@@ -356,6 +356,20 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			w.row(str(name), num(float64(t.Cards)), num(float64(t.Finished)),
 				num(float64(t.WIP)), optDec(t.CycleP50), optDec(t.CycleP85))
 		}
+		w.blank()
+
+		// По людям: карточка с двумя исполнителями — у обоих.
+		w.row(bold(n("По исполнителям")))
+		w.row(bold(n("Исполнитель")), bold(n("Карточек")), bold(n("Сделано")),
+			bold(n("В работе")), bold(n("Цикл, медиана")), bold(n("Цикл, 85-я")))
+		for _, p := range sum.People {
+			name := p.Name
+			if p.UserID == nil {
+				name = n("Без исполнителя")
+			}
+			w.row(str(name), num(float64(p.Cards)), num(float64(p.Finished)),
+				num(float64(p.WIP)), optDec(p.CycleP50), optDec(p.CycleP85))
+		}
 		return charts
 	}
 	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 10, 10})

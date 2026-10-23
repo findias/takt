@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAutoGrow } from '../../shared/lib/useAutoGrow.ts'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -112,7 +113,7 @@ type ColumnProps = {
   onOpenCard: (cardId: string) => void
   onMoveByKeyboard: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
-  onCreateCard: (title: string) => void
+  onCreateCard: (title: string, assigneeIds: string[]) => void
   onRenameColumn: (name: string) => void
   onSetLimit: (limit: number | null) => void
   onUpdateColumn: (patch: ColumnPatch) => void
@@ -397,9 +398,11 @@ export function ColumnView(props: ColumnProps) {
       {!props.canEdit ? null : adding ? (
         <NewCardForm
           column={props.name}
+          people={props.people}
+          assignable={props.assignable}
           onCancel={() => setAdding(false)}
-          onCreate={(title) => {
-            props.onCreateCard(title)
+          onCreate={(title, assigneeIds) => {
+            props.onCreateCard(title, assigneeIds)
             added.current = true
             // Форма остаётся открытой: карточки заводят подряд, а закрытая
             // форма после каждой означает поиск кнопки на каждую вторую.
@@ -429,25 +432,38 @@ export function ColumnView(props: ColumnProps) {
  * работа приходит списком, и карточки заводят подряд. Закрытая после
  * каждой форма означала поиск кнопки на каждую вторую карточку — это
  * и было первым, обо что спотыкался проход по интерфейсу.
+ *
+ * Исполнитель выбирается здесь же (ROADMAP 37.4): заводящий обычно
+ * знает, кто будет делать, и второй заход в карточку ради этого был
+ * лишним шагом на каждую задачу. Выбор переживает Enter — карточки
+ * заводят пачкой, и чаще всего на одного человека.
  */
 function NewCardForm({
   column,
+  people,
+  assignable,
   onCreate,
   onCancel,
 }: {
   /** Имя колонки — кнопке: «Завести» отдельно от окружения ничего
    *  не говорит, а диктор читает кнопку именно отдельно. */
   column: string
-  onCreate: (title: string) => void
+  people: Record<string, string>
+  /** Кого можно назначить: видит доску (как в панели карточки). */
+  assignable: Record<string, string>
+  onCreate: (title: string, assigneeIds: string[]) => void
   onCancel: () => void
 }) {
   const [value, setValue] = useState('')
+  const [who, setWho] = useState<string[]>([])
   const field = useRef<HTMLTextAreaElement>(null)
+  useAutoGrow(field, value)
+  const free = Object.entries(assignable).filter(([id]) => !who.includes(id))
 
   const submit = () => {
     const title = value.trim()
     if (!title) return
-    onCreate(title)
+    onCreate(title, who)
     setValue('')
     // Фокус возвращается руками: доска перерисовывается новой карточкой,
     // и без этого он уезжает на `body` — то есть обход с клавиатуры
@@ -478,6 +494,41 @@ function NewCardForm({
           }
         }}
       />
+      {(who.length > 0 || free.length > 0) && (
+        <div className="row row--tight new-card-who" role="group" aria-label={t.column.assignees}>
+          {who.map((id) => {
+            const name = people[id] ?? assignable[id] ?? t.common.someone
+            return (
+              <button
+                key={id}
+                type="button"
+                className="chip chip--slate chip--removable"
+                aria-label={t.column.unassign(name)}
+                onClick={() => setWho(who.filter((x) => x !== id))}
+              >
+                {name} ×
+              </button>
+            )
+          })}
+          {free.length > 0 && (
+            <select
+              value=""
+              aria-label={t.column.addAssignee}
+              onChange={(e) => {
+                if (e.target.value) setWho([...who, e.target.value])
+                field.current?.focus()
+              }}
+            >
+              <option value="">{t.column.addAssigneePick}</option>
+              {free.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       <div className="row">
         <button
           type="submit"

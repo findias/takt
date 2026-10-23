@@ -1049,3 +1049,47 @@ describe('файлы карточки', () => {
     expect(attach).not.toHaveBeenCalled()
   })
 })
+
+// Заведение карточки сразу с исполнителем (ROADMAP 37.4): выбор под
+// полем названия уходит той же операцией и переживает Enter — карточки
+// заводят пачкой на одного человека.
+describe('новая карточка с исполнителем', () => {
+  it('исполнитель выбирается в форме и уходит в CREATE_CARD', async () => {
+    snapshot.mockResolvedValue({
+      ...board([]),
+      people: [
+        { userId: 'u-boris', name: 'Борис Дятлов' },
+        { userId: 'u-vera', name: 'Вера Соколова' },
+      ],
+    } as Snapshot)
+    const user = userEvent.setup()
+    show()
+
+    await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Исполнитель новой карточки' }), 'u-boris')
+    // Выбранный — фишкой, которую можно снять; в списке формы его больше нет.
+    expect(screen.getByRole('button', { name: 'Убрать исполнителя Борис Дятлов' })).toBeTruthy()
+    const pick = screen.getByRole('combobox', { name: 'Исполнитель новой карточки' })
+    expect(within(pick).queryByRole('option', { name: 'Борис Дятлов' })).toBeNull()
+    expect(within(pick).getByRole('option', { name: 'Вера Соколова' })).toBeTruthy()
+
+    await user.type(screen.getByRole('textbox', { name: 'Что нужно сделать?' }), 'Сверить остатки{Enter}')
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    const [, , type, payload] = operation.mock.calls[0]
+    expect(type).toBe('CREATE_CARD')
+    expect(payload).toMatchObject({ title: 'Сверить остатки', assigneeIds: ['u-boris'] })
+
+    // Форма осталась с тем же исполнителем — следующая карточка ему же.
+    expect(screen.getByRole('button', { name: 'Убрать исполнителя Борис Дятлов' })).toBeTruthy()
+  })
+
+  it('без выбора исполнителя операция прежняя', async () => {
+    snapshot.mockResolvedValue(board([]))
+    const user = userEvent.setup()
+    show()
+    await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
+    await user.type(screen.getByRole('textbox', { name: 'Что нужно сделать?' }), 'Без исполнителя{Enter}')
+    await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+    expect(operation.mock.calls[0][3]).not.toHaveProperty('assigneeIds')
+  })
+})

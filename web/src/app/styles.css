@@ -559,6 +559,22 @@ textarea {
   field-sizing: content;
   max-height: 40vh;
 }
+/* Строка, которая переносится (ROADMAP 37.3): название, причина
+   блокировки. Высотой в строку, пока текст короткий, и ниже — по мере
+   набора; тянуть руками незачем, высоту ведёт текст. */
+textarea.text-line {
+  min-height: var(--target);
+  resize: none;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.block-reason {
+  width: 100%;
+}
+.new-card-who select {
+  width: auto;
+  max-width: 100%;
+}
 label {
   display: flex;
   flex-direction: column;
@@ -4661,6 +4677,21 @@ textarea.description {
    подпись с полем и так делят строку. */
 /* Цвет — как у подписей внутри <label>: «Приоритет» стоит над группой
    флажков, а не внутри подписи, и без этого выходил темнее соседей. */
+/* Разрез по людям (ROADMAP 37.1): на узком экране пять столбцов
+   не помещались, и последний обрезался посреди слова. Отступы и шрифт
+   там меньше, подписи переносятся по словам. */
+.reports-people {
+  width: 100%;
+}
+@media (max-width: 40rem) {
+  .reports-people {
+    font-size: var(--text-sm);
+  }
+  .reports-people th,
+  .reports-people td {
+    padding-right: var(--space-2);
+  }
+}
 .reports .report-name {
   color: var(--ink-2);
 }

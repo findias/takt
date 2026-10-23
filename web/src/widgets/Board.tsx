@@ -1161,7 +1161,7 @@ export function Board({
         onOpenCard={showCard}
         onMoveByKeyboard={moveByKeyboard}
         onNavigate={navigateCards}
-        onCreateCard={(title) => void board.createCard(columnId, title, intoIteration)}
+        onCreateCard={(title, assigneeIds) => void board.createCard(columnId, title, intoIteration, assigneeIds)}
         onRenameColumn={(name) => void board.renameColumn(columnId, name)}
         onSetLimit={(limit) => void board.setColumnLimit(columnId, limit)}
         onUpdateColumn={(patch) => void board.updateColumn(columnId, patch)}

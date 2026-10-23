@@ -24,6 +24,10 @@ func (s *Server) registerReportRoutes(mux *http.ServeMux) {
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReport))
 	mux.HandleFunc("GET /api/reports/cards/count",
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReportCount))
+	// Люди под отбор (ROADMAP 37.1–37.2) — для экрана: кого предлагать
+	// в «Исполнителях» и разрез по людям. Ключу ни к чему: в JSON
+	// выгрузки тот же разрез уже есть, в summary.people.
+	mux.HandleFunc("GET /api/reports/people", s.human(s.handleReportPeople))
 
 	// Срезы — сохранённые отборы человека, как виды доски: ключу
 	// интеграции они ни к чему, у него нет экрана, где их открывать.
@@ -185,6 +189,20 @@ func (s *Server) handleReportCount(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]int{"total": n, "limit": report.MaxRows})
+}
+
+func (s *Server) handleReportPeople(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	f, err := reportFilter(r.URL.Query())
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	people, err := s.reports.People(r.Context(), p.OrgID, p.ID, f)
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, people)
 }
 
 func (s *Server) handleReport(w http.ResponseWriter, r *http.Request, p auth.Principal) {
