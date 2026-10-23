@@ -38,6 +38,7 @@ import type { newCard } from './ru/newCard.ts'
 import type { panel } from './ru/panel.ts'
 import type { feed } from './ru/feed.ts'
 import type { moveCard } from './ru/moveCard.ts'
+import type { completion } from './ru/completion.ts'
 
 /**
  * Разделы, которые едут со своим экраном, а не при открытии.
@@ -68,6 +69,7 @@ type Lazy = {
   panel: typeof panel
   feed: typeof feed
   moveCard: typeof moveCard
+  completion: typeof completion
 }
 export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
@@ -100,6 +102,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
   panel: { ru: () => import('./ru/panel.ts'), en: () => import('./en/panel.ts') },
   feed: { ru: () => import('./ru/feed.ts'), en: () => import('./en/feed.ts') },
   moveCard: { ru: () => import('./ru/moveCard.ts'), en: () => import('./en/moveCard.ts') },
+  completion: { ru: () => import('./ru/completion.ts'), en: () => import('./en/completion.ts') },
 }
 
 /** Подгрузить разделы на выбранном языке. Повторная загрузка ничего

@@ -262,7 +262,7 @@ func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) 
 	// доля разбиения, название части, её состояние. Остальным платить
 	// за лишний запрос и лишний замок незачем.
 	switch req.Type {
-	case "MOVE_CARD", "MOVE_CARD_TO_BOARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
+	case "MOVE_CARD", "MOVE_CARD_TO_BOARD", "UPDATE_CARD", "SET_CARD_DONE", "SET_CARD_PERCENT", "ARCHIVE_CARD",
 		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD", "SET_BLOCK_UNTIL", "SET_BLOCK_REASON":
 	default:
 		return "", nil
@@ -500,6 +500,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return removeFromIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_CARD_DONE":
 		return setCardDone(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_CARD_PERCENT":
+		return setCardPercent(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "BLOCK_CARD":
 		return blockCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UNBLOCK_CARD":

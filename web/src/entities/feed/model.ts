@@ -103,6 +103,8 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return t.feed.done
     case 'undone':
       return t.feed.undone
+    case 'percent_set':
+      return typeof p.percent === 'number' ? t.feed.percentSet(p.percent) : t.feed.percentAuto
     case 'blocked':
       return typeof p.reason === 'string' ? t.feed.blockedFor(p.reason) : t.feed.blocked
     // Снята тем, что сделали держащую карточку: автор — тот, кто её

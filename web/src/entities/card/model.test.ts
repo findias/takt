@@ -465,3 +465,20 @@ test('внешний номер на карточке: номер как ест�
   assert.equal(externalRefLabel('https://tracker.example.test'), 'tracker.example.test')
   assert.equal(externalRefLabel('https://tracker.example.test/task/%D0%97-1'), 'З-1')
 })
+
+// Процент выполнения (ROADMAP 38): ручной перекрывает счёт, счёт идёт
+// из частей, у сделанной — 100, у неначатой без частей процента нет.
+test('процент выполнения: ручной, из частей, сделанная, никакой', async () => {
+  const { completion, progressRatio } = await import('./model.ts')
+  const base = {
+    id: 'c', number: 'К-1', columnId: 'col', position: 'a0', title: 'Т', description: '', version: 1,
+    columnEnteredAt: '2026-10-01T00:00:00Z', startedAt: null, finishedAt: null, outcome: null,
+    estimate: null, comments: 0, priority: 'medium', dueOn: null, doneAt: null,
+  } as unknown as Card
+  assert.equal(completion(base), null)
+  assert.deepEqual(completion({ ...base, percent: 40 }), { percent: 40, manual: true })
+  assert.deepEqual(completion({ ...base, progress: { done: 1.4, total: 2, byWeight: false } }), { percent: 70, manual: false })
+  assert.deepEqual(completion({ ...base, percent: 10, progress: { done: 2, total: 2, byWeight: false } }), { percent: 10, manual: true })
+  assert.deepEqual(completion({ ...base, doneAt: '2026-10-02T00:00:00Z' }), { percent: 100, manual: false })
+  assert.equal(progressRatio({ ...base, percent: 25 }), 0.25)
+})

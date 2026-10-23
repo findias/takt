@@ -36,6 +36,8 @@ export const feed: typeof ru = {
     prioritised: 'priority changed',
     done: 'marked done',
     undone: '“done” mark removed',
+    percentSet: (n: number) => `${n}% complete`,
+    percentAuto: 'completion is counted automatically again',
     blockedFor: (reason: string) => `blocked: ${reason}`,
     blocked: 'blocked',
     unblocked: 'block lifted',

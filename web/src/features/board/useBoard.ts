@@ -896,6 +896,13 @@ export function useBoard(boardId: string | null, notify: Notify) {
       ),
     [patchCard],
   )
+  // Процент выполнения (ROADMAP 38). Патч несёт и родителей этой доски:
+  // процент части входит в их счёт.
+  const setCardPercent = useCallback(
+    (cardId: string, percent: number | null) =>
+      run('SET_CARD_PERCENT', { cardId, percent }, t.ops.percent),
+    [run],
+  )
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
       patchCard(
@@ -1127,6 +1134,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     renameCard,
     describeCard,
     estimateCard,
+    setCardPercent,
     prioritiseCard,
     commitCard,
     archiveCard,

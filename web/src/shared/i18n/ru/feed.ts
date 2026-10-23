@@ -37,6 +37,8 @@ export const feed = {
     prioritised: 'изменён приоритет',
     done: 'отмечена сделанной',
     undone: 'отметка «сделана» снята',
+    percentSet: (n: number) => `выполнено ${n}%`,
+    percentAuto: 'процент выполнения снова считается сам',
     blockedFor: (reason: string) => `заблокирована: ${reason}`,
     blocked: 'заблокирована',
     unblocked: 'блокировка снята',

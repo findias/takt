@@ -21,6 +21,7 @@ import {
   blockedPartsLabel,
   progressLabel,
   progressRatio,
+  completion,
   directPartsLabel,
   deepStuckLabel,
   unitLabel, epicTone, externalRefLabel } from '../../entities/card/model.ts'
@@ -305,6 +306,8 @@ function CardViewInner({
    * остальные живут в панели и в отборах.
    */
   const due = card?.dueOn ? dueLabel(card.dueOn) : null
+  // Процент выполнения (ROADMAP 38): ручной или из частей.
+  const done = card ? completion(card) : null
   // Часть, которая стоит, останавливает и целое: разбили работу, одна
   // часть упёрлась — задача не идёт. Раньше об этом знала только сама
   // часть, а с доски работа выглядела идущей.
@@ -921,6 +924,7 @@ function CardViewInner({
                       части — в подсказке, для того, кто спросит. */}
                   <span className="muted small" aria-hidden="true" title={directPartsLabel(card, unit) ?? undefined}>
                     {progressLabel(card, unit)}
+                    {done !== null && ` · ${done.percent}%`}
                   </span>
                 </button>
               ) : (
@@ -940,6 +944,7 @@ function CardViewInner({
                   </div>
                   <span className="muted small" title={directPartsLabel(card, unit) ?? undefined}>
                     {progressLabel(card, unit)}
+                    {done !== null && ` · ${done.percent}%`}
                   </span>
                 </>
               )}
@@ -956,6 +961,25 @@ function CardViewInner({
                   ))}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Процент без частей (ROADMAP 38): у работы, которую не дробили,
+              его ставят руками — и только тогда он есть на карточке.
+              Ноль у каждой неначатой карточки был бы шумом. */}
+          {!(card?.progress && card.progress.total > 0) && done?.manual && (
+            <div className="card-progress">
+              <div
+                className="progress"
+                role="progressbar"
+                aria-valuenow={done.percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${done.percent}%`}
+              >
+                <div className="progress-fill" style={{ transform: `scaleX(${done.percent / 100})` }} />
+              </div>
+              <span className="muted small" aria-hidden="true">{`${done.percent}%`}</span>
             </div>
           )}
 

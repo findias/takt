@@ -471,6 +471,32 @@ func (s *Service) SetIterations(ctx context.Context, orgID, actorID, boardID str
 		})))
 }
 
+// ErrUnknownUnit — единицы оценки с таким именем нет.
+var ErrUnknownUnit = errors.New("единица оценки бывает points, hours или days")
+
+// SetEstimateUnit задаёт доске свою единицу оценки (ROADMAP 38) или,
+// с пустой, возвращает её к единице организации. Числа оценок не
+// пересчитываются: тройка остаётся тройкой, меняется подпись под ней —
+// очки в часы не переводятся никаким коэффициентом, как и у организации.
+func (s *Service) SetEstimateUnit(ctx context.Context, orgID, actorID, boardID string, unit *string) error {
+	if unit != nil && *unit != "points" && *unit != "hours" && *unit != "days" {
+		return ErrUnknownUnit
+	}
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(s.db.InScope(ctx,
+		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, `
+				update boards set estimate_unit = $2, version = version + 1
+				 where id = $1 and archived_at is null`, boardID, unit)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				return ErrNotFound
+			}
+			return nil
+		})))
+}
+
 // ErrUnknownLevel — уровня доски с таким именем нет.
 var ErrUnknownLevel = errors.New("уровень доски бывает team или portfolio")
 
@@ -733,7 +759,8 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var cards int
 			var runs bool
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
-				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &visibility, &teamID, &cards, &runs); err != nil {
+				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
+				&visibility, &teamID, &cards, &runs); err != nil {
 				return err
 			}
 			b.Visibility = &visibility

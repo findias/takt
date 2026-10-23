@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
 import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
-import { dateWords } from '../../entities/card/model.ts'
-import type { FlowReport } from '../../shared/api/index.ts'
+import { UNIT_NAMES, dateWords } from '../../entities/card/model.ts'
+import type { EstimateUnit, FlowReport } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
 import { Hint } from '../../shared/ui/Hint.tsx'
@@ -22,6 +22,8 @@ export function Flow({
   sleProbability,
   iterationsEnabled,
   level,
+  ownUnit,
+  orgUnit,
   onClose,
   onPromise,
 }: {
@@ -34,6 +36,9 @@ export function Flow({
   iterationsEnabled: boolean
   /** Уровень доски (этап 33): команда или портфель эпиков. */
   level: 'team' | 'portfolio'
+  /** Своя единица оценки доски (ROADMAP 38); пусто — как у организации. */
+  ownUnit: EstimateUnit | null
+  orgUnit: EstimateUnit
   onClose: () => void
   /** Обещание изменилось — доске стоит перечитать себя. */
   onPromise: () => void
@@ -97,6 +102,7 @@ export function Flow({
 
       <IterationsSwitch boardId={boardId} enabled={iterationsEnabled} onChanged={onPromise} />
       <LevelSwitch boardId={boardId} level={level} onChanged={onPromise} />
+      <UnitSwitch boardId={boardId} own={ownUnit} org={orgUnit} onChanged={onPromise} />
 
       {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
           читается уже с этой оговоркой. Переключатель виден, пока есть
@@ -467,6 +473,55 @@ function LevelSwitch({
         </select>
       </label>
       <p className="muted small">{t.flow.levelHint}</p>
+    </section>
+  )
+}
+
+/** Единица оценки доски (ROADMAP 38): своя или как у организации.
+ *  Обратимо, без вопроса: числа оценок не пересчитываются. */
+function UnitSwitch({
+  boardId,
+  own,
+  org,
+  onChanged,
+}: {
+  boardId: string
+  own: EstimateUnit | null
+  org: EstimateUnit
+  onChanged: () => void
+}) {
+  const [value, setValue] = useState<EstimateUnit | ''>(own ?? '')
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <section className="stack stack--tight">
+      <ScreenError>{error}</ScreenError>
+      <label className="row row--tight small">
+        <span>{t.flow.unit}</span>
+        <select
+          value={value}
+          onChange={(e) => {
+            const next = e.target.value as EstimateUnit | ''
+            const prev = value
+            setValue(next)
+            setError(null)
+            api
+              .setBoardEstimateUnit(boardId, next === '' ? null : next)
+              .then(onChanged)
+              .catch((err) => {
+                setValue(prev)
+                setError(err instanceof Error ? err.message : t.common.notDone)
+              })
+          }}
+        >
+          <option value="">{t.flow.unitOrg(UNIT_NAMES[org])}</option>
+          {(Object.keys(UNIT_NAMES) as EstimateUnit[]).map((u) => (
+            <option key={u} value={u}>
+              {t.flow.unitIn(UNIT_NAMES[u])}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small">{t.flow.unitHint}</p>
     </section>
   )
 }

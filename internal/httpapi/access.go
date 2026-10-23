@@ -59,6 +59,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/boards/{id}/sle", s.authed(s.handleSetSLE))
 	mux.HandleFunc("PUT /api/boards/{id}/iterations-enabled", s.authed(s.handleSetIterations))
 	mux.HandleFunc("PUT /api/boards/{id}/level", s.authed(s.handleSetLevel))
+	mux.HandleFunc("PUT /api/boards/{id}/estimate-unit", s.authed(s.handleSetBoardEstimateUnit))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
@@ -702,6 +703,31 @@ func (s *Server) handleSetLevel(w http.ResponseWriter, r *http.Request, p auth.P
 		return
 	}
 	if s.failAccess(w, "уровень доски", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Единица оценки доски (ROADMAP 38): своя или, с null, как у организации.
+// Менять может тот, кто пишет в доску, — как уровень и итерации: это
+// настройка того, как команда считает свою работу, а не права.
+func (s *Server) handleSetBoardEstimateUnit(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Unit *string `json:"unit"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := s.boards.SetEstimateUnit(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Unit)
+	if errors.Is(err, board.ErrUnknownUnit) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if s.failAccess(w, "единица оценки доски", err) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

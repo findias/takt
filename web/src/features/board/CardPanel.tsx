@@ -10,6 +10,7 @@ import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { EditIcon } from '../../shared/ui/icons.tsx'
 import { api } from '../../shared/api/index.ts'
 import type {
+  Card,
   BoardEvent,
   BoardInfo,
   CardField,
@@ -34,6 +35,7 @@ import {
   priorityLabel,
   cardDetails,
   progressLabel,
+  completion,
   directPartsLabel,
 } from '../../entities/card/model.ts'
 import type { Related } from '../../entities/card/model.ts'
@@ -107,6 +109,7 @@ export function CardPanel({
   onClose,
   onDescribe,
   onEstimate,
+  onPercent,
   onOpenCard,
   onAssign,
   onLabel,
@@ -139,6 +142,8 @@ export function CardPanel({
   onClose: () => void
   onDescribe: (cardId: string, description: string) => void
   onEstimate: (cardId: string, estimate: number | null) => void
+  /** Процент выполнения руками; null — считать самому (ROADMAP 38). */
+  onPercent: (cardId: string, percent: number | null) => void
   /** Открыть другую карточку этой же доски — по связи. */
   onOpenCard: (cardId: string) => void
   /** on = назначить, off = снять. */
@@ -476,6 +481,8 @@ export function CardPanel({
               onSave={(value) => onEstimate(card.id, value)}
             />
 
+            <Completion card={card} canEdit={canEdit} onSave={(percent) => onPercent(card.id, percent)} />
+
             <Fields
               fields={base.fields}
               values={base.fieldValues[card.id] ?? []}
@@ -637,6 +644,70 @@ function IterationPicker({
  * неоценённая — и счёт возвращается к штукам, потому что вес ноль молча
  * выкинул бы работу из знаменателя.
  */
+/**
+ * Процент выполнения (ROADMAP 38): ползунок с шагом 5 и число рядом.
+ *
+ * Уходит на сервер, когда ползунок отпустили, а не на каждом шаге:
+ * провести от 0 до 80 — шестнадцать операций и шестнадцать записей
+ * в истории, а сказано одно. Пока не трогали, показывает счёт сам
+ * (из частей, 100 у сделанной), и сдвиг превращает его в ручной.
+ */
+function Completion({
+  card,
+  canEdit,
+  onSave,
+}: {
+  card: Card
+  canEdit: boolean
+  onSave: (percent: number | null) => void
+}) {
+  const now = completion(card)
+  const [draft, setDraft] = useState<number | null>(null)
+  // Пришёл новый снимок — черновик больше не нужен: показываем то,
+  // что записано.
+  useEffect(() => setDraft(null), [card.percent, card.version])
+  const value = draft ?? now?.percent ?? 0
+  const commit = () => {
+    if (draft !== null && draft !== card.percent) onSave(draft)
+  }
+  const text = `${t.completion.value(value)}${now?.manual ? ` · ${t.completion.manual}` : ''}`
+
+  if (!canEdit) {
+    return now ? <p className="muted small">{t.completion.is(text)}</p> : null
+  }
+  return (
+    <div className="stack stack--tight">
+      <div className="field-row completion">
+        <label className="field-label" htmlFor={`completion-${card.id}`}>
+          {t.completion.title}
+        </label>
+        <input
+          id={`completion-${card.id}`}
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={value}
+          aria-valuetext={text}
+          onChange={(e) => setDraft(Number(e.target.value))}
+          onPointerUp={commit}
+          onKeyUp={commit}
+          onBlur={commit}
+        />
+        <span className="small completion-value" aria-hidden="true">
+          {text}
+        </span>
+        {now?.manual && (
+          <button type="button" className="link" onClick={() => onSave(null)}>
+            {t.completion.auto}
+          </button>
+        )}
+      </div>
+      <p className="muted small">{t.completion.hint}</p>
+    </div>
+  )
+}
+
 function Estimate({
   value,
   unit,

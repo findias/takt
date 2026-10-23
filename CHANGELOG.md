@@ -12,7 +12,9 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-No migration and no new setting.
+**One migration, safe for the running version.** `0080` adds two
+nullable columns: `cards.percent` and `boards.estimate_unit`. Pods of
+v0.5.x keep working on them and ignore both.
 
 A new operation, `MOVE_CARD_TO_BOARD` `{cardId, boardId, toColumnId?}`,
 moves a card to another board of the same level; the key or person
@@ -56,6 +58,16 @@ together from **Move selected**): pick the board and the column. The card
   Imported cards and cards moved from a board you cannot see leave the
   cell empty: their history is not here. JSON has `workDays` and
   `workTimeP50`.
+- **Each board can estimate in its own unit** — points, hours or days,
+  or as the organisation does (**Flow** → **Estimate**). Estimates are
+  not converted. The export gains an **Estimate unit** column, and the
+  board snapshot carries `estimateUnit` and `ownEstimateUnit`;
+  `PUT /api/boards/{id}/estimate-unit`.
+- **A completion percentage on every card** — task, part or epic.
+  Counted from the parts until someone sets it by hand with the slider on
+  the **Work** tab; a part's percentage now counts toward its parent (a
+  part at 40% is 0.4 of a part, no longer 0). New operation
+  `SET_CARD_PERCENT`, new event `card.percent_set`.
 
 ## v0.5.2 — 26 October 2026
 

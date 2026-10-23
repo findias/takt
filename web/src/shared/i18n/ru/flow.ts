@@ -45,6 +45,10 @@ export const flow = {
     throughputLabel: (list: string) => `Пропускная способность: ${list}`,
     promise: 'Обещание доски',
     howWeWork: 'Как работаем',
+    unit: 'Оценка',
+    unitOrg: (name: string) => `как в организации — в ${name}`,
+    unitIn: (name: string) => `в ${name}`,
+    unitHint: 'Своя единица у доски: одна команда оценивает очками, другая часами. Числа оценок не пересчитываются — меняется подпись под ними.',
     level: 'Уровень доски',
     levels: { team: 'Доска команды', portfolio: 'Портфель эпиков' },
     levelHint:

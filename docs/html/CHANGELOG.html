@@ -123,7 +123,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
 <h2 id="v0-6-0-27-october-2026">v0.6.0 — 27 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
-<p>No migration and no new setting.</p>
+<p><strong>One migration, safe for the running version.</strong> <code>0080</code> adds two nullable columns: <code>cards.percent</code> and <code>boards.estimate_unit</code>. Pods of v0.5.x keep working on them and ignore both.</p>
 <p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on, and the board metrics have <code>movedOut</code>.</p>
 <h3 id="the-rest">The rest</h3>
 <p>board…<strong>, the table has it in the row menu, and selected cards move together from </strong>Move selected<strong>): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. The old board&#39;s </strong>Flow** says how many cards moved to other   boards. Before, the only way was to create the card again on the   other board.</p>
@@ -131,6 +131,8 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong> (the open card&#39;s panel has **To another</li>
 <li><strong>The board&#39;s assignee filter lists only people who belong there.</strong> It used to offer the whole organisation; now it has those who can see the board and those already assigned on its cards (marked when they have no access). Each name shows how many open cards the person has and their estimate; the list is ordered by name, by cards or by estimate — the choice is remembered — and typing finds a person.</li>
 <li><strong>Reports show the real time in progress.</strong> The <strong>Data</strong> sheet and CSV have <strong>Time in progress, days</strong> after the cycle time: how long the card stood in work columns by its move history, without returns to the queue and waiting in queue columns. <strong>By assignee</strong>, on the screen and on the <strong>Summary</strong> sheet, has its median. Cycle time counts from the first start to done, waiting included, and with imported cards it ran to hundreds of days; the gap between the two numbers is now visible. Imported cards and cards moved from a board you cannot see leave the cell empty: their history is not here. JSON has <code>workDays</code> and <code>workTimeP50</code>.</li>
+<li><strong>Each board can estimate in its own unit</strong> — points, hours or days, or as the organisation does (<strong>Flow</strong> → <strong>Estimate</strong>). Estimates are not converted. The export gains an <strong>Estimate unit</strong> column, and the board snapshot carries <code>estimateUnit</code> and <code>ownEstimateUnit</code>; <code>PUT /api/boards/{id}/estimate-unit</code>.</li>
+<li><strong>A completion percentage on every card</strong> — task, part or epic. Counted from the parts until someone sets it by hand with the slider on the <strong>Work</strong> tab; a part&#39;s percentage now counts toward its parent (a part at 40% is 0.4 of a part, no longer 0). New operation <code>SET_CARD_PERCENT</code>, new event <code>card.percent_set</code>.</li>
 </ul>
 <h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
@@ -393,7 +395,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.5.1-14-g00aa455-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.1-16-gec5a999-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

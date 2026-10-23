@@ -436,14 +436,14 @@ func childCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card,
 // но и шкалу — «3 из 8» превращалось в «2 из 5», и полоса прыгала
 // назад на глазах у того, кто только что отметил работу сделанной.
 func progressOf(ctx context.Context, tx pgx.Tx, cardID string) (*Progress, error) {
-	var total, done, unestimated int
-	var weight, weightDone float64
+	var total, unestimated int
+	var done, weight, weightDone float64
 	err := tx.QueryRow(ctx, `
 		select count(*),
-		       count(*) filter (where `+cardDone+`),
+		       coalesce(sum(`+cardShare+`), 0)::float8,
 		       count(*) filter (where c.estimate is null),
 		       coalesce(sum(c.estimate), 0),
-		       coalesce(sum(c.estimate) filter (where `+cardDone+`), 0)
+		       coalesce(sum(c.estimate * `+cardShare+`), 0)::float8
 		  from card_links l
 		  join cards c on c.id = l.to_card and c.archived_at is null
 		 where l.from_card = $1 and l.kind = 'subtask'`, cardID).
@@ -459,7 +459,7 @@ func progressOf(ctx context.Context, tx pgx.Tx, cardID string) (*Progress, error
 	if unestimated == 0 && weight > 0 {
 		return &Progress{Done: weightDone, Total: weight, ByWeight: true}, nil
 	}
-	return &Progress{Done: float64(done), Total: float64(total)}, nil
+	return &Progress{Done: done, Total: float64(total)}, nil
 }
 
 func readCard(ctx context.Context, tx pgx.Tx, boardID, cardID string) (Card, error) {
@@ -963,5 +963,56 @@ func unblockCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 	if err != nil {
 		return Patch{}, err
 	}
+	return withParent(ctx, tx, boardID, c)
+}
+
+type setCardPercentPayload struct {
+	CardID string `json:"cardId"`
+	// Percent — 0…100 или null: null возвращает счёт самому себе.
+	Percent *int `json:"percent"`
+}
+
+// setCardPercent ставит процент выполнения руками (ROADMAP 38) или
+// снимает его. Процент не двигает карточку и не отмечает сделанной:
+// 100% руками — это «по-моему, готово», а «сделано» — отдельное
+// решение, и подменять одно другим значило бы закрывать работу
+// ползунком.
+func setCardPercent(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, raw json.RawMessage,
+) (Patch, error) {
+	var p setCardPercentPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return Patch{}, badRequestf("разбор SET_CARD_PERCENT: %v", err)
+	}
+	if p.Percent != nil && (*p.Percent < 0 || *p.Percent > 100) {
+		return Patch{}, badRequestf("процент выполнения — от 0 до 100")
+	}
+	c, err := scanCard(tx.QueryRow(ctx, `
+		update cards
+		   set percent    = $3,
+		       version    = version + 1,
+		       updated_at = now()
+		 where id = $1 and board_id = $2 and archived_at is null
+		 returning `+cardFields,
+		p.CardID, boardID, p.Percent))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Patch{}, conflictf("", "карточка не найдена или убрана с доски")
+	}
+	if err != nil {
+		return Patch{}, err
+	}
+	// В историю — с числом: «выполнено 40%» в ленте отвечает на вопрос
+	// «а сколько было в четверг», а голое «процент изменён» — нет.
+	payload := map[string]any{"percent": nil}
+	if p.Percent != nil {
+		payload["percent"] = *p.Percent
+	}
+	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "percent_set", nil, nil, payload); err != nil {
+		return Patch{}, err
+	}
+	if err := completeCard(ctx, tx, &c); err != nil {
+		return Patch{}, err
+	}
+	// Родитель — вместе с ней: процент части входит в его счёт.
 	return withParent(ctx, tx, boardID, c)
 }
