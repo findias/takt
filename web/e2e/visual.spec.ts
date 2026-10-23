@@ -43,12 +43,12 @@ const LANGS = [
 
 type Screen = { name: string; path: string; tab?: number }
 
-// Карточка — четырьмя вкладками: вкладка выбирается нажатием, адреса
+// Карточка — пятью вкладками: вкладка выбирается нажатием, адреса
 // у неё нет.
 const SCREENS = (boardId: string, cardId = ''): Screen[] => [
   { name: 'доски', path: '/' },
   { name: 'доска', path: `/board/${boardId}` },
-  ...['обсуждение', 'работа', 'история', 'задачи'].map((tab, i) => ({
+  ...['обсуждение', 'работа', 'история', 'задачи', 'файлы'].map((tab, i) => ({
     name: `карточка-${tab}`,
     path: `/board/${boardId}/card/${cardId}`,
     tab: i,
@@ -65,7 +65,10 @@ const screensFor = (only: readonly string[] | null, r: Pick<Recorded, 'boardId' 
 async function show(page: Page, screen: Screen) {
   await page.goto(screen.path)
   if (screen.tab !== undefined) {
-    const tab = page.getByRole('tab').nth(screen.tab)
+    // Вкладки ищутся в панели карточки, а не по всей странице: на узком
+    // экране впереди стоят чужие вкладки, и номер попадал не туда —
+    // под именем «задачи» снималось «Обсуждение».
+    const tab = page.locator('.panel-card').getByRole('tab').nth(screen.tab)
     await tab.click()
     await expect(tab).toHaveAttribute('aria-selected', 'true')
   }
