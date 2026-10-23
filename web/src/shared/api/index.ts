@@ -585,6 +585,11 @@ export type BoardInfo = {
   /** Уровень доски (этап 33): работа команды или портфель эпиков.
    *  Пусто — сервер старше поля, доска — команды. */
   level?: 'team' | 'portfolio'
+  /** Действующая единица оценки доски (ROADMAP 38): своя или организации.
+   *  Старый сервер не присылает — тогда берётся единица организации. */
+  estimateUnit?: EstimateUnit
+  /** Своя единица доски; пусто — как у организации. */
+  ownEstimateUnit?: EstimateUnit | null
   /** Можно ли в доску писать. Отвечает список досок — из него выбирают,
    *  куда поставить работу соседям. В снимке доски поля нет: там на этот
    *  вопрос не отвечают, и «нельзя» отличается от «не спрашивали». */
@@ -683,6 +688,9 @@ export type Card = {
    *  у подзадачи своё обсуждение, и без числа о нём узнают, только
    *  зайдя внутрь. */
   comments: number
+  /** Процент выполнения руками (ROADMAP 38). Пусто — считается сам:
+   *  из частей и отметки «сделано». Старый сервер поля не присылает. */
+  percent?: number | null
 }
 
 export type TeamShare = {
@@ -1362,6 +1370,8 @@ export const api = {
    *  и повторять это правило здесь нельзя — разъедется. */
   createBoard: (name: string, key = '', template: BoardTemplate = 'empty') =>
     request<BoardInfo>('POST', '/api/boards', { name, key, template }),
+  setBoardEstimateUnit: (boardId: string, unit: EstimateUnit | null) =>
+    request<void>('PUT', `/api/boards/${boardId}/estimate-unit`, { unit }),
   setLevel: (boardId: string, level: 'team' | 'portfolio') =>
     request<void>('PUT', `/api/boards/${boardId}/level`, { level }),
   setIterations: (boardId: string, enabled: boolean) =>

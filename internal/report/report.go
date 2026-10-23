@@ -126,18 +126,21 @@ func (f *Filter) Check() error {
 // Row — строка листа «Данные»: одна карточка со всем, что о ней
 // спрашивают. Поля JSON — как в API, а не как в базе.
 type Row struct {
-	Number    string   `json:"number"`
-	Title     string   `json:"title"`
-	Board     string   `json:"board"`
-	Team      string   `json:"team"`
-	Column    string   `json:"column"`
-	State     string   `json:"state"`
-	Priority  string   `json:"priority"`
-	Estimate  *float64 `json:"estimate"`
-	Assignees string   `json:"assignees"`
-	Labels    string   `json:"labels"`
-	Iteration string   `json:"iteration"`
-	Parent    string   `json:"parent"`
+	Number   string   `json:"number"`
+	Title    string   `json:"title"`
+	Board    string   `json:"board"`
+	Team     string   `json:"team"`
+	Column   string   `json:"column"`
+	State    string   `json:"state"`
+	Priority string   `json:"priority"`
+	Estimate *float64 `json:"estimate"`
+	// EstimateUnit — в чём оценка: у досок теперь своя единица (ROADMAP 38),
+	// и без неё сводная таблица сложила бы очки одной команды с часами другой.
+	EstimateUnit string `json:"estimateUnit"`
+	Assignees    string `json:"assignees"`
+	Labels       string `json:"labels"`
+	Iteration    string `json:"iteration"`
+	Parent       string `json:"parent"`
 	// Epic — название эпика: ближайшего предка на доске-портфеле
 	// (этап 33.3). Пусто — эпика нет или он не виден.
 	Epic string `json:"epic"`
@@ -381,6 +384,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		            when c.started_at is not null then 'active'
 		            else 'queued' end,
 		       c.priority, c.estimate::float8,
+		       coalesce(b.estimate_unit, (select o.estimate_unit from orgs o where o.id = b.org_id)),
 		       coalesce((select string_agg(coalesce(nullif(u.name, ''), u.email), ', '
 		                                   order by coalesce(nullif(u.name, ''), u.email))
 		                   from card_assignees a join users u on u.id = a.user_id
@@ -433,7 +437,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 	for rows.Next() {
 		var r Row
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
-			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
+			&r.Priority, &r.Estimate, &r.EstimateUnit, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
 			&r.Refs, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
 			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Description); err != nil {
 			return err

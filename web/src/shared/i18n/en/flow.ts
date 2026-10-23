@@ -43,6 +43,10 @@ export const flow: typeof ru = {
     throughputLabel: (list: string) => `Throughput: ${list}`,
     promise: 'Board promise',
     howWeWork: 'How we work',
+    unit: 'Estimate',
+    unitOrg: (name: string) => `as in the organisation — in ${name}`,
+    unitIn: (name: string) => `in ${name}`,
+    unitHint: 'The board has its own unit: one team estimates in points, another in hours. Estimates are not converted — only the label under them changes.',
     level: 'Board level',
     levels: { team: 'Team board', portfolio: 'Epic portfolio' },
     levelHint:

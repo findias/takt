@@ -24,7 +24,7 @@ var dataColumns = []struct {
 	width float64
 }{
 	{"Номер", 11}, {"Название", 48}, {"Доска", 20}, {"Подразделение", 18},
-	{"Колонка", 16}, {"Состояние", 12}, {"Приоритет", 12}, {"Оценка", 9},
+	{"Колонка", 16}, {"Состояние", 12}, {"Приоритет", 12}, {"Оценка", 9}, {"Единица оценки", 10},
 	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11}, {"Эпик", 24},
 	{"Внешние номера", 22},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
@@ -50,6 +50,7 @@ type words struct {
 	state    map[string]string
 	priority map[string]string
 	refKind  map[string]string
+	unit     map[string]string
 	yes      string
 }
 
@@ -79,7 +80,8 @@ func wordsFor(ctx context.Context) words {
 			"external": n("Внешняя задача"),
 			"rds":      "RDS", "zno": n("ЗНО"), "zni": n("ЗНИ"), "problem": n("Проблема"),
 		},
-		yes: n("да"),
+		unit: map[string]string{"points": n("очки"), "hours": n("часы"), "days": n("дни")},
+		yes:  n("да"),
 	}
 }
 
@@ -144,7 +146,7 @@ func (s *csvSink) Row(r Row) error {
 	}
 	return s.w.Write([]string{
 		r.Number, cellText(r.Title), cellText(r.Board), cellText(r.Team), cellText(r.Column),
-		s.words.state[r.State], s.words.priority[r.Priority], est,
+		s.words.state[r.State], s.words.priority[r.Priority], est, s.words.unit[r.EstimateUnit],
 		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent, cellText(r.Epic),
 		cellText(s.words.refs(r.Refs)), csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
 		csvDays(r.CycleDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
@@ -235,7 +237,7 @@ func (s *xlsxSink) Row(r Row) error {
 	}
 	return s.book.dataRow(
 		str(r.Number), str(r.Title), str(r.Board), str(r.Team), str(r.Column),
-		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est,
+		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est, str(s.words.unit[r.EstimateUnit]),
 		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent), str(r.Epic),
 		str(s.words.refs(r.Refs)), stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
 		optDec(r.CycleDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
