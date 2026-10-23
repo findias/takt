@@ -333,9 +333,16 @@ Next to some concepts — a column limit, the board's promise, a block,
 the flow metrics, roles, key scopes — there is a round **?**. Press it
 for two or three sentences on what the concept is, with a link to the
 section of help that explains it in full. `Escape` closes it.
-### Change your email, your password, or sign out
+### Change your name, your email, your password, or sign out
 
 All of it lives behind your name as well, on the **Sign-in** tab.
+
+Your name is what everyone sees under your work: in the team, on cards,
+in the log. Under **Name**, correct it and press **Change**; the header
+shows the new name at once, and earlier records take it too. When the
+account is managed by the identity provider or the company directory,
+the tab says so, and the name is changed there — the provider would
+overwrite it at the next sign-in anyway.
 
 Your email is the name you sign in with. Under **Email**, enter the
 new address and your password and press **Change**; from then on you
@@ -761,6 +768,15 @@ A subdivision owner sees this section too: they invite members or
 viewers into their own subtree and see only their own invitations.
 Inviting into the whole organisation, or as an owner, is up to the
 organisation owner.
+
+### Correct someone's name
+
+An owner can change a member's name: a typo from an import, a changed
+surname, someone added under a nickname. **Team** tab → **Name…** next
+to the person → the new name → **Change name**. The name changes
+everywhere at once, earlier records included. **Name…** is offered on
+the same terms as **Email…** below; the change shows in the audit log
+as «name: old → new».
 
 ### Correct someone's email
 

@@ -91,6 +91,10 @@ type Member struct {
 	// EmailEditable — может ли владелец сменить почту (SetMemberEmail):
 	// человек состоит только здесь, и почту не ведёт провайдер или каталог.
 	EmailEditable bool `json:"emailEditable"`
+	// NameEditable — может ли владелец сменить имя (SetMemberName).
+	// Условие то же, что у почты, и поле отдельное нарочно: клиент
+	// не должен выводить одно право из другого.
+	NameEditable bool `json:"nameEditable"`
 	// AwaitingPassword — учётную запись завели за человека (перенос),
 	// а пароль он ещё не задал: ему нужна ссылка (IssuePasswordLink).
 	// Выпустить её можно тем же, кому можно сменить почту.
@@ -233,6 +237,7 @@ func (s *Service) Members(ctx context.Context, orgID string) ([]Member, error) {
 		if err := rows.Scan(&m.UserID, &m.Name, &m.Email, &m.Role, &m.Kind, &m.JoinedAt, &m.EmailEditable, &m.AwaitingPassword); err != nil {
 			return nil, err
 		}
+		m.NameEditable = m.EmailEditable
 		out = append(out, m)
 	}
 	return out, rows.Err()
@@ -430,6 +435,66 @@ var ErrEmailElsewhere = errors.New(
 // меняют в профиле, с паролем: там она помечается неподтверждённой,
 // а здесь стала бы подтверждённой словом того, кто её вписал.
 var ErrEmailOwn = errors.New("свою почту меняют в профиле — там спросят пароль")
+
+// ErrNameElsewhere — имя одно на все организации человека, как и почта,
+// и распоряжаться им из одной нельзя.
+var ErrNameElsewhere = errors.New(
+	"этот человек состоит и в других организациях — имя он меняет сам, в личных настройках")
+
+// ErrNameOwn — владелец меняет имя себе через «Команду»: своё — в личных
+// настройках, где шапка узнает о смене сразу.
+var ErrNameOwn = errors.New("своё имя меняют в личных настройках")
+
+// SetMemberName — владелец меняет имя участнику (ROADMAP 36.2): опечатка
+// при переносе, смена фамилии, человек заведён под псевдонимом. Условия
+// те же, что у почты: состоит лишь здесь, имя не ведёт провайдер или каталог.
+func (s *Service) SetMemberName(ctx context.Context, orgID, actorID, userID, raw string) (string, error) {
+	if userID == actorID {
+		return "", ErrNameOwn
+	}
+	name, err := auth.NormalizeName(raw)
+	if err != nil {
+		return "", err
+	}
+	err = s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
+		var was string
+		err := tx.QueryRow(ctx, `
+			select u.name from users u
+			  join memberships m on m.user_id = u.id and m.org_id = $1
+			 where u.id = $2 and u.anonymized_at is null
+			   for update of u`, orgID, userID).Scan(&was)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := ensureNotService(ctx, tx, userID); err != nil {
+			return err
+		}
+		var elsewhere bool
+		if err := tx.QueryRow(ctx,
+			`select exists (select 1 from memberships where user_id = $1 and org_id <> $2)`,
+			userID, orgID).Scan(&elsewhere); err != nil {
+			return err
+		}
+		if elsewhere {
+			return ErrNameElsewhere
+		}
+		managed, err := auth.EmailManaged(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+		if managed {
+			return auth.ErrNameManaged
+		}
+		if was == name {
+			return auth.ErrNameSame
+		}
+		return auth.SetName(ctx, tx, userID, was, name)
+	})
+	return name, err
+}
 
 // SetMemberEmail — владелец меняет почту участнику (ROADMAP 23.6):
 // опечатка при переносе, заведённый не на тот адрес. Можно только тому,

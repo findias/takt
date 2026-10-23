@@ -124,6 +124,10 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="v0-5-0-23-october-2026">v0.5.0 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>An environment label on every screen.</strong> A new setting, <code>STAND_LABEL</code> (<code>standLabel</code> in the chart), puts a short word — <code>DEV</code>, <code>UAT</code>, <code>PROD</code> — in a bar above every screen, the sign-in page included, and first in the browser tab title: <code>[DEV] POST-14 · Takt</code>. Several installations of the same image differ only by their address, and a screenshot of one was easily taken for another. Unset, nothing is shown; longer than 16 characters or more than one line, the server refuses to start and says so. No migration.</p>
+<h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>A name can be corrected.</strong> Your own — behind your name, on the «Вход» tab, under «Имя»; no password asked, the header shows the new name at once. A member&#39;s — by the owner, «Имя…» under «Команда», on the same terms as «Почта…». Both show in the audit log as «name: old → new». A name managed by the identity provider or directory is changed there. Until now a name was set once, at registration or invitation, and a typo in it lived forever.</li>
+</ul>
 <h2 id="v0-4-1-6-october-2026">v0.4.1 — 6 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>The debian image is back.</strong> v0.4.0 was published without <code>:v0.4.0-debian</code>: the <code>debian:12-slim</code> base still carried <code>perl-base</code> 5.36.0-7+deb12u3 with three critical and four high advisories, and the image scan stopped it. The image now takes its branch&#39;s fixes while it is built, as the alpine one already did in v0.4.0, and has deb12u4. Nothing else changes against v0.4.0 — no migration, the same binary behaviour; whoever runs the alpine image of v0.4.0 has nothing to do.</p>
@@ -349,7 +353,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.4.1-1-g18fa6f5-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.4.1-2-gdf0039f-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

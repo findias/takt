@@ -41,6 +41,13 @@ export function Account({
   // Почта — тоже здесь, по той же причине, что выбор поводов: сменённую
   // в диалоге профиль, загруженный при входе, не знает.
   const [email, setEmail] = useState(principal.email)
+  // И имя: оно в шапке, и после смены шапка обязана показать новое
+  // без перезагрузки. Хранится парой «было → стало», а не копией:
+  // когда профиль перечитан (другой человек вошёл в этот же браузер),
+  // копия показала бы прежнего, а пара просто перестаёт совпадать.
+  const [renamed, setRenamed] = useState<{ was: string; now: string } | null>(null)
+  const name = renamed?.was === principal.name ? renamed.now : principal.name
+  const setName = (now: string) => setRenamed({ was: principal.name, now })
 
   return (
     // Имя классу нужно и печати: личные настройки на бумаге не значат
@@ -53,10 +60,10 @@ export function Account({
         className="btn btn--quiet account-name"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={t.account.open(principal.name)}
+        aria-label={t.account.open(name)}
         onClick={() => setOpen(true)}
       >
-        <span className="account-name-text">{principal.name}</span>
+        <span className="account-name-text">{name}</span>
         {/* Знак раскрытия: без него имя читается подписью, а не кнопкой,
             и за ним никто не станет искать язык. */}
         <ChevronDownIcon />
@@ -64,9 +71,10 @@ export function Account({
       {open && (
         <Suspense fallback={null}>
           <AccountDialog
-            principal={{ ...principal, email }}
+            principal={{ ...principal, email, name }}
             sandbox={sandbox}
             onEmail={setEmail}
+            onName={setName}
             muted={muted}
             onMuted={setMuted}
             onClose={() => setOpen(false)}

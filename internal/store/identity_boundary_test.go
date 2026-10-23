@@ -43,6 +43,7 @@ var actionsOnAPerson = map[string]string{
 	"org.Remove":            "TestStrangerFromAnotherOrgIsRefused",
 	"org.Erase":             "TestStrangerFromAnotherOrgIsRefused",
 	"org.SetMemberEmail":    "TestStrangerFromAnotherOrgIsRefused",
+	"org.SetMemberName":     "TestStrangerFromAnotherOrgIsRefused",
 	"org.IssuePasswordLink": "TestStrangerFromAnotherOrgIsRefused",
 	"team.AddMember":        "TestStrangerFromAnotherOrgIsRefused",
 	"team.RemoveMember":     "TestStrangerFromAnotherOrgIsRefused",

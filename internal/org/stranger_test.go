@@ -36,6 +36,11 @@ func TestStrangerFromAnotherOrgIsRefused(t *testing.T) {
 		t.Errorf("смена почты постороннему: %v, ожидалось %v", err, ErrNotFound)
 	}
 
+	// Имя чужому: стоит под его работой в соседней организации.
+	if _, err := f.svc.SetMemberName(f.ctx, mine.OrgID, myOwner, stranger, "Захвачен"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("смена имени постороннему: %v, ожидалось %v", err, ErrNotFound)
+	}
+
 	// Ссылка «задать пароль» чужому — это вход в его учётную запись.
 	if _, err := f.svc.IssuePasswordLink(f.ctx, mine.OrgID, myOwner, stranger, "https://takt.test"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("ссылка для входа постороннему: %v, ожидалось %v", err, ErrNotFound)

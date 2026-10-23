@@ -7,6 +7,7 @@ import { t } from '../../shared/i18n/index.ts'
 import { AppearanceSettings, LanguageSettings, NotificationSettings } from './Settings.tsx'
 import { PasswordForm } from './PasswordForm.tsx'
 import { EmailForm } from './EmailForm.tsx'
+import { NameForm } from './NameForm.tsx'
 
 type Tab = 'lang' | 'appearance' | 'notifications' | 'signin'
 
@@ -14,6 +15,7 @@ export function AccountDialog({
   principal,
   sandbox,
   onEmail,
+  onName,
   muted,
   onMuted,
   onClose,
@@ -22,6 +24,7 @@ export function AccountDialog({
   principal: Principal
   sandbox: boolean
   onEmail: (email: string) => void
+  onName: (name: string) => void
   muted: NotificationReason[]
   onMuted: (muted: NotificationReason[]) => void
   onClose: () => void
@@ -98,6 +101,17 @@ export function AccountDialog({
           // Два дела входа — адрес и пароль — двумя разделами с именами:
           // без них четыре поля подряд читаются одной формой.
           <div className="account-sections">
+            {/* Имя — первым: его меняют чаще, чем почту и пароль, и оно
+                не про вход, а про то, как человека зовут под работой.
+                Провайдер ведёт имя вместе с почтой — признак общий. */}
+            <section aria-labelledby={`${base}name`}>
+              <h3 id={`${base}name`}>{t.account.nameLegend}</h3>
+              <NameForm
+                current={principal.name}
+                managed={Boolean(principal.emailManaged)}
+                onChanged={onName}
+              />
+            </section>
             <section aria-labelledby={`${base}email`}>
               <h3 id={`${base}email`}>{t.account.emailLegend}</h3>
               <EmailForm managed={Boolean(principal.emailManaged)} onChanged={onEmail} />

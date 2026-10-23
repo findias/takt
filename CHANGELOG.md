@@ -21,6 +21,16 @@ was easily taken for another. Unset, nothing is shown; longer than 16
 characters or more than one line, the server refuses to start and says
 so. No migration.
 
+### The rest
+
+- **A name can be corrected.** Your own — behind your name, on the
+  «Вход» tab, under «Имя»; no password asked, the header shows the new
+  name at once. A member's — by the owner, «Имя…» under «Команда», on
+  the same terms as «Почта…». Both show in the audit log as «name: old →
+  new». A name managed by the identity provider or directory is changed
+  there. Until now a name was set once, at registration or invitation,
+  and a typo in it lived forever.
+
 ## v0.4.1 — 6 October 2026
 
 ### For whoever installs and upgrades

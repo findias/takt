@@ -28,6 +28,7 @@ import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
 import { locale, t } from '../shared/i18n/index.ts'
 import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
+import { MemberNameDialog } from '../features/account/MemberNameDialog.tsx'
 import { navigate } from '../shared/router/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { buildTree, invitableTeams } from '../entities/team/model.ts'
@@ -75,6 +76,9 @@ export function Team({ principal }: { principal: Principal }) {
   const [toErase, setToErase] = useState<Member | null>(null)
   // Кому правят почту.
   const [toReaddress, setToReaddress] = useState<Member | null>(null)
+  // Кому правят имя.
+  const [toRename, setToRename] = useState<Member | null>(null)
+  const closeRename = useCallback(() => setToRename(null), [])
   // Только что выпущенная ссылка для входа: показывается один раз.
   const [loginLink, setLoginLink] = useState<{ name: string; link: string } | null>(null)
   const closeReaddress = useCallback(() => setToReaddress(null), [])
@@ -116,6 +120,17 @@ export function Team({ principal }: { principal: Principal }) {
         <p>{t.team.eraseBody(toErase?.name ?? '')}</p>
         <p className="muted small">{t.team.eraseKeeps}</p>
       </ConfirmDialog>
+
+      {toRename && (
+        <MemberNameDialog
+          member={toRename}
+          onClose={closeRename}
+          onChanged={(name) => {
+            load()
+            notify({ text: t.team.nameChanged(toRename.name, name), tone: 'info' })
+          }}
+        />
+      )}
 
       {toReaddress && (
         <MemberEmailDialog
@@ -193,8 +208,17 @@ export function Team({ principal }: { principal: Principal }) {
                   >
                     {t.team.remove}
                   </button>
-                  {/* Только тем, чью почту владелец вправе менять: сервер
-                      сказал это полем, и отказа по нажатию не будет. */}
+                  {/* Имя и почта — только тем, кому владелец вправе их менять:
+                      сервер сказал это полем, и отказа по нажатию не будет. */}
+                  {m.nameEditable && (
+                    <button
+                      className="link"
+                      onClick={() => setToRename(m)}
+                      aria-label={t.team.renameOf(m.name)}
+                    >
+                      {t.team.rename}
+                    </button>
+                  )}
                   {m.emailEditable && (
                     <button
                       className="link"

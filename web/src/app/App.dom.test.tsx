@@ -348,3 +348,35 @@ it('без метки среды полосы нет и заголовок бе�
   await waitFor(() => expect(document.title).toMatch(/ · Доска$/))
   expect(document.title.startsWith('[')).toBe(false)
 })
+
+// Смена своего имени (ROADMAP 36.2): шапка показывает новое имя сразу,
+// хотя профиль грузился со старым; отказ — под полем.
+it('смена имени обновляет шапку и кладёт отказ под поле', async () => {
+  const base = fetch as unknown as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  let attempt = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) !== '/api/me/name') return base(input, init)
+      attempt++
+      if (attempt === 1) return reply({ error: 'это и есть нынешнее имя', code: 'name_same' }, 400)
+      return reply({ name: 'Анна Петрова' })
+    }),
+  )
+  render(<App />)
+  await screen.findByText(ANNA.orgName)
+  await userEvent.click(screen.getByRole('button', { name: `Личные настройки: ${ANNA.name}` }))
+  await userEvent.click(await screen.findByRole('tab', { name: 'Вход' }))
+
+  const name = screen.getByLabelText('Как вас зовут')
+  expect((name as HTMLInputElement).value).toBe(ANNA.name)
+  await userEvent.click(screen.getByRole('button', { name: 'Сменить имя' }))
+  await waitFor(() => expect(name.getAttribute('aria-invalid')).toBe('true'))
+
+  await userEvent.clear(name)
+  await userEvent.type(name, 'Анна Петрова')
+  await userEvent.click(screen.getByRole('button', { name: 'Сменить имя' }))
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Личные настройки: Анна Петрова' })).toBeTruthy(),
+  )
+})
