@@ -876,19 +876,14 @@ export function useBoard(boardId: string | null, notify: Notify) {
   // поэтому такая карточка — с перечитыванием доски.
   // Исполнители — той же операцией (ROADMAP 37.4): их список патч
   // несёт целиком, как у ASSIGN_CARD, и перечитывать доску не нужно.
+  // Пустые поля — `undefined`: в запрос они не попадают вовсе.
   const createCard = useCallback(
-    (columnId: string, title: string, iterationId?: string, assigneeIds: string[] = []) => {
-      const payload = {
-        columnId,
-        title,
-        place: 'end',
-        ...(iterationId ? { iterationId } : {}),
-        ...(assigneeIds.length > 0 ? { assigneeIds } : {}),
-      }
-      return iterationId
-        ? runAndReload('CREATE_CARD', payload, t.ops.createCard)
-        : run('CREATE_CARD', payload, t.ops.createCard)
-    },
+    (columnId: string, title: string, iterationId?: string, assigneeIds: string[] = []) =>
+      (iterationId ? runAndReload : run)(
+        'CREATE_CARD',
+        { columnId, title, place: 'end', iterationId, assigneeIds: assigneeIds.length ? assigneeIds : undefined },
+        t.ops.createCard,
+      ),
     [run, runAndReload],
   )
 

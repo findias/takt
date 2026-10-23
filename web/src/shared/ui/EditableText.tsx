@@ -64,22 +64,7 @@ export function EditableText({
     onCancel?.()
   }
 
-  if (multiline)
-    return (
-      <TextLine
-        autoFocus
-        className={className}
-        label={label}
-        placeholder={placeholder}
-        value={draft}
-        onChange={setDraft}
-        onBlur={commit}
-        onEnter={commit}
-        onEscape={cancel}
-      />
-    )
-
-  return (
+  const line = (
     <input
       autoFocus
       className={className}
@@ -92,6 +77,24 @@ export function EditableText({
         if (e.key === 'Enter') commit()
         if (e.key === 'Escape') cancel()
       }}
+    />
+  )
+  // Поле подключено сразу, а не подгружается в момент правки: пока
+  // оно ехало, человек уже печатал в запасное, и при подмене курсор
+  // и выделение сбрасывались — текст ложился не туда (поймано
+  // сквозной проверкой: Ctrl+A и набор давали склейку старого с новым).
+  if (!multiline) return line
+  return (
+    <TextLine
+      autoFocus
+      className={className}
+      label={label}
+      placeholder={placeholder}
+      value={draft}
+      onChange={setDraft}
+      onBlur={commit}
+      onEnter={commit}
+      onEscape={cancel}
     />
   )
 }

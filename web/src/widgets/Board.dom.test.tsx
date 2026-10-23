@@ -493,7 +493,7 @@ describe('заведение карточек подряд', () => {
     show()
 
     await userEvent.click(await screen.findByRole('button', { name: /Завести карточку в «Очередь»/ }))
-    const field = screen.getByPlaceholderText('Что нужно сделать?')
+    const field = await screen.findByPlaceholderText('Что нужно сделать?')
     await userEvent.type(field, 'Первая{Enter}')
 
     expect(operation).toHaveBeenCalledWith('board', expect.any(String), 'CREATE_CARD', {
@@ -1066,10 +1066,10 @@ describe('новая карточка с исполнителем', () => {
     show()
 
     await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Исполнитель новой карточки' }), 'u-boris')
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Назначить на новую карточку' }), 'u-boris')
     // Выбранный — фишкой, которую можно снять; в списке формы его больше нет.
     expect(screen.getByRole('button', { name: 'Убрать исполнителя Борис Дятлов' })).toBeTruthy()
-    const pick = screen.getByRole('combobox', { name: 'Исполнитель новой карточки' })
+    const pick = screen.getByRole('combobox', { name: 'Назначить на новую карточку' })
     expect(within(pick).queryByRole('option', { name: 'Борис Дятлов' })).toBeNull()
     expect(within(pick).getByRole('option', { name: 'Вера Соколова' })).toBeTruthy()
 
@@ -1088,8 +1088,8 @@ describe('новая карточка с исполнителем', () => {
     const user = userEvent.setup()
     show()
     await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
-    await user.type(screen.getByRole('textbox', { name: 'Что нужно сделать?' }), 'Без исполнителя{Enter}')
+    await user.type(await screen.findByRole('textbox', { name: 'Что нужно сделать?' }), 'Без исполнителя{Enter}')
     await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
-    expect(operation.mock.calls[0][3]).not.toHaveProperty('assigneeIds')
+    expect(operation.mock.calls[0][3].assigneeIds).toBeUndefined()
   })
 })

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useAutoGrow } from '../../shared/lib/useAutoGrow.ts'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -14,7 +13,7 @@ import type {
   BoardLabel,
   Priority,
 } from '../../shared/api/index.ts'
-import { Button, IconButton } from '../../shared/ui/Button.tsx'
+import { IconButton } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../shared/ui/icons.tsx'
 import { NO_SUBTASKS } from '../../entities/card/model.ts'
@@ -23,8 +22,16 @@ import { CardView } from './CardView.tsx'
 import { ColumnResizer } from './ColumnResizer.tsx'
 import type { ColumnPatch } from './useBoard.ts'
 import { useRenderWindow } from '../../shared/lib/useRenderWindow.ts'
-import { t } from '../../shared/i18n/index.ts'
+import { t, withSections } from '../../shared/i18n/index.ts'
 import { Hint } from '../../shared/ui/Hint.tsx'
+
+// Форма заведения — своим куском (ROADMAP 37.4): с выбором исполнителя
+// и растущим полем она перевесила порог первой загрузки
+// (web/e2e/perf.spec.ts), а нужна только после нажатия. Загрузка
+// начинается раньше — при наведении и фокусе на кнопку, — и к нажатию
+// форма уже приехала.
+const loadNewCardForm = withSections(() => import('./NewCardForm.tsx'), 'newCard')
+const NewCardForm = lazy(() => loadNewCardForm().then((m) => ({ default: m.NewCardForm })))
 
 /** Общий пустой список меток: `?? []` создаёт новый массив на каждую
  *  отрисовку и в одиночку обесценивает мемоизацию карточки. */
@@ -396,6 +403,7 @@ export function ColumnView(props: ColumnProps) {
       </div>
 
       {!props.canEdit ? null : adding ? (
+        <Suspense fallback={null}>
         <NewCardForm
           column={props.name}
           people={props.people}
@@ -409,11 +417,14 @@ export function ColumnView(props: ColumnProps) {
             // Закрывают её Escape и «Отмена» — то есть человек, а не мы.
           }}
         />
+        </Suspense>
       ) : (
         !props.collapsed && (
           <button
             className="add"
             aria-label={t.column.addCardTo(props.name)}
+            onPointerEnter={() => void loadNewCardForm()}
+            onFocus={() => void loadNewCardForm()}
             onClick={() => setAdding(true)}
           >
             <PlusIcon />
@@ -422,128 +433,6 @@ export function ColumnView(props: ColumnProps) {
         )
       )}
     </section>
-  )
-}
-
-/**
- * Заведение карточки.
- *
- * Форма не закрывается после Enter, а очищается и остаётся с фокусом:
- * работа приходит списком, и карточки заводят подряд. Закрытая после
- * каждой форма означала поиск кнопки на каждую вторую карточку — это
- * и было первым, обо что спотыкался проход по интерфейсу.
- *
- * Исполнитель выбирается здесь же (ROADMAP 37.4): заводящий обычно
- * знает, кто будет делать, и второй заход в карточку ради этого был
- * лишним шагом на каждую задачу. Выбор переживает Enter — карточки
- * заводят пачкой, и чаще всего на одного человека.
- */
-function NewCardForm({
-  column,
-  people,
-  assignable,
-  onCreate,
-  onCancel,
-}: {
-  /** Имя колонки — кнопке: «Завести» отдельно от окружения ничего
-   *  не говорит, а диктор читает кнопку именно отдельно. */
-  column: string
-  people: Record<string, string>
-  /** Кого можно назначить: видит доску (как в панели карточки). */
-  assignable: Record<string, string>
-  onCreate: (title: string, assigneeIds: string[]) => void
-  onCancel: () => void
-}) {
-  const [value, setValue] = useState('')
-  const [who, setWho] = useState<string[]>([])
-  const field = useRef<HTMLTextAreaElement>(null)
-  useAutoGrow(field, value)
-  const free = Object.entries(assignable).filter(([id]) => !who.includes(id))
-
-  const submit = () => {
-    const title = value.trim()
-    if (!title) return
-    onCreate(title, who)
-    setValue('')
-    // Фокус возвращается руками: доска перерисовывается новой карточкой,
-    // и без этого он уезжает на `body` — то есть обход с клавиатуры
-    // начинается заново со всей страницы.
-    field.current?.focus()
-  }
-
-  return (
-    <form
-      className="new-card"
-      onSubmit={(e) => {
-        e.preventDefault()
-        submit()
-      }}
-    >
-      <textarea
-        ref={field}
-        autoFocus
-        value={value}
-        aria-label={t.column.whatToDo}
-        placeholder={t.column.whatToDo}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onCancel()
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            submit()
-          }
-        }}
-      />
-      {(who.length > 0 || free.length > 0) && (
-        <div className="row row--tight new-card-who" role="group" aria-label={t.column.assignees}>
-          {who.map((id) => {
-            const name = people[id] ?? assignable[id] ?? t.common.someone
-            return (
-              <button
-                key={id}
-                type="button"
-                className="chip chip--slate chip--removable"
-                aria-label={t.column.unassign(name)}
-                onClick={() => setWho(who.filter((x) => x !== id))}
-              >
-                {name} ×
-              </button>
-            )
-          })}
-          {free.length > 0 && (
-            <select
-              value=""
-              aria-label={t.column.addAssignee}
-              onChange={(e) => {
-                if (e.target.value) setWho([...who, e.target.value])
-                field.current?.focus()
-              }}
-            >
-              <option value="">{t.column.addAssigneePick}</option>
-              {free.map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-      <div className="row">
-        <button
-          type="submit"
-          aria-label={t.column.addCardTo(column)}
-          disabled={!value.trim()}
-        >
-          {t.column.create}
-        </button>
-        {/* Отмена — тихая: цвет ссылки рядом с главным действием
-            перетягивает взгляд на себя, и первым читается «Отмена». */}
-        <Button kind="quiet" type="button" onClick={onCancel}>
-          {t.common.cancel}
-        </Button>
-      </div>
-    </form>
   )
 }
 

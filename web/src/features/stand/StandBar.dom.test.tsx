@@ -4,7 +4,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
-import { StandBar, reflow } from './StandBar.tsx'
+import { StandBar } from './StandBar.tsx'
+import { reflow } from './StandDialog.tsx'
 import type { StandNote } from '../../shared/api/index.ts'
 
 const NOTE: StandNote = {
@@ -57,7 +58,7 @@ it('на стенде полоса называет ветку, а заметк�
   expect(await screen.findByText(/Тестовый стенд: ветка feature\/stand/)).toBeTruthy()
 
   await userEvent.click(screen.getByRole('button', { name: 'Что на стенде' }))
-  const dialog = screen.getByRole('dialog', { name: 'Что на стенде' })
+  const dialog = await screen.findByRole('dialog', { name: 'Что на стенде' })
   // Пароль — там, где он нужен.
   expect(dialog.textContent).toMatch(/anna@example\.test, пароль parol12345/)
   // Русская половина, а не английская.
