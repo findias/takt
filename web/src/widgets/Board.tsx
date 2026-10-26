@@ -94,7 +94,9 @@ const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView
 // упёрлась в порог размера (web/e2e/perf.spec.ts), а панель нужна только
 // открытой карточке. Загрузка начинается, как только доска нарисована,
 // поэтому к первому нажатию на карточку кусок обычно уже на месте.
-const loadCardPanel = () => import('../features/board/CardPanel.tsx')
+// Подписи панели и ленты изменений едут вместе с ней: в первой загрузке
+// они занимали почти весь запас до порога.
+const loadCardPanel = withSections(() => import('../features/board/CardPanel.tsx'), 'panel', 'feed')
 const CardPanel = lazy(() => loadCardPanel().then((m) => ({ default: m.CardPanel })))
 const Flow = lazy(
   withSections(
@@ -113,11 +115,14 @@ const BulkBar = lazy(() => import('../features/board/BulkBar.tsx').then((m) => (
 const Iterations = lazy(() =>
   import('../features/board/Iterations.tsx').then((m) => ({ default: m.Iterations })),
 )
-const Changes = lazy(() =>
-  import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })),
+const Changes = lazy(
+  withSections(() => import('../features/board/Changes.tsx').then((m) => ({ default: m.Changes })), 'feed'),
 )
-const CardArchive = lazy(() =>
-  import('../features/board/CardArchive.tsx').then((m) => ({ default: m.CardArchive })),
+const CardArchive = lazy(
+  withSections(
+    () => import('../features/board/CardArchive.tsx').then((m) => ({ default: m.CardArchive })),
+    'feed',
+  ),
 )
 // Панель доступа открывают редко и нажатием — грузить её с доской
 // значит платить за неё при каждом открытии доски (П7).

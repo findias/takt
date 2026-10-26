@@ -39,6 +39,7 @@ const Team = lazy(
     'hooks',
     'labelsAdmin',
     'passwordLink',
+    'feed',
   ),
 )
 // Задачи человека со всех досок (решение владельца 22.09.2026).

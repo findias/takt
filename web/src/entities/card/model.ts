@@ -413,7 +413,7 @@ export function externalRefLabel(ref: string): string {
 
 export function refKindName(kind: unknown): string {
   if (typeof kind !== 'string') return ''
-  return (t.panel.refKinds as Record<string, string>)[kind] ?? kind
+  return (t.card.refKinds as Record<string, string>)[kind] ?? kind
 }
 
 /**

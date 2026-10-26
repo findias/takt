@@ -430,7 +430,7 @@ function CardViewInner({
             <Avatar
               key={id}
               name={people[id] ?? t.common.someone}
-              away={id in assignable ? undefined : t.panel.noBoardAccess}
+              away={id in assignable ? undefined : t.cardView.noBoardAccess}
             />
           ))}
           {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}

@@ -955,7 +955,7 @@ function Assignees({
       {assignees.map((id) => {
         // Доступ отняли после назначения — человека не снимают, а
         // называют, почему он работы не видит (этап 39).
-        const away = former?.[id] ? t.panel.formerMember : id in assignable ? undefined : t.panel.noBoardAccess
+        const away = former?.[id] ? t.panel.formerMember : id in assignable ? undefined : t.cardView.noBoardAccess
         return (
           <div className="related" key={id}>
             <div className="row row--tight">
