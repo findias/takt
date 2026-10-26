@@ -94,6 +94,22 @@ func (s *Service) AddComment(ctx context.Context, orgID, actorID, boardID, cardI
 		if !exists {
 			return ErrNotFound
 		}
+		// Позвать можно только того, кто доску видит, — то же правило,
+		// что у исполнителя (0076). Не видящему уведомление пишется,
+		// но не показывается (0057): автор думал бы, что позвал, а
+		// позванный не узнал бы ничего. Человек из другой организации
+		// по-прежнему отсеивается молча ниже — о нём отвечать нельзя.
+		var blind int
+		if err := tx.QueryRow(ctx, `
+			select count(*) from memberships
+			 where org_id = $1 and user_id = any($2::uuid[])
+			   and not app_sees_board_as(user_id, $3)`,
+			orgID, mentions, boardID).Scan(&blind); err != nil {
+			return err
+		}
+		if blind > 0 {
+			return badRequestf("упомянутый не видит доску — позвать можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски")
+		}
 
 		err := tx.QueryRow(ctx, `
 			insert into card_comments (org_id, board_id, card_id, parent_id, author_id, body)

@@ -250,6 +250,7 @@ var en = map[string]string{
 	// --- Исполнители, связи, блокировки ---
 	"нужны карточка и человек":                     "a card and a person are required",
 	"назначить можно только участника организации": "only organisation members can be assigned",
+	"упомянутый не видит доску — позвать можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски":     "the person mentioned cannot see the board — only someone who can see it can be called in: add them to the board's subdivision or to the members of the private board",
 	"этот человек не видит доску — назначить можно только того, кто её видит: добавьте его в подразделение доски или в участники закрытой доски": "this person cannot see the board — only someone who can see it can be assigned: add them to the board's subdivision or to the members of the private board",
 	"карточки нет на доске":                              "the card is not on the board",
 	"недопустимый вид связи %s, ожидалось %s, %s или %s": "invalid link kind %s, expected %s, %s or %s",

@@ -66,14 +66,17 @@ function toneOf(name: string): number {
   return sum % TONES
 }
 
-export function Avatar({ name, size = SIZE }: { name: string; size?: number }) {
+/** away — почему человек здесь, а работы не видит («не видит доску»):
+ *  исполнителя, потерявшего доступ, не снимают, но и выглядеть как
+ *  обычный он не должен. */
+export function Avatar({ name, size = SIZE, away }: { name: string; size?: number; away?: string }) {
   return (
     <span
-      className={`avatar avatar--tone-${toneOf(name)}`}
+      className={`avatar avatar--tone-${toneOf(name)}${away ? ' avatar--away' : ''}`}
       style={sizing(size, ДОЛЯ_БУКВЫ)}
       // Имя целиком — рядом, а не вместо: инициалы читаются глазами,
       // скринридер читает имя.
-      title={name}
+      title={away ? `${name} · ${away}` : name}
       aria-hidden="true"
     >
       {/* Инициалов у имени два, в кружок идёт первый: второй — ровно

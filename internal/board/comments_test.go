@@ -2,6 +2,7 @@ package board
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -195,6 +196,34 @@ func TestMentionsAreStoredAsPeopleNotText(t *testing.T) {
 	list, _ := f.svc.Comments(f.ctx, f.orgID, f.actorID, card)
 	if len(list[0].Mentions) != 1 {
 		t.Errorf("правка потеряла упоминание: %+v", list[0])
+	}
+}
+
+// Позвать в обсуждение можно только того, кто доску видит (как
+// исполнителя, 0076): не видящему уведомление пишется, но не
+// показывается, и автор думал бы, что позвал.
+func TestMentionOfSomeoneWhoCannotSeeTheBoardIsRefused(t *testing.T) {
+	f := newFixture(t)
+	core := f.team("Ядро", nil)
+	f.assignBoard(core)
+	ours := addMember(t, f.svc.db, f.orgID, "member")
+	f.joins(ours, core)
+	outsider := addMember(t, f.svc.db, f.orgID, "member")
+	card := f.createCard("Обсуждаем", f.columnA)
+
+	_, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, card,
+		"посмотрите", nil, []string{ours, outsider})
+	if err == nil || !errors.Is(err, ErrBadRequest) || !strings.Contains(err.Error(), "не видит доску") {
+		t.Fatalf("упоминание не видящего доску не отвергнуто с объяснением: %v", err)
+	}
+	if list, _ := f.svc.Comments(f.ctx, f.orgID, f.actorID, card); len(list) != 0 {
+		t.Errorf("отвергнутый комментарий всё же записан: %+v", list)
+	}
+
+	c, err := f.svc.AddComment(f.ctx, f.orgID, f.actorID, f.boardID, card,
+		"посмотри", nil, []string{ours})
+	if err != nil || len(c.Mentions) != 1 {
+		t.Fatalf("видящего доску не позвать: %v %+v", err, c.Mentions)
 	}
 }
 

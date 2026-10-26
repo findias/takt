@@ -16,6 +16,11 @@ No migration and no new setting. The board snapshot no longer carries
 links to cards of that board that sit in the archive; the links stay
 in the database and come back with the card.
 
+For integrations: a comment that mentions someone who cannot see the
+board is now refused with 400 and an explanation, the way assigning
+such a person already was. Before, it was accepted, and the
+notification was never shown to them.
+
 ### The rest
 
 - **A subtask can be archived or deleted from its line.** The **⋮**
@@ -27,6 +32,17 @@ in the database and come back with the card.
   its parent and leaves the card on the board.
 - **An archived subtask no longer shows as "Card unavailable"** in its
   parent's list, as if it sat in a subdivision you cannot see.
+- **An assignee who lost access to the board is marked.** Taken out of
+  the board's subdivision, or the board closed or handed elsewhere —
+  they stay on the card, as before, but now with a dashed ring and
+  **cannot see the board** in the panel: they get no notifications about
+  it. Someone removed from the organisation keeps their name instead of
+  turning into "Someone".
+- **@ Mention offers only people who can see the board.** Calling in
+  anyone else was accepted, and they never saw it.
+- **A block whose holding card was archived says so.** It stays — the
+  work was dropped, not done — and the panel suggests lifting it or
+  restoring that card. Before, it showed only the reason.
 
 ## v0.5.1 — 23 October 2026
 

@@ -343,6 +343,13 @@ export function CardPanel({
                   {blocker?.done && (
                     <span className="small">{t.panel.holderDone}</span>
                   )}
+                  {/* Держащую убрали в архив: её нет в снимке, и строки
+                      «Держит» выше не будет. Без этой фразы оставалась
+                      одна причина, и карточка стояла, ожидая работу,
+                      от которой отказались (этап 39). */}
+                  {card.blocked.holderArchived && (
+                    <span className="small">{t.panel.holderArchived}</span>
+                  )}
                   <span className="muted small">
                     {t.panel.since(new Date(card.blocked.blockedAt).toLocaleString(locale()))}
                   </span>
@@ -436,6 +443,7 @@ export function CardPanel({
             <Assignees
               people={base.people}
               assignable={base.assignable}
+              former={base.former}
               assignees={base.cardAssignees[card.id] ?? []}
               canEdit={canEdit}
               onAssign={(userId, on) => onAssign(card.id, userId, on)}
@@ -476,7 +484,10 @@ export function CardPanel({
             cardId={card.id}
             meId={meId}
             canEdit={canEdit}
-            people={base.people}
+            // Звать — тех же, кого можно назначить: не видящему доску
+            // уведомление не покажется, и сервер такое упоминание
+            // отвергает (как назначение, 0076).
+            people={base.assignable}
           />
         )}
 
@@ -919,12 +930,14 @@ function BlockForm({
 function Assignees({
   people,
   assignable,
+  former,
   assignees,
   canEdit,
   onAssign,
 }: {
   people: Record<string, string>
   assignable: Record<string, string>
+  former?: Record<string, true>
   assignees: string[]
   canEdit: boolean
   onAssign: (userId: string, on: boolean) => void
@@ -939,23 +952,31 @@ function Assignees({
         <p className="muted small">{t.panel.nobody}</p>
       )}
 
-      {assignees.map((id) => (
-        <div className="related" key={id}>
-          <div className="row row--tight">
-            <Avatar name={people[id] ?? t.common.someone} />
-            <span>{people[id] ?? t.common.someone}</span>
+      {assignees.map((id) => {
+        // Доступ отняли после назначения — человека не снимают, а
+        // называют, почему он работы не видит (этап 39).
+        const away = former?.[id] ? t.panel.formerMember : id in assignable ? undefined : t.panel.noBoardAccess
+        return (
+          <div className="related" key={id}>
+            <div className="row row--tight">
+              <Avatar name={people[id] ?? t.common.someone} away={away} />
+              <span>
+                {people[id] ?? t.common.someone}
+                {away && <span className="muted"> · {away}</span>}
+              </span>
+            </div>
+            {canEdit && (
+              <button
+                className="link"
+                aria-label={t.panel.unassign(people[id] ?? t.panel.someoneLower)}
+                onClick={() => onAssign(id, false)}
+              >
+                {t.panel.lift}
+              </button>
+            )}
           </div>
-          {canEdit && (
-            <button
-              className="link"
-              aria-label={t.panel.unassign(people[id] ?? t.panel.someoneLower)}
-              onClick={() => onAssign(id, false)}
-            >
-              {t.panel.lift}
-            </button>
-          )}
-        </div>
-      ))}
+        )
+      })}
 
       {canEdit && free.length > 0 && (
         <select

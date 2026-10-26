@@ -427,7 +427,11 @@ function CardViewInner({
       ) : (
         <span className="avatars">
           {shownAssignees.map((id) => (
-            <Avatar key={id} name={people[id] ?? t.common.someone} />
+            <Avatar
+              key={id}
+              name={people[id] ?? t.common.someone}
+              away={id in assignable ? undefined : t.panel.noBoardAccess}
+            />
           ))}
           {hiddenAssignees > 0 && <AvatarMore count={hiddenAssignees} />}
         </span>

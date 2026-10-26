@@ -502,9 +502,10 @@ func completeCard(ctx context.Context, tx pgx.Tx, c *Card) error {
 
 	var b Block
 	err = tx.QueryRow(ctx, `
-		select id, reason, blocked_at, blocking_card, blocked_until from card_blocks
-		 where card_id = $1 and unblocked_at is null`, cardID).
-		Scan(&b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until)
+		select b.id, b.reason, b.blocked_at, b.blocking_card, b.blocked_until, `+holderArchived+`
+		  from card_blocks b
+		 where b.card_id = $1 and b.unblocked_at is null`, cardID).
+		Scan(&b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until, &b.HolderArchived)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 	case err != nil:
@@ -725,6 +726,39 @@ func releaseHeldBy(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, card
 			}
 			out = append(out, c)
 		}
+	}
+	return out, nil
+}
+
+// holderArchived — держащая блокировки `b` убрана в архив. Одно условие
+// на снимок и на патч: разойтись им значило бы показывать признак
+// до перезагрузки и терять после.
+const holderArchived = `exists (select 1 from cards h
+	                  where h.id = b.blocking_card and h.archived_at is not null)`
+
+// heldHere — карточки этой доски, которые держит названная. Архивация
+// и возврат держащей меняют их признак holderArchived, а сами они
+// об этом не узнают: блокировка живёт на той, что стоит.
+func heldHere(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card, error) {
+	rows, err := tx.Query(ctx, `
+		select b.card_id from card_blocks b
+		  join cards c on c.id = b.card_id
+		 where b.blocking_card = $1 and b.unblocked_at is null
+		   and c.board_id = $2 and c.archived_at is null`, cardID, boardID)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Card, 0, len(ids))
+	for _, id := range ids {
+		c, err := readCard(ctx, tx, boardID, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
 	}
 	return out, nil
 }

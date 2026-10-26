@@ -1488,6 +1488,45 @@ test('подзадачу убирают в архив из строки у ро�
 // часть упёрлась — задача не идёт. Знала об этом только сама часть,
 // а с доски родитель выглядел идущим, и отбор «что не идёт» его
 // не показывал.
+// Держащую часть убрали в архив — от той работы отказались. Блокировка
+// родителя от этого не снимается (снимает только сделанная), но панель
+// обязана это сказать: убранной в снимке нет, и строки «Держит» тоже.
+test('родитель говорит, что держащую часть убрали в архив', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска с убранной держащей')
+  await addCard(page, 'Очередь', 'Выпустить релиз')
+
+  const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
+  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+
+  const panel = page.getByLabel(/Карточка .* «Выпустить релиз»/)
+  const row = panel.locator('.related').filter({ hasText: 'Прогнать нагрузочные' })
+  const actions = row.getByRole('button', { name: 'Действия карточки «Прогнать нагрузочные»' })
+  await actions.click()
+  await page.getByRole('menuitem', { name: 'Держит задачу…' }).click()
+  await panel.getByLabel('Причина блокировки').fill('ждём нагрузку')
+  await panel.getByLabel('Причина блокировки').press('Enter')
+  await expect(panel.getByText('Держит:')).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await actions.click()
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+  await expect(row).toHaveCount(0)
+
+  await page.getByRole('tab', { name: 'Работа' }).click()
+  const said = panel.getByText('Работу, которая держала, убрали в архив')
+  await expect(said).toBeVisible()
+  await expect(panel.getByText('ждём нагрузку')).toBeVisible()
+
+  // Вернули часть — она снова держит, и фраза уходит.
+  await page.locator('.toast').getByRole('button', { name: 'Вернуть' }).click()
+  await expect(said).toHaveCount(0)
+  await expect(panel.getByText('Держит:')).toBeVisible()
+})
+
 test('заблокированная часть останавливает и родителя', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска с упёршейся частью')

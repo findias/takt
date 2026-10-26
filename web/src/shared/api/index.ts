@@ -678,7 +678,15 @@ export type Card = {
    *  название: карточку переименуют, а по ссылке видно ещё и то, что
    *  с ней стало — сделана ли, стоит ли сама. */
   /** `until` — когда снимется сама; нет — пока не снимут. */
-  blocked?: { id: string; reason: string; blockedAt: string; blockingCard?: string; until?: string }
+  /** holderArchived — держащую убрали в архив; блокировка от этого не снимается. */
+  blocked?: {
+    id: string
+    reason: string
+    blockedAt: string
+    blockingCard?: string
+    until?: string
+    holderArchived?: boolean
+  }
   /** Сколько реплик в обсуждении. Нужно строке подзадачи на доске:
    *  у подзадачи своё обсуждение, и без числа о нём узнают, только
    *  зайдя внутрь. */
@@ -871,8 +879,9 @@ export type Snapshot = {
 }
 
 /** assignable — видит доску, и его можно назначить. Нет поля — можно:
- *  так отвечал сервер до 0076, и так записаны ответы визуальных эталонов. */
-export type Person = { userId: string; name: string; assignable?: boolean }
+ *  так отвечал сервер до 0076, и так записаны ответы визуальных эталонов.
+ *  former — исключён из организации, но ещё исполнитель на этой доске. */
+export type Person = { userId: string; name: string; assignable?: boolean; former?: boolean }
 
 /** Сохранённый вид: строка запроса, в которой уже лежат фильтры
  *  и группировка. Вид — это сохранённая ссылка, второго представления

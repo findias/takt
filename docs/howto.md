@@ -186,6 +186,9 @@ holds up its parent, or a **Blocks** link. The board then shows
 **Waits** on one and **Holds** on the other. Both go as soon as the card
 being waited for is done — moved past the finish or marked **Done** —
 and a block held by that card lifts itself; the history says so.
+If the card being waited for is archived instead, the block stays — the
+work it waited for was dropped, not done — and the panel says so: lift
+the block, or restore that card.
 
 The other card may live on another board: find it by name in **Link to
 an existing card**, which searches every board you can see. Its name on

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-dirty.</p>
+<p>Every section in one file. Version v0.5.1-1-g1859793-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -260,7 +260,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>If you know when it ends, fill in <strong>Lifts itself (optional)</strong>: a date and a time.</li>
 </ol>
 <p>At that moment the block lifts itself: nobody has to come back to the card. The day before, the line under the card becomes bold, and the filter <strong>Block ending</strong> gathers such cards. To move the deadline, open the card and press <strong>Move deadline</strong>; to lift the block now, press <strong>Lift the block</strong>. To fix the reason — a typo, or what you wait for has changed — press <strong>Edit the reason</strong> next to it on the <strong>Work</strong> tab: the block stays the same one, and the time it has lasted is not split in two.</p>
-<p>A card can also wait for another card rather than a date: a part that holds up its parent, or a <strong>Blocks</strong> link. The board then shows <strong>Waits</strong> on one and <strong>Holds</strong> on the other. Both go as soon as the card being waited for is done — moved past the finish or marked <strong>Done</strong> — and a block held by that card lifts itself; the history says so.</p>
+<p>A card can also wait for another card rather than a date: a part that holds up its parent, or a <strong>Blocks</strong> link. The board then shows <strong>Waits</strong> on one and <strong>Holds</strong> on the other. Both go as soon as the card being waited for is done — moved past the finish or marked <strong>Done</strong> — and a block held by that card lifts itself; the history says so. If the card being waited for is archived instead, the block stays — the work it waited for was dropped, not done — and the panel says so: lift the block, or restore that card.</p>
 <p>The other card may live on another board: find it by name in <strong>Link to an existing card</strong>, which searches every board you can see. Its name on the card and in the panel then leads to it on its own board.</p>
 <h3 id="make-a-column-wider">Make a column wider</h3>
 <p>Drag the right edge of the column header. From the keyboard: focus the edge with <code>Tab</code> and use the arrows. Double-click the edge to return to the usual width.</p>
@@ -528,7 +528,8 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <tr><td><strong>Listed people only</strong></td><td>those listed by name</td></tr>
 </tbody>
 </table></div>
-<p>Only someone who can see a board can be assigned to its cards: the assignee picker offers just them, and the server refuses anyone else. A subtask on a neighbouring team&#39;s board is assigned from that board&#39;s people, or left unassigned. Someone who was assigned before losing access stays on the card and can still be removed from it.</p>
+<p>Only someone who can see a board can be assigned to its cards: the assignee picker offers just them, and the server refuses anyone else. A subtask on a neighbouring team&#39;s board is assigned from that board&#39;s people, or left unassigned. Someone who was assigned before losing access — taken out of the board&#39;s subdivision, or the board closed or handed to another subdivision — stays on the card and can still be removed from it. Their circle on the card has a dashed ring, and the card panel says <strong>cannot see the board</strong> next to the name: such a person no longer gets notifications about the card. Someone removed from the organisation keeps their name on the card and is marked <strong>no longer in the organisation</strong>.</p>
+<p>The same rule holds for <strong>@ Mention</strong> in a discussion: only people who can see the board can be called in.</p>
 <h2 id="keys">Keys</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Keys</th><th>What it does</th></tr></thead>
@@ -1770,11 +1771,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. The board snapshot no longer carries links to cards of that board that sit in the archive; the links stay in the database and come back with the card.</p>
+<p>For integrations: a comment that mentions someone who cannot see the board is now refused with 400 and an explanation, the way assigning such a person already was. Before, it was accepted, and the notification was never shown to them.</p>
 <h3 id="the-rest">The rest</h3>
 <ul>
 <li><strong>A subtask can be archived or deleted from its line.</strong> The <strong>⋮</strong> menu of a part on the same board now has <strong>Archive</strong> — with <strong>Restore</strong> in the message — and, for the owner, <strong>Delete for good</strong>. Before, the only way was to unlink the part first: it dropped into a column as a card of its own and was archived from there.</li>
 <li><strong>&#34;Remove&#34; on a subtask is now &#34;Unlink&#34;</strong>: it takes the part out of its parent and leaves the card on the board.</li>
 <li><strong>An archived subtask no longer shows as &#34;Card unavailable&#34;</strong> in its parent&#39;s list, as if it sat in a subdivision you cannot see.</li>
+<li><strong>An assignee who lost access to the board is marked.</strong> Taken out of the board&#39;s subdivision, or the board closed or handed elsewhere — they stay on the card, as before, but now with a dashed ring and <strong>cannot see the board</strong> in the panel: they get no notifications about it. Someone removed from the organisation keeps their name instead of turning into &#34;Someone&#34;.</li>
+<li><strong>@ Mention offers only people who can see the board.</strong> Calling in anyone else was accepted, and they never saw it.</li>
+<li><strong>A block whose holding card was archived says so.</strong> It stays — the work was dropped, not done — and the panel suggests lifting it or restoring that card. Before, it showed only the reason.</li>
 </ul>
 <h2 id="v0-5-1-23-october-2026">v0.5.1 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
@@ -2030,11 +2035,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h2 id="v0-5-2-26-октября-2026">v0.5.2 — 26 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p>Миграций и новых настроек нет. Снимок доски больше не несёт связи с карточками этой доски, лежащими в архиве; в базе связи остаются и возвращаются вместе с карточкой.</p>
+<p>Для интеграций: комментарий с упоминанием того, кто доску не видит, теперь отвергается с 400 и объяснением — так же, как уже отвергалось назначение такого человека. Раньше он принимался, а уведомление упомянутому так и не показывалось.</p>
 <h3 id="остальное">Остальное</h3>
 <ul>
 <li><strong>Подзадачу можно убрать в архив или удалить из её строки.</strong> В меню <strong>⋮</strong> у части на той же доске появились <strong>«Убрать в архив»</strong> — с <strong>«Вернуть»</strong> в сообщении — и у владельца <strong>«Удалить навсегда»</strong>. Раньше путь был один: сперва отвязать часть, она выпадала в колонку отдельной карточкой, и в архив её убирали уже оттуда.</li>
 <li><strong>«Убрать» у подзадачи теперь называется «Отвязать»</strong>: часть выходит из родителя, а карточка остаётся на доске.</li>
 <li><strong>Подзадача в архиве больше не значится «Карточка недоступна»</strong> в списке родителя — будто лежит в подразделении, которого вам не видно.</li>
+<li><strong>Исполнитель, потерявший доступ к доске, отмечен.</strong> Вывели из подразделения доски, доску закрыли или отдали другим — он остаётся на карточке, как и раньше, но теперь с пунктирным кружком и пометкой <strong>«не видит доску»</strong> в панели: уведомлений о ней он не получает. Исключённый из организации остаётся под своим именем, а не «Кто-то».</li>
+<li><strong>«@ Позвать» предлагает только тех, кто видит доску.</strong> Позвать другого было можно, и он об этом не узнавал.</li>
+<li><strong>Блокировка, чью держащую убрали в архив, говорит об этом.</strong> Она остаётся — от работы отказались, а не сделали её, — и панель предлагает снять блокировку или вернуть ту карточку. Раньше была видна одна причина.</li>
 </ul>
 <h2 id="v0-5-1-23-октября-2026">v0.5.1 — 23 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>

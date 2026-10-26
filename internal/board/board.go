@@ -271,6 +271,11 @@ type Block struct {
 	// карточку переименуют, а журнал блокировок обязан остаться
 	// правдой о прошлом — и заодно по ссылке видно, что с ней стало.
 	BlockingCard *string `json:"blockingCard,omitempty"`
+	// Держащую убрали в архив: от той работы отказались, и ждать её
+	// больше нечего. Блокировку это не снимает — снимает только
+	// сделанная держащая (25.09), — но молчать об этом нельзя: убранной
+	// карточки нет в снимке, и панель показывала бы одну причину.
+	HolderArchived bool `json:"holderArchived,omitempty"`
 	// Когда снимется сама. Пусто — «пока не снимут», и это норма, а не
 	// недоделка. Момент, а не дата: «до пятницы, 18:00» — конкретное
 	// время, и клиент показывает его в зоне смотрящего.
@@ -863,7 +868,8 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	commentRows.Close()
 
 	blockRows, err := tx.Query(ctx, `
-		select b.card_id, b.id, b.reason, b.blocked_at, b.blocking_card, b.blocked_until
+		select b.card_id, b.id, b.reason, b.blocked_at, b.blocking_card, b.blocked_until,
+		       `+holderArchived+`
 		  from card_blocks b
 		  join cards c on c.id = b.card_id
 		 where c.board_id = $1 and b.unblocked_at is null`, boardID)
@@ -874,7 +880,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for blockRows.Next() {
 		var cardID string
 		var b Block
-		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until); err != nil {
+		if err := blockRows.Scan(&cardID, &b.ID, &b.Reason, &b.BlockedAt, &b.BlockingCard, &b.Until, &b.HolderArchived); err != nil {
 			return err
 		}
 		if card := byID[cardID]; card != nil {
@@ -972,7 +978,8 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 // Отдельной функцией, а не хвостом enrich: там есть ранний выход для
 // доски без связей, и итерации на такой доске просто не доходили бы
 // до ответа. Тест это и поймал.
-// loadPeople отдаёт тех, кого можно назначить. Список маленький —
+// loadPeople отдаёт тех, кого можно назначить, и тех, кто ещё числится
+// исполнителем, хотя из организации исключён. Список маленький —
 // установка рассчитана на сотню человек, — и без него исполнитель
 // на карточке остался бы идентификатором.
 //
@@ -989,16 +996,26 @@ func loadPeople(ctx context.Context, tx pgx.Tx, orgID, boardID string, snap *Sna
 		select u.id, u.name,
 		       (select visibility = 'org' from boards where id = $2)
 		       or app_sees_board_as(u.id, $2)
+		       , false
 		  from memberships m join users u on u.id = m.user_id
 		 where m.org_id = $1 and u.kind = 'person'
-		 order by u.name`, orgID, boardID)
+		union all
+		-- Исключённые, за которыми осталась работа на этой доске.
+		select distinct u.id, u.name, false, true
+		  from card_assignees a
+		  join cards c on c.id = a.card_id
+		  join users u on u.id = a.user_id
+		 where c.board_id = $2
+		   and not exists (select 1 from memberships m
+		                    where m.org_id = $1 and m.user_id = a.user_id)
+		 order by 2`, orgID, boardID)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var p Person
-		if err := rows.Scan(&p.UserID, &p.Name, &p.Assignable); err != nil {
+		if err := rows.Scan(&p.UserID, &p.Name, &p.Assignable, &p.Former); err != nil {
 			return err
 		}
 		snap.People = append(snap.People, p)

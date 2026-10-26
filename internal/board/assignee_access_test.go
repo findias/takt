@@ -164,3 +164,43 @@ func TestSeesBoardAsAnswersOnlyAboutOwnBoardsAndRestoresTheActor(t *testing.T) {
 		return nil
 	})
 }
+
+// Доступ отнимают и после назначения — сняли с подразделения, закрыли
+// доску, исключили из организации. Исполнителя при этом не снимают:
+// это переписало бы историю. Но снимок обязан сказать, что он доски
+// больше не видит, а исключённого — назвать по имени, а не «Кто-то».
+func TestAssigneeWhoLostAccessIsNamedAndMarked(t *testing.T) {
+	f := newFixture(t)
+	core := f.team("Ядро", nil)
+	f.assignBoard(core)
+	moved := addMember(t, f.svc.db, f.orgID, "member")
+	gone := addMember(t, f.svc.db, f.orgID, "member")
+	f.joins(moved, core)
+	f.joins(gone, core)
+	card := f.createCard("Чья работа", f.columnA)
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": card, "userId": moved})
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": card, "userId": gone})
+
+	f.inTenant(func(tx pgx.Tx) error {
+		if _, err := tx.Exec(f.ctx, `delete from team_members where team_id = $1 and user_id = $2`, core, moved); err != nil {
+			return err
+		}
+		_, err := tx.Exec(f.ctx, `delete from memberships where org_id = $1 and user_id = $2`, f.orgID, gone)
+		return err
+	})
+
+	snap := f.snapshot()
+	people := map[string]Person{}
+	for _, p := range snap.People {
+		people[p.UserID] = p
+	}
+	if p, ok := people[moved]; !ok || p.Assignable || p.Former {
+		t.Errorf("снятый с подразделения: %+v (ждали в списке, не назначаемым, в организации)", p)
+	}
+	if p, ok := people[gone]; !ok || p.Name == "" || p.Assignable || !p.Former {
+		t.Errorf("исключённый: %+v (ждали по имени, не назначаемым, с пометкой «не в организации»)", p)
+	}
+	if len(snap.CardAssignees[card]) != 2 {
+		t.Errorf("исполнителей сняли молча: %v", snap.CardAssignees[card])
+	}
+}

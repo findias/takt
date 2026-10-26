@@ -445,3 +445,17 @@ test('назначить предлагают видящих доску и уж�
     ['u-anna', 'u-vera', 'u-gleb'],
   )
 })
+
+// Исключённого из организации назначение не снимают (этап 39): он
+// приходит в списке людей с пометкой и подписан по имени, а не «Кто-то».
+test('исключённый исполнитель подписан по имени и отмечен', () => {
+  const snap = snapshot([])
+  snap.people = [
+    { userId: 'u-anna', name: 'Анна', assignable: true },
+    { userId: 'u-dmitry', name: 'Дмитрий', assignable: false, former: true },
+  ]
+  const base = fromSnapshot(snap)
+  assert.equal(base.people['u-dmitry'], 'Дмитрий')
+  assert.equal('u-dmitry' in base.assignable, false)
+  assert.deepEqual(base.former, { 'u-dmitry': true })
+})

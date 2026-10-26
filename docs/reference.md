@@ -36,7 +36,16 @@ Only someone who can see a board can be assigned to its cards: the
 assignee picker offers just them, and the server refuses anyone else.
 A subtask on a neighbouring team's board is assigned from that board's
 people, or left unassigned. Someone who was assigned before losing
-access stays on the card and can still be removed from it.
+access — taken out of the board's subdivision, or the board closed or
+handed to another subdivision — stays on the card and can still be
+removed from it. Their circle on the card has a dashed ring, and the
+card panel says **cannot see the board** next to the name: such a
+person no longer gets notifications about the card. Someone removed
+from the organisation keeps their name on the card and is marked
+**no longer in the organisation**.
+
+The same rule holds for **@ Mention** in a discussion: only people who
+can see the board can be called in.
 
 ## Keys
 

@@ -44,3 +44,38 @@ func TestDoneCardReleasesTheBlockItHeld(t *testing.T) {
 		t.Error("сделанная карточка сняла чужую блокировку")
 	}
 }
+
+// Держащую убрали в архив — от той работы отказались. Блокировку это
+// не снимает (снимает только сделанная), но стоящая карточка обязана
+// это знать: убранной в снимке нет, и панель показывала бы одну причину.
+func TestArchivedHolderIsNamedOnTheBlockItHolds(t *testing.T) {
+	f := newFixture(t)
+	holder := f.createCard("Держит", f.columnA)
+	held := f.createCard("Ждёт", f.columnA)
+	f.mustApply("BLOCK_CARD", map[string]any{"cardId": held, "reason": "ждём", "blockingCard": holder})
+
+	flag := func(cards []Card) (seen, archived bool) {
+		for _, c := range cards {
+			if c.ID == held {
+				return true, c.Blocked != nil && c.Blocked.HolderArchived
+			}
+		}
+		return false, false
+	}
+
+	res := f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": holder})
+	if seen, archived := flag(res.Patch.Cards); !seen || !archived {
+		t.Errorf("патч архивации: стоящая в патче=%v, признак=%v", seen, archived)
+	}
+	if _, archived := flag(f.snapshot().Cards); !archived {
+		t.Error("снимок не говорит, что держащая в архиве")
+	}
+	if n := f.countRows(`select count(*) from card_blocks where card_id = $1 and unblocked_at is null`, held); n != 1 {
+		t.Errorf("блокировку сняли архивацией держащей: открытых %d", n)
+	}
+
+	res = f.mustApply("RESTORE_CARD", map[string]any{"cardId": holder})
+	if seen, archived := flag(res.Patch.Cards); !seen || archived {
+		t.Errorf("патч возврата: стоящая в патче=%v, признак=%v", seen, archived)
+	}
+}

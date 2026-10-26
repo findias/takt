@@ -53,6 +53,9 @@ export type BaseState = {
   /** Те из people, кто видит доску: назначить можно только их. Имена
    *  остальных нужны — ими подписаны прежние исполнители. */
   assignable: Record<string, string>
+  /** Те из people, кого исключили из организации, а работа за ними
+   *  осталась: назначение не снимают, но подписать надо иначе. */
+  former?: Record<string, true>
   /** Словарь меток и то, что чем помечено. */
   labels: BoardLabel[]
   cardLabels: Record<string, string[]>
@@ -90,15 +93,18 @@ export function fromSnapshot(snap: Snapshot): BaseState {
 
   const people: Record<string, string> = {}
   const assignable: Record<string, string> = {}
+  const former: Record<string, true> = {}
   for (const person of snap.people) {
     people[person.userId] = person.name
     if (person.assignable !== false) assignable[person.userId] = person.name
+    if (person.former) former[person.userId] = true
   }
 
   return {
     info: snap.board,
     people,
     assignable,
+    former,
     labels: snap.labels,
     cardLabels: snap.cardLabels,
     cardAssignees: snap.cardAssignees,

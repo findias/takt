@@ -872,7 +872,12 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 	if err != nil {
 		return Patch{}, err
 	}
-	return Patch{RemovedCardIDs: []string{id}, Cards: parents}, nil
+	// Кого она держала — узнают, что держащая в архиве.
+	held, err := heldHere(ctx, tx, boardID, id)
+	if err != nil {
+		return Patch{}, err
+	}
+	return Patch{RemovedCardIDs: []string{id}, Cards: append(parents, held...)}, nil
 }
 
 // restoreCard возвращает карточку на доску.
@@ -932,8 +937,18 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"to": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
-	// Вернувшаяся часть снова входит в долю разбиения.
-	return withParent(ctx, tx, boardID, card)
+	// Вернувшаяся часть снова входит в долю разбиения, а те, кого она
+	// держит, снова ждут живую работу.
+	patch, err := withParent(ctx, tx, boardID, card)
+	if err != nil {
+		return Patch{}, err
+	}
+	held, err := heldHere(ctx, tx, boardID, p.CardID)
+	if err != nil {
+		return Patch{}, err
+	}
+	patch.Cards = append(patch.Cards, held...)
+	return patch, nil
 }
 
 // deleteCard стирает карточку насовсем — вместе с тем, как шла её работа.
