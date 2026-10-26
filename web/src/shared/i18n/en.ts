@@ -909,6 +909,7 @@ export const en: typeof ru = {
     doneOf: (title: string) => `Done: ${title}`,
     holds: 'Holds the task up…',
     remove: 'Remove',
+    unlink: 'Unlink',
     iterationIs: (name: string) => `Iteration: ${name}`,
     iterationNone: 'not set',
     iterationClosed: (name: string) => `Iteration: ${name} — closed. Its report stays as it was; the work can move to an open one.`,

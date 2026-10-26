@@ -1191,6 +1191,8 @@ export function Board({
     <Suspense fallback={null}>
       <CardPanel
         onRename={renameCard}
+        onArchive={archiveCard}
+        onDelete={canPurge ? askDelete : undefined}
         base={base}
         boardId={boardId}
         cardId={openCard}

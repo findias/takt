@@ -374,9 +374,13 @@ Each part is one line: its tick, its name, who does it and how many
 replies its discussion has. The rest is in the **⋮** menu at the end
 of the line: **Rename** (a part on another team's board is renamed by
 opening it), **Holds the task up…** — the part stops its parent, and
-you are asked why — and **Remove**, which unlinks the part and leaves
-it on its board. Any open card is renamed with the pencil next to its
-title in the panel.
+you are asked why — and **Unlink**, which takes the part out of its
+parent and leaves it on its board as a card of its own. To get rid of
+a part on the same board, use **Archive** in the same menu: the line
+goes, the bar stops counting it, and **Restore** in the message brings
+it back under its parent. **Delete for good**, for the owner, asks
+first, as it does for any card. Any open card is renamed with the
+pencil next to its title in the panel.
 
 A part on the same board is an item of its parent: a line in the
 parent's card, not a card in a column. Tick it when it is done — that

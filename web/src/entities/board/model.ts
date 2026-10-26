@@ -196,6 +196,14 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     }
   }
 
+  // Связи снятой карточки уходят вместе с ней, как и в снимке: связь
+  // без карточки клиент назвал бы «недоступной», а убранную подзадачу
+  // так и показывал до перечитывания доски.
+  const links =
+    removed.length > 0 && base.links.some((l) => removed.includes(l.fromCard) || removed.includes(l.toCard))
+      ? base.links.filter((l) => !removed.includes(l.fromCard) && !removed.includes(l.toCard))
+      : base.links
+
   // Метки приходят списком целиком — «вот как теперь». Такой патч
   // применяется дважды без вреда, и догоняющему клиенту не нужно
   // рассуждать о порядке.
@@ -227,6 +235,7 @@ export function applyPatch(base: BaseState, result: OperationResult): BaseState 
     columns,
     cards,
     order: touched.size > 0 ? order : base.order,
+    links,
     labels,
     cardLabels,
     cardAssignees,

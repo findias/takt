@@ -168,6 +168,20 @@ test('патч с удалением убирает карточку отовс�
   assert.equal(next.cards['1'], undefined)
 })
 
+test('снятая карточка уносит свои связи: без неё связь читалась бы «недоступной»', () => {
+  const base = {
+    ...fromSnapshot(snapshot([card('p', COL_A, 'a0'), card('s', COL_A, 'a1'), card('o', COL_A, 'a2')])),
+    links: [
+      { fromCard: 'p', toCard: 's', kind: 'subtask' as const },
+      { fromCard: 'p', toCard: 'o', kind: 'subtask' as const },
+    ],
+  }
+  const next = applyPatch(base, { version: 3, patch: { removedCardIds: ['s'] } })
+  assert.deepEqual(next.links, [{ fromCard: 'p', toCard: 'o', kind: 'subtask' }])
+  // Патч без снятых карточек связей не трогает — тот же массив.
+  assert.equal(applyPatch(next, { version: 4, patch: {} }).links, next.links)
+})
+
 test('патч с новой колонкой добавляет её в правильное место', () => {
   const base = fromSnapshot(snapshot([]))
   const next = applyPatch(base, {

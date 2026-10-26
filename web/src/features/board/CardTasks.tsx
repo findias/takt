@@ -3,7 +3,7 @@ import { TextLine } from '../../shared/ui/TextLine.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Avatar, AvatarMore, AVATAR_SMALL } from '../../shared/ui/Avatar.tsx'
-import { CommentIcon, EditIcon, MoreIcon, PlusIcon } from '../../shared/ui/icons.tsx'
+import { ArchiveIcon, CommentIcon, EditIcon, MoreIcon, PlusIcon, TrashIcon } from '../../shared/ui/icons.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import type { MenuItem } from '../../shared/ui/Menu.tsx'
 import { LINK_KIND_NAMES, REF_KINDS, request } from '../../shared/api/index.ts'
@@ -36,6 +36,8 @@ export function CardTasks({
   onUnlink,
   onRename,
   onMarkDone,
+  onArchive,
+  onDelete,
   onAddRef,
   onRemoveRef,
   onHold,
@@ -52,6 +54,10 @@ export function CardTasks({
   onUnlink: (fromCard: string, toCard: string, kind: LinkKind) => void
   onRename: (cardId: string, title: string) => void
   onMarkDone: (cardId: string, done: boolean) => void
+  /** Убрать в архив подзадачу этой доски. Пусто — прав нет. */
+  onArchive?: (cardId: string) => void
+  /** Удалить навсегда — с вопросом. Пусто — это не владелец. */
+  onDelete?: (cardId: string, title: string) => void
   onAddRef: (cardId: string, kind: RefKind, ref: string) => void
   onRemoveRef: (cardId: string, refId: string) => void
   /** Часть держит саму задачу: форма блокировки — на «Работе». */
@@ -135,6 +141,13 @@ export function CardTasks({
             // доску. Чужую переименовывают, открыв её.
             onRename={s.onThisBoard ? (title) => onRename(s.id, title) : undefined}
             onMarkDone={onMarkDone}
+            // Убрать и удалить отсюда — тоже только свою: подзадача этой
+            // доски — строка родителя, а не карточка в колонке, и ни меню
+            // карточки, ни выделения у неё нет. Без этих пунктов убрать
+            // её можно было только отвязав: она выпадала в колонку
+            // отдельной карточкой, и уже оттуда её убирали.
+            onArchive={canEdit && s.onThisBoard && onArchive ? () => onArchive(s.id) : undefined}
+            onDelete={canEdit && s.onThisBoard && onDelete ? () => onDelete(s.id, s.title) : undefined}
             // Часть может держать саму задачу, и говорят об этом
             // отсюда: у родителя, где видно и остальные части.
             // У заблокированной задачи предлагать нечего — вторая
@@ -211,6 +224,8 @@ function RelatedRow({
   onMarkDone,
   onHold,
   onRename,
+  onArchive,
+  onDelete,
 }: {
   related: Related
   /** userId → имя. Задан — в хвосте строки видно, на ком часть. */
@@ -229,6 +244,10 @@ function RelatedRow({
   /** Переименовать подзадачу прямо в строке (владелец 25.09.2026:
    *  «подзадачи нельзя переименовать»). Пусто — чужая или без прав. */
   onRename?: (title: string) => void
+  /** Убрать часть в архив. Пусто — чужая или без прав. */
+  onArchive?: () => void
+  /** Удалить часть навсегда. Пусто — чужая или это не владелец. */
+  onDelete?: () => void
 }) {
   const [renaming, setRenaming] = useState(false)
   // Флажок и галочка отвечают на один вопрос, поэтому вместе их нет:
@@ -258,7 +277,17 @@ function RelatedRow({
   if (canEdit && onRename) {
     actions.push({ label: t.cardView.rename, icon: <EditIcon />, onSelect: () => setRenaming(true) })
   }
-  if (canEdit && related.reachable) actions.push({ label: t.panel.remove, onSelect: onRemove })
+  // «Отвязать», а не «убрать»: снимается только связь, и своя часть
+  // после этого встаёт в колонку отдельной карточкой. Убрать саму
+  // часть — следующими пунктами, так же как у карточки на доске:
+  // архив без вопроса и с отменой, удаление последним и с вопросом.
+  if (canEdit && related.reachable) actions.push({ label: t.panel.unlink, onSelect: onRemove })
+  if (onArchive) {
+    actions.push({ label: t.cardView.archive, icon: <ArchiveIcon />, danger: true, onSelect: onArchive })
+  }
+  if (onDelete) {
+    actions.push({ label: t.cardView.deleteForever, icon: <TrashIcon />, danger: true, onSelect: onDelete })
+  }
   // «На этой доске» ничего не сообщает: своя часть и так здесь. Где
   // лежит — говорится только о чужой, вместе с тем, что с ней у соседей.
   const where = related.onThisBoard ? '' : related.where

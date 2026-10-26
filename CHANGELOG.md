@@ -8,6 +8,26 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.5.2 — 26 October 2026
+
+### For whoever installs and upgrades
+
+No migration and no new setting. The board snapshot no longer carries
+links to cards of that board that sit in the archive; the links stay
+in the database and come back with the card.
+
+### The rest
+
+- **A subtask can be archived or deleted from its line.** The **⋮**
+  menu of a part on the same board now has **Archive** — with
+  **Restore** in the message — and, for the owner, **Delete for good**.
+  Before, the only way was to unlink the part first: it dropped into a
+  column as a card of its own and was archived from there.
+- **"Remove" on a subtask is now "Unlink"**: it takes the part out of
+  its parent and leaves the card on the board.
+- **An archived subtask no longer shows as "Card unavailable"** in its
+  parent's list, as if it sat in a subdivision you cannot see.
+
 ## v0.5.1 — 23 October 2026
 
 ### For whoever installs and upgrades

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.4.1-7-gd092a6e-dirty.</p>
+<p>Every section in one file. Version v0.5.1-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -314,7 +314,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>In the subtasks section, type the name of the part into <strong>What needs doing?</strong></li>
 <li>Press <strong>Subtask</strong>. To give the part to another team, pick their board in the list next to the name first.</li>
 </ol>
-<p>Each part is one line: its tick, its name, who does it and how many replies its discussion has. The rest is in the <strong>⋮</strong> menu at the end of the line: <strong>Rename</strong> (a part on another team&#39;s board is renamed by opening it), <strong>Holds the task up…</strong> — the part stops its parent, and you are asked why — and <strong>Remove</strong>, which unlinks the part and leaves it on its board. Any open card is renamed with the pencil next to its title in the panel.</p>
+<p>Each part is one line: its tick, its name, who does it and how many replies its discussion has. The rest is in the <strong>⋮</strong> menu at the end of the line: <strong>Rename</strong> (a part on another team&#39;s board is renamed by opening it), <strong>Holds the task up…</strong> — the part stops its parent, and you are asked why — and <strong>Unlink</strong>, which takes the part out of its parent and leaves it on its board as a card of its own. To get rid of a part on the same board, use <strong>Archive</strong> in the same menu: the line goes, the bar stops counting it, and <strong>Restore</strong> in the message brings it back under its parent. <strong>Delete for good</strong>, for the owner, asks first, as it does for any card. Any open card is renamed with the pencil next to its title in the panel.</p>
 <p>A part on the same board is an item of its parent: a line in the parent&#39;s card, not a card in a column. Tick it when it is done — that is all it needs. Items take no room under a column&#39;s limit, are not counted in the column, and the flow metrics count the parent, not its items. A part on another team&#39;s board is an ordinary card in their columns, moved by them. Either way the parent card grows a &#34;so many of so many&#34; bar.</p>
 <p>When a filter or a swimlane hides the parent, its item is shown as a card in the parent&#39;s column, so your share of the work does not vanish. On <strong>Tasks</strong> an item shows its parent&#39;s column and the parent&#39;s number; a ticked item counts as finished.</p>
 <p>Parts can have parts of their own — an epic, its features, the tasks under them, up to five levels. The bar on a card with grandchildren counts the leaves of the whole tree — the tasks at the bottom, &#34;1 of 6&#34;; its direct parts (&#34;0 of 3&#34; features) are in the bar&#39;s tooltip and next to it in the card panel. A middle card is not counted in the bar, or a feature and its tasks would count twice; the weight, when every leaf is estimated, is the sum of the leaves&#39; estimates. A blocked part at any depth stops the top card too: the epic shows &#34;Part blocked&#34; when a task two levels down is stuck. A blocked parent does not stop its parts — they are what people carry on with.</p>
@@ -1767,6 +1767,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p>No migration and no new setting. The board snapshot no longer carries links to cards of that board that sit in the archive; the links stay in the database and come back with the card.</p>
+<h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>A subtask can be archived or deleted from its line.</strong> The <strong>⋮</strong> menu of a part on the same board now has <strong>Archive</strong> — with <strong>Restore</strong> in the message — and, for the owner, <strong>Delete for good</strong>. Before, the only way was to unlink the part first: it dropped into a column as a card of its own and was archived from there.</li>
+<li><strong>&#34;Remove&#34; on a subtask is now &#34;Unlink&#34;</strong>: it takes the part out of its parent and leaves the card on the board.</li>
+<li><strong>An archived subtask no longer shows as &#34;Card unavailable&#34;</strong> in its parent&#39;s list, as if it sat in a subdivision you cannot see.</li>
+</ul>
 <h2 id="v0-5-1-23-october-2026">v0.5.1 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. <code>CREATE_CARD</code> accepts an optional <code>assigneeIds</code>, and the JSON export&#39;s summary gains <code>people</code>; both are additions, older clients are unaffected.</p>
@@ -2018,6 +2027,15 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-5-2-26-октября-2026">v0.5.2 — 26 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p>Миграций и новых настроек нет. Снимок доски больше не несёт связи с карточками этой доски, лежащими в архиве; в базе связи остаются и возвращаются вместе с карточкой.</p>
+<h3 id="остальное">Остальное</h3>
+<ul>
+<li><strong>Подзадачу можно убрать в архив или удалить из её строки.</strong> В меню <strong>⋮</strong> у части на той же доске появились <strong>«Убрать в архив»</strong> — с <strong>«Вернуть»</strong> в сообщении — и у владельца <strong>«Удалить навсегда»</strong>. Раньше путь был один: сперва отвязать часть, она выпадала в колонку отдельной карточкой, и в архив её убирали уже оттуда.</li>
+<li><strong>«Убрать» у подзадачи теперь называется «Отвязать»</strong>: часть выходит из родителя, а карточка остаётся на доске.</li>
+<li><strong>Подзадача в архиве больше не значится «Карточка недоступна»</strong> в списке родителя — будто лежит в подразделении, которого вам не видно.</li>
+</ul>
 <h2 id="v0-5-1-23-октября-2026">v0.5.1 — 23 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p>Миграций и новых настроек нет. <code>CREATE_CARD</code> принимает необязательный <code>assigneeIds</code>, в сводке JSON-выгрузки появилось <code>people</code>; оба — добавления, старые клиенты их не заметят.</p>

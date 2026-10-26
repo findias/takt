@@ -462,11 +462,14 @@ export function useBoard(boardId: string | null, notify: Notify) {
         tone: 'info',
         action: {
           label: t.ops.restore,
-          onAct: () => void run('RESTORE_CARD', { cardId }, t.ops.restoreCard),
+          // Перечитать доску: связи убранной карточки снимок не несёт,
+          // и вернувшаяся подзадача без них встала бы отдельной
+          // карточкой в колонку, а не строкой у родителя.
+          onAct: () => void run('RESTORE_CARD', { cardId }, t.ops.restoreCard).then(reload),
         },
       })
     },
-    [run, notify, titleOf],
+    [run, reload, notify, titleOf],
   )
   /**
    * Одно действие над многими карточками.
@@ -570,7 +573,8 @@ export function useBoard(boardId: string | null, notify: Notify) {
           tone: 'info',
           action: {
             label: t.ops.restore,
-            onAct: () => void applyToMany(done, 'RESTORE_CARD', (cardId) => ({ cardId })),
+            // Перечитать — по той же причине, что у одной карточки.
+            onAct: () => void applyToMany(done, 'RESTORE_CARD', (cardId) => ({ cardId })).then(reload),
           },
         })
       }
@@ -579,7 +583,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
       }
       return done.length
     },
-    [applyToMany, notify, namesOf],
+    [applyToMany, reload, notify, namesOf],
   )
 
   /**

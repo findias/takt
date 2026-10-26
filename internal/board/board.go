@@ -886,10 +886,21 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	}
 	blockRows.Close()
 
+	// Связи с убранной карточкой этой доски в снимок не идут: её самой
+	// в снимке нет, а чужой она не числится, и клиенту оставалось одно
+	// — «карточка недоступна, подразделение вам не видно». Так в списке
+	// подзадач висела часть, убранная в архив, — притом что прогресс её
+	// уже не считал. В базе связь остаётся: вернули карточку — вернулась
+	// и связь. Убранная на чужой доске по-прежнему приходит: у соседей
+	// это «работу не взяли», и об этом родителю знать нужно.
 	linkRows, err := tx.Query(ctx, `
+		with here as (select id, archived_at is not null as gone
+		                from cards where board_id = $1)
 		select from_card, to_card, kind from card_links
-		 where from_card in (select id from cards where board_id = $1)
-		    or to_card   in (select id from cards where board_id = $1)`, boardID)
+		 where (from_card in (select id from here where not gone)
+		    or  to_card   in (select id from here where not gone))
+		   and from_card not in (select id from here where gone)
+		   and to_card   not in (select id from here where gone)`, boardID)
 	if err != nil {
 		return err
 	}

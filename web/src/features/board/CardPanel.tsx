@@ -122,6 +122,8 @@ export function CardPanel({
   onUnblock,
   onMarkDone,
   onRename,
+  onArchive,
+  onDelete,
   onIteration,
   onField,
   onAddRef,
@@ -164,6 +166,10 @@ export function CardPanel({
   onMarkDone: (cardId: string, done: boolean) => void
   /** Переименовать карточку этой доски — открытую или её подзадачу. */
   onRename: (cardId: string, title: string) => void
+  /** Убрать в архив подзадачу этой доски — из её строки у родителя. */
+  onArchive: (cardId: string) => void
+  /** Удалить подзадачу насовсем. Пусто — это не владелец. */
+  onDelete?: (cardId: string, title: string) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
@@ -503,6 +509,8 @@ export function CardPanel({
               onUnlink={onUnlink}
               onRename={onRename}
               onMarkDone={onMarkDone}
+              onArchive={onArchive}
+              onDelete={onDelete}
               onAddRef={onAddRef}
               onRemoveRef={onRemoveRef}
               onHold={(s) => {

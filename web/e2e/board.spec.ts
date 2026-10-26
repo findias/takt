@@ -1435,6 +1435,55 @@ test('подзадачи раскрываются прямо с доски', asy
   await expect(parent.getByTitle('На кого разложены части').locator('.avatar')).toHaveCount(1)
 })
 
+// Подзадачу убирают из её же строки у родителя. Пункт родителя в колонке
+// не стоит, и меню карточки у него нет: раньше избавиться от него можно
+// было только отвязав — он выпадал в колонку отдельной карточкой. А
+// убранный в архив висел у родителя строкой «Карточка недоступна», как
+// будто лежит в чужом подразделении.
+test('подзадачу убирают в архив из строки у родителя и возвращают', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска уборки')
+  await addCard(page, 'Очередь', 'Выпустить релиз')
+
+  const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
+  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
+  await page.getByRole('button', { name: 'Подзадача' }).click()
+
+  const panel = page.getByLabel(/Карточка .* «Выпустить релиз»/)
+  const row = panel.locator('.related').filter({ hasText: 'Прогнать нагрузочные' })
+  await expect(row).toBeVisible()
+
+  await row.getByRole('button', { name: 'Действия карточки «Прогнать нагрузочные»' }).click()
+  // Связь снимает «Отвязать», а не «Убрать»: «убрать» читалось как
+  // удаление самой части.
+  await expect(page.getByRole('menuitem', { name: 'Отвязать' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+
+  await expect(row).toHaveCount(0)
+  await expect(panel.getByText('Карточка недоступна')).toHaveCount(0)
+  // И в колонку отдельной карточкой она не выпала.
+  await expect(cardIn(page, 'Очередь', 'Прогнать нагрузочные')).toHaveCount(0)
+
+  // Отмена ставит её обратно под родителя, а не карточкой в колонку.
+  await page.locator('.toast').getByRole('button', { name: 'Вернуть' }).click()
+  await expect(row).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Прогнать нагрузочные')).toHaveCount(0)
+
+  // То же после перезагрузки: снимок с сервера сходится с тем,
+  // что клиент собрал сам.
+  await page.reload()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await row.getByRole('button', { name: 'Действия карточки «Прогнать нагрузочные»' }).click()
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+  await expect(row).toHaveCount(0)
+  await page.reload()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await expect(panel.getByText('Подзадач нет', { exact: false })).toBeVisible()
+  await expect(panel.getByText('Карточка недоступна')).toHaveCount(0)
+})
+
 // Часть, которая стоит, останавливает и целое: разбили работу, одна
 // часть упёрлась — задача не идёт. Знала об этом только сама часть,
 // а с доски родитель выглядел идущим, и отбор «что не идёт» его

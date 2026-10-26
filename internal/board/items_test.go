@@ -94,3 +94,35 @@ func TestItemInMyTasksSaysWhereItLives(t *testing.T) {
 		t.Errorf("отмеченный пункт не читается сделанным: done=%v, вид %q", got.Done, got.ColumnKind)
 	}
 }
+
+// Убранный пункт пропадает из снимка вместе со связью и возвращается
+// вместе с ней. Пока связь приходила одна, без карточки, клиент
+// показывал на её месте «карточка недоступна, подразделение вам
+// не видно» — про часть, которую только что убрали в архив.
+func TestArchivedItemLeavesNoDanglingLink(t *testing.T) {
+	f := newFixture(t)
+	parent := f.createCard("Выпустить релиз", f.columns()[0].ID)
+	item := f.subtask(parent, "Прогнать нагрузочные")
+
+	linked := func() bool {
+		for _, l := range f.snapshot().Links {
+			if l.FromCard == parent && l.ToCard == item {
+				return true
+			}
+		}
+		return false
+	}
+
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": item})
+	if linked() {
+		t.Error("связь с убранным пунктом осталась в снимке без самой карточки")
+	}
+	if n := f.countRows(`select count(*) from card_links where to_card = $1`, item); n != 1 {
+		t.Fatalf("архив снял связь в базе: %d", n)
+	}
+
+	f.mustApply("RESTORE_CARD", map[string]any{"cardId": item})
+	if !linked() {
+		t.Error("пункт вернулся из архива без родителя")
+	}
+}
