@@ -470,6 +470,10 @@ Hover the card, open the **…** menu and choose **Archive**. A message appears 
 case that was the wrong card.
 
 Archived cards sit in **Archive** and come back from there at any time.
+A card's items go with it and come back with it: the archive shows one
+line, "with 2 subtasks". An item archived on its own earlier stays in
+the archive when its parent returns. Parts on other teams' boards are
+their work and stay where they are.
 Deleting for good asks for confirmation and cannot be undone. It is
 offered to the organisation owner and to the owner of the board's
 subdivision.

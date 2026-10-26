@@ -866,18 +866,133 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"from": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
+	items, err := archiveItems(ctx, tx, orgID, actorID, boardID, id)
+	if err != nil {
+		return Patch{}, err
+	}
 	// Убранная часть выпадает из доли разбиения: родитель едет следом,
 	// иначе «2 из 5» осталось бы висеть над четырьмя частями.
 	parents, err := parentCards(ctx, tx, boardID, id)
 	if err != nil {
 		return Patch{}, err
 	}
-	// Кого она держала — узнают, что держащая в архиве.
-	held, err := heldHere(ctx, tx, boardID, id)
-	if err != nil {
-		return Patch{}, err
+	// Кого она держала — узнают, что держащая в архиве. Пункты тоже
+	// бывают держащими.
+	var held []Card
+	for _, cardID := range append([]string{id}, items...) {
+		more, err := heldHere(ctx, tx, boardID, cardID)
+		if err != nil {
+			return Patch{}, err
+		}
+		held = appendNew(held, more)
 	}
-	return Patch{RemovedCardIDs: []string{id}, Cards: append(parents, held...)}, nil
+	return Patch{RemovedCardIDs: append([]string{id}, items...), Cards: appendNew(parents, held)}, nil
+}
+
+// partsOf — пункты карточки на всю глубину (IsItem): подзадачи этой
+// доски, их подзадачи этой доски и так далее. Подзадача на чужой доске
+// — работа соседей, а не строка внутри карточки, и обход на ней
+// останавливается. stamp выбирает, какие брать: nil — живые, момент —
+// убранные в архив ровно тогда.
+const partsOf = `
+	with recursive part(id) as (
+		select l.to_card from card_links l join cards c on c.id = l.to_card
+		 where l.from_card = $1 and l.kind = 'subtask' and c.board_id = $2
+		   and c.archived_at is not distinct from $3
+		union
+		select l.to_card from part p
+		  join card_links l on l.from_card = p.id and l.kind = 'subtask'
+		  join cards c on c.id = l.to_card
+		 where c.board_id = $2 and c.archived_at is not distinct from $3
+	)`
+
+// archiveItems убирает в архив пункты карточки вместе с ней.
+//
+// Пункт — строка внутри родителя, а не работа в колонке (IsItem).
+// Прежде убранный родитель выпускал свои пункты в колонку отдельными
+// карточками: убрали одну, а на доске появилось пять, которых там
+// никогда не было. Решение владельца 26.10.2026: части уходят с родителем.
+//
+// Тем же моментом, что и родитель, — now() в транзакции один: по нему
+// возврат родителя узнаёт, какие части ушли вместе с ним, а какие были
+// убраны раньше и должны остаться в архиве. Сделанная часть остаётся
+// сделанной: «отброшено» — про работу, от которой отказались.
+func archiveItems(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, parentID string) ([]string, error) {
+	rows, err := tx.Query(ctx, partsOf+`
+		update cards c
+		   set archived_at = now(),
+		       outcome     = case when c.done_at is null then coalesce(c.outcome, 'discarded') else c.outcome end,
+		       version     = c.version + 1
+		  from part
+		 where c.id = part.id
+		 returning c.id, c.column_id`, parentID, boardID, nil)
+	if err != nil {
+		return nil, err
+	}
+	ids, columns, err := idsAndColumns(rows)
+	if err != nil {
+		return nil, err
+	}
+	for i, id := range ids {
+		if err := logEvent(ctx, tx, orgID, boardID, id, actorID, "archived", &columns[i], nil,
+			itemFact(ctx, tx, boardID, columns[i], parentID, "from")); err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
+}
+
+// restoreItems возвращает пункты, ушедшие в архив вместе с родителем.
+// Убранные раньше родителя остаются в архиве: их убирали отдельно,
+// и возврат родителя этого решения не отменяет.
+func restoreItems(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, parentID string, stamp time.Time) ([]string, error) {
+	rows, err := tx.Query(ctx, partsOf+`
+		update cards c
+		   set archived_at = null,
+		       outcome     = case when c.outcome = 'discarded' then null else c.outcome end,
+		       version     = c.version + 1
+		  from part
+		 where c.id = part.id
+		 returning c.id, c.column_id`, parentID, boardID, stamp)
+	if err != nil {
+		return nil, err
+	}
+	ids, columns, err := idsAndColumns(rows)
+	if err != nil {
+		return nil, err
+	}
+	for i, id := range ids {
+		if err := logEvent(ctx, tx, orgID, boardID, id, actorID, "restored", nil, &columns[i],
+			itemFact(ctx, tx, boardID, columns[i], parentID, "to")); err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
+}
+
+func idsAndColumns(rows pgx.Rows) ([]string, []string, error) {
+	defer rows.Close()
+	var ids, columns []string
+	for rows.Next() {
+		var id, column string
+		if err := rows.Scan(&id, &column); err != nil {
+			return nil, nil, err
+		}
+		ids = append(ids, id)
+		columns = append(columns, column)
+	}
+	return ids, columns, rows.Err()
+}
+
+// itemFact — запись события пункта. Колонка у пункта ничего не значит
+// (IsItem) и бывает уже убранной в архив; тогда в записи её нет, а не
+// отказ всей операции.
+func itemFact(ctx context.Context, tx pgx.Tx, boardID, columnID, parentID, key string) map[string]any {
+	fact := map[string]any{"withParent": parentID}
+	if col, err := loadColumn(ctx, tx, boardID, columnID); err == nil {
+		fact[key] = columnFact(col)
+	}
+	return fact
 }
 
 // restoreCard возвращает карточку на доску.
@@ -896,14 +1011,18 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, badRequestf("разбор RESTORE_CARD: %v", err)
 	}
 
+	// Момент архивации — до того, как его сотрёт возврат: по нему
+	// узнаются части, ушедшие вместе с карточкой (archiveItems).
 	var columnID string
+	var stamp time.Time
 	err := tx.QueryRow(ctx, `
+		with was as (select archived_at from cards where id = $1)
 		update cards
 		   set archived_at = null,
 		       outcome     = case when outcome = 'discarded' then null else outcome end,
 		       version     = version + 1
 		 where id = $1 and board_id = $2 and archived_at is not null
-		 returning column_id`, p.CardID, boardID).Scan(&columnID)
+		 returning column_id, (select archived_at from was)`, p.CardID, boardID).Scan(&columnID, &stamp)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Карточки нет или она и так на доске: повтор отмены безобиден.
 		return Patch{}, conflictf("", "карточка уже на доске")
@@ -937,17 +1056,30 @@ func restoreCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		map[string]any{"to": columnFact(col)}); err != nil {
 		return Patch{}, err
 	}
+	items, err := restoreItems(ctx, tx, orgID, actorID, boardID, p.CardID, stamp)
+	if err != nil {
+		return Patch{}, err
+	}
 	// Вернувшаяся часть снова входит в долю разбиения, а те, кого она
 	// держит, снова ждут живую работу.
 	patch, err := withParent(ctx, tx, boardID, card)
 	if err != nil {
 		return Patch{}, err
 	}
-	held, err := heldHere(ctx, tx, boardID, p.CardID)
-	if err != nil {
-		return Patch{}, err
+	for _, cardID := range items {
+		item, err := readCard(ctx, tx, boardID, cardID)
+		if err != nil {
+			return Patch{}, err
+		}
+		patch.Cards = appendNew(patch.Cards, []Card{item})
 	}
-	patch.Cards = append(patch.Cards, held...)
+	for _, cardID := range append([]string{p.CardID}, items...) {
+		held, err := heldHere(ctx, tx, boardID, cardID)
+		if err != nil {
+			return Patch{}, err
+		}
+		patch.Cards = appendNew(patch.Cards, held)
+	}
 	return patch, nil
 }
 

@@ -1997,6 +1997,42 @@ test('убранная карточка достижима из архива и 
   await expect(panel.getByText('Архив пуст.')).toBeVisible()
 })
 
+// Подзадачи уходят в архив вместе с родителем и вместе с ним
+// возвращаются (решение владельца 26.10.2026). Прежде они выпадали
+// в колонку отдельными карточками.
+test('подзадачи уходят в архив с родителем и возвращаются с ним', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Доска архива с частями')
+  await addCard(page, 'Очередь', 'Соседняя работа')
+  await addCard(page, 'Очередь', 'Переезд офиса')
+  const parent = cardIn(page, 'Очередь', 'Переезд офиса')
+  await openCardMenu(parent)
+  await page.getByRole('menuitem', { name: 'Завести подзадачу' }).click()
+  await parent.getByLabel('Название подзадачи').fill('Заказать грузчиков')
+  await parent.getByLabel('Название подзадачи').press('Enter')
+  await expect(parent.getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+
+  await openCardMenu(parent)
+  await page.getByRole('menuitem', { name: 'Убрать в архив' }).click()
+  await expect(cardIn(page, 'Очередь', 'Переезд офиса')).toHaveCount(0)
+  // После перечтения доски тоже: прежде часть всплывала карточкой.
+  // Соседняя карточка — знак, что доска уже нарисована.
+  await page.reload()
+  await expect(cardIn(page, 'Очередь', 'Соседняя работа')).toBeVisible()
+  await expect(page.getByText('Заказать грузчиков')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Архив' }).click()
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText(/Переезд офиса/)).toBeVisible()
+  await expect(panel.getByText(/с ней 1 подзадача/)).toBeVisible()
+  await expect(panel.getByText(/Заказать грузчиков/)).toHaveCount(0)
+
+  await panel.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(cardIn(page, 'Очередь', 'Переезд офиса')
+    .getByRole('button', { name: /Подзадачи: готово 0 из 1/ })).toBeVisible()
+  await expect(panel.getByText('Архив пуст.')).toBeVisible()
+})
+
 test('таблица — второй вид на те же данные, и он присылается ссылкой', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска со списком')
@@ -3301,6 +3337,16 @@ test('карточка с незакрытыми подзадачами уход
   await expect(dialog.getByText('Незакрытая часть')).toBeVisible()
   await dialog.getByRole('button', { name: 'Отмена' }).click()
   await expect(cardIn(page, 'Очередь', 'Большая работа')).toBeVisible()
+
+  // Отметка «сделана» без переезда спрашивает так же: колонка та же,
+  // но работа объявлена законченной.
+  await openCardMenu(parent)
+  await page.getByRole('menuitem', { name: 'Отметить сделанной' }).click()
+  await expect(dialog.getByText('У «Большая работа» не закрыто 1 из 1:')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Отмена' }).click()
+  await openCardMenu(parent)
+  await expect(page.getByRole('menuitem', { name: 'Отметить сделанной' })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   await moveToDone()
   await dialog.getByRole('button', { name: 'Перенести всё равно' }).click()

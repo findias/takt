@@ -320,13 +320,16 @@ const cardDone = `(c.outcome = 'done' or c.done_at is not null)`
 //
 // Родитель в архиве пункта не держит: убранный с доски, он не показан,
 // и подзадача возвращается в колонку обычной карточкой — так же решает
-// клиент (`withoutParts`), и разойтись им нельзя.
+// клиент (`withoutParts`), и разойтись им нельзя. Исключение — часть,
+// ушедшая в архив вместе с родителем (archiveItems, тот же момент):
+// она по-прежнему пункт, и метрики не считают её отдельным отказом.
 func IsItem(alias string) string {
 	return `exists (select 1 from card_links il
 	                  join cards ip on ip.id = il.from_card
 	                 where il.to_card = ` + alias + `.id and il.kind = 'subtask'
 	                   and ip.board_id = ` + alias + `.board_id
-	                   and ip.archived_at is null)`
+	                   and (ip.archived_at is null
+	                        or ip.archived_at = ` + alias + `.archived_at))`
 }
 
 // MaxSubtaskDepth ограничивает глубину дерева подзадач. Предел нужен не

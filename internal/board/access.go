@@ -617,6 +617,9 @@ type ArchivedCard struct {
 	// в архиве: возврат откажет, и знать об этом надо до нажатия,
 	// а не после.
 	Restorable bool `json:"restorable"`
+	// Parts — сколько частей ушло в архив вместе с ней и вернётся с ней
+	// же. Сами они строками архива не показаны.
+	Parts int `json:"parts"`
 }
 
 // ArchivedCardsLimit — сколько карточек архива отдаётся за раз. Архив
@@ -661,10 +664,25 @@ func (s *Service) ArchivedCards(
 			       (select u.name
 			          from card_events e left join users u on u.id = e.actor_id
 			         where e.card_id = c.id and e.type = 'archived'
-			         order by e.id desc limit 1)
+			         order by e.id desc limit 1),
+			       (with recursive part(id) as (
+			          select l.to_card from card_links l join cards pc on pc.id = l.to_card
+			           where l.from_card = c.id and l.kind = 'subtask'
+			             and pc.board_id = c.board_id and pc.archived_at = c.archived_at
+			          union
+			          select l.to_card from part p
+			            join card_links l on l.from_card = p.id and l.kind = 'subtask'
+			            join cards pc on pc.id = l.to_card
+			           where pc.board_id = c.board_id and pc.archived_at = c.archived_at)
+			        select count(*) from part)
 			  from cards c
 			  join board_columns col on col.id = c.column_id
 			 where c.board_id = $1 and c.archived_at is not null
+			   -- Часть, ушедшая с родителем, — не отдельная строка: убирали
+			   -- одну карточку, и вернётся она одним нажатием (Parts).
+			   and not exists (select 1 from card_links pl join cards pp on pp.id = pl.from_card
+			                    where pl.to_card = c.id and pl.kind = 'subtask'
+			                      and pp.board_id = c.board_id and pp.archived_at = c.archived_at)
 			   and ($2::timestamptz is null or c.archived_at < $2)
 			   and ($4 = '' or c.number ilike '%' || $4 || '%'
 			                or c.title ilike '%' || $4 || '%'
@@ -678,7 +696,7 @@ func (s *Service) ArchivedCards(
 		for rows.Next() {
 			var c ArchivedCard
 			if err := rows.Scan(&c.ID, &c.Number, &c.Title, &c.ColumnID, &c.ColumnName,
-				&c.ArchivedAt, &c.Outcome, &c.Restorable, &c.Actor); err != nil {
+				&c.ArchivedAt, &c.Outcome, &c.Restorable, &c.Actor, &c.Parts); err != nil {
 				return err
 			}
 			out = append(out, c)

@@ -21,6 +21,10 @@ board is now refused with 400 and an explanation, the way assigning
 such a person already was. Before, it was accepted, and the
 notification was never shown to them.
 
+Also for integrations: `ARCHIVE_CARD` now archives the card's subtasks
+on the same board along with it, and `RESTORE_CARD` brings back those
+that went with it. Subtasks on other boards are not touched.
+
 ### The rest
 
 - **A subtask can be archived or deleted from its line.** The **⋮**
@@ -43,6 +47,11 @@ notification was never shown to them.
 - **A block whose holding card was archived says so.** It stays — the
   work was dropped, not done — and the panel suggests lifting it or
   restoring that card. Before, it showed only the reason.
+- **Subtasks go to the archive with their parent.** Archiving a card
+  takes its items with it, and **Restore** brings them back; the
+  archive shows one line, "with 2 subtasks". Before, the items dropped
+  into the column as separate cards — archiving one card put several
+  new ones on the board. Flow metrics do not count them as discarded.
 
 ## v0.5.1 — 23 October 2026
 

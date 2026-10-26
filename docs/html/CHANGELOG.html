@@ -125,6 +125,7 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. The board snapshot no longer carries links to cards of that board that sit in the archive; the links stay in the database and come back with the card.</p>
 <p>For integrations: a comment that mentions someone who cannot see the board is now refused with 400 and an explanation, the way assigning such a person already was. Before, it was accepted, and the notification was never shown to them.</p>
+<p>Also for integrations: <code>ARCHIVE_CARD</code> now archives the card&#39;s subtasks on the same board along with it, and <code>RESTORE_CARD</code> brings back those that went with it. Subtasks on other boards are not touched.</p>
 <h3 id="the-rest">The rest</h3>
 <ul>
 <li><strong>A subtask can be archived or deleted from its line.</strong> The <strong>⋮</strong> menu of a part on the same board now has <strong>Archive</strong> — with <strong>Restore</strong> in the message — and, for the owner, <strong>Delete for good</strong>. Before, the only way was to unlink the part first: it dropped into a column as a card of its own and was archived from there.</li>
@@ -133,6 +134,7 @@ color:var(--ink-3);font-size:.85rem}
 <li><strong>An assignee who lost access to the board is marked.</strong> Taken out of the board&#39;s subdivision, or the board closed or handed elsewhere — they stay on the card, as before, but now with a dashed ring and <strong>cannot see the board</strong> in the panel: they get no notifications about it. Someone removed from the organisation keeps their name instead of turning into &#34;Someone&#34;.</li>
 <li><strong>@ Mention offers only people who can see the board.</strong> Calling in anyone else was accepted, and they never saw it.</li>
 <li><strong>A block whose holding card was archived says so.</strong> It stays — the work was dropped, not done — and the panel suggests lifting it or restoring that card. Before, it showed only the reason.</li>
+<li><strong>Subtasks go to the archive with their parent.</strong> Archiving a card takes its items with it, and <strong>Restore</strong> brings them back; the archive shows one line, &#34;with 2 subtasks&#34;. Before, the items dropped into the column as separate cards — archiving one card put several new ones on the board. Flow metrics do not count them as discarded.</li>
 </ul>
 <h2 id="v0-5-1-23-october-2026">v0.5.1 — 23 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
@@ -380,7 +382,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.5.1-1-g1859793-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.1-4-g2a2625f-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -3,6 +3,8 @@ package board
 import (
 	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Пункт родителя — подзадача с той же доски (IsItem). Своя колонка
@@ -125,4 +127,105 @@ func TestArchivedItemLeavesNoDanglingLink(t *testing.T) {
 	if !linked() {
 		t.Error("пункт вернулся из архива без родителя")
 	}
+}
+
+// Пункты уходят в архив вместе с родителем и вместе с ним возвращаются
+// (решение владельца 26.10.2026). Прежде убранный родитель выпускал их
+// в колонку отдельными карточками: убрали одну, а на доске появилось
+// столько, сколько было пунктов.
+func TestItemsGoToArchiveWithTheirParent(t *testing.T) {
+	f := newFixture(t)
+	queue := f.columns()[0].ID
+	parent := f.createCard("Выпустить релиз", queue)
+	open := f.subtask(parent, "Прогнать нагрузочные")
+	deep := f.subtask(open, "Поднять стенд")
+	done := f.subtask(parent, "Собрать сборку")
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": done, "done": true})
+	// Убранный раньше родителя пункт — отдельное решение, и возврат
+	// родителя его не отменяет.
+	earlier := f.subtask(parent, "Черновик письма")
+	f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": earlier})
+	// Часть на чужой доске — работа соседей: с родителем она не уходит.
+	other := f.boardOfTeam("Соседи", nil)
+	far := f.partOn(f.boardID, parent, "Поправить их сервис", other)
+
+	res := f.mustApply("ARCHIVE_CARD", map[string]any{"cardId": parent})
+	removed := map[string]bool{}
+	for _, id := range res.Patch.RemovedCardIDs {
+		removed[id] = true
+	}
+	for _, id := range []string{parent, open, deep, done} {
+		if !removed[id] {
+			t.Errorf("карточка %s не убрана патчем вместе с родителем", f.titleOf(id))
+		}
+	}
+	for _, c := range f.snapshot().Cards {
+		if c.ID == open || c.ID == deep || c.ID == done {
+			t.Errorf("пункт %q остался на доске без родителя", c.Title)
+		}
+	}
+	if n := f.countRows(`select count(*) from cards where id = $1 and archived_at is null`, far); n != 1 {
+		t.Error("часть на чужой доске ушла в архив вместе с родителем")
+	}
+	// Сделанная часть отказом не становится, брошенная — становится.
+	if n := f.countRows(`select count(*) from cards where id = $1 and outcome is null`, done); n != 1 {
+		t.Error("сделанная часть записана отброшенной")
+	}
+	// И метрики считают ушедшие с родителем пунктами, а не отказами.
+	if n := f.countRows(`select count(*) from cards c where c.id = any($1) and `+IsItem("c"),
+		[]string{open, deep, done}); n != 3 {
+		t.Errorf("пунктами остались %d из 3 ушедших с родителем", n)
+	}
+
+	// В архиве — одна строка за одно действие, с числом частей.
+	list, err := f.svc.ArchivedCards(f.ctx, f.orgID, f.actorID, f.boardID, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := map[string]int{}
+	for _, c := range list {
+		rows[c.ID] = c.Parts
+	}
+	if len(rows) != 2 || rows[parent] != 3 {
+		t.Errorf("в архиве ждали родителя с тремя частями и отдельно убранный пункт, вышло %+v", list)
+	}
+	if _, ok := rows[earlier]; !ok {
+		t.Error("отдельно убранный пункт пропал из архива")
+	}
+
+	res = f.mustApply("RESTORE_CARD", map[string]any{"cardId": parent})
+	back := map[string]bool{}
+	for _, c := range res.Patch.Cards {
+		back[c.ID] = true
+	}
+	for _, id := range []string{open, deep, done} {
+		if !back[id] {
+			t.Errorf("пункт %s не вернулся патчем вместе с родителем", f.titleOf(id))
+		}
+	}
+	live := map[string]bool{}
+	for _, c := range f.snapshot().Cards {
+		live[c.ID] = true
+	}
+	for _, id := range []string{parent, open, deep, done} {
+		if !live[id] {
+			t.Errorf("карточка %s не вернулась на доску", f.titleOf(id))
+		}
+	}
+	if live[earlier] {
+		t.Error("возврат родителя вернул и пункт, убранный раньше него")
+	}
+	if n := f.countRows(`select count(*) from cards where id = any($1) and outcome is not null`,
+		[]string{open, deep, done}); n != 0 {
+		t.Errorf("у %d вернувшихся пунктов остался исход", n)
+	}
+}
+
+func (f *fixture) titleOf(id string) string {
+	f.t.Helper()
+	title := id
+	f.inTenant(func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select title from cards where id = $1`, id).Scan(&title)
+	})
+	return title
 }

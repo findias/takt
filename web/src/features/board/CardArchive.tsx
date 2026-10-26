@@ -116,6 +116,7 @@ export function CardArchive({
                   {c.columnName} · {t.parts.archivedAt(timeText(c.archivedAt))}
                   {c.actor ? ` · ${c.actor}` : ''}
                   {c.outcome === 'done' ? t.parts.wasFinished : ''}
+                  {c.parts > 0 ? t.parts.withParts(c.parts) : ''}
                 </span>
                 {/* Сказано до нажатия, а не после отказа. */}
                 {!c.restorable && (

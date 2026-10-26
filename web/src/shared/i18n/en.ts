@@ -540,6 +540,7 @@ export const en: typeof ru = {
       'The archive is empty. Cards taken off the board end up here: they are not deleted and can be restored from here.',
     archivedAt: (when: string) => `archived ${when}`,
     wasFinished: ' · had been finished',
+    withParts: (n: number) => ` · with ${n1(n, 'subtask', 'subtasks')}`,
     columnArchived: (column: string) =>
       `Column “${column}” is archived too — there is nowhere to restore to until it is restored.`,
     restore: 'Restore',
