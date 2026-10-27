@@ -3846,3 +3846,33 @@ test('карточку переносят и из панели — панель 
   await expect(card).toHaveCount(0)
   await expect(page).not.toHaveURL(/\/card\//)
 })
+
+test('выделенные карточки переносятся на другую доску пачкой', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Ядро')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Поставки')
+  for (const title of ['Первая к соседям', 'Вторая к соседям', 'Остаётся']) {
+    await addCard(page, 'Очередь', title)
+  }
+  for (const title of ['Первая к соседям', 'Вторая к соседям']) {
+    const card = cardIn(page, 'Очередь', title)
+    await card.hover()
+    await card.getByRole('checkbox', { name: `Выделить «${title}»` }).check()
+  }
+
+  const bar = page.getByRole('status', { name: 'Действия над выделенными' })
+  await bar.getByRole('button', { name: 'Перенести выделенные' }).click()
+  await page.getByRole('menuitem', { name: 'На другую доску…' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Перенести 2 карточки на другую доску' })
+  await dialog.getByLabel('Колонка').selectOption({ label: 'В работе' })
+  await dialog.getByRole('button', { name: 'Перенести', exact: true }).click()
+
+  await expect(cardIn(page, 'Очередь', 'Первая к соседям')).toHaveCount(0)
+  await expect(cardIn(page, 'Очередь', 'Вторая к соседям')).toHaveCount(0)
+  await expect(cardIn(page, 'Очередь', 'Остаётся')).toBeVisible()
+  await expect(page.getByText('2 карточки перенесено на доску «Ядро»')).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть', exact: true }).click()
+  await expect(cardIn(page, 'В работе', 'Первая к соседям')).toBeVisible()
+  await expect(cardIn(page, 'В работе', 'Вторая к соседям')).toBeVisible()
+})

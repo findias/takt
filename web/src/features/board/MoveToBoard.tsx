@@ -17,21 +17,26 @@ import { Field, FormError } from '../../shared/ui/Field.tsx'
  *
  * Предлагаются только доски того же уровня: перенос с портфеля
  * на доску команды сервер всё равно откажет.
+ *
+ * Карточек может быть несколько — выделенные на доске. Тогда ответы
+ * складываются: снимаемые метки и исполнители без доступа — по всем
+ * карточкам сразу, чтобы подтверждение было одно на всю пачку.
  */
 export function MoveToBoard({
   boardId,
-  cardId,
+  cardIds,
   title,
   boards,
   onMove,
   onCancel,
 }: {
   boardId: string
-  cardId: string
+  cardIds: string[]
+  /** Название карточки или, если их несколько, «3 карточки». */
   title: string
   /** Куда можно: доски того же уровня, куда человек пишет. */
   boards: BoardInfo[]
-  onMove: (cardId: string, toBoard: BoardInfo, columnId: string) => void
+  onMove: (cardIds: string[], toBoard: BoardInfo, columnId: string) => void
   onCancel: () => void
 }) {
   const [target, setTarget] = useState(boards[0]?.id ?? '')
@@ -46,9 +51,10 @@ export function MoveToBoard({
     if (!target) return
     let alive = true
     setFailed(false)
-    api.movePreview(boardId, cardId, target).then(
-      (data) => {
+    Promise.all(cardIds.map((id) => api.movePreview(boardId, id, target))).then(
+      (answers) => {
         if (!alive) return
+        const data = merged(answers)
         setPreview({ board: target, data })
         setColumn(data.columns[0]?.id ?? '')
       },
@@ -57,7 +63,8 @@ export function MoveToBoard({
     return () => {
       alive = false
     }
-  }, [boardId, cardId, target])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- карточки сравниваются текстом: массив пересоздаётся при каждой отрисовке
+  }, [boardId, cardIds.join(), target])
 
   const shown = preview?.board === target ? preview.data : null
   const chosen = boards.find((b) => b.id === target)
@@ -66,12 +73,12 @@ export function MoveToBoard({
   return (
     <ConfirmDialog
       open
-      title={t.moveCard.title(title)}
+      title={cardIds.length > 1 ? t.moveCard.titleMany(title) : t.moveCard.title(title)}
       confirmLabel={t.moveCard.confirm}
       busy={!!target && !shown && !failed}
       confirmDisabled={!chosen || blocked}
       onCancel={onCancel}
-      onConfirm={() => chosen && onMove(cardId, chosen, column)}
+      onConfirm={() => chosen && onMove(cardIds, chosen, column)}
     >
       {boards.length === 0 ? (
         <p>{t.moveCard.noBoards}</p>
@@ -127,4 +134,19 @@ export function MoveToBoard({
       )}
     </ConfirmDialog>
   )
+}
+
+/** Ответы по нескольким карточкам — одним: колонки у доски назначения
+ *  одни, остальное складывается без повторов. */
+function merged(answers: MovePreview[]): MovePreview {
+  const union = (pick: (a: MovePreview) => string[]) =>
+    [...new Set(answers.flatMap(pick))].sort((a, b) => a.localeCompare(b))
+  return {
+    columns: answers[0]?.columns ?? [],
+    droppedLabels: union((a) => a.droppedLabels),
+    unseen: union((a) => a.unseen),
+    iteration: union((a) => (a.iteration ? [a.iteration] : [])).join(', '),
+    items: answers.reduce((sum, a) => sum + a.items, 0),
+    otherLevel: answers.some((a) => a.otherLevel),
+  }
 }

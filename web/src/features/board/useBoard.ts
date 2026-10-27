@@ -531,6 +531,34 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [boardId],
   )
 
+  /**
+   * Перенести выделенные на другую доску — по одной, как остальные
+   * групповые действия. Отказавшие названы поимённо: у одной карточки
+   * исполнитель не видит доску, остальные переехали — так и сказано.
+   * Отмены нет: перенос назад не вернул бы снятые метки и номера.
+   */
+  const moveManyToBoard = useCallback(
+    async (cardIds: string[], toBoard: string, columnId: string) => {
+      const names = new Map(cardIds.map((id) => [id, titles.current.get(id) ?? t.ops.untitled]))
+      const { done, failed } = await applyToMany(cardIds, 'MOVE_CARD_TO_BOARD', (cardId) => ({
+        cardId,
+        boardId: toBoard,
+        toColumnId: columnId,
+      }))
+      if (failed.length > 0) {
+        const list = failed.map((id) => names.get(id) ?? t.ops.untitled)
+        notify({
+          text: t.ops.bulkMoveToBoardFailed(
+            list.length <= 3 ? list.join(', ') : t.ops.andMore(list.slice(0, 3).join(', '), list.length - 3),
+          ),
+          tone: 'warning',
+        })
+      }
+      return done
+    },
+    [applyToMany, notify],
+  )
+
   /** Отказ называет карточки по именам, но не все: двадцать названий
    *  в одну строку — это не сообщение, а список. */
   const namesOf = useCallback(
@@ -1103,6 +1131,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     commitCard,
     archiveCard,
     moveCardToBoard,
+    moveManyToBoard,
     moveMany,
     archiveMany,
     labelMany,

@@ -35,6 +35,7 @@ export function BulkBar({
   labels,
   assignable,
   onMove,
+  onMoveToBoard,
   onPrioritise,
   onLabel,
   onAssign,
@@ -48,6 +49,8 @@ export function BulkBar({
   /** userId → имя тех, кого можно назначить: видящих доску. */
   assignable: Record<string, string>
   onMove: (columnId: string) => void
+  /** На другую доску; пусто — некуда, пункта нет. */
+  onMoveToBoard?: () => void
   onPrioritise: (priority: Priority) => void
   onLabel: (labelId: string) => void
   onAssign: (userId: string) => void
@@ -69,11 +72,18 @@ export function BulkBar({
         // Пункт — одно название колонки: «Перенести» уже написано
         // на кнопке, и повторять его в каждом пункте значит читать
         // одно и то же слово четыре раза подряд.
-        items={columns.map((column) => ({
-          label: column.name,
-          icon: <MoveIcon />,
-          onSelect: () => onMove(column.id),
-        }))}
+        items={[
+          ...columns.map((column) => ({
+            label: column.name,
+            icon: <MoveIcon />,
+            onSelect: () => onMove(column.id),
+          })),
+          // Другая доска — последним пунктом: колонки своей доски нужны
+          // каждый день, перенос к соседям — редко.
+          ...(onMoveToBoard
+            ? [{ label: t.parts.bulkToBoard, icon: <MoveIcon />, onSelect: onMoveToBoard }]
+            : []),
+        ]}
       >
         <MoveIcon />
         {t.parts.move}

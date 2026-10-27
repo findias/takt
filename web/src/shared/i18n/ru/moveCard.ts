@@ -6,6 +6,7 @@ import { plural } from '../../lib/plural.ts'
 
 export const moveCard = {
     title: (card: string) => `Перенести «${card}» на другую доску`,
+    titleMany: (cards: string) => `Перенести ${cards} на другую доску`,
     board: 'Доска',
     column: 'Колонка',
     confirm: 'Перенести',

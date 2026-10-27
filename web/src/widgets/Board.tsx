@@ -41,7 +41,7 @@ import type { Command } from '../features/board/Palette.tsx'
 import { useCollapsedColumns } from '../features/board/useCollapsed.ts'
 import { useColumnWidths } from '../features/board/columnWidth.ts'
 import { nextCard } from '../features/board/navigation.ts'
-import { cardDetails, childrenOf, dateWords, dependenciesOf, parentsOf } from '../entities/card/model.ts'
+import { cardDetails, cardsLabel, childrenOf, dateWords, dependenciesOf, parentsOf } from '../entities/card/model.ts'
 import { NARROW, useMedia } from '../shared/lib/useMedia.ts'
 import {
   GROUPING_NAMES,
@@ -888,9 +888,10 @@ export function Board({
   )
   // Карточка, которую переносят на другую доску (ROADMAP 40). Название
   // — вместе с идентификатором по той же причине, что у удаления.
-  const [pendingMove, setPendingMove] = useState<{ id: string; title: string } | null>(null)
+  // Карточек несколько, когда переносят выделенные.
+  const [pendingMove, setPendingMove] = useState<{ ids: string[]; title: string } | null>(null)
   const askMove = useCallback(
-    (cardId: string, title: string) => setPendingMove({ id: cardId, title }),
+    (cardId: string, title: string) => setPendingMove({ ids: [cardId], title }),
     [],
   )
   // Меняется после удаления: архив перечитывает себя, потому что своего
@@ -1317,24 +1318,36 @@ export function Board({
     <Suspense fallback={null}>
       <MoveToBoard
         boardId={boardId}
-        cardId={pendingMove.id}
+        cardIds={pendingMove.ids}
         title={pendingMove.title}
         boards={moveTargets}
         onCancel={() => setPendingMove(null)}
-        onMove={(cardId, toBoard, columnId) => {
+        onMove={(cardIds, toBoard, columnId) => {
+          const { title } = pendingMove
           setPendingMove(null)
-          void board.moveCardToBoard(cardId, toBoard.id, columnId).then((ok) => {
-            if (!ok) return
-            // Открытая карточка ушла — панель закрывается, а не
-            // показывает то, чего на доске больше нет.
-            if (openCard === cardId) setOpenCard(null)
+          const open = () => navigate(boardPath(toBoard.id, cardIds.length === 1 ? cardIds[0] : null))
+          if (cardIds.length === 1) {
+            const [cardId] = cardIds
+            void board.moveCardToBoard(cardId, toBoard.id, columnId).then((ok) => {
+              if (!ok) return
+              // Открытая карточка ушла — панель закрывается, а не
+              // показывает то, чего на доске больше нет.
+              if (openCard === cardId) setOpenCard(null)
+              notify({
+                text: t.ops.movedToBoard(title, toBoard.name),
+                tone: 'info',
+                action: { label: t.ops.openMoved, onAct: open },
+              })
+            })
+            return
+          }
+          void board.moveManyToBoard(cardIds, toBoard.id, columnId).then((done) => {
+            if (openCard && done.includes(openCard)) setOpenCard(null)
+            if (done.length === 0) return
             notify({
-              text: t.ops.movedToBoard(pendingMove.title, toBoard.name),
+              text: t.ops.bulkMovedToBoard(cardsLabel(done.length), toBoard.name),
               tone: 'info',
-              action: {
-                label: t.ops.openMoved,
-                onAct: () => navigate(boardPath(toBoard.id, cardId)),
-              },
+              action: { label: t.ops.openMoved, onAct: open },
             })
           })
         }}
@@ -1703,6 +1716,15 @@ export function Board({
             boardId={boardId}
             labels={base.labels}
             assignable={base.assignable}
+            onMoveToBoard={
+              canEdit && moveTargets.length > 0
+                ? () => {
+                    const ids = chosen
+                    clearPicked()
+                    setPendingMove({ ids, title: cardsLabel(ids.length) })
+                  }
+                : undefined
+            }
             onMove={(columnId) => {
               const ids = chosen
               clearPicked()

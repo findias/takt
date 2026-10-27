@@ -3,6 +3,7 @@ import type { moveCard as ru } from '../ru/moveCard.ts'
 
 export const moveCard: typeof ru = {
     title: (card: string) => `Move “${card}” to another board`,
+    titleMany: (cards: string) => `Move ${cards} to another board`,
     board: 'Board',
     column: 'Column',
     confirm: 'Move',
