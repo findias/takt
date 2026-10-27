@@ -3374,12 +3374,18 @@ test('подзадача переименовывается из панели р
   await expect(page.getByRole('tabpanel').getByRole('button', { name: 'Точное название', exact: true })).toBeVisible()
 
   // Название самой открытой карточки — карандашом рядом с заголовком.
+  const beforeRename = await boardVersion(page)
   await page.getByRole('button', { name: 'Переименовать «Родитель»' }).click()
   await page.getByRole('textbox', { name: 'Название карточки' }).fill('Родитель, переименован')
   await page.getByRole('textbox', { name: 'Название карточки' }).press('Enter')
   await expect(page.getByRole('heading', { name: 'Родитель, переименован' })).toBeVisible()
 
-  // И то и другое сохранено, а не только нарисовано.
+  // И то и другое сохранено, а не только нарисовано. Перезагрузка — после
+  // подтверждения: правка показывается сразу, а доезжает потом, и снимок,
+  // прочитанный раньше неё, пришёл бы старым (то же разобрано у «перенос
+  // не теряется, если сразу перезагрузить страницу»). Здесь проверяется
+  // сохранение, а не гонка с перезагрузкой.
+  await savedSince(page, beforeRename)
   await page.reload()
   await cardIn(page, 'Очередь', 'Родитель, переименован').click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
