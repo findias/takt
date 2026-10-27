@@ -481,7 +481,9 @@ subdivision.
 ### Move a card to another board
 
 Hover the card, open the **…** menu and choose **Move to another
-board…**. Pick the board and the column the card should land in; the
+board…** — or press **To another board…** at the top of the open card's
+panel, which also works from the tree and from **Tasks**; in the table
+the same item is in the row's **…** menu. Pick the board and the column the card should land in; the
 list offers boards of the same level that you can write to — an epic
 does not move from a portfolio to a team board, nor a task the other
 way. Before you confirm, the dialog names what will change:

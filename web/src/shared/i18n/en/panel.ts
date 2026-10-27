@@ -3,6 +3,7 @@ import type { panel as ru } from '../ru/panel.ts'
 
 export const panel: typeof ru = {
     talk: 'Discussion',
+    moveToBoard: 'To another board…',
     work: 'Work',
     history: 'History',
     tasks: 'Tasks',

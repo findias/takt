@@ -27,7 +27,9 @@ board, and notifications lead to the board the card is on now.
 ### The rest
 
 - **A card can move to another board.** The **…** menu on a card has
-  **Move to another board…**: pick the board and the column. The card
+  **Move to another board…** (the open card's panel has **To another
+board…**, the table has it in the row menu): pick the board and the
+column. The card
   keeps its discussion, files and history, gets the new board's number
   (search still finds the old one, and an old link to the card leads to
   its new board), and takes its subtasks on this

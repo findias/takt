@@ -126,8 +126,9 @@ color:var(--ink-3);font-size:.85rem}
 <p>No migration and no new setting.</p>
 <p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on.</p>
 <h3 id="the-rest">The rest</h3>
+<p>board…**, the table has it in the row menu): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. Before, the only way was to create the card again on the other   board.</p>
 <ul>
-<li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong>: pick the board and the column. The card keeps its discussion, files and history, gets the new board&#39;s number (search still finds the old one, and an old link to the card leads to its new board), and takes its subtasks on this board along. Before you confirm, the dialog names the labels that will be removed and the iteration it will leave; an assignee who cannot see the new board is named too, and the move waits until they can. Before, the only way was to create the card again on the other board.</li>
+<li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong> (the open card&#39;s panel has **To another</li>
 </ul>
 <h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
@@ -390,7 +391,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>Nobody has ever performed the installation: the chart is checked by rendering and by consistency, but not by installing into a real cluster.</li>
 <li>There are no attachments on cards. The <code>STORAGE</code> setting is gone: it was read and used by nobody, and a setting without behaviour promises a capability and forces you to mount a volume nobody needs.</li>
 </ul>
-<footer>Takt, version v0.5.1-7-g3000bdd-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.1-8-g789da79-dirty. Built from CHANGELOG.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

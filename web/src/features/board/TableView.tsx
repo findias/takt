@@ -50,6 +50,7 @@ export function TableView({
   labels,
   onOpenCard,
   onMoveToColumn,
+  onMoveToBoard,
   onAssign,
   onSort,
 }: {
@@ -65,6 +66,8 @@ export function TableView({
   labels: BoardLabel[]
   onOpenCard: (cardId: string) => void
   onMoveToColumn: (cardId: string, columnId: string) => void
+  /** Перенести на другую доску; пусто — некуда, пункта нет. */
+  onMoveToBoard?: (cardId: string, title: string) => void
   onAssign: (cardId: string, userId: string, on: boolean) => void
   /** Смена порядка по щелчку в заголовок. Пусто — заголовки остаются
    *  подписями: сортировать без адреса некуда. */
@@ -222,6 +225,9 @@ export function TableView({
                           label: t.talk.moveTo(c.name),
                           onSelect: () => onMoveToColumn(card.id, c.id),
                         })),
+                      ...(onMoveToBoard
+                        ? [{ label: t.cardView.moveToBoard, onSelect: () => onMoveToBoard(card.id, card.title) }]
+                        : []),
                       ...assigneeChoices(people, assignable, assignees).map(([id, name]) => ({
                         label: assignees.includes(id) ? t.talk.unassign(name) : t.talk.assignTo(name),
                         onSelect: () => onAssign(card.id, id, !assignees.includes(id)),

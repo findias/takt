@@ -1083,7 +1083,9 @@ export function Board({
     api.cardHome(cardId).then(
       ({ boardId: home }) => {
         if (!still()) return
-        if (home !== boardId) navigate(boardPath(home, cardId), { replace: true })
+        // Панель экрана «Задачи» с него не уводит: список перечитается
+        // и сам покажет, где карточка теперь.
+        if (home !== boardId && !panelOnly) navigate(boardPath(home, cardId), { replace: true })
         else setOpenCard(null)
       },
       () => {
@@ -1092,7 +1094,7 @@ export function Board({
         notify({ text: t.screen.cardGone, tone: 'warning' })
       },
     )
-  }, [base, openCard, boardId, setOpenCard, notify])
+  }, [base, openCard, boardId, panelOnly, setOpenCard, notify])
 
   // Куда переносить карточку: те же доски, что для работы соседям, но
   // только своего уровня — эпик на доску команды сервер не перенесёт.
@@ -1261,6 +1263,7 @@ export function Board({
         onRename={renameCard}
         onArchive={archiveCard}
         onDelete={canPurge ? askDelete : undefined}
+        onMoveToBoard={canEdit && moveTargets.length > 0 ? askMove : undefined}
         base={base}
         boardId={boardId}
         cardId={openCard}
@@ -1308,11 +1311,43 @@ export function Board({
     </Suspense>
   )
 
+  // Диалог переноса — и на доске, и в панели экрана «Задачи»: панель
+  // предлагает действие в обоих местах.
+  const moveDialog = pendingMove && (
+    <Suspense fallback={null}>
+      <MoveToBoard
+        boardId={boardId}
+        cardId={pendingMove.id}
+        title={pendingMove.title}
+        boards={moveTargets}
+        onCancel={() => setPendingMove(null)}
+        onMove={(cardId, toBoard, columnId) => {
+          setPendingMove(null)
+          void board.moveCardToBoard(cardId, toBoard.id, columnId).then((ok) => {
+            if (!ok) return
+            // Открытая карточка ушла — панель закрывается, а не
+            // показывает то, чего на доске больше нет.
+            if (openCard === cardId) setOpenCard(null)
+            notify({
+              text: t.ops.movedToBoard(pendingMove.title, toBoard.name),
+              tone: 'info',
+              action: {
+                label: t.ops.openMoved,
+                onAct: () => navigate(boardPath(toBoard.id, cardId)),
+              },
+            })
+          })
+        }}
+      />
+    </Suspense>
+  )
+
   if (panelOnly)
     return (
       <div className="board-panel-only">
         <ClosingDialog closing={closing} onDone={() => setClosing(null)} />
         {cardPanel}
+        {moveDialog}
       </div>
     )
 
@@ -1590,6 +1625,7 @@ export function Board({
           labels={base.labels}
           onOpenCard={showCard}
           onMoveToColumn={moveToColumn}
+          onMoveToBoard={canEdit && moveTargets.length > 0 ? askMove : undefined}
           onAssign={assignCard}
         />
         </Suspense>
@@ -1748,34 +1784,7 @@ export function Board({
         </Suspense>
       )}
 
-      {pendingMove && (
-        <Suspense fallback={null}>
-          <MoveToBoard
-            boardId={boardId}
-            cardId={pendingMove.id}
-            title={pendingMove.title}
-            boards={moveTargets}
-            onCancel={() => setPendingMove(null)}
-            onMove={(cardId, toBoard, columnId) => {
-              setPendingMove(null)
-              void board.moveCardToBoard(cardId, toBoard.id, columnId).then((ok) => {
-                if (!ok) return
-                // Открытая карточка ушла — панель закрывается, а не
-                // показывает то, чего на доске больше нет.
-                if (openCard === cardId) setOpenCard(null)
-                notify({
-                  text: t.ops.movedToBoard(pendingMove.title, toBoard.name),
-                  tone: 'info',
-                  action: {
-                    label: t.ops.openMoved,
-                    onAct: () => navigate(boardPath(toBoard.id, cardId)),
-                  },
-                })
-              })
-            }}
-          />
-        </Suspense>
-      )}
+      {moveDialog}
 
       {/* Вопрос задаётся один раз и называет карточку: подтверждение
           «вы уверены?» без имени того, что исчезнет, отвечают не читая. */}

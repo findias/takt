@@ -124,6 +124,7 @@ export function CardPanel({
   onRename,
   onArchive,
   onDelete,
+  onMoveToBoard,
   onIteration,
   onField,
   onAddRef,
@@ -170,6 +171,10 @@ export function CardPanel({
   onArchive: (cardId: string) => void
   /** Удалить подзадачу насовсем. Пусто — это не владелец. */
   onDelete?: (cardId: string, title: string) => void
+  /** Перенести на другую доску (ROADMAP 40). Пусто — некуда или нельзя:
+   *  действие не предлагается. Из панели — потому что дерево и экран
+   *  «Задачи» своего меню у карточки не имеют. */
+  onMoveToBoard?: (cardId: string, title: string) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
@@ -275,6 +280,13 @@ export function CardPanel({
       }
       label={t.panel.cardLabel(card.number, card.title)}
       onClose={onClose}
+      actions={
+        onMoveToBoard && (
+          <button className="link" onClick={() => onMoveToBoard(card.id, card.title)}>
+            {t.panel.moveToBoard}
+          </button>
+        )
+      }
     >
       <Tabs
         base={ids}

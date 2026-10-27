@@ -4,6 +4,7 @@
 
 export const panel = {
     talk: 'Обсуждение',
+    moveToBoard: 'На другую доску…',
     work: 'Работа',
     history: 'История',
     tasks: 'Задачи',

@@ -3825,3 +3825,24 @@ test('карточка переносится на другую доску и о
   await page.goto(`${oldBoard}/card/00000000-0000-4000-8000-000000000000`)
   await expect(page.getByText(/Карточки по этой ссылке нет/)).toBeVisible()
 })
+
+test('карточку переносят и из панели — панель закрывается вслед', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Ядро')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Поставки')
+  await addCard(page, 'Очередь', 'Сверить остатки')
+  const card = cardIn(page, 'Очередь', 'Сверить остатки')
+
+  // Из панели — потому что у дерева и у экрана «Задачи» своего меню
+  // карточки нет, а панель открывается отовсюду.
+  await card.click()
+  const panel = page.getByLabel(/Карточка .* «Сверить остатки»/)
+  await panel.getByRole('button', { name: 'На другую доску…' }).click()
+  await page.getByRole('dialog', { name: /Перенести «Сверить остатки»/ })
+    .getByRole('button', { name: 'Перенести', exact: true }).click()
+
+  await expect(panel).toHaveCount(0)
+  await expect(card).toHaveCount(0)
+  await expect(page).not.toHaveURL(/\/card\//)
+})
