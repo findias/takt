@@ -100,7 +100,7 @@ func TestAuditTriggersWriteNamedAndSecretFreeEntries(t *testing.T) {
 		}
 		if len(missing) > 0 {
 			sort.Strings(missing)
-			t.Errorf("в подписях журнала (%s.ts, feed.subjects) нет %v: запись покажется названием таблицы", lang, missing)
+			t.Errorf("в подписях журнала (%s/feed.ts, subjects) нет %v: запись покажется названием таблицы", lang, missing)
 		}
 	}
 }
@@ -125,10 +125,12 @@ func auditedTables(t *testing.T, ctx context.Context, admin *pgx.Conn) []string 
 
 // feedSubjects читает ключи feed.subjects из каталога подписей клиента.
 // Разбор текстом, а не исполнением: каталог — TypeScript, а проверке
-// нужен только список ключей внутри одного объекта.
+// нужен только список ключей внутри одного объекта. Подписи ленты
+// живут в своём разделе (`ru/feed.ts`), который едет с экранами, а не
+// в основном каталоге.
 func feedSubjects(t *testing.T, lang string) map[string]bool {
 	_, self, _, _ := runtime.Caller(0)
-	path := filepath.Join(filepath.Dir(self), "..", "..", "web", "src", "shared", "i18n", lang+".ts")
+	path := filepath.Join(filepath.Dir(self), "..", "..", "web", "src", "shared", "i18n", lang, "feed.ts")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("каталог подписей: %v", err)
