@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Перенос карточки на другую доску (ROADMAP 40).
@@ -48,6 +49,32 @@ type MovePreview struct {
 	Items int `json:"items"`
 	// Доска другого уровня: портфель и доска команды. Перенос откажет.
 	OtherLevel bool `json:"otherLevel"`
+}
+
+// CardHome говорит, на какой доске карточка лежит сейчас.
+//
+// Ссылка на карточку несёт доску (`/board/{доска}/card/{карточка}`),
+// и после переноса (ROADMAP 40) старая ссылка вела на доску, где
+// карточки уже нет: панель молча не открывалась. Клиент спрашивает
+// здесь и переходит туда, где карточка теперь. Что видно, решает
+// политика: карточка на доске, которой спрашивающему не видно,
+// отвечает «не найдена», как и всё недоступное.
+func (s *Service) CardHome(ctx context.Context, orgID, userID, cardID string) (string, error) {
+	var boardID string
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			select c.board_id::text from cards c
+			  join boards b on b.id = c.board_id
+			 where c.id = $1 and c.archived_at is null and b.archived_at is null`,
+			cardID).Scan(&boardID)
+	})
+	// Нечитаемый идентификатор из адресной строки — та же «не найдена»,
+	// а не сбой сервера.
+	var pgErr *pgconn.PgError
+	if errors.Is(err, pgx.ErrNoRows) || (errors.As(err, &pgErr) && pgErr.Code == "22P02") {
+		return "", ErrNotFound
+	}
+	return boardID, err
 }
 
 // PreviewMove отвечает, что произойдёт при переносе карточки на доску

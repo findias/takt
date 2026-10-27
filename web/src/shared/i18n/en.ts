@@ -801,6 +801,7 @@ export const en: typeof ru = {
     assigneesFailedWhy: (why: string) => `Could not change assignees: ${why}`,
   },
   screen: {
+    cardGone: 'The card from this link is gone: it was deleted, archived, or is on a board you cannot see',
     showFlow: 'Show flow',
     flowHint: 'board metrics',
     showArchive: 'Show card archive',

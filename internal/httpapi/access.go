@@ -32,6 +32,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	// Что случится при переносе карточки на другую доску — до переноса:
 	// подтверждение называет снимаемое поимённо (ROADMAP 40).
 	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}/move-preview", s.authed(s.handleMovePreview))
+	// Где карточка сейчас: старая ссылка на перенесённую карточку
+	// ведёт на доску, где её больше нет.
+	mux.HandleFunc("GET /api/cards/{cardId}/board", s.authed(s.handleCardHome))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
 	// Отдельный путь, а не флаг у DELETE: у этих двух действий разная
@@ -204,6 +207,18 @@ func (s *Server) handleMovePreview(w http.ResponseWriter, r *http.Request, p aut
 		s.fail(w, "перенос карточки", err)
 	default:
 		writeJSON(w, http.StatusOK, preview)
+	}
+}
+
+func (s *Server) handleCardHome(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	boardID, err := s.boards.CardHome(r.Context(), p.OrgID, p.ID, r.PathValue("cardId"))
+	switch {
+	case errors.Is(err, board.ErrNotFound):
+		writeError(w, http.StatusNotFound, "карточки нет: она удалена, убрана в архив или лежит на доске, которой вам не видно")
+	case err != nil:
+		s.fail(w, "доска карточки", err)
+	default:
+		writeJSON(w, http.StatusOK, map[string]string{"boardId": boardID})
 	}
 }
 

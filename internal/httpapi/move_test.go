@@ -63,4 +63,16 @@ func TestCardMovesToAnotherBoardOverHTTP(t *testing.T) {
 		!strings.Contains(string(body), "карточка не найдена") {
 		t.Errorf("карточки на прежней доске уже нет: код %d, тело %s", code, body)
 	}
+
+	// Старая ссылка ведёт на прежнюю доску; где карточка теперь, говорит
+	// отдельный запрос — по нему клиент переходит.
+	home := owner.mustDo("GET", "/api/cards/"+cardID+"/board", nil, http.StatusOK)
+	if field(t, home, "boardId") != to {
+		t.Errorf("доска карточки названа неверно: %s", home)
+	}
+	for _, bad := range []string{uuid.NewString(), "не-uuid"} {
+		if code, body := owner.do("GET", "/api/cards/"+bad+"/board", nil); code != http.StatusNotFound {
+			t.Errorf("карточка %q: код %d, тело %s", bad, code, body)
+		}
+	}
 }

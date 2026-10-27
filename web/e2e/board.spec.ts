@@ -3790,6 +3790,7 @@ test('карточка переносится на другую доску и о
   await page.getByRole('button', { name: 'Все доски' }).click()
   await createBoard(page, 'Поставки')
   await addCard(page, 'Очередь', 'Перевезти стенд')
+  const oldBoard = page.url()
   const card = cardIn(page, 'Очередь', 'Перевезти стенд')
   const oldNumber = ((await card.locator('.card-number').textContent()) ?? '').trim()
 
@@ -3814,4 +3815,13 @@ test('карточка переносится на другую доску и о
   // История одна на всю жизнь карточки и говорит, откуда она пришла.
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByText(`перенесена с доски «Поставки», там была ${oldNumber}`)).toBeVisible()
+
+  // Старая ссылка — из почты, из закладок — ведёт туда, где карточка теперь.
+  const [newBoard, cardId] = page.url().split('/card/')
+  await page.goto(`${oldBoard}/card/${cardId}`)
+  await expect(page).toHaveURL(`${newBoard}/card/${cardId}`)
+  await expect(page.getByRole('heading', { name: 'Перевезти стенд' })).toBeVisible()
+  // А ссылка на карточку, которой нет нигде, говорит об этом словами.
+  await page.goto(`${oldBoard}/card/00000000-0000-4000-8000-000000000000`)
+  await expect(page.getByText(/Карточки по этой ссылке нет/)).toBeVisible()
 })

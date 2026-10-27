@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-5-g6a21df9-dirty.</p>
+<p>Every section in one file. Version v0.5.1-7-g3000bdd-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1777,15 +1777,21 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
+<h2 id="v0-6-0-27-october-2026">v0.6.0 — 27 October 2026</h2>
+<h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
+<p>No migration and no new setting.</p>
+<p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on.</p>
+<h3 id="the-rest">The rest</h3>
+<ul>
+<li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong>: pick the board and the column. The card keeps its discussion, files and history, gets the new board&#39;s number (search still finds the old one, and an old link to the card leads to its new board), and takes its subtasks on this board along. Before you confirm, the dialog names the labels that will be removed and the iteration it will leave; an assignee who cannot see the new board is named too, and the move waits until they can. Before, the only way was to create the card again on the other board.</li>
+</ul>
 <h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting. The board snapshot no longer carries links to cards of that board that sit in the archive; the links stay in the database and come back with the card.</p>
 <p>For integrations: a comment that mentions someone who cannot see the board is now refused with 400 and an explanation, the way assigning such a person already was. Before, it was accepted, and the notification was never shown to them.</p>
 <p>Also for integrations: <code>ARCHIVE_CARD</code> now archives the card&#39;s subtasks on the same board along with it, and <code>RESTORE_CARD</code> brings back those that went with it. Subtasks on other boards are not touched.</p>
-<p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now.</p>
 <h3 id="the-rest">The rest</h3>
 <ul>
-<li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong>: pick the board and the column. The card keeps its discussion, files and history, gets the new board&#39;s number (search still finds the old one), and takes its subtasks on this board along. Before you confirm, the dialog names the labels that will be removed and the iteration it will leave; an assignee who cannot see the new board is named too, and the move waits until they can. Before, the only way was to create the card again on the other board.</li>
 <li><strong>A subtask can be archived or deleted from its line.</strong> The <strong>⋮</strong> menu of a part on the same board now has <strong>Archive</strong> — with <strong>Restore</strong> in the message — and, for the owner, <strong>Delete for good</strong>. Before, the only way was to unlink the part first: it dropped into a column as a card of its own and was archived from there.</li>
 <li><strong>&#34;Remove&#34; on a subtask is now &#34;Unlink&#34;</strong>: it takes the part out of its parent and leaves the card on the board.</li>
 <li><strong>An archived subtask no longer shows as &#34;Card unavailable&#34;</strong> in its parent&#39;s list, as if it sat in a subdivision you cannot see.</li>
@@ -2045,15 +2051,21 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
+<h2 id="v0-6-0-27-октября-2026">v0.6.0 — 27 октября 2026</h2>
+<h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
+<p>Миграций и новых настроек нет.</p>
+<p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас. <code>GET /api/cards/{cardId}/board</code> говорит, на какой доске карточка.</p>
+<h3 id="остальное">Остальное</h3>
+<ul>
+<li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong>: выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний, а старая ссылка на неё ведёт на новую доску) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. Раньше путь был один — завести карточку на той доске заново.</li>
+</ul>
 <h2 id="v0-5-2-26-октября-2026">v0.5.2 — 26 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p>Миграций и новых настроек нет. Снимок доски больше не несёт связи с карточками этой доски, лежащими в архиве; в базе связи остаются и возвращаются вместе с карточкой.</p>
 <p>Для интеграций: комментарий с упоминанием того, кто доску не видит, теперь отвергается с 400 и объяснением — так же, как уже отвергалось назначение такого человека. Раньше он принимался, а уведомление упомянутому так и не показывалось.</p>
 <p>Ещё для интеграций: <code>ARCHIVE_CARD</code> теперь убирает в архив и подзадачи карточки на той же доске, а <code>RESTORE_CARD</code> возвращает те, что ушли вместе с ней. Подзадачи на других досках не трогаются.</p>
-<p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас.</p>
 <h3 id="остальное">Остальное</h3>
 <ul>
-<li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong>: выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. Раньше путь был один — завести карточку на той доске заново.</li>
 <li><strong>Подзадачу можно убрать в архив или удалить из её строки.</strong> В меню <strong>⋮</strong> у части на той же доске появились <strong>«Убрать в архив»</strong> — с <strong>«Вернуть»</strong> в сообщении — и у владельца <strong>«Удалить навсегда»</strong>. Раньше путь был один: сперва отвязать часть, она выпадала в колонку отдельной карточкой, и в архив её убирали уже оттуда.</li>
 <li><strong>«Убрать» у подзадачи теперь называется «Отвязать»</strong>: часть выходит из родителя, а карточка остаётся на доске.</li>
 <li><strong>Подзадача в архиве больше не значится «Карточка недоступна»</strong> в списке родителя — будто лежит в подразделении, которого вам не видно.</li>

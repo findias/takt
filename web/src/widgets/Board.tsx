@@ -1055,6 +1055,45 @@ export function Board({
     }
   }, [boardId])
 
+  // Ссылка на карточку, которой на этой доске нет. Чаще всего её
+  // перенесли на другую доску (ROADMAP 40), а ссылка осталась в почте
+  // или закладках: переходим туда, где карточка теперь. Если её нет
+  // нигде, говорим об этом словами — молча не открывшаяся панель
+  // выглядит поломкой.
+  //
+  // Спрашивается один раз на адрес, когда доска загрузилась, а не на
+  // каждый патч: свою карточку, только что перенесённую отсюда, искать
+  // незачем — для неё есть «Открыть» в сообщении.
+  const checkedRef = useRef<string | null>(null)
+  useEffect(() => {
+    // Панель закрыли — забытый ответ не должен открыть её снова.
+    if (!openCard) checkedRef.current = null
+    // Снимок — именно этой доски: при переходе на другую прежний ещё
+    // на руках, и карточки в нём, конечно, нет.
+    if (!base || !openCard || base.info.id !== boardId) return
+    const key = `${boardId}/${openCard}`
+    if (checkedRef.current === key) return
+    checkedRef.current = key
+    if (base.cards[openCard]) return
+    // Ответ применяется, только если адрес тот же: снимок за это время
+    // меняется не раз, и отменять запрос по каждому патчу нельзя —
+    // повторно этот адрес уже не проверится.
+    const cardId = openCard
+    const still = () => checkedRef.current === key
+    api.cardHome(cardId).then(
+      ({ boardId: home }) => {
+        if (!still()) return
+        if (home !== boardId) navigate(boardPath(home, cardId), { replace: true })
+        else setOpenCard(null)
+      },
+      () => {
+        if (!still()) return
+        setOpenCard(null)
+        notify({ text: t.screen.cardGone, tone: 'warning' })
+      },
+    )
+  }, [base, openCard, boardId, setOpenCard, notify])
+
   // Куда переносить карточку: те же доски, что для работы соседям, но
   // только своего уровня — эпик на доску команды сервер не перенесёт.
   const level = base?.info.level ?? 'team'

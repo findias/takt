@@ -1176,6 +1176,10 @@ export const api = {
     request<{ sourceHistory?: SourceHistory }>('GET', `/api/boards/${boardId}/cards/${cardId}`).then(
       (r) => r.sourceHistory ?? null,
     ),
+  /** На какой доске карточка сейчас: старая ссылка на перенесённую
+   *  ведёт туда, где её уже нет. */
+  cardHome: (cardId: string) =>
+    request<{ boardId: string }>('GET', `/api/cards/${encodeURIComponent(cardId)}/board`),
   /** Что случится при переносе карточки на другую доску — до переноса:
    *  подтверждение называет снимаемое поимённо. */
   movePreview: (boardId: string, cardId: string, to: string) =>

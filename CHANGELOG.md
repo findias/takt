@@ -8,6 +8,35 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+## v0.6.0 — 27 October 2026
+
+### For whoever installs and upgrades
+
+No migration and no new setting.
+
+A new operation, `MOVE_CARD_TO_BOARD` `{cardId, boardId, toColumnId?}`,
+moves a card to another board of the same level; the key or person
+must be able to write to both. The card gets a number from the new
+board. Two new events go with it: `card.moved_out` on the old board and
+`card.moved_in` on the new one, with the old number in `fromNumber` —
+subscriptions that list events by name need them added. A card's
+history (`/events?cardId=…`) now includes what happened to it on the old
+board, and notifications lead to the board the card is on now.
+`GET /api/cards/{cardId}/board` tells which board a card is on.
+
+### The rest
+
+- **A card can move to another board.** The **…** menu on a card has
+  **Move to another board…**: pick the board and the column. The card
+  keeps its discussion, files and history, gets the new board's number
+  (search still finds the old one, and an old link to the card leads to
+  its new board), and takes its subtasks on this
+  board along. Before you confirm, the dialog names the labels that
+  will be removed and the iteration it will leave; an assignee who
+  cannot see the new board is named too, and the move waits until they
+  can. Before, the only way was to create the card again on the other
+  board.
+
 ## v0.5.2 — 26 October 2026
 
 ### For whoever installs and upgrades
@@ -25,26 +54,8 @@ Also for integrations: `ARCHIVE_CARD` now archives the card's subtasks
 on the same board along with it, and `RESTORE_CARD` brings back those
 that went with it. Subtasks on other boards are not touched.
 
-A new operation, `MOVE_CARD_TO_BOARD` `{cardId, boardId, toColumnId?}`,
-moves a card to another board of the same level; the key or person
-must be able to write to both. The card gets a number from the new
-board. Two new events go with it: `card.moved_out` on the old board and
-`card.moved_in` on the new one, with the old number in `fromNumber` —
-subscriptions that list events by name need them added. A card's
-history (`/events?cardId=…`) now includes what happened to it on the old
-board, and notifications lead to the board the card is on now.
-
 ### The rest
 
-- **A card can move to another board.** The **…** menu on a card has
-  **Move to another board…**: pick the board and the column. The card
-  keeps its discussion, files and history, gets the new board's number
-  (search still finds the old one), and takes its subtasks on this
-  board along. Before you confirm, the dialog names the labels that
-  will be removed and the iteration it will leave; an assignee who
-  cannot see the new board is named too, and the move waits until they
-  can. Before, the only way was to create the card again on the other
-  board.
 - **A subtask can be archived or deleted from its line.** The **⋮**
   menu of a part on the same board now has **Archive** — with
   **Restore** in the message — and, for the owner, **Delete for good**.
