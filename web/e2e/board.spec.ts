@@ -3783,3 +3783,35 @@ test('на карточку ставят несколько меток, не о�
   await expect(card.getByRole('button', { name: /^Метки: / })).toHaveAttribute('aria-label', /Срочно/)
   await expect(card.locator('.card-labels .chip')).toHaveCount(3)
 })
+
+test('карточка переносится на другую доску и открывается там', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Ядро')
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  await createBoard(page, 'Поставки')
+  await addCard(page, 'Очередь', 'Перевезти стенд')
+  const card = cardIn(page, 'Очередь', 'Перевезти стенд')
+  const oldNumber = ((await card.locator('.card-number').textContent()) ?? '').trim()
+
+  await openCardMenu(card)
+  await page.getByRole('menuitem', { name: 'Перенести на другую доску…' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByLabel('Доска')).toHaveValue(/.+/)
+  // Колонку выбирают: работа приходит к соседям не обязательно в очередь.
+  await dialog.getByLabel('Колонка').selectOption({ label: 'В работе' })
+  await expect(dialog.getByText(/номер той доски/)).toBeVisible()
+  await dialog.getByRole('button', { name: 'Перенести', exact: true }).click()
+
+  await expect(card).toHaveCount(0)
+  // Тост ведёт туда, куда карточка ушла: искать её на чужой доске
+  // самому — лишний шаг сразу после переноса.
+  await page.getByRole('button', { name: 'Открыть', exact: true }).click()
+  await expect(page).toHaveURL(/\/card\//)
+  const moved = cardIn(page, 'В работе', 'Перевезти стенд')
+  await expect(moved).toBeVisible()
+  const newNumber = ((await moved.locator('.card-number').textContent()) ?? '').trim()
+  expect(newNumber).not.toBe(oldNumber)
+  // История одна на всю жизнь карточки и говорит, откуда она пришла.
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(page.getByText(`перенесена с доски «Поставки», там была ${oldNumber}`)).toBeVisible()
+})

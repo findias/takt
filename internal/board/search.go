@@ -37,6 +37,10 @@ type FoundCard struct {
 // известен, и тогда нужна ровно эта карточка. Дальше — свежие: связывают
 // обычно то, что завели недавно. Подстрока ищется `strpos`, а не `ilike`:
 // знаки `%` и `_` в запросе остаются буквами, и экранировать нечего.
+//
+// Прежний номер перенесённой карточки (ROADMAP 40) находит её тоже, но
+// только целиком: на старый номер ссылаются переписка и внешние
+// системы, и найти по нему нужно ровно ту карточку, а не всё похожее.
 func (s *Service) SearchCards(ctx context.Context, orgID, userID, query string) ([]FoundCard, error) {
 	out := []FoundCard{}
 	query = strings.TrimSpace(query)
@@ -50,7 +54,10 @@ func (s *Service) SearchCards(ctx context.Context, orgID, userID, query string) 
 			  join boards b on b.id = c.board_id
 			 where c.archived_at is null and b.archived_at is null
 			   and (strpos(lower(c.number), lower($1)) > 0
-			        or strpos(lower(c.title), lower($1)) > 0)
+			        or strpos(lower(c.title), lower($1)) > 0
+			        or exists (select 1 from card_events e
+			                    where e.card_id = c.id and e.type = 'moved_in'
+			                      and lower(e.payload ->> 'fromNumber') = lower($1)))
 			 order by lower(c.number) = lower($1) desc, c.created_at desc
 			 limit $2`, query, SearchLimit)
 		if err != nil {

@@ -53,6 +53,10 @@ var EventKinds = []string{
 	"prioritised",
 	"committed",
 	"moved",
+	// Перенос на другую доску (ROADMAP 40): уход пишется прежней доске,
+	// приход — новой, каждой в её ленту.
+	"moved_out",
+	"moved_in",
 	"blocked",
 	"block_until",
 	// Причину поправили — интервал тот же, меняется только текст.
@@ -110,6 +114,11 @@ type Feed struct {
 // к спрашивающему: события карточек, где он исполнитель, и реплики,
 // в которых его упомянули.
 //
+// История одной карточки берётся по карточке, а не по доске: перенесённая
+// (ROADMAP 40) прожила часть жизни на другой доске, и её события остались
+// там. Что из них видно спрашивающему, решает политика — чужая закрытая
+// доска свои события не покажет.
+//
 // Отбор именно такой, потому что лента отвечает на вопрос «что случилось
 // с моей работой». Свои же действия из неё не вычитаются: человек,
 // вернувшийся из отпуска, хочет видеть и то, что делал сам до отъезда,
@@ -122,8 +131,7 @@ func (s *Service) Events(ctx context.Context, orgID, userID, boardID string, car
 			  from card_events e
 			  join cards c on c.id = e.card_id
 			  left join users u on u.id = e.actor_id
-			 where e.board_id = $1
-			   and ($2 = '' or e.card_id = $2::uuid)
+			 where ($2 = '' and e.board_id = $1 or e.card_id = nullif($2, '')::uuid)
 			   and ($3::bigint is null or e.id < $3)
 			   and (not $5::bool
 			        or exists (select 1 from card_assignees a

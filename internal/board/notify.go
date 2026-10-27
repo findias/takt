@@ -108,17 +108,24 @@ const NotificationsLimit = 50
 func (s *Service) Notifications(ctx context.Context, orgID, userID string) (NotificationsPage, error) {
 	page := NotificationsPage{Items: []Notification{}}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx,
-			`select count(*) from notifications where recipient_id = $1 and read_at is null`,
+		// Доска — та, где карточка лежит сейчас, а не та, где написано
+		// уведомление: перенесённая на другую доску (ROADMAP 40) по старой
+		// ссылке не открылась бы. Карточка, ушедшая на доску, которой
+		// получателю не видно, пропадает и из списка, и из счётчика —
+		// иначе счётчик звал бы к тому, чего не показать.
+		if err := tx.QueryRow(ctx, `
+			select count(*) from notifications n
+			  join cards c on c.id = n.card_id
+			 where n.recipient_id = $1 and n.read_at is null`,
 			userID).Scan(&page.Unread); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			select n.id, n.reason, n.board_id, b.name, n.card_id, c.number, c.title,
+			select n.id, n.reason, c.board_id, b.name, n.card_id, c.number, c.title,
 			       u.name, n.created_at, n.read_at is not null
 			  from notifications n
-			  join boards b on b.id = n.board_id
 			  join cards c on c.id = n.card_id
+			  join boards b on b.id = c.board_id
 			  left join users u on u.id = n.actor_id
 			 where n.recipient_id = $1
 			 order by n.created_at desc

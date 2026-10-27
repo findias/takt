@@ -262,7 +262,7 @@ func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) 
 	// доля разбиения, название части, её состояние. Остальным платить
 	// за лишний запрос и лишний замок незачем.
 	switch req.Type {
-	case "MOVE_CARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
+	case "MOVE_CARD", "MOVE_CARD_TO_BOARD", "UPDATE_CARD", "SET_CARD_DONE", "ARCHIVE_CARD",
 		"RESTORE_CARD", "DELETE_CARD", "BLOCK_CARD", "UNBLOCK_CARD", "SET_BLOCK_UNTIL", "SET_BLOCK_REASON":
 	default:
 		return "", nil
@@ -299,7 +299,7 @@ func parentBoardOf(ctx context.Context, tx pgx.Tx, boardID string, req Request) 
 // здесь нестрогий намеренно: если нагрузка нечитаема, честную ошибку
 // об этом выдаст сама операция, а не проверка порядка замков.
 func targetBoard(req Request) string {
-	if req.Type != "CREATE_SUBTASK" {
+	if req.Type != "CREATE_SUBTASK" && req.Type != "MOVE_CARD_TO_BOARD" {
 		return ""
 	}
 	var p struct {
@@ -454,6 +454,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return createCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "MOVE_CARD":
 		return moveCard(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "MOVE_CARD_TO_BOARD":
+		return moveCardToBoard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "UPDATE_CARD":
 		return updateCard(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "ARCHIVE_CARD":
@@ -645,7 +647,7 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 		 where id = $1 and board_id = $2 and archived_at is null`,
 		p.CardID, boardID).Scan(&fromColumn)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Patch{}, conflictf(p.ToColumnID, "карточка уже удалена или перенесена на другую доску")
+		return Patch{}, conflictf(p.ToColumnID, "карточка уже удалена, убрана в архив или перенесена на другую доску")
 	}
 	if err != nil {
 		return Patch{}, err

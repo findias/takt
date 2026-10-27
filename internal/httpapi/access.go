@@ -29,6 +29,9 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	// вынужден был читать ради этого всю доску.
 	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}",
 		s.scoped(apiclient.ScopeBoardsRead, s.handleCard))
+	// Что случится при переносе карточки на другую доску — до переноса:
+	// подтверждение называет снимаемое поимённо (ROADMAP 40).
+	mux.HandleFunc("GET /api/boards/{id}/cards/{cardId}/move-preview", s.authed(s.handleMovePreview))
 	mux.HandleFunc("DELETE /api/boards/{id}", s.authed(s.handleArchiveBoard))
 	mux.HandleFunc("POST /api/boards/{id}/restore", s.authed(s.handleRestoreBoard))
 	// Отдельный путь, а не флаг у DELETE: у этих двух действий разная
@@ -182,6 +185,26 @@ func (s *Server) handleCard(w http.ResponseWriter, r *http.Request, p auth.Princ
 		return
 	}
 	writeJSON(w, http.StatusOK, card)
+}
+
+func (s *Server) handleMovePreview(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	to := r.URL.Query().Get("to")
+	if to == "" {
+		writeError(w, http.StatusBadRequest, "не сказано, на какую доску переносить: параметр to")
+		return
+	}
+	preview, err := s.boards.PreviewMove(r.Context(), p.OrgID, p.ID,
+		r.PathValue("id"), r.PathValue("cardId"), to)
+	switch {
+	case errors.Is(err, board.ErrNotFound):
+		writeError(w, http.StatusNotFound, "карточка не найдена на этой доске")
+	case errors.Is(err, board.ErrMoveTargetMissing):
+		writeError(w, http.StatusNotFound, board.ErrMoveTargetMissing.Error())
+	case err != nil:
+		s.fail(w, "перенос карточки", err)
+	default:
+		writeJSON(w, http.StatusOK, preview)
+	}
 }
 
 func (s *Server) handleArchivedBoards(w http.ResponseWriter, r *http.Request, p auth.Principal) {

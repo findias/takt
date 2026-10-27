@@ -333,6 +333,20 @@ A field that is not sent does not change. For the limit that means
 "leave it alone" and "remove it" are different intents: only an
 explicit `null` removes the limit.
 
+`MOVE_CARD_TO_BOARD` moves a card to another board of the same level.
+Both boards are locked, so the actor must be able to write to both:
+
+```
+{ "type": "MOVE_CARD_TO_BOARD",
+  "payload": { "cardId": "…", "boardId": "…", "toColumnId": "…" } }
+```
+
+The card gets a number from the new board, and its items travel with
+it. Labels that do not apply there are removed; an assignee who cannot
+see the new board turns the move into a `409` that names them. What
+will be removed can be asked first:
+`GET /api/boards/{id}/cards/{cardId}/move-preview?to={boardId}`.
+
 ## The integration API
 
 The contract is published at `/api/v1/docs` on a running installation,

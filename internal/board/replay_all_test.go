@@ -28,6 +28,8 @@ func TestEveryOperationReplaysWithoutEffect(t *testing.T) {
 	first := f.createCard("Первая", f.columnA)
 	second := f.createCard("Вторая", f.columnA)
 	doomed := f.createCard("На удаление", f.columnA)
+	traveller := f.createCard("В дорогу", f.columnA)
+	elsewhere, _, _ := f.secondBoard()
 	label := f.label("Проба повтора")
 	field, err := f.svc.CreateField(f.ctx, f.orgID, f.actorID, "Проба повтора", FieldText, nil)
 	if err != nil {
@@ -77,6 +79,7 @@ func TestEveryOperationReplaysWithoutEffect(t *testing.T) {
 		{"ARCHIVE_CARD", fixed(map[string]any{"cardId": second})},
 		{"RESTORE_CARD", fixed(map[string]any{"cardId": second})},
 		{"DELETE_CARD", fixed(map[string]any{"cardId": doomed})},
+		{"MOVE_CARD_TO_BOARD", fixed(map[string]any{"cardId": traveller, "boardId": elsewhere})},
 		{"CREATE_COLUMN", fixed(map[string]any{"name": "Колонка повтором"})},
 		{"RENAME_COLUMN", fixed(map[string]any{"columnId": f.columnB, "name": "Переименована"})},
 		{"UPDATE_COLUMN", fixed(map[string]any{"columnId": f.columnA, "wipLimit": 10})},

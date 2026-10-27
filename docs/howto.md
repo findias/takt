@@ -478,6 +478,29 @@ Deleting for good asks for confirmation and cannot be undone. It is
 offered to the organisation owner and to the owner of the board's
 subdivision.
 
+### Move a card to another board
+
+Hover the card, open the **…** menu and choose **Move to another
+board…**. Pick the board and the column the card should land in; the
+list offers boards of the same level that you can write to — an epic
+does not move from a portfolio to a team board, nor a task the other
+way. Before you confirm, the dialog names what will change:
+
+- the card gets a number from the new board. Search still finds it by
+  the old number, and links to the card keep working;
+- its items — subtasks on this board — move with it; parts on other
+  teams' boards stay where they are and stay its parts;
+- labels that do not apply on the new board are removed, and the
+  dialog lists them;
+- the card leaves an open iteration of the old board; the reports of
+  closed iterations do not change.
+
+Discussion, files and the whole history travel with the card: its
+**History** tab shows both "moved to the board…" and the old number.
+If an assignee cannot see the new board, the move is refused with
+their name — remove them from the card or give them access first.
+Notifications about the card lead to the board it is on now.
+
 <a id="iterations"></a>
 ### Run a sprint or a release
 

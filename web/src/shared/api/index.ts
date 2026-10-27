@@ -608,6 +608,22 @@ export type BoardInfo = {
  *  бывает много, а началом и концом объявляются конкретные колонки. */
 export type ColumnKind = 'queue' | 'in_progress' | 'done'
 
+/** Что случится при переносе карточки на другую доску (ROADMAP 40). */
+export type MovePreview = {
+  /** Колонки доски назначения. */
+  columns: Column[]
+  /** Метки, которые там не действуют и снимутся. */
+  droppedLabels: string[]
+  /** Исполнители, которые доски не видят: пока их нет, перенос откажет. */
+  unseen: string[]
+  /** Открытая итерация, из которой карточка выйдет; пусто — ни в какой. */
+  iteration: string
+  /** Сколько пунктов уедет вместе с карточкой. */
+  items: number
+  /** Портфель и доска команды: перенос откажет. */
+  otherLevel: boolean
+}
+
 export type Column = {
   id: string
   name: string
@@ -1159,6 +1175,13 @@ export const api = {
   sourceHistory: (boardId: string, cardId: string) =>
     request<{ sourceHistory?: SourceHistory }>('GET', `/api/boards/${boardId}/cards/${cardId}`).then(
       (r) => r.sourceHistory ?? null,
+    ),
+  /** Что случится при переносе карточки на другую доску — до переноса:
+   *  подтверждение называет снимаемое поимённо. */
+  movePreview: (boardId: string, cardId: string, to: string) =>
+    request<MovePreview>(
+      'GET',
+      `/api/boards/${boardId}/cards/${cardId}/move-preview?to=${encodeURIComponent(to)}`,
     ),
   setRole: (userId: string, role: Role) =>
     request<void>('PUT', `/api/members/${userId}/role`, { role }),

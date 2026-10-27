@@ -138,6 +138,9 @@ type CardProps = {
   onNavigate: (cardId: string, direction: 'left' | 'right' | 'up' | 'down') => void
   onRename: (cardId: string, title: string) => void
   onArchive: (cardId: string) => void
+  /** Перенести на другую доску. Пусто — некуда: других досок, куда
+   *  человек пишет, нет, и пункт меню не предлагается. */
+  onMoveToBoard?: (cardId: string, title: string) => void
   /** Удалить насовсем. Пусто — значит нельзя: право владельца выражено
    *  отсутствием обработчика, а не спрятанным пунктом меню, который
    *  ответит отказом. */
@@ -184,6 +187,7 @@ function CardViewInner({
   onRename,
   canEdit,
   onArchive,
+  onMoveToBoard,
   onDelete,
 }: CardProps) {
   const title = card?.title ?? '…'
@@ -821,6 +825,15 @@ function CardViewInner({
                         icon: <MoveIcon />,
                         onSelect: () => onMoveToColumn(cardId, c.id),
                       })),
+                    ...(onMoveToBoard
+                      ? [
+                          {
+                            label: t.cardView.moveToBoard,
+                            icon: <MoveIcon />,
+                            onSelect: () => onMoveToBoard(cardId, title),
+                          },
+                        ]
+                      : []),
                     {
                       label: t.cardView.archive,
                       icon: <ArchiveIcon />,

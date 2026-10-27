@@ -124,6 +124,14 @@ const CardArchive = lazy(
     'feed',
   ),
 )
+// Перенос на другую доску — редкое действие из меню карточки: диалог
+// и его тексты едут, только когда его открыли.
+const MoveToBoard = lazy(
+  withSections(
+    () => import('../features/board/MoveToBoard.tsx').then((m) => ({ default: m.MoveToBoard })),
+    'moveCard',
+  ),
+)
 // Панель доступа открывают редко и нажатием — грузить её с доской
 // значит платить за неё при каждом открытии доски (П7).
 const AccessPanel = lazy(() =>
@@ -878,6 +886,13 @@ export function Board({
     (cardId: string, title: string) => setPendingDelete({ id: cardId, title }),
     [],
   )
+  // Карточка, которую переносят на другую доску (ROADMAP 40). Название
+  // — вместе с идентификатором по той же причине, что у удаления.
+  const [pendingMove, setPendingMove] = useState<{ id: string; title: string } | null>(null)
+  const askMove = useCallback(
+    (cardId: string, title: string) => setPendingMove({ id: cardId, title }),
+    [],
+  )
   // Меняется после удаления: архив перечитывает себя, потому что своего
   // состояния доски у него нет.
   const [archiveKey, setArchiveKey] = useState(0)
@@ -1040,6 +1055,14 @@ export function Board({
     }
   }, [boardId])
 
+  // Куда переносить карточку: те же доски, что для работы соседям, но
+  // только своего уровня — эпик на доску команды сервер не перенесёт.
+  const level = base?.info.level ?? 'team'
+  const moveTargets = useMemo(
+    () => subtaskBoards.filter((b) => (b.level ?? 'team') === level),
+    [subtaskBoards, level],
+  )
+
   // Доска в архиве — не поломка, а положение дел: сказать об этом надо
   // словами и дать то единственное, что здесь делают. Прежде такая
   // ссылка отвечала «доска не найдена», и человек шёл искать поломку
@@ -1189,6 +1212,7 @@ export function Board({
         onRenameCard={renameCard}
         onArchiveCard={archiveCard}
         onDeleteCard={canPurge ? askDelete : undefined}
+        onMoveCardToBoard={canEdit && moveTargets.length > 0 ? askMove : undefined}
       />
     ))
 
@@ -1682,6 +1706,35 @@ export function Board({
               : undefined
           }
         />
+        </Suspense>
+      )}
+
+      {pendingMove && (
+        <Suspense fallback={null}>
+          <MoveToBoard
+            boardId={boardId}
+            cardId={pendingMove.id}
+            title={pendingMove.title}
+            boards={moveTargets}
+            onCancel={() => setPendingMove(null)}
+            onMove={(cardId, toBoard, columnId) => {
+              setPendingMove(null)
+              void board.moveCardToBoard(cardId, toBoard.id, columnId).then((ok) => {
+                if (!ok) return
+                // Открытая карточка ушла — панель закрывается, а не
+                // показывает то, чего на доске больше нет.
+                if (openCard === cardId) setOpenCard(null)
+                notify({
+                  text: t.ops.movedToBoard(pendingMove.title, toBoard.name),
+                  tone: 'info',
+                  action: {
+                    label: t.ops.openMoved,
+                    onAct: () => navigate(boardPath(toBoard.id, cardId)),
+                  },
+                })
+              })
+            }}
+          />
         </Suspense>
       )}
 

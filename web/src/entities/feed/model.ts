@@ -46,6 +46,19 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       if (p.crossedFinish === true) return t.feed.workFinished(where)
       return where
     }
+    // Перенос на другую доску (ROADMAP 40): имя доски и номер — снимком,
+    // как колонки у перемещения. Прежний номер нужен затем, чтобы его
+    // узнали: на него ссылались в переписке.
+    case 'moved_out': {
+      const board = name(p.to)
+      return board && typeof p.number === 'string' ? t.feed.movedOut(board, p.number) : t.feed.movedOutBare
+    }
+    case 'moved_in': {
+      const board = name(p.from)
+      return board && typeof p.fromNumber === 'string'
+        ? t.feed.movedIn(board, p.fromNumber)
+        : t.feed.movedInBare
+    }
     case 'renamed':
       return typeof p.title === 'string' ? t.feed.renamedTo(p.title) : t.feed.renamed
     case 'described':

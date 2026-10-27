@@ -229,6 +229,8 @@
           "card.prioritised",
           "card.committed",
           "card.moved",
+          "card.moved_out",
+          "card.moved_in",
           "card.blocked",
           "card.block_until",
           "card.block_reason",
@@ -275,7 +277,7 @@
       "Operation": {
         "type": "object",
         "required": ["operationId", "type", "payload"],
-        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз. У блокировки может быть срок: BLOCK_CARD принимает необязательный `until` — момент ISO 8601 с зоной, позже текущего; SET_BLOCK_UNTIL меняет его у открытой блокировки, `until: null` делает её бессрочной; SET_BLOCK_REASON меняет причину открытой блокировки, не разрывая её интервал (событие card.block_reason). Вышедший срок снимает сам сервер — событием card.block_expired без автора. CREATE_CARD принимает необязательный `iterationId` — карточка ложится в открытую итерацию той же операцией (закрытая отказывает). ADD_TO_ITERATION для карточки из закрытой итерации переносит её в открытую; отчёт закрытой не меняется. SORT_COLUMN `{columnId, by: \"iteration\"}` один раз переставляет карточки колонки по итерациям в порядке начала, без итерации — в конец; дальше порядок снова ручной. MOVE_COLUMN `{columnId, place: start|end|after, afterColumnId}` переставляет колонку; карточки едут с ней.",
+        "description": "Клиент присылает намерение, а не вычисленное состояние. Повтор с тем же operationId не выполняется второй раз. У блокировки может быть срок: BLOCK_CARD принимает необязательный `until` — момент ISO 8601 с зоной, позже текущего; SET_BLOCK_UNTIL меняет его у открытой блокировки, `until: null` делает её бессрочной; SET_BLOCK_REASON меняет причину открытой блокировки, не разрывая её интервал (событие card.block_reason). Вышедший срок снимает сам сервер — событием card.block_expired без автора. CREATE_CARD принимает необязательный `iterationId` — карточка ложится в открытую итерацию той же операцией (закрытая отказывает). ADD_TO_ITERATION для карточки из закрытой итерации переносит её в открытую; отчёт закрытой не меняется. SORT_COLUMN `{columnId, by: \"iteration\"}` один раз переставляет карточки колонки по итерациям в порядке начала, без итерации — в конец; дальше порядок снова ручной. MOVE_COLUMN `{columnId, place: start|end|after, afterColumnId}` переставляет колонку; карточки едут с ней. MOVE_CARD_TO_BOARD `{cardId, boardId, toColumnId?}` переносит карточку на другую доску того же уровня, куда у ключа есть запись: в названную колонку или первую, с новым номером от доски назначения; пункты (подзадачи на той же доске) едут с ней, части на других досках остаются. Метки, которые там не действуют, снимаются, открытая итерация закрывается; исполнитель, который доску назначения не видит, — отказ 409 с его именем. Прежней доске пишется событие card.moved_out, новой — card.moved_in с прежним номером (fromNumber).",
         "properties": {
           "operationId": { "type": "string", "format": "uuid" },
           "type": {
@@ -283,6 +285,7 @@
             "enum": [
               "CREATE_CARD",
               "MOVE_CARD",
+              "MOVE_CARD_TO_BOARD",
               "UPDATE_CARD",
               "ARCHIVE_CARD",
               "RESTORE_CARD",
@@ -747,7 +750,7 @@
         "summary": "Лента событий доски",
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
-          { "name": "cardId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "cardId", "in": "query", "description": "История одной карточки — вся, на каких бы досках она ни жила: перенесённая на другую доску (MOVE_CARD_TO_BOARD) показывает и события прежней, если та видна ключу.", "schema": { "type": "string", "format": "uuid" } },
           { "$ref": "#/components/parameters/before" }
         ],
         "responses": { "200": { "description": "События и курсор next" } }

@@ -472,6 +472,35 @@ export function useBoard(boardId: string | null, notify: Notify) {
     [run, reload, notify, titleOf],
   )
   /**
+   * Перенести карточку на другую доску (ROADMAP 40).
+   *
+   * Ждёт ответа, а не рисует заранее: что снимется и пройдёт ли перенос
+   * вообще, решает сервер, и карточка, исчезнувшая до отказа, вернулась
+   * бы на место рывком. Отвечает, получилось ли, — тост с переходом
+   * на новую доску ставит экран: адрес — его забота, а не данных.
+   */
+  const moveCardToBoard = useCallback(
+    async (cardId: string, toBoard: string, columnId: string) => {
+      if (!boardId) return false
+      try {
+        const result = await api.operation(boardId, crypto.randomUUID(), 'MOVE_CARD_TO_BOARD', {
+          cardId,
+          boardId: toBoard,
+          toColumnId: columnId,
+        })
+        setBase((current) => (current ? applyPatch(current, result) : current))
+        return true
+      } catch (e) {
+        notify({
+          text: e instanceof Error ? `${t.ops.moveToBoard}: ${e.message}` : t.ops.moveToBoard,
+          tone: 'warning',
+        })
+        return false
+      }
+    },
+    [boardId, notify],
+  )
+  /**
    * Одно действие над многими карточками.
    *
    * По операции на карточку, одна за другой, а не пачкой: сервер
@@ -1073,6 +1102,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     prioritiseCard,
     commitCard,
     archiveCard,
+    moveCardToBoard,
     moveMany,
     archiveMany,
     labelMany,

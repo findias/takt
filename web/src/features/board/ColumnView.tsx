@@ -135,6 +135,7 @@ type ColumnProps = {
    *  Название передаётся вместе с идентификатором: диалог один на доску,
    *  и спрашивают из него в том числе про архивные карточки. */
   onDeleteCard?: (cardId: string, title: string) => void
+  onMoveCardToBoard?: (cardId: string, title: string) => void
 }
 
 /**
@@ -361,6 +362,7 @@ export function ColumnView(props: ColumnProps) {
             onRename={props.onRenameCard}
             onArchive={props.onArchiveCard}
             onDelete={props.onDeleteCard}
+            onMoveToBoard={props.onMoveCardToBoard}
           />
         ))}
         {/* Хвост: до него доходит либо прокрутка, либо клавиатура —
