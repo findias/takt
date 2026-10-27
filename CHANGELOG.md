@@ -22,7 +22,8 @@ board. Two new events go with it: `card.moved_out` on the old board and
 subscriptions that list events by name need them added. A card's
 history (`/events?cardId=…`) now includes what happened to it on the old
 board, and notifications lead to the board the card is on now.
-`GET /api/cards/{cardId}/board` tells which board a card is on.
+`GET /api/cards/{cardId}/board` tells which board a card is on, and the
+board metrics have `movedOut`.
 
 ### The rest
 
@@ -36,8 +37,9 @@ together from **Move selected**): pick the board and the column. The card
   board along. Before you confirm, the dialog names the labels that
   will be removed and the iteration it will leave; an assignee who
   cannot see the new board is named too, and the move waits until they
-  can. Before, the only way was to create the card again on the other
-  board.
+  can. The old board's **Flow** says how many cards moved to other
+  boards. Before, the only way was to create the card again on the
+  other board.
 
 ## v0.5.2 — 26 October 2026
 

@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-9-g2414ead-dirty.</p>
+<p>Every section in one file. Version v0.5.1-10-g5a2d916-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -347,7 +347,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>labels that do not apply on the new board are removed, and the dialog lists them;</li>
 <li>the card leaves an open iteration of the old board; the reports of closed iterations do not change.</li>
 </ul>
-<p>Discussion, files and the whole history travel with the card: its <strong>History</strong> tab shows both &#34;moved to the board…&#34; and the old number. If an assignee cannot see the new board, the move is refused with their name — remove them from the card or give them access first. Notifications about the card lead to the board it is on now.</p>
+<p>Discussion, files and the whole history travel with the card: its <strong>History</strong> tab shows both &#34;moved to the board…&#34; and the old number. If an assignee cannot see the new board, the move is refused with their name — remove them from the card or give them access first. Notifications about the card lead to the board it is on now. Its cycle time and its place in throughput go to the new board; the old board&#39;s <strong>Flow</strong> says how many cards moved to other boards in the period.</p>
 <h3 id="iterations">Run a sprint or a release</h3>
 <ol>
 <li>In the strip above the board press <strong>+ iteration</strong>.</li>
@@ -1780,9 +1780,9 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h2 id="v0-6-0-27-october-2026">v0.6.0 — 27 October 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p>No migration and no new setting.</p>
-<p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on.</p>
+<p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on, and the board metrics have <code>movedOut</code>.</p>
 <h3 id="the-rest">The rest</h3>
-<p>board…<strong>, the table has it in the row menu, and selected cards move together from </strong>Move selected**): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. Before, the only way was to create the card again on the other   board.</p>
+<p>board…<strong>, the table has it in the row menu, and selected cards move together from </strong>Move selected<strong>): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. The old board&#39;s </strong>Flow** says how many cards moved to other   boards. Before, the only way was to create the card again on the   other board.</p>
 <ul>
 <li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong> (the open card&#39;s panel has **To another</li>
 </ul>
@@ -2055,10 +2055,10 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h2 id="v0-6-0-27-октября-2026">v0.6.0 — 27 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p>Миграций и новых настроек нет.</p>
-<p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас. <code>GET /api/cards/{cardId}/board</code> говорит, на какой доске карточка.</p>
+<p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас. <code>GET /api/cards/{cardId}/board</code> говорит, на какой доске карточка, а в метриках доски появилось <code>movedOut</code>.</p>
 <h3 id="остальное">Остальное</h3>
 <ul>
-<li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong> (в панели открытой карточки — <strong>«На другую доску…»</strong>, в таблице — в меню строки, выделенные переносятся вместе из <strong>«Перенести выделенные»</strong>): выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний, а старая ссылка на неё ведёт на новую доску) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. Раньше путь был один — завести карточку на той доске заново.</li>
+<li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong> (в панели открытой карточки — <strong>«На другую доску…»</strong>, в таблице — в меню строки, выделенные переносятся вместе из <strong>«Перенести выделенные»</strong>): выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний, а старая ссылка на неё ведёт на новую доску) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. «Поток» прежней доски называет, сколько карточек ушло на другие доски. Раньше путь был один — завести карточку на той доске заново.</li>
 </ul>
 <h2 id="v0-5-2-26-октября-2026">v0.5.2 — 26 октября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>

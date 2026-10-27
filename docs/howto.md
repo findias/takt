@@ -504,7 +504,10 @@ Discussion, files and the whole history travel with the card: its
 **History** tab shows both "moved to the board…" and the old number.
 If an assignee cannot see the new board, the move is refused with
 their name — remove them from the card or give them access first.
-Notifications about the card lead to the board it is on now.
+Notifications about the card lead to the board it is on now. Its
+cycle time and its place in throughput go to the new board; the old
+board's **Flow** says how many cards moved to other boards in the
+period.
 
 <a id="iterations"></a>
 ### Run a sprint or a release

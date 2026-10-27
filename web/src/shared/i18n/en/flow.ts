@@ -29,6 +29,7 @@ export const flow: typeof ru = {
     week: (when: string) => `week of ${when}`,
     byWeek: 'By week, finished work only.',
     discarded: (n: number) => ` Another ${n} taken off the board unfinished — they do not count.`,
+    movedOut: (n: number) => ` Moved to other boards: ${n} — the board they went to counts them.`,
     noThroughput:
       'Nothing finished yet — nothing to count. Bars appear when the first card reaches the column marked as finish.',
     forecast: 'How long it will take',

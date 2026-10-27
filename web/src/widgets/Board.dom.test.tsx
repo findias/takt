@@ -578,6 +578,7 @@ describe('поток словами, а не машинными строками
     flow: [],
     forecast: null,
     discarded: 0,
+    movedOut: 0,
     imported: 0,
     withoutImported: false,
   }

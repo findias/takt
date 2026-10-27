@@ -208,10 +208,16 @@ export function Flow({
             <p className="muted small">
               {t.flow.byWeek}
               {report.discarded > 0 && t.flow.discarded(report.discarded)}
+              {report.movedOut > 0 && t.flow.movedOut(report.movedOut)}
             </p>
           </>
         ) : (
-          <p className="muted small">{t.flow.noThroughput}</p>
+          <p className="muted small">
+            {t.flow.noThroughput}
+            {/* Ушедшее к соседям называется и здесь: доска, откуда всё
+                ушло, иначе выглядела бы доской, где ничего не было. */}
+            {report.movedOut > 0 && t.flow.movedOut(report.movedOut)}
+          </p>
         )}
       </section>
 

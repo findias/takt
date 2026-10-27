@@ -56,6 +56,13 @@ type Report struct {
 	// Показывается рядом с пропускной способностью намеренно: в неё они
 	// не входят, и молчать об их числе значит скрывать половину картины.
 	Discarded int `json:"discarded"`
+	// MovedOut — сколько карточек ушло с доски на другие доски за окно
+	// (ROADMAP 40). Метрики считаются по карточкам, лежащим на доске,
+	// поэтому ушедшая уносит с собой и время цикла, и место в пропускной
+	// способности — их считает доска, куда она пришла. Число называется
+	// рядом с отказами по той же причине: молча пропавшая работа
+	// выглядит как работа, которой не было.
+	MovedOut int `json:"movedOut"`
 	// Imported — сколько карточек отчёта перенесены из другой системы
 	// (этап 23): закончены в окне или идут сейчас. Их даты взяты
 	// оттуда, а начало работы там неизвестно и принято равным дате
@@ -225,6 +232,15 @@ func (s *Service) cycleTime(ctx context.Context, tx pgx.Tx, boardID string, days
 		   and (not $3 or c.external_source is null)
 		   and not `+board.IsItem("c"),
 		boardID, days, lived).Scan(&out.Discarded); err != nil {
+		return err
+	}
+	// Колонка ухода есть только у самой карточки: её пункты уехали
+	// с ней и отдельной работой не считаются (IsItem).
+	if err := tx.QueryRow(ctx, `
+		select count(distinct e.card_id) from card_events e
+		 where e.board_id = $1 and e.type = 'moved_out' and e.from_column is not null
+		   and e.at >= now() - make_interval(days => $2)`,
+		boardID, days).Scan(&out.MovedOut); err != nil {
 		return err
 	}
 
