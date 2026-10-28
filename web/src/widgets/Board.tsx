@@ -30,6 +30,7 @@ import { ConfirmDialog } from '../shared/ui/Dialog.tsx'
 import { CardSearch, FilterBar } from '../features/board/FilterBar.tsx'
 import { EMPTY, NO_ITERATION, filtersToQuery, isEmpty, matches, parseFilters } from '../features/board/filters.ts'
 import type { Filters } from '../features/board/filters.ts'
+import { assigneeOptions } from '../features/board/assigneeFilter.ts'
 import { withViewTransition } from '../shared/lib/withViewTransition.ts'
 import { boardPath, navigate, setQuery, useQuery } from '../shared/router/index.ts'
 import { Views } from '../features/board/Views.tsx'
@@ -570,14 +571,11 @@ export function Board({
     return [...cards, ...actions]
   }, [base, grouping, filters, setGrouping, setFilters])
 
-  // Список людей для фильтра: в снимке они словарём, а выпадающему
-  // списку нужен порядок.
-  const peopleList = useMemo(
-    () =>
-      Object.entries(base?.people ?? {})
-        .map(([userId, name]) => ({ userId, name }))
-        .sort((a, b) => a.name.localeCompare(b.name, locale())),
-    [base?.people],
+  // Люди для отбора по исполнителю: видящие доску и стоящие на её
+  // карточках, с загрузкой (assigneeFilter.ts).
+  const assigneeList = useMemo(
+    () => (base ? assigneeOptions(base, filters.assignee) : []),
+    [base, filters.assignee],
   )
 
   // useLayoutEffect, а не useEffect: обычные эффекты откладываются
@@ -1465,7 +1463,8 @@ export function Board({
         )}
         <FilterBar
           filters={filters}
-          people={peopleList}
+          people={assigneeList}
+          unit={unit}
           labels={base.labels}
           iterations={openIterations}
           hidden={hidden}

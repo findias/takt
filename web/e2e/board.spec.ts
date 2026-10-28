@@ -130,6 +130,17 @@ async function openFilters(page: Page) {
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
 }
 
+/** Отобрать доску по исполнителю: свой список с порядком и поиском,
+ *  а не нативный `select`. */
+async function pickAssignee(page: Page, name: string) {
+  await page.getByRole('button', { name: /^Исполнитель:/ }).click()
+  await page
+    .getByRole('listbox', { name: 'Исполнитель' })
+    .getByRole('option')
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .click()
+}
+
 /** Выбрать вид доски: он — выпадающим списком слева. */
 async function pickView(page: Page, name: 'Доска' | 'Таблица' | 'Изменения') {
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: name })
@@ -1160,7 +1171,7 @@ test('фильтр по исполнителю показывает и то, ч�
   // Работа без исполнителя и есть то, что теряется: её надо уметь
   // спросить отдельно.
   await openFilters(page)
-  await page.getByLabel('Исполнитель').selectOption('none')
+  await pickAssignee(page, 'Ни на ком')
   await expect(cardIn(page, 'Очередь', 'Ничья работа')).toBeVisible()
   await expect(page.getByRole('group', { name: /Моя работа/ })).toHaveCount(0)
 })
@@ -1373,7 +1384,7 @@ test('на узком экране показывается одна колон�
   // показана не вся: спрятанный фильтр без такого напоминания — это
   // фильтр, о котором забывают.
   const toggle = page.getByRole('button', { name: /Отбор/ })
-  await expect(page.getByRole('combobox', { name: 'Исполнитель' })).toBeHidden()
+  await expect(page.getByRole('button', { name: /^Исполнитель:/ })).toBeHidden()
   await expect(page.getByRole('searchbox', { name: 'Найти карточку' })).toBeVisible()
 
   await toggle.click()
@@ -1804,11 +1815,11 @@ test('исполнителей у карточки может быть неск�
   // Фильтр «на мне» показывает работу, о которой договорились вдвоём:
   // иначе один из двоих не найдёт её у себя.
   await openFilters(page)
-  await page.getByLabel('Исполнитель').selectOption({ label: 'Иван Петров' })
+  await pickAssignee(page, 'Иван Петров')
   await expect(card).toBeVisible()
 
   await openFilters(page)
-  await page.getByLabel('Исполнитель').selectOption({ label: 'Ни на ком' })
+  await pickAssignee(page, 'Ни на ком')
   await expect(card).toHaveCount(0)
   expect(who.email).toBeTruthy()
 })

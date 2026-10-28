@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { Iteration, BoardLabel, Person } from '../../shared/api/index.ts'
+import type { Iteration, BoardLabel, EstimateUnit } from '../../shared/api/index.ts'
 import { groupByOrigin, labelTitle, chipClass } from '../../entities/label/model.ts'
 import { epicTone } from '../../entities/card/model.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { CheckIcon, CloseIcon, FilterIcon, SearchIcon } from '../../shared/ui/icons.tsx'
-import { EMPTY, NO_ITERATION, UNASSIGNED, activeCount, isEmpty } from './filters.ts'
+import { EMPTY, NO_ITERATION, activeCount, isEmpty } from './filters.ts'
+import { AssigneeFilter } from './AssigneeFilter.tsx'
+import type { AssigneeOption } from './assigneeFilter.ts'
 import type { Filters } from './filters.ts'
 import { t } from '../../shared/i18n/index.ts'
 
@@ -24,6 +26,7 @@ import { t } from '../../shared/i18n/index.ts'
 export function FilterBar({
   filters,
   people,
+  unit,
   labels,
   iterations,
   hidden,
@@ -32,7 +35,9 @@ export function FilterBar({
   onChange,
 }: {
   filters: Filters
-  people: Person[]
+  /** Видящие доску и стоящие на её карточках, с загрузкой. */
+  people: AssigneeOption[]
+  unit: EstimateUnit
   labels: BoardLabel[]
   /** Открытые итерации доски: закрытые не отбирают — их смотрят
    *  отчётом, а не доской. */
@@ -102,19 +107,12 @@ export function FilterBar({
         id={restId}
         onKeyDown={closeOnEscape}
       >
-        <select
-          value={filters.assignee ?? ''}
-          aria-label={t.filters.assignee}
-          onChange={(e) => onChange({ ...filters, assignee: e.target.value || null })}
-        >
-          <option value="">{t.filters.allAssignees}</option>
-          <option value={UNASSIGNED}>{t.filters.unassigned}</option>
-          {people.map((person) => (
-            <option key={person.userId} value={person.userId}>
-              {person.name}
-            </option>
-          ))}
-        </select>
+        <AssigneeFilter
+          value={filters.assignee}
+          options={people}
+          unit={unit}
+          onChange={(assignee) => onChange({ ...filters, assignee })}
+        />
 
         {/* Итерация — ответ на «к чему это привязано снаружи». Без
             отбора спринт на доске не увидеть: он живёт только

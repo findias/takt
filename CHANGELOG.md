@@ -40,6 +40,12 @@ together from **Move selected**): pick the board and the column. The card
   can. The old board's **Flow** says how many cards moved to other
   boards. Before, the only way was to create the card again on the
   other board.
+- **The board's assignee filter lists only people who belong there.**
+  It used to offer the whole organisation; now it has those who can see
+  the board and those already assigned on its cards (marked when they
+  have no access). Each name shows how many open cards the person has
+  and their estimate; the list is ordered by name, by cards or by
+  estimate — the choice is remembered — and typing finds a person.
 - **Reports show the real time in progress.** The **Data** sheet and CSV
   have **Time in progress, days** after the cycle time: how long the card
   stood in work columns by its move history, without returns to the

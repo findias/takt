@@ -66,7 +66,7 @@ can see the board can be called in.
 | Filter | What it shows |
 | --- | --- |
 | Text | cards whose title contains the substring |
-| Assignee | whose cards; separately, "nobody's" |
+| Assignee | whose cards; separately, "nobody's". The list holds those who can see the board and those already assigned on its cards, each with how many open cards they have; it is ordered **By name**, **By cards** or **By estimate**, and typing finds a person |
 | Labels | cards carrying **all** the selected labels |
 | **Urgent** | highest and high priority |
 | **Due soon** | due today, tomorrow, the day after, or overdue |

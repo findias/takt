@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-12-gdd0ca76-dirty.</p>
+<p>Every section in one file. Version v0.5.1-14-g00aa455-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -562,7 +562,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <thead><tr><th>Filter</th><th>What it shows</th></tr></thead>
 <tbody>
 <tr><td>Text</td><td>cards whose title contains the substring</td></tr>
-<tr><td>Assignee</td><td>whose cards; separately, &#34;nobody&#39;s&#34;</td></tr>
+<tr><td>Assignee</td><td>whose cards; separately, &#34;nobody&#39;s&#34;. The list holds those who can see the board and those already assigned on its cards, each with how many open cards they have; it is ordered <strong>By name</strong>, <strong>By cards</strong> or <strong>By estimate</strong>, and typing finds a person</td></tr>
 <tr><td>Labels</td><td>cards carrying <strong>all</strong> the selected labels</td></tr>
 <tr><td><strong>Urgent</strong></td><td>highest and high priority</td></tr>
 <tr><td><strong>Due soon</strong></td><td>due today, tomorrow, the day after, or overdue</td></tr>
@@ -1788,6 +1788,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <p>board…<strong>, the table has it in the row menu, and selected cards move together from </strong>Move selected<strong>): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. The old board&#39;s </strong>Flow** says how many cards moved to other   boards. Before, the only way was to create the card again on the   other board.</p>
 <ul>
 <li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong> (the open card&#39;s panel has **To another</li>
+<li><strong>The board&#39;s assignee filter lists only people who belong there.</strong> It used to offer the whole organisation; now it has those who can see the board and those already assigned on its cards (marked when they have no access). Each name shows how many open cards the person has and their estimate; the list is ordered by name, by cards or by estimate — the choice is remembered — and typing finds a person.</li>
 <li><strong>Reports show the real time in progress.</strong> The <strong>Data</strong> sheet and CSV have <strong>Time in progress, days</strong> after the cycle time: how long the card stood in work columns by its move history, without returns to the queue and waiting in queue columns. <strong>By assignee</strong>, on the screen and on the <strong>Summary</strong> sheet, has its median. Cycle time counts from the first start to done, waiting included, and with imported cards it ran to hundreds of days; the gap between the two numbers is now visible. Imported cards and cards moved from a board you cannot see leave the cell empty: their history is not here. JSON has <code>workDays</code> and <code>workTimeP50</code>.</li>
 </ul>
 <h2 id="v0-5-2-26-october-2026">v0.5.2 — 26 October 2026</h2>
@@ -2063,6 +2064,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h3 id="остальное">Остальное</h3>
 <ul>
 <li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong> (в панели открытой карточки — <strong>«На другую доску…»</strong>, в таблице — в меню строки, выделенные переносятся вместе из <strong>«Перенести выделенные»</strong>): выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний, а старая ссылка на неё ведёт на новую доску) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. «Поток» прежней доски называет, сколько карточек ушло на другие доски. Раньше путь был один — завести карточку на той доске заново.</li>
+<li><strong>В отборе доски по исполнителю — только те, кто к ней относится.</strong> Раньше список предлагал всю организацию; теперь в нём те, кто видит доску, и те, кто уже стоит на её карточках (у них помечено, если доступа нет). Рядом с именем — сколько у человека незавершённых карточек и их оценка; порядок — по имени, по карточкам или по оценке, выбор запоминается, а набор находит человека.</li>
 <li><strong>Отчёты показывают настоящее время в работе.</strong> На листе <strong>«Данные»</strong> и в CSV после времени цикла — <strong>«Время в работе, дней»</strong>: сколько карточка стояла в колонках работы по журналу перемещений, без возвратов в очередь и ожидания в колонках-очередях. В разрезе **«По исполнителям»<strong> — на экране и на листе </strong>«Сводка»** — его медиана. Время цикла считает от первого начала до готовности вместе с ожиданием и у перенесённых карточек доходило до сотен дней; теперь разница видна. У перенесённых из другой системы и с доски, которой вы не видите, ячейка пуста: их истории здесь нет. В JSON — <code>workDays</code> и <code>workTimeP50</code>.</li>
 </ul>
 <h2 id="v0-5-2-26-октября-2026">v0.5.2 — 26 октября 2026</h2>

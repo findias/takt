@@ -20,6 +20,7 @@ function show() {
       <FilterBar
         filters={EMPTY}
         people={[]}
+        unit="points"
         labels={[]}
         iterations={[]}
         hidden={0}

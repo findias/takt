@@ -1269,6 +1269,48 @@ select {
   color: var(--ink);
 }
 
+/* Кнопка, открывающая свой список, выглядит как выбор рядом с ней:
+   в полосе отбора она стоит между нативными списками, и другая форма
+   читалась бы как другой вид элемента. */
+.select-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: inherit;
+  padding: var(--space-1) var(--space-2);
+  min-height: max(var(--target), calc(1.6em + 2 * var(--space-1) + 2px));
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  max-inline-size: 16rem;
+}
+.select-button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Выбор исполнителя: порядок, поле поиска, список. Шире меню действий —
+   рядом с именем стоит загрузка, и «3 в работе, 8 ч» не должно рвать
+   строку. */
+.assignee-picker {
+  width: 22rem;
+  padding: var(--space-2);
+  gap: var(--space-2);
+}
+.assignee-picker .segment {
+  align-self: flex-start;
+}
+.assignee-picker input {
+  width: 100%;
+}
+.assignee-picker .palette-list {
+  padding: 0;
+  max-height: 18rem;
+}
+
 /* «Нельзя» должно читаться, а не угадываться. Прозрачности мало:
    выпадающий список наблюдателя на экране доступа отличался от рабочего
    только ею — те же фон, рамка, цвет текста и обычный курсор, и разница
@@ -4032,7 +4074,8 @@ textarea.description {
      это длинное название метки или человек с отчеством, и в строке
      получается пустое поле в пол-экрана (замечено владельцем
      22.09.2026 на ARCHTEAM). Ширину держим, длинное имя обрезаем. */
-  .filters-rest select {
+  .filters-rest select,
+  .filters-rest .select-button {
     max-inline-size: 12.5rem;
     text-overflow: ellipsis;
   }
