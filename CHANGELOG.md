@@ -58,6 +58,13 @@ together from **Move selected**): pick the board and the column. The card
   Imported cards and cards moved from a board you cannot see leave the
   cell empty: their history is not here. JSON has `workDays` and
   `workTimeP50`.
+- **Reports keep subtasks with their task and show completion.** On
+  the **Data** sheet (and in CSV and JSON) each part sits right under its
+  task with its title indented; in Excel the parts are a group you can
+  fold. A **Completion percentage** column shows what the board card
+  shows. The cumulative flow on the **Summary** sheet keeps its chart and
+  gains a line on how to read it; the long table of numbers by date moved
+  to a sheet of its own, **Flow by date**. JSON has `percent` and `level`.
 - **Each board can estimate in its own unit** — points, hours or days,
   or as the organisation does (**Flow** → **Estimate**). Estimates are
   not converted. The export gains an **Estimate unit** column, and the

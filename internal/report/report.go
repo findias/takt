@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/store"
 )
 
@@ -152,6 +153,13 @@ type Row struct {
 	FinishedAt *time.Time `json:"finishedAt"`
 	DueOn      *string    `json:"dueOn"`
 	CycleDays  *float64   `json:"cycleTimeDays"`
+	// Percent — процент выполнения, как на карточке доски (percent.go).
+	// Пусто — не мерили: не начата и частей нет.
+	Percent *int `json:"percent"`
+	// Level — глубина под задачей в этой выгрузке: 0 — задача (или часть,
+	// отобранная без неё), 1 — её часть и так далее. Строки идут деревом:
+	// часть сразу под своей задачей.
+	Level int `json:"level"`
 	// WorkDays — время в работе: сумма отрезков в колонках работы
 	// (work.go). Пусто — не начата или история неполна.
 	WorkDays    *float64 `json:"workDays"`
@@ -381,7 +389,37 @@ func (f *Filter) sql() (string, []any) {
 func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 	// Порядок — как люди ищут в таблице: доска, затем номер числом,
 	// а не строкой, где «ПОСТ-10» стоит раньше «ПОСТ-9».
+	//
+	// Подзадача стоит сразу под своей задачей, а не там, куда её поставил
+	// бы номер: руководитель читает задачу вместе с её частями, и
+	// «Родитель» в соседнем столбце заставлял собирать дерево глазами
+	// (замечание владельца 28.10.2026). Порядок — путь от корня: у каждой
+	// строки её место в плоском порядке, у части — путь родителя и своё
+	// место. Корень — карточка, чьего родителя в выгрузке нет: часть,
+	// отобранная без задачи, стоит сама по себе, а не исчезает.
 	rows, err := tx.Query(ctx, `
+		with recursive flat as (
+			select c.id, row_number() over (
+			         order by b.name, b.id, substring(c.number from '(\d+)$')::bigint, c.number) as ord
+			  from report_cards r
+			  join cards c on c.id = r.id
+			  join boards b on b.id = c.board_id
+		), up as (
+			select l.to_card as child, l.from_card as parent
+			  from card_links l
+			 where l.kind = 'subtask'
+			   and l.to_card in (select id from flat)
+			   and l.from_card in (select id from flat)
+		), tree(id, path) as (
+			select f.id, array[f.ord] from flat f
+			 where not exists (select 1 from up where up.child = f.id)
+			union all
+			select u.child, t.path || f.ord
+			  from tree t
+			  join up u on u.parent = t.id
+			  join flat f on f.id = u.child
+			 where cardinality(t.path) <= $1::int
+		)
 		select c.number, c.title, b.name, coalesce(t.name, ''), col.name,
 		       case when c.outcome is not null then c.outcome
 		            when c.started_at is not null then 'active'
@@ -424,17 +462,20 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		            then extract(epoch from (now() - c.started_at)) / 86400.0 end,
 		       k.id is not null, coalesce(k.reason, ''),
 		       c.external_source is not null, c.archived_at is not null,
-		       c.description
+		       c.description, p.percent, cardinality(coalesce(tr.path, array[f.ord])) - 1
 		  from report_cards r
+		  join flat f on f.id = r.id
+		  left join tree tr on tr.id = r.id
 		  join cards c on c.id = r.id
 		  join boards b on b.id = c.board_id
 		  join board_columns col on col.id = c.column_id
 		  left join teams t on t.id = b.team_id
 		  left join lateral (`+workDaysLateral+`) w on true
+		  left join lateral (`+percentLateral+`) p on true
 		  left join lateral (select id, reason from card_blocks
 		                      where card_id = c.id and unblocked_at is null
 		                      order by blocked_at desc limit 1) k on true
-		 order by b.name, b.id, substring(c.number from '(\d+)$')::bigint, c.number`)
+		 order by coalesce(tr.path, array[f.ord])`, board.MaxSubtaskDepth)
 	if err != nil {
 		return err
 	}
@@ -444,7 +485,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
 			&r.Priority, &r.Estimate, &r.EstimateUnit, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
 			&r.Refs, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.WorkDays, &r.AgeDays,
-			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Description); err != nil {
+			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Description, &r.Percent, &r.Level); err != nil {
 			return err
 		}
 		r.CreatedAt = r.CreatedAt.UTC()

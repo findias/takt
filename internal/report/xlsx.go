@@ -51,7 +51,22 @@ const (
 	styleDecimal
 	stylePercent
 	styleTitle
+	styleIndent1
+	styleIndent2
+	styleIndent3
 )
+
+// indentStyle — сдвиг названия части по глубине; глубже третьего уровня
+// сдвиг не растёт: столбец названия не резиновый.
+func indentStyle(level int) int {
+	switch {
+	case level <= 0:
+		return styleNone
+	case level >= 3:
+		return styleIndent3
+	}
+	return styleIndent1 + level - 1
+}
 
 const stylesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="` + nsMain + `">
@@ -60,7 +75,7 @@ const stylesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="7">
+<cellXfs count="10">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
@@ -68,6 +83,9 @@ const stylesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="left" indent="2"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="left" indent="4"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="left" indent="6"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`
@@ -150,13 +168,21 @@ type sheetRows struct {
 	err error
 }
 
-func (s *sheetRows) row(cells ...cell) {
+func (s *sheetRows) row(cells ...cell) { s.rowAt(0, cells...) }
+
+// rowAt — строка уровня группировки level: Excel собирает строки
+// с уровнем больше нуля в группу под строкой выше и сворачивает её.
+func (s *sheetRows) rowAt(level int, cells ...cell) {
 	s.n++
 	if s.err != nil {
 		return
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, `<row r="%d">`, s.n)
+	if level > 0 {
+		fmt.Fprintf(&b, `<row r="%d" outlineLevel="%d">`, s.n, min(level, 7))
+	} else {
+		fmt.Fprintf(&b, `<row r="%d">`, s.n)
+	}
 	for i, c := range cells {
 		if c.kind == 0 {
 			continue
@@ -190,13 +216,14 @@ func (s *sheetRows) row(cells ...cell) {
 // blank — пустая строка-разделитель.
 func (s *sheetRows) blank() { s.n++ }
 
-// xlsxBook — книга из двух листов: «Сводка» с диаграммами и «Данные».
+// xlsxBook — книга из трёх листов: «Сводка» с диаграммами, «Данные»
+// и «Поток по дням» — числа под накопительной диаграммой.
 // Части пишутся в zip по порядку: сперва всё постоянное, затем лист
 // данных строками, затем сводка, которой нужны все строки до неё.
 type xlsxBook struct {
 	zw     *zip.Writer
 	data   *sheetRows
-	names  [2]string // сводка, данные
+	names  [3]string // сводка, данные, поток по дням
 	width  int       // колонок в листе данных
 	closed bool
 }
@@ -207,8 +234,8 @@ func xmlAttr(s string) string {
 	return strings.ReplaceAll(b.String(), `"`, "&quot;")
 }
 
-func newXLSXBook(w io.Writer, summaryName, dataName string, header []string, widths []float64) (*xlsxBook, error) {
-	book := &xlsxBook{zw: zip.NewWriter(w), names: [2]string{summaryName, dataName}, width: len(header)}
+func newXLSXBook(w io.Writer, summaryName, dataName, flowName string, header []string, widths []float64) (*xlsxBook, error) {
+	book := &xlsxBook{zw: zip.NewWriter(w), names: [3]string{summaryName, dataName, flowName}, width: len(header)}
 	parts := []struct{ name, body string }{
 		{"[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -218,6 +245,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName string, header []string, wid
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
 <Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
 <Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
@@ -229,13 +257,14 @@ func newXLSXBook(w io.Writer, summaryName, dataName string, header []string, wid
 		{"xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="` + nsMain + `" xmlns:r="` + nsRel + `">
 <bookViews><workbookView activeTab="0"/></bookViews>
-<sheets><sheet name="` + xmlAttr(summaryName) + `" sheetId="1" r:id="rId1"/><sheet name="` + xmlAttr(dataName) + `" sheetId="2" r:id="rId2"/></sheets>
+<sheets><sheet name="` + xmlAttr(summaryName) + `" sheetId="1" r:id="rId1"/><sheet name="` + xmlAttr(dataName) + `" sheetId="2" r:id="rId2"/><sheet name="` + xmlAttr(flowName) + `" sheetId="3" r:id="rId4"/></sheets>
 </workbook>`},
 		{"xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="` + nsPkg + `">
 <Relationship Id="rId1" Type="` + relSheet + `" Target="worksheets/sheet1.xml"/>
 <Relationship Id="rId2" Type="` + relSheet + `" Target="worksheets/sheet2.xml"/>
 <Relationship Id="rId3" Type="` + relStyles + `" Target="styles.xml"/>
+<Relationship Id="rId4" Type="` + relSheet + `" Target="worksheets/sheet3.xml"/>
 </Relationships>`},
 		{"xl/styles.xml", stylesXML},
 	}
@@ -257,7 +286,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName string, header []string, wid
 	// Шапка закреплена: на тысячной строке без неё не понять, какая
 	// колонка — время цикла, а какая — возраст.
 	fmt.Fprintf(w2, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="%s" xmlns:r="%s"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>`, nsMain, nsRel)
+<worksheet xmlns="%s" xmlns:r="%s"><sheetPr><outlinePr summaryBelow="0"/></sheetPr><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>`, nsMain, nsRel)
 	writeCols(w2, widths)
 	w2.WriteString(`<sheetData>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	book.data = &sheetRows{w: w2}
@@ -281,9 +310,9 @@ func writeCols(w *bufio.Writer, widths []float64) {
 	w.WriteString(`</cols>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 }
 
-// dataRow — строка листа «Данные».
-func (b *xlsxBook) dataRow(cells ...cell) error {
-	b.data.row(cells...)
+// dataRow — строка листа «Данные» уровня level (0 — задача, 1 — её часть).
+func (b *xlsxBook) dataRow(level int, cells ...cell) error {
+	b.data.rowAt(level, cells...)
 	return b.data.err
 }
 
@@ -299,6 +328,8 @@ type chartSpec struct {
 	valCols  []int // колонки рядов
 	colors   []string
 	anchor   [2]int // левый верхний угол: колонка и строка, с 0
+	// sheet — с какого листа ряды: 0 — сводка, 2 — поток по дням.
+	sheet int
 }
 
 // finish закрывает лист данных и пишет сводку: её строки уже собраны
@@ -307,7 +338,11 @@ type chartSpec struct {
 // Диаграмм всегда две: их части названы в [Content_Types].xml ещё
 // до первой строки, когда сводки нет, а часть, названная и не
 // записанная, для Excel — испорченная книга.
-func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float64) error {
+//
+// flow пишет лист «Поток по дням» — числа, на которые ссылается
+// накопительная диаграмма сводки.
+func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float64,
+	flow func(*sheetRows), flowWidths []float64) error {
 	d := b.data
 	if d.err != nil {
 		return d.err
@@ -337,6 +372,10 @@ func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float6
 	// диаграммы не уезжали на отдельные листы бумаги.
 	w.WriteString(`</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><drawing r:id="rId1"/></worksheet>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
 	if err := w.Flush(); err != nil {
+		return err
+	}
+
+	if err := b.plainSheet("xl/worksheets/sheet3.xml", flow, flowWidths); err != nil {
 		return err
 	}
 
@@ -379,20 +418,40 @@ func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float6
 	return b.zw.Close()
 }
 
+// plainSheet — лист из одной таблицы с закреплённой шапкой.
+func (b *xlsxBook) plainSheet(name string, fill func(*sheetRows), widths []float64) error {
+	f, err := b.zw.Create(name)
+	if err != nil {
+		return err
+	}
+	w := bufio.NewWriter(f)
+	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="%s" xmlns:r="%s"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>`, nsMain, nsRel)
+	writeCols(w, widths)
+	w.WriteString(`<sheetData>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
+	rows := &sheetRows{w: w}
+	fill(rows)
+	if rows.err != nil {
+		return rows.err
+	}
+	w.WriteString(`</sheetData></worksheet>`) // #nosec G104 -- bufio.Writer запоминает первую ошибку записи и отдаёт её из Flush, а Flush проверяется
+	return w.Flush()
+}
+
 // Размер диаграммы в ячейках листа.
 const (
 	chartCols = 9
 	chartRows = 18
 )
 
-// ref — адрес ячейки листа сводки для формулы диаграммы.
-func (b *xlsxBook) ref(col, row int) string {
-	return "'" + strings.ReplaceAll(b.names[0], "'", "''") + "'!$" + colName(col) + "$" + strconv.Itoa(row)
+// ref — адрес ячейки листа sheet для формулы диаграммы.
+func (b *xlsxBook) ref(sheet, col, row int) string {
+	return "'" + strings.ReplaceAll(b.names[sheet], "'", "''") + "'!$" + colName(col) + "$" + strconv.Itoa(row)
 }
 
-// span — столбец ячеек сводки с first по last строку.
-func (b *xlsxBook) span(col, first, last int) string {
-	return b.ref(col, first) + ":$" + colName(col) + "$" + strconv.Itoa(last)
+// span — столбец ячеек листа sheet с first по last строку.
+func (b *xlsxBook) span(sheet, col, first, last int) string {
+	return b.ref(sheet, col, first) + ":$" + colName(col) + "$" + strconv.Itoa(last)
 }
 
 // chartXML — диаграмма DrawingML. Порядок элементов задан схемой,
@@ -407,16 +466,16 @@ func (b *xlsxBook) chartXML(c chartSpec) string {
 	_ = xml.EscapeText(&s, []byte(c.title))
 	s.WriteString(`</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>`)
 
-	cat := b.span(c.catCol, c.firstRow, c.lastRow)
+	cat := b.span(c.sheet, c.catCol, c.firstRow, c.lastRow)
 	series := func() {
 		for i, col := range c.valCols {
 			fmt.Fprintf(&s, `<c:ser><c:idx val="%d"/><c:order val="%d"/><c:tx><c:strRef><c:f>%s</c:f></c:strRef></c:tx>`,
-				i, i, b.ref(col, c.firstRow-1))
+				i, i, b.ref(c.sheet, col, c.firstRow-1))
 			fmt.Fprintf(&s, `<c:spPr><a:solidFill><a:srgbClr val="%s"/></a:solidFill></c:spPr>`, c.colors[i%len(c.colors)])
 			if c.kind == "bar" {
 				s.WriteString(`<c:invertIfNegative val="0"/>`)
 			}
-			val := b.span(col, c.firstRow, c.lastRow)
+			val := b.span(c.sheet, col, c.firstRow, c.lastRow)
 			fmt.Fprintf(&s, `<c:cat><c:numRef><c:f>%s</c:f></c:numRef></c:cat><c:val><c:numRef><c:f>%s</c:f></c:numRef></c:val></c:ser>`,
 				cat, val)
 		}

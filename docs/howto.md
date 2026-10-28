@@ -809,9 +809,10 @@ Then download:
 
 - **Excel (XLSX)** opens on a **Summary** sheet: what was selected,
   cards done and discarded in the period, work in progress, cycle time
-  and age (median and 85th percentile), throughput by week and a
-  cumulative flow diagram — both with charts — iteration completion,
-  a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card
+  and age (median and 85th percentile), throughput by week with a chart,
+  the cumulative flow diagram with a line on how to read it (its numbers
+  by date are on a sheet of their own, after **Data**), iteration
+  completion, a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card
   with every field, ready for pivot tables: among them **External
   numbers** — the card's external task numbers, RDS, service requests,
   change requests and problems in one
@@ -825,6 +826,12 @@ Then download:
   counted, so the gap between the two is waiting. It is empty for a card
   not yet started and for one whose history is incomplete — imported
   from another system, or moved from a board you cannot see.
+
+  Subtasks follow their task: each part sits right under it, its title
+  indented, and in Excel the parts form a group you can fold with the
+  button on the left. The completion percentage is the one the board
+  card shows: set by hand, or counted from the parts, or 100 for a done
+  card; it is empty for work not started that has no parts.
 - **CSV** holds the same rows without the summary.
 - **JSON** is for a program: field names as in the API, values as
   codes (`done`, `high`).

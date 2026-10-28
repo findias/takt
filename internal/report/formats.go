@@ -24,7 +24,7 @@ var dataColumns = []struct {
 	width float64
 }{
 	{"Номер", 11}, {"Название", 48}, {"Доска", 20}, {"Подразделение", 18},
-	{"Колонка", 16}, {"Состояние", 12}, {"Приоритет", 12}, {"Оценка", 9}, {"Единица оценки", 10},
+	{"Колонка", 16}, {"Состояние", 12}, {"Процент выполнения", 19}, {"Приоритет", 12}, {"Оценка", 9}, {"Единица оценки", 10},
 	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11}, {"Эпик", 24},
 	{"Внешние номера", 22},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
@@ -135,6 +135,13 @@ func csvDays(p *float64) string {
 	return strconv.FormatFloat(*p, 'f', 1, 64)
 }
 
+func csvPercent(p *int) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.Itoa(*p)
+}
+
 func (s *csvSink) Row(r Row) error {
 	est := ""
 	if r.Estimate != nil {
@@ -146,7 +153,7 @@ func (s *csvSink) Row(r Row) error {
 	}
 	return s.w.Write([]string{
 		r.Number, cellText(r.Title), cellText(r.Board), cellText(r.Team), cellText(r.Column),
-		s.words.state[r.State], s.words.priority[r.Priority], est, s.words.unit[r.EstimateUnit],
+		s.words.state[r.State], csvPercent(r.Percent), s.words.priority[r.Priority], est, s.words.unit[r.EstimateUnit],
 		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent, cellText(r.Epic),
 		cellText(s.words.refs(r.Refs)), csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
 		csvDays(r.CycleDays), csvDays(r.WorkDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
@@ -223,7 +230,8 @@ type xlsxSink struct {
 // NewXLSX — книга: «Сводка» первым листом, «Данные» вторым.
 func NewXLSX(ctx context.Context, w io.Writer, f Filter) (Sink, error) {
 	names, widths := header(ctx)
-	book, err := newXLSXBook(w, i18n.Name(ctx, "Сводка"), i18n.Name(ctx, "Данные"), names, widths)
+	book, err := newXLSXBook(w, i18n.Name(ctx, "Сводка"), i18n.Name(ctx, "Данные"),
+		i18n.Name(ctx, "Поток по датам"), names, widths)
 	if err != nil {
 		return nil, err
 	}
@@ -235,9 +243,17 @@ func (s *xlsxSink) Row(r Row) error {
 	if r.Estimate != nil {
 		est = num(*r.Estimate)
 	}
-	return s.book.dataRow(
-		str(r.Number), str(r.Title), str(r.Board), str(r.Team), str(r.Column),
-		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est, str(s.words.unit[r.EstimateUnit]),
+	done := cell{}
+	if r.Percent != nil {
+		done = pct(float64(*r.Percent) / 100)
+	}
+	// Часть — сдвинутым названием и в группе под задачей: Excel сворачивает
+	// группу кнопкой слева, и задача читается целиком или без частей.
+	title := str(r.Title)
+	title.style = indentStyle(r.Level)
+	return s.book.dataRow(r.Level,
+		str(r.Number), title, str(r.Board), str(r.Team), str(r.Column),
+		str(s.words.state[r.State]), done, str(s.words.priority[r.Priority]), est, str(s.words.unit[r.EstimateUnit]),
 		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent), str(r.Epic),
 		str(s.words.refs(r.Refs)), stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
 		optDec(r.CycleDays), optDec(r.WorkDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
@@ -310,24 +326,23 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		nextFree := first - 2 + chartRows + 1 // первая строка под диаграммой, с 0
 		w.blank()
 
-		// Накопительная: три полосы стопкой, как на «Потоке».
+		// Накопительная: три полосы стопкой, как на «Потоке». На сводке —
+		// диаграмма и как её читать; числа по дням — своим листом: столбец
+		// в девяносто строк на первом листе читали как главное в файле и
+		// не понимали, что это (замечание владельца 28.10.2026).
+		for w.n < nextFree {
+			w.blank()
+		}
 		w.row(bold(n("Накопительная диаграмма потока")))
-		stepWord := n("День")
-		if sum.FlowStep == "week" {
-			stepWord = n("Конец недели")
-		}
-		w.row(bold(stepWord), bold(n("Сделано")), bold(n("В работе")), bold(n("В очереди")))
-		first = w.n + 1
-		for _, d := range sum.Flow {
-			w.row(isoDay(d.Day), num(float64(d.Done)), num(float64(d.InProgress)), num(float64(d.Queued)))
-		}
+		w.row(str(n("Снизу вверх: сделано нарастающим итогом, в работе, в очереди. " +
+			"Средняя полоса толстеет — берут больше, чем успевают закончить.")))
+		w.row(str(n("Числа — на листе «Поток по датам».")))
 		charts[1] = chartSpec{kind: "area", title: n("Накопительная диаграмма потока"),
-			firstRow: first, lastRow: w.n, catCol: 0, valCols: []int{1, 2, 3},
+			firstRow: 2, lastRow: 1 + len(sum.Flow), catCol: 0, valCols: []int{1, 2, 3},
 			colors: []string{"3F7D6B", "D8A13A", "A9B4B0"},
-			anchor: [2]int{chartCol, max(first-2, nextFree)}}
-		nextFree = max(first-2, nextFree) + chartRows + 1
-		w.blank()
-		// Таблицы ниже шире двух колонок и ушли бы под диаграммы.
+			anchor: [2]int{0, w.n}, sheet: 2}
+		nextFree = w.n + chartRows + 1
+		// Таблицы ниже ушли бы под диаграмму.
 		for w.n < nextFree {
 			w.blank()
 		}
@@ -375,7 +390,17 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		}
 		return charts
 	}
-	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 10, 10})
+	flow := func(w *sheetRows) {
+		stepWord := n("День")
+		if sum.FlowStep == "week" {
+			stepWord = n("Конец недели")
+		}
+		w.row(bold(stepWord), bold(n("Сделано")), bold(n("В работе")), bold(n("В очереди")))
+		for _, d := range sum.Flow {
+			w.row(isoDay(d.Day), num(float64(d.Done)), num(float64(d.InProgress)), num(float64(d.Queued)))
+		}
+	}
+	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 10, 10}, flow, []float64{14, 12, 12, 12})
 }
 
 // chartCol — колонка, с которой начинаются диаграммы: правее таблиц

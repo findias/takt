@@ -337,8 +337,20 @@ func TestXLSXIsAReadableBook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("импорт не читает выгрузку: %v", err)
 	}
-	if !slices.Equal(sheets, []string{"Summary", "Data"}) {
-		t.Errorf("листы %v, ожидались Summary и Data (английский запрос)", sheets)
+	if !slices.Equal(sheets, []string{"Summary", "Data", "Flow by date"}) {
+		t.Errorf("листы %v, ожидались Summary, Data и Flow by date (английский запрос)", sheets)
+	}
+	// Накопительная рисуется по своему листу: на сводке чисел под ней нет.
+	for _, part := range zr.File {
+		if part.Name != "xl/charts/chart2.xml" {
+			continue
+		}
+		r, _ := part.Open()
+		body, _ := io.ReadAll(r)
+		r.Close()
+		if !strings.Contains(string(body), "'Flow by date'!$B$2") {
+			t.Errorf("накопительная ссылается не на лист потока: %s", body)
+		}
 	}
 	if table.Headers[0] != "Number" || len(table.Rows) != 2 {
 		t.Fatalf("шапка %v, строк %d", table.Headers, len(table.Rows))
