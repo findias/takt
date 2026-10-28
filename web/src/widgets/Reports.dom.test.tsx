@@ -35,8 +35,8 @@ beforeEach(() => {
             { id: 'u-vera', name: 'Вера Соколова' },
           ],
           rows: [
-            { userId: 'u-boris', name: 'Борис Дятлов', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 4 },
-            { userId: null, name: '', cards: 1, finished: 0, wip: 0, cycleTimeP50: null, cycleTimeP85: null },
+            { userId: 'u-boris', name: 'Борис Дятлов', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 4, workTimeP50: 2 },
+            { userId: null, name: '', cards: 1, finished: 0, wip: 0, cycleTimeP50: null, cycleTimeP85: null, workTimeP50: null },
           ],
         })
       if (path.startsWith('/api/reports/slices')) return reply({ slices: [] })

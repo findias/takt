@@ -30,6 +30,7 @@ type PersonRow = {
   wip: number
   cycleTimeP50: number | null
   cycleTimeP85: number | null
+  workTimeP50: number | null
 }
 type People = { candidates: Option[]; rows: PersonRow[] }
 
@@ -283,6 +284,7 @@ function ByPerson({ rows, chosen, onPick }: { rows: PersonRow[]; chosen: string[
               <th scope="col">{s.finished}</th>
               <th scope="col">{s.wip}</th>
               <th scope="col">{s.cycleMedian}</th>
+              <th scope="col">{s.workMedian}</th>
             </tr>
           </thead>
           <tbody>
@@ -304,6 +306,7 @@ function ByPerson({ rows, chosen, onPick }: { rows: PersonRow[]; chosen: string[
                 <td>{r.finished}</td>
                 <td>{r.wip}</td>
                 <td>{days(r.cycleTimeP50)}</td>
+                <td>{days(r.workTimeP50)}</td>
               </tr>
             ))}
           </tbody>

@@ -28,7 +28,7 @@ var dataColumns = []struct {
 	{"Исполнители", 24}, {"Метки", 24}, {"Итерация", 16}, {"Родитель", 11}, {"Эпик", 24},
 	{"Внешние номера", 22},
 	{"Заведена", 17}, {"Начата", 17}, {"Закончена", 17}, {"Срок", 11},
-	{"Время цикла, дней", 12}, {"Возраст, дней", 12}, {"Заблокирована", 12},
+	{"Время цикла, дней", 12}, {"Время в работе, дней", 12}, {"Возраст, дней", 12}, {"Заблокирована", 12},
 	{"Причина блокировки", 28}, {"Перенесена", 11}, {"В архиве", 10},
 	// Описание — последним: самое длинное, и в конце таблицы оно
 	// не раздвигает строки между столбцами, которые сравнивают.
@@ -147,7 +147,7 @@ func (s *csvSink) Row(r Row) error {
 		s.words.state[r.State], s.words.priority[r.Priority], est,
 		cellText(r.Assignees), cellText(r.Labels), cellText(r.Iteration), r.Parent, cellText(r.Epic),
 		cellText(s.words.refs(r.Refs)), csvStamp(&r.CreatedAt), csvStamp(r.StartedAt), csvStamp(r.FinishedAt), due,
-		csvDays(r.CycleDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
+		csvDays(r.CycleDays), csvDays(r.WorkDays), csvDays(r.AgeDays), s.words.flag(r.Blocked),
 		cellText(r.BlockReason), s.words.flag(r.Imported), s.words.flag(r.Archived),
 		cellText(r.Description),
 	})
@@ -238,7 +238,7 @@ func (s *xlsxSink) Row(r Row) error {
 		str(s.words.state[r.State]), str(s.words.priority[r.Priority]), est,
 		str(r.Assignees), str(r.Labels), str(r.Iteration), str(r.Parent), str(r.Epic),
 		str(s.words.refs(r.Refs)), stamp(r.CreatedAt), optStamp(r.StartedAt), optStamp(r.FinishedAt), optISODay(r.DueOn),
-		optDec(r.CycleDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
+		optDec(r.CycleDays), optDec(r.WorkDays), optDec(r.AgeDays), str(s.words.flag(r.Blocked)),
 		str(r.BlockReason), str(s.words.flag(r.Imported)), str(s.words.flag(r.Archived)),
 		str(r.Description),
 	)
@@ -361,14 +361,15 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		// По людям: карточка с двумя исполнителями — у обоих.
 		w.row(bold(n("По исполнителям")))
 		w.row(bold(n("Исполнитель")), bold(n("Карточек")), bold(n("Сделано")),
-			bold(n("В работе")), bold(n("Цикл, медиана")), bold(n("Цикл, 85-я")))
+			bold(n("В работе")), bold(n("Цикл, медиана")), bold(n("Цикл, 85-я")),
+			bold(n("Время в работе, медиана")))
 		for _, p := range sum.People {
 			name := p.Name
 			if p.UserID == nil {
 				name = n("Без исполнителя")
 			}
 			w.row(str(name), num(float64(p.Cards)), num(float64(p.Finished)),
-				num(float64(p.WIP)), optDec(p.CycleP50), optDec(p.CycleP85))
+				num(float64(p.WIP)), optDec(p.CycleP50), optDec(p.CycleP85), optDec(p.WorkP50))
 		}
 		return charts
 	}

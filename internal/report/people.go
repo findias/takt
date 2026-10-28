@@ -28,6 +28,9 @@ type PersonRow struct {
 	WIP      int      `json:"wip"`
 	CycleP50 *float64 `json:"cycleTimeP50"`
 	CycleP85 *float64 `json:"cycleTimeP85"`
+	// WorkP50 — медиана времени в работе (work.go) по тем же
+	// сделанным карточкам, что и цикл: разница между ними — ожидание.
+	WorkP50 *float64 `json:"workTimeP50"`
 }
 
 // Person — человек для выбора в отборе.
@@ -126,14 +129,18 @@ func personRows(ctx context.Context, tx pgx.Tx, source string, args []any, f Fil
 		       count(*) filter (where c.outcome = 'done' and c.finished_at < $` + strconv.Itoa(n-1) + `),
 		       count(*) filter (where c.started_at is not null and c.finished_at is null),
 		       percentile_cont(0.50) within group (order by d.cycle),
-		       percentile_cont(0.85) within group (order by d.cycle)
+		       percentile_cont(0.85) within group (order by d.cycle),
+		       percentile_cont(0.50) within group (order by d.work)
 		  from ` + source + ` r
 		  join cards c on c.id = r.id
 		  left join card_assignees a on a.card_id = c.id
 		  left join users u on u.id = a.user_id
+		  left join lateral (` + workDaysLateral + `) w on true
 		  cross join lateral (select
 		       case when c.outcome = 'done' and c.started_at is not null and c.finished_at < $` + strconv.Itoa(n-1) + `
-		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle) d
+		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle,
+		       case when c.outcome = 'done' and c.finished_at < $` + strconv.Itoa(n-1) + `
+		            then w.days end as work) d
 		 where cardinality($` + strconv.Itoa(n) + `::uuid[]) = 0 or a.user_id = any($` + strconv.Itoa(n) + `::uuid[])
 		 group by a.user_id, u.name, u.email
 		 order by a.user_id is null, lower(coalesce(nullif(u.name, ''), u.email))`
@@ -145,10 +152,10 @@ func personRows(ctx context.Context, tx pgx.Tx, source string, args []any, f Fil
 	out := []PersonRow{}
 	for rows.Next() {
 		var p PersonRow
-		if err := rows.Scan(&p.UserID, &p.Name, &p.Cards, &p.Finished, &p.WIP, &p.CycleP50, &p.CycleP85); err != nil {
+		if err := rows.Scan(&p.UserID, &p.Name, &p.Cards, &p.Finished, &p.WIP, &p.CycleP50, &p.CycleP85, &p.WorkP50); err != nil {
 			return nil, err
 		}
-		p.CycleP50, p.CycleP85 = round2(p.CycleP50), round2(p.CycleP85)
+		p.CycleP50, p.CycleP85, p.WorkP50 = round2(p.CycleP50), round2(p.CycleP85), round2(p.WorkP50)
 		out = append(out, p)
 	}
 	return out, rows.Err()

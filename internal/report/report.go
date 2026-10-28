@@ -143,17 +143,20 @@ type Row struct {
 	Epic string `json:"epic"`
 	// Refs — заявки, по которым идёт работа: RDS, ЗНО, ЗНИ, проблемы,
 	// в порядке, в каком их добавляли.
-	Refs        []Ref      `json:"refs"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	StartedAt   *time.Time `json:"startedAt"`
-	FinishedAt  *time.Time `json:"finishedAt"`
-	DueOn       *string    `json:"dueOn"`
-	CycleDays   *float64   `json:"cycleTimeDays"`
-	AgeDays     *float64   `json:"ageDays"`
-	Blocked     bool       `json:"blocked"`
-	BlockReason string     `json:"blockReason"`
-	Imported    bool       `json:"imported"`
-	Archived    bool       `json:"archived"`
+	Refs       []Ref      `json:"refs"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	StartedAt  *time.Time `json:"startedAt"`
+	FinishedAt *time.Time `json:"finishedAt"`
+	DueOn      *string    `json:"dueOn"`
+	CycleDays  *float64   `json:"cycleTimeDays"`
+	// WorkDays — время в работе: сумма отрезков в колонках работы
+	// (work.go). Пусто — не начата или история неполна.
+	WorkDays    *float64 `json:"workDays"`
+	AgeDays     *float64 `json:"ageDays"`
+	Blocked     bool     `json:"blocked"`
+	BlockReason string   `json:"blockReason"`
+	Imported    bool     `json:"imported"`
+	Archived    bool     `json:"archived"`
 	// Description — описание целиком: выгрузку отдают тем, кто доски
 	// не открывает, и «что надо сделать» они читают отсюда.
 	Description string `json:"description"`
@@ -412,6 +415,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		       to_char(c.due_on, 'YYYY-MM-DD'),
 		       case when c.outcome = 'done' and c.started_at is not null
 		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end,
+		       w.days,
 		       case when c.started_at is not null and c.finished_at is null
 		            then extract(epoch from (now() - c.started_at)) / 86400.0 end,
 		       k.id is not null, coalesce(k.reason, ''),
@@ -422,6 +426,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		  join boards b on b.id = c.board_id
 		  join board_columns col on col.id = c.column_id
 		  left join teams t on t.id = b.team_id
+		  left join lateral (`+workDaysLateral+`) w on true
 		  left join lateral (select id, reason from card_blocks
 		                      where card_id = c.id and unblocked_at is null
 		                      order by blocked_at desc limit 1) k on true
@@ -434,13 +439,13 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		var r Row
 		if err := rows.Scan(&r.Number, &r.Title, &r.Board, &r.Team, &r.Column, &r.State,
 			&r.Priority, &r.Estimate, &r.Assignees, &r.Labels, &r.Iteration, &r.Parent, &r.Epic,
-			&r.Refs, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.AgeDays,
+			&r.Refs, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &r.DueOn, &r.CycleDays, &r.WorkDays, &r.AgeDays,
 			&r.Blocked, &r.BlockReason, &r.Imported, &r.Archived, &r.Description); err != nil {
 			return err
 		}
 		r.CreatedAt = r.CreatedAt.UTC()
 		r.StartedAt, r.FinishedAt = utc(r.StartedAt), utc(r.FinishedAt)
-		r.CycleDays, r.AgeDays = round2(r.CycleDays), round2(r.AgeDays)
+		r.CycleDays, r.WorkDays, r.AgeDays = round2(r.CycleDays), round2(r.WorkDays), round2(r.AgeDays)
 		if err := sink.Row(r); err != nil {
 			return err
 		}

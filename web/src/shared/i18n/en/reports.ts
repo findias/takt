@@ -29,11 +29,12 @@ export const reports: typeof ru = {
     finished: 'Done',
     wip: 'In progress',
     cycleMedian: 'Cycle, median',
+    workMedian: 'Time in progress, median',
     days: (n: number) => `${n.toLocaleString('en-GB')} d`,
     noAssignee: 'No assignee',
     onlyPerson: (name: string) => `Only ${name}: selection and file for this person`,
     byPersonHint:
-      'For the current selection. A card with several assignees counts for each. Click a name to narrow the selection and the file to that person. The file holds the same breakdown on the Summary sheet.',
+      'For the current selection. A card with several assignees counts for each. Time in progress is how long the cards stood in work columns, not counting returns to the queue; the gap to cycle time is waiting. Click a name to narrow the selection and the file to that person. The file holds the same breakdown on the Summary sheet.',
     labels: 'Labels',
     allLabels: 'Any',
     addLabel: 'Add a label',

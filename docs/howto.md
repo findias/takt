@@ -783,7 +783,7 @@ its cards.
 
 Below the selection you see how many cards match, and **By assignee** —
 what each person has under the current selection: cards, done, in
-progress, the median cycle time. A card with several assignees counts
+progress, the median cycle time and the median time in progress. A card with several assignees counts
 for each. Click a name and the selection, and the file, become that
 person's. Cards with nobody on them are a row of their own.
 
@@ -800,6 +800,13 @@ Then download:
   cell, `RDS 12345; Problem PRB-7` — and, last, the whole
   **Description**. Everything on the summary is counted from those
   same rows.
+
+  The time in progress column, in days, next to the cycle time is how long the card
+  actually stood in work columns, by its move history: a return to the
+  queue and waiting in a queue column in the middle of the flow are not
+  counted, so the gap between the two is waiting. It is empty for a card
+  not yet started and for one whose history is incomplete — imported
+  from another system, or moved from a board you cannot see.
 - **CSV** holds the same rows without the summary.
 - **JSON** is for a program: field names as in the API, values as
   codes (`done`, `high`).

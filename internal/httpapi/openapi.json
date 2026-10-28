@@ -105,7 +105,7 @@
       },
       "ReportCard": {
         "type": "object",
-        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "epic", "refs", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "ageDays", "blocked", "blockReason", "imported", "archived", "description"],
+        "required": ["number", "title", "board", "team", "column", "state", "priority", "estimate", "assignees", "labels", "iteration", "parent", "epic", "refs", "createdAt", "startedAt", "finishedAt", "dueOn", "cycleTimeDays", "workDays", "ageDays", "blocked", "blockReason", "imported", "archived", "description"],
         "properties": {
           "number": { "type": "string" },
           "title": { "type": "string" },
@@ -137,6 +137,7 @@
           "finishedAt": { "type": ["string", "null"], "format": "date-time" },
           "dueOn": { "type": ["string", "null"], "format": "date" },
           "cycleTimeDays": { "type": ["number", "null"], "description": "Время цикла сделанной карточки, дней до сотых." },
+          "workDays": { "type": ["number", "null"], "description": "Время в работе: сколько дней до сотых карточка простояла в колонках работы по журналу перемещений, без возвратов в очередь и ожидания в колонках-очередях. Пусто — не начата или история неполна: перенесена из другой системы или с доски, которой вы не видите." },
           "ageDays": { "type": ["number", "null"], "description": "Возраст незаконченной работы, дней до сотых." },
           "blocked": { "type": "boolean" },
           "blockReason": { "type": "string" },

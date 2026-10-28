@@ -1346,6 +1346,10 @@ func respreadEvents(ctx context.Context, tx pgx.Tx) error {
 	// карточки, а у только что заведённой события уходили в будущее
 	// (проход по дизайну 26.09.2026).
 	//
+	// Переход через начало и через финиш встаёт на отметки карточки:
+	// иначе работа, начатая неделю назад, по журналу шла бы час, и время
+	// в работе в отчёте спорило бы с временем цикла рядом.
+	//
 	// Создание — всегда первое, остальные по номеру: у карточек, заведённых
 	// переносом или сценариями на стенде, событие создания бывает не первым
 	// по номеру, и раскладка «по номеру» ставила его в середину — первая
@@ -1354,10 +1358,15 @@ func respreadEvents(ctx context.Context, tx pgx.Tx) error {
 	// карточка, чьё время создания впереди, уводила бы события в будущее.
 	rows, err := tx.Query(ctx, `
 		select org_id, board_id, card_id, actor_id, type, from_column, to_column, payload,
-		       base + (n - 1) * step
+		       case when type = 'moved' and (payload ->> 'crossedFinish')::boolean and finished is not null
+		            then greatest(least(finished, now()), base)
+		            when type = 'moved' and (payload ->> 'crossedStart')::boolean and started is not null
+		            then greatest(least(started, now()), base)
+		            else base + (n - 1) * step end
 		  from (
 		    select e.id, e.org_id, e.board_id, e.card_id, e.actor_id, e.type,
 		           e.from_column, e.to_column, e.payload,
+		           c.started_at as started, c.finished_at as finished,
 		           least(c.created_at, now()) as base,
 		           row_number() over (partition by e.card_id
 		                              order by (e.type <> 'created'), e.id) as n,

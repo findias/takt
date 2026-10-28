@@ -326,10 +326,13 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="reports">Export cards for a report</h3>
 <p>When someone asks you to &#34;send a spreadsheet&#34;, open the <strong>Reports</strong> tab. Choose the <strong>Period</strong> — two dates, or <strong>30 days</strong>, <strong>90 days</strong>, <strong>This quarter</strong>, <strong>Last quarter</strong> — and narrow it down if you need to: <strong>Boards</strong>, <strong>Subdivisions</strong> (a subdivision includes the ones nested in it), <strong>Assignees</strong>, <strong>Labels</strong>, <strong>Priority</strong>, <strong>State</strong>, and an <strong>Iteration</strong> once a single board is chosen. Empty means &#34;any&#34;. A card is included if it was alive during the period: created before the period ended and not finished before it began. Its state and age are as of today.</p>
 <p>Pick <strong>Boards</strong> or <strong>Subdivisions</strong> and the <strong>Assignees</strong> list narrows to their people: a subdivision&#39;s members together with its nested subdivisions, a board&#39;s people who can see it, plus anyone assigned on its cards.</p>
-<p>Below the selection you see how many cards match, and <strong>By assignee</strong> — what each person has under the current selection: cards, done, in progress, the median cycle time. A card with several assignees counts for each. Click a name and the selection, and the file, become that person&#39;s. Cards with nobody on them are a row of their own.</p>
+<p>Below the selection you see how many cards match, and <strong>By assignee</strong> — what each person has under the current selection: cards, done, in progress, the median cycle time and the median time in progress. A card with several assignees counts for each. Click a name and the selection, and the file, become that person&#39;s. Cards with nobody on them are a row of their own.</p>
 <p>Then download:</p>
 <ul>
 <li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done and discarded in the period, work in progress, cycle time and age (median and 85th percentile), throughput by week and a cumulative flow diagram — both with charts — iteration completion, a breakdown by subdivision and one by assignee. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables: among them **External numbers** — the card&#39;s external task numbers, RDS, service requests, change requests and problems in one cell, <code>RDS 12345; Problem PRB-7</code> — and, last, the whole <strong>Description</strong>. Everything on the summary is counted from those same rows.</li>
+</ul>
+<p>  The time in progress column, in days, next to the cycle time is how long the card   actually stood in work columns, by its move history: a return to the   queue and waiting in a queue column in the middle of the flow are not   counted, so the gap between the two is waiting. It is empty for a card   not yet started and for one whose history is incomplete — imported   from another system, or moved from a board you cannot see.</p>
+<ul>
 <li><strong>CSV</strong> holds the same rows without the summary.</li>
 <li><strong>JSON</strong> is for a program: field names as in the API, values as codes (<code>done</code>, <code>high</code>).</li>
 </ul>
@@ -417,7 +420,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <p><code>--reuse-values</code> is mandatory: without it the settings revert to the chart defaults.</p>
 <h3 id="close-registration">Close registration</h3>
 <p>Set <code>signup=closed</code> at install or upgrade time. Then only the owner creates organisations, and the &#34;create a new organisation&#34; button disappears from the sign-in screen.</p>
-<footer>Takt, version v0.5.1-10-g5a2d916-dirty. Built from howto.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.1-12-gdd0ca76-dirty. Built from howto.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

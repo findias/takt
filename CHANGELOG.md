@@ -40,6 +40,16 @@ together from **Move selected**): pick the board and the column. The card
   can. The old board's **Flow** says how many cards moved to other
   boards. Before, the only way was to create the card again on the
   other board.
+- **Reports show the real time in progress.** The **Data** sheet and CSV
+  have **Time in progress, days** after the cycle time: how long the card
+  stood in work columns by its move history, without returns to the
+  queue and waiting in queue columns. **By assignee**, on the screen and
+  on the **Summary** sheet, has its median. Cycle time counts from the
+  first start to done, waiting included, and with imported cards it ran
+  to hundreds of days; the gap between the two numbers is now visible.
+  Imported cards and cards moved from a board you cannot see leave the
+  cell empty: their history is not here. JSON has `workDays` and
+  `workTimeP50`.
 
 ## v0.5.2 — 26 October 2026
 
