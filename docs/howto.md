@@ -815,7 +815,9 @@ card and it opens at the side, so the problem can be fixed in place;
 when nothing is stuck, the page says so. Then the **Summary
 for the period** — the same numbers the file opens with, counted by the
 same selection, so you can answer "how much did we close this quarter"
-without downloading anything: done and discarded within the period,
+without downloading anything: done, created and discarded within the
+period, each with "was" — the same number for the previous period of
+the same length, right before this one, and the difference —,
 in progress now, cycle time and age of unfinished work (half and 85 of
 100), **Due dates** — what share of the cards done in the period with a
 due date were done on time, and how many are overdue now —, throughput
@@ -843,7 +845,8 @@ file would hold only the header.
 Then download:
 
 - **Excel (XLSX)** opens on a **Summary** sheet: what was selected,
-  cards done and discarded in the period, work in progress, cycle time
+  cards done, created and discarded in the period (with the previous
+  period of the same length and the difference beside), work in progress, cycle time
   and age (median and 85th percentile), due dates (done with a due date,
   of them on time, overdue now), blocks in the period by reason, done
   and created by week with a chart, where the effort went by label and

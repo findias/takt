@@ -66,6 +66,17 @@ type Summary = {
   }[]
   teams: { team: string; cards: number; finished: number; wip: number; cycleTimeP50: number | null; cycleTimeP85: number | null }[]
   effort: { finished: number; unit: string; mixedUnits: boolean; byLabel: ShareRow[]; byEpic: ShareRow[] }
+  previous: {
+    from: string
+    to: string
+    finished: number
+    discarded: number
+    created: number
+    cycleTime: Percentiles | null
+    dueFinished: number
+    dueOnTime: number
+    blockedDays: number
+  }
   people: PersonRow[]
 }
 type ShareRow = { name: string; scope?: 'org' | 'team' | 'board'; scopeName?: string; finished: number; weight: number; unestimated: number }
@@ -460,21 +471,33 @@ function AttentionView({ list, onOpen }: { list: Attention; onOpen: (c: Attentio
 function SummaryView({ sum }: { sum: Summary }) {
   const s = t.reports
   const days = (v: number) => s.days(round(v))
+  // Прошлый период (42.3, срез 9): под числом — что было и разница
+  // со знаком. Направление читается по знаку; что хорошо, а что
+  // плохо, решает читающий: меньше сделанного и меньше цикла — разное.
+  const prev = sum.previous
+  const was = (cur: number, before: number, show: (v: number) => string) => {
+    const d = round(cur - before)
+    return s.was(show(before), d === 0 ? s.same : (d > 0 ? '+' : '−') + show(Math.abs(d)))
+  }
+  const createdNow = sum.throughput.reduce((n, w) => n + w.created, 0)
   return (
     <>
       <section className="stack reports-group">
         <h3 className="section-title">{s.summary}</h3>
         <div className="row row--tight">
-          <Figure label={s.finished} value={String(sum.finished)} />
-          <Figure label={s.discarded} value={String(sum.discarded)} />
+          <Figure label={s.finished} value={String(sum.finished)} note={was(sum.finished, prev.finished, String)} />
+          <Figure label={s.created} value={String(createdNow)} note={was(createdNow, prev.created, String)} />
+          <Figure label={s.discarded} value={String(sum.discarded)} note={was(sum.discarded, prev.discarded, String)} />
           <Figure label={s.wip} value={String(sum.wip)} />
         </div>
         <div className="row row--tight">
           <span className="small report-name">{s.cycle}</span>
           {sum.cycleTime ? (
             <>
-              <Figure label={s.half} value={days(sum.cycleTime.p50)} />
-              <Figure label={s.p85} value={days(sum.cycleTime.p85)} />
+              <Figure label={s.half} value={days(sum.cycleTime.p50)}
+                note={prev.cycleTime ? was(sum.cycleTime.p50, prev.cycleTime.p50, days) : undefined} />
+              <Figure label={s.p85} value={days(sum.cycleTime.p85)}
+                note={prev.cycleTime ? was(sum.cycleTime.p85, prev.cycleTime.p85, days) : undefined} />
             </>
           ) : (
             <span className="muted small">{s.noCycle}</span>
@@ -496,7 +519,10 @@ function SummaryView({ sum }: { sum: Summary }) {
             <>
               {sum.due.finished > 0 ? (
                 <Figure label={s.onTime(sum.due.finished)}
-                  value={s.percent(Math.round((100 * sum.due.onTime) / sum.due.finished))} />
+                  value={s.percent(Math.round((100 * sum.due.onTime) / sum.due.finished))}
+                  note={prev.dueFinished > 0
+                    ? was(Math.round((100 * sum.due.onTime) / sum.due.finished), Math.round((100 * prev.dueOnTime) / prev.dueFinished), s.percent)
+                    : undefined} />
               ) : (
                 <Figure label={s.noneDueDone} value={String(sum.due.withDue)} />
               )}
@@ -506,7 +532,7 @@ function SummaryView({ sum }: { sum: Summary }) {
             <span className="muted small">{s.noDue}</span>
           )}
         </div>
-        <p className="muted small">{s.summaryHint}</p>
+        <p className="muted small">{s.summaryHint} {s.previousHint(dateWords(prev.from), dateWords(prev.to))}</p>
       </section>
 
       <section className="stack reports-group">
@@ -532,7 +558,7 @@ function SummaryView({ sum }: { sum: Summary }) {
           <>
             <div className="row row--tight">
               <Figure label={s.blockedCards} value={String(sum.blocks.cards)} />
-              <Figure label={s.blockedDays} value={s.days(sum.blocks.days)} />
+              <Figure label={s.blockedDays} value={s.days(sum.blocks.days)} note={was(sum.blocks.days, prev.blockedDays, s.days)} />
               <Figure label={s.blockedPerCard} value={s.days(round(sum.blocks.days / sum.blocks.cards))} />
             </div>
             <div className="table-wrap">
@@ -706,11 +732,12 @@ function ShareTable({ rows, total, label, nameHead, none, unit, withScope }: {
   )
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+function Figure({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="figure">
       <span className="figure-value">{value}</span>
       <span className="muted small">{label}</span>
+      {note && <span className="muted small figure-note">{note}</span>}
     </div>
   )
 }

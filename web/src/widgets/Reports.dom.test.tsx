@@ -89,6 +89,7 @@ beforeEach(() => {
             ],
             byEpic: [{ name: 'Переезд', finished: 2, weight: 5, unestimated: 0 }, { name: '', finished: 2, weight: 5, unestimated: 0 }],
           },
+          previous: { from: '2026-09-08', to: '2026-09-30', finished: 3, discarded: 0, created: 1, cycleTime: { p50: 5, p85: 8 }, dueFinished: 2, dueOnTime: 2, blockedDays: 3 },
           people: [
             { userId: 'u-boris', name: 'Борис Дятлов', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 4, workTimeP50: 2 },
             { userId: null, name: '', cards: 1, finished: 0, wip: 0, cycleTimeP50: null, cycleTimeP85: null, workTimeP50: null },
@@ -149,6 +150,10 @@ it('сводка за период видна на экране под тем ж
   // Сроки: доля в срок от сделанных со сроком, просроченные — числом.
   expect(screen.getByText('в срок из 4 сделанных со сроком').previousSibling?.textContent).toBe('75 %')
   expect(screen.getByText('просрочено сейчас').previousSibling?.textContent).toBe('2')
+  // Прошлый период: «было» и разница со знаком под числом.
+  expect(screen.getByText('было 3, −2')).toBeTruthy()
+  expect(screen.getByText('было 5 дн., −1,5 дн.')).toBeTruthy()
+  expect(screen.getByText('было 100 %, −25 %')).toBeTruthy()
   // Блокировки: сумма дней и причины как написали; пустая — словами.
   const reasons = screen.getByRole('table', { name: 'По причинам' })
   expect(within(reasons).getByText('ждём акт')).toBeTruthy()

@@ -4753,6 +4753,10 @@ textarea.description {
 .reports .report-name {
   color: var(--ink-2);
 }
+/* «Было …» под числом сводки: третьей строкой, тише подписи. */
+.figure-note {
+  font-size: var(--text-xs, 0.75rem);
+}
 /* Число дней «без движения» на «Потоке»: три цифры, не строка. */
 .flow-stale {
   width: 4.5rem;

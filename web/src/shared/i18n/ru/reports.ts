@@ -58,6 +58,10 @@ export const reports = {
     summaryHint:
       'Те же числа, что на листе «Сводка» файла, тем же отбором. Сделано и отброшено — внутри периода; в работе и возраст — на сегодня.',
     summaryFailed: 'Не удалось собрать сводку',
+    created: 'Создано',
+    was: (before: string, diff: string) => `было ${before}, ${diff}`,
+    same: 'без изменений',
+    previousHint: (from: string, to: string) => `«Было» — прошлый период той же длины, ${from} — ${to}, тем же отбором.`,
     discarded: 'Отброшено',
     cycle: 'Время цикла',
     age: 'Возраст незавершённого',

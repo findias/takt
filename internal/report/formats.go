@@ -297,13 +297,25 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		}
 		w.blank()
 
-		w.row(bold(n("Карточек в выгрузке")), num(float64(sum.Cards)))
-		w.row(str(n("Сделано за период")), num(float64(sum.Finished)))
-		w.row(str(n("Отброшено за период")), num(float64(sum.Discarded)))
+		// Третий и четвёртый столбцы — прошлый период той же длины встык
+		// к началу и разница (42.3, срез 9); у «на сегодня» прошлого нет.
+		prev := sum.Previous
+		w.row(bold(n("Карточек в выгрузке")), num(float64(sum.Cards)), bold(n("Прошлый период")), bold(n("Разница")))
+		w.row(str(n("Прошлый период")), isoDay(prev.From), isoDay(prev.To))
+		diff := func(cur, was float64) cell { return dec(cur - was) }
+		w.row(str(n("Сделано за период")), num(float64(sum.Finished)), num(float64(prev.Finished)), diff(float64(sum.Finished), float64(prev.Finished)))
+		w.row(str(n("Создано за период")), num(float64(created(sum.Throughput))), num(float64(prev.Created)), diff(float64(created(sum.Throughput)), float64(prev.Created)))
+		w.row(str(n("Отброшено за период")), num(float64(sum.Discarded)), num(float64(prev.Discarded)), diff(float64(sum.Discarded), float64(prev.Discarded)))
 		w.row(str(n("В работе сейчас")), num(float64(sum.WIP)))
 		if sum.CycleTime != nil {
-			w.row(str(n("Время цикла, медиана, дней")), dec(sum.CycleTime.P50))
-			w.row(str(n("Время цикла, 85-я процентиль, дней")), dec(sum.CycleTime.P85))
+			p50, p85 := cell{}, cell{}
+			d50, d85 := cell{}, cell{}
+			if prev.CycleTime != nil {
+				p50, p85 = dec(prev.CycleTime.P50), dec(prev.CycleTime.P85)
+				d50, d85 = diff(sum.CycleTime.P50, prev.CycleTime.P50), diff(sum.CycleTime.P85, prev.CycleTime.P85)
+			}
+			w.row(str(n("Время цикла, медиана, дней")), dec(sum.CycleTime.P50), p50, d50)
+			w.row(str(n("Время цикла, 85-я процентиль, дней")), dec(sum.CycleTime.P85), p85, d85)
 		}
 		if sum.Age != nil {
 			w.row(str(n("Возраст незавершённого, медиана, дней")), dec(sum.Age.P50))
@@ -318,7 +330,11 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			if sum.Due.Finished > 0 {
 				share = pct(float64(sum.Due.OnTime) / float64(sum.Due.Finished))
 			}
-			w.row(str(n("Из них в срок")), num(float64(sum.Due.OnTime)), share)
+			wasShare := cell{}
+			if prev.DueFinished > 0 {
+				wasShare = pct(float64(prev.DueOnTime) / float64(prev.DueFinished))
+			}
+			w.row(str(n("Из них в срок")), num(float64(sum.Due.OnTime)), share, wasShare)
 			w.row(str(n("Просрочено сейчас")), num(float64(sum.Due.OverdueNow)))
 		}
 		w.blank()
@@ -328,7 +344,7 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		if sum.Blocks.Cards > 0 {
 			w.row(bold(n("Блокировки за период")))
 			w.row(str(n("Карточек в блокировке")), num(float64(sum.Blocks.Cards)))
-			w.row(str(n("Дней в блокировке, всего")), dec(sum.Blocks.Days))
+			w.row(str(n("Дней в блокировке, всего")), dec(sum.Blocks.Days), dec(prev.BlockedDays), diff(sum.Blocks.Days, prev.BlockedDays))
 			w.row(bold(n("Причина")), bold(n("Карточек")), bold(n("Дней")))
 			for _, r := range sum.Blocks.Reasons {
 				reason := r.Reason
@@ -476,6 +492,15 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		}
 	}
 	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 12, 10, 10, 10}, flow, []float64{14, 12, 12, 12})
+}
+
+// created — заведено за период: сумма по неделям.
+func created(weeks []WeekCount) int {
+	n := 0
+	for _, w := range weeks {
+		n += w.Created
+	}
+	return n
 }
 
 // chartCol — колонка, с которой начинаются диаграммы: правее таблиц

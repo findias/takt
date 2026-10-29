@@ -208,6 +208,10 @@ type Summary struct {
 	// Effort — куда ушли силы за период (ROADMAP 42.3, срез 2): сделанное
 	// по меткам и по эпикам, числом и весом.
 	Effort Effort `json:"effort"`
+	// Previous — те же главные числа за прошлый период той же длины,
+	// встык к началу (ROADMAP 42.3, срез 9): «больше или меньше, чем
+	// в прошлый раз» — обычный вопрос к любому отчёту.
+	Previous Previous `json:"previous"`
 	// People — разрез по исполнителям (ROADMAP 37.1): «что делал
 	// Борис» без фильтра в Excel.
 	People []PersonRow `json:"people"`
@@ -269,6 +273,21 @@ type ShareRow struct {
 	Weight    float64 `json:"weight"`
 	// Unestimated — сколько из сделанных без оценки: вес тогда меньше правды.
 	Unestimated int `json:"unestimated"`
+}
+
+// Previous — главные числа прошлого периода, посчитанные тем же отбором
+// по карточкам, жившим в нём. Разницу и направление считает экран.
+// WIP и возраст здесь не нужны: они «на сегодня», прошлого у них нет.
+type Previous struct {
+	From        string       `json:"from"`
+	To          string       `json:"to"`
+	Finished    int          `json:"finished"`
+	Discarded   int          `json:"discarded"`
+	Created     int          `json:"created"`
+	CycleTime   *Percentiles `json:"cycleTime"`
+	DueFinished int          `json:"dueFinished"`
+	DueOnTime   int          `json:"dueOnTime"`
+	BlockedDays float64      `json:"blockedDays"`
 }
 
 // Chosen — названия выбранного в отборе; пустой список — «любые».
@@ -858,8 +877,57 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 	if sum.Effort, err = effort(ctx, tx, next); err != nil {
 		return sum, err
 	}
+	if sum.Previous, err = previous(ctx, tx, f); err != nil {
+		return sum, err
+	}
 	sum.People, err = personRows(ctx, tx, f)
 	return sum, err
+}
+
+// previous — главные числа прошлого периода: той же длины, встык
+// к началу нынешнего, тем же отбором. Считается своим подзапросом,
+// а не временной таблицей: карточки, жившие в прошлом периоде, —
+// другой набор.
+func previous(ctx context.Context, tx pgx.Tx, f Filter) (Previous, error) {
+	length := f.To.Sub(f.From) + 24*time.Hour
+	p := f
+	p.To = f.From.AddDate(0, 0, -1)
+	p.From = f.From.Add(-length)
+	out := Previous{From: p.From.Format(time.DateOnly), To: p.To.Format(time.DateOnly)}
+	where, args := p.sql()
+	var c50, c85 *float64
+	// #sql-склейка: условие собирает Filter.sql из постоянных кусков, значения идут параметрами
+	err := tx.QueryRow(ctx, `
+		with prev as (select c.id `+where+`),
+		done as (
+			select c.* from prev p join cards c on c.id = p.id
+			 where c.outcome = 'done' and c.finished_at >= $1 and c.finished_at < $2
+		)
+		select (select count(*) from done),
+		       (select count(*) from prev p join cards c on c.id = p.id
+		         where c.outcome = 'discarded' and c.finished_at >= $1 and c.finished_at < $2),
+		       (select count(*) from prev p join cards c on c.id = p.id
+		         where c.created_at >= $1 and c.created_at < $2),
+		       (select percentile_cont(0.50) within group (order by extract(epoch from (finished_at - started_at)) / 86400.0)
+		          from done where started_at is not null),
+		       (select percentile_cont(0.85) within group (order by extract(epoch from (finished_at - started_at)) / 86400.0)
+		          from done where started_at is not null),
+		       (select count(*) from done where due_on is not null),
+		       (select count(*) from done where due_on is not null
+		           and (finished_at at time zone 'UTC')::date <= due_on),
+		       (select coalesce(sum(extract(epoch from (least(coalesce(x.unblocked_at, now()), $2::timestamptz)
+		                                              - greatest(x.blocked_at, $1::timestamptz))) / 86400.0), 0)
+		          from card_blocks x join prev p on p.id = x.card_id
+		         where x.blocked_at < $2 and coalesce(x.unblocked_at, now()) > $1)`, args...).
+		Scan(&out.Finished, &out.Discarded, &out.Created, &c50, &c85, &out.DueFinished, &out.DueOnTime, &out.BlockedDays)
+	if err != nil {
+		return out, err
+	}
+	if c50 != nil {
+		out.CycleTime = &Percentiles{P50: *round2(c50), P85: *round2(c85)}
+	}
+	out.BlockedDays = *round2(&out.BlockedDays)
+	return out, nil
 }
 
 // effort — куда ушли силы: сделанное за период по меткам (только

@@ -70,6 +70,14 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Compared with the previous period.** Under the main numbers of
+  the summary on **Reports** — done, created, discarded, cycle time,
+  the share done on time, days blocked — a line says what the number
+  was in the previous period of the same length, right before this
+  one, under the same selection, and the difference with its sign. The
+  **Summary** sheet has the previous period and the difference in two
+  columns beside. JSON `summary.previous` holds the numbers and the
+  period's dates.
 - **Where the effort went.** The summary on **Reports** and the
   **Summary** sheet break work done in the period down by label (with
   the label's scope: organisation-wide, a subdivision's or a board's)

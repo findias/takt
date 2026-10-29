@@ -692,3 +692,26 @@ func TestEffortByLabelAndEpic(t *testing.T) {
 		t.Errorf("по эпикам: %v — ожидались Переезд 1, без эпика 2", byEpic)
 	}
 }
+
+// Прошлый период (ROADMAP 42.3, срез 9): той же длины, встык к началу,
+// тем же отбором; сделанное в нём — там, а не здесь, и наоборот.
+func TestSummaryCarriesThePreviousPeriod(t *testing.T) {
+	f := newFixture(t)
+	f.card(spec{title: "Сделана в этом", created: 30, started: 5, finished: 2, outcome: "done"})
+	f.card(spec{title: "Сделана в прошлом", created: 30, started: 25, finished: 20, outcome: "done"})
+	f.card(spec{title: "Заведена в прошлом", created: 18, started: -1, finished: -1})
+
+	c := f.export(f.owner, period(14))
+	if c.sum.Finished != 1 {
+		t.Errorf("в этом периоде сделано %d, ожидалась одна", c.sum.Finished)
+	}
+	p := c.sum.Previous
+	if p.Finished != 1 || p.Created != 1 || p.CycleTime == nil || p.CycleTime.P50 < 4.9 || p.CycleTime.P50 > 5.1 {
+		t.Errorf("прошлый период %+v; ожидалось сделано 1, создано 1, цикл около 5 дней", p)
+	}
+	from, _ := time.Parse(time.DateOnly, p.From)
+	to, _ := time.Parse(time.DateOnly, p.To)
+	if to.Sub(from) != 13*24*time.Hour || !to.AddDate(0, 0, 1).Equal(period(14).From) {
+		t.Errorf("прошлый период %s — %s: ожидалось 14 дней встык к началу", p.From, p.To)
+	}
+}

@@ -57,6 +57,10 @@ export const reports: typeof ru = {
     summaryHint:
       'The same numbers as on the Summary sheet of the file, under the same selection. Done and discarded are within the period; in progress and age are as of today.',
     summaryFailed: 'Could not build the summary',
+    created: 'Created',
+    was: (before: string, diff: string) => `was ${before}, ${diff}`,
+    same: 'no change',
+    previousHint: (from: string, to: string) => `“Was” is the previous period of the same length, ${from} – ${to}, under the same selection.`,
     discarded: 'Discarded',
     cycle: 'Cycle time',
     age: 'Age of unfinished work',
