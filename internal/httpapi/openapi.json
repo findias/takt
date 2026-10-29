@@ -72,6 +72,8 @@
               "attachments_full",
               "attachment_type",
               "attachment_missing",
+              "status_unknown",
+              "status_not_epic",
               "password_short",
               "password_link_invalid",
               "password_link_own",
@@ -284,6 +286,7 @@
           "card.done",
           "card.undone",
           "card.percent_set",
+          "card.status_set",
           "card.archived",
           "card.restored"
         ]

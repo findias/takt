@@ -99,7 +99,22 @@ bar, **When it will be done** gives three dates — half the chances, 85
 and 95 of 100 — forecast the way **Flow** forecasts, from the past
 weeks of the boards where the parts lie, and a chart of how the scope
 grew against what was done. With no finished part yet it says there is
-nothing to forecast from rather than inventing a date. Moving from Jira? `takt-fetch` brings the epics as a portfolio board of
+nothing to forecast from rather than inventing a date.
+
+The bar and the forecast count the parts; what the person leading the
+epic thinks of it is a **status in words**. At the top of the epic's
+**Tasks** tab, **Status** shows the latest one — **on track**, **at
+risk** or **off track** — with who said it, when, and a note; the same
+word sits on the epic card on the portfolio. **Update status…** records
+a new one: pick the word, add a note if there is something to say, and
+**Save**. Statuses are never edited or deleted, a new one goes on top
+and the old ones stay in **Status history**: "when did this become at
+risk" is a question the history answers. Anyone who can write to the
+portfolio board can set the status of any epic on it; a viewer sees
+the status and the history but cannot set one. The card's history and
+subscriptions get `card.status_set` with the word and the note.
+
+Moving from Jira? `takt-fetch` brings the epics as a portfolio board of
 the package, and their issues keep them as parents. An existing board becomes a portfolio (and
 back) under **How we work** in **Flow** — **Board level**. The board
 list marks portfolios **epic portfolio**.

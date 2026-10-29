@@ -689,6 +689,9 @@ export type Card = {
    *  (этап 33.5). `total` и `done` — листья, как у полосы; `blocked` —
    *  стоящих карточек доски на любой глубине. */
   teams?: TeamShare[]
+  /** Последний статус эпика словами (42.3, срез 10) — только у карточки
+   *  портфеля, которой его ставили. История — `api.epicStatuses`. */
+  status?: EpicStatus
   /** Счёт по листьям всего поддерева — только у карточки с внуками
    *  (этап 32.3). `stuck` — заблокированных глубже прямых частей: о прямых
    *  клиент знает из связей доски. */
@@ -721,6 +724,21 @@ export type Card = {
   /** Процент выполнения руками (ROADMAP 38). Пусто — считается сам:
    *  из частей и отметки «сделано». Старый сервер поля не присылает. */
   percent?: number | null
+}
+
+/** Статус эпика словами: от спокойного к тревожному. Список закрыт
+ *  сервером (`kinds` в ответе истории). */
+export type EpicStatusKind = 'on_track' | 'at_risk' | 'off_track'
+export const EPIC_STATUS_KINDS: EpicStatusKind[] = ['on_track', 'at_risk', 'off_track']
+
+export type EpicStatus = {
+  id: string
+  cardId: string
+  status: EpicStatusKind
+  note: string
+  author: string | null
+  authorId: string | null
+  at: string
 }
 
 export type TeamShare = {
@@ -1352,6 +1370,11 @@ export const api = {
     return request<Attachment>('POST', `/api/boards/${boardId}/cards/${cardId}/attachments`, form)
   },
   deleteAttachment: (id: string) => request<void>('DELETE', `/api/attachments/${id}`),
+  /** История статусов эпика, от нового к старому (42.3, срез 10). */
+  epicStatuses: (cardId: string) =>
+    request<{ statuses: EpicStatus[]; kinds: EpicStatusKind[] }>('GET', `/api/cards/${cardId}/statuses`),
+  setEpicStatus: (boardId: string, cardId: string, status: EpicStatusKind, note: string) =>
+    request<EpicStatus>('POST', `/api/boards/${boardId}/cards/${cardId}/statuses`, { status, note }),
   commentRevisions: (commentId: string) =>
     request<{ revisions: string[] }>('GET', `/api/comments/${commentId}/revisions`),
 

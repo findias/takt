@@ -12,10 +12,15 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Two migrations, safe for the running version.** `0080` adds two
+**Three migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
-adds nullable `boards.stale_days`. Pods of v0.5.x keep working on them
-and ignore all three.
+adds nullable `boards.stale_days`; `0082` adds the table
+`epic_statuses`, which the old version never touches. Pods of v0.5.x
+keep working on all of it.
+
+A new event, `card.status_set`, carries an epic's status in words
+(`status`: `on_track`, `at_risk` or `off_track`) and its `note` —
+subscriptions that list events by name need it added.
 
 A new operation, `MOVE_CARD_TO_BOARD` `{cardId, boardId, toColumnId?}`,
 moves a card to another board of the same level; the key or person
@@ -78,6 +83,17 @@ together from **Move selected**): pick the board and the column. The card
   growth of the scope is visible apart from progress. With no finished
   part the forecast is null, not a date. The screen's own call is
   `GET /api/cards/{id}/forecast`, not in the contract.
+- **An epic has a status in words.** At the top of the epic's **Tasks**
+  tab on a portfolio board, **Status** shows the latest — **on track**,
+  **at risk** or **off track** — with who said it, when, and a note;
+  the same word sits on the epic card on the portfolio. **Update
+  status…** records a new one; statuses are never edited, the old ones
+  stay in **Status history**. Anyone who can write to the portfolio
+  board sets the status of any epic on it; a viewer only reads. The
+  card's history gets `card.status_set` with the word and the note.
+  The screen's own calls are `GET /api/cards/{id}/statuses` and
+  `POST /api/boards/{id}/cards/{cardId}/statuses`, not in the
+  contract; `status` on a card in the board snapshot is the latest one.
 - **Compared with the previous period.** Under the main numbers of
   the summary on **Reports** — done, created, discarded, cycle time,
   the share done on time, days blocked — a line says what the number

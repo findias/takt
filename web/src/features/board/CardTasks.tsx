@@ -14,6 +14,7 @@ import type { CardDetails, Related } from '../../entities/card/model.ts'
 import { t } from '../../shared/i18n/index.ts'
 import { boardPath, navigate } from '../../shared/router/index.ts'
 import { EpicForecast } from './EpicForecast.tsx'
+import { EpicStatusBlock } from './EpicStatus.tsx'
 
 /**
  * Вкладка «Задачи» карточки: заявки сервис-деска, родитель, подзадачи
@@ -80,6 +81,11 @@ export function CardTasks({
           onLink={(epicId) => onLink(epicId, card.id, 'subtask')}
           onUnlink={(epicId) => onUnlink(epicId, card.id, 'subtask')}
         />
+      )}
+      {/* На портфеле первым — статус словами (42.3, срез 10): за ним
+          руководство и открывает эпик. */}
+      {base.info.level === 'portfolio' && (
+        <EpicStatusBlock boardId={base.info.id} cardId={card.id} current={card.status} canEdit={canEdit} />
       )}
       <Refs
         refs={base.cardRefs[card.id] ?? []}

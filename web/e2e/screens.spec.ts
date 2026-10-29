@@ -290,6 +290,19 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.screenshot({ path: `${SHOTS}/16-отчёт-итерации.png` })
   await backToBoard(page, boardUrl)
 
+  // Эпик на портфеле: статус словами с историей, прогноз (42.3).
+  await page.getByRole('button', { name: 'Все доски' }).click()
+  // Не openBoard: у портфеля первая колонка — «Идея», а не «Очередь».
+  await page.getByRole('button', { name: 'Портфель', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
+  await page.locator('.card-title').first().click()
+  await page.getByRole('tab', { name: 'Задачи' }).click()
+  await page.getByRole('button', { name: 'Обновить статус…' }).click()
+  await page.getByText('История статусов').click()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: `${SHOTS}/16б-эпик-статус.png`, fullPage: true })
+  await backToBoard(page, boardUrl)
+
   // Доступ к доске — прямо из её шапки.
   await page.getByRole('button', { name: /Видна/ }).click()
   await page.waitForTimeout(400)

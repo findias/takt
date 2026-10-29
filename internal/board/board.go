@@ -216,6 +216,9 @@ type Card struct {
 	// (этап 33.5). Есть только у карточки портфеля с частями на других
 	// досках.
 	Teams []TeamShare `json:"teams,omitempty"`
+	// Status — последний статус словами (42.3, срез 10): только у карточки
+	// портфеля, которой его ставили. История — отдельным запросом.
+	Status *EpicStatus `json:"status,omitempty"`
 	// Открытая блокировка, если есть.
 	Blocked *Block `json:"blocked,omitempty"`
 	// Сколько реплик в обсуждении. Считается запросом на доску, как
@@ -862,6 +865,15 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 	for id, t := range shares {
 		if card := byID[id]; card != nil {
 			card.Teams = t
+		}
+	}
+	statuses, err := latestStatuses(ctx, tx, &boardID, nil)
+	if err != nil {
+		return err
+	}
+	for id, st := range statuses {
+		if card := byID[id]; card != nil {
+			card.Status = st
 		}
 	}
 

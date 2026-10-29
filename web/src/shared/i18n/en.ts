@@ -236,6 +236,7 @@ export const en: typeof ru = {
       'card.done': 'Work marked done',
       'card.undone': '“Done” mark removed',
       'card.percent_set': 'Completion changed',
+      'card.status_set': 'Epic status set',
       'card.archived': 'Card archived',
       'card.restored': 'Card restored to the board',
     } as Record<string, string>,
@@ -699,6 +700,9 @@ export const en: typeof ru = {
     select: (title: string) => `Select “${title}”`,
     epicFilter: (title: string) => `Epic “${title}”: show only its work`,
     teams: 'Where the epic’s work is',
+    epicStatus: 'Epic status',
+    statusWords: { on_track: 'on track', at_risk: 'at risk', off_track: 'off track' },
+    statusTitle: (word: string, author: string, when: string) => `Epic status: ${word}. ${author}, ${when}`,
     teamShare: (key: string, done: number, total: number, blocked: number) =>
       blocked > 0 ? `${key} ${done}/${total} · ${blocked} stuck` : `${key} ${done}/${total}`,
     teamShareTitle: (board: string, done: number, total: number, blocked: number) =>

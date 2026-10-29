@@ -142,6 +142,9 @@ test('остальные события переводятся по типу', (
   assert.equal(eventText(event('blocked', { reason: 'ждём стенд' })), 'заблокирована: ждём стенд')
   assert.equal(eventText(event('unblocked')), 'блокировка снята')
   assert.equal(eventText(event('linked', { kind: 'subtask' })), 'связана: подзадача')
+  // Статус эпика (42.3, срез 10): слово — из каталога, пояснение — как сказано.
+  assert.equal(eventText(event('status_set', { status: 'at_risk', note: 'смежники молчат' })), 'статус эпика: под угрозой — смежники молчат')
+  assert.equal(eventText(event('status_set', { status: 'on_track' })), 'статус эпика: идёт')
 })
 
 test('срок в журнале — словами и без отсчёта от сегодня', () => {

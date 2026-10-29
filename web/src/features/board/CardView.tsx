@@ -33,6 +33,8 @@ import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { SubtaskRow } from './SubtaskRow.tsx'
+import { StatusChip } from './StatusChip.tsx'
+import { statusWord, timeText } from '../../entities/feed/model.ts'
 import { boardPath, navigate } from '../../shared/router/index.ts'
 import {
   ArchiveIcon,
@@ -988,6 +990,19 @@ function CardViewInner({
               с отбором по этому эпику: следующий вопрос после «у ПОСТ
               стоит одна» — «какая». Стоящее — словом, а не цветом:
               тревога на карточке одна, и её уже подняла полоса. */}
+          {/* Статус словами (42.3, срез 10): одно слово цветом тревожности,
+              автор и дата — в подсказке. Полоса говорит «сколько», статус —
+              «как это оценивает ведущий». */}
+          {card?.status && (
+            <StatusChip
+              status={card.status.status}
+              title={t.cardView.statusTitle(
+                statusWord(card.status.status),
+                card.status.author ?? t.talk.noName,
+                timeText(card.status.at),
+              )}
+            />
+          )}
           {card?.teams && card.teams.length > 0 && (
             <ul className="card-teams" aria-label={t.cardView.teams}>
               {card.teams.map((s) => {

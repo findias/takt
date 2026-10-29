@@ -11,6 +11,9 @@ package demo
 // песочнице не остаётся ни одной кириллической буквы
 // (TestEnglishSandboxHasNoRussian).
 var english = map[string]string{
+	// Статус эпика словами (42.3, срез 10).
+	"Стеллажи едут по графику, релиз склада в итерации.":                       "Shelving is on schedule, the warehouse release is in the iteration.",
+	"Смежники не подтвердили дату переезда, регламент приёмки ждёт их ответа.": "Partners have not confirmed the move date; the intake procedure waits on their answer.",
 	// Перенесённое из прежней системы.
 	"Сверить остатки за июль":                  "Reconcile July stock",
 	"Продлить договор с перевозчиком":          "Renew the carrier contract",

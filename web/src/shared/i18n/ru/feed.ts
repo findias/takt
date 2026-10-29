@@ -39,6 +39,7 @@ export const feed = {
     undone: 'отметка «сделана» снята',
     percentSet: (n: number) => `выполнено ${n}%`,
     percentAuto: 'процент выполнения снова считается сам',
+    statusSet: (word: string, note: string) => (note ? `статус эпика: ${word} — ${note}` : `статус эпика: ${word}`),
     blockedFor: (reason: string) => `заблокирована: ${reason}`,
     blocked: 'заблокирована',
     unblocked: 'блокировка снята',

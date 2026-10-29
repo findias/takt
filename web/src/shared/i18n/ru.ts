@@ -238,6 +238,7 @@ export const ru = {
       'card.done': 'Работа отмечена сделанной',
       'card.undone': 'Отметка «сделана» снята',
       'card.percent_set': 'Изменён процент выполнения',
+      'card.status_set': 'Поставлен статус эпика',
       'card.archived': 'Карточка убрана в архив',
       'card.restored': 'Карточка возвращена на доску',
     } as Record<string, string>,
@@ -699,6 +700,11 @@ export const ru = {
     select: (title: string) => `Выделить «${title}»`,
     epicFilter: (title: string) => `Эпик «${title}»: показать только его работу`,
     teams: 'Где работа эпика',
+    /** Статус эпика словами (42.3, срез 10): слова общие для карточки,
+        панели и ленты — живут в базовом каталоге. */
+    epicStatus: 'Статус эпика',
+    statusWords: { on_track: 'идёт', at_risk: 'под угрозой', off_track: 'сорван' },
+    statusTitle: (word: string, author: string, when: string) => `Статус эпика: ${word}. ${author}, ${when}`,
     teamShare: (key: string, done: number, total: number, blocked: number) =>
       blocked > 0 ? `${key} ${done}/${total} · стоит ${blocked}` : `${key} ${done}/${total}`,
     teamShareTitle: (board: string, done: number, total: number, blocked: number) =>

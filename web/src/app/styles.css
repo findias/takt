@@ -5725,3 +5725,44 @@ a.card-external:hover {
   white-space: nowrap;
   cursor: pointer;
 }
+/* Статус эпика словами (42.3, срез 10). Таблетка метки с тоном той же
+   тревожности: зелёный «идёт», янтарный «под угрозой», розовый «сорван»;
+   слово остаётся и без цвета. На карточке — своей строкой, не в ряду
+   значков команд: значки ведут на доски, статус — нет. */
+.epic-status-chip {
+  align-self: flex-start;
+}
+.epic-status-note {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.epic-status-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.epic-status-kinds legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+}
+.epic-status-kinds label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.epic-status-history summary {
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.epic-status-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

@@ -309,6 +309,31 @@ func (f *filler) settleDeliveries() error {
 
 func (f *filler) owner() string { return f.people[People[0].Email] }
 
+// personID — человек демо по русской почте. При наполнении с нуля
+// он уже в карте; при доливе карта знает только владельца, и остальных
+// находят в базе — по почте той же организации, в её языке.
+func (f *filler) personID(email string) (string, error) {
+	if id := f.people[email]; id != "" {
+		return id, nil
+	}
+	for _, p := range People {
+		if p.Email != email {
+			continue
+		}
+		var id string
+		err := f.db.Pool.QueryRow(f.ctx, `
+			select u.id from users u
+			  join memberships m on m.user_id = u.id and m.org_id = $1
+			 where lower(u.email) = $2`, f.orgID, strings.ToLower(f.email(p))).Scan(&id)
+		if err != nil {
+			return "", fmt.Errorf("человек демо %s: %w", email, err)
+		}
+		f.people[email] = id
+		return id, nil
+	}
+	return "", fmt.Errorf("человека демо %s нет в списке", email)
+}
+
 // --- организация и люди ---
 
 func (f *filler) organization() error {
@@ -960,6 +985,43 @@ func (f *filler) epic() error {
 	}
 	if err != nil {
 		return err
+	}
+	// Статус словами (42.3, срез 10): история из двух записей — сперва
+	// «идёт» от Анны, потом «под угрозой» от Бориса с причиной. Без
+	// истории не видно, что статус — запись о сказанном, а не поле;
+	// без «под угрозой» на портфеле не на чем смотреть тревожный цвет.
+	// Повторная заливка статусов не дублирует: есть хоть один — стоят.
+	var hasStatus bool
+	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select exists (select 1 from epic_statuses where card_id = $1)`,
+			epicID).Scan(&hasStatus)
+	}); err != nil {
+		return err
+	}
+	if !hasStatus {
+		if _, err := f.boards.SetEpicStatus(f.ctx, f.orgID, f.owner(), portfolio, epicID,
+			board.StatusOnTrack, f.w("Стеллажи едут по графику, релиз склада в итерации.")); err != nil {
+			return fmt.Errorf("статус эпика: %w", err)
+		}
+		boris, err := f.personID("boris@example.test")
+		if err != nil {
+			return err
+		}
+		if _, err := f.boards.SetEpicStatus(f.ctx, f.orgID, boris, portfolio, epicID,
+			board.StatusAtRisk, f.w("Смежники не подтвердили дату переезда, регламент приёмки ждёт их ответа.")); err != nil {
+			return fmt.Errorf("статус эпика: %w", err)
+		}
+		// Записи разводятся по датам: две за одну минуту — не история.
+		if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+			_, err := tx.Exec(f.ctx, `
+				update epic_statuses
+				   set created_at = now() - case status when 'on_track' then interval '8 days'
+				                                        else interval '2 days' end
+				 where card_id = $1`, epicID)
+			return err
+		}); err != nil {
+			return err
+		}
 	}
 	// Внешние номера (0077): у эпика — номером, у фичи — адресом. Номер
 	// и адрес на карточке доски выглядят по-разному, и без обоих этого

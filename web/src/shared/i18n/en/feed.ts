@@ -38,6 +38,7 @@ export const feed: typeof ru = {
     undone: '“done” mark removed',
     percentSet: (n: number) => `${n}% complete`,
     percentAuto: 'completion is counted automatically again',
+    statusSet: (word: string, note: string) => (note ? `epic status: ${word} — ${note}` : `epic status: ${word}`),
     blockedFor: (reason: string) => `blocked: ${reason}`,
     blocked: 'blocked',
     unblocked: 'block lifted',

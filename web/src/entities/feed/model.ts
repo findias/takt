@@ -105,6 +105,13 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return t.feed.undone
     case 'percent_set':
       return typeof p.percent === 'number' ? t.feed.percentSet(p.percent) : t.feed.percentAuto
+    // Статус эпика словами (42.3, срез 10): слово — из общего каталога,
+    // пояснение — как сказано.
+    case 'status_set':
+      return t.feed.statusSet(
+        statusWord(p.status),
+        typeof p.note === 'string' ? p.note : '',
+      )
     case 'blocked':
       return typeof p.reason === 'string' ? t.feed.blockedFor(p.reason) : t.feed.blocked
     // Снята тем, что сделали держащую карточку: автор — тот, кто её
@@ -328,4 +335,10 @@ function importedFrom(source: string): string {
 /** Имя системы, откуда перенесли: код источника — «YouGile». */
 export function sourceName(source: string): string {
   return SOURCE_NAMES[source] ?? source
+}
+
+/** Слово статуса эпика по его коду; незнакомый код — как есть. */
+export function statusWord(status: unknown): string {
+  const words: Record<string, string> = t.cardView.statusWords
+  return typeof status === 'string' ? (words[status] ?? status) : ''
 }

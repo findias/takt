@@ -499,6 +499,11 @@ func completeCard(ctx context.Context, tx pgx.Tx, c *Card) error {
 		return err
 	}
 	c.Teams = shares[cardID]
+	statuses, err := latestStatuses(ctx, tx, nil, &cardID)
+	if err != nil {
+		return err
+	}
+	c.Status = statuses[cardID]
 
 	var b Block
 	err = tx.QueryRow(ctx, `
