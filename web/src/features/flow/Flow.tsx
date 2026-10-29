@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Panel, usePanelMode } from '../../shared/ui/Panel.tsx'
 import { api } from '../../shared/api/index.ts'
-import { AgingChart, CumulativeFlow, CycleScatter } from './charts.tsx'
+import { AgingChart, Bars, CumulativeFlow, CycleScatter } from './charts.tsx'
 import { UNIT_NAMES, dateWords } from '../../entities/card/model.ts'
 import type { EstimateUnit, FlowReport } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
@@ -274,27 +274,6 @@ function Figure({ label, value }: { label: string; value: string }) {
     <div className="figure">
       <span className="figure-value">{value}</span>
       <span className="muted small">{label}</span>
-    </div>
-  )
-}
-
-/** Столбики без библиотеки: график из десятка значений — это десяток
- *  прямоугольников, и тащить ради них зависимость незачем. */
-function Bars({ values, labels }: { values: number[]; labels: string[] }) {
-  const top = Math.max(1, ...values)
-  return (
-    <div
-      className="bars"
-      role="img"
-      // Диктору читаются пары «неделя — сколько»: один ряд чисел
-      // без недель не говорит ни о чём, а столбики он не видит.
-      aria-label={t.flow.throughputLabel(values.map((value, i) => `${labels[i]} — ${value}`).join(', '))}
-    >
-      {values.map((value, i) => (
-        <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
-          <div className="bar-fill" style={{ height: `${(value / top) * 100}%` }} />
-        </div>
-      ))}
     </div>
   )
 }

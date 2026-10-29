@@ -24,6 +24,10 @@ func (s *Server) registerReportRoutes(mux *http.ServeMux) {
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReport))
 	mux.HandleFunc("GET /api/reports/cards/count",
 		s.scoped(apiclient.ScopeBoardsRead, s.handleReportCount))
+	// Сводка без строк (ROADMAP 42.3, срез 1): экран показывает её
+	// под отбором, а программе она нужна без 50 000 строк перед ней.
+	mux.HandleFunc("GET /api/reports/summary",
+		s.scoped(apiclient.ScopeBoardsRead, s.handleReportSummary))
 	// Люди под отбор (ROADMAP 37.1–37.2) — для экрана: кого предлагать
 	// в «Исполнителях» и разрез по людям. Ключу ни к чему: в JSON
 	// выгрузки тот же разрез уже есть, в summary.people.
@@ -189,6 +193,22 @@ func (s *Server) handleReportCount(w http.ResponseWriter, r *http.Request, p aut
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]int{"total": n, "limit": report.MaxRows})
+}
+
+// Сводка — тем же отбором и теми же запросами, что лист «Сводка»
+// файла: экран и файл не расходятся по построению.
+func (s *Server) handleReportSummary(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	f, err := reportFilter(r.URL.Query())
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	sum, err := s.reports.Summary(r.Context(), p.OrgID, p.ID, f)
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, sum)
 }
 
 func (s *Server) handleReportPeople(w http.ResponseWriter, r *http.Request, p auth.Principal) {

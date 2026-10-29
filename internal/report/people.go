@@ -2,7 +2,6 @@ package report
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -46,25 +45,21 @@ type People struct {
 	// не выбрано — вся организация. Выбранные в отборе исполнители
 	// входят всегда: иначе выбор пропал бы из списка, хотя остался
 	// в адресе и в отборе.
-	Candidates []Person    `json:"candidates"`
-	Rows       []PersonRow `json:"rows"`
+	Candidates []Person `json:"candidates"`
 }
 
-// People отвечает экрану отчёта: кого предлагать в «Исполнителях»
-// и что каждый делал под нынешний отбор.
+// People отвечает экрану отчёта: кого предлагать в «Исполнителях».
+// Что каждый делал — в сводке (Summary.People): с 42.3 экран берёт
+// её целиком, и считать разрез ещё раз здесь значило бы считать
+// его дважды на каждое движение отбора.
 func (s *Service) People(ctx context.Context, orgID, userID string, f Filter) (People, error) {
-	out := People{Candidates: []Person{}, Rows: []PersonRow{}}
+	out := People{Candidates: []Person{}}
 	if err := f.Check(); err != nil {
 		return out, err
 	}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
 		var err error
-		if out.Candidates, err = candidates(ctx, tx, orgID, f); err != nil {
-			return err
-		}
-		where, args := f.sql()
-		// #sql-склейка: условие собирает Filter.sql из постоянных кусков, значения идут параметрами
-		out.Rows, err = personRows(ctx, tx, `(select c.id `+where+`)`, args, f)
+		out.Candidates, err = candidates(ctx, tx, orgID, f)
 		return err
 	})
 	return out, err
@@ -115,33 +110,30 @@ func candidates(ctx context.Context, tx pgx.Tx, orgID string, f Filter) ([]Perso
 	})
 }
 
-// personRows — разрез по исполнителям над набором карточек source
-// (временная таблица выгрузки или подзапрос отбора). Выбраны
-// исполнители — строки только их: соисполнители выбранного в разрезе
-// «что делал Борис» — чужие строки.
-func personRows(ctx context.Context, tx pgx.Tx, source string, args []any, f Filter) ([]PersonRow, error) {
+// personRows — разрез по исполнителям над временной таблицей отбора
+// (gather). Выбраны исполнители — строки только их: соисполнители
+// выбранного в разрезе «что делал Борис» — чужие строки.
+func personRows(ctx context.Context, tx pgx.Tx, f Filter) ([]PersonRow, error) {
 	next := f.To.AddDate(0, 0, 1)
-	args = append(append([]any{}, args...), next, nonNil(f.Assignees))
-	n := len(args)
-	// #sql-склейка: source — имя временной таблицы или подзапрос Filter.sql, значения идут параметрами
+	args := []any{next, nonNil(f.Assignees)}
 	q := `
 		select a.user_id::text, coalesce(nullif(u.name, ''), u.email, ''), count(*),
-		       count(*) filter (where c.outcome = 'done' and c.finished_at < $` + strconv.Itoa(n-1) + `),
+		       count(*) filter (where c.outcome = 'done' and c.finished_at < $1),
 		       count(*) filter (where c.started_at is not null and c.finished_at is null),
 		       percentile_cont(0.50) within group (order by d.cycle),
 		       percentile_cont(0.85) within group (order by d.cycle),
 		       percentile_cont(0.50) within group (order by d.work)
-		  from ` + source + ` r
+		  from report_cards r
 		  join cards c on c.id = r.id
 		  left join card_assignees a on a.card_id = c.id
 		  left join users u on u.id = a.user_id
 		  left join lateral (` + workDaysLateral + `) w on true
 		  cross join lateral (select
-		       case when c.outcome = 'done' and c.started_at is not null and c.finished_at < $` + strconv.Itoa(n-1) + `
+		       case when c.outcome = 'done' and c.started_at is not null and c.finished_at < $1
 		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle,
-		       case when c.outcome = 'done' and c.finished_at < $` + strconv.Itoa(n-1) + `
+		       case when c.outcome = 'done' and c.finished_at < $1
 		            then w.days end as work) d
-		 where cardinality($` + strconv.Itoa(n) + `::uuid[]) = 0 or a.user_id = any($` + strconv.Itoa(n) + `::uuid[])
+		 where cardinality($2::uuid[]) = 0 or a.user_id = any($2::uuid[])
 		 group by a.user_id, u.name, u.email
 		 order by a.user_id is null, lower(coalesce(nullif(u.name, ''), u.email))`
 	rows, err := tx.Query(ctx, q, args...)

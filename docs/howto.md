@@ -799,11 +799,21 @@ to their people: a subdivision's members together with its nested
 subdivisions, a board's people who can see it, plus anyone assigned on
 its cards.
 
-Below the selection you see how many cards match, and **By assignee** —
-what each person has under the current selection: cards, done, in
-progress, the median cycle time and the median time in progress. A card with several assignees counts
+Below the selection you see how many cards match, then the **Summary
+for the period** — the same numbers the file opens with, counted by the
+same selection, so you can answer "how much did we close this quarter"
+without downloading anything: done and discarded within the period,
+in progress now, cycle time and age of unfinished work (half and 85 of
+100), throughput by week as bars, the cumulative flow diagram,
+**Iteration completion** (taken, done and the share, for iterations
+overlapping the period), a breakdown **By subdivision** — the one that
+runs the card's board — and **By assignee**: what each person has under
+the current selection: cards, done, in progress, the median cycle time
+and the median time in progress. A card with several assignees counts
 for each. Click a name and the selection, and the file, become that
-person's. Cards with nobody on them are a row of their own.
+person's. Cards with nobody on them are a row of their own. When
+nothing matches, there is no summary: the line above already said the
+file would hold only the header.
 
 Then download:
 
@@ -841,7 +851,9 @@ boards you can see are included. One export takes at most 50,000 cards;
 if more match, the screen says how many and asks you to shorten the
 period or pick boards. The address keeps the selection, so the link can
 be sent to someone. The same export is open to integration keys with
-`boards:read`: `GET /api/v1/reports/cards`.
+`boards:read`: `GET /api/v1/reports/cards`; the summary alone, without
+the rows, is `GET /api/v1/reports/summary` with the same parameters —
+it has no card limit.
 
 A selection you repeat — "closed last quarter", "where work gets
 stuck" — is saved under a name with **Save selection as a slice**; it

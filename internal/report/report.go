@@ -301,17 +301,8 @@ func (s *Service) Export(ctx context.Context, orgID, userID string, f Filter, op
 		return err
 	}
 	return s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
-		where, args := f.sql()
-		// Временная таблица живёт до конца транзакции: отбор делается
-		// один раз, и «Данные» со «Сводкой» считаются из одних строк.
-		// #sql-склейка: условие собирает Filter.sql из постоянных кусков, значения идут параметрами
-		if _, err := tx.Exec(ctx, `
-			create temp table report_cards on commit drop as
-			select c.id `+where, args...); err != nil {
-			return err
-		}
-		var total int
-		if err := tx.QueryRow(ctx, `select count(*) from report_cards`).Scan(&total); err != nil {
+		total, err := gather(ctx, tx, f)
+		if err != nil {
 			return err
 		}
 		if total > s.limit {
@@ -334,6 +325,47 @@ func (s *Service) Export(ctx context.Context, orgID, userID string, f Filter, op
 		}
 		return sink.Summary(sum)
 	})
+}
+
+// Summary — та же сводка, что первым листом книги, без строк: экран
+// «Отчёты» показывает её под отбором (ROADMAP 42.3, срез 1). Считается
+// тем же отбором и теми же запросами, что в Export, — лист файла
+// и экран не могут разойтись. Предела на число карточек здесь нет:
+// предел стоит против файла в 50 000 строк, а сводка — несколько
+// чисел по тем же строкам, и считает их база.
+func (s *Service) Summary(ctx context.Context, orgID, userID string, f Filter) (Summary, error) {
+	var sum Summary
+	if err := f.Check(); err != nil {
+		return sum, err
+	}
+	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
+		total, err := gather(ctx, tx, f)
+		if err != nil {
+			return err
+		}
+		if sum, err = summarize(ctx, tx, f); err != nil {
+			return err
+		}
+		sum.Cards = total
+		return nil
+	})
+	return sum, err
+}
+
+// gather отбирает карточки во временную таблицу и отвечает, сколько
+// их. Таблица живёт до конца транзакции: отбор делается один раз,
+// и «Данные» со «Сводкой» считаются из одних строк.
+func gather(ctx context.Context, tx pgx.Tx, f Filter) (int, error) {
+	where, args := f.sql()
+	// #sql-склейка: условие собирает Filter.sql из постоянных кусков, значения идут параметрами
+	if _, err := tx.Exec(ctx, `
+		create temp table report_cards on commit drop as
+		select c.id `+where, args...); err != nil {
+		return 0, err
+	}
+	var total int
+	err := tx.QueryRow(ctx, `select count(*) from report_cards`).Scan(&total)
+	return total, err
 }
 
 // sql — условие отбора: from, join и where, начиная с «from».
@@ -671,7 +703,7 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		return sum, err
 	}
 	rows.Close()
-	sum.People, err = personRows(ctx, tx, "report_cards", nil, f)
+	sum.People, err = personRows(ctx, tx, f)
 	return sum, err
 }
 

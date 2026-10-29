@@ -83,6 +83,7 @@ func TestContractDescribesWhatServerAnswers(t *testing.T) {
 	today := time.Now().UTC().Format(time.DateOnly)
 	period := "?from=" + today + "&to=" + today + "&board=" + boardID
 	c.call("GET", "/reports/cards/count"+period, nil, http.StatusOK)
+	c.call("GET", "/reports/summary"+period, nil, http.StatusOK)
 	c.call("GET", "/reports/cards"+period+"&format=json", nil, http.StatusOK)
 	c.call("GET", "/reports/cards?from="+today+"&to=2000-01-01", nil, http.StatusBadRequest)
 }

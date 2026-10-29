@@ -315,3 +315,25 @@ function area(points: [number, number][]): string {
 function round(value: number): string {
   return value < 10 ? value.toFixed(1) : String(Math.round(value))
 }
+
+/** Столбики без библиотеки: график из десятка значений — это десяток
+ *  прямоугольников, и тащить ради них зависимость незачем. Те же
+ *  столбики — у пропускной способности на «Отчётах». */
+export function Bars({ values, labels }: { values: number[]; labels: string[] }) {
+  const top = Math.max(1, ...values)
+  return (
+    <div
+      className="bars"
+      role="img"
+      // Диктору читаются пары «неделя — сколько»: один ряд чисел
+      // без недель не говорит ни о чём, а столбики он не видит.
+      aria-label={t.flow.throughputLabel(values.map((value, i) => `${labels[i]} — ${value}`).join(', '))}
+    >
+      {values.map((value, i) => (
+        <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
+          <div className="bar-fill" style={{ height: `${(value / top) * 100}%` }} />
+        </div>
+      ))}
+    </div>
+  )
+}

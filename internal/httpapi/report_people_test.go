@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -42,10 +43,6 @@ func TestReportPeopleNarrowToChosenTeamAndBoard(t *testing.T) {
 	period := "/api/reports/people?from=" + time.Now().AddDate(0, 0, -7).Format(time.DateOnly) + "&to=" + day
 	type answer struct {
 		Candidates []struct{ ID string }
-		Rows       []struct {
-			UserID *string
-			Cards  int
-		}
 	}
 	get := func(q string) answer {
 		t.Helper()
@@ -54,6 +51,22 @@ func TestReportPeopleNarrowToChosenTeamAndBoard(t *testing.T) {
 			t.Fatal(err)
 		}
 		return out
+	}
+	// Разрез по людям — в сводке: экран берёт её целиком, и ещё раз
+	// тот же разрез люди не считают.
+	type personRow struct {
+		UserID *string
+		Cards  int
+	}
+	rowsOf := func(q string) []personRow {
+		t.Helper()
+		var out struct{ People []personRow }
+		raw := owner.mustDo("GET", "/api/reports/summary?from="+
+			time.Now().AddDate(0, 0, -7).Format(time.DateOnly)+"&to="+day+q, nil, http.StatusOK)
+		if err := json.Unmarshal(raw, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.People
 	}
 	ids := func(x answer) []string {
 		out := []string{}
@@ -93,7 +106,7 @@ func TestReportPeopleNarrowToChosenTeamAndBoard(t *testing.T) {
 	}
 
 	// Разрез: карточка на двоих — у каждого, ничья — строкой без имени.
-	rows := get("&board=" + devBoard).Rows
+	rows := rowsOf("&board=" + devBoard)
 	count := map[string]int{}
 	for _, r := range rows {
 		key := ""
@@ -127,7 +140,7 @@ func TestReportPeopleNarrowToChosenTeamAndBoard(t *testing.T) {
 	if !slices.Contains(ids(one), boris.userID) {
 		t.Errorf("выбранный исполнитель пропал из списка: %v", ids(one))
 	}
-	for _, r := range get("&assignee=" + boris.userID).Rows {
+	for _, r := range rowsOf("&assignee=" + boris.userID) {
 		if r.UserID == nil || *r.UserID != boris.userID {
 			t.Errorf("при выбранном Борисе в разрезе чужая строка: %+v", r)
 		}
@@ -180,5 +193,42 @@ func TestCardIsCreatedWithAssignees(t *testing.T) {
 	}
 	if strings.Contains(string(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK)), "Не должна завестись") {
 		t.Error("карточка завелась без исполнителя, которому отказали")
+	}
+}
+
+// Сводка на экране и в файле — одно и то же (ROADMAP 42.3, срез 1):
+// ответ /reports/summary побайтово равен полю summary выгрузки JSON
+// под тем же отбором. Разойдутся — тимлид покажет руководству одни
+// числа, а в присланном файле окажутся другие.
+func TestReportSummaryIsTheFilesSummary(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Сводка на экране")
+	boris := owner.join("member")
+	board := owner.board("Поставки")
+	done := owner.cardOn(board, "Сделанная")
+	owner.op(board, uuid.NewString(), "ASSIGN_CARD", map[string]any{"cardId": done, "userId": boris.userID})
+	owner.cardOn(board, "В очереди")
+
+	day := time.Now().Format(time.DateOnly)
+	q := "from=" + time.Now().AddDate(0, 0, -7).Format(time.DateOnly) + "&to=" + day + "&board=" + board
+	screen := owner.mustDo("GET", "/api/reports/summary?"+q, nil, http.StatusOK)
+	var file struct {
+		Summary json.RawMessage `json:"summary"`
+	}
+	if err := json.Unmarshal(owner.mustDo("GET", "/api/reports/cards?format=json&"+q, nil, http.StatusOK), &file); err != nil {
+		t.Fatal(err)
+	}
+	var onScreen, inFile map[string]any
+	if err := json.Unmarshal(screen, &onScreen); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(file.Summary, &inFile); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(onScreen, inFile) {
+		t.Errorf("сводка экрана и файла разошлись:\nэкран %s\nфайл  %s", screen, file.Summary)
+	}
+	if onScreen["cards"] != float64(2) || len(onScreen["people"].([]any)) != 2 {
+		t.Errorf("сводка не о тех карточках: %s", screen)
 	}
 }

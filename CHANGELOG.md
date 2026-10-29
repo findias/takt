@@ -58,6 +58,17 @@ together from **Move selected**): pick the board and the column. The card
   Imported cards and cards moved from a board you cannot see leave the
   cell empty: their history is not here. JSON has `workDays` and
   `workTimeP50`.
+- **The report summary is on the screen.** Under the selection on
+  **Reports**, before any file: done, discarded and in progress, cycle
+  time and age, throughput by week, the cumulative flow diagram,
+  iteration completion and the breakdowns by subdivision and by
+  assignee — the same numbers as the **Summary** sheet, counted by the
+  same selection in one request, so the screen and the file cannot
+  disagree. For programs there is `GET /api/v1/reports/summary` with the
+  parameters of `/reports/cards` and no card limit; `summary.people` is
+  now described in the contract. `/api/reports/people` (the screen's
+  own call, not in the contract) no longer returns `rows`: the screen
+  takes the breakdown from the summary instead of counting it twice.
 - **Reports keep subtasks with their task and show completion.** On
   the **Data** sheet (and in CSV and JSON) each part sits right under its
   task with its title indented; in Excel the parts are a group you can

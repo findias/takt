@@ -6,6 +6,8 @@ import { setQuery, useQuery } from '../shared/router/index.ts'
 import { PickList } from '../shared/ui/PickList.tsx'
 import { Slices } from '../features/reports/Slices.tsx'
 import { Button } from '../shared/ui/Button.tsx'
+import { Bars, CumulativeFlow } from '../features/flow/charts.tsx'
+import { dateWords } from '../entities/card/model.ts'
 import { t } from '../shared/i18n/index.ts'
 import {
   PRESETS,
@@ -32,14 +34,35 @@ type PersonRow = {
   cycleTimeP85: number | null
   workTimeP50: number | null
 }
-type People = { candidates: Option[]; rows: PersonRow[] }
+type People = { candidates: Option[] }
+type Percentiles = { p50: number; p85: number }
+/** Сводка — та же, что первым листом книги: сервер считает её одним
+ *  запросом для экрана и для файла. */
+type Summary = {
+  cards: number
+  finished: number
+  discarded: number
+  wip: number
+  cycleTime: Percentiles | null
+  age: Percentiles | null
+  throughput: { week: string; count: number }[]
+  flowStep: 'day' | 'week'
+  flow: { day: string; queued: number; inProgress: number; done: number }[]
+  iterations: { name: string; board: string; startsOn: string; endsOn: string; closed: boolean; planned: number; done: number }[]
+  teams: { team: string; cards: number; finished: number; wip: number; cycleTimeP50: number | null; cycleTimeP85: number | null }[]
+  people: PersonRow[]
+}
+type SummaryState = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; data: Summary }
 
 // Вызовы — здесь, а не в общем клиенте: экран грузится отдельным куском.
 const countCards = (f: ReportFilter) =>
   request<{ total: number; limit: number }>('GET', '/api/reports/cards/count?' + reportQuery(f).toString())
 // Люди под отбор (ROADMAP 37.1–37.2): из кого выбирать исполнителей —
-// люди выбранных досок и подразделений, — и что каждый делал.
+// люди выбранных досок и подразделений.
 const reportPeople = (f: ReportFilter) => request<People>('GET', '/api/reports/people?' + reportQuery(f).toString())
+// Сводка под отбор (ROADMAP 42.3, срез 1): то, что раньше было только
+// на первом листе файла, — на экране, с разрезом по людям внутри.
+const reportSummary = (f: ReportFilter) => request<Summary>('GET', '/api/reports/summary?' + reportQuery(f).toString())
 
 const FORMATS: Format[] = ['xlsx', 'csv', 'json']
 
@@ -64,6 +87,7 @@ export function Reports() {
   const [labels, setLabels] = useState<Option[]>([])
   const [iterations, setIterations] = useState<Iteration[]>([])
   const [count, setCount] = useState<Count>({ status: 'counting' })
+  const [summary, setSummary] = useState<SummaryState>({ status: 'loading' })
 
   // Списки для выбора — один раз: они нужны, чтобы назвать выбранное,
   // а не чтобы отбирать.
@@ -99,15 +123,20 @@ export function Reports() {
     const filter = parseReportFilter(new URLSearchParams(key), now)
     if (periodReversed(filter)) return
     setCount({ status: 'counting' })
+    setSummary({ status: 'loading' })
     const timer = setTimeout(() => {
       countCards(filter)
         .then((r) => current && setCount({ status: 'ready', ...r }))
         .catch((e) => current && setCount({ status: 'error', error: e instanceof Error ? e.message : s.countFailed }))
       // Люди — тем же отбором и в тот же момент: выбрали подразделение —
-      // список исполнителей сузился до его людей, разрез пересчитался.
+      // список исполнителей сузился до его людей.
       reportPeople(filter)
         .then((r) => current && setPeople(r))
         .catch(() => current && setPeople(null))
+      // Сводка — тем же отбором: что покажет файл, видно до файла.
+      reportSummary(filter)
+        .then((r) => current && setSummary({ status: 'ready', data: r }))
+        .catch((e) => current && setSummary({ status: 'error', error: e instanceof Error ? e.message : s.summaryFailed }))
     }, 300)
     return () => {
       current = false
@@ -237,8 +266,17 @@ export function Reports() {
                   : s.count(count.total)}
       </p>
 
-      {people && people.rows.length > 0 && !reversed && (
-        <ByPerson rows={people.rows} chosen={f.assignees} onPick={(id) => change({ assignees: [id] })} />
+      {/* Сводка — только когда есть о чём: при нуле карточек строка
+          выше уже сказала, что в файле будет одна шапка. Отказ —
+          словами: пропавшая сводка выглядела бы как «её тут и не было». */}
+      {!reversed && summary.status === 'error' && <p className="form-error">{summary.error}</p>}
+      {!reversed && summary.status === 'ready' && summary.data.cards > 0 && (
+        <>
+          <SummaryView sum={summary.data} />
+          {summary.data.people.length > 0 && (
+            <ByPerson rows={summary.data.people} chosen={f.assignees} onPick={(id) => change({ assignees: [id] })} />
+          )}
+        </>
       )}
 
       <div className="row">
@@ -264,6 +302,152 @@ export function Reports() {
 }
 
 /**
+ * Сводка организации на экране (ROADMAP 42.3, срез 1). До неё лист
+ * «Сводка» считался только в файл, и чтобы увидеть, сколько сделано
+ * за квартал, тимлид скачивал книгу. Здесь — те же числа и те же две
+ * диаграммы, что в книге, под тем же отбором; сервер считает их одним
+ * запросом, и экран с файлом разойтись не могут.
+ *
+ * Диаграммы и слова — с «Потока»: руководство уже читает их там
+ * по одной доске, здесь — по всей организации или по отбору.
+ */
+function SummaryView({ sum }: { sum: Summary }) {
+  const s = t.reports
+  const days = (v: number) => s.days(round(v))
+  return (
+    <>
+      <section className="stack reports-group">
+        <h3 className="section-title">{s.summary}</h3>
+        <div className="row row--tight">
+          <Figure label={s.finished} value={String(sum.finished)} />
+          <Figure label={s.discarded} value={String(sum.discarded)} />
+          <Figure label={s.wip} value={String(sum.wip)} />
+        </div>
+        <div className="row row--tight">
+          <span className="small report-name">{s.cycle}</span>
+          {sum.cycleTime ? (
+            <>
+              <Figure label={s.half} value={days(sum.cycleTime.p50)} />
+              <Figure label={s.p85} value={days(sum.cycleTime.p85)} />
+            </>
+          ) : (
+            <span className="muted small">{s.noCycle}</span>
+          )}
+        </div>
+        {sum.age && (
+          <div className="row row--tight">
+            <span className="small report-name">{s.age}</span>
+            <Figure label={s.half} value={days(sum.age.p50)} />
+            <Figure label={s.p85} value={days(sum.age.p85)} />
+          </div>
+        )}
+        <p className="muted small">{s.summaryHint}</p>
+      </section>
+
+      <section className="stack reports-group">
+        <h3 className="section-title">{t.flow.throughput}</h3>
+        {sum.throughput.some((w) => w.count > 0) ? (
+          <>
+            <Bars values={sum.throughput.map((w) => w.count)}
+              labels={sum.throughput.map((w) => t.flow.week(dateWords(w.week)))} />
+            <p className="muted small">{t.flow.byWeek}</p>
+          </>
+        ) : (
+          <p className="muted small">{s.noThroughput}</p>
+        )}
+      </section>
+
+      {/* Накопительная рисуется от двух точек: период в один день —
+          одна точка, и диаграмма молча не показывается. */}
+      {sum.flow.length > 1 && (
+        <section className="stack reports-group">
+          <h3 className="section-title">{t.flow.cfd}</h3>
+          <CumulativeFlow flow={sum.flow} />
+        </section>
+      )}
+
+      {sum.iterations.length > 0 && (
+        <section className="stack reports-group">
+          <h3 className="section-title">{s.iterations}</h3>
+          <div className="table-wrap">
+            <table className="figures reports-table" aria-label={s.iterations}>
+              <thead>
+                <tr>
+                  <th scope="col">{s.iterationName}</th>
+                  <th scope="col">{s.board}</th>
+                  <th scope="col">{s.starts}</th>
+                  <th scope="col">{s.ends}</th>
+                  <th scope="col">{s.planned}</th>
+                  <th scope="col">{s.finished}</th>
+                  <th scope="col">{s.share}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sum.iterations.map((it) => (
+                  <tr key={`${it.board}/${it.name}/${it.startsOn}`}>
+                    <th scope="row">{it.name}</th>
+                    <td>{it.board}</td>
+                    <td>{dateWords(it.startsOn)}</td>
+                    <td>{dateWords(it.endsOn)}</td>
+                    <td>{it.planned}</td>
+                    <td>{it.done}</td>
+                    <td>{it.planned > 0 ? s.percent(Math.round((100 * it.done) / it.planned)) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">{s.iterationsHint}</p>
+        </section>
+      )}
+
+      <section className="stack reports-group">
+        <h3 className="section-title">{s.byTeam}</h3>
+        <div className="table-wrap">
+          <table className="figures reports-table" aria-label={s.byTeam}>
+            <thead>
+              <tr>
+                <th scope="col">{s.team}</th>
+                <th scope="col">{s.cards}</th>
+                <th scope="col">{s.finished}</th>
+                <th scope="col">{s.wip}</th>
+                <th scope="col">{s.cycleMedian}</th>
+                <th scope="col">{s.cycleP85}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sum.teams.map((r) => (
+                <tr key={r.team}>
+                  <th scope="row">{r.team || <span className="muted">{s.noTeam}</span>}</th>
+                  <td>{r.cards}</td>
+                  <td>{r.finished}</td>
+                  <td>{r.wip}</td>
+                  <td>{r.cycleTimeP50 === null ? '—' : s.days(r.cycleTimeP50)}</td>
+                  <td>{r.cycleTimeP85 === null ? '—' : s.days(r.cycleTimeP85)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted small">{s.byTeamHint}</p>
+      </section>
+    </>
+  )
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="figure">
+      <span className="figure-value">{value}</span>
+      <span className="muted small">{label}</span>
+    </div>
+  )
+}
+
+// Дни — до десятых, как на «Потоке»: «3,47 дн.» точнее, чем данные.
+const round = (v: number) => Math.round(v * 10) / 10
+
+/**
  * Разрез по исполнителям под нынешний отбор (ROADMAP 37.1): «что делал
  * Борис» прямо на экране, без файла и фильтра в Excel. Имя — кнопка:
  * она ставит отбор на этого человека, и выгрузка ниже становится его.
@@ -276,7 +460,7 @@ function ByPerson({ rows, chosen, onPick }: { rows: PersonRow[]; chosen: string[
     <section className="stack reports-group">
       <h3 className="section-title">{s.byPerson}</h3>
       <div className="table-wrap">
-        <table className="figures reports-people">
+        <table className="figures reports-table" aria-label={s.byPerson}>
           <thead>
             <tr>
               <th scope="col">{s.person}</th>

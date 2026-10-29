@@ -48,8 +48,15 @@ const Tasks = lazy(
 )
 // Выгрузка для руководства (этап 24): её открывают раз в месяц,
 // к отчёту, — в куске доски ей не место.
+// Сводка на экране (42.3) рисуется теми же диаграммами, что «Поток»,
+// и говорит их словами — разделы «Потока» едут вместе с ней.
 const Reports = lazy(
-  withSections(() => import('../widgets/Reports.tsx').then((m) => ({ default: m.Reports })), 'reports'),
+  withSections(
+    () => import('../widgets/Reports.tsx').then((m) => ({ default: m.Reports })),
+    'reports',
+    'flow',
+    'flowReport',
+  ),
 )
 const Structure = lazy(
   withSections(
