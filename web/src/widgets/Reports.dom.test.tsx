@@ -45,11 +45,12 @@ beforeEach(() => {
           wip: 1,
           cycleTime: { p50: 3.5, p85: 3.5 },
           age: { p50: 6, p85: 6 },
+          due: { withDue: 7, finished: 4, onTime: 3, overdueNow: 2 },
           throughput: [
-            { week: '2026-09-28', count: 0 },
-            { week: '2026-10-05', count: 1 },
-            { week: '2026-10-12', count: 0 },
-            { week: '2026-10-19', count: 0 },
+            { week: '2026-09-28', count: 0, created: 1 },
+            { week: '2026-10-05', count: 1, created: 0 },
+            { week: '2026-10-12', count: 0, created: 2 },
+            { week: '2026-10-19', count: 0, created: 0 },
           ],
           flowStep: 'day',
           flow: [
@@ -105,7 +106,10 @@ it('сводка за период видна на экране под тем ж
   await waitFor(() => expect(asked.some((p) => p.startsWith('/api/reports/summary?') && p.includes('team=t-dev'))).toBe(true))
   expect(await screen.findByRole('heading', { name: 'Сводка за период' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Пропускная способность' })).toBeTruthy()
-  expect(screen.getByRole('img', { name: /^Пропускная способность: / })).toBeTruthy()
+  expect(screen.getByRole('img', { name: /^Пропускная способность: .*сделано 1, создано 0/ })).toBeTruthy()
+  // Сроки: доля в срок от сделанных со сроком, просроченные — числом.
+  expect(screen.getByText('в срок из 4 сделанных со сроком').previousSibling?.textContent).toBe('75 %')
+  expect(screen.getByText('просрочено сейчас').previousSibling?.textContent).toBe('2')
   expect(screen.getByRole('img', { name: /^Накопительная диаграмма потока/ })).toBeTruthy()
 
   const iterations = screen.getByRole('table', { name: 'Выполнение итераций' })

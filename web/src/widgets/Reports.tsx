@@ -45,6 +45,7 @@ type Summary = {
   wip: number
   cycleTime: Percentiles | null
   age: Percentiles | null
+  due: { withDue: number; finished: number; onTime: number; overdueNow: number }
   throughput: { week: string; count: number; created: number }[]
   flowStep: 'day' | 'week'
   flow: { day: string; queued: number; inProgress: number; done: number }[]
@@ -341,6 +342,25 @@ function SummaryView({ sum }: { sum: Summary }) {
             <Figure label={s.p85} value={days(sum.age.p85)} />
           </div>
         )}
+        {/* Сроки (42.3, срез 8): доля в срок — от сделанных со сроком,
+            просроченные — на сегодня. Без единого срока в отборе — слова,
+            а не три нуля. */}
+        <div className="row row--tight">
+          <span className="small report-name">{s.due}</span>
+          {sum.due.withDue > 0 ? (
+            <>
+              {sum.due.finished > 0 ? (
+                <Figure label={s.onTime(sum.due.finished)}
+                  value={s.percent(Math.round((100 * sum.due.onTime) / sum.due.finished))} />
+              ) : (
+                <Figure label={s.noneDueDone} value={String(sum.due.withDue)} />
+              )}
+              <Figure label={s.overdueNow} value={String(sum.due.overdueNow)} />
+            </>
+          ) : (
+            <span className="muted small">{s.noDue}</span>
+          )}
+        </div>
         <p className="muted small">{s.summaryHint}</p>
       </section>
 

@@ -185,14 +185,17 @@ type Ref struct {
 type Summary struct {
 	// Chosen — отбор словами. Файл пересылают, и получатель должен
 	// видеть, какие доски и чьи карточки в нём, не спрашивая автора.
-	Chosen     Chosen       `json:"chosen"`
-	Cards      int          `json:"cards"`
-	Finished   int          `json:"finished"`
-	Discarded  int          `json:"discarded"`
-	WIP        int          `json:"wip"`
-	CycleTime  *Percentiles `json:"cycleTime"`
-	Age        *Percentiles `json:"age"`
-	Throughput []WeekCount  `json:"throughput"`
+	Chosen    Chosen       `json:"chosen"`
+	Cards     int          `json:"cards"`
+	Finished  int          `json:"finished"`
+	Discarded int          `json:"discarded"`
+	WIP       int          `json:"wip"`
+	CycleTime *Percentiles `json:"cycleTime"`
+	Age       *Percentiles `json:"age"`
+	// Due — соблюдение сроков (ROADMAP 42.3, срез 8): среди сделанных
+	// за период со сроком — сколько в срок; просроченных сейчас — числом.
+	Due        DueSummary  `json:"due"`
+	Throughput []WeekCount `json:"throughput"`
 	// FlowStep — шаг накопительной: день или неделя. Длинный период
 	// по дням — тысячи точек, которых на диаграмме не различить.
 	FlowStep   string         `json:"flowStep"`
@@ -202,6 +205,20 @@ type Summary struct {
 	// People — разрез по исполнителям (ROADMAP 37.1): «что делал
 	// Борис» без фильтра в Excel.
 	People []PersonRow `json:"people"`
+}
+
+// DueSummary — сроки. WithDue — карточек со сроком в отборе вообще:
+// без него экран не отличит «сроков нет» от «сроки есть, но ещё ни один
+// не наступил». Finished — сделано за период со сроком, OnTime —
+// из них не позже срока (день финиша по UTC против даты срока),
+// OverdueNow — не сделано, а срок уже прошёл. Доля — OnTime/Finished;
+// её считает экран, а не сервер: при нуле сделанных доли нет, и слово
+// «нет» на каждом языке своё.
+type DueSummary struct {
+	WithDue    int `json:"withDue"`
+	Finished   int `json:"finished"`
+	OnTime     int `json:"onTime"`
+	OverdueNow int `json:"overdueNow"`
 }
 
 // Chosen — названия выбранного в отборе; пустой список — «любые».
@@ -554,7 +571,12 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		       percentile_cont(0.50) within group (order by d.cycle),
 		       percentile_cont(0.85) within group (order by d.cycle),
 		       percentile_cont(0.50) within group (order by d.age),
-		       percentile_cont(0.85) within group (order by d.age)
+		       percentile_cont(0.85) within group (order by d.age),
+		       count(*) filter (where c.due_on is not null),
+		       count(*) filter (where c.due_on is not null and c.outcome = 'done' and c.finished_at < $1),
+		       count(*) filter (where c.due_on is not null and c.outcome = 'done' and c.finished_at < $1
+		                          and (c.finished_at at time zone 'UTC')::date <= c.due_on),
+		       count(*) filter (where c.due_on is not null and c.finished_at is null and c.due_on < current_date)
 		  from report_cards r
 		  join cards c on c.id = r.id
 		  cross join lateral (select
@@ -562,7 +584,8 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		            then extract(epoch from (c.finished_at - c.started_at)) / 86400.0 end as cycle,
 		       case when c.started_at is not null and c.finished_at is null
 		            then extract(epoch from (now() - c.started_at)) / 86400.0 end as age) d`,
-		next).Scan(&sum.Finished, &sum.Discarded, &sum.WIP, &c50, &c85, &a50, &a85); err != nil {
+		next).Scan(&sum.Finished, &sum.Discarded, &sum.WIP, &c50, &c85, &a50, &a85,
+		&sum.Due.WithDue, &sum.Due.Finished, &sum.Due.OnTime, &sum.Due.OverdueNow); err != nil {
 		return sum, err
 	}
 	if c50 != nil {

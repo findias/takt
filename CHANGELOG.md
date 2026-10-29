@@ -69,6 +69,12 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Due dates kept.** The summary on **Reports** and the **Summary**
+  sheet say, among cards done in the period that had a due date, what
+  share was done on time (the day of finishing, in UTC, against the due
+  date) and how many cards are overdue right now. Nothing in the
+  selection has a due date — the screen says so instead of showing
+  zeros. JSON `summary.due` has `finished`, `onTime`, `overdueNow`.
 - **Created against done.** Next to each week's throughput bar, on
   **Flow** and on **Reports**, a light bar shows how many cards were
   created in that week: light bars higher than dark ones week after

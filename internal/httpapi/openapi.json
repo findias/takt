@@ -150,7 +150,7 @@
       },
       "ReportSummary": {
         "type": "object",
-        "required": ["chosen", "cards", "finished", "discarded", "wip", "cycleTime", "age", "throughput", "flowStep", "flow", "iterations", "teams", "people"],
+        "required": ["chosen", "cards", "finished", "discarded", "wip", "cycleTime", "age", "due", "throughput", "flowStep", "flow", "iterations", "teams", "people"],
         "properties": {
           "chosen": {
             "type": "object",
@@ -172,6 +172,7 @@
           "wip": { "type": "integer", "description": "В работе сейчас." },
           "cycleTime": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
           "age": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
+          "due": { "type": "object", "description": "Соблюдение сроков среди карточек со сроком.", "required": ["withDue", "finished", "onTime", "overdueNow"], "properties": { "withDue": { "type": "integer", "description": "Карточек со сроком в отборе." }, "finished": { "type": "integer", "description": "Сделано за период со сроком." }, "onTime": { "type": "integer", "description": "Из них не позже срока: день финиша по UTC против даты срока." }, "overdueNow": { "type": "integer", "description": "Не сделано, а срок уже прошёл — на сегодня." } } },
           "throughput": { "type": "array", "items": { "type": "object", "required": ["week", "count", "created"], "properties": { "week": { "type": "string", "format": "date" }, "count": { "type": "integer", "description": "Сделано на этой неделе." }, "created": { "type": "integer", "description": "Заведено на этой неделе внутри периода. Больше сделанного неделю за неделей — очередь растёт." } } } },
           "flowStep": { "type": "string", "enum": ["day", "week"], "description": "Шаг накопительной: по дням до 120 дней периода, дальше по неделям." },
           "flow": { "type": "array", "items": { "type": "object", "required": ["day", "queued", "inProgress", "done"], "properties": { "day": { "type": "string", "format": "date" }, "queued": { "type": "integer" }, "inProgress": { "type": "integer" }, "done": { "type": "integer" } } } },

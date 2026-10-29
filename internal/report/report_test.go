@@ -118,6 +118,9 @@ type spec struct {
 	created, started  float64
 	finished          float64
 	outcome, priority string
+	// due — срок, дней назад от «сейчас» (отрицательное — впереди);
+	// nil — срока нет.
+	due *float64
 }
 
 func (f *fixture) card(s spec) string {
@@ -143,13 +146,14 @@ func (f *fixture) card(s spec) string {
 	f.inTenant(f.owner, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx, `
 			insert into cards (org_id, board_id, number, column_id, title, position, priority,
-			                   created_at, started_at, finished_at, outcome)
+			                   created_at, started_at, finished_at, outcome, due_on)
 			values ($1, $2, 'ПОСТ-' || $3::int, $4, $5, $6, $7,
 			        now() - $8::numeric * interval '1 day',
 			        now() - $9::numeric * interval '1 day',
-			        now() - $10::numeric * interval '1 day', $11)
+			        now() - $10::numeric * interval '1 day', $11,
+			        (now() - $12::numeric * interval '1 day')::date)
 			returning id`, f.orgID, s.board, f.seq, f.column[s.board], s.title, uuid.NewString(),
-			s.priority, s.created, ago(s.started), ago(s.finished), outcome).Scan(&id)
+			s.priority, s.created, ago(s.started), ago(s.finished), outcome, s.due).Scan(&id)
 	})
 	return id
 }
@@ -518,5 +522,23 @@ func TestSummaryCountsCreatedByWeek(t *testing.T) {
 	}
 	if created != 1 || finished != 1 {
 		t.Errorf("создано %d, сделано %d; ожидалось по одной", created, finished)
+	}
+}
+
+// Соблюдение сроков (ROADMAP 42.3, срез 8): среди сделанных со сроком —
+// сколько в срок; не сделанная с прошедшим сроком — просрочена сейчас;
+// карточка без срока в счёт не идёт ни там, ни там.
+func TestSummaryCountsDueDates(t *testing.T) {
+	f := newFixture(t)
+	d := func(v float64) *float64 { return &v }
+	f.card(spec{title: "В срок", created: 10, started: 9, finished: 3, outcome: "done", due: d(2)})
+	f.card(spec{title: "С опозданием", created: 10, started: 9, finished: 1, outcome: "done", due: d(4)})
+	f.card(spec{title: "Просрочена", created: 10, started: 9, finished: -1, due: d(1)})
+	f.card(spec{title: "Срок впереди", created: 10, started: 9, finished: -1, due: d(-5)})
+	f.card(spec{title: "Без срока", created: 10, started: 9, finished: 2, outcome: "done"})
+
+	c := f.export(f.owner, period(14))
+	if got := c.sum.Due; got.WithDue != 4 || got.Finished != 2 || got.OnTime != 1 || got.OverdueNow != 1 {
+		t.Errorf("сроки %+v; ожидалось со сроком 4, сделано 2, в срок 1, просрочено сейчас 1", got)
 	}
 }

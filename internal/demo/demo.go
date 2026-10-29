@@ -1290,6 +1290,20 @@ func (f *filler) backdate() error {
 			  from numbered n where n.id = c.id`); err != nil {
 			return err
 		}
+		// Сроки у сделанных (ROADMAP 42.3, срез 8): первая успела
+		// за два дня до срока, вторая опоздала на три — иначе в сводке
+		// не из чего считать долю сделанных в срок.
+		if _, err := tx.Exec(f.ctx, `
+			with numbered as (
+				select id, row_number() over (order by created_at) as n
+				  from cards where outcome = 'done'
+			)
+			update cards c
+			   set due_on = case when n.n = 1 then (c.finished_at + interval '2 days')::date
+			                     else (c.finished_at - interval '3 days')::date end
+			  from numbered n where n.id = c.id and n.n <= 2`); err != nil {
+			return err
+		}
 		// Идущая работа стареет: без этого возраст незавершённого пуст,
 		// а метка «дольше обещанного» не появляется никогда.
 		if _, err := tx.Exec(f.ctx, `

@@ -309,6 +309,18 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			w.row(str(n("Возраст незавершённого, медиана, дней")), dec(sum.Age.P50))
 			w.row(str(n("Возраст незавершённого, 85-я процентиль, дней")), dec(sum.Age.P85))
 		}
+		// Сроки (42.3, срез 8) — только когда они у карточек есть:
+		// три нуля читались бы как «всё просрочено на ноль».
+		if sum.Due.WithDue > 0 {
+			w.row(str(n("Карточек со сроком")), num(float64(sum.Due.WithDue)))
+			w.row(str(n("Со сроком, сделано за период")), num(float64(sum.Due.Finished)))
+			share := cell{}
+			if sum.Due.Finished > 0 {
+				share = pct(float64(sum.Due.OnTime) / float64(sum.Due.Finished))
+			}
+			w.row(str(n("Из них в срок")), num(float64(sum.Due.OnTime)), share)
+			w.row(str(n("Просрочено сейчас")), num(float64(sum.Due.OverdueNow)))
+		}
 		w.blank()
 
 		// Пропускная способность: таблица и столбцы рядом с ней.
