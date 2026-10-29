@@ -323,6 +323,23 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		}
 		w.blank()
 
+		// Блокировки (42.3, срез 6) — только когда были: нулевая
+		// таблица причин ничего не говорит.
+		if sum.Blocks.Cards > 0 {
+			w.row(bold(n("Блокировки за период")))
+			w.row(str(n("Карточек в блокировке")), num(float64(sum.Blocks.Cards)))
+			w.row(str(n("Дней в блокировке, всего")), dec(sum.Blocks.Days))
+			w.row(bold(n("Причина")), bold(n("Карточек")), bold(n("Дней")))
+			for _, r := range sum.Blocks.Reasons {
+				reason := r.Reason
+				if reason == "" {
+					reason = n("Без причины")
+				}
+				w.row(str(reason), num(float64(r.Cards)), dec(r.Days))
+			}
+			w.blank()
+		}
+
 		// Пропускная способность: таблица и столбцы рядом с ней.
 		// Создано рядом со сделанным: две линии расходятся — очередь
 		// растёт (42.3, срез 7).

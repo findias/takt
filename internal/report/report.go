@@ -194,8 +194,11 @@ type Summary struct {
 	Age       *Percentiles `json:"age"`
 	// Due — соблюдение сроков (ROADMAP 42.3, срез 8): среди сделанных
 	// за период со сроком — сколько в срок; просроченных сейчас — числом.
-	Due        DueSummary  `json:"due"`
-	Throughput []WeekCount `json:"throughput"`
+	Due DueSummary `json:"due"`
+	// Blocks — время в блокировке за период, по причинам (ROADMAP 42.3,
+	// срез 6): последний отчёт модуля «Канбан» Kaiten, которого не было.
+	Blocks     BlockSummary `json:"blocks"`
+	Throughput []WeekCount  `json:"throughput"`
 	// FlowStep — шаг накопительной: день или неделя. Длинный период
 	// по дням — тысячи точек, которых на диаграмме не различить.
 	FlowStep   string         `json:"flowStep"`
@@ -219,6 +222,23 @@ type DueSummary struct {
 	Finished   int `json:"finished"`
 	OnTime     int `json:"onTime"`
 	OverdueNow int `json:"overdueNow"`
+}
+
+// BlockSummary — блокировки, пересекавшие период. Days — дней внутри
+// периода, суммой по интервалам: карточка, заблокированная дважды,
+// считается обоими разами, а не последним. Reasons — то же по причине,
+// как её написали; пустая причина — пустой строкой, слово за неё
+// подставляет экран на своём языке.
+type BlockSummary struct {
+	Cards   int           `json:"cards"`
+	Days    float64       `json:"days"`
+	Reasons []BlockReason `json:"reasons"`
+}
+
+type BlockReason struct {
+	Reason string  `json:"reason"`
+	Cards  int     `json:"cards"`
+	Days   float64 `json:"days"`
 }
 
 // Chosen — названия выбранного в отборе; пустой список — «любые».
@@ -595,9 +615,50 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		sum.Age = &Percentiles{P50: *round2(a50), P85: *round2(a85)}
 	}
 
+	// Блокировки — интервалы, обрезанные периодом: открытая считается
+	// до сейчас. По причинам — чем больше дней, тем выше.
+	sum.Blocks.Reasons = []BlockReason{}
+	rows, err := tx.Query(ctx, `
+		with spans as (
+			select x.card_id, btrim(x.reason) as reason,
+			       extract(epoch from (least(coalesce(x.unblocked_at, now()), $2::timestamptz)
+			                           - greatest(x.blocked_at, $1::timestamptz))) / 86400.0 as days
+			  from card_blocks x
+			  join report_cards r on r.id = x.card_id
+			 where x.blocked_at < $2 and coalesce(x.unblocked_at, now()) > $1
+		)
+		select reason, grouping(reason) = 1, count(distinct card_id), coalesce(sum(days), 0)
+		  from spans
+		 group by rollup (reason)
+		 order by grouping(reason) desc, sum(days) desc, reason`, from, next)
+	if err != nil {
+		return sum, err
+	}
+	for rows.Next() {
+		// Итог — строкой rollup; отличать её по grouping, а не по пустой
+		// причине: пустая причина — настоящая строка.
+		var reason *string
+		var total bool
+		var cards int
+		var days float64
+		if err := rows.Scan(&reason, &total, &cards, &days); err != nil {
+			rows.Close()
+			return sum, err
+		}
+		if total {
+			sum.Blocks.Cards, sum.Blocks.Days = cards, *round2(&days)
+			continue
+		}
+		sum.Blocks.Reasons = append(sum.Blocks.Reasons, BlockReason{Reason: *reason, Cards: cards, Days: *round2(&days)})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return sum, err
+	}
+
 	// Недели без единой законченной тоже нужны: без них график врёт,
 	// что команда что-то доводит до конца каждую неделю.
-	rows, err := tx.Query(ctx, `
+	rows, err = tx.Query(ctx, `
 		with weeks as (
 			select generate_series(date_trunc('week', $1::timestamptz),
 			                       date_trunc('week', $2::timestamptz - interval '1 day'),

@@ -70,6 +70,13 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Blocks in the period.** The summary on **Reports** and the
+  **Summary** sheet say how many cards stood blocked in the period,
+  for how many days in total and per card, and the same by reason as
+  it was written. Days are clipped to the period and summed over every
+  block of a card — a card blocked twice counts both times; an open
+  block counts up to today. JSON `summary.blocks` has `cards`, `days`
+  and `reasons[]`.
 - **Needs attention now.** On **Reports**, under the selection, the
   team lead's page: blocked cards with the reason and days blocked,
   cards running past the board's promise, overdue cards, cards in

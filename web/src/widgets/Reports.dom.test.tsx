@@ -60,6 +60,7 @@ beforeEach(() => {
           cycleTime: { p50: 3.5, p85: 3.5 },
           age: { p50: 6, p85: 6 },
           due: { withDue: 7, finished: 4, onTime: 3, overdueNow: 2 },
+          blocks: { cards: 2, days: 7.5, reasons: [{ reason: 'ждём акт', cards: 1, days: 5 }, { reason: '', cards: 1, days: 2.5 }] },
           throughput: [
             { week: '2026-09-28', count: 0, created: 1 },
             { week: '2026-10-05', count: 1, created: 0 },
@@ -138,6 +139,11 @@ it('сводка за период видна на экране под тем ж
   // Сроки: доля в срок от сделанных со сроком, просроченные — числом.
   expect(screen.getByText('в срок из 4 сделанных со сроком').previousSibling?.textContent).toBe('75 %')
   expect(screen.getByText('просрочено сейчас').previousSibling?.textContent).toBe('2')
+  // Блокировки: сумма дней и причины как написали; пустая — словами.
+  const reasons = screen.getByRole('table', { name: 'По причинам' })
+  expect(within(reasons).getByText('ждём акт')).toBeTruthy()
+  expect(within(reasons).getByText('Без причины')).toBeTruthy()
+  expect(screen.getByText('всего в блокировке').previousSibling?.textContent).toBe('7,5 дн.')
   expect(screen.getByRole('img', { name: /^Накопительная диаграмма потока/ })).toBeTruthy()
 
   const iterations = screen.getByRole('table', { name: 'Выполнение итераций' })

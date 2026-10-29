@@ -47,6 +47,7 @@ type Summary = {
   cycleTime: Percentiles | null
   age: Percentiles | null
   due: { withDue: number; finished: number; onTime: number; overdueNow: number }
+  blocks: { cards: number; days: number; reasons: { reason: string; cards: number; days: number }[] }
   throughput: { week: string; count: number; created: number }[]
   flowStep: 'day' | 'week'
   flow: { day: string; queued: number; inProgress: number; done: number }[]
@@ -504,6 +505,44 @@ function SummaryView({ sum }: { sum: Summary }) {
           </>
         ) : (
           <p className="muted small">{s.noThroughput}</p>
+        )}
+      </section>
+
+      {/* Блокировки за период (42.3, срез 6): сколько дней простояли
+          и из-за чего. Не было — одной строкой, без пустой таблицы. */}
+      <section className="stack reports-group">
+        <h3 className="section-title">{s.blocks}</h3>
+        {sum.blocks.cards === 0 ? (
+          <p className="muted small">{s.noBlocks}</p>
+        ) : (
+          <>
+            <div className="row row--tight">
+              <Figure label={s.blockedCards} value={String(sum.blocks.cards)} />
+              <Figure label={s.blockedDays} value={s.days(sum.blocks.days)} />
+              <Figure label={s.blockedPerCard} value={s.days(round(sum.blocks.days / sum.blocks.cards))} />
+            </div>
+            <div className="table-wrap">
+              <table className="figures reports-table" aria-label={s.blockReasons}>
+                <thead>
+                  <tr>
+                    <th scope="col">{s.blockReason}</th>
+                    <th scope="col">{s.cards}</th>
+                    <th scope="col">{s.blockDays}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sum.blocks.reasons.map((r) => (
+                    <tr key={r.reason}>
+                      <th scope="row">{r.reason || <span className="muted">{s.noReason}</span>}</th>
+                      <td>{r.cards}</td>
+                      <td>{s.days(r.days)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted small">{s.blocksHint}</p>
+          </>
         )}
       </section>
 

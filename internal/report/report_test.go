@@ -542,3 +542,51 @@ func TestSummaryCountsDueDates(t *testing.T) {
 		t.Errorf("сроки %+v; ожидалось со сроком 4, сделано 2, в срок 1, просрочено сейчас 1", got)
 	}
 }
+
+// Блокировки за период (ROADMAP 42.3, срез 6): карточка, заблокированная
+// дважды, считается суммой обоих интервалов, а не последним; интервал
+// обрезается периодом; открытая считается до сейчас; по причинам —
+// как написали, пустая — отдельной строкой.
+func TestSummaryCountsBlockedDaysBySumOfSpans(t *testing.T) {
+	f := newFixture(t)
+	twice := f.card(spec{title: "Дважды", created: 20, started: 19, finished: -1})
+	once := f.card(spec{title: "Однажды, с хвостом до периода", created: 40, started: 39, finished: -1})
+	f.card(spec{title: "Не блокировалась", created: 5, started: 4, finished: -1})
+	f.inTenant(f.owner, func(tx pgx.Tx) error {
+		for _, b := range []struct {
+			card   string
+			reason string
+			from   int
+			to     *int
+		}{
+			{twice, "ждём акт", 10, intp(8)},
+			{twice, "ждём акт", 4, intp(1)},
+			// 20 дней назад — до начала периода в 14 дней: внутрь попадают 14 - 12 = 2 дня.
+			{once, "", 20, intp(12)},
+		} {
+			var until any
+			if b.to != nil {
+				until = time.Now().AddDate(0, 0, -*b.to)
+			}
+			if _, err := tx.Exec(f.ctx, `insert into card_blocks (org_id, card_id, reason, blocked_at, unblocked_at)
+				 values ($1, $2, $3, now() - $4::int * interval '1 day', $5)`,
+				f.orgID, b.card, b.reason, b.from, until); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	c := f.export(f.owner, period(14))
+	b := c.sum.Blocks
+	// «Дважды»: 2 + 3 = 5 дней; «Однажды»: от начала периода (14 дней
+	// назад, в полночь UTC) до 12 дней назад — около двух дней.
+	if b.Cards != 2 || b.Days < 6.5 || b.Days > 7.5 {
+		t.Errorf("блокировки: %+v — ожидались 2 карточки и около 7 дней", b)
+	}
+	if len(b.Reasons) != 2 || b.Reasons[0].Reason != "ждём акт" || b.Reasons[0].Days < 4.9 || b.Reasons[0].Days > 5.1 ||
+		b.Reasons[1].Reason != "" {
+		t.Errorf("по причинам: %+v — ожидались «ждём акт» на 5 дней и пустая причина", b.Reasons)
+	}
+}
+
+func intp(v int) *int { return &v }
