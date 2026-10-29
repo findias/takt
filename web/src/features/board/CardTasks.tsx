@@ -13,6 +13,7 @@ import { cardDetails, epicTone, progressRatio, refKindName } from '../../entitie
 import type { CardDetails, Related } from '../../entities/card/model.ts'
 import { t } from '../../shared/i18n/index.ts'
 import { boardPath, navigate } from '../../shared/router/index.ts'
+import { EpicForecast } from './EpicForecast.tsx'
 
 /**
  * Вкладка «Задачи» карточки: заявки сервис-деска, родитель, подзадачи
@@ -125,6 +126,9 @@ export function CardTasks({
             />
           </div>
         )}
+        {/* На портфеле под «готово X из Y» — когда будет готово
+            остальное и как рос объём (42.3, срез 4). */}
+        {progress && base.info.level === 'portfolio' && <EpicForecast cardId={card.id} version={base.info.version} />}
 
         {details.subtasks.length === 0 && (
           <p className="muted small">{t.panel.noSubtasks}</p>

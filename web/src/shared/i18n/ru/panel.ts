@@ -28,6 +28,19 @@ export const panel = {
     done: (label: string) => `Готово ${label}`,
     noSubtasks:
       'Подзадач нет. Подзадача может идти на доске другой команды — прогресс всё равно посчитается здесь.',
+    epicForecast: 'Когда будет готово',
+    epicHalf: 'половина шансов к',
+    epicP85: '85 из 100 к',
+    epicP95: '95 из 100 к',
+    epicAllDone: 'Все части сделаны.',
+    epicNoDonePart: 'Ни одна часть ещё не доведена — прогнозу не из чего считаться.',
+    epicNoThroughput: (weeks: number) =>
+      `На досках частей за ${weeks} недель ничего не доведено до конца — прогнозу не из чего считаться.`,
+    epicForecastHint: (remaining: number, finished: number, weeks: number, boards: number) =>
+      `Осталось ${remaining}. Прогноз складывает случайные недели из прошлого досок, где лежат части: ${finished} доведено за ${weeks} недель на ${boards} ${boards === 1 ? 'доске' : 'досках'}. Он говорит одно: что будет, если дальше пойдёт как шло.`,
+    epicScopeLabel: (weeks: number, total: number, done: number) =>
+      `Объём и сделанное по неделям, ${weeks} точек. Сейчас частей ${total}, сделано ${done}.`,
+    epicScopeCaption: 'Верхняя линия — сколько частей заведено, площадь — сколько сделано. Линия растёт, а разрыв не сужается — в эпик доливают.',
     links: 'Связи',
     doneSr: 'Готово. ',
     blockedSr: 'Заблокирована. ',

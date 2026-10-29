@@ -70,6 +70,14 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **An epic says when it will be done.** On a portfolio board, the
+  epic's **Tasks** tab shows, under the progress bar, three dates —
+  half the chances, 85 and 95 of 100 — forecast by the same
+  Monte-Carlo as on **Flow**, from the last 12 weeks of the boards
+  where the parts lie, and a chart of scope against done by week, so
+  growth of the scope is visible apart from progress. With no finished
+  part the forecast is null, not a date. The screen's own call is
+  `GET /api/cards/{id}/forecast`, not in the contract.
 - **Compared with the previous period.** Under the main numbers of
   the summary on **Reports** — done, created, discarded, cycle time,
   the share done on time, days blocked — a line says what the number

@@ -344,3 +344,41 @@ export function Bars({ values, labels, created }: { values: number[]; labels: st
     </div>
   )
 }
+
+/**
+ * Объём и сделанное эпика по неделям (ROADMAP 42.3, срез 4): верхняя
+ * линия — сколько частей заведено к дате, площадь под нижней — сколько
+ * сделано. Рост верхней линии — рост объёма, и его видно отдельно
+ * от прогресса: эпик, у которого сделанное растёт, а разрыв не
+ * сужается, — это эпик, в который доливают.
+ */
+export function ScopeChart({
+  points,
+  label,
+  caption,
+}: {
+  points: { week: string; scope: number; done: number }[]
+  label: string
+  caption: string
+}) {
+  if (points.length < 2) return null
+  const top = Math.max(1, ...points.map((p) => p.scope))
+  const x = (i: number) => PAD.left + (i / (points.length - 1)) * PLOT.w
+  const y = (value: number) => PAD.top + PLOT.h - (value / top) * PLOT.h
+  return (
+    <figure className="chart">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+        <Grid top={top} />
+        <path d={area(points.map((p, i) => [x(i), y(p.scope)]))} fill="var(--ink-3)" fillOpacity={0.18} />
+        <path d={area(points.map((p, i) => [x(i), y(p.done)]))} fill="var(--accent)" fillOpacity={0.75} />
+        <path
+          d={points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(p.scope)}`).join(' ')}
+          fill="none"
+          stroke="var(--ink-3)"
+          strokeWidth={1.5}
+        />
+      </svg>
+      <figcaption className="muted small">{caption}</figcaption>
+    </figure>
+  )
+}

@@ -26,6 +26,19 @@ export const panel: typeof ru = {
     done: (label: string) => `Done ${label}`,
     noSubtasks:
       'No subtasks. A subtask can live on another team’s board — progress is still counted here.',
+    epicForecast: 'When it will be done',
+    epicHalf: 'half the chances by',
+    epicP85: '85 of 100 by',
+    epicP95: '95 of 100 by',
+    epicAllDone: 'Every part is done.',
+    epicNoDonePart: 'No part is finished yet, so there is nothing to forecast from.',
+    epicNoThroughput: (weeks: number) =>
+      `Nothing was finished on the parts’ boards in ${weeks} weeks, so there is nothing to forecast from.`,
+    epicForecastHint: (remaining: number, finished: number, weeks: number, boards: number) =>
+      `${remaining} left. The forecast adds up random past weeks of the boards where the parts lie: ${finished} finished in ${weeks} weeks on ${boards} ${boards === 1 ? 'board' : 'boards'}. It says one thing: what happens if things go on as they went.`,
+    epicScopeLabel: (weeks: number, total: number, done: number) =>
+      `Scope and done by week, ${weeks} points. Now ${total} parts, ${done} done.`,
+    epicScopeCaption: 'The upper line is how many parts exist, the area is how many are done. The line grows and the gap does not close — the epic is being topped up.',
     links: 'Links',
     doneSr: 'Done. ',
     blockedSr: 'Blocked. ',

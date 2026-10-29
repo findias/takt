@@ -421,6 +421,22 @@ func forecast(weekly []WeeklyCount) []ForecastPoint {
 		return nil
 	}
 
+	out := []ForecastPoint{}
+	for _, target := range []int{5, 10, 20} {
+		p50, p85, p95 := simulate(samples, target)
+		out = append(out, ForecastPoint{Cards: target, P50: p50 * 7, P85: p85 * 7, P95: p95 * 7})
+	}
+	return out
+}
+
+// simulate — тысяча испытаний: случайные недели из прошлого складываются,
+// пока не наберётся target; отвечает неделями, за которые укладываются
+// 50, 85 и 95 испытаний из ста. Общее у прогноза «Потока» и у эпика.
+func simulate(samples []int, target int) (p50, p85, p95 int) {
+	total := 0
+	for _, n := range samples {
+		total += n
+	}
 	// Источник случайности с постоянным зерном: один и тот же прошлый
 	// поток обязан давать один и тот же прогноз, иначе два человека
 	// увидят разные числа и потратят день на выяснение, чей верный.
@@ -428,26 +444,16 @@ func forecast(weekly []WeeklyCount) []ForecastPoint {
 	// а не непредсказуемость. Криптостойкий источник дал бы разным
 	// людям разные числа по одним и тем же данным.
 	source := rand.New(rand.NewSource(int64(total*1000 + len(samples))))
-
 	const trials = 1000
-	out := []ForecastPoint{}
-	for _, target := range []int{5, 10, 20} {
-		results := make([]int, 0, trials)
-		for i := 0; i < trials; i++ {
-			done, weeks := 0, 0
-			for done < target && weeks < 520 {
-				done += samples[source.Intn(len(samples))]
-				weeks++
-			}
-			results = append(results, weeks*7)
+	results := make([]int, 0, trials)
+	for i := 0; i < trials; i++ {
+		done, weeks := 0, 0
+		for done < target && weeks < 520 {
+			done += samples[source.Intn(len(samples))]
+			weeks++
 		}
-		sort.Ints(results)
-		out = append(out, ForecastPoint{
-			Cards: target,
-			P50:   results[len(results)*50/100],
-			P85:   results[len(results)*85/100],
-			P95:   results[len(results)*95/100],
-		})
+		results = append(results, weeks)
 	}
-	return out
+	sort.Ints(results)
+	return results[len(results)*50/100], results[len(results)*85/100], results[len(results)*95/100]
 }

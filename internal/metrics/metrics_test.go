@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -321,5 +322,66 @@ func TestThroughputCountsCreatedAgainstDone(t *testing.T) {
 	last := report.Throughput[len(report.Throughput)-1]
 	if last.Created < 1 {
 		t.Errorf("заведённая сегодня не попала в «создано» текущей недели: %+v", last)
+	}
+}
+
+// Эпик с прогнозом (ROADMAP 42.3, срез 4): листья поддерева через доски,
+// объём по неделям, даты — когда есть доведённая часть и доведённое
+// на досках частей; без доведённых частей — null, а не дата.
+func TestEpicForecastNeedsADonePart(t *testing.T) {
+	f := newFixture(t)
+	var portfolio, epic string
+	f.inTenant(func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `insert into boards (org_id, project_id, name, key, level)
+			 select org_id, project_id, 'Портфель', 'ПОРТ', 'portfolio' from boards where id = $1 returning id`,
+			f.boardID).Scan(&portfolio); err != nil {
+			return err
+		}
+		var col string
+		if err := tx.QueryRow(f.ctx, `insert into board_columns (org_id, board_id, name, position, kind)
+			 values ($1, $2, 'Эпики', 'a0', 'in_progress') returning id`, f.orgID, portfolio).Scan(&col); err != nil {
+			return err
+		}
+		return tx.QueryRow(f.ctx, `insert into cards (org_id, board_id, number, column_id, title, position)
+			 values ($1, $2, 'ПОРТ-1', $3, 'Переезд', $4) returning id`, f.orgID, portfolio, col, uuid.NewString()).Scan(&epic)
+	})
+	link := func(child string) {
+		f.inTenant(func(tx pgx.Tx) error {
+			_, err := tx.Exec(f.ctx, `insert into card_links (org_id, from_card, to_card, kind) values ($1, $2, $3, 'subtask')`,
+				f.orgID, epic, child)
+			return err
+		})
+	}
+	link(f.card("Часть идёт", 10, nil, nil))
+	link(f.card("Часть ждёт", 3, nil, nil))
+	// На доске есть доведённое, но не из этого эпика: прогнозу всё
+	// ещё не из чего — у эпика ни одной доведённой части.
+	f.card("Чужая, сделана", 8, days(6), done())
+
+	got, err := f.svc.EpicForecast(f.ctx, f.orgID, f.userID, epic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Total != 2 || got.Done != 0 || got.Remaining != 2 || got.Forecast != nil {
+		t.Errorf("без доведённых частей: %+v — ожидались 2 части, прогноз пуст", got)
+	}
+	if len(got.Scope) == 0 || got.Scope[len(got.Scope)-1].Scope != 2 {
+		t.Errorf("объём по неделям: %+v — ожидалась последняя точка с двумя", got.Scope)
+	}
+
+	link(f.card("Часть сделана", 9, days(7), done()))
+	got, err = f.svc.EpicForecast(f.ctx, f.orgID, f.userID, epic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Done != 1 || got.Remaining != 2 || got.Forecast == nil {
+		t.Fatalf("с доведённой частью: %+v — ожидался прогноз", got)
+	}
+	today := time.Now().UTC().Format(time.DateOnly)
+	if got.Forecast.P50 < today || got.Forecast.P85 < got.Forecast.P50 || got.Forecast.P95 < got.Forecast.P85 {
+		t.Errorf("даты не по порядку: %+v", got.Forecast)
+	}
+	if got.Finished < 2 || got.Boards != 1 {
+		t.Errorf("история: %+v — ожидались две доведённые на одной доске", got)
 	}
 }

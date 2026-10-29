@@ -136,6 +136,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/cards/search", s.human(s.handleSearchCards))
 	mux.HandleFunc("GET /api/cards/{id}/path", s.human(s.handleCardPath))
 	mux.HandleFunc("GET /api/cards/{id}/tree", s.human(s.handleCardTree))
+	// Эпик с прогнозом (ROADMAP 42.3, срез 4): когда будет готово
+	// остальное и как рос объём — панели карточки на портфеле.
+	mux.HandleFunc("GET /api/cards/{id}/forecast", s.human(s.handleCardForecast))
 	// Приглашает владелец организации или владелец подразделения —
 	// в своё поддерево; кто вправе, решает политика (0072), а не роль.
 	mux.HandleFunc("POST /api/invites", s.authed(s.handleInvite))
