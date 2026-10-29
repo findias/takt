@@ -277,14 +277,25 @@ type FlowDay struct {
 // IterationRow — выполнение итерации: сколько было в ней и сколько
 // из этого сделано. Считается по отобранным карточкам, а не по всей
 // итерации: отчёт отвечает на свой вопрос.
+// IterationRow — итерация, пересекающая период, по карточкам отбора,
+// на момент закрытия (идущая — на сейчас), как в отчёте итерации
+// (board.IterationReport). Planned — обещано: в составе на момент
+// и добавлено не позже первого дня; Added — добавлено по ходу;
+// Dropped — выброшено из состава; Done — сделано из состава;
+// DonePlanned — сделано из обещанного. Доля обещания —
+// DonePlanned/Planned: добавленное по ходу в неё не входит, иначе
+// доля врёт в обе стороны (ROADMAP 42.3, срез 3).
 type IterationRow struct {
-	Name     string `json:"name"`
-	Board    string `json:"board"`
-	StartsOn string `json:"startsOn"`
-	EndsOn   string `json:"endsOn"`
-	Closed   bool   `json:"closed"`
-	Planned  int    `json:"planned"`
-	Done     int    `json:"done"`
+	Name        string `json:"name"`
+	Board       string `json:"board"`
+	StartsOn    string `json:"startsOn"`
+	EndsOn      string `json:"endsOn"`
+	Closed      bool   `json:"closed"`
+	Planned     int    `json:"planned"`
+	Added       int    `json:"added"`
+	Dropped     int    `json:"dropped"`
+	Done        int    `json:"done"`
+	DonePlanned int    `json:"donePlanned"`
 }
 
 // TeamRow — разрез по подразделениям: чьё подразделение ведёт доску.
@@ -729,25 +740,46 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 	}
 
 	// Итерации, пересекающие период, у которых есть отобранные карточки.
+	// Состав — на момент закрытия (идущей — на сейчас), интервалами,
+	// как в отчёте итерации: вышедшая и вернувшаяся карточка — одна,
+	// добавленная поздно — по первому входу.
 	rows, err = tx.Query(ctx, `
-		select i.name, b.name, to_char(i.starts_on, 'YYYY-MM-DD'),
-		       to_char(i.ends_on, 'YYYY-MM-DD'), i.closed_at is not null,
-		       count(*), count(*) filter (where c.outcome = 'done')
-		  from iterations i
-		  join boards b on b.id = i.board_id
-		  join iteration_cards ic on ic.iteration_id = i.id and ic.removed_at is null
-		  join report_cards r on r.id = ic.card_id
-		  join cards c on c.id = r.id
-		 where i.starts_on < $2 and i.ends_on >= $1
-		 group by i.id, i.name, b.name, i.starts_on, i.ends_on, i.closed_at
-		 order by i.starts_on, b.name, i.name`, from, next)
+		with it as (
+			select i.id, i.name, b.name as board, i.starts_on, i.ends_on, i.closed_at,
+			       coalesce(i.closed_at, now()) as t
+			  from iterations i
+			  join boards b on b.id = i.board_id
+			 where i.starts_on < $2 and i.ends_on >= $1
+		),
+		spans as (
+			select ic.iteration_id, ic.card_id, min(ic.added_at) as first_added,
+			       bool_or(ic.removed_at is null or ic.removed_at > it.t) as inside
+			  from iteration_cards ic
+			  join it on it.id = ic.iteration_id
+			  join report_cards r on r.id = ic.card_id
+			 where ic.added_at <= it.t
+			 group by ic.iteration_id, ic.card_id
+		)
+		select it.name, it.board, to_char(it.starts_on, 'YYYY-MM-DD'),
+		       to_char(it.ends_on, 'YYYY-MM-DD'), it.closed_at is not null,
+		       count(*) filter (where s.inside and s.first_added::date <= it.starts_on),
+		       count(*) filter (where s.inside and s.first_added::date > it.starts_on),
+		       count(*) filter (where not s.inside),
+		       count(*) filter (where s.inside and c.outcome = 'done' and c.finished_at <= it.t),
+		       count(*) filter (where s.inside and s.first_added::date <= it.starts_on
+		                          and c.outcome = 'done' and c.finished_at <= it.t)
+		  from it
+		  join spans s on s.iteration_id = it.id
+		  join cards c on c.id = s.card_id
+		 group by it.id, it.name, it.board, it.starts_on, it.ends_on, it.closed_at
+		 order by it.starts_on, it.board, it.name`, from, next)
 	if err != nil {
 		return sum, err
 	}
 	for rows.Next() {
 		var it IterationRow
 		if err := rows.Scan(&it.Name, &it.Board, &it.StartsOn, &it.EndsOn, &it.Closed,
-			&it.Planned, &it.Done); err != nil {
+			&it.Planned, &it.Added, &it.Dropped, &it.Done, &it.DonePlanned); err != nil {
 			rows.Close()
 			return sum, err
 		}

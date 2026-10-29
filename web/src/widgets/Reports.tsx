@@ -51,7 +51,18 @@ type Summary = {
   throughput: { week: string; count: number; created: number }[]
   flowStep: 'day' | 'week'
   flow: { day: string; queued: number; inProgress: number; done: number }[]
-  iterations: { name: string; board: string; startsOn: string; endsOn: string; closed: boolean; planned: number; done: number }[]
+  iterations: {
+    name: string
+    board: string
+    startsOn: string
+    endsOn: string
+    closed: boolean
+    planned: number
+    added: number
+    dropped: number
+    done: number
+    donePlanned: number
+  }[]
   teams: { team: string; cards: number; finished: number; wip: number; cycleTimeP50: number | null; cycleTimeP85: number | null }[]
   people: PersonRow[]
 }
@@ -567,6 +578,8 @@ function SummaryView({ sum }: { sum: Summary }) {
                   <th scope="col">{s.starts}</th>
                   <th scope="col">{s.ends}</th>
                   <th scope="col">{s.planned}</th>
+                  <th scope="col">{s.added}</th>
+                  <th scope="col">{s.dropped}</th>
                   <th scope="col">{s.finished}</th>
                   <th scope="col">{s.share}</th>
                 </tr>
@@ -579,8 +592,11 @@ function SummaryView({ sum }: { sum: Summary }) {
                     <td>{dateWords(it.startsOn)}</td>
                     <td>{dateWords(it.endsOn)}</td>
                     <td>{it.planned}</td>
+                    <td>{it.added}</td>
+                    <td>{it.dropped}</td>
                     <td>{it.done}</td>
-                    <td>{it.planned > 0 ? s.percent(Math.round((100 * it.done) / it.planned)) : '—'}</td>
+                    {/* Доля — от обещанного: добавленное по ходу её не меняет. */}
+                    <td>{it.planned > 0 ? s.percent(Math.round((100 * it.donePlanned) / it.planned)) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

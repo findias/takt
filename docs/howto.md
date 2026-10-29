@@ -824,8 +824,11 @@ week beside each (light bars higher than dark ones week after week
 means the queue is growing), **Blocks in the period** — how many cards
 stood blocked, for how many days in total and per card, and by reason
 as it was written —, the cumulative flow diagram,
-**Iteration completion** (taken, done and the share, for iterations
-overlapping the period), a breakdown **By subdivision** — the one that
+**Iteration completion** — for iterations overlapping the period, as
+of closing: promised on the first day, added on the way, dropped, done,
+and the share of the promise, which is done out of promised and does
+not move with what was added later, so row after row shows whether the
+team keeps its word —, a breakdown **By subdivision** — the one that
 runs the card's board — and **By assignee**: what each person has under
 the current selection: cards, done, in progress, the median cycle time
 and the median time in progress. A card with several assignees counts

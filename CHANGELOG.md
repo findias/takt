@@ -70,6 +70,14 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Iteration completion is a trend, and the share is honest.** The
+  iterations table on **Reports** and the **Summary** sheet is counted
+  as of each iteration's closing, like the iteration report: promised
+  on the first day, added on the way, dropped, done, and the share of
+  the promise — done out of promised. Work added after the start no
+  longer inflates or deflates the share. JSON `summary.iterations[]`
+  gains `added`, `dropped`, `donePlanned`; `planned` now means promised
+  on the first day, not everything in the iteration.
 - **Blocks in the period.** The summary on **Reports** and the
   **Summary** sheet say how many cards stood blocked in the period,
   for how many days in total and per card, and the same by reason as

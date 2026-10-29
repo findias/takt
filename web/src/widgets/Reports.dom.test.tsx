@@ -73,7 +73,7 @@ beforeEach(() => {
             { day: '2026-10-23', queued: 1, inProgress: 1, done: 1 },
           ],
           iterations: [
-            { name: 'Неделя 41', board: 'Разработка', startsOn: '2026-10-05', endsOn: '2026-10-11', closed: true, planned: 4, done: 3 },
+            { name: 'Неделя 41', board: 'Разработка', startsOn: '2026-10-05', endsOn: '2026-10-11', closed: true, planned: 4, added: 2, dropped: 1, done: 5, donePlanned: 3 },
           ],
           teams: [
             { team: 'Разработка', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 3.5 },
@@ -148,7 +148,9 @@ it('сводка за период видна на экране под тем ж
 
   const iterations = screen.getByRole('table', { name: 'Выполнение итераций' })
   const row = within(iterations).getByRole('row', { name: /Неделя 41/ })
+  // Доля — от обещанного (3 из 4), добавленное по ходу её не меняет.
   expect(within(row).getByText('75 %')).toBeTruthy()
+  expect(within(row).getByText('5')).toBeTruthy()
 
   const teams = screen.getByRole('table', { name: 'По подразделениям' })
   expect(within(teams).getByText('Без подразделения')).toBeTruthy()

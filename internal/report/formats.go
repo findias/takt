@@ -379,16 +379,20 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		}
 
 		if len(sum.Iterations) > 0 {
+			// Доля — от обещанного: добавленное по ходу в неё не входит
+			// (42.3, срез 3), иначе она врёт в обе стороны.
 			w.row(bold(n("Выполнение итераций")))
 			w.row(bold(n("Итерация")), bold(n("Доска")), bold(n("Начало")), bold(n("Конец")),
-				bold(n("Взято")), bold(n("Сделано")), bold(n("Доля")))
+				bold(n("Обещано")), bold(n("Добавлено по ходу")), bold(n("Выброшено")),
+				bold(n("Сделано")), bold(n("Доля обещания")))
 			for _, it := range sum.Iterations {
 				share := cell{}
 				if it.Planned > 0 {
-					share = pct(float64(it.Done) / float64(it.Planned))
+					share = pct(float64(it.DonePlanned) / float64(it.Planned))
 				}
 				w.row(str(it.Name), str(it.Board), isoDay(it.StartsOn), isoDay(it.EndsOn),
-					num(float64(it.Planned)), num(float64(it.Done)), share)
+					num(float64(it.Planned)), num(float64(it.Added)), num(float64(it.Dropped)),
+					num(float64(it.Done)), share)
 			}
 			w.blank()
 		}
@@ -431,7 +435,7 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			w.row(isoDay(d.Day), num(float64(d.Done)), num(float64(d.InProgress)), num(float64(d.Queued)))
 		}
 	}
-	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 10, 10}, flow, []float64{14, 12, 12, 12})
+	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 12, 10, 10, 10}, flow, []float64{14, 12, 12, 12})
 }
 
 // chartCol — колонка, с которой начинаются диаграммы: правее таблиц

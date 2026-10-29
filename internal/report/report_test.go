@@ -590,3 +590,46 @@ func TestSummaryCountsBlockedDaysBySumOfSpans(t *testing.T) {
 }
 
 func intp(v int) *int { return &v }
+
+// Тренд по итерациям (ROADMAP 42.3, срез 3): доля выполненного
+// обещания считается от обещанного на первый день и не меняется
+// от добавленного по ходу — иначе она врала бы в обе стороны;
+// выброшенное считается отдельно.
+func TestIterationShareIgnoresLateAdded(t *testing.T) {
+	f := newFixture(t)
+	promisedDone := f.card(spec{title: "Обещана и сделана", created: 20, started: 9, finished: 2, outcome: "done"})
+	promisedNot := f.card(spec{title: "Обещана, не сделана", created: 20, started: 9, finished: -1})
+	lateDone := f.card(spec{title: "Добавлена по ходу и сделана", created: 6, started: 5, finished: 1, outcome: "done"})
+	dropped := f.card(spec{title: "Выброшена", created: 20, started: -1, finished: -1})
+	f.inTenant(f.owner, func(tx pgx.Tx) error {
+		var it string
+		if err := tx.QueryRow(f.ctx, `insert into iterations (org_id, board_id, name, starts_on, ends_on, goal)
+			 values ($1, $2, 'Неделя 40', current_date - 10, current_date + 3, '') returning id`,
+			f.orgID, f.board).Scan(&it); err != nil {
+			return err
+		}
+		for _, c := range []struct {
+			card    string
+			added   int
+			removed *int
+		}{{promisedDone, 12, nil}, {promisedNot, 12, nil}, {lateDone, 6, nil}, {dropped, 12, intp(4)}} {
+			var removed any
+			if c.removed != nil {
+				removed = time.Now().AddDate(0, 0, -*c.removed)
+			}
+			if _, err := tx.Exec(f.ctx, `insert into iteration_cards (org_id, iteration_id, card_id, added_at, removed_at)
+				 values ($1, $2, $3, now() - $4::int * interval '1 day', $5)`, f.orgID, it, c.card, c.added, removed); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	c := f.export(f.owner, period(14))
+	if len(c.sum.Iterations) != 1 {
+		t.Fatalf("итераций %d, ожидалась одна", len(c.sum.Iterations))
+	}
+	it := c.sum.Iterations[0]
+	if it.Planned != 2 || it.Added != 1 || it.Dropped != 1 || it.Done != 2 || it.DonePlanned != 1 {
+		t.Errorf("итерация %+v; ожидалось обещано 2, добавлено 1, выброшено 1, сделано 2, из обещанного 1", it)
+	}
+}

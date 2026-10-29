@@ -1290,6 +1290,28 @@ func (f *filler) backdate() error {
 			  from numbered n where n.id = c.id`); err != nil {
 			return err
 		}
+		// Состав итераций: карточка, заведённая до начала итерации,
+		// вошла в неё в первый день — это «обещанное»; заведённая позже —
+		// «добавленное по ходу» (42.3, срез 3). Без этого всё в демо
+		// выглядело бы добавленным сегодня, и доля обещания была бы пуста.
+		// Карточки закрытой итерации заведены до её начала: закрытая
+		// итерация — это обещание, которое уже проверили.
+		if _, err := tx.Exec(f.ctx, `
+			update cards c
+			   set created_at = least(c.created_at, i.starts_on::timestamptz - interval '1 day')
+			  from iteration_cards ic
+			  join iterations i on i.id = ic.iteration_id and i.closed_at is not null
+			 where ic.card_id = c.id`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(f.ctx, `
+			update iteration_cards ic
+			   set added_at = greatest(c.created_at, i.starts_on::timestamptz)
+			  from iterations i, cards c
+			 where i.id = ic.iteration_id and c.id = ic.card_id
+			   and ic.added_at > i.starts_on::timestamptz`); err != nil {
+			return err
+		}
 		// Блокировки стоят уже несколько дней: «Требует внимания»
 		// (42.3, срез 5) показывает, сколько, и ноль там читался бы
 		// как «только что».
