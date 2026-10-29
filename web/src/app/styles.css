@@ -2741,14 +2741,21 @@ textarea.description {
   height: 100%;
   display: flex;
   align-items: flex-end;
+  gap: 1px;
   background: var(--surface-2);
   border-radius: 2px;
 }
 .bar-fill {
-  width: 100%;
+  flex: 1;
   background: var(--accent);
   border-radius: 2px;
   min-height: 1px;
+}
+/* Заведённое той же недели — рядом, светлее: пара читается как
+   «пришло против ушло», а не как два графика. */
+.bar-fill--created {
+  background: var(--ink-3);
+  opacity: 0.35;
 }
 
 .figures {

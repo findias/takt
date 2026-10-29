@@ -570,8 +570,8 @@ describe('поток словами, а не машинными строками
     cycleTime: null,
     finished: [],
     throughput: [
-      { week: '2026-05-18', count: 0 },
-      { week: '2026-05-25', count: 3 },
+      { week: '2026-05-18', count: 0, created: 0 },
+      { week: '2026-05-25', count: 3, created: 0 },
     ],
     wip: 0,
     aging: [],
@@ -594,10 +594,10 @@ describe('поток словами, а не машинными строками
     vi.spyOn(api, 'metrics').mockResolvedValue({
       ...metrics,
       throughput: [
-        { week: '2026-05-04', count: 1 },
-        { week: '2026-05-11', count: 0 },
-        { week: '2026-05-18', count: 1 },
-        { week: '2026-05-25', count: 1 },
+        { week: '2026-05-04', count: 1, created: 0 },
+        { week: '2026-05-11', count: 0, created: 0 },
+        { week: '2026-05-18', count: 1, created: 0 },
+        { week: '2026-05-25', count: 1, created: 0 },
       ],
       forecast: [{ cards: 5, p50: 105, p85: 140, p95: 161 }],
     })
@@ -616,10 +616,10 @@ describe('поток словами, а не машинными строками
     vi.spyOn(api, 'metrics').mockResolvedValue({
       ...metrics,
       throughput: [
-        { week: '2026-05-04', count: 5 },
-        { week: '2026-05-11', count: 4 },
-        { week: '2026-05-18', count: 6 },
-        { week: '2026-05-25', count: 5 },
+        { week: '2026-05-04', count: 5, created: 0 },
+        { week: '2026-05-11', count: 4, created: 0 },
+        { week: '2026-05-18', count: 6, created: 0 },
+        { week: '2026-05-25', count: 5, created: 0 },
       ],
       forecast: [{ cards: 5, p50: 7, p85: 14, p95: 21 }],
     })
@@ -640,11 +640,13 @@ describe('поток словами, а не машинными строками
     await user.click(await screen.findByRole('button', { name: 'Поток' }))
     const bars = await screen.findByRole('img', { name: /Пропускная способность/ })
     const titles = [...bars.querySelectorAll('.bar')].map((b) => b.getAttribute('title'))
-    expect(titles).toEqual(['неделя 18 мая: 0', 'неделя 25 мая: 3'])
+    // Созданное — рядом со сделанным (ROADMAP 42.3, срез 7): пара
+    // читается и в подсказке, и диктору.
+    expect(titles).toEqual(['неделя 18 мая: сделано 0, создано 0', 'неделя 25 мая: сделано 3, создано 0'])
     // Диктору читаются пары «неделя — сколько»: ряд чисел без недель
     // не говорит ни о чём, а столбики он не видит.
     expect(bars.getAttribute('aria-label')).toBe(
-      'Пропускная способность: неделя 18 мая — 0, неделя 25 мая — 3',
+      'Пропускная способность: неделя 18 мая — сделано 0, создано 0, неделя 25 мая — сделано 3, создано 0',
     )
   })
 })

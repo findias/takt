@@ -312,17 +312,19 @@ func (s *xlsxSink) Summary(sum Summary) error {
 		w.blank()
 
 		// Пропускная способность: таблица и столбцы рядом с ней.
+		// Создано рядом со сделанным: две линии расходятся — очередь
+		// растёт (42.3, срез 7).
 		w.row(bold(n("Пропускная способность по неделям")))
-		w.row(bold(n("Неделя с")), bold(n("Сделано")))
+		w.row(bold(n("Неделя с")), bold(n("Сделано")), bold(n("Создано")))
 		first := w.n + 1
 		for _, wk := range sum.Throughput {
-			w.row(isoDay(wk.Week), num(float64(wk.Count)))
+			w.row(isoDay(wk.Week), num(float64(wk.Count)), num(float64(wk.Created)))
 		}
 		// Недель и дней в периоде всегда хотя бы по одной: период
 		// не короче дня, и ряды диаграмм не бывают пустыми.
-		charts[0] = chartSpec{kind: "bar", title: n("Сделано по неделям"),
-			firstRow: first, lastRow: w.n, catCol: 0, valCols: []int{1},
-			colors: []string{"3F7D6B"}, anchor: [2]int{chartCol, first - 2}}
+		charts[0] = chartSpec{kind: "bar", title: n("Сделано и создано по неделям"),
+			firstRow: first, lastRow: w.n, catCol: 0, valCols: []int{1, 2},
+			colors: []string{"3F7D6B", "A9B4B0"}, anchor: [2]int{chartCol, first - 2}}
 		nextFree := first - 2 + chartRows + 1 // первая строка под диаграммой, с 0
 		w.blank()
 

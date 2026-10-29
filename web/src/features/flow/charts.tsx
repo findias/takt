@@ -318,20 +318,27 @@ function round(value: number): string {
 
 /** Столбики без библиотеки: график из десятка значений — это десяток
  *  прямоугольников, и тащить ради них зависимость незачем. Те же
- *  столбики — у пропускной способности на «Отчётах». */
-export function Bars({ values, labels }: { values: number[]; labels: string[] }) {
-  const top = Math.max(1, ...values)
+ *  столбики — у пропускной способности на «Отчётах».
+ *
+ *  Рядом с доведённым — заведённое той же недели (42.3, срез 7), светлым:
+ *  светлые выше тёмных неделю за неделей — очередь растёт, и это видно
+ *  раньше, чем вырастет время цикла. Шкала у пары общая, иначе
+ *  столбики нельзя сравнить между собой. */
+export function Bars({ values, labels, created }: { values: number[]; labels: string[]; created?: number[] }) {
+  const top = Math.max(1, ...values, ...(created ?? []))
+  const pair = (i: number) => (created ? t.flow.weekPair(values[i], created[i]) : String(values[i]))
   return (
     <div
       className="bars"
       role="img"
       // Диктору читаются пары «неделя — сколько»: один ряд чисел
       // без недель не говорит ни о чём, а столбики он не видит.
-      aria-label={t.flow.throughputLabel(values.map((value, i) => `${labels[i]} — ${value}`).join(', '))}
+      aria-label={t.flow.throughputLabel(values.map((_, i) => `${labels[i]} — ${pair(i)}`).join(', '))}
     >
       {values.map((value, i) => (
-        <div key={labels[i]} className="bar" title={`${labels[i]}: ${value}`}>
+        <div key={labels[i]} className="bar" title={`${labels[i]}: ${pair(i)}`}>
           <div className="bar-fill" style={{ height: `${(value / top) * 100}%` }} />
+          {created && <div className="bar-fill bar-fill--created" style={{ height: `${(created[i] / top) * 100}%` }} />}
         </div>
       ))}
     </div>

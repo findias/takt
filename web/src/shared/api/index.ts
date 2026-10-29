@@ -376,7 +376,8 @@ export type FlowReport = {
    *  и двадцать по три дают одинаковую медиану и совершенно разный
    *  разговор на разборе. */
   finished: { id: string; title: string; finishedOn: string; days: number; imported: boolean }[]
-  throughput: { week: string; count: number }[]
+  /** Рядом с доведённым — заведённое той же недели: расходятся — очередь растёт. */
+  throughput: { week: string; count: number; created: number }[]
   wip: number
   aging: { id: string; title: string; column: string; days: number; blocked: boolean; imported: boolean }[]
   flow: { day: string; queued: number; inProgress: number; done: number }[]

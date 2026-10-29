@@ -804,7 +804,9 @@ for the period** — the same numbers the file opens with, counted by the
 same selection, so you can answer "how much did we close this quarter"
 without downloading anything: done and discarded within the period,
 in progress now, cycle time and age of unfinished work (half and 85 of
-100), throughput by week as bars, the cumulative flow diagram,
+100), throughput by week as bars with what was created in the same
+week beside each (light bars higher than dark ones week after week
+means the queue is growing), the cumulative flow diagram,
 **Iteration completion** (taken, done and the share, for iterations
 overlapping the period), a breakdown **By subdivision** — the one that
 runs the card's board — and **By assignee**: what each person has under
@@ -819,7 +821,7 @@ Then download:
 
 - **Excel (XLSX)** opens on a **Summary** sheet: what was selected,
   cards done and discarded in the period, work in progress, cycle time
-  and age (median and 85th percentile), throughput by week with a chart,
+  and age (median and 85th percentile), done and created by week with a chart,
   the cumulative flow diagram with a line on how to read it (its numbers
   by date are on a sheet of their own, after **Data**), iteration
   completion, a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card

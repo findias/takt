@@ -501,3 +501,22 @@ func TestExportCarriesTicketsAndDescription(t *testing.T) {
 		t.Errorf("столбец «Описание»: %q", got)
 	}
 }
+
+// Создано против сделано в сводке (ROADMAP 42.3, срез 7): «создано»
+// считает заведённое внутри периода по неделям; заведённое до периода
+// в нём не создано, хотя в отбор попадает.
+func TestSummaryCountsCreatedByWeek(t *testing.T) {
+	f := newFixture(t)
+	f.card(spec{title: "Старая", created: 40, started: 40, finished: 1, outcome: "done"})
+	f.card(spec{title: "Новая", created: 1, started: -1, finished: -1})
+
+	c := f.export(f.owner, period(14))
+	created, finished := 0, 0
+	for _, w := range c.sum.Throughput {
+		created += w.Created
+		finished += w.Count
+	}
+	if created != 1 || finished != 1 {
+		t.Errorf("создано %d, сделано %d; ожидалось по одной", created, finished)
+	}
+}

@@ -202,17 +202,18 @@ export function Flow({
         {/* Пустая сетка столбиков читается как поломка графика, а не как
             «нечего показывать». Пока ни одна карточка не доведена
             до конца, честнее сказать это словами. */}
-        {report.throughput.some((w) => w.count > 0) ? (
+        {report.throughput.some((w) => w.count > 0 || w.created > 0) ? (
           <>
             <Bars
               values={report.throughput.map((w) => w.count)}
+              created={report.throughput.map((w) => w.created)}
               // Неделя названа словами: в подсказке столбика стояло
               // «2026-05-18: 0» — машинная запись там, где человек
               // ищет глазами «какая это была неделя».
               labels={report.throughput.map((w) => t.flow.week(dateWords(w.week)))}
             />
             <p className="muted small">
-              {t.flow.byWeek}
+              {t.flow.byWeek} {t.flow.createdVsDone}
               {report.discarded > 0 && t.flow.discarded(report.discarded)}
               {report.movedOut > 0 && t.flow.movedOut(report.movedOut)}
             </p>

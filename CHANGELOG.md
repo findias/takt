@@ -69,6 +69,13 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Created against done.** Next to each week's throughput bar, on
+  **Flow** and on **Reports**, a light bar shows how many cards were
+  created in that week: light bars higher than dark ones week after
+  week means more work arrives than leaves, and the queue grows before
+  cycle time does. The **Summary** sheet has a **Created** column and
+  the chart has both series; JSON `throughput[]` and the metrics'
+  `throughput[]` gain `created`.
 - **Reports keep subtasks with their task and show completion.** On
   the **Data** sheet (and in CSV and JSON) each part sits right under its
   task with its title indented; in Excel the parts are a group you can

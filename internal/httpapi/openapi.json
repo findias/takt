@@ -172,7 +172,7 @@
           "wip": { "type": "integer", "description": "В работе сейчас." },
           "cycleTime": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
           "age": { "type": ["object", "null"], "required": ["p50", "p85"], "properties": { "p50": { "type": "number" }, "p85": { "type": "number" } } },
-          "throughput": { "type": "array", "items": { "type": "object", "required": ["week", "count"], "properties": { "week": { "type": "string", "format": "date" }, "count": { "type": "integer" } } } },
+          "throughput": { "type": "array", "items": { "type": "object", "required": ["week", "count", "created"], "properties": { "week": { "type": "string", "format": "date" }, "count": { "type": "integer", "description": "Сделано на этой неделе." }, "created": { "type": "integer", "description": "Заведено на этой неделе внутри периода. Больше сделанного неделю за неделей — очередь растёт." } } } },
           "flowStep": { "type": "string", "enum": ["day", "week"], "description": "Шаг накопительной: по дням до 120 дней периода, дальше по неделям." },
           "flow": { "type": "array", "items": { "type": "object", "required": ["day", "queued", "inProgress", "done"], "properties": { "day": { "type": "string", "format": "date" }, "queued": { "type": "integer" }, "inProgress": { "type": "integer" }, "done": { "type": "integer" } } } },
           "iterations": { "type": "array", "items": { "type": "object", "required": ["name", "board", "startsOn", "endsOn", "closed", "planned", "done"], "properties": { "name": { "type": "string" }, "board": { "type": "string" }, "startsOn": { "type": "string", "format": "date" }, "endsOn": { "type": "string", "format": "date" }, "closed": { "type": "boolean" }, "planned": { "type": "integer" }, "done": { "type": "integer" } } } },
@@ -613,13 +613,14 @@
                     },
                     "throughput": {
                       "type": "array",
-                      "description": "Сколько доведено до конца по неделям.",
+                      "description": "Сколько доведено до конца по неделям — и сколько заведено на той же неделе.",
                       "items": {
                         "type": "object",
-                        "required": ["week", "count"],
+                        "required": ["week", "count", "created"],
                         "properties": {
                           "week": { "type": "string", "format": "date", "description": "Понедельник недели." },
-                          "count": { "type": "integer" }
+                          "count": { "type": "integer", "description": "Доведено до конца." },
+                          "created": { "type": "integer", "description": "Заведено на доске на этой неделе." }
                         }
                       }
                     },

@@ -225,6 +225,9 @@ type Percentiles struct {
 type WeekCount struct {
 	Week  string `json:"week"`
 	Count int    `json:"count"`
+	// Created — заведено на той же неделе внутри периода: «создано
+	// против сделано» (ROADMAP 42.3, срез 7).
+	Created int `json:"created"`
 }
 
 type FlowDay struct {
@@ -576,18 +579,21 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 			select generate_series(date_trunc('week', $1::timestamptz),
 			                       date_trunc('week', $2::timestamptz - interval '1 day'),
 			                       interval '1 week') as week)
-		select to_char(w.week, 'YYYY-MM-DD'), count(c.id)
+		select to_char(w.week, 'YYYY-MM-DD'),
+		       count(c.id) filter (where c.outcome = 'done' and c.finished_at >= $1 and c.finished_at < $2
+		                             and date_trunc('week', c.finished_at) = w.week),
+		       count(c.id) filter (where c.created_at >= $1 and c.created_at < $2
+		                             and date_trunc('week', c.created_at) = w.week)
 		  from weeks w
 		  left join (report_cards r join cards c on c.id = r.id)
-		    on c.outcome = 'done' and c.finished_at >= $1 and c.finished_at < $2
-		   and date_trunc('week', c.finished_at) = w.week
+		    on date_trunc('week', c.finished_at) = w.week or date_trunc('week', c.created_at) = w.week
 		 group by w.week order by w.week`, from, next)
 	if err != nil {
 		return sum, err
 	}
 	for rows.Next() {
 		var w WeekCount
-		if err := rows.Scan(&w.Week, &w.Count); err != nil {
+		if err := rows.Scan(&w.Week, &w.Count, &w.Created); err != nil {
 			rows.Close()
 			return sum, err
 		}

@@ -106,6 +106,10 @@ type FinishedCard struct {
 type WeeklyCount struct {
 	Week  string `json:"week"`
 	Count int    `json:"count"`
+	// Created — сколько заведено на той же неделе (ROADMAP 42.3, срез 7).
+	// Рядом с доведённым: приходит больше, чем уходит, — очередь
+	// растёт, и это видно раньше, чем вырастет время цикла.
+	Created int `json:"created"`
 }
 
 type AgingCard struct {
@@ -282,11 +286,12 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 				interval '1 week') as week
 		)
 		select to_char(w.week, 'YYYY-MM-DD'),
-		       count(c.id) filter (where c.outcome = 'done')
+		       count(c.id) filter (where c.outcome = 'done' and date_trunc('week', c.finished_at) = w.week),
+		       count(c.id) filter (where date_trunc('week', c.created_at) = w.week)
 		  from weeks w
 		  left join cards c
 		    on c.board_id = $1
-		   and date_trunc('week', c.finished_at) = w.week
+		   and (date_trunc('week', c.finished_at) = w.week or date_trunc('week', c.created_at) = w.week)
 		   and (not $3 or c.external_source is null)
 		   and not `+board.IsItem("c")+`
 		 group by w.week
@@ -297,7 +302,7 @@ func (s *Service) throughput(ctx context.Context, tx pgx.Tx, boardID string, day
 	defer rows.Close()
 	for rows.Next() {
 		var wc WeeklyCount
-		if err := rows.Scan(&wc.Week, &wc.Count); err != nil {
+		if err := rows.Scan(&wc.Week, &wc.Count, &wc.Created); err != nil {
 			return err
 		}
 		out.Throughput = append(out.Throughput, wc)

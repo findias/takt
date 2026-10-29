@@ -296,3 +296,30 @@ func TestItemsOfAParentAreNotFlow(t *testing.T) {
 		t.Errorf("пропускная способность посчитала пункт: %d", total)
 	}
 }
+
+// Создано против сделано (ROADMAP 42.3, срез 7): у недели считается
+// и заведённое. Карточка, заведённая и доведённая в разные недели,
+// стоит в «создано» одной и в «сделано» другой; заведённая без
+// финиша — только в «создано».
+func TestThroughputCountsCreatedAgainstDone(t *testing.T) {
+	f := newFixture(t)
+	f.card("Давно заведена, доведена сейчас", 20, days(20), done())
+	f.card("Заведена сейчас, не доведена", 0.5, nil, nil)
+
+	report, err := f.svc.Report(f.ctx, f.orgID, f.userID, f.boardID, 28)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, finished := 0, 0
+	for _, w := range report.Throughput {
+		created += w.Created
+		finished += w.Count
+	}
+	if created != 2 || finished != 1 {
+		t.Errorf("создано %d, сделано %d; ожидалось 2 и 1", created, finished)
+	}
+	last := report.Throughput[len(report.Throughput)-1]
+	if last.Created < 1 {
+		t.Errorf("заведённая сегодня не попала в «создано» текущей недели: %+v", last)
+	}
+}

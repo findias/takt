@@ -172,7 +172,7 @@ hung. Every list that offers a label also says where it comes from.
 | Metric | What it answers |
 | --- | --- |
 | Cycle time | how many days work usually takes (percentiles) |
-| Throughput | how many cards were finished, by week |
+| Throughput | how many cards were finished, by week — and how many were created in the same week |
 | In progress | how much work is running right now |
 | Ageing | what is running and how long it has been running |
 | Cumulative flow | three bands by day: queued, in progress, done |

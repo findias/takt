@@ -28,6 +28,9 @@ export const flow: typeof ru = {
     throughput: 'Throughput',
     week: (when: string) => `week of ${when}`,
     byWeek: 'By week, finished work only.',
+    createdVsDone:
+      'Light bars are what was created in the same week: higher than the dark ones week after week means more work arrives than leaves, and the queue grows.',
+    weekPair: (done: number, created: number) => `done ${done}, created ${created}`,
     discarded: (n: number) => ` Another ${n} taken off the board unfinished — they do not count.`,
     movedOut: (n: number) => ` Moved to other boards: ${n} — the board they went to counts them.`,
     noThroughput:

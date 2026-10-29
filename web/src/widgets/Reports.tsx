@@ -45,7 +45,7 @@ type Summary = {
   wip: number
   cycleTime: Percentiles | null
   age: Percentiles | null
-  throughput: { week: string; count: number }[]
+  throughput: { week: string; count: number; created: number }[]
   flowStep: 'day' | 'week'
   flow: { day: string; queued: number; inProgress: number; done: number }[]
   iterations: { name: string; board: string; startsOn: string; endsOn: string; closed: boolean; planned: number; done: number }[]
@@ -346,11 +346,11 @@ function SummaryView({ sum }: { sum: Summary }) {
 
       <section className="stack reports-group">
         <h3 className="section-title">{t.flow.throughput}</h3>
-        {sum.throughput.some((w) => w.count > 0) ? (
+        {sum.throughput.some((w) => w.count > 0 || w.created > 0) ? (
           <>
-            <Bars values={sum.throughput.map((w) => w.count)}
+            <Bars values={sum.throughput.map((w) => w.count)} created={sum.throughput.map((w) => w.created)}
               labels={sum.throughput.map((w) => t.flow.week(dateWords(w.week)))} />
-            <p className="muted small">{t.flow.byWeek}</p>
+            <p className="muted small">{t.flow.byWeek} {t.flow.createdVsDone}</p>
           </>
         ) : (
           <p className="muted small">{s.noThroughput}</p>

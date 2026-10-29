@@ -13,7 +13,7 @@ export const hintText: typeof ru = {
   cycleTime: 'How many days work takes from the column where it starts to the column where it ends. Shown as percentiles: an average would hide the long tail.',
   age: 'How many days each started card has been going. Age speaks not about the past but about what is stuck right now.',
   accumulation: 'Three bands by day: not started, in progress, done. An in-progress band that keeps growing means more is started than finished.',
-  throughput: 'How many cards a week reach the column where work ends. Cards taken off the board unfinished do not count.',
+  throughput: 'How many cards a week reach the column where work ends, and how many were created in the same week. Cards taken off the board unfinished do not count.',
   forecast: 'How many days finishing so many cards may take. It samples random weeks from the past and says one thing: what happens if it goes on as it went.',
   roles: 'An owner reads, changes work and runs the organisation. A member reads and changes work. A viewer only reads.',
   subdivisionAdmin: 'Runs their own subtree: who is in it, nested subdivisions and their boards; invites people and appoints owners below. Appointed by the organisation owner or the owner of a subdivision above.',
