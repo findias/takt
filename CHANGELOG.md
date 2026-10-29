@@ -35,6 +35,16 @@ board metrics have `movedOut`.
 
 ### The rest
 
+- **Reports speak plainly.** Every block on **Reports** has a "?"
+  beside its title with a few sentences on what the numbers mean and a
+  link to the reference, which has a new section, "Numbers on
+  Reports". Labels say what the number is instead of naming the
+  statistic: "usually: half of the cards" and "almost always: 85 of
+  100" instead of "half" and "85 of 100", **Done out of promised**
+  instead of "share of promise", **Sum of estimates** instead of
+  "weight", **Cycle time, usually** instead of "cycle, median". The
+  long notes under the blocks moved into those explanations. The file
+  is unchanged.
 - **A card can move to another board.** The **…** menu on a card has
   **Move to another board…** (the open card's panel has **To another
 board…**, the table has it in the row menu, and selected cards move

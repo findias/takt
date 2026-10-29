@@ -7,6 +7,7 @@ import { setQuery, useQuery } from '../shared/router/index.ts'
 import { PickList } from '../shared/ui/PickList.tsx'
 import { Slices } from '../features/reports/Slices.tsx'
 import { Button } from '../shared/ui/Button.tsx'
+import { Hint } from '../shared/ui/Hint.tsx'
 import { Bars, CumulativeFlow } from '../features/flow/charts.tsx'
 import { UNIT_NAMES, dateWords } from '../entities/card/model.ts'
 import type { EstimateUnit } from '../shared/api/index.ts'
@@ -412,7 +413,14 @@ function AttentionView({ list, onOpen }: { list: Attention; onOpen: (c: Attentio
   const total = groups.reduce((n, g) => n + list[g.key].length, 0)
   return (
     <section className="stack reports-group">
-      <h3 className="section-title">{s.attention}</h3>
+      {/* «?» у заголовка блока, а не абзац под ним (42.3, упрощение
+          29.10): двенадцать абзацев мелким под двенадцатью блоками
+          читались как ещё один отчёт. Пояснение открывают, когда
+          оно нужно; на экране остаётся то, что нужно для действия. */}
+      <div className="section-head">
+        <h3 className="section-title">{s.attention}</h3>
+        <Hint topic="attentionReport" />
+      </div>
       {total === 0 ? (
         <p className="muted small">{s.attentionNone}</p>
       ) : (
@@ -453,7 +461,6 @@ function AttentionView({ list, onOpen }: { list: Attention; onOpen: (c: Attentio
           ))
       )}
       {list.truncated && <p className="muted small">{s.attentionTruncated}</p>}
-      <p className="muted small">{s.attentionHint}</p>
     </section>
   )
 }
@@ -483,7 +490,10 @@ function SummaryView({ sum }: { sum: Summary }) {
   return (
     <>
       <section className="stack reports-group">
-        <h3 className="section-title">{s.summary}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{s.summary}</h3>
+          <Hint topic="summaryReport" />
+        </div>
         <div className="row row--tight">
           <Figure label={s.finished} value={String(sum.finished)} note={was(sum.finished, prev.finished, String)} />
           <Figure label={s.created} value={String(createdNow)} note={was(createdNow, prev.created, String)} />
@@ -492,6 +502,7 @@ function SummaryView({ sum }: { sum: Summary }) {
         </div>
         <div className="row row--tight">
           <span className="small report-name">{s.cycle}</span>
+          <Hint topic="cycleTime" />
           {sum.cycleTime ? (
             <>
               <Figure label={s.half} value={days(sum.cycleTime.p50)}
@@ -506,6 +517,7 @@ function SummaryView({ sum }: { sum: Summary }) {
         {sum.age && (
           <div className="row row--tight">
             <span className="small report-name">{s.age}</span>
+            <Hint topic="age" />
             <Figure label={s.half} value={days(sum.age.p50)} />
             <Figure label={s.p85} value={days(sum.age.p85)} />
           </div>
@@ -515,6 +527,7 @@ function SummaryView({ sum }: { sum: Summary }) {
             а не три нуля. */}
         <div className="row row--tight">
           <span className="small report-name">{s.due}</span>
+          <Hint topic="dueDates" />
           {sum.due.withDue > 0 ? (
             <>
               {sum.due.finished > 0 ? (
@@ -532,16 +545,19 @@ function SummaryView({ sum }: { sum: Summary }) {
             <span className="muted small">{s.noDue}</span>
           )}
         </div>
-        <p className="muted small">{s.summaryHint} {s.previousHint(dateWords(prev.from), dateWords(prev.to))}</p>
+        <p className="muted small">{s.previousHint(dateWords(prev.from), dateWords(prev.to))}</p>
       </section>
 
       <section className="stack reports-group">
-        <h3 className="section-title">{t.flow.throughput}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{s.weekly}</h3>
+          <Hint topic="throughput" />
+        </div>
         {sum.throughput.some((w) => w.count > 0 || w.created > 0) ? (
           <>
             <Bars values={sum.throughput.map((w) => w.count)} created={sum.throughput.map((w) => w.created)}
               labels={sum.throughput.map((w) => t.flow.week(dateWords(w.week)))} />
-            <p className="muted small">{t.flow.byWeek} {t.flow.createdVsDone}</p>
+            <p className="muted small">{s.weeklyHint}</p>
           </>
         ) : (
           <p className="muted small">{s.noThroughput}</p>
@@ -551,7 +567,10 @@ function SummaryView({ sum }: { sum: Summary }) {
       {/* Блокировки за период (42.3, срез 6): сколько дней простояли
           и из-за чего. Не было — одной строкой, без пустой таблицы. */}
       <section className="stack reports-group">
-        <h3 className="section-title">{s.blocks}</h3>
+        <div className="section-head">
+          <h3 className="section-title">{s.blocks}</h3>
+          <Hint topic="blocksReport" />
+        </div>
         {sum.blocks.cards === 0 ? (
           <p className="muted small">{s.noBlocks}</p>
         ) : (
@@ -581,7 +600,6 @@ function SummaryView({ sum }: { sum: Summary }) {
                 </tbody>
               </table>
             </div>
-            <p className="muted small">{s.blocksHint}</p>
           </>
         )}
       </section>
@@ -590,14 +608,20 @@ function SummaryView({ sum }: { sum: Summary }) {
           одна точка, и диаграмма молча не показывается. */}
       {sum.flow.length > 1 && (
         <section className="stack reports-group">
-          <h3 className="section-title">{t.flow.cfd}</h3>
+          <div className="section-head">
+            <h3 className="section-title">{t.flow.cfd}</h3>
+            <Hint topic="accumulation" />
+          </div>
           <CumulativeFlow flow={sum.flow} />
         </section>
       )}
 
       {sum.iterations.length > 0 && (
         <section className="stack reports-group">
-          <h3 className="section-title">{s.iterations}</h3>
+          <div className="section-head">
+            <h3 className="section-title">{s.iterations}</h3>
+            <Hint topic="iterationsReport" />
+          </div>
           <div className="table-wrap">
             <table className="figures reports-table" aria-label={s.iterations}>
               <thead>
@@ -631,7 +655,6 @@ function SummaryView({ sum }: { sum: Summary }) {
               </tbody>
             </table>
           </div>
-          <p className="muted small">{s.iterationsHint}</p>
         </section>
       )}
 
@@ -640,15 +663,15 @@ function SummaryView({ sum }: { sum: Summary }) {
           сделанных; карточка с двумя метками — у обеих. */}
       {sum.effort.finished > 0 && (
         <section className="stack reports-group">
-          <h3 className="section-title">{s.effort}</h3>
+          <div className="section-head">
+            <h3 className="section-title">{s.effort}</h3>
+            <Hint topic="effort" />
+          </div>
           <ShareTable rows={sum.effort.byLabel} total={sum.effort.finished} label={s.effortByLabel}
             nameHead={s.label} none={s.noLabel} unit={sum.effort.mixedUnits ? null : sum.effort.unit} withScope />
           <ShareTable rows={sum.effort.byEpic} total={sum.effort.finished} label={s.effortByEpic}
             nameHead={s.epic} none={s.noEpic} unit={sum.effort.mixedUnits ? null : sum.effort.unit} />
-          <p className="muted small">
-            {s.effortHint}
-            {sum.effort.mixedUnits && ' ' + s.effortMixed}
-          </p>
+          {sum.effort.mixedUnits && <p className="muted small">{s.effortMixed}</p>}
         </section>
       )}
 
@@ -756,7 +779,10 @@ function ByPerson({ rows, chosen, onPick }: { rows: PersonRow[]; chosen: string[
   const days = (v: number | null) => (v === null ? '—' : s.days(v))
   return (
     <section className="stack reports-group">
-      <h3 className="section-title">{s.byPerson}</h3>
+      <div className="section-head">
+        <h3 className="section-title">{s.byPerson}</h3>
+        <Hint topic="people" />
+      </div>
       <div className="table-wrap">
         <table className="figures reports-table" aria-label={s.byPerson}>
           <thead>

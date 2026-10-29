@@ -230,7 +230,7 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
 <tbody>
-<tr><td>Cycle time</td><td>how many days work usually takes (percentiles)</td></tr>
+<tr><td>Cycle time</td><td>how many days work usually takes: half of the cards fit in the first number, 85 of 100 in the second</td></tr>
 <tr><td>Throughput</td><td>how many cards were finished, by week — and how many were created in the same week</td></tr>
 <tr><td>In progress</td><td>how much work is running right now</td></tr>
 <tr><td>Ageing</td><td>what is running and how long it has been running</td></tr>
@@ -240,6 +240,78 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>Every board counts its own metrics. Epics live on a portfolio board, so their months never mix with a team&#39;s days.</p>
+<h2 id="reports-numbers">Numbers on <strong>Reports</strong></h2>
+<p>Every block on <strong>Reports</strong> has a &#34;?&#34; beside its title with the same explanation in a few sentences. Here they are together, block by block. All of them count the cards that match the selection above.</p>
+<h3 id="reports-attention">Needs attention now</h3>
+<p>What keeps work from moving as of today. The period does not apply here; the selection does. A card with two problems is in both lists. Click a card and it opens at the side, so the problem can be fixed in place.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>List</th><th>What is in it</th></tr></thead>
+<tbody>
+<tr><td>Blocked</td><td>cards with a block on them, and for how many days, with the reason</td></tr>
+<tr><td>Running longer than promised</td><td>started cards that have been running longer than the board&#39;s promise: the time work usually takes to cross the board</td></tr>
+<tr><td>Overdue</td><td>cards whose due date has passed and which are not done</td></tr>
+<tr><td>In progress without an assignee</td><td>started cards with nobody on them</td></tr>
+<tr><td>No movement</td><td>cards sitting in one column longer than the board&#39;s <strong>No movement</strong> setting on Flow, 7 days by default</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-summary">Summary for the period</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Number</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Done</td><td>cards finished within the period</td></tr>
+<tr><td>Created</td><td>cards created within the period</td></tr>
+<tr><td>Discarded</td><td>cards taken off the board unfinished within the period</td></tr>
+<tr><td>In progress</td><td>started and not finished, as of today</td></tr>
+<tr><td>was …, +…</td><td>the same number for the previous period of the same length, right before this one, and the difference</td></tr>
+<tr><td>Cycle time</td><td>how many days a card takes from the column where work starts to the column where it ends. &#34;Usually&#34; is the number half of the finished cards fit in; &#34;almost always&#34; is the number 85 of 100 fit in. There is no average on purpose: a few long cards would skew it</td></tr>
+<tr><td>How long started work has been running</td><td>the same two numbers for cards that are started and not finished: half of them have been running less than the first, 85 of 100 less than the second. This is what is stuck right now</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-due">Due dates</h3>
+<p>Only cards with a due date count. The share done on time is those done in the period no later than their due date; the &#34;was&#34; beside it is the same share for the previous period. The number overdue now is how many cards have passed their date and are not done, as of today.</p>
+<h3 id="done-and-created-by-week">Done and created by week</h3>
+<p>Dark bars are cards finished in that week, light bars are cards created in the same week. Light bars higher than dark ones week after week mean more work comes in than goes out, and the queue grows.</p>
+<h3 id="reports-blocks">Blocks in the period</h3>
+<p>How many cards stood blocked in the period and how many days that took, in total and per card. Days are counted within the period and summed over every block of a card; a block that is still open counts up to today. The table by reason shows reasons as they were written on the cards.</p>
+<h3 id="how-work-piles-up">How work piles up</h3>
+<p>Three bands by day: queued, in progress, done. A band of work in progress that keeps getting thicker means more is started than finished.</p>
+<h3 id="reports-iterations">Iterations: promised and done</h3>
+<p>Iterations that overlap the period, as of their closing; a running one as of today.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Promised</td><td>cards the iteration held on its first day</td></tr>
+<tr><td>Added on the way</td><td>cards put into the iteration after it started</td></tr>
+<tr><td>Taken out</td><td>cards removed from the iteration before it closed</td></tr>
+<tr><td>Done</td><td>cards finished in the iteration, including those added on the way</td></tr>
+<tr><td>Done out of promised</td><td>done cards among the promised ones, as a share of the promise; what was added on the way does not change it. Row after row shows whether the team keeps its word</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-effort">Where the effort went</h3>
+<p>Cards done in the period, laid out by label and by epic.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Whose</td><td>the label&#39;s scope: organisation-wide, a subdivision&#39;s or a board&#39;s</td></tr>
+<tr><td>Done</td><td>cards done with this label or under this epic</td></tr>
+<tr><td>Share</td><td>out of everything done in the period. A card with two labels counts for both, so shares may add up to more than a hundred</td></tr>
+<tr><td>Sum of estimates</td><td>the estimates of those cards added up, in the unit the boards use; &#34;(3 unestimated)&#34; is how many had no estimate. Shown only when every selected board estimates in the same unit</td></tr>
+</tbody>
+</table></div>
+<p>The epic is the nearest parent on a portfolio board; epics themselves are not in the table.</p>
+<h3 id="reports-people">By subdivision and by assignee</h3>
+<p>The subdivision is the one that runs the card&#39;s board. A card with two assignees counts for both; cards with nobody on them are a row of their own. Click a name and the selection, and the file, become that person&#39;s.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Cards</td><td>cards that match the selection</td></tr>
+<tr><td>Done</td><td>finished within the period</td></tr>
+<tr><td>In progress</td><td>started and not finished, as of today</td></tr>
+<tr><td>Cycle time, usually</td><td>the number half of the finished cards fit in, in days</td></tr>
+<tr><td>Cycle time, almost always</td><td>the number 85 of 100 fit in</td></tr>
+<tr><td>Pure work, usually</td><td>how long the card stood in work columns, without waiting in a queue, for half of the cards; the gap to cycle time is waiting</td></tr>
+</tbody>
+</table></div>
 <h2 id="key-scopes">Integration key scopes</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Scope</th><th>What it opens</th></tr></thead>
@@ -295,7 +367,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.5.1-30-g65c608c-dirty. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.5.1-31-gded2084-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

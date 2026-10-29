@@ -145,10 +145,10 @@ it('сводка за период видна на экране под тем ж
   render(<Reports principal={anna} />)
   await waitFor(() => expect(asked.some((p) => p.startsWith('/api/reports/summary?') && p.includes('team=t-dev'))).toBe(true))
   expect(await screen.findByRole('heading', { name: 'Сводка за период' })).toBeTruthy()
-  expect(screen.getByRole('heading', { name: 'Пропускная способность' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Сделано и создано по неделям' })).toBeTruthy()
   expect(screen.getByRole('img', { name: /^Пропускная способность: .*сделано 1, создано 0/ })).toBeTruthy()
   // Сроки: доля в срок от сделанных со сроком, просроченные — числом.
-  expect(screen.getByText('в срок из 4 сделанных со сроком').previousSibling?.textContent).toBe('75 %')
+  expect(screen.getByText('сделаны в срок (из 4 со сроком)').previousSibling?.textContent).toBe('75 %')
   expect(screen.getByText('просрочено сейчас').previousSibling?.textContent).toBe('2')
   // Прошлый период: «было» и разница со знаком под числом.
   expect(screen.getByText('было 3, −2')).toBeTruthy()
@@ -158,10 +158,10 @@ it('сводка за период видна на экране под тем ж
   const reasons = screen.getByRole('table', { name: 'По причинам' })
   expect(within(reasons).getByText('ждём акт')).toBeTruthy()
   expect(within(reasons).getByText('Без причины')).toBeTruthy()
-  expect(screen.getByText('всего в блокировке').previousSibling?.textContent).toBe('7,5 дн.')
+  expect(screen.getByText('дней всего').previousSibling?.textContent).toBe('7,5 дн.')
   expect(screen.getByRole('img', { name: /^Накопительная диаграмма потока/ })).toBeTruthy()
 
-  const iterations = screen.getByRole('table', { name: 'Выполнение итераций' })
+  const iterations = screen.getByRole('table', { name: 'Итерации: обещано и сделано' })
   const row = within(iterations).getByRole('row', { name: /Неделя 41/ })
   // Доля — от обещанного (3 из 4), добавленное по ходу её не меняет.
   expect(within(row).getByText('75 %')).toBeTruthy()
@@ -172,7 +172,7 @@ it('сводка за период видна на экране под тем ж
   const defect = within(byLabel).getByRole('row', { name: /дефект/ })
   expect(within(defect).getByText('75 %')).toBeTruthy()
   expect(within(byLabel).getByText('Без метки')).toBeTruthy()
-  expect(within(byLabel).getByRole('columnheader', { name: 'Вес, в очках' })).toBeTruthy()
+  expect(within(byLabel).getByRole('columnheader', { name: 'Сумма оценок, в очках' })).toBeTruthy()
   expect(within(screen.getByRole('table', { name: 'По эпикам' })).getByText('Переезд')).toBeTruthy()
 
   const teams = screen.getByRole('table', { name: 'По подразделениям' })

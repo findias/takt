@@ -171,7 +171,7 @@ hung. Every list that offers a label also says where it comes from.
 
 | Metric | What it answers |
 | --- | --- |
-| Cycle time | how many days work usually takes (percentiles) |
+| Cycle time | how many days work usually takes: half of the cards fit in the first number, 85 of 100 in the second |
 | Throughput | how many cards were finished, by week — and how many were created in the same week |
 | In progress | how much work is running right now |
 | Ageing | what is running and how long it has been running |
@@ -181,6 +181,117 @@ hung. Every list that offers a label also says where it comes from.
 
 Every board counts its own metrics. Epics live on a portfolio board, so
 their months never mix with a team's days.
+
+<a id="reports-numbers"></a>
+## Numbers on **Reports**
+
+Every block on **Reports** has a "?" beside its title with the same
+explanation in a few sentences. Here they are together, block by block.
+All of them count the cards that match the selection above.
+
+<a id="reports-attention"></a>
+### Needs attention now
+
+What keeps work from moving as of today. The period does not apply
+here; the selection does. A card with two problems is in both lists.
+Click a card and it opens at the side, so the problem can be fixed in
+place.
+
+| List | What is in it |
+| --- | --- |
+| Blocked | cards with a block on them, and for how many days, with the reason |
+| Running longer than promised | started cards that have been running longer than the board's promise: the time work usually takes to cross the board |
+| Overdue | cards whose due date has passed and which are not done |
+| In progress without an assignee | started cards with nobody on them |
+| No movement | cards sitting in one column longer than the board's **No movement** setting on Flow, 7 days by default |
+
+<a id="reports-summary"></a>
+### Summary for the period
+
+| Number | What it means |
+| --- | --- |
+| Done | cards finished within the period |
+| Created | cards created within the period |
+| Discarded | cards taken off the board unfinished within the period |
+| In progress | started and not finished, as of today |
+| was …, +… | the same number for the previous period of the same length, right before this one, and the difference |
+| Cycle time | how many days a card takes from the column where work starts to the column where it ends. "Usually" is the number half of the finished cards fit in; "almost always" is the number 85 of 100 fit in. There is no average on purpose: a few long cards would skew it |
+| How long started work has been running | the same two numbers for cards that are started and not finished: half of them have been running less than the first, 85 of 100 less than the second. This is what is stuck right now |
+
+<a id="reports-due"></a>
+### Due dates
+
+Only cards with a due date count. The share done on time is those
+done in the period no later than their due date; the "was" beside it
+is the same share for the previous period. The number overdue now is
+how many cards have passed their date and are not done, as of today.
+
+### Done and created by week
+
+Dark bars are cards finished in that week, light bars are cards
+created in the same week. Light bars higher than dark ones week after
+week mean more work comes in than goes out, and the queue grows.
+
+<a id="reports-blocks"></a>
+### Blocks in the period
+
+How many cards stood blocked in the period and how many days that
+took, in total and per card. Days are counted within the period and
+summed over every block of a card; a block that is still open counts
+up to today. The table by reason shows reasons as they were written on
+the cards.
+
+### How work piles up
+
+Three bands by day: queued, in progress, done. A band of work in
+progress that keeps getting thicker means more is started than
+finished.
+
+<a id="reports-iterations"></a>
+### Iterations: promised and done
+
+Iterations that overlap the period, as of their closing; a running one
+as of today.
+
+| Column | What it means |
+| --- | --- |
+| Promised | cards the iteration held on its first day |
+| Added on the way | cards put into the iteration after it started |
+| Taken out | cards removed from the iteration before it closed |
+| Done | cards finished in the iteration, including those added on the way |
+| Done out of promised | done cards among the promised ones, as a share of the promise; what was added on the way does not change it. Row after row shows whether the team keeps its word |
+
+<a id="reports-effort"></a>
+### Where the effort went
+
+Cards done in the period, laid out by label and by epic.
+
+| Column | What it means |
+| --- | --- |
+| Whose | the label's scope: organisation-wide, a subdivision's or a board's |
+| Done | cards done with this label or under this epic |
+| Share | out of everything done in the period. A card with two labels counts for both, so shares may add up to more than a hundred |
+| Sum of estimates | the estimates of those cards added up, in the unit the boards use; "(3 unestimated)" is how many had no estimate. Shown only when every selected board estimates in the same unit |
+
+The epic is the nearest parent on a portfolio board; epics themselves
+are not in the table.
+
+<a id="reports-people"></a>
+### By subdivision and by assignee
+
+The subdivision is the one that runs the card's board. A card with
+two assignees counts for both; cards with nobody on them are a row of
+their own. Click a name and the selection, and the file, become that
+person's.
+
+| Column | What it means |
+| --- | --- |
+| Cards | cards that match the selection |
+| Done | finished within the period |
+| In progress | started and not finished, as of today |
+| Cycle time, usually | the number half of the finished cards fit in, in days |
+| Cycle time, almost always | the number 85 of 100 fit in |
+| Pure work, usually | how long the card stood in work columns, without waiting in a queue, for half of the cards; the gap to cycle time is waiting |
 
 <a id="key-scopes"></a>
 ## Integration key scopes

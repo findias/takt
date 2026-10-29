@@ -51,6 +51,14 @@ export const HELP_TOPICS = {
   grouping: 'howto#swimlanes',
   attention: 'howto#board',
   notifications: 'howto#notifications',
+  // «Отчёты» (42.3): «?» у блоков ведут в справочник, раздел «Числа на «Отчётах»».
+  attentionReport: 'reference#reports-attention',
+  summaryReport: 'reference#reports-summary',
+  dueDates: 'reference#reports-due',
+  blocksReport: 'reference#reports-blocks',
+  iterationsReport: 'reference#reports-iterations',
+  effort: 'reference#reports-effort',
+  people: 'reference#reports-people',
 } as const
 
 export type HelpTopic = keyof typeof HELP_TOPICS

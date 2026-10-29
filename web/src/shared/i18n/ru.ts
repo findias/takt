@@ -112,6 +112,14 @@ export const ru = {
     attention: 'Требует внимания',
     notifications: 'Уведомления',
     tasks: 'Задачи человека',
+    // «Отчёты» (42.3): у каждого блока свой «?», имя — заголовок блока.
+    attentionReport: 'Требует внимания сейчас',
+    summaryReport: 'Сводка за период',
+    dueDates: 'Сроки',
+    blocksReport: 'Блокировки за период',
+    iterationsReport: 'Итерации: обещано и сделано',
+    effort: 'Куда ушли силы',
+    people: 'По исполнителям',
   },
   help: {
     button: 'Справка',

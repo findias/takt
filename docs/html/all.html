@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-30-g65c608c-dirty.</p>
+<p>Every section in one file. Version v0.5.1-31-gded2084-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -421,7 +421,16 @@ color:var(--ink-3);font-size:.85rem}
 <h3 id="reports">Export cards for a report</h3>
 <p>When someone asks you to &#34;send a spreadsheet&#34;, open the <strong>Reports</strong> tab. Choose the <strong>Period</strong> — two dates, or <strong>30 days</strong>, <strong>90 days</strong>, <strong>This quarter</strong>, <strong>Last quarter</strong> — and narrow it down if you need to: <strong>Boards</strong>, <strong>Subdivisions</strong> (a subdivision includes the ones nested in it), <strong>Assignees</strong>, <strong>Labels</strong>, <strong>Priority</strong>, <strong>State</strong>, and an <strong>Iteration</strong> once a single board is chosen. Empty means &#34;any&#34;. A card is included if it was alive during the period: created before the period ended and not finished before it began. Its state and age are as of today.</p>
 <p>Pick <strong>Boards</strong> or <strong>Subdivisions</strong> and the <strong>Assignees</strong> list narrows to their people: a subdivision&#39;s members together with its nested subdivisions, a board&#39;s people who can see it, plus anyone assigned on its cards.</p>
-<p>Below the selection you see how many cards match, then <strong>Needs attention now</strong> — the team lead&#39;s page: what is blocked and for how long (with the reason), what has been running longer than the board&#39;s promise, what is overdue, what is in progress with nobody on it, and what has sat in one column longer than the board&#39;s <strong>No movement</strong> setting (Flow; 7 days by default). The period does not apply here: it is about today. A card with two problems is in both groups. Click a card and it opens at the side, so the problem can be fixed in place; when nothing is stuck, the page says so. Then the <strong>Summary for the period</strong> — the same numbers the file opens with, counted by the same selection, so you can answer &#34;how much did we close this quarter&#34; without downloading anything: done, created and discarded within the period, each with &#34;was&#34; — the same number for the previous period of the same length, right before this one, and the difference —, in progress now, cycle time and age of unfinished work (half and 85 of 100), <strong>Due dates</strong> — what share of the cards done in the period with a due date were done on time, and how many are overdue now —, throughput by week as bars with what was created in the same week beside each (light bars higher than dark ones week after week means the queue is growing), <strong>Blocks in the period</strong> — how many cards stood blocked, for how many days in total and per card, and by reason as it was written —, the cumulative flow diagram, <strong>Iteration completion</strong> — for iterations overlapping the period, as of closing: promised on the first day, added on the way, dropped, done, and the share of the promise, which is done out of promised and does not move with what was added later, so row after row shows whether the team keeps its word —, <strong>Where the effort went</strong> — work done in the period by label (with the label&#39;s scope) and by epic, as a count, a share of everything done and, when the selected boards estimate in one unit, as weight; a card with several labels counts for each —, a breakdown <strong>By subdivision</strong> — the one that runs the card&#39;s board — and <strong>By assignee</strong>: what each person has under the current selection: cards, done, in progress, the median cycle time and the median time in progress. A card with several assignees counts for each. Click a name and the selection, and the file, become that person&#39;s. Cards with nobody on them are a row of their own. When nothing matches, there is no summary: the line above already said the file would hold only the header.</p>
+<p>Below the selection you see how many cards match, then the blocks, each with a &#34;?&#34; beside its title that explains the numbers in a few sentences; all of them together are in the reference, under <a href="reference.html#reports-numbers">Numbers on Reports</a>.</p>
+<ul>
+<li><strong>Needs attention now</strong> — the team lead&#39;s page as of today: what is blocked, what runs longer than promised, what is overdue, what is in progress with nobody on it and what sits without movement. The period does not apply here. Click a card and it opens at the side, so the problem can be fixed in place; when nothing is stuck, the page says so.</li>
+<li><strong>Summary for the period</strong> — the same numbers the file opens with: done, created and discarded, each with &#34;was&#34; for the previous period of the same length; in progress now; cycle time and how long started work has been running, as &#34;usually&#34; (half of the cards) and &#34;almost always&#34; (85 of 100); due dates.</li>
+<li><strong>Done and created by week</strong> as bars, <strong>Blocks in the period</strong> with the reasons, and how work piles up by day.</li>
+<li><strong>Iterations: promised and done</strong> — promised on the first day, added on the way, taken out, done, and done out of promised, row after row.</li>
+<li><strong>Where the effort went</strong> — work done by label and by epic, as a count, a share and a sum of estimates.</li>
+<li><strong>By subdivision</strong> and <strong>By assignee</strong> — what each has under the current selection. Click a name and the selection, and the file, become that person&#39;s.</li>
+</ul>
+<p>When nothing matches, there is no summary: the line above already said the file would hold only the header.</p>
 <p>Then download:</p>
 <ul>
 <li><strong>Excel (XLSX)</strong> opens on a <strong>Summary</strong> sheet: what was selected, cards done, created and discarded in the period (with the previous period of the same length and the difference beside), work in progress, cycle time and age (median and 85th percentile), due dates (done with a due date, of them on time, overdue now), blocks in the period by reason, done and created by week with a chart, where the effort went by label and by epic, the cumulative flow diagram with a line on how to read it (its numbers by date are on a sheet of their own, after <strong>Data</strong>), iteration completion, a breakdown by subdivision and one by assignee. The <strong>Data</strong> sheet has one row per card with every field, ready for pivot tables: among them **External numbers** — the card&#39;s external task numbers, RDS, service requests, change requests and problems in one cell, <code>RDS 12345; Problem PRB-7</code> — and, last, the whole <strong>Description</strong>. Everything on the summary is counted from those same rows.</li>
@@ -630,7 +639,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <div class="tablewrap"><table>
 <thead><tr><th>Metric</th><th>What it answers</th></tr></thead>
 <tbody>
-<tr><td>Cycle time</td><td>how many days work usually takes (percentiles)</td></tr>
+<tr><td>Cycle time</td><td>how many days work usually takes: half of the cards fit in the first number, 85 of 100 in the second</td></tr>
 <tr><td>Throughput</td><td>how many cards were finished, by week — and how many were created in the same week</td></tr>
 <tr><td>In progress</td><td>how much work is running right now</td></tr>
 <tr><td>Ageing</td><td>what is running and how long it has been running</td></tr>
@@ -640,6 +649,78 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <p>Every board counts its own metrics. Epics live on a portfolio board, so their months never mix with a team&#39;s days.</p>
+<h2 id="reports-numbers">Numbers on <strong>Reports</strong></h2>
+<p>Every block on <strong>Reports</strong> has a &#34;?&#34; beside its title with the same explanation in a few sentences. Here they are together, block by block. All of them count the cards that match the selection above.</p>
+<h3 id="reports-attention">Needs attention now</h3>
+<p>What keeps work from moving as of today. The period does not apply here; the selection does. A card with two problems is in both lists. Click a card and it opens at the side, so the problem can be fixed in place.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>List</th><th>What is in it</th></tr></thead>
+<tbody>
+<tr><td>Blocked</td><td>cards with a block on them, and for how many days, with the reason</td></tr>
+<tr><td>Running longer than promised</td><td>started cards that have been running longer than the board&#39;s promise: the time work usually takes to cross the board</td></tr>
+<tr><td>Overdue</td><td>cards whose due date has passed and which are not done</td></tr>
+<tr><td>In progress without an assignee</td><td>started cards with nobody on them</td></tr>
+<tr><td>No movement</td><td>cards sitting in one column longer than the board&#39;s <strong>No movement</strong> setting on Flow, 7 days by default</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-summary">Summary for the period</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Number</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Done</td><td>cards finished within the period</td></tr>
+<tr><td>Created</td><td>cards created within the period</td></tr>
+<tr><td>Discarded</td><td>cards taken off the board unfinished within the period</td></tr>
+<tr><td>In progress</td><td>started and not finished, as of today</td></tr>
+<tr><td>was …, +…</td><td>the same number for the previous period of the same length, right before this one, and the difference</td></tr>
+<tr><td>Cycle time</td><td>how many days a card takes from the column where work starts to the column where it ends. &#34;Usually&#34; is the number half of the finished cards fit in; &#34;almost always&#34; is the number 85 of 100 fit in. There is no average on purpose: a few long cards would skew it</td></tr>
+<tr><td>How long started work has been running</td><td>the same two numbers for cards that are started and not finished: half of them have been running less than the first, 85 of 100 less than the second. This is what is stuck right now</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-due">Due dates</h3>
+<p>Only cards with a due date count. The share done on time is those done in the period no later than their due date; the &#34;was&#34; beside it is the same share for the previous period. The number overdue now is how many cards have passed their date and are not done, as of today.</p>
+<h3 id="done-and-created-by-week">Done and created by week</h3>
+<p>Dark bars are cards finished in that week, light bars are cards created in the same week. Light bars higher than dark ones week after week mean more work comes in than goes out, and the queue grows.</p>
+<h3 id="reports-blocks">Blocks in the period</h3>
+<p>How many cards stood blocked in the period and how many days that took, in total and per card. Days are counted within the period and summed over every block of a card; a block that is still open counts up to today. The table by reason shows reasons as they were written on the cards.</p>
+<h3 id="how-work-piles-up">How work piles up</h3>
+<p>Three bands by day: queued, in progress, done. A band of work in progress that keeps getting thicker means more is started than finished.</p>
+<h3 id="reports-iterations">Iterations: promised and done</h3>
+<p>Iterations that overlap the period, as of their closing; a running one as of today.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Promised</td><td>cards the iteration held on its first day</td></tr>
+<tr><td>Added on the way</td><td>cards put into the iteration after it started</td></tr>
+<tr><td>Taken out</td><td>cards removed from the iteration before it closed</td></tr>
+<tr><td>Done</td><td>cards finished in the iteration, including those added on the way</td></tr>
+<tr><td>Done out of promised</td><td>done cards among the promised ones, as a share of the promise; what was added on the way does not change it. Row after row shows whether the team keeps its word</td></tr>
+</tbody>
+</table></div>
+<h3 id="reports-effort">Where the effort went</h3>
+<p>Cards done in the period, laid out by label and by epic.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Whose</td><td>the label&#39;s scope: organisation-wide, a subdivision&#39;s or a board&#39;s</td></tr>
+<tr><td>Done</td><td>cards done with this label or under this epic</td></tr>
+<tr><td>Share</td><td>out of everything done in the period. A card with two labels counts for both, so shares may add up to more than a hundred</td></tr>
+<tr><td>Sum of estimates</td><td>the estimates of those cards added up, in the unit the boards use; &#34;(3 unestimated)&#34; is how many had no estimate. Shown only when every selected board estimates in the same unit</td></tr>
+</tbody>
+</table></div>
+<p>The epic is the nearest parent on a portfolio board; epics themselves are not in the table.</p>
+<h3 id="reports-people">By subdivision and by assignee</h3>
+<p>The subdivision is the one that runs the card&#39;s board. A card with two assignees counts for both; cards with nobody on them are a row of their own. Click a name and the selection, and the file, become that person&#39;s.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Column</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td>Cards</td><td>cards that match the selection</td></tr>
+<tr><td>Done</td><td>finished within the period</td></tr>
+<tr><td>In progress</td><td>started and not finished, as of today</td></tr>
+<tr><td>Cycle time, usually</td><td>the number half of the finished cards fit in, in days</td></tr>
+<tr><td>Cycle time, almost always</td><td>the number 85 of 100 fit in</td></tr>
+<tr><td>Pure work, usually</td><td>how long the card stood in work columns, without waiting in a queue, for half of the cards; the gap to cycle time is waiting</td></tr>
+</tbody>
+</table></div>
 <h2 id="key-scopes">Integration key scopes</h2>
 <div class="tablewrap"><table>
 <thead><tr><th>Scope</th><th>What it opens</th></tr></thead>
@@ -1795,6 +1876,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h3 id="the-rest">The rest</h3>
 <p>board…<strong>, the table has it in the row menu, and selected cards move together from </strong>Move selected<strong>): pick the board and the column. The card   keeps its discussion, files and history, gets the new board&#39;s number   (search still finds the old one, and an old link to the card leads to   its new board), and takes its subtasks on this   board along. Before you confirm, the dialog names the labels that   will be removed and the iteration it will leave; an assignee who   cannot see the new board is named too, and the move waits until they   can. The old board&#39;s </strong>Flow** says how many cards moved to other   boards. Before, the only way was to create the card again on the   other board.</p>
 <ul>
+<li><strong>Reports speak plainly.</strong> Every block on <strong>Reports</strong> has a &#34;?&#34; beside its title with a few sentences on what the numbers mean and a link to the reference, which has a new section, &#34;Numbers on Reports&#34;. Labels say what the number is instead of naming the statistic: &#34;usually: half of the cards&#34; and &#34;almost always: 85 of 100&#34; instead of &#34;half&#34; and &#34;85 of 100&#34;, <strong>Done out of promised</strong> instead of &#34;share of promise&#34;, <strong>Sum of estimates</strong> instead of &#34;weight&#34;, <strong>Cycle time, usually</strong> instead of &#34;cycle, median&#34;. The long notes under the blocks moved into those explanations. The file is unchanged.</li>
 <li><strong>A card can move to another board.</strong> The <strong>…</strong> menu on a card has <strong>Move to another board…</strong> (the open card&#39;s panel has **To another</li>
 <li><strong>The board&#39;s assignee filter lists only people who belong there.</strong> It used to offer the whole organisation; now it has those who can see the board and those already assigned on its cards (marked when they have no access). Each name shows how many open cards the person has and their estimate; the list is ordered by name, by cards or by estimate — the choice is remembered — and typing finds a person.</li>
 <li><strong>Reports show the real time in progress.</strong> The <strong>Data</strong> sheet and CSV have <strong>Time in progress, days</strong> after the cycle time: how long the card stood in work columns by its move history, without returns to the queue and waiting in queue columns. <strong>By assignee</strong>, on the screen and on the <strong>Summary</strong> sheet, has its median. Cycle time counts from the first start to done, waiting included, and with imported cards it ran to hundreds of days; the gap between the two numbers is now visible. Imported cards and cards moved from a board you cannot see leave the cell empty: their history is not here. JSON has <code>workDays</code> and <code>workTimeP50</code>.</li>
@@ -2085,6 +2167,7 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас. <code>GET /api/cards/{cardId}/board</code> говорит, на какой доске карточка, а в метриках доски появилось <code>movedOut</code>.</p>
 <h3 id="остальное">Остальное</h3>
 <ul>
+<li><strong>Отчёты говорят просто.</strong> У каждого блока на <strong>«Отчётах»</strong> рядом с заголовком стоит «?» с несколькими фразами о том, что значат числа, и ссылкой в справочник, где появился раздел «Числа на «Отчётах»». Подписи говорят, что это за число, а не как зовётся статистика: «обычно: половина карточек» и «почти всегда: 85 из 100» вместо «половина» и «85 из 100», <strong>«Сделано из обещанного»</strong> вместо «доля обещания», <strong>«Сумма оценок»</strong> вместо «вес», **«Время цикла, обычно»** вместо «цикл, медиана». Длинные абзацы под блоками ушли в эти пояснения. Файл не изменился.</li>
 <li><strong>Карточку можно перенести на другую доску.</strong> В меню <strong>«…»</strong> карточки появилось <strong>«Перенести на другую доску…»</strong> (в панели открытой карточки — <strong>«На другую доску…»</strong>, в таблице — в меню строки, выделенные переносятся вместе из <strong>«Перенести выделенные»</strong>): выбрать доску и колонку. Карточка сохраняет обсуждение, файлы и историю, получает номер новой доски (поиск находит и прежний, а старая ссылка на неё ведёт на новую доску) и забирает с собой свои подзадачи на этой доске. До подтверждения диалог называет метки, которые снимутся, и итерацию, из которой она выйдет; исполнитель, который новую доску не видит, тоже назван, и перенос ждёт, пока ему её не откроют. «Поток» прежней доски называет, сколько карточек ушло на другие доски. Раньше путь был один — завести карточку на той доске заново.</li>
 <li><strong>В отборе доски по исполнителю — только те, кто к ней относится.</strong> Раньше список предлагал всю организацию; теперь в нём те, кто видит доску, и те, кто уже стоит на её карточках (у них помечено, если доступа нет). Рядом с именем — сколько у человека незавершённых карточек и их оценка; порядок — по имени, по карточкам или по оценке, выбор запоминается, а набор находит человека.</li>
 <li><strong>Отчёты показывают настоящее время в работе.</strong> На листе <strong>«Данные»</strong> и в CSV после времени цикла — <strong>«Время в работе, дней»</strong>: сколько карточка стояла в колонках работы по журналу перемещений, без возвратов в очередь и ожидания в колонках-очередях. В разрезе **«По исполнителям»<strong> — на экране и на листе </strong>«Сводка»** — его медиана. Время цикла считает от первого начала до готовности вместе с ожиданием и у перенесённых карточек доходило до сотен дней; теперь разница видна. У перенесённых из другой системы и с доски, которой вы не видите, ячейка пуста: их истории здесь нет. В JSON — <code>workDays</code> и <code>workTimeP50</code>.</li>

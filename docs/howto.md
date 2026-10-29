@@ -824,43 +824,35 @@ to their people: a subdivision's members together with its nested
 subdivisions, a board's people who can see it, plus anyone assigned on
 its cards.
 
-Below the selection you see how many cards match, then **Needs
-attention now** — the team lead's page: what is blocked and for how
-long (with the reason), what has been running longer than the board's
-promise, what is overdue, what is in progress with nobody on it, and
-what has sat in one column longer than the board's **No movement**
-setting (Flow; 7 days by default). The period does not apply here: it
-is about today. A card with two problems is in both groups. Click a
-card and it opens at the side, so the problem can be fixed in place;
-when nothing is stuck, the page says so. Then the **Summary
-for the period** — the same numbers the file opens with, counted by the
-same selection, so you can answer "how much did we close this quarter"
-without downloading anything: done, created and discarded within the
-period, each with "was" — the same number for the previous period of
-the same length, right before this one, and the difference —,
-in progress now, cycle time and age of unfinished work (half and 85 of
-100), **Due dates** — what share of the cards done in the period with a
-due date were done on time, and how many are overdue now —, throughput
-by week as bars with what was created in the same
-week beside each (light bars higher than dark ones week after week
-means the queue is growing), **Blocks in the period** — how many cards
-stood blocked, for how many days in total and per card, and by reason
-as it was written —, the cumulative flow diagram,
-**Iteration completion** — for iterations overlapping the period, as
-of closing: promised on the first day, added on the way, dropped, done,
-and the share of the promise, which is done out of promised and does
-not move with what was added later, so row after row shows whether the
-team keeps its word —, **Where the effort went** — work done in the period by label (with
-the label's scope) and by epic, as a count, a share of everything done
-and, when the selected boards estimate in one unit, as weight; a card
-with several labels counts for each —, a breakdown **By subdivision** —
-the one that runs the card's board — and **By assignee**: what each person has under
-the current selection: cards, done, in progress, the median cycle time
-and the median time in progress. A card with several assignees counts
-for each. Click a name and the selection, and the file, become that
-person's. Cards with nobody on them are a row of their own. When
-nothing matches, there is no summary: the line above already said the
-file would hold only the header.
+Below the selection you see how many cards match, then the blocks,
+each with a "?" beside its title that explains the numbers in a few
+sentences; all of them together are in the reference, under
+[Numbers on Reports](reference.md#reports-numbers).
+
+- **Needs attention now** — the team lead's page as of today: what is
+  blocked, what runs longer than promised, what is overdue, what is in
+  progress with nobody on it and what sits without movement. The
+  period does not apply here. Click a card and it opens at the side,
+  so the problem can be fixed in place; when nothing is stuck, the page
+  says so.
+- **Summary for the period** — the same numbers the file opens with:
+  done, created and discarded, each with "was" for the previous period
+  of the same length; in progress now; cycle time and how long started
+  work has been running, as "usually" (half of the cards) and "almost
+  always" (85 of 100); due dates.
+- **Done and created by week** as bars, **Blocks in the period** with
+  the reasons, and how work piles up by day.
+- **Iterations: promised and done** — promised on the first day, added
+  on the way, taken out, done, and done out of promised, row after
+  row.
+- **Where the effort went** — work done by label and by epic, as a
+  count, a share and a sum of estimates.
+- **By subdivision** and **By assignee** — what each has under the
+  current selection. Click a name and the selection, and the file,
+  become that person's.
+
+When nothing matches, there is no summary: the line above already said
+the file would hold only the header.
 
 Then download:
 

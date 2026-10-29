@@ -113,6 +113,13 @@ export const en: typeof ru = {
     attention: 'Needs attention',
     notifications: 'Notifications',
     tasks: 'A person’s tasks',
+    attentionReport: 'Needs attention now',
+    summaryReport: 'Summary for the period',
+    dueDates: 'Due dates',
+    blocksReport: 'Blocks in the period',
+    iterationsReport: 'Iterations: promised and done',
+    effort: 'Where the effort went',
+    people: 'By assignee',
   },
   help: {
     button: 'Help',
