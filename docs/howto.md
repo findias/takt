@@ -565,6 +565,11 @@ points, another hours, and neither has to pretend. Estimates are not
 converted: a three stays a three, only the label changes. The export
 names the unit in a column of its own.
 
+Next to it, **No movement** — how many days a card in progress may sit
+in one column before it lands in **Needs attention** on **Reports**.
+Empty means 7. A support board may want one day; a research board, a
+fortnight.
+
 <a id="import"></a>
 ## Moving in
 
@@ -799,7 +804,15 @@ to their people: a subdivision's members together with its nested
 subdivisions, a board's people who can see it, plus anyone assigned on
 its cards.
 
-Below the selection you see how many cards match, then the **Summary
+Below the selection you see how many cards match, then **Needs
+attention now** — the team lead's page: what is blocked and for how
+long (with the reason), what has been running longer than the board's
+promise, what is overdue, what is in progress with nobody on it, and
+what has sat in one column longer than the board's **No movement**
+setting (Flow; 7 days by default). The period does not apply here: it
+is about today. A card with two problems is in both groups. Click a
+card and it opens at the side, so the problem can be fixed in place;
+when nothing is stuck, the page says so. Then the **Summary
 for the period** — the same numbers the file opens with, counted by the
 same selection, so you can answer "how much did we close this quarter"
 without downloading anything: done and discarded within the period,

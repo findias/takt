@@ -47,6 +47,10 @@ export const flow: typeof ru = {
     throughputLabel: (list: string) => `Throughput: ${list}`,
     promise: 'Board promise',
     howWeWork: 'How we work',
+    stale: 'No movement',
+    staleDays: 'days',
+    staleHint: (n: number) =>
+      `How many days a card in progress may sit in one column before it lands in “Needs attention” on Reports. Empty means ${n}.`,
     unit: 'Estimate',
     unitOrg: (name: string) => `as in the organisation — in ${name}`,
     unitIn: (name: string) => `in ${name}`,

@@ -1290,6 +1290,18 @@ func (f *filler) backdate() error {
 			  from numbered n where n.id = c.id`); err != nil {
 			return err
 		}
+		// Блокировки стоят уже несколько дней: «Требует внимания»
+		// (42.3, срез 5) показывает, сколько, и ноль там читался бы
+		// как «только что».
+		if _, err := tx.Exec(f.ctx, `
+			with numbered as (
+				select id, row_number() over (order by blocked_at) as n from card_blocks
+				 where unblocked_at is null
+			)
+			update card_blocks b set blocked_at = b.blocked_at - (n.n * 2 || ' days')::interval
+			  from numbered n where n.id = b.id`); err != nil {
+			return err
+		}
 		// Сроки у сделанных (ROADMAP 42.3, срез 8): первая успела
 		// за два дня до срока, вторая опоздала на три — иначе в сводке
 		// не из чего считать долю сделанных в срок.

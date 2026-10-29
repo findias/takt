@@ -497,6 +497,32 @@ func (s *Service) SetEstimateUnit(ctx context.Context, orgID, actorID, boardID s
 		})))
 }
 
+// ErrBadStaleDays — «без движения» вне разумного.
+var ErrBadStaleDays = errors.New("дней без движения — от 1 до 365")
+
+// SetStaleDays — сколько дней карточка в работе может стоять в одной
+// колонке, прежде чем попасть в «Требует внимания» (ROADMAP 42.3,
+// срез 5). Пусто — семь: у поддержки сутки без движения — тревога,
+// у исследований неделя — норма, и общее число врало бы одной из них.
+func (s *Service) SetStaleDays(ctx context.Context, orgID, actorID, boardID string, days *int) error {
+	if days != nil && (*days < 1 || *days > 365) {
+		return ErrBadStaleDays
+	}
+	return s.explained(ctx, orgID, actorID, boardID, translateAccess(s.db.InScope(ctx,
+		store.Scope{OrgID: orgID, UserID: actorID}, func(tx pgx.Tx) error {
+			tag, err := tx.Exec(ctx, `
+				update boards set stale_days = $2, version = version + 1
+				 where id = $1 and archived_at is null`, boardID, days)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() == 0 {
+				return ErrNotFound
+			}
+			return nil
+		})))
+}
+
 // ErrUnknownLevel — уровня доски с таким именем нет.
 var ErrUnknownLevel = errors.New("уровень доски бывает team или portfolio")
 
@@ -760,7 +786,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var runs bool
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
 				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
-				&visibility, &teamID, &cards, &runs); err != nil {
+				&b.StaleDays, &visibility, &teamID, &cards, &runs); err != nil {
 				return err
 			}
 			b.Visibility = &visibility

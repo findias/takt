@@ -1706,6 +1706,7 @@ export function Board({
           level={base.info.level === 'portfolio' ? 'portfolio' : 'team'}
           ownUnit={base.info.ownEstimateUnit ?? null}
           orgUnit={orgUnit}
+          staleDays={base.info.staleDays ?? null}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

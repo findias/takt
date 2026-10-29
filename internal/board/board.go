@@ -81,6 +81,9 @@ type Info struct {
 	// доска берёт единицу организации и сменится вместе с ней.
 	EstimateUnit    string  `json:"estimateUnit"`
 	OwnEstimateUnit *string `json:"ownEstimateUnit"`
+	// Без движения (0081, ROADMAP 42.3): дней в одной колонке работы,
+	// после которых карточка попадает в «Требует внимания». Пусто — семь.
+	StaleDays *int `json:"staleDays"`
 	// Можно ли в доску писать. Спрашивает список досок — из него выбирают,
 	// куда поставить работу соседям, и предлагать доску, которая откажет,
 	// значит обещать невыполнимое.
@@ -114,12 +117,12 @@ type Info struct {
 // columnFields и cardFields ниже: список повторяется в нескольких
 // запросах, и разъехавшийся порядок ловится только в рантайме.
 const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled, level,
-	estimate_unit, coalesce(estimate_unit, (select o.estimate_unit from orgs o where o.id = org_id))`
+	estimate_unit, coalesce(estimate_unit, (select o.estimate_unit from orgs o where o.id = org_id)), stale_days`
 
 func scanBoard(row pgx.Row) (Info, error) {
 	var b Info
 	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level,
-		&b.OwnEstimateUnit, &b.EstimateUnit)
+		&b.OwnEstimateUnit, &b.EstimateUnit, &b.StaleDays)
 	return b, err
 }
 
@@ -515,7 +518,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
 				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
-				&writable, &visibility, &teamID, &cards); err != nil {
+				&b.StaleDays, &writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable

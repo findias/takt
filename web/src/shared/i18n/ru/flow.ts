@@ -48,6 +48,10 @@ export const flow = {
     throughputLabel: (list: string) => `Пропускная способность: ${list}`,
     promise: 'Обещание доски',
     howWeWork: 'Как работаем',
+    stale: 'Без движения',
+    staleDays: 'дней',
+    staleHint: (n: number) =>
+      `Сколько дней карточка в работе может стоять в одной колонке, прежде чем попасть в «Требует внимания» на «Отчётах». Пусто — ${n}.`,
     unit: 'Оценка',
     unitOrg: (name: string) => `как в организации — в ${name}`,
     unitIn: (name: string) => `в ${name}`,

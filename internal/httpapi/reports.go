@@ -32,6 +32,9 @@ func (s *Server) registerReportRoutes(mux *http.ServeMux) {
 	// в «Исполнителях» и разрез по людям. Ключу ни к чему: в JSON
 	// выгрузки тот же разрез уже есть, в summary.people.
 	mux.HandleFunc("GET /api/reports/people", s.human(s.handleReportPeople))
+	// «Требует внимания» (ROADMAP 42.3, срез 5) — экрану: пять групп
+	// застрявшего на сегодня под тот же отбор, со ссылкой в карточку.
+	mux.HandleFunc("GET /api/reports/attention", s.human(s.handleReportAttention))
 
 	// Срезы — сохранённые отборы человека, как виды доски: ключу
 	// интеграции они ни к чему, у него нет экрана, где их открывать.
@@ -209,6 +212,20 @@ func (s *Server) handleReportSummary(w http.ResponseWriter, r *http.Request, p a
 		return
 	}
 	writeJSON(w, http.StatusOK, sum)
+}
+
+func (s *Server) handleReportAttention(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	f, err := reportFilter(r.URL.Query())
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	list, err := s.reports.Attention(r.Context(), p.OrgID, p.ID, f)
+	if err != nil {
+		s.failReport(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, list)
 }
 
 func (s *Server) handleReportPeople(w http.ResponseWriter, r *http.Request, p auth.Principal) {

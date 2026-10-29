@@ -4753,6 +4753,16 @@ textarea.description {
 .reports .report-name {
   color: var(--ink-2);
 }
+/* Число дней «без движения» на «Потоке»: три цифры, не строка. */
+.flow-stale {
+  width: 4.5rem;
+}
+/* «Требует внимания» (42.3): название карточки переносится, числа
+   стоят столбцом справа от него. */
+.attention-table td.attention-days {
+  text-align: right;
+  white-space: nowrap;
+}
 @media (min-width: 40rem) {
   .reports .pick-list-name,
   .reports .report-name {

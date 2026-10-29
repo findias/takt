@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, request } from '../shared/api/index.ts'
-import type { Iteration } from '../shared/api/index.ts'
+import type { Iteration, Principal } from '../shared/api/index.ts'
+import { Board } from './Board.tsx'
 import { PRIORITY_NAMES } from '../entities/card/model.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
 import { PickList } from '../shared/ui/PickList.tsx'
@@ -54,6 +55,26 @@ type Summary = {
   people: PersonRow[]
 }
 type SummaryState = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; data: Summary }
+/** «Требует внимания» (ROADMAP 42.3, срез 5): пять групп на сегодня. */
+type AttentionCard = {
+  id: string
+  boardId: string
+  board: string
+  number: string
+  title: string
+  column: string
+  days: number
+  reason?: string
+  dueOn?: string
+}
+type Attention = {
+  blocked: AttentionCard[]
+  overPromise: AttentionCard[]
+  overdue: AttentionCard[]
+  unassigned: AttentionCard[]
+  stale: AttentionCard[]
+  truncated: boolean
+}
 
 // Вызовы — здесь, а не в общем клиенте: экран грузится отдельным куском.
 const countCards = (f: ReportFilter) =>
@@ -64,6 +85,8 @@ const reportPeople = (f: ReportFilter) => request<People>('GET', '/api/reports/p
 // Сводка под отбор (ROADMAP 42.3, срез 1): то, что раньше было только
 // на первом листе файла, — на экране, с разрезом по людям внутри.
 const reportSummary = (f: ReportFilter) => request<Summary>('GET', '/api/reports/summary?' + reportQuery(f).toString())
+// Застрявшее на сегодня под тот же отбор; период сервер не применяет.
+const reportAttention = (f: ReportFilter) => request<Attention>('GET', '/api/reports/attention?' + reportQuery(f).toString())
 
 const FORMATS: Format[] = ['xlsx', 'csv', 'json']
 
@@ -76,7 +99,7 @@ const FORMATS: Format[] = ['xlsx', 'csv', 'json']
  * файла: кнопка заранее знает, что выгрузка не соберётся, и говорит,
  * что сузить.
  */
-export function Reports() {
+export function Reports({ principal }: { principal: Principal }) {
   const query = useQuery()
   const [now] = useState(() => new Date())
   const f = parseReportFilter(query, now)
@@ -89,6 +112,16 @@ export function Reports() {
   const [iterations, setIterations] = useState<Iteration[]>([])
   const [count, setCount] = useState<Count>({ status: 'counting' })
   const [summary, setSummary] = useState<SummaryState>({ status: 'loading' })
+  const [attention, setAttention] = useState<Attention | null>(null)
+  // Открытая карточка — в адресе, как на «Задачах»: «доска:карточка».
+  // Доска панели остаётся подключённой после закрытия: правка перед
+  // самым закрытием подтверждается уже после него.
+  const [openBoard, openCard] = (query.get('open') ?? '').split(':')
+  const [panelBoard, setPanelBoard] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  useEffect(() => {
+    if (openBoard) setPanelBoard(openBoard)
+  }, [openBoard])
 
   // Списки для выбора — один раз: они нужны, чтобы назвать выбранное,
   // а не чтобы отбирать.
@@ -138,19 +171,31 @@ export function Reports() {
       reportSummary(filter)
         .then((r) => current && setSummary({ status: 'ready', data: r }))
         .catch((e) => current && setSummary({ status: 'error', error: e instanceof Error ? e.message : s.summaryFailed }))
+      // Застрявшее — тем же отбором, на сегодня; перечитывается и после
+      // правки в панели: сняли блокировку — строка должна уйти.
+      reportAttention(filter)
+        .then((r) => current && setAttention(r))
+        .catch(() => current && setAttention(null))
     }, 300)
     return () => {
       current = false
       clearTimeout(timer)
     }
-  }, [key, now, s])
+  }, [key, now, s, reloadKey])
 
   const change = (patch: Partial<ReportFilter>) => {
     const next = { ...f, ...patch }
     // Итерация принадлежит доске: сменили доски — итерация ушла.
     if (patch.boards && !(next.boards.length === 1 && next.boards[0] === oneBoard)) next.iteration = null
-    setQuery(addressQuery(next), { replace: true })
+    setQuery(withOpen(addressQuery(next), query.get('open')), { replace: true })
   }
+  // Открытая карточка живёт в адресе рядом с отбором: отбор её не теряет,
+  // а она — отбор.
+  const withOpen = (q: URLSearchParams, open: string | null) => {
+    if (open) q.set('open', open)
+    return q
+  }
+  const setOpen = (open: string | null) => setQuery(withOpen(addressQuery(f), open), { replace: true })
   const toggle = <T extends string>(list: T[], value: T) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
 
@@ -267,6 +312,10 @@ export function Reports() {
                   : s.count(count.total)}
       </p>
 
+      {!reversed && attention && (
+        <AttentionView list={attention} onOpen={(c) => setOpen(`${c.boardId}:${c.id}`)} />
+      )}
+
       {/* Сводка — только когда есть о чём: при нуле карточек строка
           выше уже сказала, что в файле будет одна шапка. Отказ —
           словами: пропавшая сводка выглядела бы как «её тут и не было». */}
@@ -298,7 +347,88 @@ export function Reports() {
         )}
       </div>
       <p className="muted small">{s.formatsHint}</p>
+      {panelBoard && (
+        <Board
+          key={panelBoard}
+          boardId={panelBoard}
+          cardId={openBoard === panelBoard && openCard ? openCard : null}
+          onCard={(cardId) => setOpen(cardId ? `${panelBoard}:${cardId}` : null)}
+          onChanged={() => setReloadKey((k) => k + 1)}
+          unit={principal.estimateUnit}
+          meId={principal.id}
+          isOwner={principal.role === 'owner'}
+          canEdit={principal.role !== 'viewer'}
+          onBack={() => setOpen(null)}
+          panelOnly
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * «Требует внимания сейчас» (ROADMAP 42.3, срез 5): пять вопросов
+ * тимлида одной страницей — что заблокировано и давно ли, что идёт
+ * дольше обещания доски, что просрочено, что в работе без исполнителя,
+ * что стоит в колонке дольше «без движения» доски. Не новые данные,
+ * а новый срез тех же: каждая строка ведёт в карточку, и беда чинится
+ * тут же, сбоку. Пусто — сказано словами, а не пятью пустыми таблицами.
+ */
+function AttentionView({ list, onOpen }: { list: Attention; onOpen: (c: AttentionCard) => void }) {
+  const s = t.reports
+  const groups: { key: keyof Omit<Attention, 'truncated'>; title: string; what: string }[] = [
+    { key: 'blocked', title: s.attnBlocked, what: s.attnBlockedDays },
+    { key: 'overPromise', title: s.attnOverPromise, what: s.attnInWorkDays },
+    { key: 'overdue', title: s.attnOverdue, what: s.attnOverdueDays },
+    { key: 'unassigned', title: s.attnUnassigned, what: s.attnInWorkDays },
+    { key: 'stale', title: s.attnStale, what: s.attnStaleDays },
+  ]
+  const total = groups.reduce((n, g) => n + list[g.key].length, 0)
+  return (
+    <section className="stack reports-group">
+      <h3 className="section-title">{s.attention}</h3>
+      {total === 0 ? (
+        <p className="muted small">{s.attentionNone}</p>
+      ) : (
+        groups
+          .filter((g) => list[g.key].length > 0)
+          .map((g) => (
+            <div key={g.key} className="stack stack--tight">
+              <h4 className="small report-name">{g.title}: {list[g.key].length}</h4>
+              <div className="table-wrap">
+                <table className="figures reports-table attention-table" aria-label={g.title}>
+                  <thead>
+                    <tr>
+                      <th scope="col">{s.attnCard}</th>
+                      <th scope="col">{s.board}</th>
+                      <th scope="col">{s.attnColumn}</th>
+                      <th scope="col" className="attention-days">{g.what}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list[g.key].map((c) => (
+                      <tr key={c.id}>
+                        <th scope="row">
+                          <button type="button" className="link table-title" onClick={() => onOpen(c)}>
+                            {c.number} {c.title}
+                          </button>
+                          {c.reason && <div className="muted small">{c.reason}</div>}
+                          {c.dueOn && <div className="muted small">{s.attnDue(dateWords(c.dueOn))}</div>}
+                        </th>
+                        <td>{c.board}</td>
+                        <td className="muted">{c.column}</td>
+                        <td className="attention-days">{s.days(c.days)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))
+      )}
+      {list.truncated && <p className="muted small">{s.attentionTruncated}</p>}
+      <p className="muted small">{s.attentionHint}</p>
+    </section>
   )
 }
 

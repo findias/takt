@@ -593,6 +593,9 @@ export type BoardInfo = {
   estimateUnit?: EstimateUnit
   /** Своя единица доски; пусто — как у организации. */
   ownEstimateUnit?: EstimateUnit | null
+  /** «Без движения» (ROADMAP 42.3): дней в одной колонке работы до
+   *  попадания в «Требует внимания»; пусто — семь. */
+  staleDays?: number | null
   /** Можно ли в доску писать. Отвечает список досок — из него выбирают,
    *  куда поставить работу соседям. В снимке доски поля нет: там на этот
    *  вопрос не отвечают, и «нельзя» отличается от «не спрашивали». */
@@ -1414,6 +1417,8 @@ export const api = {
     request<BoardInfo>('POST', '/api/boards', { name, key, template }),
   setBoardEstimateUnit: (boardId: string, unit: EstimateUnit | null) =>
     request<void>('PUT', `/api/boards/${boardId}/estimate-unit`, { unit }),
+  setBoardStaleDays: (boardId: string, days: number | null) =>
+    request<void>('PUT', `/api/boards/${boardId}/stale-days`, { days }),
   setLevel: (boardId: string, level: 'team' | 'portfolio') =>
     request<void>('PUT', `/api/boards/${boardId}/level`, { level }),
   setIterations: (boardId: string, enabled: boolean) =>

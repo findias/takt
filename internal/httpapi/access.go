@@ -60,6 +60,7 @@ func (s *Server) registerAccessRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/boards/{id}/iterations-enabled", s.authed(s.handleSetIterations))
 	mux.HandleFunc("PUT /api/boards/{id}/level", s.authed(s.handleSetLevel))
 	mux.HandleFunc("PUT /api/boards/{id}/estimate-unit", s.authed(s.handleSetBoardEstimateUnit))
+	mux.HandleFunc("PUT /api/boards/{id}/stale-days", s.authed(s.handleSetBoardStaleDays))
 	mux.HandleFunc("POST /api/boards/{id}/iterations", s.authed(s.handleCreateIteration))
 	mux.HandleFunc("POST /api/boards/{id}/iterations/{iterationId}/close",
 		s.authed(s.handleCloseIteration))
@@ -711,6 +712,29 @@ func (s *Server) handleSetLevel(w http.ResponseWriter, r *http.Request, p auth.P
 // Единица оценки доски (ROADMAP 38): своя или, с null, как у организации.
 // Менять может тот, кто пишет в доску, — как уровень и итерации: это
 // настройка того, как команда считает свою работу, а не права.
+// «Без движения» доски (ROADMAP 42.3, срез 5): пусто — семь дней.
+func (s *Server) handleSetBoardStaleDays(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Days *int `json:"days"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	err := s.boards.SetStaleDays(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Days)
+	if errors.Is(err, board.ErrBadStaleDays) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if s.failAccess(w, "дни без движения", err) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) handleSetBoardEstimateUnit(w http.ResponseWriter, r *http.Request, p auth.Principal) {
 	if !p.CanEdit() {
 		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")

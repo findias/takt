@@ -9,6 +9,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { Reports } from './Reports.tsx'
+import type { Principal } from '../shared/api/index.ts'
+
+const anna = { id: 'u-anna', role: 'owner', estimateUnit: 'points' } as unknown as Principal
 
 const asked: string[] = []
 
@@ -16,8 +19,19 @@ function reply(body: unknown) {
   return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
 }
 
+// Панель карточки подключает поток изменений доски; в jsdom его нет,
+// а здесь он молчит — проверяется адрес, не поток.
+class SilentEventSource {
+  static readonly CLOSED = 2
+  readyState = 1
+  constructor(readonly url: string) {}
+  addEventListener() {}
+  close() {}
+}
+
 beforeEach(() => {
   asked.length = 0
+  vi.stubGlobal('EventSource', SilentEventSource)
   window.history.replaceState(null, '', '/reports?from=2026-10-01&to=2026-10-23&team=t-dev')
   vi.stubGlobal(
     'fetch',
@@ -70,6 +84,20 @@ beforeEach(() => {
           ],
         })
       if (path.startsWith('/api/reports/slices')) return reply({ slices: [] })
+      // «Требует внимания» (ROADMAP 42.3, срез 5): застрявшее на сегодня.
+      if (path.startsWith('/api/reports/attention'))
+        return reply({
+          blocked: [
+            { id: 'c-1', boardId: 'b-dev', board: 'Разработка', number: 'РАЗ-7', title: 'Ждём акт', column: 'В работе', days: 3.5, reason: 'подписывает склад' },
+          ],
+          overPromise: [],
+          overdue: [
+            { id: 'c-2', boardId: 'b-dev', board: 'Разработка', number: 'РАЗ-9', title: 'Релиз', column: 'В работе', days: 2, dueOn: '2026-10-21' },
+          ],
+          unassigned: [],
+          stale: [],
+          truncated: false,
+        })
       return reply({})
     }),
   )
@@ -81,7 +109,7 @@ afterEach(() => {
 
 it('список исполнителей — люди выбранного подразделения, разрез по людям на экране', async () => {
   const user = userEvent.setup()
-  render(<Reports />)
+  render(<Reports principal={anna} />)
 
   // Люди спрошены тем же отбором, что и число карточек.
   await waitFor(() => expect(asked.some((p) => p.startsWith('/api/reports/people?') && p.includes('team=t-dev'))).toBe(true))
@@ -102,7 +130,7 @@ it('список исполнителей — люди выбранного по
 // видны под отбором — сделано, в работе, цикл, итерации, подразделения;
 // доля итерации — сделанное от взятого, без добавленного по ходу.
 it('сводка за период видна на экране под тем же отбором', async () => {
-  render(<Reports />)
+  render(<Reports principal={anna} />)
   await waitFor(() => expect(asked.some((p) => p.startsWith('/api/reports/summary?') && p.includes('team=t-dev'))).toBe(true))
   expect(await screen.findByRole('heading', { name: 'Сводка за период' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Пропускная способность' })).toBeTruthy()
@@ -118,4 +146,23 @@ it('сводка за период видна на экране под тем ж
 
   const teams = screen.getByRole('table', { name: 'По подразделениям' })
   expect(within(teams).getByText('Без подразделения')).toBeTruthy()
+})
+
+// «Требует внимания» (ROADMAP 42.3, срез 5): группы с числом, причина
+// блокировки и срок под названием; нажатие кладёт карточку в адрес
+// рядом с отбором — отбор не теряется.
+it('застрявшее видно группами, карточка открывается, отбор остаётся', async () => {
+  const user = userEvent.setup()
+  render(<Reports principal={anna} />)
+  await waitFor(() => expect(asked.some((p) => p.startsWith('/api/reports/attention?') && p.includes('team=t-dev'))).toBe(true))
+  expect(await screen.findByRole('heading', { name: 'Заблокированы: 1' })).toBeTruthy()
+  const blocked = screen.getByRole('table', { name: 'Заблокированы' })
+  expect(within(blocked).getByText('подписывает склад')).toBeTruthy()
+  expect(within(blocked).getByText('3,5 дн.')).toBeTruthy()
+  expect(within(screen.getByRole('table', { name: 'Просрочены' })).getByText(/^срок /)).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: /Без исполнителя/ })).toBeNull()
+
+  await user.click(within(blocked).getByRole('button', { name: 'РАЗ-7 Ждём акт' }))
+  await waitFor(() => expect(window.location.search).toContain('open=b-dev%3Ac-1'))
+  expect(window.location.search).toContain('team=t-dev')
 })

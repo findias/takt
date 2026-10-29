@@ -397,7 +397,7 @@ function Screens() {
             route.name === 'tasks') && (
             <Suspense fallback={<Skeleton lines={3} />}>
               {route.name === 'tasks' && <Tasks principal={principal} />}
-              {route.name === 'reports' && <Reports />}
+              {route.name === 'reports' && <Reports principal={principal} />}
               {route.name === 'team' && <Team principal={principal} />}
               {route.name === 'import' && <ImportScreen />}
               {route.name === 'structure' && (

@@ -12,9 +12,10 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**One migration, safe for the running version.** `0080` adds two
-nullable columns: `cards.percent` and `boards.estimate_unit`. Pods of
-v0.5.x keep working on them and ignore both.
+**Two migrations, safe for the running version.** `0080` adds two
+nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
+adds nullable `boards.stale_days`. Pods of v0.5.x keep working on them
+and ignore all three.
 
 A new operation, `MOVE_CARD_TO_BOARD` `{cardId, boardId, toColumnId?}`,
 moves a card to another board of the same level; the key or person
@@ -69,6 +70,15 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Needs attention now.** On **Reports**, under the selection, the
+  team lead's page: blocked cards with the reason and days blocked,
+  cards running past the board's promise, overdue cards, cards in
+  progress with nobody on them, and cards sitting in one column longer
+  than the board's new **No movement** setting (Flow; 7 days unless
+  set, `PUT /api/boards/{id}/stale-days`, `staleDays` on the board).
+  The period does not apply; a card opens at the side from the row.
+  Nothing stuck — said in words. The screen's own call is
+  `GET /api/reports/attention`, not in the contract.
 - **Due dates kept.** The summary on **Reports** and the **Summary**
   sheet say, among cards done in the period that had a due date, what
   share was done on time (the day of finishing, in UTC, against the due

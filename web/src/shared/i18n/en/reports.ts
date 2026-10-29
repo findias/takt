@@ -35,6 +35,24 @@ export const reports: typeof ru = {
     onlyPerson: (name: string) => `Only ${name}: selection and file for this person`,
     byPersonHint:
       'A card with several assignees counts for each. Time in progress is how long the cards stood in work columns, not counting returns to the queue; the gap to cycle time is waiting. Click a name to narrow the selection and the file to that person.',
+    attention: 'Needs attention now',
+    attentionNone:
+      'Nothing is stuck: no blocked cards, none running past the board’s promise, none overdue, none in progress without an assignee, none sitting without movement.',
+    attentionHint:
+      'For the current selection, as of today — the period does not apply here. Click a card to open it at the side and fix the problem in place. “No movement” means longer than the board’s setting (Flow → No movement), 7 days by default.',
+    attentionTruncated: 'Showing the first thousand cards — narrow the selection.',
+    attnBlocked: 'Blocked',
+    attnOverPromise: 'Running past the board’s promise',
+    attnOverdue: 'Overdue',
+    attnUnassigned: 'In progress without an assignee',
+    attnStale: 'No movement',
+    attnCard: 'Card',
+    attnColumn: 'Column',
+    attnBlockedDays: 'Days blocked',
+    attnInWorkDays: 'Days in progress',
+    attnOverdueDays: 'Days overdue',
+    attnStaleDays: 'Days in the column',
+    attnDue: (when: string) => `due ${when}`,
     summary: 'Summary for the period',
     summaryHint:
       'The same numbers as on the Summary sheet of the file, under the same selection. Done and discarded are within the period; in progress and age are as of today.',

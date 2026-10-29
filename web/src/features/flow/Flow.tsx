@@ -24,6 +24,7 @@ export function Flow({
   level,
   ownUnit,
   orgUnit,
+  staleDays,
   onClose,
   onPromise,
 }: {
@@ -39,6 +40,8 @@ export function Flow({
   /** Своя единица оценки доски (ROADMAP 38); пусто — как у организации. */
   ownUnit: EstimateUnit | null
   orgUnit: EstimateUnit
+  /** «Без движения» доски (ROADMAP 42.3, срез 5); пусто — семь дней. */
+  staleDays: number | null
   onClose: () => void
   /** Обещание изменилось — доске стоит перечитать себя. */
   onPromise: () => void
@@ -103,6 +106,7 @@ export function Flow({
       <IterationsSwitch boardId={boardId} enabled={iterationsEnabled} onChanged={onPromise} />
       <LevelSwitch boardId={boardId} level={level} onChanged={onPromise} />
       <UnitSwitch boardId={boardId} own={ownUnit} org={orgUnit} onChanged={onPromise} />
+      <StaleSwitch boardId={boardId} days={staleDays} onChanged={onPromise} />
 
       {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
           читается уже с этой оговоркой. Переключатель виден, пока есть
@@ -269,6 +273,47 @@ export function Flow({
     </Panel>
   )
 }
+
+/**
+ * «Без движения» (ROADMAP 42.3, срез 5): через сколько дней в одной
+ * колонке работы карточка попадает в «Требует внимания» на «Отчётах».
+ * У доски своё: у поддержки сутки — тревога, у исследований неделя —
+ * норма. Пусто — семь. Сохраняется по уходу из поля, а не на каждую
+ * цифру: «1» по дороге к «14» — не настройка.
+ */
+function StaleSwitch({ boardId, days, onChanged }: { boardId: string; days: number | null; onChanged: () => void }) {
+  const [value, setValue] = useState(days === null ? '' : String(days))
+  const [error, setError] = useState<string | null>(null)
+  const save = () => {
+    const next = value.trim() === '' ? null : Number(value)
+    if (next === days) return
+    setError(null)
+    api
+      .setBoardStaleDays(boardId, next)
+      .then(onChanged)
+      .catch((err) => {
+        setValue(days === null ? '' : String(days))
+        setError(err instanceof Error ? err.message : t.common.notDone)
+      })
+  }
+  return (
+    <section className="stack stack--tight">
+      <ScreenError>{error}</ScreenError>
+      <label className="row row--tight small">
+        <span>{t.flow.stale}</span>
+        <input type="number" min={1} max={365} className="flow-stale" value={value}
+          placeholder={String(DEFAULT_STALE_DAYS)}
+          onChange={(e) => setValue(e.target.value)} onBlur={save}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+        <span>{t.flow.staleDays}</span>
+      </label>
+      <p className="muted small">{t.flow.staleHint(DEFAULT_STALE_DAYS)}</p>
+    </section>
+  )
+}
+
+// Семь — то же умолчание, что у сервера (report.DefaultStaleDays).
+const DEFAULT_STALE_DAYS = 7
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
