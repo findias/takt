@@ -148,9 +148,21 @@
           "description": { "type": "string", "description": "Описание карточки целиком; в XLSX обрезается до 32 767 знаков — предела ячейки." }
         }
       },
+      "ShareRow": {
+        "type": "object",
+        "required": ["name", "finished", "weight", "unestimated"],
+        "properties": {
+          "name": { "type": "string", "description": "Пусто — без метки или без эпика." },
+          "scope": { "type": "string", "enum": ["org", "team", "board"], "description": "У меток: область метки." },
+          "scopeName": { "type": "string", "description": "Название подразделения или доски области." },
+          "finished": { "type": "integer" },
+          "weight": { "type": "number", "description": "Сумма оценок сделанных." },
+          "unestimated": { "type": "integer", "description": "Сколько из сделанных без оценки: вес меньше правды." }
+        }
+      },
       "ReportSummary": {
         "type": "object",
-        "required": ["chosen", "cards", "finished", "discarded", "wip", "cycleTime", "age", "due", "blocks", "throughput", "flowStep", "flow", "iterations", "teams", "people"],
+        "required": ["chosen", "cards", "finished", "discarded", "wip", "cycleTime", "age", "due", "blocks", "throughput", "flowStep", "flow", "iterations", "teams", "effort", "people"],
         "properties": {
           "chosen": {
             "type": "object",
@@ -179,6 +191,7 @@
           "flow": { "type": "array", "items": { "type": "object", "required": ["day", "queued", "inProgress", "done"], "properties": { "day": { "type": "string", "format": "date" }, "queued": { "type": "integer" }, "inProgress": { "type": "integer" }, "done": { "type": "integer" } } } },
           "iterations": { "type": "array", "description": "Итерации, пересекающие период, по карточкам отбора, на момент закрытия (идущая — на сейчас). Доля обещания — donePlanned/planned: добавленное по ходу в неё не входит.", "items": { "type": "object", "required": ["name", "board", "startsOn", "endsOn", "closed", "planned", "added", "dropped", "done", "donePlanned"], "properties": { "name": { "type": "string" }, "board": { "type": "string" }, "startsOn": { "type": "string", "format": "date" }, "endsOn": { "type": "string", "format": "date" }, "closed": { "type": "boolean" }, "planned": { "type": "integer", "description": "Обещано: в составе на момент и добавлено не позже первого дня." }, "added": { "type": "integer", "description": "Добавлено по ходу и осталось в составе." }, "dropped": { "type": "integer", "description": "Выброшено из состава." }, "done": { "type": "integer", "description": "Сделано из состава." }, "donePlanned": { "type": "integer", "description": "Сделано из обещанного." } } } },
           "teams": { "type": "array", "items": { "type": "object", "required": ["team", "cards", "finished", "wip", "cycleTimeP50", "cycleTimeP85"], "properties": { "team": { "type": "string" }, "cards": { "type": "integer" }, "finished": { "type": "integer" }, "wip": { "type": "integer" }, "cycleTimeP50": { "type": ["number", "null"] }, "cycleTimeP85": { "type": ["number", "null"] } } } },
+          "effort": { "type": "object", "description": "Куда ушли силы: сделанное за период по меткам (обычным, не «человек») и по эпикам, числом и весом. Доля — finished строки от finished разреза; карточка с несколькими метками — у каждой. Пустое name — без метки или без эпика; карточки портфеля в разрез по эпикам не входят.", "required": ["finished", "unit", "mixedUnits", "byLabel", "byEpic"], "properties": { "finished": { "type": "integer" }, "unit": { "type": "string", "description": "Единица оценки, одна на отбор; пусто при mixedUnits." }, "mixedUnits": { "type": "boolean", "description": "Доски сделанного считают в разных единицах — веса складывать нельзя." }, "byLabel": { "type": "array", "items": { "$ref": "#/components/schemas/ShareRow" } }, "byEpic": { "type": "array", "items": { "$ref": "#/components/schemas/ShareRow" } } } },
           "people": { "type": "array", "description": "Разрез по исполнителям под отбор. Карточка с несколькими исполнителями — у каждого; строка с userId null — карточки без исполнителя. Выбраны исполнители — строки только их.", "items": { "type": "object", "required": ["userId", "name", "cards", "finished", "wip", "cycleTimeP50", "cycleTimeP85", "workTimeP50"], "properties": { "userId": { "type": ["string", "null"], "format": "uuid" }, "name": { "type": "string" }, "cards": { "type": "integer" }, "finished": { "type": "integer" }, "wip": { "type": "integer" }, "cycleTimeP50": { "type": ["number", "null"] }, "cycleTimeP85": { "type": ["number", "null"] }, "workTimeP50": { "type": ["number", "null"], "description": "Медиана времени в работе по сделанным, дней; разница с циклом — ожидание." } } } }
         }
       },

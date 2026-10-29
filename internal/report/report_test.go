@@ -633,3 +633,62 @@ func TestIterationShareIgnoresLateAdded(t *testing.T) {
 		t.Errorf("итерация %+v; ожидалось обещано 2, добавлено 1, выброшено 1, сделано 2, из обещанного 1", it)
 	}
 }
+
+// Куда ушли силы (ROADMAP 42.3, срез 2): карточка с двумя метками одной
+// области считается у каждой, без метки — своей строкой; эпик —
+// ближайший предок на портфеле; недоведённое в разрез не входит.
+func TestEffortByLabelAndEpic(t *testing.T) {
+	f := newFixture(t)
+	both := f.card(spec{title: "Две метки", created: 10, started: 9, finished: 2, outcome: "done"})
+	one := f.card(spec{title: "Одна метка", created: 10, started: 9, finished: 1, outcome: "done"})
+	f.card(spec{title: "Без меток", created: 10, started: 9, finished: 1, outcome: "done"})
+	f.card(spec{title: "Не сделана", created: 10, started: 9, finished: -1})
+	f.inTenant(f.owner, func(tx pgx.Tx) error {
+		var bug, debt, portfolio, epic string
+		if err := tx.QueryRow(f.ctx, `insert into labels (org_id, name, tone) values ($1, 'дефект', 'rose') returning id`, f.orgID).Scan(&bug); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(f.ctx, `insert into labels (org_id, name, tone) values ($1, 'долг', 'slate') returning id`, f.orgID).Scan(&debt); err != nil {
+			return err
+		}
+		for _, pair := range [][2]string{{both, bug}, {both, debt}, {one, bug}} {
+			if _, err := tx.Exec(f.ctx, `insert into card_labels (org_id, card_id, label_id) values ($1, $2, $3)`, f.orgID, pair[0], pair[1]); err != nil {
+				return err
+			}
+		}
+		if err := tx.QueryRow(f.ctx, `insert into boards (org_id, project_id, name, key, level)
+			 select org_id, project_id, 'Портфель', 'ПОРТ', 'portfolio' from boards where id = $1 returning id`, f.board).Scan(&portfolio); err != nil {
+			return err
+		}
+		var col string
+		if err := tx.QueryRow(f.ctx, `insert into board_columns (org_id, board_id, name, position, kind)
+			 values ($1, $2, 'Эпики', 'a0', 'in_progress') returning id`, f.orgID, portfolio).Scan(&col); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(f.ctx, `insert into cards (org_id, board_id, number, column_id, title, position)
+			 values ($1, $2, 'ПОРТ-1', $3, 'Переезд', $4) returning id`, f.orgID, portfolio, col, uuid.NewString()).Scan(&epic); err != nil {
+			return err
+		}
+		_, err := tx.Exec(f.ctx, `insert into card_links (org_id, from_card, to_card, kind) values ($1, $2, $3, 'subtask')`, f.orgID, epic, both)
+		return err
+	})
+	c := f.export(f.owner, period(14))
+	e := c.sum.Effort
+	if e.Finished != 3 || e.MixedUnits {
+		t.Errorf("сделано %d, единицы смешаны %v; ожидалось 3 и нет", e.Finished, e.MixedUnits)
+	}
+	byLabel := map[string]int{}
+	for _, r := range e.ByLabel {
+		byLabel[r.Name] = r.Finished
+	}
+	if byLabel["дефект"] != 2 || byLabel["долг"] != 1 || byLabel[""] != 1 {
+		t.Errorf("по меткам: %v — ожидались дефект 2, долг 1, без метки 1", byLabel)
+	}
+	byEpic := map[string]int{}
+	for _, r := range e.ByEpic {
+		byEpic[r.Name] = r.Finished
+	}
+	if byEpic["Переезд"] != 1 || byEpic[""] != 2 {
+		t.Errorf("по эпикам: %v — ожидались Переезд 1, без эпика 2", byEpic)
+	}
+}

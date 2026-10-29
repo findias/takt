@@ -397,6 +397,46 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			w.blank()
 		}
 
+		// Куда ушли силы (42.3, срез 2): по меткам и по эпикам; доля —
+		// от всех сделанных, у карточки с двумя метками — у обеих.
+		if sum.Effort.Finished > 0 {
+			weightHead := func() cell {
+				if sum.Effort.MixedUnits {
+					return cell{}
+				}
+				return bold(strings.Join([]string{n("Вес"), s.words.unit[sum.Effort.Unit]}, ", "))
+			}
+			shareRows := func(list []ShareRow, none string, withScope bool) {
+				for _, r := range list {
+					name := r.Name
+					if name == "" {
+						name = n(none)
+					}
+					cells := []cell{str(name)}
+					if withScope {
+						cells = append(cells, str(s.scopeWords(r)))
+					}
+					cells = append(cells, num(float64(r.Finished)), pct(float64(r.Finished)/float64(sum.Effort.Finished)))
+					if !sum.Effort.MixedUnits {
+						cells = append(cells, dec(r.Weight))
+					}
+					w.row(cells...)
+				}
+			}
+			w.row(bold(n("Куда ушли силы: по меткам")))
+			w.row(bold(n("Метка")), bold(n("Область")), bold(n("Сделано")), bold(n("Доля")), weightHead())
+			shareRows(sum.Effort.ByLabel, "Без метки", true)
+			w.row(str(n("Карточка с несколькими метками считается у каждой, поэтому доли в сумме больше ста.")))
+			if sum.Effort.MixedUnits {
+				w.row(str(n("Доски отбора считают в разных единицах — веса не складываются.")))
+			}
+			w.blank()
+			w.row(bold(n("Куда ушли силы: по эпикам")))
+			w.row(bold(n("Эпик")), bold(n("Сделано")), bold(n("Доля")), weightHead())
+			shareRows(sum.Effort.ByEpic, "Без эпика", false)
+			w.blank()
+		}
+
 		w.row(bold(n("По подразделениям")))
 		w.row(bold(n("Подразделение")), bold(n("Карточек")), bold(n("Сделано")),
 			bold(n("В работе")), bold(n("Цикл, медиана")), bold(n("Цикл, 85-я")))
@@ -441,6 +481,23 @@ func (s *xlsxSink) Summary(sum Summary) error {
 // chartCol — колонка, с которой начинаются диаграммы: правее таблиц
 // пропускной способности и потока (они в четыре колонки).
 const chartCol = 5
+
+// scopeWords — область метки словами: «общая», «подразделение Х»,
+// «доска Y».
+func (s *xlsxSink) scopeWords(r ShareRow) string {
+	var word string
+	switch r.Scope {
+	case "team":
+		word = i18n.Name(s.ctx, "подразделение")
+	case "board":
+		word = i18n.Name(s.ctx, "доска")
+	case "org":
+		return i18n.Name(s.ctx, "общая")
+	default:
+		return ""
+	}
+	return strings.Join([]string{word, r.ScopeName}, " ")
+}
 
 func (s *xlsxSink) join(codes []string, dict map[string]string) string {
 	out := make([]string, len(codes))

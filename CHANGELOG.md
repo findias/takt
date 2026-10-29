@@ -70,6 +70,15 @@ together from **Move selected**): pick the board and the column. The card
   now described in the contract. `/api/reports/people` (the screen's
   own call, not in the contract) no longer returns `rows`: the screen
   takes the breakdown from the summary instead of counting it twice.
+- **Where the effort went.** The summary on **Reports** and the
+  **Summary** sheet break work done in the period down by label (with
+  the label's scope: organisation-wide, a subdivision's or a board's)
+  and by epic — the nearest ancestor on a portfolio board — as a
+  count, a share of everything done and, when the selected boards
+  estimate in one unit, as weight with the number of unestimated cards
+  beside it. A card with several labels counts for each. JSON
+  `summary.effort` has `finished`, `unit`, `mixedUnits`, `byLabel[]`
+  and `byEpic[]`.
 - **Iteration completion is a trend, and the share is honest.** The
   iterations table on **Reports** and the **Summary** sheet is counted
   as of each iteration's closing, like the iteration report: promised

@@ -205,6 +205,9 @@ type Summary struct {
 	Flow       []FlowDay      `json:"flow"`
 	Iterations []IterationRow `json:"iterations"`
 	Teams      []TeamRow      `json:"teams"`
+	// Effort — куда ушли силы за период (ROADMAP 42.3, срез 2): сделанное
+	// по меткам и по эпикам, числом и весом.
+	Effort Effort `json:"effort"`
 	// People — разрез по исполнителям (ROADMAP 37.1): «что делал
 	// Борис» без фильтра в Excel.
 	People []PersonRow `json:"people"`
@@ -239,6 +242,33 @@ type BlockReason struct {
 	Reason string  `json:"reason"`
 	Cards  int     `json:"cards"`
 	Days   float64 `json:"days"`
+}
+
+// Effort — сделанное за период по меткам и по эпикам. Finished — всего
+// сделанных, от него экран считает доли. Карточка с несколькими метками
+// считается у каждой, без меток — строкой с пустым именем; без эпика —
+// тоже пустой строкой; карточки портфеля (сами эпики) в разрез по эпикам
+// не входят. Вес — сумма оценок сделанных; MixedUnits — доски отбора
+// считают в разных единицах, и складывать веса нельзя: экран и файл
+// тогда вес не показывают.
+type Effort struct {
+	Finished   int        `json:"finished"`
+	Unit       string     `json:"unit"`
+	MixedUnits bool       `json:"mixedUnits"`
+	ByLabel    []ShareRow `json:"byLabel"`
+	ByEpic     []ShareRow `json:"byEpic"`
+}
+
+// ShareRow — строка разреза. Scope у меток: org, team или board,
+// ScopeName — название подразделения или доски; у эпиков пусто.
+type ShareRow struct {
+	Name      string  `json:"name"`
+	Scope     string  `json:"scope,omitempty"`
+	ScopeName string  `json:"scopeName,omitempty"`
+	Finished  int     `json:"finished"`
+	Weight    float64 `json:"weight"`
+	// Unestimated — сколько из сделанных без оценки: вес тогда меньше правды.
+	Unestimated int `json:"unestimated"`
 }
 
 // Chosen — названия выбранного в отборе; пустой список — «любые».
@@ -825,8 +855,116 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 		return sum, err
 	}
 	rows.Close()
+	if sum.Effort, err = effort(ctx, tx, next); err != nil {
+		return sum, err
+	}
 	sum.People, err = personRows(ctx, tx, f)
 	return sum, err
+}
+
+// effort — куда ушли силы: сделанное за период по меткам (только
+// обычные, не «человек») и по эпикам (ближайший предок на портфеле,
+// той же глубины, что у дерева). Единица — одна на отбор, если
+// у всех досок сделанного она одна; иначе веса не складываются.
+func effort(ctx context.Context, tx pgx.Tx, next time.Time) (Effort, error) {
+	out := Effort{ByLabel: []ShareRow{}, ByEpic: []ShareRow{}}
+	var units []string
+	if err := tx.QueryRow(ctx, `
+		select count(*),
+		       coalesce(array_agg(distinct coalesce(b.estimate_unit,
+		                 (select o.estimate_unit from orgs o where o.id = b.org_id))), '{}')
+		  from report_cards r
+		  join cards c on c.id = r.id
+		  join boards b on b.id = c.board_id
+		 where c.outcome = 'done' and c.finished_at < $1`, next).Scan(&out.Finished, &units); err != nil {
+		return out, err
+	}
+	if len(units) == 1 {
+		out.Unit = units[0]
+	}
+	out.MixedUnits = len(units) > 1
+
+	scan := func(rows pgx.Rows, dst *[]ShareRow, withScope bool) error {
+		defer rows.Close()
+		for rows.Next() {
+			var r ShareRow
+			var err error
+			if withScope {
+				err = rows.Scan(&r.Name, &r.Scope, &r.ScopeName, &r.Finished, &r.Weight, &r.Unestimated)
+			} else {
+				err = rows.Scan(&r.Name, &r.Finished, &r.Weight, &r.Unestimated)
+			}
+			if err != nil {
+				return err
+			}
+			r.Weight = *round2(&r.Weight)
+			*dst = append(*dst, r)
+		}
+		return rows.Err()
+	}
+	rows, err := tx.Query(ctx, `
+		with done as (
+			select c.id, c.estimate from report_cards r
+			  join cards c on c.id = r.id
+			 where c.outcome = 'done' and c.finished_at < $1
+		),
+		tagged as (
+			select d.id, d.estimate, l.name,
+			       case when l.board_id is not null then 'board'
+			            when l.team_id is not null then 'team' else 'org' end as scope,
+			       coalesce(lb.name, lt.name, '') as scope_name
+			  from done d
+			  join card_labels cl on cl.card_id = d.id
+			  join labels l on l.id = cl.label_id and l.kind = 'regular'
+			  left join teams lt on lt.id = l.team_id
+			  left join boards lb on lb.id = l.board_id
+			union all
+			select d.id, d.estimate, '', '', ''
+			  from done d
+			 where not exists (select 1 from card_labels cl join labels l on l.id = cl.label_id
+			                    where cl.card_id = d.id and l.kind = 'regular')
+		)
+		select name, scope, scope_name, count(*), coalesce(sum(estimate), 0)::float8,
+		       count(*) filter (where estimate is null)
+		  from tagged
+		 group by name, scope, scope_name
+		 order by name = '', count(*) desc, lower(name)`, next)
+	if err != nil {
+		return out, err
+	}
+	if err := scan(rows, &out.ByLabel, true); err != nil {
+		return out, err
+	}
+	rows, err = tx.Query(ctx, `
+		with done as (
+			select c.id, c.estimate from report_cards r
+			  join cards c on c.id = r.id
+			  join boards b on b.id = c.board_id and b.level = 'team'
+			 where c.outcome = 'done' and c.finished_at < $1
+		),
+		owned as (
+			select d.id, d.estimate,
+			       coalesce((with recursive up(anc, depth) as (
+			                   select k.from_card, 1 from card_links k
+			                    where k.to_card = d.id and k.kind = 'subtask'
+			                   union all
+			                   select k.from_card, u.depth + 1
+			                     from up u join card_links k on k.to_card = u.anc and k.kind = 'subtask'
+			                    where u.depth < `+itoa(board.MaxSubtaskDepth)+`)
+			                 select a.title from up u
+			                   join cards a on a.id = u.anc
+			                   join boards ab on ab.id = a.board_id and ab.level = 'portfolio'
+			                  order by u.depth limit 1), '') as epic
+			  from done d
+		)
+		select epic, count(*), coalesce(sum(estimate), 0)::float8, count(*) filter (where estimate is null)
+		  from owned
+		 group by epic
+		 order by epic = '', count(*) desc, lower(epic)`, next)
+	if err != nil {
+		return out, err
+	}
+	return out, scan(rows, &out.ByEpic, false)
 }
 
 // names — названия выбранного. Невидимое спрашивающему не называется:

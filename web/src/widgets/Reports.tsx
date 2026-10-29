@@ -8,7 +8,8 @@ import { PickList } from '../shared/ui/PickList.tsx'
 import { Slices } from '../features/reports/Slices.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { Bars, CumulativeFlow } from '../features/flow/charts.tsx'
-import { dateWords } from '../entities/card/model.ts'
+import { UNIT_NAMES, dateWords } from '../entities/card/model.ts'
+import type { EstimateUnit } from '../shared/api/index.ts'
 import { t } from '../shared/i18n/index.ts'
 import {
   PRESETS,
@@ -64,8 +65,10 @@ type Summary = {
     donePlanned: number
   }[]
   teams: { team: string; cards: number; finished: number; wip: number; cycleTimeP50: number | null; cycleTimeP85: number | null }[]
+  effort: { finished: number; unit: string; mixedUnits: boolean; byLabel: ShareRow[]; byEpic: ShareRow[] }
   people: PersonRow[]
 }
+type ShareRow = { name: string; scope?: 'org' | 'team' | 'board'; scopeName?: string; finished: number; weight: number; unestimated: number }
 type SummaryState = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; data: Summary }
 /** «Требует внимания» (ROADMAP 42.3, срез 5): пять групп на сегодня. */
 type AttentionCard = {
@@ -606,6 +609,23 @@ function SummaryView({ sum }: { sum: Summary }) {
         </section>
       )}
 
+      {/* Куда ушли силы (42.3, срез 2): по меткам и по эпикам. Главный
+          ответ на «мы вообще чем заняты». Доли считаются от всех
+          сделанных; карточка с двумя метками — у обеих. */}
+      {sum.effort.finished > 0 && (
+        <section className="stack reports-group">
+          <h3 className="section-title">{s.effort}</h3>
+          <ShareTable rows={sum.effort.byLabel} total={sum.effort.finished} label={s.effortByLabel}
+            nameHead={s.label} none={s.noLabel} unit={sum.effort.mixedUnits ? null : sum.effort.unit} withScope />
+          <ShareTable rows={sum.effort.byEpic} total={sum.effort.finished} label={s.effortByEpic}
+            nameHead={s.epic} none={s.noEpic} unit={sum.effort.mixedUnits ? null : sum.effort.unit} />
+          <p className="muted small">
+            {s.effortHint}
+            {sum.effort.mixedUnits && ' ' + s.effortMixed}
+          </p>
+        </section>
+      )}
+
       <section className="stack reports-group">
         <h3 className="section-title">{s.byTeam}</h3>
         <div className="table-wrap">
@@ -637,6 +657,52 @@ function SummaryView({ sum }: { sum: Summary }) {
         <p className="muted small">{s.byTeamHint}</p>
       </section>
     </>
+  )
+}
+
+/** Таблица долей: имя, область (у меток), сделано, доля, вес. Вес
+ *  спрятан, когда доски считают в разных единицах: складывать часы
+ *  с очками нельзя, и подпись не спасёт. */
+function ShareTable({ rows, total, label, nameHead, none, unit, withScope }: {
+  rows: ShareRow[]
+  total: number
+  label: string
+  nameHead: string
+  none: string
+  unit: string | null
+  withScope?: boolean
+}) {
+  const s = t.reports
+  const scope = (r: ShareRow) =>
+    r.scope === 'team' ? s.scopeTeam(r.scopeName ?? '') : r.scope === 'board' ? s.scopeBoard(r.scopeName ?? '') : r.scope === 'org' ? s.scopeOrg : ''
+  return (
+    <div className="stack stack--tight">
+      <h4 className="small report-name">{label}</h4>
+      <div className="table-wrap">
+        <table className="figures reports-table" aria-label={label}>
+          <thead>
+            <tr>
+              <th scope="col">{nameHead}</th>
+              {withScope && <th scope="col">{s.scope}</th>}
+              <th scope="col">{s.finished}</th>
+              <th scope="col">{s.effortShare}</th>
+              {unit && <th scope="col">{s.weight(UNIT_NAMES[unit as EstimateUnit] ?? unit)}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`${r.scope ?? ''}/${r.scopeName ?? ''}/${r.name}`}>
+                <th scope="row">{r.name || <span className="muted">{none}</span>}</th>
+                {withScope && <td className="muted">{scope(r)}</td>}
+                <td>{r.finished}</td>
+                <td>{s.percent(Math.round((100 * r.finished) / total))}</td>
+                {unit && <td>{r.weight.toLocaleString()}{r.unestimated > 0 && <span className="muted"> {s.unestimated(r.unestimated)}</span>}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 

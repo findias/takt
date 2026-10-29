@@ -79,6 +79,16 @@ beforeEach(() => {
             { team: 'Разработка', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 3.5 },
             { team: '', cards: 1, finished: 0, wip: 0, cycleTimeP50: null, cycleTimeP85: null },
           ],
+          effort: {
+            finished: 4,
+            unit: 'points',
+            mixedUnits: false,
+            byLabel: [
+              { name: 'дефект', scope: 'org', scopeName: '', finished: 3, weight: 8, unestimated: 1 },
+              { name: '', finished: 1, weight: 2, unestimated: 0 },
+            ],
+            byEpic: [{ name: 'Переезд', finished: 2, weight: 5, unestimated: 0 }, { name: '', finished: 2, weight: 5, unestimated: 0 }],
+          },
           people: [
             { userId: 'u-boris', name: 'Борис Дятлов', cards: 2, finished: 1, wip: 1, cycleTimeP50: 3.5, cycleTimeP85: 4, workTimeP50: 2 },
             { userId: null, name: '', cards: 1, finished: 0, wip: 0, cycleTimeP50: null, cycleTimeP85: null, workTimeP50: null },
@@ -151,6 +161,14 @@ it('сводка за период видна на экране под тем ж
   // Доля — от обещанного (3 из 4), добавленное по ходу её не меняет.
   expect(within(row).getByText('75 %')).toBeTruthy()
   expect(within(row).getByText('5')).toBeTruthy()
+
+  // Куда ушли силы: доля от всех сделанных, без метки — словами, вес в единице.
+  const byLabel = screen.getByRole('table', { name: 'По меткам' })
+  const defect = within(byLabel).getByRole('row', { name: /дефект/ })
+  expect(within(defect).getByText('75 %')).toBeTruthy()
+  expect(within(byLabel).getByText('Без метки')).toBeTruthy()
+  expect(within(byLabel).getByRole('columnheader', { name: 'Вес, в очках' })).toBeTruthy()
+  expect(within(screen.getByRole('table', { name: 'По эпикам' })).getByText('Переезд')).toBeTruthy()
 
   const teams = screen.getByRole('table', { name: 'По подразделениям' })
   expect(within(teams).getByText('Без подразделения')).toBeTruthy()

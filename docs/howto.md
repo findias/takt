@@ -828,8 +828,11 @@ as it was written —, the cumulative flow diagram,
 of closing: promised on the first day, added on the way, dropped, done,
 and the share of the promise, which is done out of promised and does
 not move with what was added later, so row after row shows whether the
-team keeps its word —, a breakdown **By subdivision** — the one that
-runs the card's board — and **By assignee**: what each person has under
+team keeps its word —, **Where the effort went** — work done in the period by label (with
+the label's scope) and by epic, as a count, a share of everything done
+and, when the selected boards estimate in one unit, as weight; a card
+with several labels counts for each —, a breakdown **By subdivision** —
+the one that runs the card's board — and **By assignee**: what each person has under
 the current selection: cards, done, in progress, the median cycle time
 and the median time in progress. A card with several assignees counts
 for each. Click a name and the selection, and the file, become that
@@ -843,7 +846,8 @@ Then download:
   cards done and discarded in the period, work in progress, cycle time
   and age (median and 85th percentile), due dates (done with a due date,
   of them on time, overdue now), blocks in the period by reason, done
-  and created by week with a chart,
+  and created by week with a chart, where the effort went by label and
+  by epic,
   the cumulative flow diagram with a line on how to read it (its numbers
   by date are on a sheet of their own, after **Data**), iteration
   completion, a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card
