@@ -35,6 +35,7 @@ export const feed: typeof ru = {
     priorityTo: (level: string) => `priority: ${level}`,
     prioritised: 'priority changed',
     done: 'marked done',
+    doneAtHundred: 'marked done: 100% complete',
     undone: '“done” mark removed',
     percentSet: (n: number) => `${n}% complete`,
     percentAuto: 'completion is counted automatically again',

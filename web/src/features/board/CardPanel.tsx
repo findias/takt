@@ -672,8 +672,11 @@ function Completion({
   }
   const text = `${t.completion.value(value)}${now?.manual ? ` · ${t.completion.manual}` : ''}`
 
-  if (!canEdit) {
-    return now ? <p className="muted small">{t.completion.is(text)}</p> : null
+  // Прошедшая финиш выполнена на сто, и ползунок ей ни к чему: другой
+  // процент сервер не примет. Отмеченная руками ползунок оставляет —
+  // сдвиг ниже ста снимает отметку.
+  if (!canEdit || card.outcome === 'done') {
+    return now ? <p className="muted small">{t.completion.is(card.outcome === 'done' ? `${text} · ${t.completion.finished}` : text)}</p> : null
   }
   return (
     <div className="stack stack--tight">

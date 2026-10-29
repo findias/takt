@@ -438,9 +438,15 @@ someone moves it, it counts itself: from the parts, a part at 40%
 giving its parent 0.4 of a part, and 100 for a card marked done. A
 percentage set by hand overrides the count on that card, for a task, a
 part or an epic alike; **Count automatically** brings the count back.
-It neither moves the card nor marks it done. A card without parts shows
-its percentage on the board only once it is set by hand. The history
-keeps "40% complete".
+A hundred percent and "done" are the same thing: a card that reaches
+100, by hand or because its last part got done, is marked done, and
+its parent is marked too once all of its parts are; a card marked done
+or past the finish column is 100 in the report whatever was set by
+hand, and the slider is gone for a card past the finish. Moving the
+slider below 100 lifts the mark. The percentage never moves the card
+on the board. A card without parts shows its percentage on the board
+only once it is set by hand. The history keeps "40% complete" and
+"marked done: 100% complete".
 
 An open part shows its path to the root above the number: "Move to the
 new warehouse · Platform › Ship the warehouse release". A link on this

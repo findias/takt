@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -132,4 +133,127 @@ func TestBoardHasItsOwnEstimateUnit(t *testing.T) {
 
 	owner.mustDo("PUT", "/api/boards/"+boardID+"/estimate-unit", map[string]any{"unit": "parrots"}, http.StatusBadRequest)
 	viewer.mustDo("PUT", "/api/boards/"+boardID+"/estimate-unit", map[string]any{"unit": "hours"}, http.StatusForbidden)
+}
+
+// Сто процентов и отметка «сделано» — одно и то же (решение владельца
+// 29.10.2026): сто руками — отметка; последняя часть сделана — родитель
+// отмечен; меньше ста у отмеченной — отметка снята; прошедшая финиш
+// выполнена на сто, и другой процент у неё не принимается.
+func TestHundredPercentMarksDoneAndDoneIsHundred(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Сто процентов")
+	boardID := owner.board("Поставки")
+	card := func(id string) struct {
+		DoneAt  *string
+		Percent *int
+		Outcome *string
+	} {
+		t.Helper()
+		var snap struct {
+			Cards []struct {
+				ID      string
+				DoneAt  *string
+				Percent *int
+				Outcome *string
+			}
+		}
+		if err := json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap); err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range snap.Cards {
+			if c.ID == id {
+				return struct {
+					DoneAt  *string
+					Percent *int
+					Outcome *string
+				}{c.DoneAt, c.Percent, c.Outcome}
+			}
+		}
+		t.Fatalf("карточки %s нет на снимке", id)
+		return struct {
+			DoneAt  *string
+			Percent *int
+			Outcome *string
+		}{}
+	}
+
+	// Сто руками — отмечена сделанной, в истории — с причиной.
+	single := owner.cardOn(boardID, "Смета")
+	owner.op(boardID, uuid.NewString(), "SET_CARD_PERCENT", map[string]any{"cardId": single, "percent": 100})
+	if card(single).DoneAt == nil {
+		t.Fatalf("сто процентов не отметили карточку сделанной")
+	}
+	events := owner.mustDo("GET", "/api/boards/"+boardID+"/events?cardId="+single, nil, http.StatusOK)
+	if !strings.Contains(string(events), `"done"`) || !strings.Contains(string(events), `"percent":100`) {
+		t.Errorf("в истории нет отметки со ста процентами: %s", events)
+	}
+	// Меньше ста у отмеченной — отметка снята.
+	owner.op(boardID, uuid.NewString(), "SET_CARD_PERCENT", map[string]any{"cardId": single, "percent": 60})
+	if card(single).DoneAt != nil {
+		t.Errorf("процент ниже ста не снял отметку")
+	}
+
+	// Последняя часть сделана — родитель отмечен; снимок родителя
+	// показывает сто, что бы ни стояло руками.
+	parent := owner.cardOn(boardID, "Выпустить релиз")
+	var parts []string
+	for _, title := range []string{"Договор", "Акт"} {
+		raw := owner.op(boardID, uuid.NewString(), "CREATE_SUBTASK", map[string]any{"parentCardId": parent, "title": title})
+		var res struct {
+			Patch struct{ Cards []struct{ ID, Title string } }
+		}
+		if err := json.Unmarshal(raw, &res); err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range res.Patch.Cards {
+			if c.Title == title {
+				parts = append(parts, c.ID)
+			}
+		}
+	}
+	owner.op(boardID, uuid.NewString(), "SET_CARD_DONE", map[string]any{"cardId": parts[0], "done": true})
+	if card(parent).DoneAt != nil {
+		t.Fatalf("родитель отмечен при одной части из двух")
+	}
+	owner.op(boardID, uuid.NewString(), "SET_CARD_PERCENT", map[string]any{"cardId": parts[1], "percent": 100})
+	if card(parent).DoneAt == nil {
+		t.Errorf("последняя часть на ста не отметила родителя")
+	}
+
+	// Прошедшая финиш — сто, и другой процент у неё не принимается.
+	finished := owner.cardOn(boardID, "Переезд")
+	owner.op(boardID, uuid.NewString(), "SET_CARD_PERCENT", map[string]any{"cardId": finished, "percent": 40})
+	var snap struct {
+		Columns []struct{ ID string } `json:"columns"`
+	}
+	if err := json.Unmarshal(owner.mustDo("GET", "/api/boards/"+boardID, nil, http.StatusOK), &snap); err != nil {
+		t.Fatal(err)
+	}
+	owner.op(boardID, uuid.NewString(), "MOVE_CARD", map[string]any{
+		"cardId": finished, "toColumnId": snap.Columns[len(snap.Columns)-1].ID, "place": "end"})
+	code, body := owner.do("POST", "/api/boards/"+boardID+"/operations", map[string]any{
+		"operationId": uuid.NewString(), "type": "SET_CARD_PERCENT",
+		"payload": map[string]any{"cardId": finished, "percent": 50}})
+	if code != http.StatusConflict || !strings.Contains(string(body), "уже сделана") {
+		t.Errorf("процент у сделанной: код %d, %s", code, body)
+	}
+	// В выгрузке у неё 100, а не 40.
+	var export struct {
+		Cards []struct {
+			Title   string `json:"title"`
+			Percent *int   `json:"percent"`
+		} `json:"cards"`
+	}
+	if err := json.Unmarshal(owner.mustDo("GET", "/api/reports/cards?format=json&boards="+boardID+
+		"&from="+time.Now().AddDate(0, 0, -7).Format(time.DateOnly)+"&to="+time.Now().AddDate(0, 0, 1).Format(time.DateOnly), nil, http.StatusOK), &export); err != nil {
+		t.Fatal(err)
+	}
+	if len(export.Cards) == 0 {
+		t.Fatalf("выгрузка пуста")
+	}
+	for _, r := range export.Cards {
+		if r.Title == "Переезд" && (r.Percent == nil || *r.Percent != 100) {
+			t.Errorf("в выгрузке у сделанной не 100: %+v", r.Percent)
+		}
+	}
 }

@@ -35,6 +35,15 @@ board metrics have `movedOut`.
 
 ### The rest
 
+- **A hundred percent and "done" are the same thing.** A card that
+  reaches 100% — by hand, or because its last part got done, moved past
+  the finish, was taken out or archived — is marked done, and its parent
+  after it, up the tree. A card marked done or past the finish shows
+  100 in the report and on the board whatever was set by hand; the
+  **Complete** slider is gone for a card past the finish, and a
+  different percentage for it is refused. Moving the slider below 100
+  lifts the mark. The mark set this way goes into the history as
+  "marked done: 100% complete" (event `card.done` with `percent: 100`).
 - **Reports speak plainly.** Every block on **Reports** has a "?"
   beside its title with a few sentences on what the numbers mean and a
   link to the reference, which has a new section, "Numbers on

@@ -728,6 +728,12 @@ func moveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, ra
 		if released, err = releaseHeldBy(ctx, tx, orgID, actorID, boardID, c.ID); err != nil {
 			return Patch{}, err
 		}
+		// Последняя часть прошла финиш — родитель сделан.
+		more, err := markDoneUpwards(ctx, tx, orgID, actorID, boardID, c.ID)
+		if err != nil {
+			return Patch{}, err
+		}
+		released = appendNew(released, more)
 	}
 	// Пересечение точки финиша делает часть сделанной — значит, доля
 	// разбиения у родителя изменилась, и он едет вместе с ней. Иначе
@@ -875,11 +881,17 @@ func archiveCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 		return Patch{}, err
 	}
 	// Убранная часть выпадает из доли разбиения: родитель едет следом,
-	// иначе «2 из 5» осталось бы висеть над четырьмя частями.
+	// иначе «2 из 5» осталось бы висеть над четырьмя частями. Остались
+	// одни сделанные — родитель дошёл до ста и отмечен.
+	released, err := markDoneUpwards(ctx, tx, orgID, actorID, boardID, id)
+	if err != nil {
+		return Patch{}, err
+	}
 	parents, err := parentCards(ctx, tx, boardID, id)
 	if err != nil {
 		return Patch{}, err
 	}
+	parents = appendNew(parents, released)
 	// Кого она держала — узнают, что держащая в архиве. Пункты тоже
 	// бывают держащими.
 	var held []Card

@@ -36,6 +36,7 @@ export const feed = {
     priorityTo: (level: string) => `приоритет: ${level}`,
     prioritised: 'изменён приоритет',
     done: 'отмечена сделанной',
+    doneAtHundred: 'отмечена сделанной: выполнена на 100%',
     undone: 'отметка «сделана» снята',
     percentSet: (n: number) => `выполнено ${n}%`,
     percentAuto: 'процент выполнения снова считается сам',

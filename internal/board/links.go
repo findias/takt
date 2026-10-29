@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -75,7 +76,17 @@ func linkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, r
 	if err := insertLink(ctx, tx, orgID, actorID, p, fromBoard, toBoard); err != nil {
 		return Patch{}, err
 	}
-	return linkPatch(ctx, tx, boardID, p)
+	// Привязали сделанную часть — родитель мог дойти до ста.
+	var released []Card
+	if p.Kind == LinkSubtask {
+		var err error
+		if released, err = markDoneUpwards(ctx, tx, orgID, actorID, boardID, p.ToCard); err != nil {
+			return Patch{}, err
+		}
+	}
+	patch, err := linkPatch(ctx, tx, boardID, p)
+	patch.Cards = appendNew(patch.Cards, released)
+	return patch, err
 }
 
 // checkEpicStaysParent не даёт эпику встать под задачу команды.
@@ -295,7 +306,18 @@ func unlinkCards(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string,
 			return Patch{}, err
 		}
 	}
-	return linkPatch(ctx, tx, boardID, p)
+	// Сняли незаконченную часть — у бывшего родителя остались одни
+	// сделанные, и он мог дойти до ста.
+	var released []Card
+	if p.Kind == LinkSubtask {
+		var err error
+		if released, err = markDoneFrom(ctx, tx, orgID, actorID, boardID, p.FromCard); err != nil {
+			return Patch{}, err
+		}
+	}
+	patch, err := linkPatch(ctx, tx, boardID, p)
+	patch.Cards = appendNew(patch.Cards, released)
+	return patch, err
 }
 
 // checkSubtaskTree не даёт замкнуть цикл и уйти глубже предела.
@@ -658,6 +680,12 @@ func setCardDone(
 		if released, err = releaseHeldBy(ctx, tx, orgID, actorID, boardID, c.ID); err != nil {
 			return Patch{}, err
 		}
+		// Последняя часть сделана — сделан и родитель.
+		more, err := markDoneUpwards(ctx, tx, orgID, actorID, boardID, c.ID)
+		if err != nil {
+			return Patch{}, err
+		}
+		released = appendNew(released, more)
 	}
 	if err := completeCard(ctx, tx, &c); err != nil {
 		return Patch{}, err
@@ -789,19 +817,7 @@ func withParent(ctx context.Context, tx pgx.Tx, boardID string, c Card) (Patch, 
 // Предок на чужой доске пропускается, но подъём идёт дальше: над ним
 // может снова стоять карточка этой доски.
 func parentCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card, error) {
-	rows, err := tx.Query(ctx, `
-		with recursive up(card, depth) as (
-			select from_card, 1 from card_links where to_card = $1 and kind = 'subtask'
-			union all
-			select l.from_card, u.depth + 1
-			  from up u join card_links l on l.to_card = u.card and l.kind = 'subtask'
-			 where u.depth < $2
-		)
-		select card from up order by depth`, cardID, MaxSubtaskDepth)
-	if err != nil {
-		return nil, err
-	}
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	ids, err := ancestorIDs(ctx, tx, cardID)
 	if err != nil {
 		return nil, err
 	}
@@ -817,6 +833,132 @@ func parentCards(ctx context.Context, tx pgx.Tx, boardID, cardID string) ([]Card
 		out = append(out, parent)
 	}
 	return out, nil
+}
+
+// ancestorIDs — предки карточки по связи «подзадача», от ближнего
+// к корню, с любых досок; подъём ограничен MaxSubtaskDepth.
+func ancestorIDs(ctx context.Context, tx pgx.Tx, cardID string) ([]string, error) {
+	rows, err := tx.Query(ctx, `
+		with recursive up(card, depth) as (
+			select from_card, 1 from card_links where to_card = $1 and kind = 'subtask'
+			union all
+			select l.from_card, u.depth + 1
+			  from up u join card_links l on l.to_card = u.card and l.kind = 'subtask'
+			 where u.depth < $2
+		)
+		select card from up order by depth`, cardID, MaxSubtaskDepth)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
+}
+
+// --- сто процентов и отметка «сделано» — одно и то же ---
+//
+// Решение владельца 29.10.2026, отменившее запись этапа 38 «процент
+// не отмечает сделанной»: сделанная карточка выполнена на сто процентов,
+// а карточка, дошедшая до ста, — сделана. Иначе в отчёте стояли
+// сделанные задачи с «40%» и задачи «100%», которые никто не закрыл,
+// и читающему приходилось гадать, какому из двух столбцов верить.
+//
+// Сто — и поставленное руками, и насчитанное по частям: последняя
+// часть сделана — родитель сделан, и так вверх по дереву, пока счёт
+// родителя доходит до ста. Отметка, а не перенос в «Готово»: куда
+// карточке ехать по доске, знает человек, а поток считается по финишу.
+// Обратного хода у частей нет: открывшаяся часть отметку родителя
+// не снимает — отметку, поставленную руками, нельзя отличить от
+// поставленной по счёту, а стирать сказанное человеком нельзя.
+
+// hundredOf — дошла ли карточка до ста: ручной процент — он и есть,
+// иначе счёт по частям, округлённый как на экране; без частей и без
+// ручного процента — нет.
+func hundredOf(ctx context.Context, tx pgx.Tx, cardID string, percent *int) (bool, error) {
+	if percent != nil {
+		return *percent == 100, nil
+	}
+	p, err := progressOf(ctx, tx, cardID)
+	if err != nil || p == nil || p.Total <= 0 {
+		return false, err
+	}
+	return math.Round(100*p.Done/p.Total) >= 100, nil
+}
+
+// atHundred — то же для ещё не сделанной карточки этой доски: о сделанной
+// (или убранной) false — отмечать нечего.
+func atHundred(ctx context.Context, tx pgx.Tx, boardID, cardID string) (bool, error) {
+	var percent *int
+	var done bool
+	err := tx.QueryRow(ctx, `
+		select percent, coalesce(`+cardDone+`, false)
+		  from cards c
+		 where c.id = $1 and c.board_id = $2 and c.archived_at is null`, cardID, boardID).
+		Scan(&percent, &done)
+	if errors.Is(err, pgx.ErrNoRows) || done {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return hundredOf(ctx, tx, cardID, percent)
+}
+
+// markDoneAtHundred ставит отметку «сделано», если карточка дошла до ста,
+// и отпускает тех, кого она держала, — как ручная отметка.
+func markDoneAtHundred(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, cardID string,
+) (released []Card, err error) {
+	full, err := atHundred(ctx, tx, boardID, cardID)
+	if err != nil || !full {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		update cards
+		   set done_at = now(), version = version + 1, updated_at = now()
+		 where id = $1 and board_id = $2`, cardID, boardID); err != nil {
+		return nil, err
+	}
+	// В историю — с причиной: «отмечена сделанной» от человека и от
+	// счёта выглядят одинаково, а спросят «кто закрыл» — ответить нечем.
+	if err := logEvent(ctx, tx, orgID, boardID, cardID, actorID, "done", nil, nil,
+		map[string]any{"percent": 100}); err != nil {
+		return nil, err
+	}
+	return releaseHeldBy(ctx, tx, orgID, actorID, boardID, cardID)
+}
+
+// markDoneUpwards — после изменения части: предки на этой доске,
+// чей счёт дошёл до ста, отмечаются сделанными, от ближнего к корню.
+// Предок на чужой доске пропускается: писать на чужую доску по чужому
+// праву нельзя, а подъём над ним идёт дальше.
+func markDoneUpwards(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, cardID string,
+) ([]Card, error) {
+	ids, err := ancestorIDs(ctx, tx, cardID)
+	if err != nil {
+		return nil, err
+	}
+	var released []Card
+	for _, id := range ids {
+		more, err := markDoneAtHundred(ctx, tx, orgID, actorID, boardID, id)
+		if err != nil {
+			return nil, err
+		}
+		released = appendNew(released, more)
+	}
+	return released, nil
+}
+
+// markDoneFrom — сама карточка и её предки: после того как у неё
+// сняли часть, счёт мог дойти до ста у неё самой.
+func markDoneFrom(
+	ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, cardID string,
+) ([]Card, error) {
+	released, err := markDoneAtHundred(ctx, tx, orgID, actorID, boardID, cardID)
+	if err != nil {
+		return nil, err
+	}
+	more, err := markDoneUpwards(ctx, tx, orgID, actorID, boardID, cardID)
+	return appendNew(released, more), err
 }
 
 // --- блокировки ---
@@ -992,6 +1134,18 @@ func setCardPercent(
 	if p.Percent != nil && (*p.Percent < 0 || *p.Percent > 100) {
 		return Patch{}, badRequestf("процент выполнения — от 0 до 100")
 	}
+	// Прошедшая финиш выполнена на сто: другой процент у неё — не правка,
+	// а спор с доской, и отказ говорит, в чём он.
+	var finished bool
+	if err := tx.QueryRow(ctx, `
+		select coalesce(outcome = 'done', false) from cards
+		 where id = $1 and board_id = $2 and archived_at is null`, p.CardID, boardID).
+		Scan(&finished); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return Patch{}, err
+	}
+	if finished && p.Percent != nil && *p.Percent != 100 {
+		return Patch{}, conflictf("", "карточка уже сделана и выполнена на сто процентов: верните её в работу, если это не так")
+	}
 	c, err := scanCard(tx.QueryRow(ctx, `
 		update cards
 		   set percent    = $3,
@@ -1015,9 +1169,38 @@ func setCardPercent(
 	if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "percent_set", nil, nil, payload); err != nil {
 		return Patch{}, err
 	}
-	if err := completeCard(ctx, tx, &c); err != nil {
+	// Сто — сделана; меньше ста у отмеченной руками — отметка снята:
+	// человек сказал, что работа не закончена, и две правды на одной
+	// карточке не живут. Снимается только отметка, не финиш.
+	full, err := hundredOf(ctx, tx, c.ID, c.Percent)
+	if err != nil {
+		return Patch{}, err
+	}
+	var released []Card
+	if full {
+		if released, err = markDoneAtHundred(ctx, tx, orgID, actorID, boardID, c.ID); err != nil {
+			return Patch{}, err
+		}
+	} else if c.DoneAt != nil && !finished {
+		if _, err := tx.Exec(ctx, `
+			update cards set done_at = null, version = version + 1, updated_at = now()
+			 where id = $1 and board_id = $2`, c.ID, boardID); err != nil {
+			return Patch{}, err
+		}
+		if err := logEvent(ctx, tx, orgID, boardID, c.ID, actorID, "undone", nil, nil, nil); err != nil {
+			return Patch{}, err
+		}
+	}
+	more, err := markDoneUpwards(ctx, tx, orgID, actorID, boardID, c.ID)
+	if err != nil {
+		return Patch{}, err
+	}
+	released = appendNew(released, more)
+	if c, err = readCard(ctx, tx, boardID, c.ID); err != nil {
 		return Patch{}, err
 	}
 	// Родитель — вместе с ней: процент части входит в его счёт.
-	return withParent(ctx, tx, boardID, c)
+	patch, err := withParent(ctx, tx, boardID, c)
+	patch.Cards = appendNew(patch.Cards, released)
+	return patch, err
 }

@@ -637,10 +637,12 @@ function number(value: number): string {
  * доски был бы шумом, а не сведением.
  */
 export function completion(card: Card): { percent: number; manual: boolean } | null {
+  // Сделанная выполнена на сто, что бы ни стояло руками (решение
+  // владельца 29.10): сервер то же делает в выгрузке.
+  if (card.doneAt || card.outcome === 'done') return { percent: 100, manual: false }
   if (card.percent !== undefined && card.percent !== null) return { percent: card.percent, manual: true }
   const m = measure(card)
   if (m) return { percent: Math.round((m.done / m.total) * 100), manual: false }
-  if (card.doneAt || card.outcome === 'done') return { percent: 100, manual: false }
   return null
 }
 

@@ -100,7 +100,8 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
     // а не факт о работе. Поток о ней по-прежнему судит по колонке
     // финиша, и ставить эти два события в один ряд нельзя.
     case 'done':
-      return t.feed.done
+      // Со ста процентов (29.10) — сказано, что отметку поставил счёт.
+      return p.percent === 100 ? t.feed.doneAtHundred : t.feed.done
     case 'undone':
       return t.feed.undone
     case 'percent_set':
