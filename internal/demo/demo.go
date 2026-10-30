@@ -552,7 +552,9 @@ func (f *filler) suggestions() error {
 			"", []string{"boris@example.test", "gleb@example.test", "dmitry@example.test"}, 12},
 		{"gleb@example.test", "Общий чат с дежурным смежников",
 			"Смежники отвечают по почте с задержкой в день. Чат с дежурным сократил бы ожидание в блокировках — сейчас это главная причина простоя.",
-			"Платформа", []string{"anna@example.test", "vera@example.test"}, 9},
+			// Шестнадцать дней без решения: на ней видно счётчик «ждут
+			// решения дольше двух недель» (срез 3).
+			"Платформа", []string{"anna@example.test", "vera@example.test"}, 16},
 		{"boris@example.test", "Отмечать карточки, которые ждут приёмки заказчика",
 			"Такие висят в «В работе» и портят возраст работы. Отдельная колонка или метка покажут, что ждём не себя.",
 			"Разработка", []string{"vera@example.test", "gleb@example.test", "anna@example.test", "dmitry@example.test"}, 5},

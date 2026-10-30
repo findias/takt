@@ -118,6 +118,7 @@ const REASONS: NotificationReason[] = [
   'block_ending',
   'block_expired',
   'over_promise',
+  'idea_decided',
 ]
 
 /**

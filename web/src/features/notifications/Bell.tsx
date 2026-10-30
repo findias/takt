@@ -94,7 +94,7 @@ export function Bell() {
     if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
       e.preventDefault()
       setOpen(false)
-      navigate(boardPath(n.boardId, n.cardId))
+      navigate(targetOf(n))
     }
   }
 
@@ -155,13 +155,13 @@ export function Bell() {
           <ul className="bell-list">
             {items.map((n) => (
               <li key={n.id} className={n.read ? 'bell-item' : 'bell-item bell-item--unread'}>
-                <a href={boardPath(n.boardId, n.cardId)} onClick={(e) => openOne(n, e)}>
+                <a href={targetOf(n)} onClick={(e) => openOne(n, e)}>
                   <span className="bell-what">{describe(n)}</span>
                   <span className="bell-card">
-                    <span className="bell-number">{n.cardNumber}</span> {n.cardTitle}
+                    {n.ideaId ? n.ideaTitle : <><span className="bell-number">{n.cardNumber}</span> {n.cardTitle}</>}
                   </span>
                   <span className="bell-where muted small">
-                    {n.boardName} · {ago(n.createdAt)}
+                    {n.ideaId ? t.app.ideas : n.boardName} · {ago(n.createdAt)}
                     {!n.read && <span className="sr-only">, {t.notifications.unreadMark}</span>}
                   </span>
                 </a>
@@ -172,6 +172,12 @@ export function Bell() {
       )}
     </div>
   )
+}
+
+/** Куда ведёт запись: к карточке на её доске или к идее в списке —
+ *  с решёнными, потому что решённая идея из списка по умолчанию уходит. */
+function targetOf(n: AppNotification): string {
+  return n.ideaId ? `/ideas?decided=1#idea-${n.ideaId}` : boardPath(n.boardId, n.cardId)
 }
 
 function describe(n: AppNotification): string {

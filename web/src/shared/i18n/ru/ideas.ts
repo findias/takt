@@ -41,6 +41,8 @@ export const ideas = {
     nobodyYet: 'Пока никто не поддержал',
     // Решение (срез 2).
     allDecided: 'Все идеи решены. Поставьте «Показать решённые», чтобы увидеть их.',
+    waiting: (n: number) => `Ждут решения дольше двух недель: ${n}`,
+    waitingOnly: 'Показаны только те, что ждут решения дольше двух недель.',
     withDecided: 'Показать решённые',
     shownOf: (shown: number, total: number) => `${shown} из ${total}`,
     decide: 'Решить…',

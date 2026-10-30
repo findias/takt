@@ -35,6 +35,8 @@ export const ideas: typeof ru = {
     andMore: (n: number) => ` and ${n} more`,
     nobodyYet: 'Nobody has supported it yet',
     allDecided: 'Every idea has been decided. Tick “Show decided” to see them.',
+    waiting: (n: number) => `Waiting for a decision for over two weeks: ${n}`,
+    waitingOnly: 'Showing only the ideas waiting for a decision for over two weeks.',
     withDecided: 'Show decided',
     shownOf: (shown: number, total: number) => `${shown} of ${total}`,
     decide: 'Decide…',

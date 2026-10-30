@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/findias/takt/internal/i18n"
+	"github.com/findias/takt/internal/realtime"
 )
 
 // Решение по идее словами (ROADMAP 43, срез 2). Четыре исхода, записи
@@ -34,6 +35,10 @@ var Kinds = []string{Taken, Declined, Duplicate, Later}
 
 // MaxNote — предел пояснения, как у статуса эпика.
 const MaxNote = 2000
+
+// ReasonDecided — повод уведомления «по идее решили» (0085): автору
+// и поддержавшим, кроме самого решившего.
+const ReasonDecided = "idea_decided"
 
 var (
 	ErrKindUnknown    = errors.New("решение — одно из: taken, declined, duplicate, later")
@@ -246,10 +251,12 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 		if kind == Duplicate {
 			intoID = &into
 		}
-		_, err := tx.Exec(ctx, `
+		var decisionID string
+		err := tx.QueryRow(ctx, `
 			insert into idea_decisions (org_id, idea_id, author_id, decision, note, card_id, into_idea_id)
-			values ($1, $2, $3, $4, $5, $6, $7)`,
-			orgID, ideaID, actorID, kind, note, cardID, intoID)
+			values ($1, $2, $3, $4, $5, $6, $7)
+			returning id`,
+			orgID, ideaID, actorID, kind, note, cardID, intoID).Scan(&decisionID)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "42501" {
@@ -257,8 +264,40 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 			}
 			return err
 		}
+		if err := notifyDecided(ctx, tx, orgID, actorID, ideaID, decisionID); err != nil {
+			return err
+		}
 		out, err = one(ctx, tx, actorID, ideaID)
 		return err
 	})
 	return out, err
+}
+
+// notifyDecided пишет «по идее решили» автору и поддержавшим — в той же
+// транзакции, что и решение, как уведомления доски (board/notify.go):
+// не теряется при записанном решении и не появляется без него. Самому
+// решившему и выключившим этот повод не пишется. Источник — запись
+// решения: повтора у неё нет, уникальность таблицы — страховка.
+func notifyDecided(ctx context.Context, tx pgx.Tx, orgID, actorID, ideaID, decisionID string) error {
+	rows, err := tx.Query(ctx, `
+		select u.id from users u
+		 where u.id in (select author_id from ideas where id = $1
+		                union select user_id from idea_votes where idea_id = $1)
+		   and u.id <> $2::uuid
+		   and not ($3 = any (u.muted_notifications))`,
+		ideaID, actorID, ReasonDecided)
+	if err != nil {
+		return err
+	}
+	notified, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil || len(notified) == 0 {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into notifications (org_id, recipient_id, idea_id, actor_id, reason, source)
+		select $1, r, $2, $3, $4, $5 from unnest($6::uuid[]) r`,
+		orgID, ideaID, actorID, ReasonDecided, "decision:"+decisionID, notified); err != nil {
+		return err
+	}
+	return realtime.Notify(ctx, tx, realtime.Change{Notified: notified})
 }

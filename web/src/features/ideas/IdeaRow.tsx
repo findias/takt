@@ -35,7 +35,7 @@ export function IdeaRow({
   const who = votersLine(idea.voters)
   const [deciding, setDeciding] = useState(false)
   return (
-    <article className="idea" aria-labelledby={`idea-${idea.id}`}>
+    <article className="idea" aria-labelledby={`idea-${idea.id}`} tabIndex={-1}>
       <div className="idea-main">
         <h3 className="idea-title" id={`idea-${idea.id}`}>
           {idea.title}

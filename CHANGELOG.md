@@ -12,12 +12,15 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Five migrations, safe for the running version.** `0080` adds two
+**Six migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
-the table `idea_decisions`, which the old version never touches. Pods of
-v0.5.x keep working on all of it.
+the table `idea_decisions`, which the old version never touches; `0085`
+lets `notifications.board_id` and `card_id` be empty and adds
+`notifications.idea_id` — the old version always fills both and reads
+through a join with cards, so it simply does not see notifications
+about ideas. Pods of v0.5.x keep working on all of it.
 
 A new event, `card.status_set`, carries an epic's status in words
 (`status`: `on_track`, `at_risk` or `off_track`) and its `note` —
@@ -53,8 +56,12 @@ board metrics have `movedOut`.
   requires a reason; **Already exists** counts the idea's supporters
   towards another idea; **Later** keeps it open. Decisions keep their
   author and time and pile up as history; decided ideas leave the list
-  until **Show decided** is ticked. The calls (`/api/ideas`) are
-  interface calls, outside the contract; an integration key is refused.
+  until **Show decided** is ticked. The author and the supporters hear
+  about a decision through the bell (a new reason, "A decision on my
+  idea, or on one I supported", which can be switched off like the
+  others), and ideas waiting for a decision for more than two weeks are
+  counted above the list. The calls (`/api/ideas`) are interface
+  calls, outside the contract; an integration key is refused.
 - **A hundred percent and "done" are the same thing.** A card that
   reaches 100% — by hand, or because its last part got done, moved past
   the finish, was taken out or archived — is marked done, and its parent

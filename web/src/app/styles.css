@@ -4979,6 +4979,21 @@ textarea.description {
   width: fit-content;
   color: var(--ink-3);
 }
+.ideas-waiting {
+  align-self: flex-start;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-height: var(--target);
+  display: inline-flex;
+  align-items: center;
+}
+.ideas-waiting--on {
+  border-color: var(--caution);
+}
+.idea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .idea-history-list {
   list-style: none;
   margin: var(--space-1) 0 0;

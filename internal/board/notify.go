@@ -79,13 +79,17 @@ func eventSource(id int64) string { return "event:" + strconv.FormatInt(id, 10) 
 
 // Notification — уведомление, как его видит получатель.
 type Notification struct {
-	ID        string    `json:"id"`
-	Reason    string    `json:"reason"`
+	ID     string `json:"id"`
+	Reason string `json:"reason"`
+	// Доска и карточка пусты у уведомления об идее (0085): там заполнены
+	// IdeaID и IdeaTitle. Одно из двух есть всегда.
 	BoardID   string    `json:"boardId"`
 	BoardName string    `json:"boardName"`
 	CardID    string    `json:"cardId"`
 	CardNo    string    `json:"cardNumber"`
 	CardTitle string    `json:"cardTitle"`
+	IdeaID    *string   `json:"ideaId"`
+	IdeaTitle *string   `json:"ideaTitle"`
 	ActorName *string   `json:"actorName"`
 	CreatedAt time.Time `json:"createdAt"`
 	Read      bool      `json:"read"`
@@ -113,21 +117,28 @@ func (s *Service) Notifications(ctx context.Context, orgID, userID string) (Noti
 		// ссылке не открылась бы. Карточка, ушедшая на доску, которой
 		// получателю не видно, пропадает и из списка, и из счётчика —
 		// иначе счётчик звал бы к тому, чего не показать.
+		// Уведомление об идее (0085) карточки не имеет: оно остаётся, пока
+		// есть идея, — идеи открыты всей организации.
 		if err := tx.QueryRow(ctx, `
 			select count(*) from notifications n
-			  join cards c on c.id = n.card_id
-			 where n.recipient_id = $1 and n.read_at is null`,
+			  left join cards c on c.id = n.card_id
+			  left join ideas i on i.id = n.idea_id
+			 where n.recipient_id = $1 and n.read_at is null
+			   and (c.id is not null or i.id is not null)`,
 			userID).Scan(&page.Unread); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			select n.id, n.reason, c.board_id, b.name, n.card_id, c.number, c.title,
-			       u.name, n.created_at, n.read_at is not null
+			select n.id, n.reason, coalesce(c.board_id::text, ''), coalesce(b.name, ''),
+			       coalesce(n.card_id::text, ''), coalesce(c.number, ''), coalesce(c.title, ''),
+			       i.id, i.title, u.name, n.created_at, n.read_at is not null
 			  from notifications n
-			  join cards c on c.id = n.card_id
-			  join boards b on b.id = c.board_id
+			  left join cards c on c.id = n.card_id
+			  left join boards b on b.id = c.board_id
+			  left join ideas i on i.id = n.idea_id
 			  left join users u on u.id = n.actor_id
 			 where n.recipient_id = $1
+			   and (c.id is not null or i.id is not null)
 			 order by n.created_at desc
 			 limit $2`, userID, NotificationsLimit)
 		if err != nil {
@@ -136,7 +147,7 @@ func (s *Service) Notifications(ctx context.Context, orgID, userID string) (Noti
 		items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Notification, error) {
 			var n Notification
 			err := row.Scan(&n.ID, &n.Reason, &n.BoardID, &n.BoardName, &n.CardID, &n.CardNo,
-				&n.CardTitle, &n.ActorName, &n.CreatedAt, &n.Read)
+				&n.CardTitle, &n.IdeaID, &n.IdeaTitle, &n.ActorName, &n.CreatedAt, &n.Read)
 			return n, err
 		})
 		if err != nil {

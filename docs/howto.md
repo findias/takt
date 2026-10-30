@@ -315,8 +315,9 @@ browser: on another device they can be different.
 The bell in the header counts what is unread. It rings when someone
 calls you into a discussion, assigns you to a card or blocks a card you
 work on, when a block on your card has less than a day to go or lifts
-at its deadline, and when your card runs longer than the board's
-promise — never about what you did yourself. Press the bell and pick an entry: the card
+at its deadline, when your card runs longer than the board's
+promise, and when an idea you suggested or supported gets a decision —
+never about what you did yourself. Press the bell and pick an entry: the card
 opens and the entry counts as read. **Mark all as read** clears the
 counter.
 
@@ -842,7 +843,11 @@ that one; **Later** — seen, will come back to it. Every decision keeps
 its author and time; a new decision does not erase the old one, and
 **Decision history** under the idea shows them all. Ideas that were
 taken, declined or merged leave the list; **Show decided** brings them
-back. "Later" stays in the list: it is still open.
+back. "Later" stays in the list: it is still open. When a decision is
+recorded, the idea's author and everyone who supported it hear about it
+through the bell — except the one who decided. Ideas lying without any
+decision for more than two weeks are counted above the list: press the
+count to see only them.
 
 <a id="reports"></a>
 ### Export cards for a report

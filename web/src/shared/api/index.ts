@@ -62,6 +62,7 @@ export type NotificationReason =
   | 'block_expired'
   | 'block_ending'
   | 'over_promise'
+  | 'idea_decided'
 
 export type AppNotification = {
   id: string
@@ -71,6 +72,10 @@ export type AppNotification = {
   cardId: string
   cardNumber: string
   cardTitle: string
+  /** Уведомление об идее (ROADMAP 43): доска и карточка пусты, идея
+   *  заполнена. Нет в ответе старого сервера — поэтому необязательны. */
+  ideaId?: string | null
+  ideaTitle?: string | null
   /** Кто это сделал; пусто — служебная задача (снятие по сроку). */
   actorName: string | null
   createdAt: string

@@ -1,7 +1,7 @@
 // Вкладка «Идеи»: порядок и похожее — чистые функции, без браузера.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isSettled, parseIdeaSort, similarIdeas, sortIdeas, stems, visibleIdeas, votersLine } from './model.ts'
+import { isSettled, parseIdeaSort, similarIdeas, sortIdeas, stems, visibleIdeas, votersLine, waitingIdeas } from './model.ts'
 import type { Idea } from '../../shared/api/index.ts'
 
 const idea = (id: string, title: string, votes: number, createdAt: string): Idea => ({
@@ -86,4 +86,15 @@ test('решённые насовсем прячутся, «позже» и не
   assert.deepEqual(ids(visibleIdeas(mixed, true)), ['a', 'b', 'c', 'd', 'e'])
   assert.equal(isSettled(mixed[1]), false)
   assert.equal(isSettled(mixed[0]), true)
+})
+
+test('ждут решения дольше двух недель: без решения и старше срока; «позже» — уже ответ', () => {
+  const now = new Date('2026-10-30T12:00:00Z')
+  const list = [
+    idea('old', 'Старая', 0, '2026-10-01T10:00:00Z'),
+    idea('edge', 'Ровно две недели без часа', 0, '2026-10-16T13:00:00Z'),
+    idea('fresh', 'Свежая', 0, '2026-10-29T10:00:00Z'),
+    decided(idea('later', 'Отложенная старая', 0, '2026-09-01T10:00:00Z'), 'later'),
+  ]
+  assert.deepEqual(ids(waitingIdeas(list, now)), ['old'])
 })

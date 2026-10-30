@@ -64,3 +64,14 @@ export function isSettled(idea: Idea): boolean {
 export function visibleIdeas(list: Idea[], withDecided: boolean): Idea[] {
   return withDecided ? list : list.filter((i) => !isSettled(i))
 }
+
+/** Сколько дней идея может ждать решения, прежде чем список скажет
+ *  об этом вслух: две недели — срок, после которого разбор «когда
+ *  накопится» уже не случится сам. */
+export const WAITING_DAYS = 14
+
+/** Идеи без единого решения дольше WAITING_DAYS. «Позже» — уже ответ. */
+export function waitingIdeas(list: Idea[], now: Date = new Date()): Idea[] {
+  const limit = now.getTime() - WAITING_DAYS * 24 * 60 * 60 * 1000
+  return list.filter((i) => !i.decision && new Date(i.createdAt).getTime() < limit)
+}

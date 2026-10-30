@@ -7,7 +7,7 @@ import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { t } from '../shared/i18n/index.ts'
-import { parseIdeaSort, sortIdeas, visibleIdeas } from '../entities/idea/model.ts'
+import { parseIdeaSort, sortIdeas, visibleIdeas, waitingIdeas } from '../entities/idea/model.ts'
 import { IdeaForm } from '../features/ideas/IdeaForm.tsx'
 import { IdeaRow } from '../features/ideas/IdeaRow.tsx'
 import { loadIdeas, voteIdea } from '../features/ideas/api.ts'
@@ -25,6 +25,7 @@ export function Ideas({ principal }: { principal: Principal }) {
   const query = useQuery()
   const sort = parseIdeaSort(query)
   const withDecided = query.get('decided') === '1'
+  const waitingOnly = query.get('waiting') === '1'
   const s = t.ideas
 
   const [list, setList] = useState<IdeaList | null>(null)
@@ -95,7 +96,17 @@ export function Ideas({ principal }: { principal: Principal }) {
       .finally(() => setVoting(null))
   }
 
-  const shown = list ? sortIdeas(visibleIdeas(list.ideas, withDecided), sort) : []
+  const waiting = list ? waitingIdeas(list.ideas) : []
+  const shown = list ? sortIdeas(waitingOnly ? waiting : visibleIdeas(list.ideas, withDecided), sort) : []
+
+  // Из колокольчика приходят к одной идее: адрес несёт её в #idea-…,
+  // а список приезжает позже адреса — прокрутить можно только теперь.
+  useEffect(() => {
+    if (!list || !location.hash.startsWith('#idea-')) return
+    const target = document.getElementById(location.hash.slice(1))
+    target?.scrollIntoView({ block: 'center' })
+    target?.closest<HTMLElement>('.idea')?.focus()
+  }, [list])
   const setFlag = (key: string, on: boolean, value = '1') => {
     const next = new URLSearchParams(query)
     if (on) next.set(key, value)
@@ -129,6 +140,19 @@ export function Ideas({ principal }: { principal: Principal }) {
       <p className="muted small">
         {s.hint} <Hint topic="ideas" />
       </p>
+      {/* Идеи, лежащие без ответа: разбор «когда накопится» не случается
+          сам, и список говорит об этом первым, а не автор через месяц. */}
+      {waiting.length > 0 && (
+        <button
+          type="button"
+          className={waitingOnly ? 'mark mark--aging ideas-waiting ideas-waiting--on' : 'mark mark--aging ideas-waiting'}
+          aria-pressed={waitingOnly}
+          onClick={() => setFlag('waiting', !waitingOnly)}
+        >
+          {s.waiting(waiting.length)}
+        </button>
+      )}
+      {waitingOnly && <p className="muted small">{s.waitingOnly}</p>}
       {open && (
         <IdeaForm
           teams={teams}
