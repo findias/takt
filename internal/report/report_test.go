@@ -341,8 +341,8 @@ func TestXLSXIsAReadableBook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("импорт не читает выгрузку: %v", err)
 	}
-	if !slices.Equal(sheets, []string{"Summary", "Data", "Flow by date"}) {
-		t.Errorf("листы %v, ожидались Summary, Data и Flow by date (английский запрос)", sheets)
+	if !slices.Equal(sheets, []string{"Summary", "Data", "Flow by date", "Ideas"}) {
+		t.Errorf("листы %v, ожидались Summary, Data, Flow by date и Ideas (английский запрос)", sheets)
 	}
 	// Накопительная рисуется по своему листу: на сводке чисел под ней нет.
 	for _, part := range zr.File {
@@ -718,5 +718,44 @@ func TestSummaryCarriesThePreviousPeriod(t *testing.T) {
 	to, _ := time.Parse(time.DateOnly, p.To)
 	if to.Sub(from) != 13*24*time.Hour || !to.AddDate(0, 0, 1).Equal(period(14).From) {
 		t.Errorf("прошлый период %s — %s: ожидалось 14 дней встык к началу", p.From, p.To)
+	}
+}
+
+// Идеи в сводке (ROADMAP 43, срез 4): все идеи организации с последним
+// решением, без отбора и периода; голоса двойника считаются у цели.
+func TestSummaryListsIdeasWithTheirDecisions(t *testing.T) {
+	f := newFixture(t)
+	var kept, dup string
+	f.inTenant(f.owner, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(f.ctx, `insert into ideas (org_id, author_id, title) values ($1, $2, 'Шаблон') returning id`,
+			f.orgID, f.owner).Scan(&kept); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(f.ctx, `insert into ideas (org_id, author_id, title) values ($1, $2, 'Шаблоны') returning id`,
+			f.orgID, f.owner).Scan(&dup); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(f.ctx, `insert into idea_votes (org_id, idea_id, user_id) values ($1, $2, $3)`,
+			f.orgID, dup, f.owner); err != nil {
+			return err
+		}
+		_, err := tx.Exec(f.ctx, `
+			insert into idea_decisions (org_id, idea_id, author_id, decision, note, into_idea_id)
+			values ($1, $2, $3, 'duplicate', '', $4)`, f.orgID, dup, f.owner, kept)
+		return err
+	})
+	c := f.export(f.owner, period(14))
+	if len(c.sum.Ideas) != 2 {
+		t.Fatalf("идей в сводке %d, ожидались 2: %+v", len(c.sum.Ideas), c.sum.Ideas)
+	}
+	byTitle := map[string]IdeaRow{}
+	for _, i := range c.sum.Ideas {
+		byTitle[i.Title] = i
+	}
+	if k := byTitle["Шаблон"]; k.Votes != 1 || k.Decision != "" || k.DecidedAt != nil {
+		t.Errorf("цель склейки: %+v", k)
+	}
+	if d := byTitle["Шаблоны"]; d.Decision != "duplicate" || d.DecidedBy == "" || d.DecidedAt == nil {
+		t.Errorf("двойник: %+v", d)
 	}
 }

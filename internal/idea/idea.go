@@ -19,7 +19,20 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/findias/takt/internal/store"
+	"github.com/findias/takt/internal/webhook"
 )
+
+// События подписок (ROADMAP 43, срез 4): идея подана и по идее решили.
+// Голос событием не рассылаем: получатель захлебнулся бы «+1», а решение
+// и так несёт итоговое число. Список нужен контракту (EventName)
+// и интерфейсу подписок — через webhook.Known.
+const (
+	EventCreated = "idea.created"
+	EventDecided = "idea.decided"
+)
+
+// EventNames — события идей для подписки, в порядке жизни идеи.
+func EventNames() []string { return []string{EventCreated, EventDecided} }
 
 // Limit — сколько идей отдаём за раз. Больше таблица без листания
 // не покажет, а организация в 130 человек столько живых идей не копит.
@@ -236,9 +249,24 @@ func (s *Service) Create(ctx context.Context, orgID, userID, title, body string,
 		}
 		var err error
 		out, err = one(ctx, tx, userID, id)
-		return err
+		if err != nil {
+			return err
+		}
+		return webhook.Enqueue(ctx, tx, orgID, EventCreated, map[string]any{"idea": out.Public()})
 	})
 	return out, err
+}
+
+// Public — идея для подписчика: без того, что зависит от спрашивающего
+// (мой голос, моё право решать), — у подписки своего лица нет.
+func (i Idea) Public() map[string]any {
+	return map[string]any{
+		"id": i.ID, "title": i.Title, "body": i.Body,
+		"authorId": i.AuthorID, "author": i.Author,
+		"teamId": i.TeamID, "team": i.Team,
+		"votes": i.Votes, "voters": i.Voters, "createdAt": i.CreatedAt,
+		"decision": i.Decision,
+	}
 }
 
 // Vote ставит или снимает голос userID. Повтор ничего не меняет:

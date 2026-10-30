@@ -847,7 +847,9 @@ back. "Later" stays in the list: it is still open. When a decision is
 recorded, the idea's author and everyone who supported it hear about it
 through the bell — except the one who decided. Ideas lying without any
 decision for more than two weeks are counted above the list: press the
-count to see only them.
+count to see only them. An integration key with `boards:read` reads the
+list at `/api/v1/ideas`, and one with `boards:write` submits ideas —
+a bot in a chat can bring them; voting and deciding stay with people.
 
 <a id="reports"></a>
 ### Export cards for a report
@@ -908,7 +910,10 @@ Then download:
   by epic,
   the cumulative flow diagram with a line on how to read it (its numbers
   by date are on a sheet of their own, after **Data**), iteration
-  completion, a breakdown by subdivision and one by assignee. The **Data** sheet has one row per card
+  completion, a breakdown by subdivision and one by assignee. The last
+  sheet, **Ideas**, lists the organisation's ideas with their supporters
+  and the current decision — the selection and the period do not apply
+  to it. The **Data** sheet has one row per card
   with every field, ready for pivot tables: among them **External
   numbers** — the card's external task numbers, RDS, service requests,
   change requests and problems in one

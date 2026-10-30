@@ -223,7 +223,7 @@ func (s *sheetRows) blank() { s.n++ }
 type xlsxBook struct {
 	zw     *zip.Writer
 	data   *sheetRows
-	names  [3]string // сводка, данные, поток по дням
+	names  [4]string // сводка, данные, поток по дням, идеи
 	width  int       // колонок в листе данных
 	closed bool
 }
@@ -234,8 +234,8 @@ func xmlAttr(s string) string {
 	return strings.ReplaceAll(b.String(), `"`, "&quot;")
 }
 
-func newXLSXBook(w io.Writer, summaryName, dataName, flowName string, header []string, widths []float64) (*xlsxBook, error) {
-	book := &xlsxBook{zw: zip.NewWriter(w), names: [3]string{summaryName, dataName, flowName}, width: len(header)}
+func newXLSXBook(w io.Writer, summaryName, dataName, flowName, ideasName string, header []string, widths []float64) (*xlsxBook, error) {
+	book := &xlsxBook{zw: zip.NewWriter(w), names: [4]string{summaryName, dataName, flowName, ideasName}, width: len(header)}
 	parts := []struct{ name, body string }{
 		{"[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -246,6 +246,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName, flowName string, header []s
 <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
 <Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
 <Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
@@ -257,7 +258,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName, flowName string, header []s
 		{"xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="` + nsMain + `" xmlns:r="` + nsRel + `">
 <bookViews><workbookView activeTab="0"/></bookViews>
-<sheets><sheet name="` + xmlAttr(summaryName) + `" sheetId="1" r:id="rId1"/><sheet name="` + xmlAttr(dataName) + `" sheetId="2" r:id="rId2"/><sheet name="` + xmlAttr(flowName) + `" sheetId="3" r:id="rId4"/></sheets>
+<sheets><sheet name="` + xmlAttr(summaryName) + `" sheetId="1" r:id="rId1"/><sheet name="` + xmlAttr(dataName) + `" sheetId="2" r:id="rId2"/><sheet name="` + xmlAttr(flowName) + `" sheetId="3" r:id="rId4"/><sheet name="` + xmlAttr(ideasName) + `" sheetId="4" r:id="rId5"/></sheets>
 </workbook>`},
 		{"xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="` + nsPkg + `">
@@ -265,6 +266,7 @@ func newXLSXBook(w io.Writer, summaryName, dataName, flowName string, header []s
 <Relationship Id="rId2" Type="` + relSheet + `" Target="worksheets/sheet2.xml"/>
 <Relationship Id="rId3" Type="` + relStyles + `" Target="styles.xml"/>
 <Relationship Id="rId4" Type="` + relSheet + `" Target="worksheets/sheet3.xml"/>
+<Relationship Id="rId5" Type="` + relSheet + `" Target="worksheets/sheet4.xml"/>
 </Relationships>`},
 		{"xl/styles.xml", stylesXML},
 	}
@@ -342,7 +344,7 @@ type chartSpec struct {
 // flow пишет лист «Поток по дням» — числа, на которые ссылается
 // накопительная диаграмма сводки.
 func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float64,
-	flow func(*sheetRows), flowWidths []float64) error {
+	flow func(*sheetRows), flowWidths []float64, ideas func(*sheetRows), ideasWidths []float64) error {
 	d := b.data
 	if d.err != nil {
 		return d.err
@@ -376,6 +378,9 @@ func (b *xlsxBook) finish(summary func(*sheetRows) [2]chartSpec, widths []float6
 	}
 
 	if err := b.plainSheet("xl/worksheets/sheet3.xml", flow, flowWidths); err != nil {
+		return err
+	}
+	if err := b.plainSheet("xl/worksheets/sheet4.xml", ideas, ideasWidths); err != nil {
 		return err
 	}
 

@@ -297,6 +297,11 @@ func (f *filler) fill() error {
 // удвоений.
 func (f *filler) settleDeliveries() error {
 	const reason = `Post "https://example.test/hooks/board": dial tcp: lookup example.test: no such host`
+	// События лежат в ящике (0086), пока работник их не разложит;
+	// гасить нужно доставки — значит, сперва разложить самим.
+	if _, err := webhook.FanOut(f.ctx, f.db); err != nil {
+		return err
+	}
 	return f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
 		// Восемь попыток — столько же, после скольких сдаётся работник:
 		// число видно на экране, и оно должно значить то же самое.

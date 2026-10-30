@@ -190,8 +190,11 @@ func (s *Service) SetPaused(ctx context.Context, orgID, actorID, hookID string, 
 			tag, err = tx.Exec(ctx,
 				`update webhooks set paused_at = now() where id = $1`, hookID)
 		} else {
+			// resumed_at — граница для ящика (FanOut): случившееся до
+			// возобновления этой подписке не раскладывается.
 			tag, err = tx.Exec(ctx,
-				`update webhooks set paused_at = null, disabled_at = null, last_error = null
+				`update webhooks set paused_at = null, disabled_at = null, last_error = null,
+				        resumed_at = now()
 				  where id = $1`, hookID)
 		}
 		if err != nil {
@@ -267,7 +270,7 @@ func (s *Service) Retry(ctx context.Context, orgID, actorID, deliveryID string) 
 			return err
 		}
 		_, err = tx.Exec(ctx, `
-			update webhooks set disabled_at = null, last_error = null
+			update webhooks set disabled_at = null, last_error = null, resumed_at = now()
 			 where id = $1 and disabled_at is not null`, hookID)
 		return err
 	})
@@ -276,21 +279,45 @@ func (s *Service) Retry(ctx context.Context, orgID, actorID, deliveryID string) 
 // Enqueue кладёт событие в исходящий ящик — в той же транзакции, в которой
 // оно произошло. Вызывается изнутри операции и потому принимает готовую
 // транзакцию, а не открывает свою.
+//
+// В ящик, а не сразу в доставки (0086): подписки видит только владелец,
+// и действие участника или ключа, выбирая подписки под своими
+// политиками, не находило ни одной — событие тихо пропадало. Ящик
+// не смотрит на подписки; по ним его раскладывает работник (FanOut),
+// которому подписки видны все.
 func Enqueue(ctx context.Context, tx pgx.Tx, orgID, event string, payload any) error {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	// Подписок на событие обычно ноль или одна: вставка сразу выбирает
-	// подходящие, чтобы не тащить их в код и не ходить в базу дважды.
-	_, err = tx.Exec(ctx, `
-		insert into webhook_deliveries (org_id, webhook_id, event, payload)
-		select $1, w.id, $2, $3::jsonb
-		  from webhooks w
-		 where w.org_id = $1 and w.disabled_at is null and w.paused_at is null
-		   and $2 = any (w.events)`,
-		orgID, event, string(body))
-	return err
+	return EnqueueMany(ctx, tx, orgID, event, []any{payload})
+}
+
+// FanOut раскладывает ящик по доставкам: по строке на подписку, которая
+// ждёт это событие и не отключена. Ходит без арендатора, как работник;
+// возвращает, сколько доставок заведено. Строки ящика забираются
+// удалением с возвратом — второй работник, пришедший следом, застаёт
+// пустоту, а не раскладывает то же второй раз.
+func FanOut(ctx context.Context, db *store.Store) (int, error) {
+	var n int
+	err := db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			with taken as (
+				delete from webhook_outbox returning id, org_id, event, payload, created_at)
+			insert into webhook_deliveries (org_id, webhook_id, event, payload)
+			select t.org_id, w.id, t.event, t.payload
+			  from taken t
+			  join webhooks w on w.org_id = t.org_id
+			 where w.disabled_at is null and w.paused_at is null
+			   and t.event = any (w.events)
+			   -- Событие старше подписки или её последнего возобновления —
+			   -- не её: пауза обещала, что накопленное не прилетит.
+			   and t.created_at >= w.created_at
+			   and (w.resumed_at is null or t.created_at >= w.resumed_at)
+			 order by t.id`)
+		if err != nil {
+			return err
+		}
+		n = int(tag.RowsAffected())
+		return nil
+	})
+	return n, err
 }
 
 // Sign подписывает тело ключом подписки вместе с меткой времени.
@@ -328,12 +355,9 @@ func EnqueueMany(ctx context.Context, tx pgx.Tx, orgID, event string, payloads [
 		bodies[i] = string(b)
 	}
 	_, err := tx.Exec(ctx, `
-		insert into webhook_deliveries (org_id, webhook_id, event, payload)
-		select $1, w.id, $2, p.body::jsonb
-		  from webhooks w
-		 cross join unnest($3::text[]) with ordinality as p(body, n)
-		 where w.org_id = $1 and w.disabled_at is null and w.paused_at is null
-		   and $2 = any (w.events)
+		insert into webhook_outbox (org_id, event, payload)
+		select $1, $2, p.body::jsonb
+		  from unnest($3::text[]) with ordinality as p(body, n)
 		 order by p.n`,
 		orgID, event, bodies)
 	return err

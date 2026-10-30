@@ -51,6 +51,8 @@ type words struct {
 	priority map[string]string
 	refKind  map[string]string
 	unit     map[string]string
+	// decision — решение по идее словами (ROADMAP 43), для листа «Идеи».
+	decision map[string]string
 	yes      string
 }
 
@@ -81,7 +83,10 @@ func wordsFor(ctx context.Context) words {
 			"rds":      "RDS", "zno": n("ЗНО"), "zni": n("ЗНИ"), "problem": n("Проблема"),
 		},
 		unit: map[string]string{"points": n("очки"), "hours": n("часы"), "days": n("дни")},
-		yes:  n("да"),
+		decision: map[string]string{
+			"taken": n("Берём"), "declined": n("Не берём"), "duplicate": n("Уже есть"), "later": n("Позже"),
+		},
+		yes: n("да"),
 	}
 }
 
@@ -231,7 +236,7 @@ type xlsxSink struct {
 func NewXLSX(ctx context.Context, w io.Writer, f Filter) (Sink, error) {
 	names, widths := header(ctx)
 	book, err := newXLSXBook(w, i18n.Name(ctx, "Сводка"), i18n.Name(ctx, "Данные"),
-		i18n.Name(ctx, "Поток по датам"), names, widths)
+		i18n.Name(ctx, "Поток по датам"), i18n.Name(ctx, "Идеи"), names, widths)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +496,23 @@ func (s *xlsxSink) Summary(sum Summary) error {
 			w.row(isoDay(d.Day), num(float64(d.Done)), num(float64(d.InProgress)), num(float64(d.Queued)))
 		}
 	}
-	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 12, 10, 10, 10}, flow, []float64{14, 12, 12, 12})
+	// Лист «Идеи» (ROADMAP 43, срез 4): предложения людей со словом
+	// решения — руководство спрашивает «что предлагали и что с этим»
+	// тем же письмом, что и «пришлите табличку».
+	ideas := func(w *sheetRows) {
+		w.row(bold(n("Идея")), bold(n("Автор")), bold(n("Кому")), bold(n("Поддержали")), bold(n("Подана")),
+			bold(n("Решение")), bold(n("Кто решил")), bold(n("Когда решено")), bold(n("Пояснение")), bold(n("Карточка")))
+		for _, i := range sum.Ideas {
+			state := n("Без решения")
+			if i.Decision != "" {
+				state = s.words.decision[i.Decision]
+			}
+			w.row(str(i.Title), str(i.Author), str(i.Team), num(float64(i.Votes)), day(i.CreatedAt),
+				str(state), str(i.DecidedBy), optStamp(i.DecidedAt), str(i.Note), str(i.Card))
+		}
+	}
+	return s.book.finish(build, []float64{46, 17, 14, 14, 10, 12, 10, 10, 10}, flow, []float64{14, 12, 12, 12},
+		ideas, []float64{40, 20, 16, 12, 12, 14, 20, 16, 40, 12})
 }
 
 // created — заведено за период: сумма по неделям.

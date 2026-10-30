@@ -13,6 +13,7 @@ import (
 
 	"github.com/findias/takt/internal/i18n"
 	"github.com/findias/takt/internal/realtime"
+	"github.com/findias/takt/internal/webhook"
 )
 
 // Решение по идее словами (ROADMAP 43, срез 2). Четыре исхода, записи
@@ -268,7 +269,10 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 			return err
 		}
 		out, err = one(ctx, tx, actorID, ideaID)
-		return err
+		if err != nil {
+			return err
+		}
+		return webhook.Enqueue(ctx, tx, orgID, EventDecided, map[string]any{"idea": out.Public()})
 	})
 	return out, err
 }

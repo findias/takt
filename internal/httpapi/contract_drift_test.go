@@ -47,7 +47,7 @@ func TestContractEnumerationsMatchCode(t *testing.T) {
 	// Имена событий — тот же список, который сервер предлагает
 	// интерфейсу и по которому отказывает в подписке.
 	sameSet(t, "имена событий", "описании",
-		board.EventNames(),
+		knownEvents(),
 		enumAt(t, doc, "components", "schemas", "EventName", "enum"))
 }
 

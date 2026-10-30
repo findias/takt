@@ -249,6 +249,8 @@ export const en: typeof ru = {
       'card.status_set': 'Epic status set',
       'card.archived': 'Card archived',
       'card.restored': 'Card restored to the board',
+      'idea.created': 'Idea submitted',
+      'idea.decided': 'Idea decided',
     } as Record<string, string>,
     httpError: (status: number) => `Error ${status}`,
     offline: 'No connection to the server',

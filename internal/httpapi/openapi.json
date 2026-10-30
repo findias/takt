@@ -297,7 +297,9 @@
           "card.percent_set",
           "card.status_set",
           "card.archived",
-          "card.restored"
+          "card.restored",
+          "idea.created",
+          "idea.decided"
         ]
       },
       "Delivery": {
@@ -844,6 +846,38 @@
         "description": "Разрешение audit:read. Журнал только дописывается; недоступность выглядит как пустая лента, а не как отказ. В payload лежит снимок строки: у добавления — под ключом new, у изменения — обе стороны (new и old), у удаления — только old: удалённая строка новой не бывает.",
         "parameters": [{ "$ref": "#/components/parameters/before" }],
         "responses": { "200": { "description": "Записи и курсор next" } }
+      }
+    },
+    "/ideas": {
+      "get": {
+        "summary": "Идеи от людей команды",
+        "description": "Разрешение boards:read. Список идей организации, новые сверху, не больше 500 (truncated — показаны не все). У идеи — автор, подразделение «кому», число и имена поддержавших, нынешнее решение (decision: taken, declined, duplicate или later, с пояснением, автором, карточкой у taken и идеей-целью у duplicate) и canDecide — вправе ли спрашивающий решать.",
+        "responses": { "200": { "description": "Список идей (ideas) и признак truncated" } }
+      },
+      "post": {
+        "summary": "Подать идею",
+        "description": "Разрешение boards:write. Автором становится тот, чьим ключом подано. Голос и решение — действия человека на экране, ключу они не открыты.",
+        "parameters": [{ "$ref": "#/components/parameters/idempotencyKey" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string", "description": "Одной фразой, до 200 знаков." },
+                  "body": { "type": "string", "description": "Подробнее, до 5000 знаков; можно пусто." },
+                  "teamId": { "type": "string", "format": "uuid", "description": "Кому: подразделение. Пусто — всей организации." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Идея заведена; в ответе — она целиком" },
+          "400": { "description": "Пустое или длинное название (idea_title_empty, idea_title_long), длинное описание (idea_body_long), неизвестное подразделение (idea_team_unknown)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
       }
     }
   },

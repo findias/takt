@@ -112,6 +112,12 @@ func (w *Worker) Run(ctx context.Context) {
 // Once забирает пачку созревших доставок и отправляет их. Возвращает,
 // сколько отправлено, — по этому числу Run решает, спать ли.
 func (w *Worker) Once(ctx context.Context) (int, error) {
+	// Сперва ящик раскладывается по доставкам (0086): событие, которое
+	// только что положили, уходит этим же заходом, а не следующим.
+	fanned, err := FanOut(ctx, w.db)
+	if err != nil {
+		return 0, err
+	}
 	type job struct {
 		id       string
 		hookID   string
@@ -126,7 +132,7 @@ func (w *Worker) Once(ctx context.Context) (int, error) {
 	// Работник ходит без арендатора: очередь общая. Строки берутся
 	// с блокировкой и пропуском занятых, поэтому два работника не отправят
 	// одно и то же дважды.
-	err := w.db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
+	err = w.db.InScope(ctx, store.Scope{}, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			select d.id, d.webhook_id, d.event, d.payload::text, d.attempts, w.url, w.secret
 			  from webhook_deliveries d
@@ -168,14 +174,16 @@ func (w *Worker) Once(ctx context.Context) (int, error) {
 		return nil
 	})
 	if err != nil || len(jobs) == 0 {
-		return 0, err
+		// Разложенное, но ещё не созревшее — тоже работа: Run не уснёт
+		// и заберёт его следующим заходом.
+		return fanned, err
 	}
 
 	for _, j := range jobs {
 		status, sendErr := w.send(ctx, j.url, j.secret, j.id, j.event, j.payload)
 		w.record(ctx, j.id, j.hookID, j.attempts+1, status, sendErr)
 	}
-	return len(jobs), nil
+	return len(jobs) + fanned, nil
 }
 
 func (w *Worker) send(ctx context.Context, target, secret, deliveryID, event string, body []byte) (int, error) {

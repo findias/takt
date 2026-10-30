@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/store"
 	"github.com/findias/takt/internal/store/testdb"
 	"github.com/findias/takt/internal/webhook"
@@ -209,7 +208,7 @@ func TestSubscriptionTakesOnlyEventsThatExist(t *testing.T) {
 	if err := json.Unmarshal(raw, &list); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(list.Events, board.EventNames()) {
+	if !slices.Equal(list.Events, knownEvents()) {
 		t.Errorf("сервер предлагает не то, что доставляет: %v", list.Events)
 	}
 

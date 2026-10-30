@@ -252,6 +252,8 @@ export const ru = {
       'card.status_set': 'Поставлен статус эпика',
       'card.archived': 'Карточка убрана в архив',
       'card.restored': 'Карточка возвращена на доску',
+      'idea.created': 'Идея подана',
+      'idea.decided': 'По идее решили',
     } as Record<string, string>,
     httpError: (status: number) => `Ошибка ${status}`,
     offline: 'Нет связи с сервером',

@@ -95,6 +95,9 @@ var sections = []section{
 	{"iteration_cards", `
 		select to_jsonb(c) from iteration_cards c where org_id = $1 order by added_at`},
 	{"card_events", `select to_jsonb(e) from card_events e where org_id = $1 order by id`},
+	{"ideas", `select to_jsonb(i) from ideas i where org_id = $1 order by created_at`},
+	{"idea_votes", `select to_jsonb(v) from idea_votes v where org_id = $1 order by created_at`},
+	{"idea_decisions", `select to_jsonb(d) from idea_decisions d where org_id = $1 order by created_at`},
 	{"webhooks", `select to_jsonb(w) - 'secret' from webhooks w where org_id = $1 order by created_at`},
 	{"api_clients", `
 		select to_jsonb(c) - 'token_hash' from api_clients c where org_id = $1 order by created_at`},

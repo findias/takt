@@ -6,18 +6,21 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/findias/takt/internal/apiclient"
 	"github.com/findias/takt/internal/auth"
 	"github.com/findias/takt/internal/idea"
 )
 
-// Идеи от людей команды (ROADMAP 43, срез 1): список организации,
-// подача и голос. Вызовы интерфейса, вне контракта: ключу интеграции
-// идеи не нужны, а человеку — любому, в том числе наблюдателю, —
-// нужны; поэтому обёртка human, а не роль.
+// Идеи от людей команды (ROADMAP 43). Список и подача — в контракте
+// (срез 4): бот из чата приносит идею так же, как человек, под своим
+// именем ключа; разрешения — те же, что у досок: читать доски — читать
+// идеи, писать — подавать. Голос и решение остаются вызовами
+// интерфейса: это действия человека, в том числе наблюдателя, —
+// поэтому обёртка human, а не роль.
 
 func (s *Server) registerIdeaRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/ideas", s.human(s.handleIdeas))
-	mux.HandleFunc("POST /api/ideas", s.human(s.handleCreateIdea))
+	mux.HandleFunc("GET /api/ideas", s.scoped(apiclient.ScopeBoardsRead, s.handleIdeas))
+	mux.HandleFunc("POST /api/ideas", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateIdea))
 	mux.HandleFunc("PUT /api/ideas/{id}/vote", s.human(s.handleVoteIdea))
 	mux.HandleFunc("DELETE /api/ideas/{id}/vote", s.human(s.handleUnvoteIdea))
 	mux.HandleFunc("GET /api/ideas/{id}/decisions", s.human(s.handleIdeaDecisions))

@@ -215,6 +215,65 @@ type Summary struct {
 	// People — разрез по исполнителям (ROADMAP 37.1): «что делал
 	// Борис» без фильтра в Excel.
 	People []PersonRow `json:"people"`
+	// Ideas — идеи людей команды с нынешним решением (ROADMAP 43,
+	// срез 4). Отбор и период на них не действуют: идея — не карточка,
+	// у неё нет доски, а «что предлагали и что с этим» спрашивают
+	// обо всей организации.
+	Ideas []IdeaRow `json:"ideas"`
+}
+
+// IdeaRow — идея в отчёте. Decision пуст, пока не решали; Card —
+// номер карточки у «берём», если она жива и видна.
+type IdeaRow struct {
+	ID        string     `json:"id"`
+	Title     string     `json:"title"`
+	Author    string     `json:"author"`
+	Team      string     `json:"team"`
+	Votes     int        `json:"votes"`
+	CreatedAt time.Time  `json:"createdAt"`
+	Decision  string     `json:"decision"`
+	DecidedBy string     `json:"decidedBy"`
+	DecidedAt *time.Time `json:"decidedAt"`
+	Note      string     `json:"note"`
+	Card      string     `json:"card"`
+}
+
+// ideaRows — идеи организации, новые сверху, с последним решением.
+// Голоса — как на экране: свои и влившихся двойников.
+func ideaRows(ctx context.Context, tx pgx.Tx) ([]IdeaRow, error) {
+	rows, err := tx.Query(ctx, `
+		with current as (
+			select distinct on (idea_id) idea_id, decision, note, author_id, created_at, card_id, into_idea_id
+			  from idea_decisions order by idea_id, created_at desc, id desc)
+		select i.id, i.title, coalesce(u.name, ''), coalesce(tm.name, ''),
+		       (select count(distinct v.user_id) from idea_votes v
+		         where v.idea_id = i.id
+		            or v.idea_id in (select m.idea_id from current m
+		                              where m.decision = 'duplicate' and m.into_idea_id = i.id)),
+		       i.created_at,
+		       coalesce(d.decision, ''), coalesce(du.name, ''), d.created_at, coalesce(d.note, ''),
+		       coalesce(c.number, '')
+		  from ideas i
+		  left join users u on u.id = i.author_id
+		  left join teams tm on tm.id = i.team_id
+		  left join current d on d.idea_id = i.id
+		  left join users du on du.id = d.author_id
+		  left join cards c on c.id = d.card_id and c.archived_at is null
+		 order by i.created_at desc, i.id desc`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []IdeaRow{}
+	for rows.Next() {
+		var r IdeaRow
+		if err := rows.Scan(&r.ID, &r.Title, &r.Author, &r.Team, &r.Votes, &r.CreatedAt,
+			&r.Decision, &r.DecidedBy, &r.DecidedAt, &r.Note, &r.Card); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // DueSummary — сроки. WithDue — карточек со сроком в отборе вообще:
@@ -632,7 +691,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 
 func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 	sum := Summary{Throughput: []WeekCount{}, Flow: []FlowDay{},
-		Iterations: []IterationRow{}, Teams: []TeamRow{}, People: []PersonRow{}}
+		Iterations: []IterationRow{}, Teams: []TeamRow{}, People: []PersonRow{}, Ideas: []IdeaRow{}}
 	from, next := f.From, f.To.AddDate(0, 0, 1)
 
 	chosen, err := names(ctx, tx, f)
@@ -880,7 +939,10 @@ func summarize(ctx context.Context, tx pgx.Tx, f Filter) (Summary, error) {
 	if sum.Previous, err = previous(ctx, tx, f); err != nil {
 		return sum, err
 	}
-	sum.People, err = personRows(ctx, tx, f)
+	if sum.People, err = personRows(ctx, tx, f); err != nil {
+		return sum, err
+	}
+	sum.Ideas, err = ideaRows(ctx, tx)
 	return sum, err
 }
 

@@ -5,12 +5,21 @@ import (
 	"net/http"
 
 	"github.com/findias/takt/internal/auth"
+	"github.com/findias/takt/internal/board"
+	"github.com/findias/takt/internal/idea"
 	"github.com/findias/takt/internal/retention"
 	"github.com/findias/takt/internal/webhook"
 )
 
 // Подписки на события. Заводит и видит владелец: подписка выносит данные
 // наружу, и список подписок — это список того, куда они уходят.
+
+// knownEvents — всё, на что можно подписаться: события карточек и идей
+// одним списком. Тем же списком живёт описание контракта (EventName),
+// и проверка перечислений сверяет их между собой.
+func knownEvents() []string {
+	return append(append([]string{}, board.EventNames()...), idea.EventNames()...)
+}
 
 func (s *Server) registerWebhookRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/webhooks", s.owner(s.handleListWebhooks))

@@ -113,7 +113,9 @@ test('переведены все виды событий, а не почти в
   // `field_set` — и заметить это можно было только глазами на нужной
   // карточке. Список видов один на всё приложение: он же объявляет
   // подписки, и сверяться с ним дешевле, чем помнить.
+  // События идей (idea.*) в журнале карточки не бывают: у них свой экран.
   const raw = Object.keys(WEBHOOK_EVENT_NAMES)
+    .filter((name) => name.startsWith('card.'))
     .map((name) => name.replace(/^card\./, ''))
     .filter((kind) => eventText(event(kind, { fieldId: 'f-1', value: 'что-то' })) === kind)
   assert.deepEqual(raw, [])

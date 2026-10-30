@@ -108,9 +108,59 @@ func TestIdeasAreSubmittedAndSupportedByAnyoneInTheOrganisation(t *testing.T) {
 		t.Errorf("посторонний видит идеи: %+v", list)
 	}
 	stranger.mustDo("PUT", "/api/ideas/"+mine.ID+"/vote", nil, http.StatusNotFound)
-	// Ключ интеграции в идеи не ходит: это вызов интерфейса.
+	// Ключ без разрешения на запись не голосует: голос — действие человека.
 	key := owner.serviceKey("boards:read")
-	if status, _ := a.withToken(key, "GET", "/api/ideas", nil); status != http.StatusForbidden {
-		t.Errorf("ключ прочитал идеи: %d", status)
+	if status, _ := a.withToken(key, "PUT", "/api/ideas/"+mine.ID+"/vote", nil); status != http.StatusForbidden {
+		t.Errorf("ключ проголосовал: %d", status)
+	}
+}
+
+// Идеи в контракте (ROADMAP 43, срез 4): ключ с boards:read читает
+// список, с boards:write подаёт — автором становится ключ; голос
+// и решение ключу закрыты. Подача и решение уходят подписчику
+// событиями idea.created и idea.decided.
+func TestIdeasAreOpenToKeysAndSendEvents(t *testing.T) {
+	a := newAPI(t)
+	owner := a.registerOrg("Идеи ключом")
+	target := newReceiver(t)
+	owner.mustDo("POST", "/api/webhooks", map[string]any{
+		"name": "Чат", "url": target.server.URL, "events": []string{"idea.created", "idea.decided"},
+	}, http.StatusCreated)
+
+	reader := owner.serviceKey("boards:read")
+	writer := owner.serviceKey("boards:read", "boards:write")
+	if status, body := a.withToken(reader, "POST", "/api/v1/ideas", map[string]any{"title": "Из чата"}); status != http.StatusForbidden {
+		t.Errorf("ключ без boards:write подал идею: %d %s", status, body)
+	}
+	status, body := a.withToken(writer, "POST", "/api/v1/ideas", map[string]any{"title": "Из чата", "body": "Принёс бот."})
+	if status != http.StatusCreated {
+		t.Fatalf("подача ключом: %d %s", status, body)
+	}
+	id, _ := field(t, body, "id").(string)
+	if author, _ := field(t, body, "author").(string); author == "" {
+		t.Errorf("у идеи от ключа нет автора: %s", body)
+	}
+	status, body = a.withToken(reader, "GET", "/api/v1/ideas", nil)
+	if status != http.StatusOK || !strings.Contains(string(body), `"Из чата"`) {
+		t.Errorf("список ключом: %d %s", status, body)
+	}
+	if status, _ := a.withToken(writer, "PUT", "/api/v1/ideas/"+id+"/vote", nil); status != http.StatusForbidden {
+		t.Errorf("ключ проголосовал: %d", status)
+	}
+	if status, _ := a.withToken(writer, "POST", "/api/v1/ideas/"+id+"/decisions", map[string]any{"decision": "later"}); status != http.StatusForbidden {
+		t.Errorf("ключ решил: %d", status)
+	}
+
+	owner.decide(id, map[string]any{"decision": "later", "note": "после чата"}, http.StatusCreated)
+	await(t, "события по идее не доехали", func() bool { return len(target.received()) >= 2 })
+	events := map[string]bool{}
+	for _, r := range target.received() {
+		events[r.event] = true
+		if !strings.Contains(string(r.body), `"Из чата"`) {
+			t.Errorf("в событии %s нет идеи: %s", r.event, r.body)
+		}
+	}
+	if !events["idea.created"] || !events["idea.decided"] {
+		t.Errorf("события: %v", events)
 	}
 }

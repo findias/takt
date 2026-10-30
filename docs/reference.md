@@ -303,8 +303,8 @@ person's.
 
 | Scope | What it opens |
 | --- | --- |
-| `boards:read` | reading boards and cards |
-| `boards:write` | changing boards and cards |
+| `boards:read` | reading boards, cards and ideas |
+| `boards:write` | changing boards and cards; submitting ideas |
 | `structure:read` | reading the subdivision structure |
 | `audit:read` | reading the audit log |
 | `scim:write` | provisioning people and groups from a directory (separate key only) |
@@ -318,6 +318,11 @@ link removed, commented on, file attached, file removed, custom field
 filled, custom field cleared,
 added to an iteration, removed from an iteration, work marked done,
 mark removed, completion changed, epic status set, archived, restored to the board.
+
+Idea: submitted (`idea.created`), decided (`idea.decided`) — the body
+carries the idea with its supporters and, for the second, the decision.
+Events reach the receiver whoever caused them: a member, a viewer, an
+integration key or a background job.
 
 ## Installation settings
 
