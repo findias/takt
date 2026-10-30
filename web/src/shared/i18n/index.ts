@@ -31,6 +31,7 @@ import type { imports } from './ru/imports.ts'
 import type { stand } from './ru/stand.ts'
 import type { passwordLink } from './ru/passwordLink.ts'
 import type { tasks } from './ru/tasks.ts'
+import type { ideas } from './ru/ideas.ts'
 import type { reports } from './ru/reports.ts'
 import type { tree } from './ru/tree.ts'
 import type { files } from './ru/files.ts'
@@ -62,6 +63,7 @@ type Lazy = {
   stand: typeof stand
   passwordLink: typeof passwordLink
   tasks: typeof tasks
+  ideas: typeof ideas
   reports: typeof reports
   tree: typeof tree
   files: typeof files
@@ -95,6 +97,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
     en: () => import('./en/passwordLink.ts'),
   },
   tasks: { ru: () => import('./ru/tasks.ts'), en: () => import('./en/tasks.ts') },
+  ideas: { ru: () => import('./ru/ideas.ts'), en: () => import('./en/ideas.ts') },
   reports: { ru: () => import('./ru/reports.ts'), en: () => import('./en/reports.ts') },
   tree: { ru: () => import('./ru/tree.ts'), en: () => import('./en/tree.ts') },
   files: { ru: () => import('./ru/files.ts'), en: () => import('./en/files.ts') },

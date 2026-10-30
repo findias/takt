@@ -112,6 +112,7 @@ export const ru = {
     attention: 'Требует внимания',
     notifications: 'Уведомления',
     tasks: 'Задачи человека',
+    ideas: 'Идеи',
     // «Отчёты» (42.3): у каждого блока свой «?», имя — заголовок блока.
     attentionReport: 'Требует внимания сейчас',
     summaryReport: 'Сводка за период',
@@ -363,6 +364,7 @@ export const ru = {
   app: {
     boards: 'Доски',
     tasks: 'Задачи',
+    ideas: 'Идеи',
     team: 'Команда',
     structure: 'Структура',
     reports: 'Отчёты',

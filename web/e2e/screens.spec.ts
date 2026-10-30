@@ -630,6 +630,16 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByRole('table', { name: /^Задачи:/ }).waitFor()
   await page.screenshot({ path: `${SHOTS}/39-задачи.png`, fullPage: true })
 
+  // Идеи от людей команды (этап 43): список и форма с похожими.
+  await page.getByRole('button', { name: 'Идеи', exact: true }).click()
+  await page.getByRole('list', { name: 'Идеи организации' }).waitFor()
+  await page.screenshot({ path: `${SHOTS}/44-идеи.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Предложить идею' }).click()
+  await page.getByLabel('Что предлагаете').fill('Шаблон карточки')
+  await page.getByText('Похожее уже предлагали').waitFor()
+  await page.screenshot({ path: `${SHOTS}/44б-идеи-форма-похожее.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Отмена' }).click()
+
   // Выгрузка для руководства (этап 24): отбор и число до файла.
   await page.getByRole('button', { name: 'Отчёты', exact: true }).click()
   await page.getByRole('status').filter({ hasText: 'Под отбор' }).waitFor()
@@ -673,5 +683,8 @@ test('снимки экранов', async ({ page, browser }) => {
   await en.getByRole('button', { name: 'Tasks', exact: true }).click()
   await en.getByRole('table', { name: /^Tasks:/ }).waitFor()
   await en.screenshot({ path: `${SHOTS}/39б-задачи-en.png`, fullPage: true })
+  await en.getByRole('button', { name: 'Ideas', exact: true }).click()
+  await en.getByRole('list', { name: 'Ideas of the organisation' }).waitFor()
+  await en.screenshot({ path: `${SHOTS}/44в-идеи-en.png`, fullPage: true })
   await english.close()
 })

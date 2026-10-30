@@ -46,6 +46,10 @@ const Team = lazy(
 const Tasks = lazy(
   withSections(() => import('../widgets/Tasks.tsx').then((m) => ({ default: m.Tasks })), 'tasks'),
 )
+// Идеи от людей команды (ROADMAP 43): свой кусок, как «Задачи».
+const Ideas = lazy(
+  withSections(() => import('../widgets/Ideas.tsx').then((m) => ({ default: m.Ideas })), 'ideas'),
+)
 // Выгрузка для руководства (этап 24): её открывают раз в месяц,
 // к отчёту, — в куске доски ей не место.
 // Сводка на экране (42.3) рисуется теми же диаграммами, что «Поток»,
@@ -85,7 +89,7 @@ const PasswordLinkScreen = lazy(
   ),
 )
 
-const TABS = ['boards', 'tasks', 'reports', 'team', 'structure'] as const
+const TABS = ['boards', 'tasks', 'ideas', 'reports', 'team', 'structure'] as const
 const tabTitle = (name: (typeof TABS)[number]) => t.app[name]
 
 /** Сообщения общие на всё приложение: их очередь и время жизни —
@@ -243,9 +247,11 @@ function Screens() {
             ? 'import'
             : route.name === 'tasks'
               ? 'tasks'
-              : route.name === 'reports'
-                ? 'reports'
-                : null,
+              : route.name === 'ideas'
+                ? 'ideas'
+                : route.name === 'reports'
+                  ? 'reports'
+                  : null,
   )
   // F1 и «?» — справка по тому экрану, где человек сейчас. Слушатель
   // один на приложение: экраны о клавише не знают, они знают свою тему.
@@ -394,9 +400,11 @@ function Screens() {
             route.name === 'structure' ||
             route.name === 'import' ||
             route.name === 'reports' ||
+            route.name === 'ideas' ||
             route.name === 'tasks') && (
             <Suspense fallback={<Skeleton lines={3} />}>
               {route.name === 'tasks' && <Tasks principal={principal} />}
+              {route.name === 'ideas' && <Ideas principal={principal} />}
               {route.name === 'reports' && <Reports principal={principal} />}
               {route.name === 'team' && <Team principal={principal} />}
               {route.name === 'import' && <ImportScreen />}

@@ -674,4 +674,10 @@ var en = map[string]string{
 	"у среза должно быть название":                                                    "a slice needs a name",
 	"название среза длиннее 200 знаков — сократите его":                               "the slice name is longer than 200 characters — shorten it",
 	"отбор среза слишком длинный — выберите меньше досок и людей":                     "the slice selection is too long — pick fewer boards and people",
+	// --- Идеи (этап 43) ---
+	"такой идеи нет":                                                        "there is no such idea",
+	"назовите идею — хотя бы одной фразой":                                  "give the idea a name — one sentence is enough",
+	"название идеи — не длиннее %s знаков":                                  "the idea's name is at most %s characters",
+	"описание идеи — не длиннее %s знаков":                                  "the idea's description is at most %s characters",
+	"такого подразделения нет — выберите из списка или оставьте идею общей": "there is no such subdivision — pick one from the list or leave the idea for the whole organisation",
 }

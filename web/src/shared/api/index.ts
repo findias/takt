@@ -469,6 +469,25 @@ export type SourceHistory = {
   pending: boolean
 }
 
+/** Идея от человека команды (вкладка «Идеи», ROADMAP 43). */
+export type Idea = {
+  id: string
+  title: string
+  body: string
+  /** Пусто, если автора стёрли: идея остаётся за организацией. */
+  authorId: string | null
+  author: string | null
+  /** Подразделение, к которому обращена; пусто — всей организации. */
+  teamId: string | null
+  team: string | null
+  votes: number
+  /** Кто поддержал, в порядке голосов. */
+  voters: string[]
+  /** Мой голос стоит. */
+  voted: boolean
+  createdAt: string
+}
+
 /** Карточка в списке задач человека (вкладка «Задачи»). */
 export type Task = {
   id: string

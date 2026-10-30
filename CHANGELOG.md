@@ -12,11 +12,11 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Three migrations, safe for the running version.** `0080` adds two
+**Four migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
-`epic_statuses`, which the old version never touches. Pods of v0.5.x
-keep working on all of it.
+`epic_statuses` and `0083` the tables `ideas` and `idea_votes`, which
+the old version never touches. Pods of v0.5.x keep working on all of it.
 
 A new event, `card.status_set`, carries an epic's status in words
 (`status`: `on_track`, `at_risk` or `off_track`) and its `note` —
@@ -35,6 +35,19 @@ board metrics have `movedOut`.
 
 ### The rest
 
+- **Ideas from people on the team.** A new tab, **Ideas**, next to
+  **Tasks**: suggestions kept apart from the work on the boards. Anyone
+  in the organisation submits an idea — a viewer included, the one
+  thing a viewer writes — names it in a sentence, adds detail and says
+  whom it is for: a subdivision or the whole organisation. While the
+  name is typed, ideas that sound alike are shown, so people support an
+  existing one instead of filing a copy. **Support** puts your name
+  under the idea and can be taken back; the list orders by newest or
+  by most supported, and the order lives in the address. An idea has no
+  assignee, estimate or column and does not count in flow metrics. What
+  becomes of an idea — a card on a board, or a decline with a reason —
+  comes in the next release. The calls (`/api/ideas`) are interface
+  calls, outside the contract; an integration key is refused.
 - **A hundred percent and "done" are the same thing.** A card that
   reaches 100% — by hand, or because its last part got done, moved past
   the finish, was taken out or archived — is marked done, and its parent

@@ -48,6 +48,7 @@ documentation use, and what each of them means in Takt.
 | Owner | Reads, changes work and runs the organisation |
 | Member | Reads and changes work |
 | Viewer | Only reads |
+| Idea | A suggestion from someone on the team, kept apart from the work on the boards: anyone can submit one and support others'. It has no assignee, no estimate and no column |
 | Subdivision owner | Runs their own subtree: who is in it, nested subdivisions, boards; invites people into it |
 | Area observer | Reads everything in their subtree |
 | Board visibility | Who sees a board: the whole organisation, its own subdivision, or listed people only |

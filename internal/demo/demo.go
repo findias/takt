@@ -34,6 +34,7 @@ import (
 	"github.com/findias/takt/internal/auth"
 	"github.com/findias/takt/internal/board"
 	"github.com/findias/takt/internal/i18n"
+	"github.com/findias/takt/internal/idea"
 	"github.com/findias/takt/internal/importer"
 	"github.com/findias/takt/internal/org"
 	"github.com/findias/takt/internal/store"
@@ -88,6 +89,7 @@ type filler struct {
 	orgs    *org.Service
 	teams   *team.Service
 	boards  *board.Service
+	ideas   *idea.Service
 	orgID   string
 	people  map[string]string // почта из People → идентификатор
 	teamIDs map[string]string // название подразделения → идентификатор
@@ -143,6 +145,7 @@ func newFiller(ctx context.Context, db *store.Store) *filler {
 		orgs:   org.New(db),
 		teams:  team.New(db),
 		boards: board.New(db),
+		ideas:  idea.New(db),
 		people: map[string]string{},
 		lang:   i18n.Of(ctx),
 	}
@@ -255,6 +258,9 @@ func (f *filler) fill() error {
 	}
 	if err := f.workspace(); err != nil {
 		return fmt.Errorf("доски: %w", err)
+	}
+	if err := f.suggestions(); err != nil {
+		return fmt.Errorf("идеи: %w", err)
 	}
 	if err := f.backdate(); err != nil {
 		return fmt.Errorf("сдвиг отметок в прошлое: %w", err)
@@ -483,6 +489,96 @@ func (f *filler) structure() error {
 		return err
 	}
 	return f.teams.Archive(f.ctx, f.orgID, f.owner(), kurs.ID)
+}
+
+// --- идеи от людей команды (ROADMAP 43) ---
+
+// suggestions заводит четыре идеи от четырёх людей — среди них
+// наблюдатель Глеб: на нём видно, что идею подаёт и тот, кто работу
+// не меняет. Голоса — чтобы список было чем сортировать; одна идея
+// без единого голоса — чтобы было видно, как выглядит ноль.
+// Повторная заливка идей не дублирует: есть хоть одна — стоят.
+func (f *filler) suggestions() error {
+	var filled bool
+	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select exists (select 1 from ideas where org_id = $1)`, f.orgID).Scan(&filled)
+	}); err != nil {
+		return err
+	}
+	if filled {
+		return nil
+	}
+	// Подразделение — по имени: при доливе (topUp) карты идентификаторов
+	// нет, а имя в базе лежит на языке организации.
+	team := func(name string) (*string, error) {
+		if id, ok := f.teamIDs[name]; ok {
+			return &id, nil
+		}
+		var id string
+		err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+			return tx.QueryRow(f.ctx, `select id from teams where name = $1 and archived_at is null`,
+				f.w(name)).Scan(&id)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("подразделение «%s»: %w", name, err)
+		}
+		return &id, nil
+	}
+	plan := []struct {
+		author      string
+		title, body string
+		team        string
+		voters      []string
+		daysAgo     int
+	}{
+		{"vera@example.test", "Шаблон карточки для типовой поставки",
+			"Половина карточек на «Поставках» заводится с одним и тем же набором подзадач: сверить остатки, согласовать график, принять. Шаблон избавит от копирования руками.",
+			"", []string{"boris@example.test", "gleb@example.test", "dmitry@example.test"}, 12},
+		{"gleb@example.test", "Общий чат с дежурным смежников",
+			"Смежники отвечают по почте с задержкой в день. Чат с дежурным сократил бы ожидание в блокировках — сейчас это главная причина простоя.",
+			"Платформа", []string{"anna@example.test", "vera@example.test"}, 9},
+		{"boris@example.test", "Отмечать карточки, которые ждут приёмки заказчика",
+			"Такие висят в «В работе» и портят возраст работы. Отдельная колонка или метка покажут, что ждём не себя.",
+			"Разработка", []string{"vera@example.test", "gleb@example.test", "anna@example.test", "dmitry@example.test"}, 5},
+		{"dmitry@example.test", "Сверять остатки автоматически по понедельникам",
+			"Скрипт против выгрузки склада: расхождения сразу карточкой на доске, а не руками раз в месяц.",
+			"Ядро", nil, 1},
+	}
+	for _, p := range plan {
+		author, err := f.personID(p.author)
+		if err != nil {
+			return err
+		}
+		var teamID *string
+		if p.team != "" {
+			if teamID, err = team(p.team); err != nil {
+				return err
+			}
+		}
+		created, err := f.ideas.Create(f.ctx, f.orgID, author, f.w(p.title), f.w(p.body), teamID)
+		if err != nil {
+			return fmt.Errorf("идея «%s»: %w", p.title, err)
+		}
+		for _, v := range p.voters {
+			voter, err := f.personID(v)
+			if err != nil {
+				return err
+			}
+			if _, err := f.ideas.Vote(f.ctx, f.orgID, voter, created.ID, true); err != nil {
+				return fmt.Errorf("голос за «%s»: %w", p.title, err)
+			}
+		}
+		// Идеи разводятся по датам: четыре за одну минуту — не список
+		// за месяц, и «новые» от «поддержанных» не отличить.
+		if err := f.db.InTenant(f.ctx, f.orgID, author, func(tx pgx.Tx) error {
+			_, err := tx.Exec(f.ctx, `update ideas set created_at = now() - make_interval(days => $2) where id = $1`,
+				created.ID, p.daysAgo)
+			return err
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // --- доски, карточки и всё, что на них висит ---

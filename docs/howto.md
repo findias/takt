@@ -812,6 +812,24 @@ labels these tasks carry). **Clear filters** brings everything back. A private b
 have no access to is not shown, even if the person works on it. The
 address keeps the choice, so the list can be sent to someone.
 
+<a id="ideas"></a>
+### Suggest an idea
+
+The **Ideas** tab is where people on the team suggest what to change —
+apart from the work on the boards. Press **Suggest an idea**, name it
+in one sentence under **What do you suggest**, add **More detail** if
+there is any, and choose **For whom**: a subdivision, or the whole
+organisation. While you type the name, ideas that sound alike are shown
+underneath: support one of them instead of filing a second copy — one
+idea with thirty supporters gets looked at, ten with three each do not.
+Anyone in the organisation can suggest and support, a viewer included:
+an idea is not work, so the rule "a viewer does not change work" does
+not apply to it. **Support** puts your name under the idea; pressing it
+again takes the name back. **Order** switches between the newest first
+and the most supported first; the choice lives in the address, so the
+list can be sent as a link. An idea has no assignee, no estimate and
+no column, and it does not count in flow metrics.
+
 <a id="reports"></a>
 ### Export cards for a report
 

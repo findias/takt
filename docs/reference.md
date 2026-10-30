@@ -16,6 +16,9 @@ in the English interface.
 | **Member** | yes | yes | no |
 | **Viewer** | yes | no | no |
 
+Every role, the viewer included, suggests ideas on the **Ideas** tab and
+supports others' — an idea is not work.
+
 Beyond roles, the owner appoints (and a subdivision owner, below their own node):
 
 | Appointment | What it grants |

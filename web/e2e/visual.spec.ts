@@ -54,6 +54,7 @@ const SCREENS = (boardId: string, cardId = ''): Screen[] => [
     tab: i,
   })),
   { name: 'задачи', path: '/tasks' },
+  { name: 'идеи', path: '/ideas' },
   { name: 'отчёты', path: '/reports' },
   { name: 'команда', path: '/team' },
   { name: 'структура', path: '/structure' },

@@ -14,6 +14,15 @@ var english = map[string]string{
 	// Статус эпика словами (42.3, срез 10).
 	"Стеллажи едут по графику, релиз склада в итерации.":                       "Shelving is on schedule, the warehouse release is in the iteration.",
 	"Смежники не подтвердили дату переезда, регламент приёмки ждёт их ответа.": "Partners have not confirmed the move date; the intake procedure waits on their answer.",
+	// Идеи от людей команды (43, срез 1).
+	"Шаблон карточки для типовой поставки": "A card template for a routine delivery",
+	"Половина карточек на «Поставках» заводится с одним и тем же набором подзадач: сверить остатки, согласовать график, принять. Шаблон избавит от копирования руками.": "Half the cards on “Supplies” start with the same set of subtasks: reconcile stock, agree the schedule, accept. A template would spare the copying by hand.",
+	"Общий чат с дежурным смежников": "A shared chat with the partners' on-call person",
+	"Смежники отвечают по почте с задержкой в день. Чат с дежурным сократил бы ожидание в блокировках — сейчас это главная причина простоя.": "Partners answer email a day late. A chat with their on-call person would cut the waiting in blocks — right now it is the main cause of idle time.",
+	"Отмечать карточки, которые ждут приёмки заказчика":                                                        "Mark cards that wait for the customer's acceptance",
+	"Такие висят в «В работе» и портят возраст работы. Отдельная колонка или метка покажут, что ждём не себя.": "They sit in “In progress” and skew the age of work. A separate column or label would show that we are waiting on someone else.",
+	"Сверять остатки автоматически по понедельникам":                                                           "Reconcile stock automatically on Mondays",
+	"Скрипт против выгрузки склада: расхождения сразу карточкой на доске, а не руками раз в месяц.":            "A script against the warehouse export: discrepancies land on the board as cards at once, instead of by hand once a month.",
 	// Перенесённое из прежней системы.
 	"Сверить остатки за июль":                  "Reconcile July stock",
 	"Продлить договор с перевозчиком":          "Renew the carrier contract",

@@ -113,6 +113,7 @@ export const en: typeof ru = {
     attention: 'Needs attention',
     notifications: 'Notifications',
     tasks: 'A person’s tasks',
+    ideas: 'Ideas',
     attentionReport: 'Needs attention now',
     summaryReport: 'Summary for the period',
     dueDates: 'Due dates',
@@ -362,6 +363,7 @@ export const en: typeof ru = {
   app: {
     boards: 'Boards',
     tasks: 'Tasks',
+    ideas: 'Ideas',
     team: 'Team',
     structure: 'Structure',
     reports: 'Reports',
