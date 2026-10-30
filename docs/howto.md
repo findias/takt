@@ -830,6 +830,20 @@ and the most supported first; the choice lives in the address, so the
 list can be sent as a link. An idea has no assignee, no estimate and
 no column, and it does not count in flow metrics.
 
+What becomes of an idea is said in words. The organisation owner
+decides any idea; a subdivision owner decides the ideas addressed to
+their subtree. They press **Decide…** under the idea and choose one of
+four: **Taking it** — pick a **Board** you can write to, and a card with
+the idea's text appears in its first column, linked from the idea with
+its number and column; **Not taking it** — a **Note** with the reason
+is required, the author needs an answer; **Already exists** — name
+**Which idea already exists**, and this idea's supporters count towards
+that one; **Later** — seen, will come back to it. Every decision keeps
+its author and time; a new decision does not erase the old one, and
+**Decision history** under the idea shows them all. Ideas that were
+taken, declined or merged leave the list; **Show decided** brings them
+back. "Later" stays in the list: it is still open.
+
 <a id="reports"></a>
 ### Export cards for a report
 

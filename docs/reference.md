@@ -17,7 +17,9 @@ in the English interface.
 | **Viewer** | yes | no | no |
 
 Every role, the viewer included, suggests ideas on the **Ideas** tab and
-supports others' — an idea is not work.
+supports others' — an idea is not work. What becomes of an idea is decided
+by the owner, and by a subdivision owner for the ideas addressed to their
+subtree.
 
 Beyond roles, the owner appoints (and a subdivision owner, below their own node):
 

@@ -3,8 +3,8 @@
 //
 // Идея — не карточка. У неё нет доски, исполнителя и оценки, она не
 // входит в метрики потока и в «создано против сделано». Что с ней
-// делать, решают потом (срез 2): берут в работу — тогда появляется
-// карточка, — отказывают с причиной или склеивают с такой же.
+// делать, решают словами (decide.go): берут в работу — тогда появляется
+// карточка, — отказывают с причиной, называют двойником или откладывают.
 // Здесь — подать, увидеть и поддержать.
 package idea
 
@@ -56,11 +56,17 @@ type Idea struct {
 	Team   *string `json:"team"`
 	// Votes — сколько поддержало; Voters — кто, в порядке голосов:
 	// «+1» без имён читалось бы как счётчик, а не как поддержка людей.
+	// Голоса идей, названных двойниками этой, считаются здесь же
+	// (см. decide.go): одна идея с тридцатью голосами, а не три по десять.
 	Votes  int      `json:"votes"`
 	Voters []string `json:"voters"`
 	// Voted — мой голос стоит.
 	Voted     bool      `json:"voted"`
 	CreatedAt time.Time `json:"createdAt"`
+	// Decision — нынешнее решение по идее; пусто — ещё не решали.
+	Decision *Decision `json:"decision"`
+	// CanDecide — спрашивающий вправе решить судьбу этой идеи.
+	CanDecide bool `json:"canDecide"`
 }
 
 // List — идеи и то, всё ли показано.
@@ -76,29 +82,89 @@ type Service struct {
 
 func New(db *store.Store) *Service { return &Service{db: db} }
 
-// ideaColumns — один запрос на идею и на список: число голосов, имена
-// поддержавших и мой голос считаются подзапросами, чтобы список
-// и ответ на голос не разошлись в форме.
-const ideaColumns = `
+// ideaQuery — один запрос на идею и на список: голоса, нынешнее решение
+// и право решать считаются здесь, чтобы список и ответ на действие
+// не разошлись в форме. $1 — спрашивающий.
+//
+// `current` — последняя запись решения по каждой идее. Голоса считаются
+// по самой идее и по тем, чьё нынешнее решение — «уже есть» с указанием
+// на неё: склейка живёт в запросе, а не в данных, и отменяется новой
+// записью решения, ничего не теряя.
+const ideaQuery = `
+	with current as (
+		select distinct on (idea_id)
+		       idea_id, id, decision, note, author_id, created_at, card_id, into_idea_id
+		  from idea_decisions
+		 order by idea_id, created_at desc, id desc)
 	select i.id, i.title, i.body, i.author_id, u.name, i.team_id, tm.name,
-	       (select count(*) from idea_votes v where v.idea_id = i.id),
-	       (select coalesce(array_agg(coalesce(vu.name, '') order by v.created_at), '{}')
-	          from idea_votes v left join users vu on vu.id = v.user_id
-	         where v.idea_id = i.id),
-	       exists (select 1 from idea_votes v where v.idea_id = i.id and v.user_id = $1),
-	       i.created_at
+	       v.n, v.names, v.mine, i.created_at,
+	       d.id, d.decision, d.note, d.author_id, du.name, d.created_at,
+	       c.id, c.board_id, c.number, cb.name, cc.name, cc.kind,
+	       c.id is not null and (c.outcome is not null or c.done_at is not null),
+	       di.id, di.title,
+	       (select app_is_owner())
+	         or (i.team_id is not null and i.team_id = any (array(select unnest(app_admin_teams()))))
 	  from ideas i
 	  left join users u on u.id = i.author_id
-	  left join teams tm on tm.id = i.team_id`
+	  left join teams tm on tm.id = i.team_id
+	  left join current d on d.idea_id = i.id
+	  left join users du on du.id = d.author_id
+	  left join cards c on c.id = d.card_id and c.archived_at is null
+	  left join boards cb on cb.id = c.board_id
+	  left join board_columns cc on cc.id = c.column_id
+	  left join ideas di on di.id = d.into_idea_id
+	  cross join lateral (
+		select count(*) as n,
+		       coalesce(array_agg(coalesce(vu.name, '') order by one.created_at), '{}') as names,
+		       coalesce(bool_or(one.user_id = $1), false) as mine
+		  from (select distinct on (x.user_id) x.user_id, x.created_at
+		          from idea_votes x
+		         where x.idea_id = i.id
+		            or x.idea_id in (select m.idea_id from current m
+		                              where m.decision = 'duplicate' and m.into_idea_id = i.id)
+		         order by x.user_id, x.created_at) one
+		  left join users vu on vu.id = one.user_id) v`
 
 func scanIdea(row pgx.Row) (Idea, error) {
 	var out Idea
+	var d Decision
+	var dID, dKind, dNote *string
+	var dAt *time.Time
+	var cID, cBoard, cNumber, cBoardName, cColumn, cKind *string
+	var cDone bool
+	var intoID, intoTitle *string
 	err := row.Scan(&out.ID, &out.Title, &out.Body, &out.AuthorID, &out.Author, &out.TeamID, &out.Team,
-		&out.Votes, &out.Voters, &out.Voted, &out.CreatedAt)
+		&out.Votes, &out.Voters, &out.Voted, &out.CreatedAt,
+		&dID, &dKind, &dNote, &d.AuthorID, &d.Author, &dAt,
+		&cID, &cBoard, &cNumber, &cBoardName, &cColumn, &cKind, &cDone,
+		&intoID, &intoTitle, &out.CanDecide)
+	if err != nil {
+		return out, err
+	}
 	if out.Voters == nil {
 		out.Voters = []string{}
 	}
-	return out, err
+	if dID != nil {
+		d.ID, d.Kind, d.Note, d.At = *dID, *dKind, *dNote, *dAt
+		if cID != nil {
+			d.Card = &CardRef{ID: *cID, BoardID: *cBoard, Number: *cNumber, BoardName: *cBoardName,
+				Column: *cColumn, ColumnKind: *cKind, Done: cDone}
+		}
+		if intoID != nil {
+			d.Into = &IdeaRef{ID: *intoID, Title: *intoTitle}
+		}
+		out.Decision = &d
+	}
+	return out, nil
+}
+
+// one — идея по идентификатору глазами userID; нет или не видна — ErrNotFound.
+func one(ctx context.Context, tx pgx.Tx, userID, ideaID string) (Idea, error) {
+	i, err := scanIdea(tx.QueryRow(ctx, ideaQuery+` where i.id = $2`, userID, ideaID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Idea{}, ErrNotFound
+	}
+	return i, err
 }
 
 // All — идеи организации, новые сверху. Сортировку «поддержанные»
@@ -107,7 +173,7 @@ func scanIdea(row pgx.Row) (Idea, error) {
 func (s *Service) All(ctx context.Context, orgID, userID string) (List, error) {
 	out := List{Ideas: []Idea{}}
 	err := s.db.InTenant(ctx, orgID, userID, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, ideaColumns+`
+		rows, err := tx.Query(ctx, ideaQuery+`
 			 order by i.created_at desc, i.id desc
 			 limit $2`, userID, Limit+1)
 		if err != nil {
@@ -169,7 +235,7 @@ func (s *Service) Create(ctx context.Context, orgID, userID, title, body string,
 			return err
 		}
 		var err error
-		out, err = scanIdea(tx.QueryRow(ctx, ideaColumns+` where i.id = $2`, userID, id))
+		out, err = one(ctx, tx, userID, id)
 		return err
 	})
 	return out, err
@@ -201,7 +267,7 @@ func (s *Service) Vote(ctx context.Context, orgID, userID, ideaID string, on boo
 		if err != nil {
 			return err
 		}
-		out, err = scanIdea(tx.QueryRow(ctx, ideaColumns+` where i.id = $2`, userID, ideaID))
+		out, err = one(ctx, tx, userID, ideaID)
 		return err
 	})
 	return out, err

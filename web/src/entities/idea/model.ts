@@ -52,3 +52,15 @@ export function similarIdeas(list: Idea[], title: string, limit = 3): Idea[] {
 export function votersLine(voters: string[], shown = 3): { names: string; more: number } {
   return { names: voters.slice(0, shown).join(', '), more: Math.max(0, voters.length - shown) }
 }
+
+/** Решённая насовсем: взята, отклонена или названа двойником. «Позже» —
+ *  всё ещё открытая: к ней вернутся, и прятать её из списка нельзя. */
+export function isSettled(idea: Idea): boolean {
+  const kind = idea.decision?.kind
+  return kind === 'taken' || kind === 'declined' || kind === 'duplicate'
+}
+
+/** Список к показу: без решённых, если их не просили. */
+export function visibleIdeas(list: Idea[], withDecided: boolean): Idea[] {
+  return withDecided ? list : list.filter((i) => !isSettled(i))
+}

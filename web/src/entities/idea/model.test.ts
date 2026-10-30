@@ -1,7 +1,7 @@
 // Вкладка «Идеи»: порядок и похожее — чистые функции, без браузера.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseIdeaSort, similarIdeas, sortIdeas, stems, votersLine } from './model.ts'
+import { isSettled, parseIdeaSort, similarIdeas, sortIdeas, stems, visibleIdeas, votersLine } from './model.ts'
 import type { Idea } from '../../shared/api/index.ts'
 
 const idea = (id: string, title: string, votes: number, createdAt: string): Idea => ({
@@ -16,6 +16,12 @@ const idea = (id: string, title: string, votes: number, createdAt: string): Idea
   voters: [],
   voted: false,
   createdAt,
+  decision: null,
+  canDecide: false,
+})
+const decided = (i: Idea, kind: 'taken' | 'declined' | 'duplicate' | 'later'): Idea => ({
+  ...i,
+  decision: { id: 'd', kind, note: '', authorId: null, author: null, at: i.createdAt },
 })
 const ids = (list: Idea[]) => list.map((i) => i.id)
 
@@ -66,4 +72,18 @@ test('строка поддержавших: первые трое именам�
     more: 2,
   })
   assert.deepEqual(votersLine([]), { names: '', more: 0 })
+})
+
+test('решённые насовсем прячутся, «позже» и нерешённые остаются', () => {
+  const mixed = [
+    decided(list[0], 'taken'),
+    decided(list[1], 'later'),
+    decided(list[2], 'declined'),
+    list[3],
+    decided(idea('e', 'Пятая', 0, '2026-10-30T10:00:00Z'), 'duplicate'),
+  ]
+  assert.deepEqual(ids(visibleIdeas(mixed, false)), ['b', 'd'])
+  assert.deepEqual(ids(visibleIdeas(mixed, true)), ['a', 'b', 'c', 'd', 'e'])
+  assert.equal(isSettled(mixed[1]), false)
+  assert.equal(isSettled(mixed[0]), true)
 })

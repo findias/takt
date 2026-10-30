@@ -639,6 +639,12 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByText('Похожее уже предлагали').waitFor()
   await page.screenshot({ path: `${SHOTS}/44б-идеи-форма-похожее.png`, fullPage: true })
   await page.getByRole('button', { name: 'Отмена' }).click()
+  await page.getByRole('checkbox', { name: 'Показать решённые' }).check()
+  await page.getByRole('button', { name: 'Решить…' }).first().click()
+  await page.getByRole('radio', { name: 'Не берём' }).check()
+  await page.screenshot({ path: `${SHOTS}/44г-идеи-решения.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await page.getByRole('checkbox', { name: 'Показать решённые' }).uncheck()
 
   // Выгрузка для руководства (этап 24): отбор и число до файла.
   await page.getByRole('button', { name: 'Отчёты', exact: true }).click()

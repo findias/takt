@@ -486,6 +486,34 @@ export type Idea = {
   /** Мой голос стоит. */
   voted: boolean
   createdAt: string
+  /** Нынешнее решение; пусто — ещё не решали. */
+  decision: IdeaDecision | null
+  /** Я вправе решить судьбу этой идеи. */
+  canDecide: boolean
+}
+
+export type IdeaDecisionKind = 'taken' | 'declined' | 'duplicate' | 'later'
+
+/** Решение по идее словами: запись с автором и датой, история только растёт. */
+export type IdeaDecision = {
+  id: string
+  kind: IdeaDecisionKind
+  note: string
+  authorId: string | null
+  author: string | null
+  at: string
+  /** Карточка из идеи («берём»); пусто, если её убрали или доска не видна. */
+  card?: {
+    id: string
+    boardId: string
+    number: string
+    boardName: string
+    column: string
+    columnKind: string
+    done: boolean
+  }
+  /** Идея, в которую влились голоса этой («уже есть»). */
+  into?: { id: string; title: string }
 }
 
 /** Карточка в списке задач человека (вкладка «Задачи»). */

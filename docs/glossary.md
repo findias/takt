@@ -49,6 +49,7 @@ documentation use, and what each of them means in Takt.
 | Member | Reads and changes work |
 | Viewer | Only reads |
 | Idea | A suggestion from someone on the team, kept apart from the work on the boards: anyone can submit one and support others'. It has no assignee, no estimate and no column |
+| Decision on an idea | What becomes of it, in words: **Taking it** (a card appears on a board), **Not taking it** (with a reason), **Already exists** (its supporters count towards another idea) or **Later**. Decisions keep their author and time and pile up as history |
 | Subdivision owner | Runs their own subtree: who is in it, nested subdivisions, boards; invites people into it |
 | Area observer | Reads everything in their subtree |
 | Board visibility | Who sees a board: the whole organisation, its own subdivision, or listed people only |

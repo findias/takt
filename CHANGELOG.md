@@ -12,11 +12,12 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Four migrations, safe for the running version.** `0080` adds two
+**Five migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
-`epic_statuses` and `0083` the tables `ideas` and `idea_votes`, which
-the old version never touches. Pods of v0.5.x keep working on all of it.
+`epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
+the table `idea_decisions`, which the old version never touches. Pods of
+v0.5.x keep working on all of it.
 
 A new event, `card.status_set`, carries an epic's status in words
 (`status`: `on_track`, `at_risk` or `off_track`) and its `note` —
@@ -45,9 +46,15 @@ board metrics have `movedOut`.
   under the idea and can be taken back; the list orders by newest or
   by most supported, and the order lives in the address. An idea has no
   assignee, estimate or column and does not count in flow metrics. What
-  becomes of an idea — a card on a board, or a decline with a reason —
-  comes in the next release. The calls (`/api/ideas`) are interface
-  calls, outside the contract; an integration key is refused.
+  becomes of an idea is said in words by the organisation owner, or by
+  a subdivision owner for the ideas addressed to their subtree:
+  **Taking it** creates a card with the idea's text on a board the
+  decider can write to and links it from the idea; **Not taking it**
+  requires a reason; **Already exists** counts the idea's supporters
+  towards another idea; **Later** keeps it open. Decisions keep their
+  author and time and pile up as history; decided ideas leave the list
+  until **Show decided** is ticked. The calls (`/api/ideas`) are
+  interface calls, outside the contract; an integration key is refused.
 - **A hundred percent and "done" are the same thing.** A card that
   reaches 100% — by hand, or because its last part got done, moved past
   the finish, was taken out or archived — is marked done, and its parent

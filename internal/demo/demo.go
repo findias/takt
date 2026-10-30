@@ -499,14 +499,30 @@ func (f *filler) structure() error {
 // без единого голоса — чтобы было видно, как выглядит ноль.
 // Повторная заливка идей не дублирует: есть хоть одна — стоят.
 func (f *filler) suggestions() error {
-	var filled bool
+	// Долив по одной: идея, которая уже есть (по названию), не заводится
+	// второй раз, а решение не ставится поверх уже стоящего — так стенд,
+	// наполненный до среза 2, получает недостающее, а не копию.
+	known := map[string]string{}
+	decided := map[string]bool{}
 	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
-		return tx.QueryRow(f.ctx, `select exists (select 1 from ideas where org_id = $1)`, f.orgID).Scan(&filled)
+		rows, err := tx.Query(f.ctx, `
+			select i.id, i.title, exists (select 1 from idea_decisions d where d.idea_id = i.id)
+			  from ideas i where i.org_id = $1`, f.orgID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id, title string
+			var has bool
+			if err := rows.Scan(&id, &title, &has); err != nil {
+				return err
+			}
+			known[title], decided[title] = id, has
+		}
+		return rows.Err()
 	}); err != nil {
 		return err
-	}
-	if filled {
-		return nil
 	}
 	// Подразделение — по имени: при доливе (topUp) карты идентификаторов
 	// нет, а имя в базе лежит на языке организации.
@@ -543,8 +559,21 @@ func (f *filler) suggestions() error {
 		{"dmitry@example.test", "Сверять остатки автоматически по понедельникам",
 			"Скрипт против выгрузки склада: расхождения сразу карточкой на доске, а не руками раз в месяц.",
 			"Ядро", nil, 1},
+		// Две идеи под решения «не берём» и «уже есть» (срез 2): без них
+		// на экране не на чем смотреть отказ с причиной и склейку голосов.
+		{"vera@example.test", "Переименовать «Очередь» в «Бэклог»",
+			"Все вокруг говорят «бэклог», а колонка называется иначе — новички путаются.",
+			"", nil, 15},
+		{"dmitry@example.test", "Шаблоны для типовых поставок",
+			"Заводить поставку из заготовки с нужными подзадачами.",
+			"Платформа", []string{"anna@example.test"}, 3},
 	}
+	created := map[string]string{}
 	for _, p := range plan {
+		if id, ok := known[f.w(p.title)]; ok {
+			created[p.title] = id
+			continue
+		}
 		author, err := f.personID(p.author)
 		if err != nil {
 			return err
@@ -555,27 +584,65 @@ func (f *filler) suggestions() error {
 				return err
 			}
 		}
-		created, err := f.ideas.Create(f.ctx, f.orgID, author, f.w(p.title), f.w(p.body), teamID)
+		idea, err := f.ideas.Create(f.ctx, f.orgID, author, f.w(p.title), f.w(p.body), teamID)
 		if err != nil {
 			return fmt.Errorf("идея «%s»: %w", p.title, err)
 		}
+		created[p.title] = idea.ID
 		for _, v := range p.voters {
 			voter, err := f.personID(v)
 			if err != nil {
 				return err
 			}
-			if _, err := f.ideas.Vote(f.ctx, f.orgID, voter, created.ID, true); err != nil {
+			if _, err := f.ideas.Vote(f.ctx, f.orgID, voter, idea.ID, true); err != nil {
 				return fmt.Errorf("голос за «%s»: %w", p.title, err)
 			}
 		}
-		// Идеи разводятся по датам: четыре за одну минуту — не список
+		// Идеи разводятся по датам: шесть за одну минуту — не список
 		// за месяц, и «новые» от «поддержанных» не отличить.
 		if err := f.db.InTenant(f.ctx, f.orgID, author, func(tx pgx.Tx) error {
 			_, err := tx.Exec(f.ctx, `update ideas set created_at = now() - make_interval(days => $2) where id = $1`,
-				created.ID, p.daysAgo)
+				idea.ID, p.daysAgo)
 			return err
 		}); err != nil {
 			return err
+		}
+	}
+	// Решения (срез 2): все четыре исхода, чтобы экран показал каждый.
+	// «Берём» кладёт карточку на «Найм» — доску, которую сквозные
+	// сценарии не считают; «уже есть» решает Борис как владелец
+	// «Платформы», которой идея адресована, — так видно второе право.
+	var naym string
+	if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+		return tx.QueryRow(f.ctx, `select id from boards where key = $1`, f.w("НАЙМ")).Scan(&naym)
+	}); err != nil {
+		return fmt.Errorf("доска для идеи: %w", err)
+	}
+	// Решающий — по почте и только когда решение ещё нужно: при доливе
+	// песочницы её людей по почтам стенда не найти, а решения там уже стоят.
+	cards := idea.Cards{Boards: f.boards}
+	for _, d := range []struct {
+		by, title string
+		req       idea.DecideRequest
+	}{
+		{"anna@example.test", "Отмечать карточки, которые ждут приёмки заказчика",
+			idea.DecideRequest{Kind: idea.Taken, BoardID: naym, Note: f.w("Колонка «Ждём заказчика» после «В работе».")}},
+		{"anna@example.test", "Шаблон карточки для типовой поставки",
+			idea.DecideRequest{Kind: idea.Later, Note: f.w("Вернёмся после релиза склада.")}},
+		{"anna@example.test", "Переименовать «Очередь» в «Бэклог»",
+			idea.DecideRequest{Kind: idea.Declined, Note: f.w("Слово «очередь» стоит в справке и в обучении новичков; переименование сломает привычку, а пользы не прибавит.")}},
+		{"boris@example.test", "Шаблоны для типовых поставок",
+			idea.DecideRequest{Kind: idea.Duplicate, IntoIdeaID: created["Шаблон карточки для типовой поставки"]}},
+	} {
+		if decided[f.w(d.title)] {
+			continue
+		}
+		by, err := f.personID(d.by)
+		if err != nil {
+			return err
+		}
+		if _, err := f.ideas.Decide(f.ctx, f.orgID, by, created[d.title], d.req, cards); err != nil {
+			return fmt.Errorf("решение по «%s»: %w", d.title, err)
 		}
 	}
 	return nil

@@ -4921,6 +4921,72 @@ textarea.description {
   flex-direction: column;
   gap: var(--space-1);
 }
+/* Решение по идее: слово-таблетка своим цветом на каждый исход —
+   «берём» акцентом, «позже» предостережением, отказ и двойник тихо.
+   Пояснение — абзацем под словом, как заметка статуса эпика. */
+.idea-decision {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+}
+.idea-decision-mark--taken {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.idea-decision-mark--later {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.idea-decision-note {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.idea-decide-open {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+.idea-decide {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  max-width: 32rem;
+}
+.idea-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.idea-kinds label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--target);
+}
+.idea-kind-hint {
+  margin: 0;
+}
+.idea-history > summary {
+  cursor: pointer;
+  min-height: var(--target);
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  color: var(--ink-3);
+}
+.idea-history-list {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0 0 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
 /* Люди источника (ROADMAP 23.6): кто слева, что с ним — справа, как
    в «Команде». Отказ по человеку — под строкой во всю ширину: он про

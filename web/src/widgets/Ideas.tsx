@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from '../shared/api/index.ts'
-import type { Idea, Principal, Team } from '../shared/api/index.ts'
+import type { BoardInfo, Idea, Principal, Team } from '../shared/api/index.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
 import { ScreenError } from '../shared/ui/Field.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { t } from '../shared/i18n/index.ts'
-import { parseIdeaSort, sortIdeas } from '../entities/idea/model.ts'
+import { parseIdeaSort, sortIdeas, visibleIdeas } from '../entities/idea/model.ts'
 import { IdeaForm } from '../features/ideas/IdeaForm.tsx'
 import { IdeaRow } from '../features/ideas/IdeaRow.tsx'
 import { loadIdeas, voteIdea } from '../features/ideas/api.ts'
@@ -24,12 +24,14 @@ import type { IdeaList } from '../features/ideas/api.ts'
 export function Ideas({ principal }: { principal: Principal }) {
   const query = useQuery()
   const sort = parseIdeaSort(query)
+  const withDecided = query.get('decided') === '1'
   const s = t.ideas
 
   const [list, setList] = useState<IdeaList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [voteError, setVoteError] = useState<string | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
+  const [boards, setBoards] = useState<BoardInfo[]>([])
   const [open, setOpen] = useState(false)
   const [voting, setVoting] = useState<string | null>(null)
 
@@ -58,8 +60,30 @@ export function Ideas({ principal }: { principal: Principal }) {
     }
   }, [open])
 
+  // Доски нужны только тому, кто решает, — и грузятся, когда есть
+  // что решать; «уже есть» меняет голоса другой идеи, поэтому после
+  // решения список перечитывается целиком.
+  const canDecideAny = list?.ideas.some((i) => i.canDecide) ?? false
+  useEffect(() => {
+    if (!canDecideAny) return
+    let current = true
+    api
+      .listBoards()
+      .then((r) => current && setBoards(r.boards.filter((b) => b.writable !== false)))
+      .catch(() => {
+        // Без списка форма решения предложит пустой выбор доски и объяснит отказ сервера.
+      })
+    return () => {
+      current = false
+    }
+  }, [canDecideAny])
+
   const replace = (idea: Idea) =>
     setList((was) => was && { ...was, ideas: was.ideas.map((i) => (i.id === idea.id ? idea : i)) })
+  const reload = () =>
+    loadIdeas()
+      .then(setList)
+      .catch(() => {})
 
   const vote = (idea: Idea, on: boolean) => {
     if (voting) return
@@ -71,7 +95,13 @@ export function Ideas({ principal }: { principal: Principal }) {
       .finally(() => setVoting(null))
   }
 
-  const shown = list ? sortIdeas(list.ideas, sort) : []
+  const shown = list ? sortIdeas(visibleIdeas(list.ideas, withDecided), sort) : []
+  const setFlag = (key: string, on: boolean, value = '1') => {
+    const next = new URLSearchParams(query)
+    if (on) next.set(key, value)
+    else next.delete(key)
+    setQuery(next, { replace: true })
+  }
 
   return (
     <div className="stack ideas-screen">
@@ -81,20 +111,20 @@ export function Ideas({ principal }: { principal: Principal }) {
         </Button>
         <label className="row row--tight">
           <span className="small">{s.sort}</span>
-          <select
-            value={sort}
-            onChange={(e) => {
-              const next = new URLSearchParams(query)
-              if (e.target.value === 'votes') next.set('sort', 'votes')
-              else next.delete('sort')
-              setQuery(next, { replace: true })
-            }}
-          >
+          <select value={sort} onChange={(e) => setFlag('sort', e.target.value === 'votes', 'votes')}>
             <option value="new">{s.sortNew}</option>
             <option value="votes">{s.sortVotes}</option>
           </select>
         </label>
-        {list && <span className="muted small">{s.count(list.ideas.length)}</span>}
+        <label className="row row--tight small">
+          <input type="checkbox" checked={withDecided} onChange={(e) => setFlag('decided', e.target.checked)} />
+          <span>{s.withDecided}</span>
+        </label>
+        {list && (
+          <span className="muted small">
+            {shown.length === list.ideas.length ? s.count(list.ideas.length) : s.shownOf(shown.length, list.ideas.length)}
+          </span>
+        )}
       </div>
       <p className="muted small">
         {s.hint} <Hint topic="ideas" />
@@ -121,11 +151,22 @@ export function Ideas({ principal }: { principal: Principal }) {
           {s.emptyHelp}
         </EmptyState>
       )}
+      {list && list.ideas.length > 0 && shown.length === 0 && <p className="muted">{s.allDecided}</p>}
       {shown.length > 0 && (
         <ul className="ideas-list" aria-label={s.listCaption}>
           {shown.map((idea) => (
             <li key={idea.id}>
-              <IdeaRow idea={idea} busy={voting === idea.id} onVote={(on) => vote(idea, on)} />
+              <IdeaRow
+                idea={idea}
+                busy={voting === idea.id}
+                boards={boards}
+                others={list!.ideas.filter((i) => i.id !== idea.id && i.decision?.kind !== 'duplicate')}
+                onVote={(on) => vote(idea, on)}
+                onDecided={(next) => {
+                  replace(next)
+                  if (next.decision?.kind === 'duplicate') void reload()
+                }}
+              />
             </li>
           ))}
         </ul>
