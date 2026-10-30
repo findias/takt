@@ -51,6 +51,11 @@ board metrics have `movedOut`.
 
 ### The rest
 
+- **A card can be sent as a link.** **Copy link** in the card's **…**
+  menu, in the panel's top row and in the table's row menu puts the
+  card's address into the clipboard; whoever opens it sees the card on
+  its board if the board is visible to them. The address was always
+  there — now it does not have to be taken from the browser's bar.
 - **Ideas from people on the team.** A new tab, **Ideas**, next to
   **Tasks**: suggestions kept apart from the work on the boards. Anyone
   in the organisation submits an idea — a viewer included, the one

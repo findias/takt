@@ -35,7 +35,8 @@ import { Menu } from '../../shared/ui/Menu.tsx'
 import { SubtaskRow } from './SubtaskRow.tsx'
 import { StatusChip } from './StatusChip.tsx'
 import { statusWord, timeText } from '../../entities/feed/model.ts'
-import { boardPath, navigate } from '../../shared/router/index.ts'
+import { boardPath, cardLink, navigate } from '../../shared/router/index.ts'
+import { useCopy } from '../../shared/ui/CopyButton.tsx'
 import {
   ArchiveIcon,
   BlockedIcon,
@@ -44,6 +45,7 @@ import {
   ChevronRightIcon,
   ClockIcon,
   EditIcon,
+  LinkIcon,
   MoreIcon,
   MoveIcon,
   PlusIcon,
@@ -209,6 +211,7 @@ function CardViewInner({
   // ответ на «что здесь внутри», заданный один раз и здесь же, а не
   // настройка, которую человек ждёт увидеть завтра такой же.
   const [open, setOpen] = useState(false)
+  const copy = useCopy()
 
   useEffect(() => {
     const element = ref.current
@@ -839,6 +842,13 @@ function CardViewInner({
                           },
                         ]
                       : []),
+                    // Поделиться задачей — ссылкой: адрес карточки открывает
+                    // её на доске тому, кому доска видна.
+                    {
+                      label: t.cardView.copyLink,
+                      icon: <LinkIcon />,
+                      onSelect: () => copy(cardLink(boardId, cardId), t.cardView.linkWhat),
+                    },
                     {
                       label: t.cardView.archive,
                       icon: <ArchiveIcon />,

@@ -739,6 +739,9 @@ export const ru = {
     moveTo: (column: string) => `Перенести в «${column}»`,
     archive: 'Убрать в архив',
     moveToBoard: 'Перенести на другую доску…',
+    copyLink: 'Скопировать ссылку',
+    // В винительном падеже — под фразы копирования (`ui.copied`).
+    linkWhat: 'ссылку на карточку',
     deleteForever: 'Удалить навсегда',
     waits: 'Ждёт',
     holds: 'Держит',

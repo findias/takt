@@ -4,6 +4,7 @@ import type { panel as ru } from '../ru/panel.ts'
 export const panel: typeof ru = {
     talk: 'Discussion',
     moveToBoard: 'To another board…',
+    copyLink: 'Copy link',
     work: 'Work',
     history: 'History',
     tasks: 'Tasks',

@@ -5,6 +5,7 @@
 export const panel = {
     talk: 'Обсуждение',
     moveToBoard: 'На другую доску…',
+    copyLink: 'Скопировать ссылку',
     work: 'Работа',
     history: 'История',
     tasks: 'Задачи',

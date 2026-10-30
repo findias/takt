@@ -21,6 +21,16 @@ board commands.
 If the card is not found, check the filter: under a filter the board
 shows less than everything, and says so in the column.
 
+<a id="share"></a>
+### Send a card to someone
+
+Press **…** on the card, or open it and press **Copy link** in the
+panel's top row: the card's address goes to the clipboard, paste it
+into a chat or a letter. Whoever opens the link sees the card on its
+board — if the board is visible to them; a private board stays closed,
+and the page says so. The link survives a move to another board. The
+same item is in the row menu of the table.
+
 <a id="filter"></a>
 ### Filter down to what you need
 

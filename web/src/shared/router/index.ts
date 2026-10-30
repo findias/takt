@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { parseRoute } from './model.ts'
 import type { Route } from './model.ts'
 
-export { parseRoute, routePath, boardPath } from './model.ts'
+export { parseRoute, routePath, boardPath, cardLink } from './model.ts'
 export type { Route } from './model.ts'
 
 /**

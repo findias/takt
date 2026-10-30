@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { Menu } from '../../shared/ui/Menu.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { MoreIcon } from '../../shared/ui/icons.tsx'
+import { useCopy } from '../../shared/ui/CopyButton.tsx'
+import { cardLink } from '../../shared/router/index.ts'
 import { ageLabel, agingLabel, assigneeChoices } from '../../entities/board/model.ts'
 import {
   UNIT_SHORT,
@@ -73,6 +75,7 @@ export function TableView({
    *  подписями: сортировать без адреса некуда. */
   onSort?: (sort: Sort) => void
 }) {
+  const copy = useCopy()
   const columnName = useMemo(
     () => Object.fromEntries(columns.map((c) => [c.id, c.name])),
     [columns],
@@ -228,6 +231,7 @@ export function TableView({
                       ...(onMoveToBoard
                         ? [{ label: t.cardView.moveToBoard, onSelect: () => onMoveToBoard(card.id, card.title) }]
                         : []),
+                      { label: t.cardView.copyLink, onSelect: () => copy(cardLink(base.info.id, card.id), t.cardView.linkWhat) },
                       ...assigneeChoices(people, assignable, assignees).map(([id, name]) => ({
                         label: assignees.includes(id) ? t.talk.unassign(name) : t.talk.assignTo(name),
                         onSelect: () => onAssign(card.id, id, !assignees.includes(id)),

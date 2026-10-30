@@ -16,6 +16,26 @@ import { t } from '../i18n/index.ts'
  * `navigator.clipboard` просто отсутствует. Тогда человеку говорят,
  * что делать руками, — поле рядом и выделяется по щелчку.
  */
+/**
+ * Скопировать и сказать, вышло ли, — для кнопки и для пунктов меню:
+ * ссылка на карточку копируется из меню «…», а не отдельной кнопкой,
+ * и поведение у неё обязано быть тем же.
+ */
+export function useCopy(): (value: string, what: string) => void {
+  const notify = useToast()
+  return (value, what) => {
+    const done = navigator.clipboard?.writeText(value)
+    if (!done) {
+      notify({ text: t.ui.copyRefused(what), tone: 'warning' })
+      return
+    }
+    void done.then(
+      () => notify({ text: t.ui.copied(what), tone: 'info' }),
+      () => notify({ text: t.ui.copyFailed(what), tone: 'warning' }),
+    )
+  }
+}
+
 export function CopyButton({
   value,
   what,
@@ -27,30 +47,9 @@ export function CopyButton({
    *  место пришлось бы заводить вторую форму слова. */
   what: string
 }) {
-  const notify = useToast()
-
+  const copy = useCopy()
   return (
-    <button
-      aria-label={t.ui.copyWhat(what)}
-      onClick={() => {
-        const done = navigator.clipboard?.writeText(value)
-        if (!done) {
-          notify({
-            text: t.ui.copyRefused(what),
-            tone: 'warning',
-          })
-          return
-        }
-        void done.then(
-          () => notify({ text: t.ui.copied(what), tone: 'info' }),
-          () =>
-            notify({
-              text: t.ui.copyFailed(what),
-              tone: 'warning',
-            }),
-        )
-      }}
-    >
+    <button aria-label={t.ui.copyWhat(what)} onClick={() => copy(value, what)}>
       {t.ui.copy}
     </button>
   )

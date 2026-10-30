@@ -736,6 +736,8 @@ export const en: typeof ru = {
     moveTo: (column: string) => `Move to “${column}”`,
     archive: 'Archive',
     moveToBoard: 'Move to another board…',
+    copyLink: 'Copy link',
+    linkWhat: 'the link to the card',
     deleteForever: 'Delete for good',
     waits: 'Waits for',
     holds: 'Holds up',

@@ -8,6 +8,8 @@ import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { EditIcon } from '../../shared/ui/icons.tsx'
+import { useCopy } from '../../shared/ui/CopyButton.tsx'
+import { cardLink } from '../../shared/router/index.ts'
 import { api } from '../../shared/api/index.ts'
 import type {
   Card,
@@ -189,6 +191,7 @@ export function CardPanel({
 }) {
   const [mode, setMode] = usePanelMode()
   const [renamingTitle, setRenamingTitle] = useState(false)
+  const copy = useCopy()
   const [editingReason, setEditingReason] = useState(false)
   // Другая карточка — правка названия прежней не переезжает на неё.
   useEffect(() => {
@@ -286,11 +289,19 @@ export function CardPanel({
       label={t.panel.cardLabel(card.number, card.title)}
       onClose={onClose}
       actions={
-        onMoveToBoard && (
-          <button className="link" onClick={() => onMoveToBoard(card.id, card.title)}>
-            {t.panel.moveToBoard}
+        <>
+          {/* Поделиться задачей — пока ссылкой: адрес карточки открывает
+              её на доске тому, кому доска видна, и после переноса
+              на другую доску тоже. */}
+          <button className="link" onClick={() => copy(cardLink(boardId, card.id), t.cardView.linkWhat)}>
+            {t.panel.copyLink}
           </button>
-        )
+          {onMoveToBoard && (
+            <button className="link" onClick={() => onMoveToBoard(card.id, card.title)}>
+              {t.panel.moveToBoard}
+            </button>
+          )}
+        </>
       }
     >
       <Tabs

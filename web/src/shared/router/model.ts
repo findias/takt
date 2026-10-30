@@ -76,3 +76,9 @@ export function routePath(route: Route): string {
 export function boardPath(boardId: string, cardId: string | null = null): string {
   return routePath({ name: 'board', boardId, cardId })
 }
+
+/** Полный адрес карточки — чтобы вставить в переписку. `origin`
+ *  берётся у страницы: установка знает своё имя лучше, чем мы. */
+export function cardLink(boardId: string, cardId: string): string {
+  return `${location.origin}${boardPath(boardId, cardId)}`
+}
