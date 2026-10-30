@@ -495,6 +495,9 @@ export type Idea = {
   decision: IdeaDecision | null
   /** Я вправе решить судьбу этой идеи. */
   canDecide: boolean
+  /** Я вправе перенести идею на другой уровень: решающий или автор,
+   *  пока не решили; решённую насовсем не переносит никто. */
+  canMove: boolean
 }
 
 export type IdeaDecisionKind = 'taken' | 'declined' | 'duplicate' | 'later'

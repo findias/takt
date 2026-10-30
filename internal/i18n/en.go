@@ -691,6 +691,10 @@ var en = map[string]string{
 	"решать идею может владелец организации или владелец подразделения, которому она адресована": "an idea is decided by the organisation owner or by the owner of the subdivision it is addressed to",
 	"операция не вернула карточку":                                                               "the operation did not return a card",
 	"Из идеи «%s»": "From the idea “%s”",
+	// --- Перенос идеи между уровнями (этап 45) ---
+	"перенести идею может её автор, пока по ней не решили, владелец организации или владелец подразделения, которому она адресована": "an idea is moved by its author until it is decided, by the organisation owner or by the owner of the subdivision it is addressed to",
+	"владелец подразделения переносит идею внутрь своих подразделений или на всю организацию — в чужое подразделение нельзя":         "a subdivision owner moves an idea within their own subdivisions or to the whole organisation — not into someone else's subdivision",
+	"идея уже решена — взята, отклонена или названа двойником; переносят только открытые":                                            "the idea is already settled — taken, declined or marked a duplicate; only open ideas move",
 	// --- Идеи в отчёте и события (этап 43, срез 4) ---
 	"Идеи":         "Ideas",
 	"Автор":        "Author",

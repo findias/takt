@@ -80,6 +80,9 @@ type Idea struct {
 	Decision *Decision `json:"decision"`
 	// CanDecide — спрашивающий вправе решить судьбу этой идеи.
 	CanDecide bool `json:"canDecide"`
+	// CanMove — спрашивающий вправе перенести идею на другой уровень
+	// (move.go): решающий или автор, пока не решили; решённую — никто.
+	CanMove bool `json:"canMove"`
 }
 
 // List — идеи и то, всё ли показано.
@@ -138,7 +141,9 @@ const ideaQuery = `
 		         order by x.user_id, x.created_at) one
 		  left join users vu on vu.id = one.user_id) v`
 
-func scanIdea(row pgx.Row) (Idea, error) {
+// scanIdea читает строку ideaQuery глазами userID: право переноса
+// зависит от того, кто спрашивает, и считается здесь же.
+func scanIdea(row pgx.Row, userID string) (Idea, error) {
 	var out Idea
 	var d Decision
 	var dID, dKind, dNote *string
@@ -168,12 +173,13 @@ func scanIdea(row pgx.Row) (Idea, error) {
 		}
 		out.Decision = &d
 	}
+	out.CanMove = canMove(out, userID)
 	return out, nil
 }
 
 // one — идея по идентификатору глазами userID; нет или не видна — ErrNotFound.
 func one(ctx context.Context, tx pgx.Tx, userID, ideaID string) (Idea, error) {
-	i, err := scanIdea(tx.QueryRow(ctx, ideaQuery+` where i.id = $2`, userID, ideaID))
+	i, err := scanIdea(tx.QueryRow(ctx, ideaQuery+` where i.id = $2`, userID, ideaID), userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Idea{}, ErrNotFound
 	}
@@ -194,7 +200,7 @@ func (s *Service) All(ctx context.Context, orgID, userID string) (List, error) {
 		}
 		defer rows.Close()
 		for rows.Next() {
-			i, err := scanIdea(rows)
+			i, err := scanIdea(rows, userID)
 			if err != nil {
 				return err
 			}

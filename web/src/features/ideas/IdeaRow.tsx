@@ -6,6 +6,8 @@ import { boardPath, navigate } from '../../shared/router/index.ts'
 import { timeText } from '../../entities/feed/model.ts'
 import { votersLine } from '../../entities/idea/model.ts'
 import { DecisionForm } from './DecisionForm.tsx'
+import { MoveForm } from './MoveForm.tsx'
+import type { MoveTarget } from './MoveForm.tsx'
 import { loadDecisions } from './api.ts'
 
 /**
@@ -21,19 +23,26 @@ export function IdeaRow({
   busy,
   boards,
   others,
+  targets,
   onVote,
   onDecided,
+  onMoved,
 }: {
   idea: Idea
   busy: boolean
   boards: BoardInfo[]
   others: Idea[]
+  /** Куда переносящему можно (этап 45); спрашивается, когда нажали. */
+  targets: (idea: Idea) => MoveTarget[]
   onVote: (on: boolean) => void
   onDecided: (idea: Idea) => void
+  onMoved: (idea: Idea) => void
 }) {
   const s = t.ideas
   const who = votersLine(idea.voters)
-  const [deciding, setDeciding] = useState(false)
+  // Одно действие за раз: решение и перенос — два разных вопроса,
+  // и две раскрытые формы под одной идеей читались бы как одна.
+  const [opened, setOpened] = useState<'decide' | 'move' | null>(null)
   return (
     <article className="idea" aria-labelledby={`idea-${idea.id}`} tabIndex={-1}>
       <div className="idea-main">
@@ -47,21 +56,41 @@ export function IdeaRow({
         </p>
         {idea.decision && <DecisionLine decision={idea.decision} />}
         {idea.decision && <History idea={idea} />}
-        {idea.canDecide && !deciding && (
-          <Button kind="quiet" className="idea-decide-open" onClick={() => setDeciding(true)}>
-            {s.decide}
-          </Button>
+        {opened === null && (idea.canDecide || idea.canMove) && (
+          <div className="row row--tight idea-actions">
+            {idea.canDecide && (
+              <Button kind="quiet" className="idea-decide-open" onClick={() => setOpened('decide')}>
+                {s.decide}
+              </Button>
+            )}
+            {idea.canMove && (
+              <Button kind="quiet" className="idea-decide-open" onClick={() => setOpened('move')}>
+                {s.move}
+              </Button>
+            )}
+          </div>
         )}
-        {deciding && (
+        {opened === 'decide' && (
           <DecisionForm
             idea={idea}
             boards={boards}
             others={others}
             onDecided={(next) => {
-              setDeciding(false)
+              setOpened(null)
               onDecided(next)
             }}
-            onCancel={() => setDeciding(false)}
+            onCancel={() => setOpened(null)}
+          />
+        )}
+        {opened === 'move' && (
+          <MoveForm
+            idea={idea}
+            targets={targets(idea)}
+            onMoved={(next) => {
+              setOpened(null)
+              onMoved(next)
+            }}
+            onCancel={() => setOpened(null)}
           />
         )}
       </div>

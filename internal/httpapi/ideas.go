@@ -23,6 +23,7 @@ func (s *Server) registerIdeaRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/ideas", s.scoped(apiclient.ScopeBoardsWrite, s.handleCreateIdea))
 	mux.HandleFunc("PUT /api/ideas/{id}/vote", s.human(s.handleVoteIdea))
 	mux.HandleFunc("DELETE /api/ideas/{id}/vote", s.human(s.handleUnvoteIdea))
+	mux.HandleFunc("PATCH /api/ideas/{id}", s.human(s.handleMoveIdea))
 	mux.HandleFunc("GET /api/ideas/{id}/decisions", s.human(s.handleIdeaDecisions))
 	mux.HandleFunc("POST /api/ideas/{id}/decisions", s.human(s.handleDecideIdea))
 }
@@ -140,5 +141,38 @@ func (s *Server) handleDecideIdea(w http.ResponseWriter, r *http.Request, p auth
 	case s.failAccess(w, "решение по идее", err):
 	default:
 		writeJSON(w, http.StatusCreated, i)
+	}
+}
+
+// Перенос идеи между уровнями (ROADMAP 45): `teamId` — подразделение,
+// пусто — всей организации. Чужое подразделение и неизвестное — с кодом:
+// форма кладёт отказ под поле «кому».
+func (s *Server) handleMoveIdea(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	id := r.PathValue("id")
+	if _, err := uuid.Parse(id); err != nil {
+		writeError(w, http.StatusNotFound, idea.ErrNotFound.Error())
+		return
+	}
+	var req struct {
+		TeamID *string `json:"teamId"`
+	}
+	if !decode(w, r, &req) {
+		return
+	}
+	i, err := s.ideas.Move(r.Context(), p.OrgID, p.ID, id, req.TeamID)
+	switch {
+	case errors.Is(err, idea.ErrTeamUnknown):
+		writeCoded(w, http.StatusBadRequest, "idea_team_unknown", err.Error())
+	case errors.Is(err, idea.ErrMoveOutside):
+		writeCoded(w, http.StatusForbidden, "idea_move_outside", err.Error())
+	case errors.Is(err, idea.ErrCannotMove):
+		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, idea.ErrSettled):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, idea.ErrNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	case s.failAccess(w, "перенос идеи", err):
+	default:
+		writeJSON(w, http.StatusOK, i)
 	}
 }

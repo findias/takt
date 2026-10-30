@@ -22,3 +22,6 @@ export const decideIdea = (id: string, body: DecideBody) => request<Idea>('POST'
 
 export const loadDecisions = (id: string) =>
   request<{ decisions: IdeaDecision[] }>('GET', `/api/ideas/${id}/decisions`)
+
+/** Перенос на другой уровень: подразделение или вся организация (null). */
+export const moveIdea = (id: string, teamId: string | null) => request<Idea>('PATCH', `/api/ideas/${id}`, { teamId })

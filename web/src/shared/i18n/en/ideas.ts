@@ -68,4 +68,11 @@ export const ideas: typeof ru = {
     historyClosed: 'Decision history',
     historyLoading: 'Loading the history…',
     historyFailed: 'Could not load the history',
+    level: 'For',
+    levelAll: 'Everyone',
+    move: 'Move…',
+    moveTitle: 'For whom now',
+    moveHint: 'The idea moves to another level with its supporters and history; it will be decided by that subdivision’s owner or by the organisation owner.',
+    moveDo: 'Move',
+    moveFailed: 'The move was not recorded — try again.',
 }

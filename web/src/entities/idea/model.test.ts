@@ -1,8 +1,19 @@
 // Вкладка «Идеи»: порядок и похожее — чистые функции, без браузера.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isSettled, parseIdeaSort, similarIdeas, sortIdeas, stems, visibleIdeas, votersLine, waitingIdeas } from './model.ts'
-import type { Idea } from '../../shared/api/index.ts'
+import {
+  isSettled,
+  levelIdeas,
+  parseIdeaLevel,
+  parseIdeaSort,
+  similarIdeas,
+  sortIdeas,
+  stems,
+  visibleIdeas,
+  votersLine,
+  waitingIdeas,
+} from './model.ts'
+import type { Idea, Team } from '../../shared/api/index.ts'
 
 const idea = (id: string, title: string, votes: number, createdAt: string): Idea => ({
   id,
@@ -18,6 +29,7 @@ const idea = (id: string, title: string, votes: number, createdAt: string): Idea
   createdAt,
   decision: null,
   canDecide: false,
+  canMove: false,
 })
 const decided = (i: Idea, kind: 'taken' | 'declined' | 'duplicate' | 'later'): Idea => ({
   ...i,
@@ -97,4 +109,38 @@ test('ждут решения дольше двух недель: без реш�
     decided(idea('later', 'Отложенная старая', 0, '2026-09-01T10:00:00Z'), 'later'),
   ]
   assert.deepEqual(ids(waitingIdeas(list, now)), ['old'])
+})
+
+// Уровни (этап 45): подразделение включает вложенные, порядок списка
+// подразделений не важен.
+const team = (id: string, parentId: string | null, depth: number): Team => ({
+  id,
+  name: id,
+  parentId,
+  depth,
+  members: 0,
+  boards: 0,
+  fromDirectory: false,
+})
+const teams = [team('core', 'platform', 2), team('platform', null, 1), team('sales', null, 1)]
+const addressed = [
+  { ...idea('o', 'Общая', 0, '2026-10-01T00:00:00Z'), teamId: null },
+  { ...idea('p', 'Платформе', 0, '2026-10-01T00:00:00Z'), teamId: 'platform' },
+  { ...idea('c', 'Ядру', 0, '2026-10-01T00:00:00Z'), teamId: 'core' },
+  { ...idea('s', 'Продажам', 0, '2026-10-01T00:00:00Z'), teamId: 'sales' },
+]
+
+test('уровень: все, организация, подразделение с вложенными', () => {
+  assert.deepEqual(ids(levelIdeas(addressed, 'all', teams)), ['o', 'p', 'c', 's'])
+  assert.deepEqual(ids(levelIdeas(addressed, 'org', teams)), ['o'])
+  assert.deepEqual(ids(levelIdeas(addressed, 'platform', teams)), ['p', 'c'])
+  assert.deepEqual(ids(levelIdeas(addressed, 'core', teams)), ['c'])
+  assert.deepEqual(ids(levelIdeas(addressed, 'gone', teams)), [])
+})
+
+test('уровень читается из адреса, пустой — все', () => {
+  assert.equal(parseIdeaLevel(new URLSearchParams('')), 'all')
+  assert.equal(parseIdeaLevel(new URLSearchParams('level=')), 'all')
+  assert.equal(parseIdeaLevel(new URLSearchParams('level=org')), 'org')
+  assert.equal(parseIdeaLevel(new URLSearchParams('level=platform')), 'platform')
 })

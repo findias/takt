@@ -1,6 +1,6 @@
 // Вкладка «Идеи»: порядок списка и поиск похожего — чистые функции,
 // проверяются без браузера.
-import type { Idea } from '../../shared/api/index.ts'
+import type { Idea, Team } from '../../shared/api/index.ts'
 
 export type IdeaSort = 'new' | 'votes'
 
@@ -74,4 +74,37 @@ export const WAITING_DAYS = 14
 export function waitingIdeas(list: Idea[], now: Date = new Date()): Idea[] {
   const limit = now.getTime() - WAITING_DAYS * 24 * 60 * 60 * 1000
   return list.filter((i) => !i.decision && new Date(i.createdAt).getTime() < limit)
+}
+
+/** Подразделение в списке «кому»: в порядке дерева, с глубиной
+ *  для отступа — вложенное видно вложенным. */
+export type TeamChoice = { id: string; name: string; level: number }
+
+/** Уровень в адресе: `all` — весь список, `org` — адресованные всей
+ *  организации, иначе — подразделение. В адресе, как и порядок: отбор
+ *  «что просят у нас» пересылают ссылкой. */
+export function parseIdeaLevel(query: URLSearchParams): string {
+  return query.get('level') || 'all'
+}
+
+/**
+ * Идеи уровня. Подразделение включает вложенные в него, как в отчётах:
+ * владелец «Платформы» спрашивает «что просят у нас», а «у нас» —
+ * это и «Ядро» внутри. Список подразделений приходит плоским и в любом
+ * порядке, поэтому вложенные собираются, пока множество растёт.
+ */
+export function levelIdeas(list: Idea[], level: string, teams: Team[]): Idea[] {
+  if (level === 'all') return list
+  if (level === 'org') return list.filter((i) => i.teamId === null)
+  const inside = new Set([level])
+  for (let grew = true; grew; ) {
+    grew = false
+    for (const tm of teams) {
+      if (tm.parentId !== null && inside.has(tm.parentId) && !inside.has(tm.id)) {
+        inside.add(tm.id)
+        grew = true
+      }
+    }
+  }
+  return list.filter((i) => i.teamId !== null && inside.has(i.teamId))
 }

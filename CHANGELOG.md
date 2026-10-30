@@ -12,7 +12,7 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Seven migrations, safe for the running version.** `0080` adds two
+**Eight migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
@@ -21,7 +21,8 @@ lets `notifications.board_id` and `card_id` be empty and adds
 `notifications.idea_id` — the old version always fills both and reads
 through a join with cards, so it simply does not see notifications
 about ideas; `0086` adds the table `webhook_outbox` and a nullable
-`webhooks.resumed_at`. Pods of v0.5.x keep working on all of it.
+`webhooks.resumed_at`; `0087` adds one row policy on `ideas`, which the
+old version never exercises. Pods of v0.5.x keep working on all of it.
 
 **Subscription events now reach the receiver whoever caused them.**
 Until now a delivery was created in the transaction of the action by
@@ -85,6 +86,18 @@ board metrics have `movedOut`.
   report has a fourth sheet, **Ideas**, and JSON an `ideas` array; the
   organisation export includes `ideas`, `idea_votes` and
   `idea_decisions`.
+- **An idea has a level, and the level can change.** An idea is
+  addressed to the whole organisation or to a subdivision at any depth.
+  **For** above the list picks a level — everyone, the whole
+  organisation, or a subdivision with the ones nested in it; the choice
+  lives in the address. **Move…** under an idea changes its level, and
+  the supporters and the decision history go with it: the author moves
+  their own idea until it is decided, the organisation owner moves any
+  open idea anywhere, a subdivision owner moves the ideas addressed to
+  their subtree within it or up to the whole organisation — not into
+  someone else's subdivision. Settled ideas do not move. In the API:
+  `PATCH /api/ideas/{id}` with `teamId` (null for the whole
+  organisation), for signed-in people; the list reports `canMove`.
 - **A hundred percent and "done" are the same thing.** A card that
   reaches 100% — by hand, or because its last part got done, moved past
   the finish, was taken out or archived — is marked done, and its parent

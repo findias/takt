@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../../shared/api/index.ts'
-import type { Idea, Team } from '../../shared/api/index.ts'
+import type { Idea } from '../../shared/api/index.ts'
 import { Field, FormError, useFormErrors } from '../../shared/ui/Field.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
 import { t } from '../../shared/i18n/index.ts'
 import { similarIdeas } from '../../entities/idea/model.ts'
+import type { TeamChoice } from '../../entities/idea/model.ts'
 import { createIdea } from './api.ts'
 
 /** Поле, под которое сервер кладёт отказ, — по коду, не по тексту. */
@@ -31,7 +32,8 @@ export function IdeaForm({
   onCancel,
   onSupport,
 }: {
-  teams: Team[]
+  /** Подразделения в порядке дерева: уровень виден отступом. */
+  teams: TeamChoice[]
   existing: Idea[]
   onCreated: (idea: Idea) => void
   onCancel: () => void
@@ -119,7 +121,7 @@ export function IdeaForm({
             <option value="">{s.wholeOrg}</option>
             {teams.map((tm) => (
               <option key={tm.id} value={tm.id}>
-                {tm.name}
+                {'\u00a0\u00a0'.repeat(tm.level) + tm.name}
               </option>
             ))}
           </select>

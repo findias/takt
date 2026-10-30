@@ -4942,9 +4942,11 @@ textarea.description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.idea-actions {
+  margin-top: var(--space-2);
+}
 .idea-decide-open {
   align-self: flex-start;
-  margin-top: var(--space-2);
 }
 .idea-decide {
   margin-top: var(--space-2);

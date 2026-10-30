@@ -639,6 +639,21 @@ test('снимки экранов', async ({ page, browser }) => {
   await page.getByText('Похожее уже предлагали').waitFor()
   await page.screenshot({ path: `${SHOTS}/44б-идеи-форма-похожее.png`, fullPage: true })
   await page.getByRole('button', { name: 'Отмена' }).click()
+
+  // Уровни идей (этап 45): отбор «Кому» по подразделению с вложенными
+  // и форма переноса под первой открытой идеей.
+  // Подразделение в списке с отступом по глубине — выбирается по значению.
+  const platform = await page.locator('option', { hasText: 'Платформа' }).first().getAttribute('value')
+  // Имя списка — подпись вместе с выбранным значением, поэтому по подписи.
+  const levelPick = page.locator('.ideas-head label', { hasText: 'Кому' }).locator('select')
+  await levelPick.selectOption(platform!)
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${SHOTS}/45-идеи-уровень.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Перенести…' }).first().click()
+  await page.getByLabel('Кому теперь').waitFor()
+  await page.screenshot({ path: `${SHOTS}/45б-идея-перенос.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await levelPick.selectOption('all')
   await page.getByRole('checkbox', { name: 'Показать решённые' }).check()
   await page.getByRole('button', { name: 'Решить…' }).first().click()
   await page.getByRole('radio', { name: 'Не берём' }).check()

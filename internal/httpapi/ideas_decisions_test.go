@@ -27,6 +27,7 @@ type decidedIdea struct {
 	ideaAnswer
 	Decision  *decisionAnswer `json:"decision"`
 	CanDecide bool            `json:"canDecide"`
+	CanMove   bool            `json:"canMove"`
 }
 
 func (s *session) idea(title string, teamID any) string {
@@ -42,9 +43,16 @@ func (s *session) idea(title string, teamID any) string {
 
 func (s *session) decide(ideaID string, body map[string]any, want int) decidedIdea {
 	s.api.t.Helper()
+	return s.decideLike("POST", "/api/ideas/"+ideaID+"/decisions", body, want)
+}
+
+// decideLike — вызов, отвечающий идеей целиком при удаче и сырым
+// отказом (в ID) иначе: так проверка читает код отказа без второго типа.
+func (s *session) decideLike(method, path string, body map[string]any, want int) decidedIdea {
+	s.api.t.Helper()
 	var out decidedIdea
-	raw := s.mustDo("POST", "/api/ideas/"+ideaID+"/decisions", body, want)
-	if want == http.StatusCreated {
+	raw := s.mustDo(method, path, body, want)
+	if want < http.StatusBadRequest {
 		if err := json.Unmarshal(raw, &out); err != nil {
 			s.api.t.Fatal(err)
 		}

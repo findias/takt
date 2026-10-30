@@ -83,6 +83,7 @@
               "idea_board_readonly",
               "idea_target_required",
               "idea_target_self",
+              "idea_move_outside",
               "password_short",
               "password_link_invalid",
               "password_link_own",

@@ -19,7 +19,9 @@ in the English interface.
 Every role, the viewer included, suggests ideas on the **Ideas** tab and
 supports others' — an idea is not work. What becomes of an idea is decided
 by the owner, and by a subdivision owner for the ideas addressed to their
-subtree.
+subtree. An idea addressed to a subdivision is moved by that subdivision's
+owner within their subtree or up to the whole organisation; the owner
+moves any open idea anywhere, the author — their own until it is decided.
 
 Beyond roles, the owner appoints (and a subdivision owner, below their own node):
 

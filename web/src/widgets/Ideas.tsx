@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { api } from '../shared/api/index.ts'
-import type { BoardInfo, Idea, Principal, Team } from '../shared/api/index.ts'
+import type { BoardInfo, Idea, Principal, Team, TeamAdmin } from '../shared/api/index.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
 import { ScreenError } from '../shared/ui/Field.tsx'
 import { EmptyState, Skeleton } from '../shared/ui/states.tsx'
 import { Button } from '../shared/ui/Button.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { t } from '../shared/i18n/index.ts'
-import { parseIdeaSort, sortIdeas, visibleIdeas, waitingIdeas } from '../entities/idea/model.ts'
+import { levelIdeas, parseIdeaLevel, parseIdeaSort, sortIdeas, visibleIdeas, waitingIdeas } from '../entities/idea/model.ts'
+import { buildTree, invitableTeams } from '../entities/team/model.ts'
 import { IdeaForm } from '../features/ideas/IdeaForm.tsx'
 import { IdeaRow } from '../features/ideas/IdeaRow.tsx'
+import type { MoveTarget } from '../features/ideas/MoveForm.tsx'
 import { loadIdeas, voteIdea } from '../features/ideas/api.ts'
 import type { IdeaList } from '../features/ideas/api.ts'
 
@@ -26,12 +28,15 @@ export function Ideas({ principal }: { principal: Principal }) {
   const sort = parseIdeaSort(query)
   const withDecided = query.get('decided') === '1'
   const waitingOnly = query.get('waiting') === '1'
+  const level = parseIdeaLevel(query)
   const s = t.ideas
+  const isOwner = principal.role === 'owner'
 
   const [list, setList] = useState<IdeaList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [voteError, setVoteError] = useState<string | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
+  const [admins, setAdmins] = useState<TeamAdmin[]>([])
   const [boards, setBoards] = useState<BoardInfo[]>([])
   const [open, setOpen] = useState(false)
   const [voting, setVoting] = useState<string | null>(null)
@@ -46,25 +51,46 @@ export function Ideas({ principal }: { principal: Principal }) {
     }
   }, [s, principal.orgId])
 
-  // Подразделения нужны только форме — и грузятся, когда её открыли.
+  // Подразделения нужны отбору «кому» над списком, форме и переносу —
+  // грузятся сразу. Без них экран всё равно работает: отбор предложит
+  // только «всей организации», идея уйдёт туда же.
   useEffect(() => {
-    if (!open) return
     let current = true
     api
       .listTeams()
       .then((r) => current && setTeams(r.teams))
-      .catch(() => {
-        // Без списка форма всё равно работает: идея уйдёт всей организации.
-      })
+      .catch(() => {})
     return () => {
       current = false
     }
-  }, [open])
+  }, [principal.orgId])
 
   // Доски нужны только тому, кто решает, — и грузятся, когда есть
   // что решать; «уже есть» меняет голоса другой идеи, поэтому после
   // решения список перечитывается целиком.
   const canDecideAny = list?.ideas.some((i) => i.canDecide) ?? false
+  // Владельцу подразделения переносить можно внутрь своей области —
+  // какая она, знают записи администраторов; владельцу организации
+  // они не нужны, и запроса нет.
+  useEffect(() => {
+    if (!canDecideAny || isOwner) return
+    let current = true
+    api
+      .listAdmins()
+      .then((r) => current && setAdmins(r.admins))
+      .catch(() => {})
+    return () => {
+      current = false
+    }
+  }, [canDecideAny, isOwner])
+  const tree = buildTree(teams)
+  // Все подразделения в порядке дерева — для отбора и формы подачи.
+  const levels = invitableTeams(tree, true, [])
+  const adminRoots = admins.filter((a) => a.userId === principal.id).map((a) => a.teamId)
+  // Автор своей нерешённой идеи переносит её куда угодно — как владелец;
+  // остальным — своя область. Отказ всё равно за базой (0087).
+  const targetsFor = (idea: Idea): MoveTarget[] =>
+    invitableTeams(tree, isOwner || (idea.authorId === principal.id && idea.decision === null), adminRoots)
   useEffect(() => {
     if (!canDecideAny) return
     let current = true
@@ -97,7 +123,9 @@ export function Ideas({ principal }: { principal: Principal }) {
   }
 
   const waiting = list ? waitingIdeas(list.ideas) : []
-  const shown = list ? sortIdeas(waitingOnly ? waiting : visibleIdeas(list.ideas, withDecided), sort) : []
+  const shown = list
+    ? sortIdeas(levelIdeas(waitingOnly ? waiting : visibleIdeas(list.ideas, withDecided), level, teams), sort)
+    : []
 
   // Из колокольчика приходят к одной идее: адрес несёт её в #idea-…,
   // а список приезжает позже адреса — прокрутить можно только теперь.
@@ -125,6 +153,18 @@ export function Ideas({ principal }: { principal: Principal }) {
           <select value={sort} onChange={(e) => setFlag('sort', e.target.value === 'votes', 'votes')}>
             <option value="new">{s.sortNew}</option>
             <option value="votes">{s.sortVotes}</option>
+          </select>
+        </label>
+        <label className="row row--tight">
+          <span className="small">{s.level}</span>
+          <select value={level} onChange={(e) => setFlag('level', e.target.value !== 'all', e.target.value)}>
+            <option value="all">{s.levelAll}</option>
+            <option value="org">{s.wholeOrg}</option>
+            {levels.map((tm) => (
+              <option key={tm.id} value={tm.id}>
+                {'\u00a0\u00a0'.repeat(tm.level) + tm.name}
+              </option>
+            ))}
           </select>
         </label>
         <label className="row row--tight small">
@@ -155,7 +195,7 @@ export function Ideas({ principal }: { principal: Principal }) {
       {waitingOnly && <p className="muted small">{s.waitingOnly}</p>}
       {open && (
         <IdeaForm
-          teams={teams}
+          teams={levels}
           existing={list?.ideas ?? []}
           onCreated={(idea) => {
             setList((was) => (was ? { ...was, ideas: [idea, ...was.ideas] } : { ideas: [idea], truncated: false }))
@@ -185,11 +225,13 @@ export function Ideas({ principal }: { principal: Principal }) {
                 busy={voting === idea.id}
                 boards={boards}
                 others={list!.ideas.filter((i) => i.id !== idea.id && i.decision?.kind !== 'duplicate')}
+                targets={targetsFor}
                 onVote={(on) => vote(idea, on)}
                 onDecided={(next) => {
                   replace(next)
                   if (next.decision?.kind === 'duplicate') void reload()
                 }}
+                onMoved={replace}
               />
             </li>
           ))}
