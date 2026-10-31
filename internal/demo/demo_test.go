@@ -3,6 +3,7 @@ package demo
 import (
 	"context"
 	"errors"
+	"github.com/findias/takt/internal/org"
 	"testing"
 	"time"
 
@@ -230,5 +231,61 @@ func TestTopUpPutsAScrambledHistoryInOrder(t *testing.T) {
 	}
 	if after := count(); after != before {
 		t.Errorf("событий было %d, после долива %d — долив их терять не вправе", before, after)
+	}
+}
+
+// Долив дописывает людей, которых в организации стенда нет: состав
+// People растёт, а база стенда наполнена прежней версией. Дмитрий
+// возвращается и в организацию, и в «Ядро». Проверка идёт на стенде
+// общей базы, как и соседние: песочницу долив по людям не трогает.
+func TestTopUpAddsPeopleWhoCameLater(t *testing.T) {
+	ctx := context.Background()
+	db := testdb.Open(t)
+	err := Fill(ctx, db)
+	if err != nil && !errors.Is(err, ErrAlreadyFilled) {
+		t.Fatalf("наполнение: %v", err)
+	}
+	var orgID, ownerID string
+	if err := db.Pool.QueryRow(ctx, `
+		select o.id, u.id from orgs o
+		  join memberships m on m.org_id = o.id
+		  join users u on u.id = m.user_id
+		 where o.name = $1 and lower(u.email) = $2`, OrgName, People[0].Email).
+		Scan(&orgID, &ownerID); err != nil {
+		t.Fatalf("организация стенда: %v", err)
+	}
+	where := func() (bool, bool) {
+		var member, inTeam bool
+		if err := db.InTenant(ctx, orgID, ownerID, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `
+				select exists (select 1 from memberships m join users u on u.id = m.user_id
+				                where m.org_id = $2 and lower(u.email) = $1),
+				       exists (select 1 from team_members tm join users u on u.id = tm.user_id
+				                 join teams t on t.id = tm.team_id
+				                where tm.org_id = $2 and lower(u.email) = $1 and t.name = 'Ядро')`,
+				"dmitry@example.test", orgID).Scan(&member, &inTeam)
+		}); err != nil {
+			t.Fatalf("где Дмитрий: %v", err)
+		}
+		return member, inTeam
+	}
+	// Как в базе, наполненной до этапа 31: Дмитрия в организации нет.
+	// Исключает его владелец штатным путём — с журналом и составом;
+	// прошлый прогон мог уже исключить, тогда исключать нечего.
+	var dmitry string
+	if err := db.Pool.QueryRow(ctx, `select id from users where lower(email) = $1`, "dmitry@example.test").Scan(&dmitry); err != nil {
+		t.Fatalf("Дмитрий: %v", err)
+	}
+	if err := org.New(db).Remove(ctx, orgID, ownerID, dmitry); err != nil && !errors.Is(err, org.ErrNotFound) {
+		t.Fatalf("убрать Дмитрия: %v", err)
+	}
+	if member, _ := where(); member {
+		t.Fatal("Дмитрий остался в организации — проверка ничего не проверяет")
+	}
+	if err := TopUpOrg(ctx, db, orgID, ownerID); err != nil {
+		t.Fatalf("долив: %v", err)
+	}
+	if member, inTeam := where(); !member || !inTeam {
+		t.Errorf("после долива Дмитрий: в организации %v, в «Ядре» %v", member, inTeam)
 	}
 }

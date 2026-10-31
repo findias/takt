@@ -421,6 +421,73 @@ func (f *filler) organization() error {
 	return nil
 }
 
+// latecomers дописывает людей из People, которых в организации стенда
+// ещё нет. Состав растёт (Дмитрий появился на этапе 31), а долив идёт
+// в базу, наполненную прежней версией, — на стенде ветки так и вышло:
+// идеи спросили Дмитрия по почте и упали. Человек уже есть, но вне
+// организации (сервер один, организаций несколько) — вписывается
+// участием; Дмитрий — ещё и в «Ядро», как при наполнении с нуля.
+//
+// Песочницу не трогает: её людей заводят всех разом, а почты у них
+// свои — долив по почтам стенда привёл бы в песочницу чужих людей.
+// Стенд от песочницы отличается почтой владельца.
+func (f *filler) latecomers() error {
+	var ownerEmail string
+	if err := f.db.Pool.QueryRow(f.ctx, `select lower(email) from users where id = $1`, f.owner()).Scan(&ownerEmail); err != nil {
+		return err
+	}
+	if ownerEmail != strings.ToLower(f.email(People[0])) {
+		return nil
+	}
+	for _, p := range People[1:] {
+		email := strings.ToLower(f.email(p))
+		var inOrg bool
+		if err := f.db.Pool.QueryRow(f.ctx, `
+			select exists (select 1 from users u join memberships m on m.user_id = u.id and m.org_id = $1
+			                where lower(u.email) = $2)`, f.orgID, email).Scan(&inOrg); err != nil {
+			return err
+		}
+		if inOrg {
+			continue
+		}
+		var id string
+		err := f.db.Pool.QueryRow(f.ctx, `select id from users where lower(email) = $1`, email).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			hash, err := auth.HashPassword(f.password())
+			if err != nil {
+				return err
+			}
+			if err := f.db.Pool.QueryRow(f.ctx, `
+				insert into users (email, name, password_hash) values ($1, $2, $3) returning id`,
+				f.email(p), f.w(p.Name), hash).Scan(&id); err != nil {
+				return fmt.Errorf("личность %s: %w", f.email(p), err)
+			}
+		} else if err != nil {
+			return err
+		}
+		if _, err := f.db.Pool.Exec(f.ctx, `
+			insert into memberships (org_id, user_id, role) values ($1, $2, $3)`,
+			f.orgID, id, p.Role); err != nil {
+			return fmt.Errorf("участие %s: %w", f.email(p), err)
+		}
+		f.people[p.Email] = id
+		if p.Email != "dmitry@example.test" {
+			continue
+		}
+		var yadro string
+		if err := f.db.InTenant(f.ctx, f.orgID, f.owner(), func(tx pgx.Tx) error {
+			return tx.QueryRow(f.ctx, `select id from teams where name = $1 and archived_at is null`,
+				f.w("Ядро")).Scan(&yadro)
+		}); err != nil {
+			return fmt.Errorf("подразделение «Ядро»: %w", err)
+		}
+		if err := f.teams.AddMember(f.ctx, f.orgID, f.owner(), yadro, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // --- дерево подразделений ---
 
 func (f *filler) structure() error {

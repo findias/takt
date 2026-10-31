@@ -296,6 +296,10 @@ func TopUpOrg(ctx context.Context, db *store.Store, orgID, ownerID string) error
 // попал только в русский: выкладка staging 26.09.2026 прошла русскую
 // сверку и упала на английской.
 func (f *filler) topUp() error {
+	// Люди — первыми: всё ниже спрашивает их по почте.
+	if err := f.latecomers(); err != nil {
+		return err
+	}
 	if err := f.imported(); err != nil {
 		return err
 	}

@@ -98,6 +98,13 @@ board metrics have `movedOut`.
   someone else's subdivision. Settled ideas do not move. In the API:
   `PATCH /api/ideas/{id}` with `teamId` (null for the whole
   organisation), for signed-in people; the list reports `canMove`.
+- **`takt demo` on an existing base adds the demo people who came
+  later.** The demo cast grew over time (Dmitry in the Core subdivision
+  appeared in v0.4), and a base filled by an earlier version had no
+  such person; topping it up then failed on the first step that asked
+  for him by e-mail — the ideas. Now the missing people are added
+  first, to the organisation and to their subdivision. Sandboxes are
+  not touched.
 - **A hundred percent and "done" are the same thing.** A card that
   reaches 100% — by hand, or because its last part got done, moved past
   the finish, was taken out or archived — is marked done, and its parent
