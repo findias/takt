@@ -19,8 +19,8 @@ import (
 //
 //	make test-integration
 //
-// Без TEST_DATABASE_URL тесты пропускаются, чтобы `go test ./...` оставался
-// зелёным на машине без docker.
+// Без TEST_DATABASE_URL нужен явно короткий прогон `go test -short ./...`:
+// обычный прогон не должен выглядеть полным, пропустив проверки базы.
 func testStore(t *testing.T) *store.Store {
 	t.Helper()
 	return testdb.Shared(t)

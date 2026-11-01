@@ -122,7 +122,7 @@ web-dev: ## Vite с горячей перезагрузкой (запросы к
 
 .PHONY: test
 test: ## Быстрые тесты без базы
-	go test ./...
+	go test -short ./...
 
 .PHONY: test-integration
 test-integration: db migrate ## Все тесты, включая работающие с настоящей базой

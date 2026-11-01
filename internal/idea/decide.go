@@ -2,12 +2,15 @@ package idea
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -51,6 +54,8 @@ var (
 	ErrTargetRequired = errors.New("укажите, какая идея уже есть")
 	ErrTargetSelf     = errors.New("идея не может быть двойником самой себя")
 	ErrCannotDecide   = errors.New("решать идею может владелец организации или владелец подразделения, которому она адресована")
+	ErrRequestInvalid = errors.New("идентификатор запроса решения должен быть UUID")
+	ErrRequestReused  = errors.New("этот идентификатор запроса уже использован для другого решения")
 )
 
 // Decision — запись решения.
@@ -90,17 +95,19 @@ type IdeaRef struct {
 // DecideRequest — что решили. BoardID нужен «берём», IntoIdeaID —
 // «уже есть», Note обязателен «не берём».
 type DecideRequest struct {
+	// RequestID переживает потерю ответа. Пусто — клиент прежней версии.
+	RequestID  string `json:"requestId,omitempty"`
 	Kind       string `json:"decision"`
 	Note       string `json:"note"`
 	BoardID    string `json:"boardId"`
 	IntoIdeaID string `json:"intoIdeaId"`
 }
 
-// CardMaker заводит карточку на доске от имени человека — это делает
-// пакет board своей операцией, со своей блокировкой доски, лимитами
-// и событиями; здесь только просят.
+// CardMaker заводит карточку в транзакции решения — пакет board
+// сохраняет свои блокировки, лимиты и события, но не фиксирует
+// карточку раньше, чем удалось записать само решение.
 type CardMaker interface {
-	CreateCard(ctx context.Context, orgID, actorID, boardID, columnID, title, description string) (string, error)
+	CreateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, columnID, title, description string) (string, error)
 }
 
 // Decisions — история решений по идее, от нового к старому. Идея,
@@ -158,10 +165,22 @@ func (s *Service) Decisions(ctx context.Context, orgID, userID, ideaID string) (
 // до работы и политикой базы при записи (0084): владелец организации
 // или владелец подразделения, которому идея адресована.
 //
-// «Берём» заводит карточку до записи решения, отдельной операцией
-// доски: не вышло — решения нет. Обратное — решение есть, карточки
-// нет — хуже: автор прочтёт «берём» и не найдёт, куда делось.
+// Карточка, описание, решение и уведомления фиксируются вместе.
+// Блокировка идеи сериализует решение и перенос; после ожидания
+// перечитываются и права, и последнее решение. RequestID узнаёт даже
+// поздний повтор после другого решения; клиенту возвращается нынешнее
+// состояние без новой записи. Без ID прежний клиент узнаёт только
+// идентичный текущему ответ.
 func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req DecideRequest, cards CardMaker) (Idea, error) {
+	var requestID *string
+	if raw := strings.TrimSpace(req.RequestID); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return Idea{}, ErrRequestInvalid
+		}
+		canonical := id.String()
+		requestID = &canonical
+	}
 	kind := strings.TrimSpace(req.Kind)
 	known := false
 	for _, k := range Kinds {
@@ -193,9 +212,18 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 		}
 	}
 
-	// Проверки — до карточки: заведённая карточка при отказе в записи
-	// решения осталась бы висеть на доске без идеи.
-	var title, body, columnID string
+	// Неиспользуемые поля не меняют смысл команды. Отпечаток хранит
+	// исходную доску: карточка позже может переехать или исчезнуть.
+	normalized := DecideRequest{Kind: kind, Note: note}
+	if kind == Taken {
+		normalized.BoardID = boardID
+	}
+	if kind == Duplicate {
+		normalized.IntoIdeaID = into
+	}
+	raw, _ := json.Marshal(normalized)
+	fingerprint := fmt.Sprintf("%x", sha256.Sum256(raw))
+	var out Idea
 	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		i, err := one(ctx, tx, actorID, ideaID)
 		if err != nil {
@@ -204,7 +232,49 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 		if !i.CanDecide {
 			return ErrCannotDecide
 		}
-		title, body = i.Title, i.Body
+		if err := lockIdea(ctx, tx, ideaID); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return ErrCannotDecide
+			}
+			return err
+		}
+		i, err = one(ctx, tx, actorID, ideaID)
+		if err != nil {
+			return err
+		}
+		if !i.CanDecide {
+			return ErrCannotDecide
+		}
+		if requestID != nil {
+			var previous string
+			err := tx.QueryRow(ctx, `
+				select request_fingerprint from idea_decisions
+				 where idea_id = $1 and author_id = $2 and request_id = $3`,
+				ideaID, actorID, *requestID).Scan(&previous)
+			switch {
+			case errors.Is(err, pgx.ErrNoRows):
+			case err != nil:
+				return err
+			case previous != fingerprint:
+				return ErrRequestReused
+			default:
+				// Возвращаем нынешнее состояние: поздний ответ не должен
+				// показывать на экране решение, уже заменённое другим.
+				out = i
+				return nil
+			}
+		}
+		if requestID == nil && i.Decision != nil {
+			var previous string
+			if err := tx.QueryRow(ctx, `select request_fingerprint from idea_decisions where id = $1`, i.Decision.ID).Scan(&previous); err != nil {
+				return err
+			}
+			if previous == fingerprint || (previous == "" && sameLegacyDecision(i.Decision, normalized)) {
+				out = i
+				return nil
+			}
+		}
+		var columnID string
 		switch kind {
 		case Taken:
 			var writable bool
@@ -221,43 +291,37 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrBoardEmpty
 			}
-			return err
+			if err != nil {
+				return err
+			}
 		case Duplicate:
 			if _, err := one(ctx, tx, actorID, into); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return Idea{}, err
-	}
-
-	var cardID *string
-	if kind == Taken {
-		// Карточка получает описание идеи и строку, откуда она: автор
-		// идеи найдёт её по словам, а команда — поймёт, зачем она.
-		origin := i18n.Name(ctx, fmt.Sprintf("Из идеи «%s»", title))
-		description := strings.TrimSpace(body + "\n\n" + origin)
-		id, err := cards.CreateCard(ctx, orgID, actorID, boardID, columnID, title, description)
-		if err != nil {
-			return Idea{}, err
+		var cardID *string
+		if kind == Taken {
+			origin := i18n.Name(ctx, fmt.Sprintf("Из идеи «%s»", i.Title))
+			description := strings.TrimSpace(i.Body + "\n\n" + origin)
+			id, err := cards.CreateCard(ctx, tx, orgID, actorID, boardID, columnID, i.Title, description)
+			if err != nil {
+				return err
+			}
+			cardID = &id
 		}
-		cardID = &id
-	}
-
-	var out Idea
-	err = s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
 		var intoID *string
 		if kind == Duplicate {
 			intoID = &into
 		}
 		var decisionID string
-		err := tx.QueryRow(ctx, `
-			insert into idea_decisions (org_id, idea_id, author_id, decision, note, card_id, into_idea_id)
-			values ($1, $2, $3, $4, $5, $6, $7)
+		// now() относится к началу транзакции, ещё до ожидания замка.
+		// История должна идти в порядке записанных решений, а не старта
+		// запросов, иначе поздно получивший замок ответ останется прошлым.
+		err = tx.QueryRow(ctx, `
+			insert into idea_decisions (org_id, idea_id, author_id, decision, note, card_id, into_idea_id, request_fingerprint, request_id, created_at)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, clock_timestamp())
 			returning id`,
-			orgID, ideaID, actorID, kind, note, cardID, intoID).Scan(&decisionID)
+			orgID, ideaID, actorID, kind, note, cardID, intoID, fingerprint, requestID).Scan(&decisionID)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "42501" {
@@ -275,6 +339,23 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, ideaID string, req
 		return webhook.Enqueue(ctx, tx, orgID, EventDecided, map[string]any{"idea": out.Public()})
 	})
 	return out, err
+}
+
+// У старой версии отпечатка нет. Пока ссылки сохранились, одинаковый
+// текущий ответ узнаётся по прежним полям — обновление не должно
+// само по себе создавать вторую карточку при первом повторе.
+func sameLegacyDecision(d *Decision, req DecideRequest) bool {
+	if d.Kind != req.Kind || d.Note != req.Note {
+		return false
+	}
+	switch req.Kind {
+	case Taken:
+		return d.Card != nil && d.Card.BoardID == req.BoardID
+	case Duplicate:
+		return d.Into != nil && d.Into.ID == req.IntoIdeaID
+	default:
+		return true
+	}
 }
 
 // notifyDecided пишет «по идее решили» автору и поддержавшим — в той же

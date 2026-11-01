@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/findias/takt/internal/board"
 )
@@ -16,9 +17,9 @@ import (
 // описания нет, и заводить его ради одного вызова незачем.
 type Cards struct{ Boards *board.Service }
 
-func (m Cards) CreateCard(ctx context.Context, orgID, actorID, boardID, columnID, title, description string) (string, error) {
+func (m Cards) CreateCard(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID, columnID, title, description string) (string, error) {
 	payload, _ := json.Marshal(map[string]any{"title": title, "columnId": columnID})
-	res, err := m.Boards.Apply(ctx, orgID, actorID, boardID, board.Request{
+	res, err := m.Boards.ApplyInTx(ctx, tx, orgID, actorID, boardID, board.Request{
 		OperationID: uuid.NewString(), Type: "CREATE_CARD", Payload: payload})
 	if err != nil {
 		return "", err
@@ -31,7 +32,7 @@ func (m Cards) CreateCard(ctx context.Context, orgID, actorID, boardID, columnID
 		return id, nil
 	}
 	payload, _ = json.Marshal(map[string]any{"cardId": id, "description": description})
-	_, err = m.Boards.Apply(ctx, orgID, actorID, boardID, board.Request{
+	_, err = m.Boards.ApplyInTx(ctx, tx, orgID, actorID, boardID, board.Request{
 		OperationID: uuid.NewString(), Type: "UPDATE_CARD", Payload: payload})
 	return id, err
 }

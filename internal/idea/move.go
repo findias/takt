@@ -53,6 +53,22 @@ func (s *Service) Move(ctx context.Context, orgID, userID, ideaID string, teamID
 		if !i.CanMove {
 			return ErrCannotMove
 		}
+		if err := lockIdea(ctx, tx, ideaID); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return ErrCannotMove
+			}
+			return err
+		}
+		i, err = one(ctx, tx, userID, ideaID)
+		if err != nil {
+			return err
+		}
+		if i.Decision != nil && i.Decision.Kind != Later {
+			return ErrSettled
+		}
+		if !i.CanMove {
+			return ErrCannotMove
+		}
 		if teamID != nil {
 			var known bool
 			if err := tx.QueryRow(ctx,

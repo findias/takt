@@ -12,7 +12,7 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Eight migrations, safe for the running version.** `0080` adds two
+**Ten migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
@@ -22,7 +22,20 @@ lets `notifications.board_id` and `card_id` be empty and adds
 through a join with cards, so it simply does not see notifications
 about ideas; `0086` adds the table `webhook_outbox` and a nullable
 `webhooks.resumed_at`; `0087` adds one row policy on `ideas`, which the
-old version never exercises. Pods of v0.5.x keep working on all of it.
+old version never exercises; `0088` adds `idea_decisions.request_fingerprint`
+with an empty default, so the old code can still write decisions;
+`0089` adds a nullable `idea_decisions.request_id` and a unique index
+for requests by a person on an idea.
+Pods of v0.5.x keep working on all of it.
+
+**Taking an idea saves the card and decision together.** A failure no
+longer leaves a card behind without a decision. The decision form keeps
+a `requestId` across retries after a lost response. Even after another
+decision, a late retry returns the current state without a duplicate
+card or notification; changing a command under the same ID gets `409`.
+Clients from the previous version send no ID and keep protection for
+identical consecutive decisions only. Moving and deciding the same idea now wait
+for each other and recheck its state and the actor's rights.
 
 **Subscription events now reach the receiver whoever caused them.**
 Until now a delivery was created in the transaction of the action by

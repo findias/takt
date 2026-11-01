@@ -861,6 +861,14 @@ count to see only them. An integration key with `boards:read` reads the
 list at `/api/v1/ideas`, and one with `boards:write` submits ideas —
 a bot in a chat can bring them; voting and deciding stay with people.
 
+If a save response is lost, submitting the same form again returns the
+idea's current state without an extra card or notification, even if
+another decision was made meanwhile. Changing the form starts a new
+decision and records an entry in its history. The card,
+its description and the decision are saved together; a failed save
+leaves no partial card on the board. Moving an idea waits for a decision
+being saved, then checks its new state and your rights again.
+
 An idea has a level: the whole organisation, or a subdivision at any
 depth — **For whom** is chosen when it is submitted. **For** above the
 list picks a level: everyone, the whole organisation, or one

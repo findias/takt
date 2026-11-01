@@ -123,8 +123,8 @@ test file backing each promise, is in
 
 What has been deliberately left out is listed at the end of
 [`REQUIREMENTS.md`](REQUIREMENTS.md), each with what would lift the
-deferral. Briefly: no file attachments on cards, no dates as a schedule
-and no Gantt charts (that is a different product), and no public cloud
+deferral. Briefly: no dates as a schedule and no Gantt charts
+(that is a different product), and no public cloud
 with self-service — the installation is meant to be private, which is
 exactly why sign-up closes with a setting.
 

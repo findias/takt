@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../../shared/api/index.ts'
 import type { BoardInfo, Idea, IdeaDecisionKind } from '../../shared/api/index.ts'
@@ -46,6 +46,9 @@ export function DecisionForm({
   const [target, setTarget] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  // Обрыв ответа не делает отправленное новым намерением. Пока поля
+  // прежние, повторяем тот же запрос; изменённое решение получает UUID.
+  const attempt = useRef<{ signature: string; id: string } | null>(null)
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -60,12 +63,17 @@ export function DecisionForm({
     }
     setBusy(true)
     form.clear()
-    decideIdea(idea.id, {
+    const body = {
       decision: kind,
-      note,
+      note: note.trim(),
       ...(kind === 'taken' ? { boardId: board } : {}),
       ...(kind === 'duplicate' ? { intoIdeaId: target } : {}),
-    })
+    }
+    const signature = JSON.stringify(body)
+    if (attempt.current?.signature !== signature) {
+      attempt.current = { signature, id: crypto.randomUUID() }
+    }
+    decideIdea(idea.id, { ...body, requestId: attempt.current.id })
       .then(onDecided)
       .catch((err: unknown) => {
         const code = err instanceof ApiError ? (err.body?.code as string | undefined) : undefined

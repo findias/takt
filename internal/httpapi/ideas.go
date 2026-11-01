@@ -130,9 +130,9 @@ func (s *Server) handleDecideIdea(w http.ResponseWriter, r *http.Request, p auth
 		writeCoded(w, http.StatusBadRequest, "idea_target_required", err.Error())
 	case errors.Is(err, idea.ErrTargetSelf):
 		writeCoded(w, http.StatusBadRequest, "idea_target_self", err.Error())
-	case errors.Is(err, idea.ErrKindUnknown), errors.Is(err, idea.ErrNoteLong):
+	case errors.Is(err, idea.ErrKindUnknown), errors.Is(err, idea.ErrNoteLong), errors.Is(err, idea.ErrRequestInvalid):
 		writeError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, idea.ErrBoardEmpty):
+	case errors.Is(err, idea.ErrBoardEmpty), errors.Is(err, idea.ErrRequestReused):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, idea.ErrCannotDecide):
 		writeError(w, http.StatusForbidden, err.Error())

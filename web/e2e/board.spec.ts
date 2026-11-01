@@ -3893,3 +3893,56 @@ test('выделенные карточки переносятся на друг
   await expect(cardIn(page, 'В работе', 'Первая к соседям')).toBeVisible()
   await expect(cardIn(page, 'В работе', 'Вторая к соседям')).toBeVisible()
 })
+
+test('потерянный ответ решения повторяется без второй карточки и не отменяет позднейшее решение', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Работа по идеям')
+  const boardId = new URL(page.url()).pathname.split('/')[2]
+  await page.goto('/ideas')
+  await page.getByRole('note').getByRole('button', { name: 'Предложить идею' }).click()
+  await page.getByLabel('Что предлагаете', { exact: true }).fill('Перенести согласование в общий чат')
+  await page.getByRole('button', { name: 'Подать', exact: true }).click()
+  const row = page.getByRole('article', { name: 'Перенести согласование в общий чат' })
+  await row.getByRole('button', { name: 'Решить…' }).click()
+  await row.getByLabel('Доска', { exact: true }).selectOption({ label: 'Работа по идеям' })
+
+  let requestId = ''
+  let ideaId = ''
+  let attempts = 0
+  await page.route('**/api/ideas/*/decisions', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    const body = route.request().postDataJSON()
+    attempts++
+    const response = await route.fetch()
+    expect(response.status()).toBe(201)
+    if (attempts === 1) {
+      requestId = body.requestId
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
+      const path = new URL(route.request().url()).pathname
+      ideaId = path.split('/')[3]
+      // Сервер сохранил «берём», ответ потерялся; пока человек
+      // повторяет, другой запрос уже отложил идею.
+      const later = await page.request.post(path, {
+        data: { decision: 'later', note: 'Сначала согласование', requestId: crypto.randomUUID() },
+      })
+      expect(later.status()).toBe(201)
+      await route.abort('failed')
+    } else {
+      expect(body.requestId).toBe(requestId)
+      await route.fulfill({ response })
+    }
+  })
+
+  await row.getByRole('button', { name: 'Записать', exact: true }).click()
+  await expect(row.getByRole('alert')).toContainText('Нет связи с сервером')
+  await row.getByRole('button', { name: 'Записать', exact: true }).click()
+  await expect(row.getByRole('button', { name: 'Записать', exact: true })).toHaveCount(0)
+  await expect(row.getByText('Позже', { exact: true })).toBeVisible()
+  expect(attempts).toBe(2)
+
+  const board = await (await page.request.get(`/api/boards/${boardId}`)).json()
+  expect(board.cards).toHaveLength(1)
+  const history = await (await page.request.get(`/api/ideas/${ideaId}/decisions`)).json()
+  expect(history.decisions).toHaveLength(2)
+  expect(history.decisions[0].kind).toBe('later')
+})

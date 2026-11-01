@@ -15,7 +15,7 @@ export const createIdea = (title: string, body: string, teamId: string | null) =
 export const voteIdea = (id: string, on: boolean) =>
   request<Idea>(on ? 'PUT' : 'DELETE', `/api/ideas/${id}/vote`)
 
-export type DecideBody = { decision: IdeaDecisionKind; note: string; boardId?: string; intoIdeaId?: string }
+export type DecideBody = { requestId: string; decision: IdeaDecisionKind; note: string; boardId?: string; intoIdeaId?: string }
 
 /** Решение записывается; ответ — идея целиком с нынешним решением. */
 export const decideIdea = (id: string, body: DecideBody) => request<Idea>('POST', `/api/ideas/${id}/decisions`, body)

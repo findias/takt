@@ -691,6 +691,8 @@ var en = map[string]string{
 	"решать идею может владелец организации или владелец подразделения, которому она адресована": "an idea is decided by the organisation owner or by the owner of the subdivision it is addressed to",
 	"операция не вернула карточку":                                                               "the operation did not return a card",
 	"Из идеи «%s»": "From the idea “%s”",
+	"идентификатор запроса решения должен быть UUID":                 "the decision request identifier must be a UUID",
+	"этот идентификатор запроса уже использован для другого решения": "this request identifier was already used for a different decision",
 	// --- Перенос идеи между уровнями (этап 45) ---
 	"перенести идею может её автор, пока по ней не решили, владелец организации или владелец подразделения, которому она адресована": "an idea is moved by its author until it is decided, by the organisation owner or by the owner of the subdivision it is addressed to",
 	"владелец подразделения переносит идею внутрь своих подразделений или на всю организацию — в чужое подразделение нельзя":         "a subdivision owner moves an idea within their own subdivisions or to the whole organisation — not into someone else's subdivision",
