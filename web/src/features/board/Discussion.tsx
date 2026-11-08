@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { useAutoGrow } from '../../shared/lib/useAutoGrow.ts'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { api } from '../../shared/api/index.ts'
@@ -9,60 +10,79 @@ import { Menu } from '../../shared/ui/Menu.tsx'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
 
-/**
- * Обсуждение карточки.
- *
- * Ветки глубиной в один уровень: ответ на ответ читать невозможно, и все,
- * кто пробовал, к этому пришли. Удалённая реплика остаётся на месте — на
- * неё ссылаются ответы, — но без текста: вырезав её, мы разорвали бы
- * ветку, в которой отвечали живым людям.
- */
+/** Общая хронология, ответы сохраняют ссылку на исходную реплику. */
 export function Discussion({
   boardId,
   cardId,
   meId,
   canEdit,
   people,
+  revision = 0,
 }: {
   boardId: string
   cardId: string
   meId: string
   canEdit: boolean
-  /** Кого можно позвать в обсуждение: те, кто видит доску, имя по идентификатору. */
   people: Record<string, string>
+  /** Версия снимка: чужая реплика приходит через уже открытый поток доски. */
+  revision?: number
 }) {
-  // Себя не зовут: уведомления о своём действии не бывает, и пункт
-  // в меню обещал бы то, чего не случится.
   const callable = Object.entries(people).filter(([id]) => id !== meId)
   const [comments, setComments] = useState<Comment[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
-
-  const load = useCallback(() => {
-    api
-      .comments(boardId, cardId)
-      .then((r) => setComments(r.comments))
-      .catch((e) => setError(e instanceof Error ? e.message : t.talk.readFailed))
-  }, [boardId, cardId])
-
-  useEffect(load, [load])
-
   const [toDelete, setToDelete] = useState<string | null>(null)
-  const act = (p: Promise<unknown>) => {
+  const [away, setAway] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const follow = useRef(true)
+  const request = useRef(0)
+  const load = useCallback(async () => {
+    const current = ++request.current
+    try {
+      const result = await api.comments(boardId, cardId)
+      if (current === request.current) {
+        setComments(result.comments)
+        setError(null)
+      }
+    } catch (e) {
+      if (current === request.current) setError(e instanceof Error ? e.message : t.talk.readFailed)
+    }
+  }, [boardId, cardId])
+  useEffect(() => {
+    void load()
+    return () => { request.current++ }
+  }, [load, revision])
+
+  const bottom = useCallback(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+    follow.current = true
+    setAway(false)
+  }, [])
+  // До отрисовки первого кадра открываем хвост; при чтении истории
+  // сохраняем место. ResizeObserver учитывает рост поля и смену размера окна.
+  useLayoutEffect(() => {
+    if (follow.current) bottom()
+  }, [comments, bottom])
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => { if (follow.current) bottom() })
+    if (scrollRef.current) observer.observe(scrollRef.current)
+    if (contentRef.current) observer.observe(contentRef.current)
+    return () => observer.disconnect()
+  }, [bottom])
+
+  const act = async (p: Promise<unknown>) => {
     setError(null)
-    p.then(load).catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
+    try { await p; await load() }
+    catch (e) { setError(e instanceof Error ? e.message : t.common.notDone) }
   }
-
-  if (!comments) return <p className="muted small">{t.talk.loading}</p>
-
-  const roots = comments.filter((c) => c.parentId === null)
-  const repliesOf = (id: string) => comments.filter((c) => c.parentId === id)
-
+  const byId = new Map(comments?.map((c) => [c.id, c]))
+  const reply = replyTo ? byId.get(replyTo) : undefined
   return (
-    <section className="stack">
-      <h3 className="section-title">{t.talk.title}</h3>
-      {/* Удалённую реплику не вернуть — значит, спрашивает. Прежде
-          удалял с первого нажатия (разбор 21.09.2026). */}
+    <section className="discussion" aria-label={t.talk.title}>
       <ConfirmDialog
         open={toDelete !== null}
         title={t.talk.deleteTitle}
@@ -72,56 +92,64 @@ export function Discussion({
         onConfirm={() => {
           const id = toDelete
           setToDelete(null)
-          if (id) act(api.deleteComment(id))
+          if (id) void act(api.deleteComment(id))
         }}
       >
         <p>{t.talk.deleteBody}</p>
       </ConfirmDialog>
       <ScreenError>{error}</ScreenError>
-
-      {roots.length === 0 && <p className="muted small">{t.talk.quiet}</p>}
-
-      {roots.map((c) => (
-        <div key={c.id} className="stack">
-          <CommentRow
-            comment={c}
-            meId={meId}
-            canEdit={canEdit}
-            onEdit={(body) => act(api.editComment(c.id, body))}
-            onDelete={() => setToDelete(c.id)}
-            onReply={() => setReplyTo(replyTo === c.id ? null : c.id)}
-          />
-          <div className="replies">
-            {repliesOf(c.id).map((r) => (
-              <CommentRow
-                key={r.id}
-                comment={r}
-                meId={meId}
-                canEdit={canEdit}
-                onEdit={(body) => act(api.editComment(r.id, body))}
-                onDelete={() => setToDelete(r.id)}
-              />
-            ))}
-            {replyTo === c.id && canEdit && (
-              <NewComment
-                placeholder={t.talk.reply}
-                people={callable}
-                onSend={(body, mentions) => {
-                  act(api.addComment(boardId, cardId, body, c.id, mentions))
-                  setReplyTo(null)
-                }}
-              />
-            )}
-          </div>
+      {error && !comments && <button onClick={() => void load()}>{t.talk.retry}</button>}
+      <div className="discussion-messages" ref={scrollRef} role="log" aria-label={t.talk.title}
+        tabIndex={0} onScroll={() => {
+          const el = scrollRef.current!
+          follow.current = el.scrollHeight - el.clientHeight - el.scrollTop <= 48
+          setAway(!follow.current)
+        }}>
+        <div className="discussion-content" ref={contentRef}>
+          {!comments && !error && <p className="muted small">{t.talk.loading}</p>}
+          {comments?.length === 0 && <p className="muted small">{t.talk.quiet}</p>}
+          {comments?.map((c) => (
+            <article key={c.id} className={`discussion-message${c.authorId === meId ? ' discussion-message--mine' : ''}`}>
+              {c.parentId && byId.has(c.parentId) && (
+                <div className="discussion-quote small">
+                  <strong>{byId.get(c.parentId)!.author ?? t.talk.noName}</strong>
+                  <p>{byId.get(c.parentId)!.deleted ? t.talk.deleted : byId.get(c.parentId)!.body}</p>
+                </div>
+              )}
+              <CommentRow comment={c} meId={meId} canEdit={canEdit}
+                onEdit={(body) => void act(api.editComment(c.id, body))}
+                onDelete={() => setToDelete(c.id)}
+                onReply={c.parentId === null ? () => {
+                  setReplyTo(c.id)
+                  fieldRef.current?.focus({ preventScroll: true })
+                } : undefined} />
+            </article>
+          ))}
         </div>
-      ))}
-
-      {canEdit && (
-        <NewComment
-          placeholder={t.talk.write}
-          people={callable}
-          onSend={(body, mentions) => act(api.addComment(boardId, cardId, body, null, mentions))}
-        />
+      </div>
+      {away && <button className="btn btn--quiet discussion-latest" onClick={bottom}>{t.talk.latest}</button>}
+      {canEdit && comments && (
+        <div className="discussion-composer">
+          {reply && <div className="discussion-reply">
+            <div className="discussion-quote small"><strong>{t.talk.replyingTo} {reply.author ?? t.talk.noName}</strong>
+              <p>{reply.deleted ? t.talk.deleted : reply.body}</p></div>
+            <button className="link" onClick={() => { setReplyTo(null); fieldRef.current?.focus() }}>{t.common.cancel}</button>
+          </div>}
+          <NewComment fieldRef={fieldRef} placeholder={t.talk.write} people={callable}
+            onSend={async (body, mentions) => {
+              setError(null)
+              try {
+                await api.addComment(boardId, cardId, body, replyTo, mentions)
+                follow.current = true
+                setReplyTo(null)
+                await load()
+                return true
+              } catch (e) {
+                setError(e instanceof Error ? e.message : t.common.notDone)
+                return false
+              }
+            }} />
+        </div>
       )}
     </section>
   )
@@ -258,29 +286,39 @@ function NewComment({
   placeholder,
   people,
   onSend,
+  fieldRef,
 }: {
   placeholder: string
   people: [string, string][]
-  onSend: (body: string, mentions: string[]) => void
+  onSend: (body: string, mentions: string[]) => Promise<boolean>
+  fieldRef: RefObject<HTMLTextAreaElement | null>
 }) {
   const [body, setBody] = useState('')
   const [called, setCalled] = useState<string[]>([])
-  const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const [sending, setSending] = useState(false)
+  const pending = useRef(false)
   useAutoGrow(fieldRef, body)
   const nameOf = (id: string) => people.find(([pid]) => pid === id)?.[1] ?? ''
   return (
     <form
       className="stack"
-      onSubmit={(e) => {
+      aria-busy={sending}
+      onSubmit={async (e) => {
         e.preventDefault()
         const text = body.trim()
-        if (!text) return
-        onSend(
-          text,
-          called.filter((id) => text.includes('@' + nameOf(id))),
-        )
-        setBody('')
-        setCalled([])
+        if (!text || pending.current) return
+        pending.current = true
+        setSending(true)
+        try {
+          if (await onSend(text, called.filter((id) => text.includes('@' + nameOf(id))))) {
+            setBody('')
+            setCalled([])
+            fieldRef.current?.focus({ preventScroll: true })
+          }
+        } finally {
+          pending.current = false
+          setSending(false)
+        }
       }}
     >
       <textarea
@@ -290,10 +328,11 @@ function NewComment({
         value={body}
         placeholder={placeholder}
         aria-label={placeholder}
+        readOnly={sending}
         onChange={(e) => setBody(e.target.value)}
       />
       <div className="row row--tight">
-        <button type="submit" disabled={!body.trim()}>
+        <button type="submit" disabled={!body.trim() || sending}>
           {t.talk.send}
         </button>
         {people.length > 0 && (
@@ -304,7 +343,9 @@ function NewComment({
             items={people.map(([id, name]) => ({
               id,
               label: name,
+              disabled: sending,
               onSelect: () => {
+                if (pending.current) return
                 setBody((b) => `${b}${b && !b.endsWith(' ') ? ' ' : ''}@${name} `)
                 setCalled((list) => (list.includes(id) ? list : [...list, id]))
                 // Меню вернёт фокус на свою кнопку; писать дальше удобнее

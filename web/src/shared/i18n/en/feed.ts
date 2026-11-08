@@ -38,6 +38,7 @@ export const feed: typeof ru = {
     doneAtHundred: 'marked done: 100% complete',
     undone: '“done” mark removed',
     percentSet: (n: number) => `${n}% complete`,
+    planned: (a: string, b: string) => `plan: ${a || '…'} — ${b || '…'}`,
     percentAuto: 'completion is counted automatically again',
     statusSet: (word: string, note: string) => (note ? `epic status: ${word} — ${note}` : `epic status: ${word}`),
     blockedFor: (reason: string) => `blocked: ${reason}`,
@@ -84,6 +85,8 @@ export const feed: typeof ru = {
       audit_retention_days: 'audit log retention',
     } as Record<string, string>,
     subjects: {
+    vacations: 'Vacation',
+    card_coverages: 'Task coverage',
       memberships: 'Organisation membership',
       invites: 'Invitation',
       teams: 'Subdivision',

@@ -63,6 +63,7 @@ export type NotificationReason =
   | 'block_ending'
   | 'over_promise'
   | 'idea_decided'
+  | 'coverage_changed'
 
 export type AppNotification = {
   id: string
@@ -535,9 +536,12 @@ export type Task = {
   columnKind: string
   priority: Priority
   dueOn: string | null
+  plannedStartOn: string | null
+  plannedEndOn: string | null
+  assigneeIds: string[]
   startedAt: string | null
   columnEnteredAt: string
-  outcome: string | null
+  outcome: Card['outcome']
   blocked: boolean
   /** Номер родителя, если задача — его пункт: колонка тогда родителя. */
   parent: string | null
@@ -703,7 +707,12 @@ export type Column = {
   wipLimitHard: boolean
 }
 
+export type CardPlan = { plannedStartOn: string | null; plannedEndOn: string | null }
+export type SaveCardPlan = (cardId: string, next: CardPlan, expected: CardPlan) => Promise<void>
+
 export type Card = {
+  plannedStartOn?: string | null
+  plannedEndOn?: string | null
   id: string
   /** Номер задачи: ПРО-142. Единственное имя карточки, которое можно
    *  назвать вслух и прислать в переписке. Не меняется никогда. */
@@ -808,6 +817,7 @@ export type TeamShare = {
 /** Узел ветки через доски (этап 33.5). Недоступный — только `id`
  *  и `parentId`: название и доску закрытой карточки сервер не отдаёт. */
 export type TreeNode = {
+  priority?: Priority
   id: string
   parentId?: string
   visible: boolean
@@ -831,6 +841,7 @@ export type Link = { fromCard: string; toCard: string; kind: LinkKind }
 /** Карточка с другой доски: столько, сколько нужно, чтобы её узнать
  *  и понять, чья это команда. Недоступной доски здесь не будет. */
 export type LinkedCard = {
+  priority?: Priority
   id: string
   title: string
   boardId: string

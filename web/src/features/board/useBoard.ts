@@ -903,6 +903,35 @@ export function useBoard(boardId: string | null, notify: Notify) {
       run('SET_CARD_PERCENT', { cardId, percent }, t.ops.percent),
     [run],
   )
+  const planRequests = useRef(new Map<string, { key: string; id: string }>())
+  const setCardPlan = useCallback(async (
+    cardId: string,
+    next: import('../../shared/api/index.ts').CardPlan,
+    expected: import('../../shared/api/index.ts').CardPlan,
+  ) => {
+    if (!boardId) return
+    const payload = { cardId, ...next, expected }
+    const key = JSON.stringify({ boardId, payload })
+    const previous = planRequests.current.get(cardId)
+    const id = previous?.key === key ? previous.id : crypto.randomUUID()
+    planRequests.current.set(cardId, { key, id })
+    try {
+      const result = await api.operation(boardId, id, 'SET_CARD_PLAN', payload)
+      // Поток мог принести более свежую правку раньше ответа операции.
+      setBase((current) => {
+        if (!current) return current
+        const cards = result.patch.cards?.filter((card) => {
+          const previous = current.cards[card.id]
+          return previous ? previous.version <= card.version : current.info.version <= result.version
+        })
+        return applyPatch(current, { ...result, version: Math.max(current.info.version, result.version), patch: { ...result.patch, cards } })
+      })
+      planRequests.current.delete(cardId)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) await reload()
+      throw e
+    }
+  }, [boardId, reload])
   const estimateCard = useCallback(
     (cardId: string, estimate: number | null) =>
       patchCard(
@@ -1135,6 +1164,7 @@ export function useBoard(boardId: string | null, notify: Notify) {
     describeCard,
     estimateCard,
     setCardPercent,
+    setCardPlan,
     prioritiseCard,
     commitCard,
     archiveCard,

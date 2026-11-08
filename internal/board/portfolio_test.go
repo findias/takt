@@ -102,7 +102,9 @@ func TestEpicCardSaysWhereItsWorkIs(t *testing.T) {
 
 func TestCardTreeCrossesBoards(t *testing.T) {
 	f := newFixture(t)
-	_, epic, other, feature, done, stuck, leaf := f.epicWithTwoTeams()
+	pf, epic, other, feature, done, stuck, leaf := f.epicWithTwoTeams()
+	f.applyTo(f.boardID, "UPDATE_CARD", map[string]any{"cardId": feature, "priority": "high"})
+	f.applyTo(other, "UPDATE_CARD", map[string]any{"cardId": leaf, "priority": "highest"})
 
 	nodes, err := f.svc.CardTree(f.ctx, f.orgID, f.actorID, epic)
 	if err != nil {
@@ -120,6 +122,20 @@ func TestCardTreeCrossesBoards(t *testing.T) {
 		if n := byID[id]; !n.Visible || n.ParentID != parent {
 			t.Errorf("узел %s: %+v, ожидался родитель %s", n.Title, n, parent)
 		}
+	}
+	if byID[feature].Priority != "high" || byID[leaf].Priority != "highest" {
+		t.Errorf("дерево потеряло приоритеты частей: %+v", nodes)
+	}
+	snap, err := f.svc.Snapshot(f.ctx, f.orgID, f.actorID, pf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	priorities := map[string]string{}
+	for _, c := range snap.Linked {
+		priorities[c.ID] = c.Priority
+	}
+	if priorities[feature] != "high" || priorities[leaf] != "highest" {
+		t.Errorf("снимок потерял приоритеты чужих частей: %+v", priorities)
 	}
 	if !byID[done].Done || !byID[stuck].Blocked || byID[leaf].BoardID != other || byID[stuck].ColumnName == "" {
 		t.Errorf("состояние узлов не дошло: %+v", nodes)
@@ -151,7 +167,7 @@ func TestCardTreeRespectsVisibility(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, n := range nodes {
-		if n.ID == leaf && (n.Visible || n.Title != "" || n.BoardName != "") {
+		if n.ID == leaf && (n.Visible || n.Title != "" || n.BoardName != "" || n.Priority != "") {
 			t.Errorf("закрытая карточка раскрыта: %+v", n)
 		}
 	}

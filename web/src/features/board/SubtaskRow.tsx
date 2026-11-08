@@ -21,6 +21,7 @@
  * доступа».
  */
 
+import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { AVATAR_SMALL, Avatar, AvatarMore } from '../../shared/ui/Avatar.tsx'
 import { BlockedIcon, CommentIcon, PeopleIcon } from '../../shared/ui/icons.tsx'
 import type { Related } from '../../entities/card/model.ts'
@@ -124,6 +125,7 @@ export function SubtaskRow({
       )}
 
       <span className="subtask-tail">
+        {named && <PriorityMark priority={subtask.priority} />}
         {/* Какая именно часть упёрлась. Родитель говорит, что стоит
             из-за части; без пометки в строке приходится открывать их
             по одной, чтобы узнать какая. */}

@@ -1,0 +1,83 @@
+import { expect, test } from '@playwright/test'
+
+for (const lang of ['ru', 'en'] as const) for (const width of [1440, 360]) for (const theme of ['light', 'dark'] as const) {
+  test(`Обсуждение: ${lang}, ${width}, ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(({ lang, theme }) => { localStorage.setItem('lang', lang); localStorage.setItem('theme', theme) }, { lang, theme })
+    const id = crypto.randomUUID()
+    expect((await page.request.post('/api/auth/register', { data: { org: `Chat ${id}`, name: 'Анна / Anna', email: `chat-${id}@example.test`, password: 'parol12345' } })).ok()).toBeTruthy()
+    const board = await (await page.request.post('/api/boards', { data: { name: lang === 'ru' ? 'Обсуждение задач' : 'Task discussions' } })).json()
+    const snapshot = await (await page.request.get(`/api/boards/${board.id}`)).json()
+    const created = await page.request.post(`/api/boards/${board.id}/operations`, { data: { operationId: crypto.randomUUID(), type: 'CREATE_CARD', payload: { columnId: snapshot.columns[0].id, title: lang === 'ru' ? 'Согласовать сроки поставки и порядок приёмки оборудования с командой' : 'Agree delivery dates and equipment acceptance with the team', place: 'end' } } })
+    expect(created.ok()).toBeTruthy()
+    const card = (await created.json()).patch.cards[0]
+    const post = async (body: string, parentId: string | null = null) => {
+      const res = await page.request.post(`/api/boards/${board.id}/cards/${card.id}/comments`, { data: { body, parentId, mentions: [] } })
+      expect(res.ok(), await res.text()).toBeTruthy()
+      return res.json()
+    }
+    const first = await post(lang === 'ru' ? 'Начало обсуждения: согласуем даты.' : 'Start of discussion: agree the dates.')
+    for (let n = 1; n <= 22; n++) await post(`${n}. ${lang === 'ru' ? 'Проверили поставку. Документы готовы, можно согласовать следующий шаг.' : 'Delivery checked. Documents are ready, we can agree the next step.'}`)
+    const tail = lang === 'ru' ? 'Поздний ответ на первое сообщение' : 'Late reply to the first message'
+    await post(tail, first.id)
+    await page.goto(`/board/${board.id}/card/${card.id}`)
+    const log = page.getByRole('log')
+    const field = page.getByRole('textbox', { name: lang === 'ru' ? 'Написать в обсуждение' : 'Write in the discussion' })
+    await expect(log.locator('article')).toHaveCount(24)
+    const gap = () => log.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)
+    await expect.poll(gap).toBeLessThan(2)
+    await expect(log.locator('article').last()).toContainText(tail)
+    await expect(log.locator('article').last().locator('.discussion-quote')).toContainText(first.body)
+    // На телефоне режим всегда полноэкранный, переключатель скрыт.
+    for (const mode of width === 360 ? ['side'] : ['side', 'center', 'full']) {
+      if (width !== 360) await page.locator('.panel-mode').selectOption(mode)
+      await expect.poll(gap).toBeLessThan(2)
+      const bounds = await field.boundingBox(), scroll = await log.boundingBox()
+      expect(bounds!.y).toBeGreaterThanOrEqual(scroll!.y + scroll!.height)
+      expect(bounds!.y + bounds!.height).toBeLessThan(900)
+      expect(scroll!.height).toBeGreaterThan(150)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
+      await page.screenshot({ path: info.outputPath(`chat-${mode}.png`), fullPage: true })
+    }
+    if (width !== 360) await page.locator('.panel-mode').selectOption('side')
+    await log.evaluate((el) => { el.scrollTop = 0; el.dispatchEvent(new Event('scroll', { bubbles: true })) })
+    const latest = page.getByRole('button', { name: lang === 'ru' ? 'К последним сообщениям' : 'Latest messages' })
+    await expect(latest).toBeVisible()
+    // Настоящее событие доски обновляет открытую переписку без polling.
+    await post('Incoming while reading history')
+    await expect(log.locator('article')).toHaveCount(25)
+    expect(await log.evaluate((el) => el.scrollTop)).toBeLessThan(2)
+    await latest.click()
+    await expect.poll(gap).toBeLessThan(2)
+    await post('Incoming at the bottom')
+    await expect(log.locator('article')).toHaveCount(26)
+    await expect.poll(gap).toBeLessThan(2)
+    await field.fill('My new message\nSecond line')
+    await page.getByRole('button', { name: lang === 'ru' ? 'Отправить' : 'Send', exact: true }).click()
+    await expect(log.locator('article').last()).toContainText('My new message')
+    await expect(field).toHaveValue('')
+    await expect.poll(gap).toBeLessThan(2)
+    await page.reload()
+    await expect(log.locator('article').last()).toContainText('My new message')
+    await expect.poll(gap).toBeLessThan(2)
+    await page.screenshot({ path: info.outputPath('chat-final.png'), fullPage: true })
+    // Ответ пишется в том же нижнем поле; ошибка не стирает длинный черновик.
+    await log.evaluate((el) => { el.scrollTop = 0; el.dispatchEvent(new Event('scroll', { bubbles: true })) })
+    await log.locator('article').first().getByRole('button', { name: lang === 'ru' ? 'Ответить' : 'Reply', exact: true }).click()
+    await expect(field).toBeFocused()
+    await expect(page.locator('.discussion-reply')).toContainText(first.body)
+    const draft = Array.from({ length: 12 }, (_, i) => `${i + 1}. ${lang === 'ru' ? 'Уточнение по поставке' : 'Delivery detail'}`).join('\n')
+    await field.fill(draft)
+    await page.route(`**/api/boards/${board.id}/cards/${card.id}/comments`, async (route) => {
+      if (route.request().method() === 'POST') await route.fulfill({ status: 503, json: { error: 'Connection lost' } })
+      else await route.continue()
+    })
+    await page.getByRole('button', { name: lang === 'ru' ? 'Отправить' : 'Send', exact: true }).click()
+    await expect(page.getByText('Connection lost', { exact: true })).toBeVisible()
+    await expect(field).toHaveValue(draft)
+    expect(await log.locator('article').count()).toBe(27)
+    const draftBox = await field.boundingBox()
+    expect(draftBox!.y + draftBox!.height).toBeLessThan(900)
+    await page.screenshot({ path: info.outputPath('chat-reply-error.png'), fullPage: true })
+  })
+}

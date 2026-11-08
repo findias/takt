@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { ROLE_NAMES, api, request } from '../shared/api/index.ts'
 import { UNIT_NAMES } from '../entities/card/model.ts'
 import { CopyButton } from '../shared/ui/CopyButton.tsx'
@@ -26,14 +26,27 @@ import { Field, useFormErrors } from '../shared/ui/Field.tsx'
 import { Webhooks } from '../features/webhooks/Webhooks.tsx'
 import { LabelsSection } from '../features/labels/LabelsSection.tsx'
 import { ScreenError } from '../shared/ui/Field'
-import { locale, t } from '../shared/i18n/index.ts'
+import { locale, t, withSections } from '../shared/i18n/index.ts'
 import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
 import { MemberNameDialog } from '../features/account/MemberNameDialog.tsx'
-import { navigate } from '../shared/router/index.ts'
+import { navigate, useQuery } from '../shared/router/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { buildTree, invitableTeams } from '../entities/team/model.ts'
 
+const Vacations = lazy(withSections(() => import('../features/availability/Vacations.tsx').then((m) => ({ default: m.Vacations })), 'availability'))
+
 export function Team({ principal }: { principal: Principal }) {
+  const query = useQuery(), vacations = query.get('view') === 'vacations'
+  return <div className="stack">
+    <div className="row" role="group" aria-label={t.app.team}>
+      <button type="button" className="btn btn--quiet" aria-pressed={!vacations} onClick={() => navigate('/team')}>{t.availability.people}</button>
+      <button type="button" className="btn btn--quiet" aria-pressed={vacations} onClick={() => navigate('/team?view=vacations')}>{t.availability.title}</button>
+    </div>
+    {vacations ? <Suspense fallback={<Skeleton />}><Vacations principal={principal} /></Suspense> : <TeamMembers principal={principal} />}
+  </div>
+}
+
+function TeamMembers({ principal }: { principal: Principal }) {
   const [members, setMembers] = useState<Member[] | null>(null)
   const [invites, setInvites] = useState<Invite[]>([])
   const [error, setError] = useState<string | null>(null)

@@ -9,6 +9,23 @@ package i18n
 // organisation, subdivision, integration key.
 // #nosec G101 -- каталог сообщений, а не учётные данные: KAITEN_TOKEN и MONDAY_TOKEN в нём — имена переменных окружения в подсказке, значений нет
 var en = map[string]string{
+	"укажите даты замещения по порядку":                                                      "enter the coverage dates in order",
+	"выберите ответ на замещение: accepted, declined или cancelled":                          "choose a coverage response: accepted, declined or cancelled",
+	"запись уже изменена: обновите данные и повторите правку":                                "this entry has changed: refresh and try again",
+	"эти даты пересекаются с другим вашим отпуском":                                          "these dates overlap another of your vacations",
+	"замещение недоступно: проверьте отпуск, даты, исполнителя и доступ заместителя к доске": "coverage is unavailable: check the vacation, dates, assignee and the substitute’s board access",
+	"укажите даты отпуска по порядку и примечание до 500 знаков":                             "enter vacation dates in order and a note of up to 500 characters",
+	"выберите часовой пояс IANA, например Europe/Moscow":                                     "choose an IANA time zone, for example Europe/Moscow",
+	"запись не найдена или больше вам недоступна":                                            "the entry was not found or is no longer accessible to you",
+	"укажите идентификатор записи UUID":                                                      "provide a UUID for the entry",
+	"изменить можно только ответ на замещение":                                               "only the coverage response can be changed",
+	"ответить на замещение может только приглашённый человек":                                "only the invited person can respond to coverage",
+
+	"план уже изменён: проверьте новые даты и повторите правку": "the plan has changed: check the new dates and try again",
+	"передайте обе даты плана и исходный план":                  "provide both plan dates and the original plan",
+	"дата плана пишется как 2026-08-21":                         "a plan date is written as 2026-08-21",
+	"окончание плана не может быть раньше начала":               "the planned end cannot be before the start",
+	"разбор SET_CARD_PLAN: %s":                                  "parsing SET_CARD_PLAN: %s",
 	// --- Вход и сессия ---
 	"неверная почта или пароль":          "wrong email or password",
 	"нет активной сессии":                "no active session",

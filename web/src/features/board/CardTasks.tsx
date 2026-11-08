@@ -1,3 +1,4 @@
+import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { useEffect, useRef, useState } from 'react'
 import { TextLine } from '../../shared/ui/TextLine.tsx'
 import { Button } from '../../shared/ui/Button.tsx'
@@ -358,6 +359,7 @@ function RelatedRow({
         ) : (
           <span>{title}</span>
         )}
+        {related.reachable && <PriorityMark priority={related.priority} />}
         {(showKind || where) && (
           <span className="muted small">
             {[showKind ? LINK_KIND_NAMES[related.kind] : '', where].filter(Boolean).join(' · ')}

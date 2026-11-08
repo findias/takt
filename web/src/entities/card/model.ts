@@ -18,6 +18,7 @@ import { live, locale, t } from '../../shared/i18n/index.ts'
 
 /** Куда ведёт связь и что об этом известно. */
 export type Related = {
+  priority?: Priority
   id: string
   kind: LinkKind
   title: string
@@ -197,6 +198,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       id,
       kind,
       title: own.title,
+      priority: own.priority,
       where: t.card.onThisBoard,
       elsewhere: null,
       stage: null,
@@ -222,6 +224,7 @@ function resolve(base: BaseState, id: string, kind: LinkKind): Related {
       id,
       kind,
       title: foreign.title,
+      priority: foreign.priority,
       where: foreign.teamName
         ? t.card.onBoardOfTeam(foreign.boardName, foreign.teamName)
         : t.card.onBoard(foreign.boardName),

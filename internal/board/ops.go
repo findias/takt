@@ -505,6 +505,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return removeFromIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_CARD_DONE":
 		return setCardDone(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_CARD_PLAN":
+		return setCardPlan(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_CARD_PERCENT":
 		return setCardPercent(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "BLOCK_CARD":

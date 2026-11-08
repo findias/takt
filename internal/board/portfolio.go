@@ -95,6 +95,7 @@ func teams(ctx context.Context, tx pgx.Tx, boardID, cardID *string) (map[string]
 // и со стороны части, 0068), — открытая работа под закрытой фичей
 // не теряется.
 type TreeNode struct {
+	Priority   string `json:"priority,omitempty"`
 	ID         string `json:"id"`
 	ParentID   string `json:"parentId,omitempty"`
 	Visible    bool   `json:"visible"`
@@ -127,7 +128,7 @@ func (s *Service) CardTree(ctx context.Context, orgID, userID, cardID string) ([
 			first as (
 				select distinct on (card) card, parent, depth from down order by card, depth
 			)
-			select f.card, coalesce(f.parent::text, ''), c.id is not null,
+			select coalesce(c.priority, ''), f.card, coalesce(f.parent::text, ''), c.id is not null,
 			       coalesce(c.number, ''), coalesce(c.title, ''),
 			       coalesce(b.id::text, ''), coalesce(b.name, ''), coalesce(col.name, ''),
 			       coalesce(`+cardDone+`, false),

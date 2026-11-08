@@ -91,13 +91,13 @@ function state(cards: Card[], links: Link[], linked: LinkedCard[] = []): BaseSta
 
 test('подзадачи разбираются по трём случаям: своя, чужая, недоступная', () => {
   const base = state(
-    [card('parent', 'Релиз'), card('own', 'Своя подзадача', { outcome: 'done' })],
+    [card('parent', 'Релиз'), card('own', 'Своя подзадача', { outcome: 'done', priority: 'high' })],
     [
       { fromCard: 'parent', toCard: 'own', kind: 'subtask' },
       { fromCard: 'parent', toCard: 'neighbour', kind: 'subtask' },
       { fromCard: 'parent', toCard: 'hidden', kind: 'subtask' },
     ],
-    [foreign('neighbour', 'Сборка', { blocked: true })],
+    [foreign('neighbour', 'Сборка', { blocked: true, priority: 'highest' })],
   )
 
   const details = cardDetails(base, 'parent')
@@ -105,11 +105,13 @@ test('подзадачи разбираются по трём случаям: с
   assert.equal(details.subtasks.length, 3)
 
   const own = details.subtasks.find((s) => s.id === 'own')!
+  assert.equal(own.priority, 'high')
   assert.equal(own.where, 'На этой доске')
   assert.equal(own.done, true)
   assert.equal(own.onThisBoard, true)
 
   const neighbour = details.subtasks.find((s) => s.id === 'neighbour')!
+  assert.equal(neighbour.priority, 'highest')
   assert.equal(neighbour.title, 'Сборка')
   assert.equal(neighbour.where, 'Доска «Соседняя» · Платформа')
   assert.equal(neighbour.blocked, true)
@@ -118,6 +120,7 @@ test('подзадачи разбираются по трём случаям: с
   // Недоступную карточку не выбрасываем: связь существует, и прогресс
   // родителя её учитывает — молча спрятать её значит соврать про прогресс.
   const hidden = details.subtasks.find((s) => s.id === 'hidden')!
+  assert.equal(hidden.priority, undefined)
   assert.equal(hidden.reachable, false)
   assert.ok(hidden.where.includes('не видно'))
 })

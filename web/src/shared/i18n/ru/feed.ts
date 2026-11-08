@@ -39,6 +39,7 @@ export const feed = {
     doneAtHundred: 'отмечена сделанной: выполнена на 100%',
     undone: 'отметка «сделана» снята',
     percentSet: (n: number) => `выполнено ${n}%`,
+    planned: (a: string, b: string) => `план: ${a || '…'} — ${b || '…'}`,
     percentAuto: 'процент выполнения снова считается сам',
     statusSet: (word: string, note: string) => (note ? `статус эпика: ${word} — ${note}` : `статус эпика: ${word}`),
     blockedFor: (reason: string) => `заблокирована: ${reason}`,
@@ -85,6 +86,8 @@ export const feed = {
       audit_retention_days: 'срок хранения журнала',
     } as Record<string, string>,
     subjects: {
+    vacations: 'Отпуск',
+    card_coverages: 'Замещение по задаче',
       memberships: 'Участие в организации',
       invites: 'Приглашение',
       teams: 'Подразделение',

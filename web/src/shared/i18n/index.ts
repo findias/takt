@@ -39,6 +39,8 @@ import type { newCard } from './ru/newCard.ts'
 import type { panel } from './ru/panel.ts'
 import type { feed } from './ru/feed.ts'
 import type { moveCard } from './ru/moveCard.ts'
+import type { availability } from './ru/availability.ts'
+import type { gantt } from './ru/gantt.ts'
 import type { completion } from './ru/completion.ts'
 
 /**
@@ -52,6 +54,8 @@ import type { completion } from './ru/completion.ts'
  * к `t.team` раньше, чем экран загружен, нечем и незачем.
  */
 type Lazy = {
+  availability: typeof availability
+  gantt: typeof gantt
   team: typeof team
   hooks: typeof hooks
   labelsAdmin: typeof labelsAdmin
@@ -77,6 +81,7 @@ export type Section = keyof Lazy
 export type Catalog = typeof ru & Lazy
 
 const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknown>>>> = {
+  availability: { ru: () => import('./ru/availability.ts'), en: () => import('./en/availability.ts') },
   team: { ru: () => import('./ru/team.ts'), en: () => import('./en/team.ts') },
   hooks: { ru: () => import('./ru/hooks.ts'), en: () => import('./en/hooks.ts') },
   labelsAdmin: {
@@ -105,6 +110,7 @@ const SECTIONS: Record<Section, Record<Lang, () => Promise<Record<string, unknow
   panel: { ru: () => import('./ru/panel.ts'), en: () => import('./en/panel.ts') },
   feed: { ru: () => import('./ru/feed.ts'), en: () => import('./en/feed.ts') },
   moveCard: { ru: () => import('./ru/moveCard.ts'), en: () => import('./en/moveCard.ts') },
+  gantt: { ru: () => import('./ru/gantt.ts'), en: () => import('./en/gantt.ts') },
   completion: { ru: () => import('./ru/completion.ts'), en: () => import('./en/completion.ts') },
 }
 

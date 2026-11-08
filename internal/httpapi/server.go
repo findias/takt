@@ -174,6 +174,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/password-links/lookup", s.handlePasswordLinkInfo)
 	mux.HandleFunc("POST /api/password-links/use", s.handleUsePasswordLink)
 
+	s.registerVacationRoutes(mux)
 	s.registerTeamRoutes(mux)
 	s.registerAccessRoutes(mux)
 	s.registerFeedRoutes(mux)
@@ -1081,6 +1082,8 @@ func (s *Server) handleOperation(w http.ResponseWriter, r *http.Request, p auth.
 		writeError(w, http.StatusForbidden, board.ErrReadOnlyBoard.Error())
 	case errors.Is(err, board.ErrBadRequest):
 		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, board.ErrPlanChanged):
+		writeCoded(w, http.StatusConflict, "plan_changed", board.ErrPlanChanged.Error())
 	case errors.Is(err, board.ErrPurgeNotYours):
 		writeCoded(w, http.StatusForbidden, "purge_not_yours", board.ErrPurgeNotYours.Error())
 	case errors.Is(err, board.ErrIterationClosed),

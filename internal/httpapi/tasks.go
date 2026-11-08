@@ -17,7 +17,7 @@ func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request, p auth.Prin
 	if person == "" {
 		person = p.ID
 	}
-	list, err := s.boards.Tasks(r.Context(), p.OrgID, p.ID, person, r.URL.Query().Get("done") == "1")
+	list, err := s.boards.Tasks(r.Context(), p.OrgID, p.ID, person, r.URL.Query().Get("done") == "1", r.URL.Query().Get("covering") == "1")
 	switch {
 	case errors.Is(err, board.ErrNotFound):
 		writeError(w, http.StatusNotFound, "такого участника в организации нет")

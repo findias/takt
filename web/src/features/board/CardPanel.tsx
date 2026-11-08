@@ -1,3 +1,4 @@
+import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
 import { TextLine } from '../../shared/ui/TextLine.tsx'
@@ -46,6 +47,9 @@ import { BlockUntilEditor, fromLocalInput } from './BlockUntil.tsx'
 import { LabelCombobox } from './LabelPicker.tsx'
 import { locale, t, withSections } from '../../shared/i18n/index.ts'
 import { Hint } from '../../shared/ui/Hint.tsx'
+import { CoveragePanel } from '../availability/CoveragePanel.tsx'
+import { PlanEditor } from '../gantt/PlanEditor.tsx'
+import { Field } from '../../shared/ui/Field.tsx'
 import { Skeleton } from '../../shared/ui/states.tsx'
 
 // Вкладка «Задачи» — отдельным куском (довод — в CardTasks.tsx).
@@ -112,6 +116,7 @@ export function CardPanel({
   onDescribe,
   onEstimate,
   onPercent,
+  onPlan,
   onOpenCard,
   onAssign,
   onLabel,
@@ -146,6 +151,7 @@ export function CardPanel({
   onEstimate: (cardId: string, estimate: number | null) => void
   /** Процент выполнения руками; null — считать самому (ROADMAP 38). */
   onPercent: (cardId: string, percent: number | null) => void
+  onPlan?: import('../../shared/api/index.ts').SaveCardPlan
   /** Открыть другую карточку этой же доски — по связи. */
   onOpenCard: (cardId: string) => void
   /** on = назначить, off = снять. */
@@ -283,7 +289,7 @@ export function CardPanel({
               />
             </Suspense>
           )}
-          <span className="card-number">{card.number}</span>
+          <span className="row row--tight"><span className="card-number">{card.number}</span><PriorityMark priority={card.priority} /></span>
         </>
       }
       label={t.panel.cardLabel(card.number, card.title)}
@@ -477,6 +483,8 @@ export function CardPanel({
               onAssign={(userId, on) => onAssign(card.id, userId, on)}
             />
 
+            <CoveragePanel key={card.id} base={base} card={card} boardId={boardId} meId={meId} canEdit={canEdit} />
+
             <Labels
               boardId={boardId}
               labels={base.labels}
@@ -492,6 +500,7 @@ export function CardPanel({
               onSave={(value) => onEstimate(card.id, value)}
             />
 
+            {onPlan && <PlanEditor key={card.id} card={card} canEdit={canEdit} onSave={onPlan} />}
             <Completion card={card} canEdit={canEdit} onSave={(percent) => onPercent(card.id, percent)} />
 
             <Fields
@@ -510,6 +519,8 @@ export function CardPanel({
             из которых чаще всего не нужен был ни один. */}
         {tab === 'talk' && (
           <Discussion
+            key={card.id}
+            revision={base.info.version}
             boardId={boardId}
             cardId={card.id}
             meId={meId}
@@ -673,15 +684,33 @@ function Completion({
   onSave: (percent: number | null) => void
 }) {
   const now = completion(card)
-  const [draft, setDraft] = useState<number | null>(null)
+  const [draft, setDraft] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const submitted = useRef<string | null>(null)
   // Пришёл новый снимок — черновик больше не нужен: показываем то,
   // что записано.
-  useEffect(() => setDraft(null), [card.percent, card.version])
-  const value = draft ?? now?.percent ?? 0
-  const commit = () => {
-    if (draft !== null && draft !== card.percent) onSave(draft)
+  useEffect(() => {
+    setDraft(null)
+    setError(false)
+    submitted.current = null
+  }, [card.id, card.percent, card.version])
+  const value = draft ?? String(now?.percent ?? 0)
+  const valid = value.trim() !== '' && Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 100
+  const change = (value: string) => {
+    submitted.current = null
+    setDraft(value)
+    setError(false)
   }
-  const text = `${t.completion.value(value)}${now?.manual ? ` · ${t.completion.manual}` : ''}`
+  const commit = () => {
+    if (draft === null || submitted.current === draft) return
+    if (!valid) {
+      setError(true)
+      return
+    }
+    submitted.current = draft
+    if (Number(draft) !== card.percent) onSave(Number(draft))
+  }
+  const text = `${t.completion.value(valid ? Number(value) : now?.percent ?? 0)}${now?.manual ? ` · ${t.completion.manual}` : ''}`
 
   // Прошедшая финиш выполнена на сто, и ползунок ей ни к чему: другой
   // процент сервер не примет. Отмеченная руками ползунок оставляет —
@@ -700,17 +729,40 @@ function Completion({
           type="range"
           min={0}
           max={100}
-          step={5}
-          value={value}
+          step={1}
+          value={valid ? Number(value) : now?.percent ?? 0}
           aria-valuetext={text}
-          onChange={(e) => setDraft(Number(e.target.value))}
+          onChange={(e) => change(e.target.value)}
           onPointerUp={commit}
           onKeyUp={commit}
           onBlur={commit}
         />
-        <span className="small completion-value" aria-hidden="true">
-          {text}
-        </span>
+        <Field label={t.completion.input} hiddenLabel className="completion-number" error={error ? t.completion.invalid : null}>
+          {(bind) => <input
+            {...bind}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            value={value}
+            onChange={(e) => change(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                e.currentTarget.blur()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                e.stopPropagation()
+                setDraft(null)
+                setError(false)
+              }
+            }}
+          />}
+        </Field>
+        <span className="small" aria-hidden="true">%</span>
         {now?.manual && (
           <button type="button" className="link" onClick={() => onSave(null)}>
             {t.completion.auto}

@@ -40,8 +40,11 @@ type Task struct {
 	Parent *string `json:"parent"`
 	// Done — отмечена сделанной руками. У пункта это и есть «закончена»:
 	// финиша у него нет, Outcome остаётся пустым.
-	Done   bool    `json:"done"`
-	Labels []Label `json:"labels"`
+	Done           bool     `json:"done"`
+	Labels         []Label  `json:"labels"`
+	PlannedStartOn *string  `json:"plannedStartOn"`
+	PlannedEndOn   *string  `json:"plannedEndOn"`
+	AssigneeIDs    []string `json:"assigneeIds"`
 }
 
 // TaskList — задачи и то, всё ли показано.
@@ -56,8 +59,9 @@ type TaskList struct {
 // Законченная — прошедшая финиш или отмеченная сделанной: отмеченный
 // пункт родителя иначе висел бы в списке «моих» вечно, финиша у него нет.
 // Порядок: сначала то, у чего есть срок, по сроку; затем по важности.
-func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, withDone bool) (TaskList, error) {
+func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, withDone bool, covering ...bool) (TaskList, error) {
 	out := TaskList{Tasks: []Task{}}
+	cover := len(covering) > 0 && covering[0]
 	err := s.db.InTenant(ctx, orgID, viewerID, func(tx pgx.Tx) error {
 		// Человек не из этой организации — «не найден», а не пустой
 		// список: пустой читался бы как «у него нет задач».
@@ -81,9 +85,10 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			       c.column_entered_at, c.outcome,
 			       exists (select 1 from card_blocks k
 			                where k.card_id = c.id and k.unblocked_at is null),
-			       item.number, c.done_at is not null
-			  from card_assignees a
-			  join cards c on c.id = a.card_id
+			       item.number, c.done_at is not null,
+                   to_char(c.planned_start_on, 'YYYY-MM-DD'), to_char(c.planned_end_on, 'YYYY-MM-DD'),
+                   array(select a.user_id::text from card_assignees a where a.card_id=c.id order by a.user_id)
+			  from cards c
 			  join boards b on b.id = c.board_id
 			  left join lateral (
 			        select p.number, p.column_id from card_links l
@@ -92,14 +97,19 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			           and p.board_id = c.board_id and p.archived_at is null
 			         limit 1) item on true
 			  join board_columns col on col.id = coalesce(item.column_id, c.column_id)
-			 where a.user_id = $1
+			 where ((not $4 and exists(select 1 from card_assignees a where a.card_id=c.id and a.user_id=$1))
+                or ($4 and exists(select 1 from card_coverages cc join vacations v on v.id=cc.vacation_id
+                    where cc.card_id=c.id and cc.substitute_id=$1 and cc.status='accepted'
+                    and cc.starts_on<= (now() at time zone (select time_zone from orgs where id=cc.org_id))::date
+                    and cc.ends_on>= (now() at time zone (select time_zone from orgs where id=cc.org_id))::date
+                    and (`+coverageValid+`))))
 			   and c.archived_at is null and b.archived_at is null
 			   and ($2 or (c.outcome is null and c.done_at is null))
 			 order by c.due_on nulls last,
 			          case c.priority when 'highest' then 0 when 'high' then 1
 			                          when 'medium' then 2 else 3 end,
 			          b.name, col.position, c.position
-			 limit $3`, personID, withDone, TaskLimit+1)
+			 limit $3`, personID, withDone, TaskLimit+1, cover)
 		if err != nil {
 			return err
 		}
@@ -109,7 +119,8 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			var t Task
 			if err := rows.Scan(&t.ID, &t.Number, &t.Title, &t.BoardID, &t.BoardName,
 				&t.Column, &t.ColumnKind, &t.Priority, &t.DueOn, &t.StartedAt,
-				&t.ColumnEnteredAt, &t.Outcome, &t.Blocked, &t.Parent, &t.Done); err != nil {
+				&t.ColumnEnteredAt, &t.Outcome, &t.Blocked, &t.Parent, &t.Done,
+				&t.PlannedStartOn, &t.PlannedEndOn, &t.AssigneeIDs); err != nil {
 				rows.Close()
 				return err
 			}

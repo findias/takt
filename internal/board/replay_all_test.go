@@ -76,6 +76,7 @@ func TestEveryOperationReplaysWithoutEffect(t *testing.T) {
 		{"SET_BLOCK_UNTIL", fixed(map[string]any{"cardId": second, "until": later})},
 		{"UNBLOCK_CARD", fixed(map[string]any{"cardId": second})},
 		{"SET_CARD_DONE", fixed(map[string]any{"cardId": first, "done": true})},
+		{"SET_CARD_PLAN", fixed(map[string]any{"cardId": first, "plannedStartOn": "2026-11-05", "plannedEndOn": "2026-11-08", "expected": map[string]any{"plannedStartOn": nil, "plannedEndOn": nil}})},
 		{"SET_CARD_PERCENT", fixed(map[string]any{"cardId": first, "percent": 40})},
 		{"ARCHIVE_CARD", fixed(map[string]any{"cardId": second})},
 		{"RESTORE_CARD", fixed(map[string]any{"cardId": second})},

@@ -1,3 +1,4 @@
+import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { useEffect, useMemo, useState } from 'react'
 import type { BaseState } from '../../entities/board/model.ts'
 import { request } from '../../shared/api/index.ts'
@@ -33,6 +34,7 @@ type Node = {
   where: string
   /** Доска чужой карточки, если она видна: туда ведёт её название. */
   boardId: string | null
+  priority?: Card['priority']
   done: boolean
   blocked: boolean
   /** Есть ли в ветке карточки других досок — тогда её досчитывает сервер. */
@@ -129,6 +131,7 @@ export function TreeView({
           ) : (
             <span className="tree-title">{node.title}</span>
           )}
+          <PriorityMark priority={node.priority} />
           {node.blocked && <span className="mark mark--alarm">{s.blocked}</span>}
           {node.done && <span className="mark">{s.done}</span>}
           <span className="muted small">{node.where}</span>
@@ -190,6 +193,7 @@ function build(base: BaseState, remote: Map<string, TreeNode>): { roots: Node[];
     return {
       id,
       title: own?.title ?? foreign?.title ?? far?.title ?? t.card.unavailable,
+      priority: own?.priority ?? foreign?.priority ?? far?.priority,
       number: own?.number ?? far?.number ?? null,
       own,
       where: own

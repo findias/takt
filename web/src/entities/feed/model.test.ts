@@ -270,3 +270,9 @@ test('блокировка, снятая по сроку, и смена срок
   )
   assert.equal(eventText(event('block_until', { until: null })), 'блокировка стала бессрочной')
 })
+
+ test('план в истории называет обе даты, частичный и снятый планы', () => {
+  assert.equal(eventText(event('planned', { plannedStartOn: '2026-11-05', plannedEndOn: '2026-11-09' })), 'план: 2026-11-05 — 2026-11-09')
+  assert.equal(eventText(event('planned', { plannedStartOn: null, plannedEndOn: '2026-11-09' })), 'план: … — 2026-11-09')
+  assert.equal(eventText(event('planned', {})), 'план: … — …')
+ })

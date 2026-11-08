@@ -40,9 +40,11 @@ to the organisation, a subdivision or a single board, say where they
 come from, and are created right from the card. Cards split into subtasks and link to each
 other — including across boards owned by different teams.
 
-**Three views of the same data.** The board answers "how is the work
+**Views of the same data.** The board answers "how is the work
 going", the table answers "what is the oldest and what did we promise",
-the change feed answers "what happened".
+the change feed answers "what happened". Gantt shows planned periods,
+completion and commitment dates on one board, with subtasks. Plans can
+be moved or resized, separately from the actual flow dates.
 
 **Filtering and grouping.** Nine filter conditions, four ways to slice
 the board into swimlanes, saved views. All of it lives in the address
@@ -75,7 +77,7 @@ with a key and a delivery log, and a full data export in one file.
 
 ## What the product does not do
 
-No dates as a schedule and no Gantt charts, no public cloud with
+No automatic dependency or resource scheduling, no public cloud with
 self-service sign-up, no file attachments on cards. These are not
 omissions: each refusal has a recorded reason, and some have a recorded
 condition under which they will be revisited. The full list is in the

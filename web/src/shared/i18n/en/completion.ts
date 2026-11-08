@@ -3,6 +3,8 @@ import type { completion as ru } from '../ru/completion.ts'
 
 export const completion: typeof ru = {
     title: 'Complete',
+    input: 'Complete, %',
+    invalid: 'Enter a whole number from 0 to 100',
     value: (n: number) => `${n}%`,
     manual: 'set by hand',
     auto: 'Count automatically',

@@ -12,7 +12,7 @@ otherwise the release gets made and the list gets written «later».
 
 ### For whoever installs and upgrades
 
-**Ten migrations, safe for the running version.** `0080` adds two
+**Twelve migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
@@ -26,6 +26,12 @@ old version never exercises; `0088` adds `idea_decisions.request_fingerprint`
 with an empty default, so the old code can still write decisions;
 `0089` adds a nullable `idea_decisions.request_id` and a unique index
 for requests by a person on an idea.
+`0090` adds nullable `cards.planned_start_on` and `planned_end_on`
+with a constraint on their order. The `SET_CARD_PLAN` operation requires
+both dates (or nulls) and the expected previous plan; a concurrent date
+change returns `409 plan_changed`.
+`0091` adds vacations, task coverage and the organisation time zone
+(default UTC), and expands notification reasons with `coverage_changed`.
 Pods of v0.5.x keep working on all of it.
 
 **Taking an idea saves the card and decision together.** A failure no
@@ -64,6 +70,30 @@ board, and notifications lead to the board the card is on now.
 board metrics have `movedOut`.
 
 ### The rest
+
+- **Vacations and confirmed task coverage.** Team has a vacation calendar,
+  visible to all colleagues, with a filter for one or more subdivisions
+  and their nested teams. Personal settings link to your own entries, and each task can have a
+  substitute for a specific period. The substitute accepts or declines;
+  accepted active coverage appears in Tasks → Covering. The Tasks list, cards and Gantt
+  flag absences; primary assignees, completion and task dates stay intact.
+  Changed vacations or lost access invalidate affected agreements.
+
+- **Card discussions read as a chat.** Latest messages stay at the bottom
+  above the writing field. Incoming replies preserve your place while
+  reading history; **Latest messages** returns to the bottom. Replies
+  quote the original message, and a failed send preserves the draft.
+- **Priorities are visible on subtasks.** Each part shows its own priority
+  on the board, tree, Gantt and card's task list. Completion can also be
+  entered as a whole percentage in the card's **Work** tab.
+- **An editable Gantt plan for one board.** Choose **Gantt** in the board
+  view selector. Planned start and end are calendar days, separate from
+  the commitment date and flow history. Move a bar or resize its ends;
+  the same dates can be edited in the card's **Work** tab. Subtasks have
+  their own plans and can be collapsed with their parent. Moving a plan
+  does not change completion or automatically move dependent tasks.
+  Viewers can read the plan; concurrent date changes are reported
+  instead of silently overwritten.
 
 - **A card can be sent as a link.** **Copy link** in the card's **…**
   menu, in the panel's top row and in the table's row menu puts the

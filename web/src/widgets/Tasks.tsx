@@ -11,17 +11,19 @@ import { Board } from './Board.tsx'
 import { t } from '../shared/i18n/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { DUES, STATUSES, filterTasks, isFiltered, labelsOf, parseTaskFilter } from './tasksFilter.ts'
+import { useAvailability } from '../features/availability/useAvailability.ts'
+import { VacationWarning } from '../features/availability/VacationWarning.tsx'
 
 const DAY = 24 * 60 * 60 * 1000
 
 // Вызов — здесь, а не в общем клиенте `api`: общий клиент едет в первую
 // загрузку каждого экрана, а этот экран грузится отдельно (порог размера
 // первой загрузки — web/e2e/perf.spec.ts).
-const loadTasks = (user?: string, withDone?: boolean) =>
+const loadTasks = (user?: string, withDone?: boolean, covering?: boolean) =>
   request<{ tasks: Task[]; truncated: boolean }>(
     'GET',
     '/api/tasks?' +
-      new URLSearchParams({ ...(user ? { user } : {}), ...(withDone ? { done: '1' } : {}) }).toString(),
+      new URLSearchParams({ ...(user ? { user } : {}), ...(withDone ? { done: '1' } : {}), ...(covering ? { covering: '1' } : {}) }).toString(),
   )
 
 /**
@@ -37,6 +39,7 @@ export function Tasks({ principal }: { principal: Principal }) {
   const query = useQuery()
   const user = query.get('user') ?? principal.id
   const withDone = query.get('done') === '1'
+  const covering = query.get('covering') === '1'
   const filter = parseTaskFilter(query)
   const s = t.tasks
 
@@ -46,6 +49,7 @@ export function Tasks({ principal }: { principal: Principal }) {
   // Перечитать список после правок в панели: название, колонка, метки
   // в таблице должны быть теми, что человек только что поставил.
   const [reloadKey, setReloadKey] = useState(0)
+  const availability = useAvailability(undefined, reloadKey)
   // Открытая задача — в адресе, как на доске: «доска:карточка».
   const [openBoard, openCard] = (query.get('open') ?? '').split(':')
   // Доска открытой задачи остаётся подключённой и после закрытия панели:
@@ -65,22 +69,33 @@ export function Tasks({ principal }: { principal: Principal }) {
 
   useEffect(() => {
     let current = true
+    let request = 0
     setList(null)
     setError(null)
-    loadTasks(user === principal.id ? undefined : user, withDone)
-      .then((r) => current && setList(r))
-      .catch((e) => current && setError(e instanceof Error ? e.message : s.loadFailed))
+    const refresh = () => {
+      const revision = ++request
+      loadTasks(user === principal.id ? undefined : user, withDone, covering)
+        .then((r) => { if (current && revision === request) { setList(r); setError(null) } })
+        .catch((e) => { if (current && revision === request) setError(e instanceof Error ? e.message : s.loadFailed) })
+    }
+    refresh()
+    // Замещение меняется без операций доски и заканчивается по календарю.
+    // Открытый список не должен сохранять уже недействующие договорённости.
+    const timer = covering ? setInterval(refresh, 60_000) : undefined
+    if (covering) window.addEventListener('focus', refresh)
     return () => {
       current = false
+      clearInterval(timer)
+      window.removeEventListener('focus', refresh)
     }
-  }, [user, withDone, principal.id, s])
+  }, [user, withDone, covering, principal.id, s])
 
   // Правка в открытой сбоку задаче — список перечитывается тихо, без
   // заглушки: таблица под панелью не должна мигать на каждую правку.
   useEffect(() => {
     if (reloadKey === 0) return
     let current = true
-    loadTasks(user === principal.id ? undefined : user, withDone)
+    loadTasks(user === principal.id ? undefined : user, withDone, covering)
       .then((r) => current && setList(r))
       .catch(() => {})
     return () => {
@@ -101,10 +116,12 @@ export function Tasks({ principal }: { principal: Principal }) {
   const labels = list ? labelsOf(list.tasks) : []
   const who = user === principal.id ? principal.name : (people.find((p) => p.userId === user)?.name ?? '')
   const now = Date.now()
+  const names = Object.fromEntries(people.map((person) => [person.userId, person.name]))
 
   return (
     <div className="stack tasks-screen">
       <div className="row tasks-head">
+        <label className="row small"><input type="checkbox" checked={covering} onChange={(e) => set('covering', e.target.checked ? '1' : null)} />{t.availability.covering}</label>
         <label className="row row--tight">
           <span className="small">{s.whose}</span>
           <select value={user} onChange={(e) =>
@@ -173,9 +190,11 @@ export function Tasks({ principal }: { principal: Principal }) {
         )}
       </div>
       <p className="muted small">
-        {s.hint} <Hint topic="tasks" />
+        {covering ? t.availability.coveringHint : s.hint} <Hint topic="tasks" />
       </p>
       <ScreenError>{error}</ScreenError>
+      <ScreenError>{availability.error}</ScreenError>
+      {availability.error && <button type="button" className="link" onClick={availability.refresh}>{t.availability.retry}</button>}
       {!list && !error && <Skeleton lines={4} />}
       {list && list.tasks.length === 0 && <p className="muted">{s.empty}</p>}
       {list && list.tasks.length > 0 && shown.length === 0 && <p className="muted">{s.emptyFiltered}</p>}
@@ -211,6 +230,9 @@ export function Tasks({ principal }: { principal: Principal }) {
                     </button>
                     {task.blocked && <span className="mark mark--alarm tasks-mark">{s.blocked}</span>}
                     {(task.outcome || task.done) && <span className="mark tasks-mark">{s.done}</span>}
+                    {availability.data && <VacationWarning data={availability.data}
+                      card={{ ...task, doneAt: task.done ? 'done' : null }} assignees={task.assigneeIds}
+                      people={names} />}
                   </td>
                   <td className="small">
                     <button className="link" onClick={() => navigate(boardPath(task.boardId))}>
