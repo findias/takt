@@ -133,3 +133,67 @@ for (const lang of ['ru', 'en'] as const) for (const width of [1440, 360]) for (
     } finally { await context.close() }
   })
 }
+
+for (const lang of ['ru', 'en'] as const) for (const width of [1440, 360]) for (const theme of ['light', 'dark'] as const) {
+  test(`Порог предупреждения об отпуске: ${lang}, ${width}, ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(({ lang, theme }) => { localStorage.setItem('lang', lang); localStorage.setItem('theme', theme) }, { lang, theme })
+    const suffix = crypto.randomUUID()
+    expect((await page.request.post('/api/auth/register', { data: { org: `Warning ${suffix}`, name: lang === 'ru' ? 'Анна Планировщик' : 'Anna Planner', email: `warning-${suffix}@example.test`, password: 'parol12345' } })).ok()).toBeTruthy()
+    const owner = await (await page.request.get('/api/me')).json()
+    const board = await (await page.request.post('/api/boards', { data: { name: lang === 'ru' ? 'Подготовка к отпуску' : 'Preparing for vacation' } })).json()
+    const snap = await (await page.request.get(`/api/boards/${board.id}`)).json()
+    const result = await page.request.post(`/api/boards/${board.id}/operations`, { data: { operationId: crypto.randomUUID(), type: 'CREATE_CARD', payload: { columnId: snap.columns[0].id, title: lang === 'ru' ? 'Передать дела перед отпуском' : 'Hand over work before vacation', assigneeIds: [owner.id], place: 'end' } } })
+    expect(result.ok()).toBeTruthy()
+    const card = (await result.json()).patch.cards[0]
+    const initial = await (await page.request.get('/api/availability')).json()
+    const shift = (days: number) => new Date(Date.parse(`${initial.today}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
+    const id = crypto.randomUUID()
+    const vacation = await (await page.request.put(`/api/vacations/${id}`, { data: { startsOn: shift(14), endsOn: shift(20) } })).json()
+    const url = `/board/${board.id}?view=gantt`
+    await page.goto(url)
+    await expect(page.locator('.gantt-name .vacation-warning')).toHaveCount(1)
+    const openSettings = async () => {
+      await page.getByRole('button', { name: lang === 'ru' ? 'Поток' : 'Flow', exact: true }).click()
+      return page.getByRole('form', { name: lang === 'ru' ? 'Предупреждения об отпусках' : 'Vacation warnings', exact: true })
+    }
+    const fieldName = lang === 'ru' ? 'За сколько дней предупреждать' : 'How many days before a vacation to warn'
+    const saveName = lang === 'ru' ? 'Сохранить предупреждения' : 'Save warnings'
+    const form = await openSettings()
+    const field = form.getByLabel(fieldName, { exact: true })
+    await field.fill('366')
+    await form.getByRole('button', { name: saveName, exact: true }).click()
+    await expect(field).toBeFocused()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await field.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('warning-invalid.png'), fullPage: true })
+    await field.fill('7')
+    await form.getByRole('button', { name: saveName, exact: true }).click()
+    await expect(form.getByRole('status')).toContainText(lang === 'ru' ? 'Предупреждения сохранены' : 'Warnings saved')
+    await expect(page.locator('.gantt-name .vacation-warning')).toHaveCount(0)
+    const bounds = await field.boundingBox()
+    expect(bounds!.width).toBeGreaterThanOrEqual(150)
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
+    await page.screenshot({ path: info.outputPath('warning-settings.png'), fullPage: true })
+    await page.reload()
+    const savedForm = await openSettings()
+    await expect(savedForm.getByLabel(fieldName, { exact: true })).toHaveValue('7')
+    await savedForm.getByLabel(fieldName, { exact: true }).fill('14')
+    await savedForm.getByRole('button', { name: saveName, exact: true }).click()
+    await expect(page.locator('.gantt-name .vacation-warning')).toHaveCount(1)
+    await page.goto('/tasks')
+    await expect(page.locator('.vacation-warning')).toHaveCount(1)
+    expect((await page.request.put(`/api/boards/${board.id}/vacation-warning-days`, { data: { days: 0 } })).ok()).toBeTruthy()
+    await page.reload()
+    await expect(page.locator('.vacation-warning')).toHaveCount(0)
+    expect((await page.request.put(`/api/vacations/${id}`, { data: { ...vacation, startsOn: initial.today } })).ok()).toBeTruthy()
+    await page.goto(`/board/${board.id}/card/${card.id}`)
+    await page.locator('.panel-card').getByRole('tab', { name: lang === 'ru' ? 'Работа' : 'Work', exact: true }).click()
+    await expect(page.locator('.panel-card .vacation-warning')).toHaveCount(1)
+    expect((await page.request.put(`/api/boards/${board.id}/vacation-warning-days`, { data: { days: null } })).ok()).toBeTruthy()
+    const current = await (await page.request.get(`/api/boards/${board.id}`)).json()
+    expect(current.board.vacationWarningDays).toBeNull()
+  })
+}

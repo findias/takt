@@ -5,9 +5,10 @@ const day = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 86400000
 export const shiftDay = (iso: string, days: number) => new Date((day(iso) + days) * 86400000).toISOString().slice(0, 10)
 export const overlaps = (a: string, b: string, c: string, d: string) => a <= d && c <= b
 
-export function relevantVacations(data: Availability, card: Pick<Card, 'plannedStartOn' | 'plannedEndOn' | 'dueOn' | 'outcome' | 'doneAt'>, assignees: string[]): Vacation[] {
+export function relevantVacations(data: Availability, card: Pick<Card, 'plannedStartOn' | 'plannedEndOn' | 'dueOn' | 'outcome' | 'doneAt'>, assignees: string[], warningDays?: number | null): Vacation[] {
   if (card.outcome || card.doneAt) return []
-  return data.vacations.filter((v) => !v.cancelled && assignees.includes(v.userId) && v.endsOn >= data.today && (
+  const through = warningDays == null ? null : shiftDay(data.today, warningDays)
+  return data.vacations.filter((v) => !v.cancelled && assignees.includes(v.userId) && v.endsOn >= data.today && (through === null || v.startsOn <= through) && (
     v.startsOn <= data.today ||
     (card.plannedStartOn && card.plannedEndOn && overlaps(v.startsOn, v.endsOn, card.plannedStartOn, card.plannedEndOn)) ||
     (card.dueOn && card.dueOn >= v.startsOn && card.dueOn <= v.endsOn) ||

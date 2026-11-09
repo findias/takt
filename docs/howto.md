@@ -1284,6 +1284,16 @@ manual review. Several assignees are checked separately: one person's
 vacation does not imply that the entire task has stopped. Vacations do
 not change columns, completion, commitments or dependent task dates.
 
+On the board, open **Flow** → **Vacation warnings** to set how many
+calendar days before a vacation its warning appears, then press **Save
+warnings**. The setting is shared by the board and applies in the card,
+Gantt and Tasks list. Anyone with board write access can change it.
+Enter a whole number from 0 to 365: **7** starts warning seven days
+before the vacation; **0** starts on its first day. Leave the field empty
+to show all relevant future vacations, as before. Current absences stay
+visible through the last day, using the organisation time zone. The
+calendar and coverage proposals remain available ahead of that warning.
+
 Changing a vacation invalidates agreements tied to its previous version;
 a new proposal and acceptance are needed. Cancelling a vacation also
 invalidates its coverage. A substitute's vacation, loss of write access,

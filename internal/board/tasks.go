@@ -40,11 +40,12 @@ type Task struct {
 	Parent *string `json:"parent"`
 	// Done — отмечена сделанной руками. У пункта это и есть «закончена»:
 	// финиша у него нет, Outcome остаётся пустым.
-	Done           bool     `json:"done"`
-	Labels         []Label  `json:"labels"`
-	PlannedStartOn *string  `json:"plannedStartOn"`
-	PlannedEndOn   *string  `json:"plannedEndOn"`
-	AssigneeIDs    []string `json:"assigneeIds"`
+	Done                bool     `json:"done"`
+	Labels              []Label  `json:"labels"`
+	PlannedStartOn      *string  `json:"plannedStartOn"`
+	PlannedEndOn        *string  `json:"plannedEndOn"`
+	AssigneeIDs         []string `json:"assigneeIds"`
+	VacationWarningDays *int     `json:"vacationWarningDays"`
 }
 
 // TaskList — задачи и то, всё ли показано.
@@ -87,7 +88,8 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			                where k.card_id = c.id and k.unblocked_at is null),
 			       item.number, c.done_at is not null,
                    to_char(c.planned_start_on, 'YYYY-MM-DD'), to_char(c.planned_end_on, 'YYYY-MM-DD'),
-                   array(select a.user_id::text from card_assignees a where a.card_id=c.id order by a.user_id)
+                   array(select a.user_id::text from card_assignees a where a.card_id=c.id order by a.user_id),
+                   b.vacation_warning_days
 			  from cards c
 			  join boards b on b.id = c.board_id
 			  left join lateral (
@@ -120,7 +122,7 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			if err := rows.Scan(&t.ID, &t.Number, &t.Title, &t.BoardID, &t.BoardName,
 				&t.Column, &t.ColumnKind, &t.Priority, &t.DueOn, &t.StartedAt,
 				&t.ColumnEnteredAt, &t.Outcome, &t.Blocked, &t.Parent, &t.Done,
-				&t.PlannedStartOn, &t.PlannedEndOn, &t.AssigneeIDs); err != nil {
+				&t.PlannedStartOn, &t.PlannedEndOn, &t.AssigneeIDs, &t.VacationWarningDays); err != nil {
 				rows.Close()
 				return err
 			}

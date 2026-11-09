@@ -11,10 +11,27 @@ import (
 
 func (s *Server) registerVacationRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/availability", s.human(s.handleAvailability))
+	mux.HandleFunc("PUT /api/boards/{id}/vacation-warning-days", s.authed(s.handleVacationWarningDays))
 	mux.HandleFunc("PUT /api/availability/timezone", s.human(s.handleAvailabilityZone))
 	mux.HandleFunc("PUT /api/vacations/{id}", s.human(s.handleSaveVacation))
 	mux.HandleFunc("PUT /api/coverages/{id}", s.human(s.handleProposeCoverage))
 	mux.HandleFunc("PATCH /api/coverages/{id}", s.human(s.handleRespondCoverage))
+}
+
+func (s *Server) handleVacationWarningDays(w http.ResponseWriter, r *http.Request, p auth.Principal) {
+	if !p.CanEdit() {
+		writeError(w, http.StatusForbidden, "у вас доступ только на чтение")
+		return
+	}
+	var req struct {
+		Days *int `json:"days"`
+	}
+	if !decode(w, r, &req) || !validAvailabilityID(w, r.PathValue("id")) {
+		return
+	}
+	if !s.availabilityError(w, s.boards.SetVacationWarningDays(r.Context(), p.OrgID, p.ID, r.PathValue("id"), req.Days)) {
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 func (s *Server) availabilityError(w http.ResponseWriter, err error) bool {
 	if err == nil {

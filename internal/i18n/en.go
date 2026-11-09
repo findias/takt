@@ -9,6 +9,7 @@ package i18n
 // organisation, subdivision, integration key.
 // #nosec G101 -- каталог сообщений, а не учётные данные: KAITEN_TOKEN и MONDAY_TOKEN в нём — имена переменных окружения в подсказке, значений нет
 var en = map[string]string{
+	"дней до предупреждения об отпуске — от 0 до 365":                                        "days before a vacation warning: 0 to 365",
 	"укажите даты замещения по порядку":                                                      "enter the coverage dates in order",
 	"выберите ответ на замещение: accepted, declined или cancelled":                          "choose a coverage response: accepted, declined or cancelled",
 	"запись уже изменена: обновите данные и повторите правку":                                "this entry has changed: refresh and try again",

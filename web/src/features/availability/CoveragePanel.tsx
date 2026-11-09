@@ -20,7 +20,7 @@ export function CoveragePanel({ base, card, boardId, meId, canEdit }: { base: Ba
     <h3 className="section-title">{s.coverage}</h3><ScreenError>{error}</ScreenError>
     {error && <button type="button" className="link" onClick={refresh}>{s.retry}</button>}
     {data && <>
-      <VacationWarning data={data} card={card} assignees={assignees} people={base.people} />
+      <VacationWarning data={data} card={card} assignees={assignees} people={base.people} warningDays={base.info?.vacationWarningDays} />
       <CoverageList entries={data.coverages.filter((c) => c.cardId === card.id && c.endsOn >= data.today && c.status !== 'cancelled' && c.status !== 'declined')} people={base.people} meId={meId} today={data.today} onChange={refresh} />
       <details><summary>{s.history}</summary><CoverageList entries={data.coverages.filter((c) => c.cardId === card.id && (c.endsOn < data.today || c.status === 'cancelled' || c.status === 'declined'))} people={base.people} meId={meId} today={data.today} onChange={refresh} /></details>
       {canEdit && vacations.length > 0 && !card.doneAt && !card.outcome && <CoverageForm key={`${card.id}:${vacations.map((v) => `${v.id}:${v.version}`).join(',')}`} vacations={vacations} data={data} card={card} people={base.people} onSaved={refresh} />}

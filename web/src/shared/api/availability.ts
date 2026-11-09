@@ -10,6 +10,7 @@ export type Coverage = {
 }
 export type Availability = { today: string; timeZone: string; vacations: Vacation[]; coverages: Coverage[]; eligible: string[] }
 export const availabilityAPI = {
+  warningDays: (board: string, days: number | null) => request<void>('PUT', `/api/boards/${board}/vacation-warning-days`, { days }),
   load: (board?: string) => request<Availability>('GET', '/api/availability' + (board ? `?board=${encodeURIComponent(board)}` : '')),
   save: (v: Vacation) => request<Vacation>('PUT', `/api/vacations/${v.id}`, v),
   propose: (c: Pick<Coverage, 'id' | 'vacationId' | 'vacationVersion' | 'cardId' | 'substituteId' | 'startsOn' | 'endsOn'>) => request<Coverage>('PUT', `/api/coverages/${c.id}`, c),

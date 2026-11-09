@@ -232,7 +232,7 @@ export function Tasks({ principal }: { principal: Principal }) {
                     {(task.outcome || task.done) && <span className="mark tasks-mark">{s.done}</span>}
                     {availability.data && <VacationWarning data={availability.data}
                       card={{ ...task, doneAt: task.done ? 'done' : null }} assignees={task.assigneeIds}
-                      people={names} />}
+                      people={names} warningDays={task.vacationWarningDays} />}
                   </td>
                   <td className="small">
                     <button className="link" onClick={() => navigate(boardPath(task.boardId))}>

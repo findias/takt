@@ -786,7 +786,7 @@ func (s *Service) Archived(ctx context.Context, orgID, userID string) ([]Info, e
 			var runs bool
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
 				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
-				&b.StaleDays, &visibility, &teamID, &cards, &runs); err != nil {
+				&b.StaleDays, &b.VacationWarningDays, &visibility, &teamID, &cards, &runs); err != nil {
 				return err
 			}
 			b.Visibility = &visibility

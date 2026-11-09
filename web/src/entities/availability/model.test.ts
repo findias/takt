@@ -7,6 +7,24 @@ const vacation: Vacation = { id: 'v', userId: 'u', startsOn: '2026-11-10', endsO
 const data: Availability = { today: '2026-11-08', timeZone: 'UTC', vacations: [vacation], coverages: [], eligible: [] }
 const card = { plannedStartOn: '2026-11-09', plannedEndOn: '2026-11-12', dueOn: null, outcome: null, doneAt: null } as Card
 const coverage = (start: string, end: string): Coverage => ({ id: 'c', vacationId: 'v', vacationVersion: 1, cardId: 'a', status: 'accepted', valid: true, startsOn: start, endsOn: end } as Coverage)
+test('предупреждение начинается за заданное число календарных дней и сохраняется до конца отпуска', () => {
+  const affected = (today: string, days: number | null) => relevantVacations({ ...data, today }, card, ['u'], days)
+  assert.deepEqual(affected('2026-11-02', 7), [])
+  assert.deepEqual(affected('2026-11-03', 7), [vacation])
+  assert.deepEqual(affected('2026-11-09', 0), [])
+  assert.deepEqual(affected('2026-11-10', 0), [vacation])
+  assert.deepEqual(affected('2026-11-20', 0), [vacation])
+  assert.deepEqual(affected('2026-11-21', 7), [])
+  assert.deepEqual(affected('2025-12-01', null), [vacation])
+  // Порог не превращает отпуск вне плана в пересечение.
+  const later = { ...card, plannedStartOn: '2026-12-01', plannedEndOn: '2026-12-10' }
+  assert.deepEqual(relevantVacations(data, later, ['u'], 7), [])
+  assert.deepEqual(relevantVacations(data, { ...card, plannedEndOn: null }, ['u'], 1), [])
+  assert.deepEqual(relevantVacations(data, { ...card, plannedEndOn: null }, ['u'], 2), [vacation])
+  const leap = { ...data, today: '2024-02-28', vacations: [{ ...vacation, startsOn: '2024-03-01', endsOn: '2024-03-02' }] }
+  assert.deepEqual(relevantVacations(leap, { ...card, plannedEndOn: null }, ['u'], 1), [])
+  assert.equal(relevantVacations(leap, { ...card, plannedEndOn: null }, ['u'], 2).length, 1)
+})
 test('отпуск пересекается с планом и обязательством; завершённая и чужая работа не предупреждает', () => {
   assert.equal(shiftDay('2024-02-28', 2), '2024-03-01')
   assert.equal(overlaps('2026-11-01', '2026-11-10', '2026-11-10', '2026-11-20'), true)

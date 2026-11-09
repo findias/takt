@@ -539,6 +539,7 @@ export type Task = {
   plannedStartOn: string | null
   plannedEndOn: string | null
   assigneeIds: string[]
+  vacationWarningDays?: number | null
   startedAt: string | null
   columnEnteredAt: string
   outcome: Card['outcome']
@@ -655,6 +656,8 @@ export type BoardInfo = {
   /** «Без движения» (ROADMAP 42.3): дней в одной колонке работы до
    *  попадания в «Требует внимания»; пусто — семь. */
   staleDays?: number | null
+  /** Пусто — все будущие отпуска; ноль — только уже начавшиеся. */
+  vacationWarningDays?: number | null
   /** Можно ли в доску писать. Отвечает список досок — из него выбирают,
    *  куда поставить работу соседям. В снимке доски поля нет: там на этот
    *  вопрос не отвечают, и «нельзя» отличается от «не спрашивали». */

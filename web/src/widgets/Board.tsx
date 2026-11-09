@@ -108,6 +108,7 @@ const Flow = lazy(
     () => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })),
     'flow',
     'flowReport',
+    'availability',
   ),
 )
 // Дерево работы — вид для тех, кому нужна иерархия (этап 32.6); с доской
@@ -1727,6 +1728,8 @@ export function Board({
           ownUnit={base.info.ownEstimateUnit ?? null}
           orgUnit={orgUnit}
           staleDays={base.info.staleDays ?? null}
+          vacationWarningDays={base.info.vacationWarningDays ?? null}
+          canEdit={canEdit}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

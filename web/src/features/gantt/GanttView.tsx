@@ -95,7 +95,7 @@ export function GanttView({ base, order, query, onQuery, onOpenCard, canEdit, on
                       </button>}
                       <button type="button" className="link gantt-title" onClick={() => onOpenCard(card.id)}><span className="card-number">{card.number}</span> {card.title}</button>
                       <PriorityMark priority={card.priority} />
-                      {availability.data && <VacationWarning data={availability.data} card={card} assignees={base.cardAssignees[card.id] ?? []} people={base.people} />}
+                      {availability.data && <VacationWarning data={availability.data} card={card} assignees={base.cardAssignees[card.id] ?? []} people={base.people} warningDays={base.info?.vacationWarningDays} />}
                       <div className="muted small">{people}{done ? ` · ${done.percent}%` : ''}</div>
                       {foreign.has(card.id) && <span className="muted small">{s.incomplete}</span>}
                       {context && <span className="muted small">{s.context}</span>}

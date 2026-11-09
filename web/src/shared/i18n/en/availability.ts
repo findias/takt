@@ -1,4 +1,8 @@
 export const availability = {
+  warningSettings: 'Vacation warnings', warningDays: 'How many days before a vacation to warn',
+  warningHint: 'Calendar days before the vacation starts, from 0 to 365. Empty means all future vacations; 0 means from the first day. Shared board setting; Today follows the organisation time zone.',
+  warningInvalid: 'Enter a whole number from 0 to 365 or leave the field empty',
+  warningSave: 'Save warnings', warningSaved: 'Warnings saved',
   bulk: 'Propose coverage for selected tasks',
   datesInvalid: 'Enter dates in order within the selected period',
   title: 'Vacations', people: 'Members', mine: 'My vacations', add: 'Add vacation', edit: 'Edit vacation',
