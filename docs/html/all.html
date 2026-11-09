@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-50-g97db0ce-dirty.</p>
+<p>Every section in one file. Version v0.5.1-52-g574d623-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -130,6 +130,7 @@ color:var(--ink-3);font-size:.85rem}
 <div class="tablewrap"><table>
 <thead><tr><th>You want to</th><th>Open</th></tr></thead>
 <tbody>
+<tr><td>Try the new features in v0.6.0</td><td><a href="howto.html#new-features">Plans, vacations and task coverage</a></td></tr>
 <tr><td>Learn to run a board</td><td><a href="quickstart.html">First fifteen minutes</a></td></tr>
 <tr><td>Solve one specific problem</td><td><a href="howto.html">How to</a></td></tr>
 <tr><td>Look up a list or a setting</td><td><a href="reference.html">Reference</a></td></tr>
@@ -146,7 +147,7 @@ color:var(--ink-3);font-size:.85rem}
 <p><strong>Filtering and grouping.</strong> Nine filter conditions, four ways to slice the board into swimlanes, saved views. All of it lives in the address bar: you send a configured view as a link.</p>
 <p><strong>Flow metrics.</strong> Cycle time as percentiles, throughput, work in progress, ageing of what is running, cumulative flow, and a probabilistic forecast. They are computed from finished work, not from fields someone filled in by hand.</p>
 <p><strong>Iterations.</strong> A sprint or a release with dates and a report once it is closed.</p>
-<p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions.</p>
+<p><strong>Organisation.</strong> Roles, subdivisions as a tree, three board visibilities, invitations by link, an audit log of administrative actions. A shared vacation calendar includes nested subdivisions; task coverage needs the substitute&#39;s acceptance and leaves primary assignees in place.</p>
 <p><strong>Moving in.</strong> From a spreadsheet (CSV, Excel), straight from YouGile, or — into a closed network — as a package: the separate exporter <a href="takt-fetch.html"><code>takt-fetch</code></a> builds it outside from YouGile, Jira, Kaiten or monday, with subtasks, links and discussions. Every import shows what will happen before it writes anything, and names what it cannot carry.</p>
 <p><strong>Integrations.</strong> A REST API with a published contract, keys with scopes, SCIM 2.0 directory provisioning, event subscriptions signed with a key and a delivery log, and a full data export in one file.</p>
 <p><strong>Sign-in.</strong> Password or a corporate identity provider (OIDC).</p>
@@ -211,6 +212,17 @@ color:var(--ink-3);font-size:.85rem}
 <p>Answers to specific questions. Each one is short and stands on its own — no need to read them in order.</p>
 <p>If this is your first time here, walk through the <a href="quickstart.html">first fifteen minutes</a> first; the rest will make more sense.</p>
 <p><strong>The interface speaks English and Russian;</strong> the language is chosen behind your name in the header. Buttons are named here as they appear in the English interface.</p>
+<h2 id="new-features">Try the new features in v0.6.0</h2>
+<p>Start with a board you can edit and a task assigned to you. A viewer can read plans and manage their own vacations, but cannot edit tasks or act as a substitute.</p>
+<ol>
+<li><strong>Make a plan.</strong> Open the task → <strong>Work</strong>, enter <strong>Planned start</strong> and <strong>Planned end</strong>, then leave the two date fields to save. Select <strong>Gantt</strong> in the board header: the task now has a bar. Drag the bar to move both dates or its edges to change one. Plan subtasks separately; changing the parent does not shift its parts. <a href="#gantt">Dates, keyboard controls and conflicts</a>.</li>
+<li><strong>Record an absence.</strong> Open <strong>Team</strong> → <strong>Vacations</strong> → <strong>Add vacation</strong>, enter the first and last day and save. Both days are included, and colleagues can see the entry immediately. Use <strong>Subdivisions</strong> to select several teams or a parent with all its descendants; clear the selection with <strong>Whole organisation</strong>. The organisation owner should check the time zone on this page before relying on <strong>Today</strong>.</li>
+<li><strong>Agree on coverage.</strong> After saving a vacation, press **Prepare coverage**, select tasks and propose a substitute. For a different period on one task, open its <strong>Work</strong> → <strong>Coverage</strong> section. Ask the substitute to open <strong>Team</strong> → <strong>Vacations</strong>, find the proposal under <strong>Coverage agreements</strong> and press <strong>Accept</strong>. Until then it is <strong>Awaiting response</strong>. Accepted coverage appears in <strong>Tasks</strong> → <strong>Covering</strong> only during its period and while it remains valid. <a href="#vacations">Rights, partial periods and invalidated agreements</a>.</li>
+<li><strong>Check the work.</strong> Review vacation warnings in <strong>Tasks</strong>, the card and <strong>Gantt</strong>. Unplanned work needs a manual check. The primary assignee stays assigned; arrange coverage for each subtask that needs it. After changing or restoring a vacation, propose and accept coverage again.</li>
+<li><strong>Update completion.</strong> In the card&#39;s <strong>Work</strong> → <strong>Complete</strong>, enter a whole number from 0 to 100 and press Enter or leave the field. 100 marks the card done; it does not move it to another column. <strong>Count automatically</strong> returns to completion calculated from parts. <a href="#completion">Completion rules</a>.</li>
+<li><strong>Keep the discussion going.</strong> Open <strong>Discussion</strong>: new messages and replies appear at the bottom. While reading history, use **Latest messages** to return to the composer. A failed send keeps your draft.</li>
+</ol>
+<p>Also in this release: <a href="#ideas">ideas and decisions</a>, <a href="#share">card links</a> and <a href="#tree">epics as a tree</a>. The <a href="CHANGELOG.html">release notes</a> include the full change list and upgrade details.</p>
 <h2 id="board">Working on the board</h2>
 <h3 id="find-a-card">Find a card</h3>
 <p>Press <code>Ctrl+K</code> and start typing. The palette searches both cards and board commands.</p>
@@ -330,7 +342,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>Priority labels appear on tasks and subtasks, including in the card header and the parts list. Each part shows its own priority; the parent&#39;s priority is not inherited. The default medium level is omitted.</p>
 <p>The fill is the card&#39;s completion percentage; the diamond is its commitment date. The vertical line marks today. Weeks and Months change the scale; arrows and Today change the period. The view, period and scale live in the URL and can be saved as a view or shared as a link.</p>
 <p>Plans are separate from commitments, estimates and actual start and finish dates. Moving a bar does not change the card&#39;s column, its completion or dependent tasks. If someone changes the same plan before you save, the server rejects the stale edit and refreshes the board. Check the current dates before editing again.</p>
-<h3 id="say-how-far-along-a-card-is">Say how far along a card is</h3>
+<h3 id="completion">Say how far along a card is</h3>
 <p>Open the card, <strong>Work</strong> tab, <strong>Complete</strong>: drag the slider and let go, or type a whole number from 0 to 100 in the field beside it and press Enter or leave the field. Escape cancels an edit. The percentage is saved and the card shows it. Until someone moves it, it counts itself: from the parts, a part at 40% giving its parent 0.4 of a part, and 100 for a card marked done. A percentage set by hand overrides the count on that card, for a task, a part or an epic alike; <strong>Count automatically</strong> brings the count back. A hundred percent and &#34;done&#34; are the same thing: a card that reaches 100, by hand or because its last part got done, is marked done, and its parent is marked too once all of its parts are; a card marked done or past the finish column is 100 in the report whatever was set by hand, and the slider is gone for a card past the finish. Moving the slider below 100 lifts the mark. The percentage never moves the card on the board. A card without parts shows its percentage on the board only once it is set by hand. The history keeps &#34;40% complete&#34; and &#34;marked done: 100% complete&#34;.</p>
 <p>An open part shows its path to the root above the number: &#34;Move to the new warehouse · Platform › Ship the warehouse release&#34;. A link on this board opens that card here; a link on another board is signed with the board and opens it there. A parent on a board you cannot see is named &#34;Unavailable card&#34; rather than dropped, so the path is never shorter than it is; its name and board stay closed. A path longer than three links folds its middle into &#34;…&#34;, and the whole chain is in the tooltip.</p>
 <h3 id="external-number">Give a card its number from another tracker</h3>
@@ -800,6 +812,32 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
+<h2 id="planning">Plans and availability</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Item</th><th>Meaning and rules</th></tr></thead>
+<tbody>
+<tr><td>Planned start / Planned end</td><td>Optional calendar days, independent of the commitment and flow history. Either may be empty; when both exist, end cannot precede start. Both days are included</td></tr>
+<tr><td>Gantt bar</td><td>Needs both planned dates. Its fill is completion; a diamond shows the commitment. Only cards and subtasks on this board are plotted</td></tr>
+<tr><td>Plan editing</td><td>Requires write access to the board. Viewers read it. A concurrent date change rejects the stale edit; review the refreshed dates before trying again</td></tr>
+<tr><td>Complete</td><td>A whole percentage from 0 to 100, or calculated from parts. 100 means done; it does not move the card between columns. A card beyond the finish stays at 100</td></tr>
+<tr><td>Vacation</td><td>Managed by the person, including a viewer. Both days are included; overlaps for one person are rejected. Dates and notes are visible to colleagues in the organisation</td></tr>
+<tr><td>Organisation time zone</td><td>An IANA name set by the organisation owner on the vacations page; defaults to UTC. Determines Today and whether coverage is currently active</td></tr>
+<tr><td>Coverage</td><td>One task, absent primary assignee, substitute and period within the vacation. Requires board write access to propose; the substitute must be able to work on the board and have no overlapping vacation</td></tr>
+</tbody>
+</table></div>
+<div class="tablewrap"><table>
+<thead><tr><th>Coverage state</th><th>Where to look / what to do</th></tr></thead>
+<tbody>
+<tr><td>Awaiting response</td><td>A proposal, not confirmed coverage; the substitute accepts or declines on the vacations page</td></tr>
+<tr><td>Accepted, future</td><td>In Coverage agreements; absent from Tasks → Covering until its start day</td></tr>
+<tr><td>Accepted, active and valid</td><td>In Tasks → Covering; the primary assignee remains assigned</td></tr>
+<tr><td>Part of a vacation</td><td>Marked as partial; check the remaining days and each subtask separately</td></tr>
+<tr><td>Invalid</td><td>Changed or cancelled vacation, substitute&#39;s vacation, lost access, removed primary assignee, archived or completed task. Review the cause and arrange coverage again; restoring a vacation does not restore consent</td></tr>
+<tr><td>Period ended</td><td>Stops applying automatically; old agreements remain in Coverage history</td></tr>
+</tbody>
+</table></div>
+<p>Vacation warnings in Tasks, cards and Gantt ask for review; they do not change dates, columns or assignees. They check each assignee separately. The calendar is organisation-wide; task details still require board visibility. A parent subdivision includes its descendants; multiple selected branches are combined. Calendar and coverage refresh every minute and when the window regains focus.</p>
+<p>For steps, see <a href="howto.html#new-features">the new features walkthrough</a>, <a href="howto.html#gantt">Gantt</a> and <a href="howto.html#vacations">vacations</a>.</p>
 </section>
 <section id="cheatsheet">
 <h1>Cheat sheet</h1>
@@ -809,9 +847,10 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <thead><tr><th>Where</th><th>What is there</th></tr></thead>
 <tbody>
 <tr><td><strong>Boards</strong></td><td>boards of the organisation and the archive</td></tr>
-<tr><td><strong>Team</strong></td><td>people, invitations, labels, keys, subscriptions, export</td></tr>
+<tr><td><strong>Team</strong></td><td>people, vacations, invitations, labels, keys, subscriptions, export</td></tr>
+<tr><td><strong>Tasks</strong> → <strong>Covering</strong></td><td>accepted coverage active now</td></tr>
 <tr><td><strong>Structure</strong></td><td>subdivisions as a tree</td></tr>
-<tr><td>Board header</td><td>a list at the left: <strong>Board</strong>, <strong>Table</strong>, <strong>Changes</strong> — three views of one set; the filter row next to it; <strong>Flow</strong> — metrics; <strong>Archive</strong> — the archive</td></tr>
+<tr><td>Board header</td><td>a list at the left: <strong>Board</strong>, <strong>Table</strong>, <strong>Tree</strong>, <strong>Gantt</strong>, <strong>Changes</strong> — views of one set; the filter row next to it; <strong>Flow</strong> — metrics; <strong>Archive</strong> — the archive</td></tr>
 </tbody>
 </table></div>
 <h2 id="keys">Keys</h2>
@@ -852,6 +891,9 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 <thead><tr><th>Word</th><th>What it means</th></tr></thead>
 <tbody>
 <tr><td>Board</td><td>One team&#39;s work, moving through columns. A board has a key, a visibility and, if the team sets one, a promise</td></tr>
+<tr><td>Plan</td><td>Optional planned start and end days of a card. Edited in Gantt or Work; does not replace the commitment or actual flow dates</td></tr>
+<tr><td>Vacation</td><td>A person’s absence over calendar days, visible to colleagues; Today follows the organisation time zone</td></tr>
+<tr><td>Coverage</td><td>An agreement for a substitute to cover one task during a vacation. Requires acceptance, keeps the primary assignee and applies only during its valid period</td></tr>
 <tr><td>Board key</td><td>A short prefix of card numbers: <code>ПОСТ</code> gives <code>ПОСТ-14</code>. Set once, when the board is created: card numbers end up in correspondence and must not change</td></tr>
 <tr><td>Card</td><td>One piece of work. Its number is the board key plus a sequence number</td></tr>
 <tr><td>Column</td><td>A stage the work goes through: <strong>Queue</strong>, <strong>In progress</strong>, <strong>Done</strong> on a new board</td></tr>
@@ -1896,13 +1938,20 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>What changed</h1>
 <p>For whoever installs and upgrades: what is different between two installations and what to look at afterwards. Why it was decided this way is in <code>research/*.html</code>; here is what to do on upgrade.</p>
 <p>The rule for an entry: first whatever changes behaviour or needs action on upgrade, then the rest. A version appears here before its tag — otherwise the release gets made and the list gets written «later».</p>
-<h2 id="v0-6-0-27-october-2026">v0.6.0 — 27 October 2026</h2>
+<h2 id="v0-6-0-9-november-2026">v0.6.0 — 9 November 2026</h2>
 <h3 id="for-whoever-installs-and-upgrades">For whoever installs and upgrades</h3>
 <p><strong>Twelve migrations, safe for the running version.</strong> <code>0080</code> adds two nullable columns: <code>cards.percent</code> and <code>boards.estimate_unit</code>; <code>0081</code> adds nullable <code>boards.stale_days</code>; <code>0082</code> adds the table <code>epic_statuses</code>, <code>0083</code> the tables <code>ideas</code> and <code>idea_votes</code> and <code>0084</code> the table <code>idea_decisions</code>, which the old version never touches; <code>0085</code> lets <code>notifications.board_id</code> and <code>card_id</code> be empty and adds <code>notifications.idea_id</code> — the old version always fills both and reads through a join with cards, so it simply does not see notifications about ideas; <code>0086</code> adds the table <code>webhook_outbox</code> and a nullable <code>webhooks.resumed_at</code>; <code>0087</code> adds one row policy on <code>ideas</code>, which the old version never exercises; <code>0088</code> adds <code>idea_decisions.request_fingerprint</code> with an empty default, so the old code can still write decisions; <code>0089</code> adds a nullable <code>idea_decisions.request_id</code> and a unique index for requests by a person on an idea. <code>0090</code> adds nullable <code>cards.planned_start_on</code> and <code>planned_end_on</code> with a constraint on their order. The <code>SET_CARD_PLAN</code> operation requires both dates (or nulls) and the expected previous plan; a concurrent date change returns <code>409 plan_changed</code>. <code>0091</code> adds vacations, task coverage and the organisation time zone (default UTC), and expands notification reasons with <code>coverage_changed</code>. Pods of v0.5.x keep working on all of it.</p>
 <p><strong>Taking an idea saves the card and decision together.</strong> A failure no longer leaves a card behind without a decision. The decision form keeps a <code>requestId</code> across retries after a lost response. Even after another decision, a late retry returns the current state without a duplicate card or notification; changing a command under the same ID gets <code>409</code>. Clients from the previous version send no ID and keep protection for identical consecutive decisions only. Moving and deciding the same idea now wait for each other and recheck its state and the actor&#39;s rights.</p>
 <p><strong>Subscription events now reach the receiver whoever caused them.</strong> Until now a delivery was created in the transaction of the action by selecting the subscriptions under the actor&#39;s own row policies — and subscriptions are visible to the owner only. An action by a member, a viewer or an integration key found no subscription and the event was silently dropped; only the owner&#39;s own actions were delivered. Events now go to an outbox and the delivery worker fans them out to the subscriptions it can see — all of them. Expect more deliveries after the upgrade: everything members do now arrives. Pausing a subscription still drops what happens meanwhile.</p>
 <p>A new event, <code>card.status_set</code>, carries an epic&#39;s status in words (<code>status</code>: <code>on_track</code>, <code>at_risk</code> or <code>off_track</code>) and its <code>note</code> — subscriptions that list events by name need it added.</p>
 <p>A new operation, <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code>, moves a card to another board of the same level; the key or person must be able to write to both. The card gets a number from the new board. Two new events go with it: <code>card.moved_out</code> on the old board and <code>card.moved_in</code> on the new one, with the old number in <code>fromNumber</code> — subscriptions that list events by name need them added. A card&#39;s history (<code>/events?cardId=…</code>) now includes what happened to it on the old board, and notifications lead to the board the card is on now. <code>GET /api/cards/{cardId}/board</code> tells which board a card is on, and the board metrics have <code>movedOut</code>.</p>
+<h3 id="after-upgrading">After upgrading</h3>
+<ol>
+<li>Apply the migrations before starting the new binary, using the <a href="install.html">upgrade procedure</a>, and run <code>takt doctor</code>.</li>
+<li>As the organisation owner, open <strong>Team</strong> → <strong>Vacations</strong> and check the organisation time zone (UTC by default). Existing cards have no planned dates until someone enters them; commitments are not copied into the plan.</li>
+<li>If subscriptions use an explicit event list, review the new events named above and <code>idea.created</code> / <code>idea.decided</code> below. Check the receiver&#39;s capacity: member and integration actions now arrive too.</li>
+<li>Share the <a href="howto.html#new-features">new features walkthrough</a> with the team. Try a plan change and a coverage proposal accepted by a second person; pending and future coverage do not appear in <strong>Tasks</strong> → <strong>Covering</strong>.</li>
+</ol>
 <h3 id="the-rest">The rest</h3>
 <ul>
 <li><strong>Vacations and confirmed task coverage.</strong> Team has a vacation calendar, visible to all colleagues, with a filter for one or more subdivisions and their nested teams. Personal settings link to your own entries, and each task can have a substitute for a specific period. The substitute accepts or declines; accepted active coverage appears in Tasks → Covering. The Tasks list, cards and Gantt flag absences; primary assignees, completion and task dates stay intact. Changed vacations or lost access invalidate affected agreements.</li>
@@ -2203,13 +2252,20 @@ takt-fetch monday fetch --board 1234567890 --out sales.takt</code></pre>
 <h1>Что менялось</h1>
 <p>Список для тех, кто ставит и обновляет: что изменилось между двумя установками и на что смотреть после обновления. Почему решено именно так — в <code>research/*.html</code>; здесь — что делать при обновлении.</p>
 <p>Правило записи: сперва то, что меняет поведение или требует действий при обновлении, потом остальное. Версия появляется здесь раньше, чем тег, — иначе выпуск делается, а список пишется «потом».</p>
-<h2 id="v0-6-0-27-октября-2026">v0.6.0 — 27 октября 2026</h2>
+<h2 id="v0-6-0-9-ноября-2026">v0.6.0 — 9 ноября 2026</h2>
 <h3 id="для-тех-кто-ставит-и-обновляет">Для тех, кто ставит и обновляет</h3>
 <p><strong>Двенадцать миграций, безопасных для работающей версии.</strong> <code>0080</code> добавляет две колонки, допускающие пусто: <code>cards.percent</code> и <code>boards.estimate_unit</code>; <code>0081</code> — допускающую пусто <code>boards.stale_days</code>; <code>0082</code> — таблицу <code>epic_statuses</code>, <code>0083</code> — таблицы <code>ideas</code> и <code>idea_votes</code>, <code>0084</code> — таблицу <code>idea_decisions</code>, которых старая версия не касается; <code>0085</code> разрешает пустые <code>notifications.board_id</code> и <code>card_id</code> и добавляет <code>notifications.idea_id</code> — старая версия заполняет оба поля всегда, а читает через join с cards, поэтому уведомлений об идеях просто не видит; <code>0086</code> добавляет таблицу <code>webhook_outbox</code> и допускающую пусто <code>webhooks.resumed_at</code>; <code>0087</code> добавляет одну политику строк на <code>ideas</code>, которой старая версия не касается; <code>0088</code> добавляет <code>idea_decisions.request_fingerprint</code> с пустым умолчанием: старый код по-прежнему записывает решения; <code>0089</code> добавляет допускающую пусто <code>idea_decisions.request_id</code> и уникальный индекс запросов человека по идее. Миграция <code>0090</code> добавляет необязательные <code>cards.planned_start_on</code> и <code>planned_end_on</code> с проверкой порядка дат. Операция <code>SET_CARD_PLAN</code> требует обе даты (или null) и ожидаемый прежний план; одновременное изменение дат возвращает <code>409 plan_changed</code>. <code>0091</code> добавляет отпуска, замещения по задачам и часовой пояс организации (по умолчанию UTC), расширяет поводы уведомлений значением <code>coverage_changed</code>. Поды v0.5.x на всём этом работают.</p>
 <p><strong>Принятие идеи сохраняет карточку и решение вместе.</strong> Ошибка больше не оставляет карточку без решения. Форма решения сохраняет <code>requestId</code> при повторе после потери ответа. Даже после другого решения поздний повтор возвращает нынешнее состояние без второй карточки и уведомления; другая команда с тем же ID получает <code>409</code>. Клиенты прежней версии не передают ID: для них защищён только одинаковый ответ подряд. Перенос и решение одной идеи теперь дожидаются друг друга и заново проверяют её состояние и права действующего.</p>
 <p><strong>События подписок теперь доходят до получателя, кто бы их ни вызвал.</strong> До сих пор доставка заводилась в транзакции действия выборкой подписок под политиками самого действующего — а подписки видны только владельцу. Действие участника, наблюдателя или ключа интеграции не находило ни одной подписки, и событие тихо пропадало; доходили только действия самого владельца. Теперь события ложатся в исходящий ящик, а работник доставки раскладывает их по подпискам, которые видит все. После обновления доставок станет больше: приходит всё, что делают участники. Пауза подписки по-прежнему отбрасывает случившееся за это время.</p>
 <p>Новое событие <code>card.status_set</code> несёт статус эпика словами (<code>status</code>: <code>on_track</code>, <code>at_risk</code> или <code>off_track</code>) и пояснение <code>note</code> — подписки, перечисляющие события по имени, нужно дополнить.</p>
 <p>Новая операция <code>MOVE_CARD_TO_BOARD</code> <code>{cardId, boardId, toColumnId?}</code> переносит карточку на другую доску того же уровня; ключ или человек должен писать в обе. Карточка получает номер новой доски. С операцией пришли два события: <code>card.moved_out</code> на прежней доске и <code>card.moved_in</code> на новой, с прежним номером в <code>fromNumber</code>, — подписки, перечисляющие события по имени, нужно дополнить. История карточки (<code>/events?cardId=…</code>) теперь включает и то, что было с ней на прежней доске, а уведомления ведут на доску, где карточка лежит сейчас. <code>GET /api/cards/{cardId}/board</code> говорит, на какой доске карточка, а в метриках доски появилось <code>movedOut</code>.</p>
+<h3 id="после-обновления">После обновления</h3>
+<ol>
+<li>Примените миграции до запуска нового бинарника по <a href="ru/установка.html">инструкции обновления</a> и выполните <code>takt doctor</code>.</li>
+<li>От имени владельца откройте <strong>«Команда»</strong> → <strong>«Отпуска»</strong> и проверьте часовой пояс организации (по умолчанию UTC). У существующих карточек плановые даты пусты, пока их не заполнят; обязательства в план не копируются.</li>
+<li>Если подписки перечисляют события явно, проверьте новые события выше и <code>idea.created</code> / <code>idea.decided</code> ниже. Проверьте пропускную способность получателя: теперь приходят и действия участников и интеграций.</li>
+<li>Передайте команде <a href="ru/как.html#new-features">инструкцию по новым возможностям</a>. Попробуйте изменить план и предложить замещение с согласием другого человека; ожидающее ответа и будущее замещение не попадает в <strong>«Задачи»</strong> → <strong>«Замещаю»</strong>.</li>
+</ol>
 <h3 id="остальное">Остальное</h3>
 <ul>
 <li><strong>Отпуска и подтверждаемое замещение по задачам.</strong> В «Команде» появился календарь отпусков всех коллег с отбором по одному или нескольким подразделениям и вложенным командам; в личных настройках — переход к своим записям. По задаче можно предложить заместителя на период; он принимает или отклоняет предложение. Принятое действующее замещение видно в «Задачах → Замещаю». Список задач, карточка и Гант предупреждают об отсутствии; основные исполнители, готовность и сроки сохраняются. Изменение отпуска или потеря доступа делают договорённости недействительными.</li>

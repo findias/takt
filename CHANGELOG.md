@@ -8,7 +8,7 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
-## v0.6.0 — 27 October 2026
+## v0.6.0 — 9 November 2026
 
 ### For whoever installs and upgrades
 
@@ -68,6 +68,22 @@ history (`/events?cardId=…`) now includes what happened to it on the old
 board, and notifications lead to the board the card is on now.
 `GET /api/cards/{cardId}/board` tells which board a card is on, and the
 board metrics have `movedOut`.
+
+### After upgrading
+
+1. Apply the migrations before starting the new binary, using the
+   [upgrade procedure](docs/install.md), and run `takt doctor`.
+2. As the organisation owner, open **Team** → **Vacations** and check the
+   organisation time zone (UTC by default). Existing cards have no
+   planned dates until someone enters them; commitments are not copied
+   into the plan.
+3. If subscriptions use an explicit event list, review the new events
+   named above and `idea.created` / `idea.decided` below. Check the
+   receiver's capacity: member and integration actions now arrive too.
+4. Share the [new features walkthrough](docs/howto.md#new-features)
+   with the team. Try a plan change and a coverage proposal accepted
+   by a second person; pending and future coverage do not appear in
+   **Tasks** → **Covering**.
 
 ### The rest
 

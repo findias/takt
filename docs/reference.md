@@ -369,3 +369,35 @@ The contract is published at `/api/v1/docs` on a running installation;
 machine-readable at `/api/v1/openapi.json`. The version is in the path,
 the reason for a refusal arrives as a code, and a repeat with the same
 idempotency key is safe.
+
+<a id="planning"></a>
+## Plans and availability
+
+| Item | Meaning and rules |
+| --- | --- |
+| Planned start / Planned end | Optional calendar days, independent of the commitment and flow history. Either may be empty; when both exist, end cannot precede start. Both days are included |
+| Gantt bar | Needs both planned dates. Its fill is completion; a diamond shows the commitment. Only cards and subtasks on this board are plotted |
+| Plan editing | Requires write access to the board. Viewers read it. A concurrent date change rejects the stale edit; review the refreshed dates before trying again |
+| Complete | A whole percentage from 0 to 100, or calculated from parts. 100 means done; it does not move the card between columns. A card beyond the finish stays at 100 |
+| Vacation | Managed by the person, including a viewer. Both days are included; overlaps for one person are rejected. Dates and notes are visible to colleagues in the organisation |
+| Organisation time zone | An IANA name set by the organisation owner on the vacations page; defaults to UTC. Determines Today and whether coverage is currently active |
+| Coverage | One task, absent primary assignee, substitute and period within the vacation. Requires board write access to propose; the substitute must be able to work on the board and have no overlapping vacation |
+
+| Coverage state | Where to look / what to do |
+| --- | --- |
+| Awaiting response | A proposal, not confirmed coverage; the substitute accepts or declines on the vacations page |
+| Accepted, future | In Coverage agreements; absent from Tasks → Covering until its start day |
+| Accepted, active and valid | In Tasks → Covering; the primary assignee remains assigned |
+| Part of a vacation | Marked as partial; check the remaining days and each subtask separately |
+| Invalid | Changed or cancelled vacation, substitute's vacation, lost access, removed primary assignee, archived or completed task. Review the cause and arrange coverage again; restoring a vacation does not restore consent |
+| Period ended | Stops applying automatically; old agreements remain in Coverage history |
+
+Vacation warnings in Tasks, cards and Gantt ask for review; they do not
+change dates, columns or assignees. They check each assignee separately.
+The calendar is organisation-wide; task details still require board
+visibility. A parent subdivision includes its descendants; multiple
+selected branches are combined. Calendar and coverage refresh every
+minute and when the window regains focus.
+
+For steps, see [the new features walkthrough](howto.md#new-features),
+[Gantt](howto.md#gantt) and [vacations](howto.md#vacations).

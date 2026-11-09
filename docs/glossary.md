@@ -8,6 +8,9 @@ documentation use, and what each of them means in Takt.
 | Word | What it means |
 | --- | --- |
 | Board | One team's work, moving through columns. A board has a key, a visibility and, if the team sets one, a promise |
+| Plan | Optional planned start and end days of a card. Edited in Gantt or Work; does not replace the commitment or actual flow dates |
+| Vacation | A person’s absence over calendar days, visible to colleagues; Today follows the organisation time zone |
+| Coverage | An agreement for a substitute to cover one task during a vacation. Requires acceptance, keeps the primary assignee and applies only during its valid period |
 | Board key | A short prefix of card numbers: `ПОСТ` gives `ПОСТ-14`. Set once, when the board is created: card numbers end up in correspondence and must not change |
 | Card | One piece of work. Its number is the board key plus a sequence number |
 | Column | A stage the work goes through: **Queue**, **In progress**, **Done** on a new board |

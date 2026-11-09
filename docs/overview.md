@@ -16,6 +16,7 @@ this page is
 
 | You want to | Open |
 | --- | --- |
+| Try the new features in v0.6.0 | [Plans, vacations and task coverage](howto.md#new-features) |
 | Learn to run a board | [First fifteen minutes](quickstart.md) |
 | Solve one specific problem | [How to](howto.md) |
 | Look up a list or a setting | [Reference](reference.md) |
@@ -60,7 +61,9 @@ is closed.
 
 **Organisation.** Roles, subdivisions as a tree, three board
 visibilities, invitations by link, an audit log of administrative
-actions.
+actions. A shared vacation calendar includes nested subdivisions; task
+coverage needs the substitute's acceptance and leaves primary assignees
+in place.
 
 **Moving in.** From a spreadsheet (CSV, Excel), straight from
 YouGile, or — into a closed network — as a package: the separate

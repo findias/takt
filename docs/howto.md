@@ -10,6 +10,50 @@ minutes](quickstart.md) first; the rest will make more sense.
 behind your name in the header. Buttons are named here as they appear
 in the English interface.
 
+<a id="new-features"></a>
+## Try the new features in v0.6.0
+
+Start with a board you can edit and a task assigned to you. A viewer
+can read plans and manage their own vacations, but cannot edit tasks
+or act as a substitute.
+
+1. **Make a plan.** Open the task → **Work**, enter **Planned start**
+   and **Planned end**, then leave the two date fields to save. Select
+   **Gantt** in the board header: the task now has a bar. Drag the bar
+   to move both dates or its edges to change one. Plan subtasks
+   separately; changing the parent does not shift its parts.
+   [Dates, keyboard controls and conflicts](#gantt).
+2. **Record an absence.** Open **Team** → **Vacations** → **Add vacation**,
+   enter the first and last day and save. Both days are included, and
+   colleagues can see the entry immediately. Use **Subdivisions** to
+   select several teams or a parent with all its descendants; clear
+   the selection with **Whole organisation**. The organisation owner
+   should check the time zone on this page before relying on **Today**.
+3. **Agree on coverage.** After saving a vacation, press **Prepare
+   coverage**, select tasks and propose a substitute. For a different
+   period on one task, open its **Work** → **Coverage** section. Ask the
+   substitute to open **Team** → **Vacations**, find the proposal under
+   **Coverage agreements** and press **Accept**. Until then it is
+   **Awaiting response**. Accepted coverage appears in **Tasks** → **Covering** only during its period and while it remains valid.
+   [Rights, partial periods and invalidated agreements](#vacations).
+4. **Check the work.** Review vacation warnings in **Tasks**, the card
+   and **Gantt**. Unplanned work needs a manual check. The primary
+   assignee stays assigned; arrange coverage for each subtask that
+   needs it. After changing or restoring a vacation, propose and accept
+   coverage again.
+5. **Update completion.** In the card's **Work** → **Complete**, enter a
+   whole number from 0 to 100 and press Enter or leave the field.
+   100 marks the card done; it does not move it to another column.
+   **Count automatically** returns to completion calculated from parts.
+   [Completion rules](#completion).
+6. **Keep the discussion going.** Open **Discussion**: new messages and
+   replies appear at the bottom. While reading history, use **Latest
+   messages** to return to the composer. A failed send keeps your draft.
+
+Also in this release: [ideas and decisions](#ideas), [card links](#share)
+and [epics as a tree](#tree). The [release notes](../CHANGELOG.md)
+include the full change list and upgrade details.
+
 <a id="board"></a>
 ## Working on the board
 
@@ -486,6 +530,7 @@ completion or dependent tasks. If someone changes the same plan before
 you save, the server rejects the stale edit and refreshes the board.
 Check the current dates before editing again.
 
+<a id="completion"></a>
 ### Say how far along a card is
 
 Open the card, **Work** tab, **Complete**: drag the slider and let go,

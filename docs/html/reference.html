@@ -369,7 +369,33 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <h2 id="the-integration-api">The integration API</h2>
 <p>The contract is published at <code>/api/v1/docs</code> on a running installation; machine-readable at <code>/api/v1/openapi.json</code>. The version is in the path, the reason for a refusal arrives as a code, and a repeat with the same idempotency key is safe.</p>
-<footer>Takt, version v0.5.1-50-g97db0ce-dirty. Built from reference.md — edit the source, not this page.</footer>
+<h2 id="planning">Plans and availability</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Item</th><th>Meaning and rules</th></tr></thead>
+<tbody>
+<tr><td>Planned start / Planned end</td><td>Optional calendar days, independent of the commitment and flow history. Either may be empty; when both exist, end cannot precede start. Both days are included</td></tr>
+<tr><td>Gantt bar</td><td>Needs both planned dates. Its fill is completion; a diamond shows the commitment. Only cards and subtasks on this board are plotted</td></tr>
+<tr><td>Plan editing</td><td>Requires write access to the board. Viewers read it. A concurrent date change rejects the stale edit; review the refreshed dates before trying again</td></tr>
+<tr><td>Complete</td><td>A whole percentage from 0 to 100, or calculated from parts. 100 means done; it does not move the card between columns. A card beyond the finish stays at 100</td></tr>
+<tr><td>Vacation</td><td>Managed by the person, including a viewer. Both days are included; overlaps for one person are rejected. Dates and notes are visible to colleagues in the organisation</td></tr>
+<tr><td>Organisation time zone</td><td>An IANA name set by the organisation owner on the vacations page; defaults to UTC. Determines Today and whether coverage is currently active</td></tr>
+<tr><td>Coverage</td><td>One task, absent primary assignee, substitute and period within the vacation. Requires board write access to propose; the substitute must be able to work on the board and have no overlapping vacation</td></tr>
+</tbody>
+</table></div>
+<div class="tablewrap"><table>
+<thead><tr><th>Coverage state</th><th>Where to look / what to do</th></tr></thead>
+<tbody>
+<tr><td>Awaiting response</td><td>A proposal, not confirmed coverage; the substitute accepts or declines on the vacations page</td></tr>
+<tr><td>Accepted, future</td><td>In Coverage agreements; absent from Tasks → Covering until its start day</td></tr>
+<tr><td>Accepted, active and valid</td><td>In Tasks → Covering; the primary assignee remains assigned</td></tr>
+<tr><td>Part of a vacation</td><td>Marked as partial; check the remaining days and each subtask separately</td></tr>
+<tr><td>Invalid</td><td>Changed or cancelled vacation, substitute&#39;s vacation, lost access, removed primary assignee, archived or completed task. Review the cause and arrange coverage again; restoring a vacation does not restore consent</td></tr>
+<tr><td>Period ended</td><td>Stops applying automatically; old agreements remain in Coverage history</td></tr>
+</tbody>
+</table></div>
+<p>Vacation warnings in Tasks, cards and Gantt ask for review; they do not change dates, columns or assignees. They check each assignee separately. The calendar is organisation-wide; task details still require board visibility. A parent subdivision includes its descendants; multiple selected branches are combined. Calendar and coverage refresh every minute and when the window regains focus.</p>
+<p>For steps, see <a href="howto.html#new-features">the new features walkthrough</a>, <a href="howto.html#gantt">Gantt</a> and <a href="howto.html#vacations">vacations</a>.</p>
+<footer>Takt, version v0.5.1-52-g574d623-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>
