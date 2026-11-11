@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-55-g47ea8ec-dirty.</p>
+<p>Every section in one file. Version v0.5.1-56-ge65352b-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1041,7 +1041,7 @@ make images                   # both at once, with a size table</code></pre>
 <pre><code>docker build --build-arg VERSION=v0.2.0 \
   --build-arg RUNTIME_BASE=debian:12-slim \
   -t takt:v0.2.0-debian .</code></pre>
-<p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
+<p>One <code>Dockerfile</code>, three stages: the client is built in <code>node:22-alpine</code>, the binary in <code>golang:1.26.11-alpine</code> and statically (<code>CGO_ENABLED=0</code>), and only those two land in the final <code>alpine</code>. Neither Go nor Node ships. It runs as the unprivileged user <code>takt</code> (uid 10001), listens on <code>:8080</code>, and serves the client from <code>/app/web/dist</code>.</p>
 <p><strong><code>VERSION</code> is passed as a build argument, and that is not a formality.</strong> The version is linked into the binary rather than read from a file: a file inside an image can be swapped, and the version has to be the same artefact as the code. Hence the trap: <code>docker build .</code> without <code>--build-arg</code> builds and runs fine, but <code>takt version</code> answers &#34;версия не задана&#34; — honest, unlike an invented number, but not worth pushing to a registry. <code>make image</code> fills <code>git describe</code> in for you.</p>
 <p>There is no need to pull the image for <code>docker compose</code>: it builds one itself (<code>build: .</code> in <code>docker-compose.yml</code>). For an air-gapped installation the image travels as a file — <code>make bundle</code>; the section on installing without internet access, below, covers it.</p>
 <div class="tablewrap"><table>

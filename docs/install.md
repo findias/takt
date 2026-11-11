@@ -110,7 +110,7 @@ docker build --build-arg VERSION=v0.2.0 \
 ```
 
 One `Dockerfile`, three stages: the client is built in
-`node:22-alpine`, the binary in `golang:1.26-alpine` and statically
+`node:22-alpine`, the binary in `golang:1.26.11-alpine` and statically
 (`CGO_ENABLED=0`), and only those two land in the final `alpine`.
 Neither Go nor Node ships. It runs as the unprivileged user `takt`
 (uid 10001), listens on `:8080`, and serves the client from
