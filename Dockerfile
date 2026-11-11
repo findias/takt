@@ -20,7 +20,7 @@ RUN npm ci || npm install
 COPY web/ ./
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.11-alpine AS build
 # Версия приезжает снаружи и вшивается линковщиком. Сборка без неё
 # работает, но отвечает «версия не задана» — и это честнее, чем
 # показывать выдуманное число.

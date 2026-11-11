@@ -84,6 +84,8 @@ type Info struct {
 	// Без движения (0081, ROADMAP 42.3): дней в одной колонке работы,
 	// после которых карточка попадает в «Требует внимания». Пусто — семь.
 	StaleDays *int `json:"staleDays"`
+	// Пусто — все будущие отпуска; ноль — только уже начавшиеся.
+	VacationWarningDays *int `json:"vacationWarningDays"`
 	// Можно ли в доску писать. Спрашивает список досок — из него выбирают,
 	// куда поставить работу соседям, и предлагать доску, которая откажет,
 	// значит обещать невыполнимое.
@@ -117,12 +119,12 @@ type Info struct {
 // columnFields и cardFields ниже: список повторяется в нескольких
 // запросах, и разъехавшийся порядок ловится только в рантайме.
 const boardFields = `id, name, version, sle_days, sle_probability, key, iterations_enabled, level,
-	estimate_unit, coalesce(estimate_unit, (select o.estimate_unit from orgs o where o.id = org_id)), stale_days`
+	estimate_unit, coalesce(estimate_unit, (select o.estimate_unit from orgs o where o.id = org_id)), stale_days, vacation_warning_days`
 
 func scanBoard(row pgx.Row) (Info, error) {
 	var b Info
 	err := row.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays, &b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level,
-		&b.OwnEstimateUnit, &b.EstimateUnit, &b.StaleDays)
+		&b.OwnEstimateUnit, &b.EstimateUnit, &b.StaleDays, &b.VacationWarningDays)
 	return b, err
 }
 
@@ -191,6 +193,9 @@ type Card struct {
 	// Дата обязательства: то, что обещано наружу. Пусто у большинства
 	// карточек — и это не «дата неизвестна», а «обязательства нет».
 	DueOn *string `json:"dueOn"`
+	// Плановые дни не подменяют обязательство и факты потока.
+	PlannedStartOn *string `json:"plannedStartOn"`
+	PlannedEndOn   *string `json:"plannedEndOn"`
 	// Отметка «сделано»: готовность, объявленная руками и не зависящая
 	// от колонки. Нужна разбиению — пункты вида «согласовать с юристами»
 	// не гоняют по доске, — и входит только в прогресс родителя. Поток
@@ -362,13 +367,14 @@ const MaxSubtaskDepth = 5
 
 const cardFields = `id, number, column_id, position, title, description, version,
 	column_entered_at, started_at, finished_at, estimate, outcome, priority,
-	to_char(due_on, 'YYYY-MM-DD'), done_at, percent`
+	to_char(due_on, 'YYYY-MM-DD'), done_at, percent,
+	to_char(planned_start_on, 'YYYY-MM-DD'), to_char(planned_end_on, 'YYYY-MM-DD')`
 
 func scanCard(row pgx.Row) (Card, error) {
 	var c Card
 	err := row.Scan(&c.ID, &c.Number, &c.ColumnID, &c.Position, &c.Title, &c.Description,
 		&c.Version, &c.ColumnEnteredAt, &c.StartedAt, &c.FinishedAt,
-		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn, &c.DoneAt, &c.Percent)
+		&c.Estimate, &c.Outcome, &c.Priority, &c.DueOn, &c.DoneAt, &c.Percent, &c.PlannedStartOn, &c.PlannedEndOn)
 	return c, err
 }
 
@@ -454,6 +460,7 @@ type CardChange struct {
 // LinkedCard — то немногое, что нужно знать о карточке с чужой доски:
 // где она лежит, чья это команда, что с ней происходит и когда её ждать.
 type LinkedCard struct {
+	Priority  string  `json:"priority"`
 	ID        string  `json:"id"`
 	Title     string  `json:"title"`
 	BoardID   string  `json:"boardId"`
@@ -521,7 +528,7 @@ func (s *Service) List(ctx context.Context, orgID, userID string) ([]Info, error
 			var cards int
 			if err := rows.Scan(&b.ID, &b.Name, &b.Version, &b.SLEDays,
 				&b.SLEProbability, &b.Key, &b.IterationsEnabled, &b.Level, &b.OwnEstimateUnit, &b.EstimateUnit,
-				&b.StaleDays, &writable, &visibility, &teamID, &cards); err != nil {
+				&b.StaleDays, &b.VacationWarningDays, &writable, &visibility, &teamID, &cards); err != nil {
 				return err
 			}
 			b.Writable = &writable
@@ -981,7 +988,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		       exists (select 1 from card_blocks cb
 		                where cb.card_id = c.id and cb.unblocked_at is null),
 		       col.name, col.kind, b.sle_days, b.sle_probability,
-		       c.archived_at is not null
+		       c.archived_at is not null, c.priority
 		  from cards c
 		  join boards b on b.id = c.board_id
 		  join board_columns col on col.id = c.column_id
@@ -996,7 +1003,7 @@ func enrich(ctx context.Context, tx pgx.Tx, boardID string, snap *Snapshot) erro
 		var c LinkedCard
 		if err := foreignRows.Scan(&c.ID, &c.Title, &c.BoardID, &c.BoardName,
 			&c.TeamName, &c.Outcome, &c.Done, &c.Blocked, &c.ColumnName, &c.ColumnKind,
-			&c.SLEDays, &c.SLEProbability, &c.Archived); err != nil {
+			&c.SLEDays, &c.SLEProbability, &c.Archived, &c.Priority); err != nil {
 			return err
 		}
 		snap.Linked = append(snap.Linked, c)

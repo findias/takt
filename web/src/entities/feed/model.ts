@@ -104,6 +104,8 @@ export function eventText(event: BoardEvent, fields: CardField[] = []): string {
       return p.percent === 100 ? t.feed.doneAtHundred : t.feed.done
     case 'undone':
       return t.feed.undone
+    case 'planned':
+      return t.feed.planned(typeof p.plannedStartOn === 'string' ? p.plannedStartOn : '', typeof p.plannedEndOn === 'string' ? p.plannedEndOn : '')
     case 'percent_set':
       return typeof p.percent === 'number' ? t.feed.percentSet(p.percent) : t.feed.percentAuto
     // Статус эпика словами (42.3, срез 10): слово — из общего каталога,

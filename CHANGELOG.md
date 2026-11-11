@@ -8,11 +8,11 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
-## v0.6.0 — 27 October 2026
+## v0.6.0 — 11 November 2026
 
 ### For whoever installs and upgrades
 
-**Eight migrations, safe for the running version.** `0080` adds two
+**Thirteen migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
@@ -22,7 +22,41 @@ lets `notifications.board_id` and `card_id` be empty and adds
 through a join with cards, so it simply does not see notifications
 about ideas; `0086` adds the table `webhook_outbox` and a nullable
 `webhooks.resumed_at`; `0087` adds one row policy on `ideas`, which the
-old version never exercises. Pods of v0.5.x keep working on all of it.
+old version never exercises; `0088` adds `idea_decisions.request_fingerprint`
+with an empty default, so the old code can still write decisions;
+`0089` adds a nullable `idea_decisions.request_id` and a unique index
+for requests by a person on an idea.
+`0090` adds nullable `cards.planned_start_on` and `planned_end_on`
+with a constraint on their order. The `SET_CARD_PLAN` operation requires
+both dates (or nulls) and the expected previous plan; a concurrent date
+change returns `409 plan_changed`.
+`0091` adds vacations, task coverage and the organisation time zone
+(default UTC), and expands notification reasons with `coverage_changed`.
+`0092` adds nullable `boards.vacation_warning_days` (0–365); null
+keeps warnings for all upcoming vacations. Pods of v0.5.x keep working
+on all of it.
+
+**Source builds require Go 1.26.11 or newer.** This fixes the
+`GO-2026-6859` HTTP header race in the standard library. Published
+binaries and images already include the corrected toolchain.
+
+**Short PostgreSQL queries no longer pay for JIT compilation.** The
+application disables JIT only inside its scoped transactions and
+restores the connection setting on commit or rollback. No database-wide
+configuration change is required. This removes latency spikes under
+concurrent use without changing row policies or access checks.
+Large reports also avoid repeatedly scanning the complete subtask
+order for every row: indexed temporary results keep export time linear
+and preserve the task/subtask order without a schema migration.
+
+**Taking an idea saves the card and decision together.** A failure no
+longer leaves a card behind without a decision. The decision form keeps
+a `requestId` across retries after a lost response. Even after another
+decision, a late retry returns the current state without a duplicate
+card or notification; changing a command under the same ID gets `409`.
+Clients from the previous version send no ID and keep protection for
+identical consecutive decisions only. Moving and deciding the same idea now wait
+for each other and recheck its state and the actor's rights.
 
 **Subscription events now reach the receiver whoever caused them.**
 Until now a delivery was created in the transaction of the action by
@@ -50,7 +84,58 @@ board, and notifications lead to the board the card is on now.
 `GET /api/cards/{cardId}/board` tells which board a card is on, and the
 board metrics have `movedOut`.
 
+### After upgrading
+
+1. Apply the migrations before starting the new binary, using the
+   [upgrade procedure](docs/install.md), and run `takt doctor`.
+2. As the organisation owner, open **Team** → **Vacations** and check the
+   organisation time zone (UTC by default). Existing cards have no
+   planned dates until someone enters them; commitments are not copied
+   into the plan.
+3. If subscriptions use an explicit event list, review the new events
+   named above and `idea.created` / `idea.decided` below. Check the
+   receiver's capacity: member and integration actions now arrive too.
+4. Share the [new features walkthrough](docs/howto.md#new-features)
+   with the team. Try a plan change and a coverage proposal accepted
+   by a second person; pending and future coverage do not appear in
+   **Tasks** → **Covering**.
+
 ### The rest
+
+- **Subtasks finish independently of the parent's column.** A subtask
+  moved to Done stays in its own column and in the parent's subtask
+  list, even while the parent is open. An open child no longer appears
+  done because its parent is in Done. Returning the parent does not
+  change children's completion; a child that itself crossed the finish
+  must be returned to work before clearing its mark.
+- **Vacation warning lead time is set per board.** In **Flow** →
+  **Vacation warnings**, choose 0–365 calendar days or leave it empty
+  to show all upcoming vacations. The same setting applies to cards,
+  Tasks and Gantt; current vacations remain visible through their end.
+
+- **Vacations and confirmed task coverage.** Team has a vacation calendar,
+  visible to all colleagues, with a filter for one or more subdivisions
+  and their nested teams. Personal settings link to your own entries, and each task can have a
+  substitute for a specific period. The substitute accepts or declines;
+  accepted active coverage appears in Tasks → Covering. The Tasks list, cards and Gantt
+  flag absences; primary assignees, completion and task dates stay intact.
+  Changed vacations or lost access invalidate affected agreements.
+
+- **Card discussions read as a chat.** Latest messages stay at the bottom
+  above the writing field. Incoming replies preserve your place while
+  reading history; **Latest messages** returns to the bottom. Replies
+  quote the original message, and a failed send preserves the draft.
+- **Priorities are visible on subtasks.** Each part shows its own priority
+  on the board, tree, Gantt and card's task list. Completion can also be
+  entered as a whole percentage in the card's **Work** tab.
+- **An editable Gantt plan for one board.** Choose **Gantt** in the board
+  view selector. Planned start and end are calendar days, separate from
+  the commitment date and flow history. Move a bar or resize its ends;
+  the same dates can be edited in the card's **Work** tab. Subtasks have
+  their own plans and can be collapsed with their parent. Moving a plan
+  does not change completion or automatically move dependent tasks.
+  Viewers can read the plan; concurrent date changes are reported
+  instead of silently overwritten.
 
 - **A card can be sent as a link.** **Copy link** in the card's **…**
   menu, in the panel's top row and in the table's row menu puts the
@@ -255,11 +340,9 @@ together from **Move selected**): pick the board and the column. The card
   part at 40% is 0.4 of a part, no longer 0). New operation
   `SET_CARD_PERCENT`, new event `card.percent_set`.
 
-## v0.5.2 — 26 October 2026
+### Other fixes since v0.5.1
 
-### For whoever installs and upgrades
-
-No migration and no new setting. The board snapshot no longer carries
+The board snapshot no longer carries
 links to cards of that board that sit in the archive; the links stay
 in the database and come back with the card.
 
@@ -271,8 +354,6 @@ notification was never shown to them.
 Also for integrations: `ARCHIVE_CARD` now archives the card's subtasks
 on the same board along with it, and `RESTORE_CARD` brings back those
 that went with it. Subtasks on other boards are not touched.
-
-### The rest
 
 - **A subtask can be archived or deleted from its line.** The **⋮**
   menu of a part on the same board now has **Archive** — with

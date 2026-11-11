@@ -85,17 +85,29 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	if req.OperationID == "" {
 		return Result{}, badRequestf("не передан operationId")
 	}
-
 	tx, err := s.db.BeginTenant(ctx, orgID, actorID)
 	if err != nil {
 		return Result{}, err
 	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
+	defer tx.Rollback(ctx)
+	result, err := s.ApplyInTx(ctx, tx, orgID, actorID, boardID, req)
+	if err != nil {
+		return Result{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Result{}, err
+	}
+	return result, nil
+}
+
+// ApplyInTx сохраняет операцию в транзакции вызывающего. Так карточка
+// из идеи, её описание и решение фиксируются вместе. Транзакция должна
+// быть открыта через BeginTenant с теми же организацией и человеком;
+// при любой ошибке вызывающий обязан её откатить.
+func (s *Service) ApplyInTx(ctx context.Context, tx pgx.Tx, orgID, actorID, boardID string, req Request) (Result, error) {
+	if req.OperationID == "" {
+		return Result{}, badRequestf("не передан operationId")
+	}
 
 	// Доски берутся первыми, и порядок здесь существенный. Журнал операций
 	// под политикой видимости: запись в него для недоступной доски отлетает
@@ -135,7 +147,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 	versions := make(map[string]int64, len(boards))
 	for _, id := range boards {
 		var v int64
-		err = tx.QueryRow(ctx, `
+		err := tx.QueryRow(ctx, `
 			select version from boards
 			 where id = $1 and archived_at is null
 			 for update`, id).Scan(&v)
@@ -174,8 +186,7 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		return Result{}, fmt.Errorf("резервирование операции: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		_ = tx.Rollback(ctx)
-		return s.storedResult(ctx, orgID, actorID, req.OperationID)
+		return storedResult(ctx, tx, req.OperationID)
 	}
 
 	patch, err := s.dispatch(ctx, tx, orgID, actorID, boardID, req)
@@ -244,10 +255,6 @@ func (s *Service) Apply(ctx context.Context, orgID, actorID, boardID string, req
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return Result{}, err
-	}
-	committed = true
 	return result, nil
 }
 
@@ -409,12 +416,10 @@ func (s *Service) explainMissingBoard(ctx context.Context, orgID, actorID, board
 	return ErrNotFound
 }
 
-func (s *Service) storedResult(ctx context.Context, orgID, actorID, operationID string) (Result, error) {
+func storedResult(ctx context.Context, tx pgx.Tx, operationID string) (Result, error) {
 	var raw []byte
-	err := s.db.InTenant(ctx, orgID, actorID, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`select result from operations where operation_id = $1`, operationID).Scan(&raw)
-	})
+	err := tx.QueryRow(ctx,
+		`select result from operations where operation_id = $1`, operationID).Scan(&raw)
 	if err != nil {
 		return Result{}, fmt.Errorf("чтение результата повторённой операции: %w", err)
 	}
@@ -500,6 +505,8 @@ func (s *Service) dispatch(ctx context.Context, tx pgx.Tx, orgID, actorID, board
 		return removeFromIteration(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_CARD_DONE":
 		return setCardDone(ctx, tx, orgID, actorID, boardID, req.Payload)
+	case "SET_CARD_PLAN":
+		return setCardPlan(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "SET_CARD_PERCENT":
 		return setCardPercent(ctx, tx, orgID, actorID, boardID, req.Payload)
 	case "BLOCK_CARD":

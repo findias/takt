@@ -91,19 +91,24 @@ import { Bell } from '../features/notifications/Bell.tsx'
  */
 const loadTableView = () => import('../features/board/TableView.tsx')
 const TableView = lazy(() => loadTableView().then((m) => ({ default: m.TableView })))
+const GanttView = lazy(withSections(
+  () => import('../features/gantt/GanttView.tsx').then((m) => ({ default: m.GanttView })),
+  'gantt', 'availability',
+))
 // Панель карточки — своим куском (этап 33.3): первая загрузка доски
 // упёрлась в порог размера (web/e2e/perf.spec.ts), а панель нужна только
 // открытой карточке. Загрузка начинается, как только доска нарисована,
 // поэтому к первому нажатию на карточку кусок обычно уже на месте.
 // Подписи панели и ленты изменений едут вместе с ней: в первой загрузке
 // они занимали почти весь запас до порога.
-const loadCardPanel = withSections(() => import('../features/board/CardPanel.tsx'), 'panel', 'feed', 'completion')
+const loadCardPanel = withSections(() => import('../features/board/CardPanel.tsx'), 'panel', 'feed', 'completion', 'gantt', 'availability')
 const CardPanel = lazy(() => loadCardPanel().then((m) => ({ default: m.CardPanel })))
 const Flow = lazy(
   withSections(
     () => import('../features/flow/Flow.tsx').then((m) => ({ default: m.Flow })),
     'flow',
     'flowReport',
+    'availability',
   ),
 )
 // Дерево работы — вид для тех, кому нужна иерархия (этап 32.6); с доской
@@ -271,7 +276,7 @@ export function Board({
   // Вид и сортировка живут в адресе рядом с фильтрами: отсортированный
   // список присылают ссылкой так же, как отфильтрованную доску.
   const asked = query.get('view')
-  const view = asked === 'table' || asked === 'changes' || asked === 'tree' ? asked : 'board'
+  const view = asked === 'gantt' || asked === 'table' || asked === 'changes' || asked === 'tree' ? asked : 'board'
   const asTable = view === 'table'
   // Кусок таблицы едет рядом с данными доски, а не за ними: см. довод
   // у `loadTableView`. Эффект, а не вызов в теле, — загрузка не должна
@@ -875,11 +880,13 @@ export function Board({
           ? 'flow'
           : showArchive
             ? 'archive'
-            : view === 'table'
-              ? 'table'
-              : view === 'tree'
-                ? 'tree'
-                : 'board',
+            : view === 'gantt'
+              ? 'gantt'
+              : view === 'table'
+                ? 'table'
+                : view === 'tree'
+                  ? 'tree'
+                  : 'board',
   )
   // Название хранится вместе с идентификатором, а не берётся из доски:
   // карточку спрашивают удалить и из архива, а там её на доске уже нет.
@@ -1276,6 +1283,7 @@ export function Board({
         onClose={() => setOpenCard(null)}
         onDescribe={(id, text) => void board.describeCard(id, text)}
         onEstimate={estimateCard}
+        onPlan={board.setCardPlan}
         onPercent={(cardId, percent) => void setCardPercent(cardId, percent)}
         onOpenCard={showCard}
         onAssign={assignCard}
@@ -1449,6 +1457,7 @@ export function Board({
           }}
         >
           <option value="board">{t.screen.viewBoard}</option>
+          <option value="gantt">{t.screen.viewGantt}</option>
           <option value="table">{t.screen.viewTable}</option>
           <option value="tree">{t.screen.viewTree}</option>
           <option value="changes">{t.screen.viewChanges}</option>
@@ -1484,7 +1493,7 @@ export function Board({
       </div>
       <div className="board-toolbar board-tools-line board-tools-line--second">
         <CardSearch filters={filters} onChange={setFilters} />
-        <select
+        {view !== 'gantt' && <select
           className="grouping"
           value={grouping}
           aria-label={t.screen.grouping}
@@ -1497,12 +1506,12 @@ export function Board({
                 {GROUPING_NAMES[g]}
               </option>
             ))}
-        </select>
+        </select>}
         {/* «?» — когда доска уже разложена дорожками: в строке инструментов
             он виден всегда и становился бы шумом, а вопрос «почему
             карточку не перетащить между дорожками» появляется, только
             когда они есть. */}
-        {grouping !== 'none' && <Hint topic="grouping" />}
+        {view !== 'gantt' && grouping !== 'none' && <Hint topic="grouping" />}
         <Views
           boardId={boardId}
           query={query.toString()}
@@ -1592,7 +1601,7 @@ export function Board({
         </div>
       )}
 
-      {narrow && (
+      {narrow && view !== 'gantt' && (
         <div className="column-switch board-toolbar" role="tablist" aria-label={t.screen.columns}>
           {base.columnIds.map((columnId) => {
             const current = columnId === (visibleColumn ?? base.columnIds[0])
@@ -1617,7 +1626,19 @@ export function Board({
           раскладка. Колонки при этом не рисуются вовсе — прятать их
           стилями значило бы держать в разметке пятьсот невидимых
           карточек. */}
-      {view === 'tree' ? (
+      {view === 'gantt' ? (
+        <Suspense fallback={<Skeleton lines={6} />}>
+          <GanttView
+            base={base}
+            order={filtered}
+            query={query}
+            onQuery={setQuery}
+            onOpenCard={showCard}
+            canEdit={canEdit}
+            onSave={board.setCardPlan}
+          />
+        </Suspense>
+      ) : view === 'tree' ? (
         <Suspense fallback={<Skeleton lines={6} />}>
           <TreeView base={base} unit={unit} onOpenCard={showCard} />
         </Suspense>
@@ -1707,6 +1728,8 @@ export function Board({
           ownUnit={base.info.ownEstimateUnit ?? null}
           orgUnit={orgUnit}
           staleDays={base.info.staleDays ?? null}
+          vacationWarningDays={base.info.vacationWarningDays ?? null}
+          canEdit={canEdit}
           onClose={() => setShowFlow(false)}
           onPromise={board.reload}
         />

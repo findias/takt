@@ -10,6 +10,50 @@ minutes](quickstart.md) first; the rest will make more sense.
 behind your name in the header. Buttons are named here as they appear
 in the English interface.
 
+<a id="new-features"></a>
+## Try the new features in v0.6.0
+
+Start with a board you can edit and a task assigned to you. A viewer
+can read plans and manage their own vacations, but cannot edit tasks
+or act as a substitute.
+
+1. **Make a plan.** Open the task → **Work**, enter **Planned start**
+   and **Planned end**, then leave the two date fields to save. Select
+   **Gantt** in the board header: the task now has a bar. Drag the bar
+   to move both dates or its edges to change one. Plan subtasks
+   separately; changing the parent does not shift its parts.
+   [Dates, keyboard controls and conflicts](#gantt).
+2. **Record an absence.** Open **Team** → **Vacations** → **Add vacation**,
+   enter the first and last day and save. Both days are included, and
+   colleagues can see the entry immediately. Use **Subdivisions** to
+   select several teams or a parent with all its descendants; clear
+   the selection with **Whole organisation**. The organisation owner
+   should check the time zone on this page before relying on **Today**.
+3. **Agree on coverage.** After saving a vacation, press **Prepare
+   coverage**, select tasks and propose a substitute. For a different
+   period on one task, open its **Work** → **Coverage** section. Ask the
+   substitute to open **Team** → **Vacations**, find the proposal under
+   **Coverage agreements** and press **Accept**. Until then it is
+   **Awaiting response**. Accepted coverage appears in **Tasks** → **Covering** only during its period and while it remains valid.
+   [Rights, partial periods and invalidated agreements](#vacations).
+4. **Check the work.** Review vacation warnings in **Tasks**, the card
+   and **Gantt**. Unplanned work needs a manual check. The primary
+   assignee stays assigned; arrange coverage for each subtask that
+   needs it. After changing or restoring a vacation, propose and accept
+   coverage again.
+5. **Update completion.** In the card's **Work** → **Complete**, enter a
+   whole number from 0 to 100 and press Enter or leave the field.
+   100 marks the card done; it does not move it to another column.
+   **Count automatically** returns to completion calculated from parts.
+   [Completion rules](#completion).
+6. **Keep the discussion going.** Open **Discussion**: new messages and
+   replies appear at the bottom. While reading history, use **Latest
+   messages** to return to the composer. A failed send keeps your draft.
+
+Also in this release: [ideas and decisions](#ideas), [card links](#share)
+and [epics as a tree](#tree). The [release notes](../CHANGELOG.md)
+include the full change list and upgrade details.
+
 <a id="board"></a>
 ## Working on the board
 
@@ -331,6 +375,13 @@ never about what you did yourself. Press the bell and pick an entry: the card
 opens and the entry counts as read. **Mark all as read** clears the
 counter.
 
+Open **Discussion** in a card to read it as a chat: the oldest messages
+are at the top, the latest at the bottom, and the writing field stays
+below the conversation. Opening the tab jumps to the latest message.
+While you read older messages, incoming ones keep your place; press
+**Latest messages** to return to the bottom. Replies appear at the end
+with a quote of the original message. A failed send keeps your draft.
+
 To call someone into a discussion, press **@ Mention** under the reply
 and pick the person. Only people who can see the board are offered.
 
@@ -427,7 +478,13 @@ so many" bar.
 When a filter or a swimlane hides the parent, its item is shown as a
 card in the parent's column, so your share of the work does not
 vanish. On **Tasks** an item shows its parent's column and the parent's
-number; a ticked item counts as finished.
+number; a ticked item counts as finished. A subtask can be moved to
+**Done** while its parent is still open; it appears in its own column
+and remains in the parent's subtask list. An open subtask of a parent
+in **Done** also stays in its own column. Returning the parent to work
+does not change the children's completion marks; these can be changed
+separately. If a child itself crossed the finish point, return it to
+work before clearing its completion mark.
 
 Parts can have parts of their own — an epic, its features, the tasks
 under them, up to five levels. The bar on a card with grandchildren
@@ -441,10 +498,50 @@ epic shows "Part blocked" when a task two levels down is stuck. A
 blocked parent does not stop its parts — they are what people carry on
 with.
 
+<a id="gantt"></a>
+
+### Plan work on a Gantt chart
+
+Choose **Gantt** in the board view selector. The view uses the board's
+filters and shows subtasks on this board under their parents; parents
+outside the filters remain as context. Parts on other boards open from
+the card and are not expanded into this chart. Parent rows have a distinct
+background and a **Subtasks** button with the number shown in this view.
+Child rows are indented, connected by a line and labelled **Subtask**.
+Use the button to collapse or expand the entire branch; this does not
+change dates or links.
+
+On the card's **Work** tab, enter **Planned start** and **Planned end**.
+Leave the pair of fields to save, or press Enter; Escape cancels the
+edit. Either date can be left empty. A bar needs both dates; work
+without a complete period stays visible. **Clear plan** removes both.
+
+Drag the bar to move its period, or its edges to change the start or
+end. One change is saved when you release it. Escape cancels a drag.
+With a handle focused, Left and Right move by one calendar day; Shift
+moves by seven. Date fields provide the same editing on a phone.
+
+Priority labels appear on tasks and subtasks, including in the card
+header and the parts list. Each part shows its own priority; the
+parent's priority is not inherited. The default medium level is omitted.
+
+The fill is the card's completion percentage; the diamond is its
+commitment date. The vertical line marks today. Weeks and Months change
+the scale; arrows and Today change the period. The view, period and
+scale live in the URL and can be saved as a view or shared as a link.
+
+Plans are separate from commitments, estimates and actual start and
+finish dates. Moving a bar does not change the card's column, its
+completion or dependent tasks. If someone changes the same plan before
+you save, the server rejects the stale edit and refreshes the board.
+Check the current dates before editing again.
+
+<a id="completion"></a>
 ### Say how far along a card is
 
-Open the card, **Work** tab, **Complete**: drag the slider (steps of
-5%) and let go — the percentage is saved and the card shows it. Until
+Open the card, **Work** tab, **Complete**: drag the slider and let go,
+or type a whole number from 0 to 100 in the field beside it and press Enter or leave the field. Escape cancels an
+edit. The percentage is saved and the card shows it. Until
 someone moves it, it counts itself: from the parts, a part at 40%
 giving its parent 0.4 of a part, and 100 for a card marked done. A
 percentage set by hand overrides the count on that card, for a task, a
@@ -861,6 +958,14 @@ count to see only them. An integration key with `boards:read` reads the
 list at `/api/v1/ideas`, and one with `boards:write` submits ideas —
 a bot in a chat can bring them; voting and deciding stay with people.
 
+If a save response is lost, submitting the same form again returns the
+idea's current state without an extra card or notification, even if
+another decision was made meanwhile. Changing the form starts a new
+decision and records an entry in its history. The card,
+its description and the decision are saved together; a failed save
+leaves no partial card on the board. Moving an idea waits for a decision
+being saved, then checks its new state and your rights again.
+
 An idea has a level: the whole organisation, or a subdivision at any
 depth — **For whom** is chosen when it is submitted. **For** above the
 list picks a level: everyone, the whole organisation, or one
@@ -1149,3 +1254,66 @@ chart defaults.
 Set `signup=closed` at install or upgrade time. Then only the owner
 creates organisations, and the "create a new organisation" button
 disappears from the sign-in screen.
+
+<a id="vacations"></a>
+
+### Vacations and task coverage
+
+Open **Team** → **Vacations**, or **My vacations** in your personal settings.
+Add the first and last day of your vacation; both days are included.
+The entry is visible to colleagues immediately, without an approval
+step. Notes are visible to the whole organisation. The calendar can be
+filtered by one or more **Subdivisions**, including all their descendants,
+or by your own name. Select a parent subdivision to see its whole branch.
+Remove individual filter chips or choose **Whole organisation** to see
+all colleagues again. The selected subdivisions are saved in the URL.
+The organisation owner sets the IANA time zone used for **Today**;
+the default is UTC. Overlapping vacations for the same person are rejected.
+
+After saving, choose **Prepare coverage**. The list shows unfinished
+tasks on boards you can see. Select tasks to propose one substitute for
+all of them, or open a card's **Work** → **Coverage** section to choose a
+substitute and a period for that task. Only someone who can work on the
+board and has no vacation overlapping the proposed period is offered.
+Proposals require write access to the task's board. Each selected task
+is saved separately; failures name the task and keep it selected for retry.
+
+A substitute must **Accept** the proposal. **Awaiting response** is not
+confirmed coverage. Their **Tasks** → **Covering** list shows accepted,
+currently active and valid coverage; future agreements are shown on the
+vacations page. Partial coverage is labelled separately. The primary
+assignee remains assigned. Coverage of a parent does not cover its subtasks.
+
+The Tasks list, card and Gantt view warn about vacations intersecting the plan or
+commitment, or about current absences. Work without a complete plan needs
+manual review. Several assignees are checked separately: one person's
+vacation does not imply that the entire task has stopped. Vacations do
+not change columns, completion, commitments or dependent task dates.
+
+On the board, open **Flow** → **Vacation warnings** to set how many
+calendar days before a vacation its warning appears, then press **Save
+warnings**. The setting is shared by the board and applies in the card,
+Gantt and Tasks list. Anyone with board write access can change it.
+Enter a whole number from 0 to 365: **7** starts warning seven days
+before the vacation; **0** starts on its first day. Leave the field empty
+to show all relevant future vacations, as before. Current absences stay
+visible through the last day, using the organisation time zone. The
+calendar and coverage proposals remain available ahead of that warning.
+
+Changing a vacation invalidates agreements tied to its previous version;
+a new proposal and acceptance are needed. Cancelling a vacation also
+invalidates its coverage. A substitute's vacation, loss of write access,
+removal of the primary assignee, archiving a task, or completing it makes
+affected coverage invalid. Moving a task rechecks the substitute's access
+to its new board. Participants receive in-app coverage
+notifications. Calendar and coverage data refresh when the window regains
+focus and every minute; the **Covering** task list refreshes the same way.
+At the end of a period, coverage stops applying
+automatically; no reassignment or restoration of assignees is performed.
+Past agreements remain available in **Coverage history**.
+
+Everyone manages their own vacations, including viewers. Vacations are
+visible within the organisation; task names and coverage details always
+follow board visibility. Vacations and coverage are included in the
+organisation's JSON export. Integration keys cannot use the personal
+vacation endpoints.

@@ -20,6 +20,7 @@ import {
   reconcileColumn,
   renderOrder,
   withoutParts,
+  homeColumn,
 } from './model.ts'
 import type { BaseState, MoveCommand } from './model.ts'
 import type { Card, Column, ColumnKind, Snapshot } from '../../shared/api/index.ts'
@@ -458,4 +459,26 @@ test('исключённый исполнитель подписан по име
   assert.equal(base.people['u-dmitry'], 'Дмитрий')
   assert.equal('u-dmitry' in base.assignable, false)
   assert.deepEqual(base.former, { 'u-dmitry': true })
+})
+
+
+test('DONE подзадачи не зависит от финиша родителя, связь остаётся', () => {
+  const base = {
+    cards: { p: { columnId: 'work', outcome: null }, a: { columnId: 'done', outcome: 'done' } },
+    links: [{ fromCard: 'p', toCard: 'a', kind: 'subtask' }],
+  } as unknown as BaseState
+  const order = { work: ['p'], done: ['a'] }
+  assert.deepEqual(withoutParts(base, order), { order })
+  assert.deepEqual(withoutParts(base, { work: [], done: ['a'] }), { order: { work: [], done: ['a'] } })
+  assert.equal(homeColumn(base, 'a'), 'done')
+  assert.equal(base.links.length, 1)
+  base.cards.p.outcome = 'done'
+  base.cards.p.columnId = 'done'
+  base.cards.a.outcome = null
+  base.cards.a.columnId = 'work'
+  assert.deepEqual(withoutParts(base, { work: ['a'], done: ['p'] }), { order: { work: ['a'], done: ['p'] } })
+  assert.equal(homeColumn(base, 'a'), 'work')
+  base.cards.p.outcome = null
+  assert.equal(homeColumn(base, 'a'), 'done')
+  assert.equal(homeColumn(base, 'p'), 'done')
 })

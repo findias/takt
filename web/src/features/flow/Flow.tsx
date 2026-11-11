@@ -7,6 +7,7 @@ import type { EstimateUnit, FlowReport } from '../../shared/api/index.ts'
 import { ScreenError } from '../../shared/ui/Field'
 import { t } from '../../shared/i18n/index.ts'
 import { Hint } from '../../shared/ui/Hint.tsx'
+import { VacationWarningSettings } from '../availability/VacationWarningSettings.tsx'
 
 /**
  * Метрики потока.
@@ -25,6 +26,8 @@ export function Flow({
   ownUnit,
   orgUnit,
   staleDays,
+  vacationWarningDays,
+  canEdit,
   onClose,
   onPromise,
 }: {
@@ -42,6 +45,8 @@ export function Flow({
   orgUnit: EstimateUnit
   /** «Без движения» доски (ROADMAP 42.3, срез 5); пусто — семь дней. */
   staleDays: number | null
+  vacationWarningDays: number | null
+  canEdit: boolean
   onClose: () => void
   /** Обещание изменилось — доске стоит перечитать себя. */
   onPromise: () => void
@@ -107,6 +112,7 @@ export function Flow({
       <LevelSwitch boardId={boardId} level={level} onChanged={onPromise} />
       <UnitSwitch boardId={boardId} own={ownUnit} org={orgUnit} onChanged={onPromise} />
       <StaleSwitch boardId={boardId} days={staleDays} onChanged={onPromise} />
+      <VacationWarningSettings boardId={boardId} days={vacationWarningDays} canEdit={canEdit} onSaved={onPromise} />
 
       {/* Перенесённое — сказано до цифр, а не после: время цикла ниже
           читается уже с этой оговоркой. Переключатель виден, пока есть

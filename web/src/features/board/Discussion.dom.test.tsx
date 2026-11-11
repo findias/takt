@@ -1,0 +1,70 @@
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { Discussion } from './Discussion.tsx'
+import { api } from '../../shared/api/index.ts'
+import type { Comment } from '../../shared/api/index.ts'
+vi.mock('../../shared/api/index.ts', () => ({ api: { comments: vi.fn(), addComment: vi.fn(), editComment: vi.fn(), deleteComment: vi.fn() } }))
+const comment = (id: string, body: string, parentId: string | null = null): Comment => ({ id, body, parentId, cardId: 'card', author: 'Борис', authorId: 'other', createdAt: '2026-11-05T09:00:00Z', editedAt: null, deleted: false, mentions: [] })
+const props = { boardId: 'board', cardId: 'card', meId: 'me', canEdit: true, people: { me: 'Анна', other: 'Борис' } }
+beforeEach(() => { vi.resetAllMocks(); vi.mocked(api.comments).mockResolvedValue({ comments: [] }) })
+afterEach(cleanup)
+it('показывает ответы в общей хронологии, один редактор с цитатой внизу', async () => {
+  vi.mocked(api.comments).mockResolvedValue({ comments: [comment('first', 'Первое'), comment('second', 'Второе'), comment('reply', 'Поздний ответ', 'first')] })
+  render(<Discussion {...props} />)
+  const articles = await screen.findAllByRole('article')
+  expect(articles.map((el) => within(el).getByText(/Первое|Второе|Поздний ответ/, { selector: '.comment-body' }).textContent)).toEqual(['Первое', 'Второе', 'Поздний ответ'])
+  expect(articles[2].querySelector('.discussion-quote')?.textContent).toContain('Первое')
+  await userEvent.click(within(articles[0]).getByRole('button', { name: 'Ответить' }))
+  expect(screen.getAllByRole('textbox')).toHaveLength(1)
+  expect(document.activeElement).toBe(screen.getByRole('textbox'))
+  expect(document.querySelector('.discussion-reply')?.textContent).toContain('Первое')
+  vi.mocked(api.addComment).mockResolvedValue(comment('new', 'Ответ', 'first'))
+  await userEvent.type(screen.getByRole('textbox'), 'Ответ')
+  await userEvent.click(screen.getByRole('button', { name: 'Отправить' }))
+  await waitFor(() => expect(api.addComment).toHaveBeenCalledWith('board', 'card', 'Ответ', 'first', []))
+  expect(document.querySelector('.discussion-reply')).toBeNull()
+})
+it('ошибка сохраняет текст и упоминание; повторное нажатие при отправке не дублирует запрос', async () => {
+  render(<Discussion {...props} />)
+  const field = await screen.findByRole('textbox')
+  await userEvent.type(field, 'Привет ')
+  await userEvent.click(screen.getByRole('button', { name: 'Позвать в обсуждение' }))
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Борис' }))
+  vi.mocked(api.addComment).mockRejectedValueOnce(new Error('Нет связи'))
+  await userEvent.click(screen.getByRole('button', { name: 'Отправить' }))
+  expect(await screen.findByText('Нет связи')).toBeTruthy()
+  expect((field as HTMLTextAreaElement).value).toBe('Привет @Борис ')
+  let finish!: (c: Comment) => void
+  vi.mocked(api.addComment).mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+  const form = field.closest('form')!
+  fireEvent.submit(form); fireEvent.submit(form)
+  expect(api.addComment).toHaveBeenCalledTimes(2)
+  expect(api.addComment).toHaveBeenLastCalledWith('board', 'card', 'Привет @Борис', null, ['other'])
+  await act(async () => finish(comment('new', 'Привет @Борис')))
+  expect((field as HTMLTextAreaElement).value).toBe('')
+  expect(document.activeElement).toBe(field)
+})
+it('при открытии прокручивает вниз, обновление не сбивает читателя истории', async () => {
+  vi.mocked(api.comments).mockResolvedValue({ comments: [comment('first', 'Первое')] })
+  const { rerender } = render(<Discussion {...props} revision={1} />)
+  const log = screen.getByRole('log')
+  Object.defineProperties(log, { scrollHeight: { configurable: true, value: 1000 }, clientHeight: { configurable: true, value: 200 } })
+  await screen.findByText('Первое')
+  expect(log.scrollTop).toBe(1000)
+  log.scrollTop = 100; fireEvent.scroll(log)
+  vi.mocked(api.comments).mockResolvedValue({ comments: [comment('first', 'Первое'), comment('new', 'Новое')] })
+  rerender(<Discussion {...props} revision={2} />)
+  await screen.findByText('Новое')
+  expect(log.scrollTop).toBe(100)
+  await userEvent.click(screen.getByRole('button', { name: 'К последним сообщениям' }))
+  expect(log.scrollTop).toBe(1000)
+})
+it('начальная ошибка даёт повторить загрузку; наблюдатель видит чат без редактора', async () => {
+  vi.mocked(api.comments).mockRejectedValueOnce(new Error('Не прочитано'))
+  render(<Discussion {...props} canEdit={false} />)
+  await screen.findByText('Не прочитано')
+  await userEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+  await screen.findByText('Пока тихо.')
+  expect(screen.queryByRole('textbox')).toBeNull()
+})

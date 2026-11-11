@@ -80,6 +80,10 @@ test file backing each promise, is in
 - **Board.** Columns, cards, moving with the mouse and from the
   keyboard (`Ctrl` with arrows), manual order. A move applies
   instantly and survives a lost connection and a page reload.
+- **Plans and vacations.** An editable Gantt plan with subtasks, planned
+  dates separate from commitments and flow history. A shared vacation
+  calendar and task coverage accepted by the substitute, with primary
+  assignees preserved. [How to use the new features](docs/howto.md#new-features).
 - **Labels in three scopes.** Organisation, subdivision or a single
   board; every list says where a label comes from, and a missing one
   is created right from the card.
@@ -123,10 +127,10 @@ test file backing each promise, is in
 
 What has been deliberately left out is listed at the end of
 [`REQUIREMENTS.md`](REQUIREMENTS.md), each with what would lift the
-deferral. Briefly: no file attachments on cards, no dates as a schedule
-and no Gantt charts (that is a different product), and no public cloud
-with self-service — the installation is meant to be private, which is
-exactly why sign-up closes with a setting.
+deferral. There is no public cloud with self-service: the installation
+is meant to be private, which is why sign-up closes with a setting.
+The editable [Gantt plan](docs/howto.md#gantt) covers one board and its
+subtasks; dependencies do not reschedule work automatically.
 
 Which schema decisions cannot be taken back after the fact is in
 [`research/schema-decisions.html`](research/schema-decisions.html)

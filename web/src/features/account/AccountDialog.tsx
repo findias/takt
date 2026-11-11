@@ -1,3 +1,4 @@
+import { navigate } from '../../shared/router/index.ts'
 import { useEffect, useRef, useState } from 'react'
 import type { NotificationReason, Principal } from '../../shared/api/index.ts'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
@@ -125,6 +126,7 @@ export function AccountDialog({
       </TabPanel>
 
       <div className="row dialog-actions account-foot">
+        <Button kind="quiet" onClick={() => { close(); navigate('/team?view=vacations&mine=1') }}>{t.account.vacations}</Button>
         <Button kind="quiet" onClick={onSignOut}>
           {t.app.signOut}
         </Button>

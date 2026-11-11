@@ -36,6 +36,7 @@ const Team = lazy(
   withSections(
     () => import('../widgets/Team.tsx').then((m) => ({ default: m.Team })),
     'team',
+    'availability',
     'hooks',
     'labelsAdmin',
     'passwordLink',
@@ -44,7 +45,7 @@ const Team = lazy(
 )
 // Задачи человека со всех досок (решение владельца 22.09.2026).
 const Tasks = lazy(
-  withSections(() => import('../widgets/Tasks.tsx').then((m) => ({ default: m.Tasks })), 'tasks'),
+  withSections(() => import('../widgets/Tasks.tsx').then((m) => ({ default: m.Tasks })), 'tasks', 'availability'),
 )
 // Идеи от людей команды (ROADMAP 43): свой кусок, как «Задачи».
 const Ideas = lazy(

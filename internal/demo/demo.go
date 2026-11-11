@@ -925,6 +925,21 @@ func (f *filler) fillPostavki(b, neighbour board.Info, labels map[string]string,
 		"cardId": ids["Согласовать смету с подрядчиком"], "dueOn": date(2)}); err != nil {
 		return err
 	}
+	// Несколько разных периодов показывают план отдельно от обещания.
+	for title, span := range map[string][2]int{
+		"Согласовать смету с подрядчиком": {-2, 3},
+		"Уточнить порядок приёмки":        {1, 8},
+		"Отгрузить релиз склада":          {-4, 1},
+	} {
+		if id := ids[title]; id != "" {
+			if _, err := f.apply(b.ID, "SET_CARD_PLAN", map[string]any{
+				"cardId": id, "plannedStartOn": date(span[0]), "plannedEndOn": date(span[1]),
+				"expected": map[string]any{"plannedStartOn": nil, "plannedEndOn": nil},
+			}); err != nil {
+				return err
+			}
+		}
+	}
 	// Части лежат на разных людях, и у одной идёт разговор: без этого
 	// на доске не увидеть, ради чего в строке подзадачи стоят аватар
 	// и счётчик реплик.

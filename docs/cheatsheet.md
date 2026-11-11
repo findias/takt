@@ -7,9 +7,10 @@ One A4 sheet for day one. Labels are named as in the English interface.
 | Where | What is there |
 | --- | --- |
 | **Boards** | boards of the organisation and the archive |
-| **Team** | people, invitations, labels, keys, subscriptions, export |
+| **Team** | people, vacations, invitations, labels, keys, subscriptions, export |
+| **Tasks** → **Covering** | accepted coverage active now |
 | **Structure** | subdivisions as a tree |
-| Board header | a list at the left: **Board**, **Table**, **Changes** — three views of one set; the filter row next to it; **Flow** — metrics; **Archive** — the archive |
+| Board header | a list at the left: **Board**, **Table**, **Tree**, **Gantt**, **Changes** — views of one set; the filter row next to it; **Flow** — metrics; **Archive** — the archive |
 
 ## Keys
 

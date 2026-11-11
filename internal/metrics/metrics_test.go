@@ -305,7 +305,9 @@ func TestItemsOfAParentAreNotFlow(t *testing.T) {
 func TestThroughputCountsCreatedAgainstDone(t *testing.T) {
 	f := newFixture(t)
 	f.card("Давно заведена, доведена сейчас", 20, days(20), done())
-	f.card("Заведена сейчас, не доведена", 0.5, nil, nil)
+	// Полдня назад в понедельник утром — ещё прошлая неделя.
+	// Для проверки текущей недели карточка должна быть заведена сейчас.
+	f.card("Заведена сейчас, не доведена", 0, nil, nil)
 
 	report, err := f.svc.Report(f.ctx, f.orgID, f.userID, f.boardID, 28)
 	if err != nil {
@@ -320,8 +322,8 @@ func TestThroughputCountsCreatedAgainstDone(t *testing.T) {
 		t.Errorf("создано %d, сделано %d; ожидалось 2 и 1", created, finished)
 	}
 	last := report.Throughput[len(report.Throughput)-1]
-	if last.Created < 1 {
-		t.Errorf("заведённая сегодня не попала в «создано» текущей недели: %+v", last)
+	if last.Created != 1 || last.Count != 1 {
+		t.Errorf("текущая неделя: %+v; ожидалось создано 1, сделано 1", last)
 	}
 }
 

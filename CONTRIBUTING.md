@@ -8,9 +8,9 @@ Thank you for reading this before making a change rather than after.
 typo. Not ceremony: this product records what it commits to do and what
 it will never do ([`REQUIREMENTS.md`](REQUIREMENTS.md), Russian), and
 several of those refusals are decisions with a written argument behind
-them, not gaps. A patch adding Gantt charts will be turned down not
-because it is bad but because the question was already considered and
-decided the other way. That is a miserable thing to learn after a
+them, not gaps. A patch adding automatic resource scheduling needs an agreed product
+decision first: the board Gantt view edits card plans and does not
+schedule people or move dependent tasks automatically. That is a miserable thing to learn after a
 weekend at the keyboard.
 
 Fixes to bugs, typos, translations and documentation: go straight ahead.
@@ -136,9 +136,9 @@ separate agreement to sign.
 чинения опечатки. Причина не в церемонии: у этого продукта записано,
 что он обязуется делать и чего не будет делать никогда
 ([`REQUIREMENTS.md`](REQUIREMENTS.md)), и часть отказов — решения
-с записанным доводом, а не пробелы. Патч, добавляющий диаграмму Ганта,
-будет отклонён не потому, что он плох, а потому, что об этом уже
-подумали и решили иначе. Обидно узнавать такое после выходных за
+с записанным доводом, а не пробелы. Автоматическое ресурсное планирование требует отдельного решения:
+Гант доски меняет планы карточек, но не распределяет людей
+и не сдвигает зависимые задачи автоматически. Обидно узнавать такое после выходных за
 клавиатурой.
 
 Чинение поломки, опечатки, перевода и документации — можно сразу.

@@ -58,6 +58,8 @@ type section struct {
 // а утечка файла превращается в утечку доступа. Пароли не выгружаются
 // по той же причине и вдобавок принадлежат человеку, а не организации.
 var sections = []section{
+	{"vacations", `select to_jsonb(v) from vacations v where org_id = $1 order by starts_on,id`},
+	{"card_coverages", `select to_jsonb(c) from card_coverages c where org_id = $1 order by created_at,id`},
 	{"people", `
 		select to_jsonb(x) from (
 			select u.email, u.name, m.role, m.created_at

@@ -65,6 +65,9 @@ func seedWhatDemoLeavesEmpty(t *testing.T, ctx context.Context, admin *pgx.Conn,
 		 select $1, id, 'прежний текст' from card_comments where org_id = $1 limit 1`, only},
 		// Вложение (0079): демо файлов не кладёт — база демо не место для
 		// байтов, которые никто не откроет.
+		{`insert into vacations(id,org_id,user_id,starts_on,ends_on) values(gen_random_uuid(),$1,$2,'2026-11-10','2026-11-20')`, both},
+		{`insert into card_coverages(id,org_id,vacation_id,vacation_version,card_id,substitute_id,starts_on,ends_on,created_by)
+          select gen_random_uuid(),$1,v.id,1,c.id,$2,'2026-11-10','2026-11-20',$2 from vacations v join cards c on c.org_id=v.org_id where v.org_id=$1 limit 1`, both},
 		{`insert into card_attachments (org_id, board_id, card_id, author_id, name, media_type, size, body)
 		 select $1, board_id, id, $2, 'проба.txt', 'text/plain; charset=utf-8', 5, 'проба'::bytea
 		   from cards where org_id = $1 limit 1`, both},

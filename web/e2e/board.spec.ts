@@ -3893,3 +3893,117 @@ test('выделенные карточки переносятся на друг
   await expect(cardIn(page, 'В работе', 'Первая к соседям')).toBeVisible()
   await expect(cardIn(page, 'В работе', 'Вторая к соседям')).toBeVisible()
 })
+
+test('потерянный ответ решения повторяется без второй карточки и не отменяет позднейшее решение', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Работа по идеям')
+  const boardId = new URL(page.url()).pathname.split('/')[2]
+  await page.goto('/ideas')
+  await page.getByRole('note').getByRole('button', { name: 'Предложить идею' }).click()
+  await page.getByLabel('Что предлагаете', { exact: true }).fill('Перенести согласование в общий чат')
+  await page.getByRole('button', { name: 'Подать', exact: true }).click()
+  const row = page.getByRole('article', { name: 'Перенести согласование в общий чат' })
+  await row.getByRole('button', { name: 'Решить…' }).click()
+  await row.getByLabel('Доска', { exact: true }).selectOption({ label: 'Работа по идеям' })
+
+  let requestId = ''
+  let ideaId = ''
+  let attempts = 0
+  await page.route('**/api/ideas/*/decisions', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    const body = route.request().postDataJSON()
+    attempts++
+    const response = await route.fetch()
+    expect(response.status()).toBe(201)
+    if (attempts === 1) {
+      requestId = body.requestId
+      expect(requestId).toMatch(/^[0-9a-f-]{36}$/)
+      const path = new URL(route.request().url()).pathname
+      ideaId = path.split('/')[3]
+      // Сервер сохранил «берём», ответ потерялся; пока человек
+      // повторяет, другой запрос уже отложил идею.
+      const later = await page.request.post(path, {
+        data: { decision: 'later', note: 'Сначала согласование', requestId: crypto.randomUUID() },
+      })
+      expect(later.status()).toBe(201)
+      await route.abort('failed')
+    } else {
+      expect(body.requestId).toBe(requestId)
+      await route.fulfill({ response })
+    }
+  })
+
+  await row.getByRole('button', { name: 'Записать', exact: true }).click()
+  await expect(row.getByRole('alert')).toContainText('Нет связи с сервером')
+  await row.getByRole('button', { name: 'Записать', exact: true }).click()
+  await expect(row.getByRole('button', { name: 'Записать', exact: true })).toHaveCount(0)
+  await expect(row.getByText('Позже', { exact: true })).toBeVisible()
+  expect(attempts).toBe(2)
+
+  const board = await (await page.request.get(`/api/boards/${boardId}`)).json()
+  expect(board.cards).toHaveLength(1)
+  const history = await (await page.request.get(`/api/ideas/${ideaId}/decisions`)).json()
+  expect(history.decisions).toHaveLength(2)
+  expect(history.decisions[0].kind).toBe('later')
+})
+
+test('финиш подзадачи независим от родителя', async ({ page }) => {
+  await register(page)
+  await createBoard(page, 'Независимый финиш')
+  await addCard(page, 'В работе', 'Родитель')
+  const boardId = new URL(page.url()).pathname.split('/')[2]
+  const snapshot = async () => (await page.request.get(`/api/boards/${boardId}`)).json()
+  const initial = await snapshot()
+  const parent = initial.cards.find((c: { title: string }) => c.title === 'Родитель').id
+  const work = initial.columns.find((c: { kind: string }) => c.kind === 'in_progress').id
+  const done = initial.columns.find((c: { kind: string }) => c.kind === 'done').id
+  const operation = async (type: string, payload: object) => {
+    const response = await page.request.post(`/api/boards/${boardId}/operations`, {
+      data: { operationId: crypto.randomUUID(), type, payload },
+    })
+    expect(response.ok()).toBeTruthy()
+  }
+  await operation('CREATE_SUBTASK', { parentCardId: parent, title: 'Завершённая часть' })
+  await operation('CREATE_SUBTASK', { parentCardId: parent, title: 'Открытая часть' })
+  const parts = await snapshot()
+  const child = parts.cards.find((c: { title: string }) => c.title === 'Завершённая часть').id
+  await page.reload()
+  await cardIn(page, 'В работе', 'Родитель').getByRole('button', { name: /Подзадачи:/ }).click()
+  await page.getByRole('checkbox', { name: 'Сделана: Завершённая часть' }).click()
+  await page.getByPlaceholder('Найти карточку').fill('Завершённая часть')
+  const partCard = cardIn(page, 'В работе', 'Завершённая часть')
+  await openCardMenu(partCard)
+  const before = await boardVersion(page)
+  await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
+  await savedSince(page, before)
+  await page.getByPlaceholder('Найти карточку').fill('')
+  await expect(cardIn(page, 'В работе', 'Родитель')).toBeVisible()
+  await page.reload()
+  await expect(cardIn(page, 'Готово', 'Завершённая часть')).toBeVisible()
+  const parentCard = cardIn(page, 'В работе', 'Родитель')
+  await parentCard.getByRole('button', { name: /Подзадачи:/ }).click()
+  await expect(parentCard.getByRole('button', { name: 'Завершённая часть', exact: true })).toBeVisible()
+  await page.screenshot({ path: '/tmp/takt-subtasks-ru.png' })
+  await page.evaluate(() => localStorage.setItem('lang', 'en'))
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Готово' }).getByRole('group').filter({ hasText: 'Завершённая часть' })).toBeVisible()
+  await page.getByRole('region', { name: 'В работе' }).getByRole('button', { name: /Subtasks:/ }).click()
+  await page.screenshot({ path: '/tmp/takt-subtasks-en.png' })
+  await operation('MOVE_CARD', { cardId: child, toColumnId: work, place: 'end' })
+  await operation('SET_CARD_DONE', { cardId: child, done: false })
+  await operation('MOVE_CARD', { cardId: parent, toColumnId: done, place: 'end' })
+  await page.evaluate(() => localStorage.setItem('lang', 'ru'))
+  await page.reload()
+  await expect(cardIn(page, 'В работе', 'Завершённая часть')).toBeVisible()
+  await expect(cardIn(page, 'Очередь', 'Открытая часть')).toBeVisible()
+  await page.screenshot({ path: '/tmp/takt-subtasks-parent-done-ru.png' })
+  await page.evaluate(() => localStorage.setItem('lang', 'en'))
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Очередь' }).getByRole('group').filter({ hasText: 'Открытая часть' })).toBeVisible()
+  await page.screenshot({ path: '/tmp/takt-subtasks-parent-done-en.png' })
+  await operation('MOVE_CARD', { cardId: parent, toColumnId: work, place: 'end' })
+  await operation('SET_CARD_DONE', { cardId: child, done: true })
+  await operation('SET_CARD_DONE', { cardId: child, done: false })
+  const returned = await snapshot()
+  expect(returned.cards.find((c: { id: string }) => c.id === child).doneAt).toBeNull()
+})
