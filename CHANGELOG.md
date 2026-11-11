@@ -8,11 +8,11 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
-## v0.6.0 — 9 November 2026
+## v0.6.0 — 11 November 2026
 
 ### For whoever installs and upgrades
 
-**Twelve migrations, safe for the running version.** `0080` adds two
+**Thirteen migrations, safe for the running version.** `0080` adds two
 nullable columns: `cards.percent` and `boards.estimate_unit`; `0081`
 adds nullable `boards.stale_days`; `0082` adds the table
 `epic_statuses`, `0083` the tables `ideas` and `idea_votes` and `0084`
@@ -32,7 +32,22 @@ both dates (or nulls) and the expected previous plan; a concurrent date
 change returns `409 plan_changed`.
 `0091` adds vacations, task coverage and the organisation time zone
 (default UTC), and expands notification reasons with `coverage_changed`.
-Pods of v0.5.x keep working on all of it.
+`0092` adds nullable `boards.vacation_warning_days` (0–365); null
+keeps warnings for all upcoming vacations. Pods of v0.5.x keep working
+on all of it.
+
+**Source builds require Go 1.26.11 or newer.** This fixes the
+`GO-2026-6859` HTTP header race in the standard library. Published
+binaries and images already include the corrected toolchain.
+
+**Short PostgreSQL queries no longer pay for JIT compilation.** The
+application disables JIT only inside its scoped transactions and
+restores the connection setting on commit or rollback. No database-wide
+configuration change is required. This removes latency spikes under
+concurrent use without changing row policies or access checks.
+Large reports also avoid repeatedly scanning the complete subtask
+order for every row: indexed temporary results keep export time linear
+and preserve the task/subtask order without a schema migration.
 
 **Taking an idea saves the card and decision together.** A failure no
 longer leaves a card behind without a decision. The decision form keeps
@@ -86,6 +101,17 @@ board metrics have `movedOut`.
    **Tasks** → **Covering**.
 
 ### The rest
+
+- **Subtasks finish independently of the parent's column.** A subtask
+  moved to Done stays in its own column and in the parent's subtask
+  list, even while the parent is open. An open child no longer appears
+  done because its parent is in Done. Returning the parent does not
+  change children's completion; a child that itself crossed the finish
+  must be returned to work before clearing its mark.
+- **Vacation warning lead time is set per board.** In **Flow** →
+  **Vacation warnings**, choose 0–365 calendar days or leave it empty
+  to show all upcoming vacations. The same setting applies to cards,
+  Tasks and Gantt; current vacations remain visible through their end.
 
 - **Vacations and confirmed task coverage.** Team has a vacation calendar,
   visible to all colleagues, with a filter for one or more subdivisions
@@ -314,11 +340,9 @@ together from **Move selected**): pick the board and the column. The card
   part at 40% is 0.4 of a part, no longer 0). New operation
   `SET_CARD_PERCENT`, new event `card.percent_set`.
 
-## v0.5.2 — 26 October 2026
+### Other fixes since v0.5.1
 
-### For whoever installs and upgrades
-
-No migration and no new setting. The board snapshot no longer carries
+The board snapshot no longer carries
 links to cards of that board that sit in the archive; the links stay
 in the database and come back with the card.
 
@@ -330,8 +354,6 @@ notification was never shown to them.
 Also for integrations: `ARCHIVE_CARD` now archives the card's subtasks
 on the same board along with it, and `RESTORE_CARD` brings back those
 that went with it. Subtasks on other boards are not touched.
-
-### The rest
 
 - **A subtask can be archived or deleted from its line.** The **⋮**
   menu of a part on the same board now has **Archive** — with
