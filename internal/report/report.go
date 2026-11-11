@@ -522,6 +522,11 @@ func gather(ctx context.Context, tx pgx.Tx, f Filter) (int, error) {
 		select c.id `+where, args...); err != nil {
 		return 0, err
 	}
+	// У временных таблиц нет автоматического ANALYZE. Без статистики
+	// размер отбора оценивался в одну строку и выбирался вложенный цикл.
+	if _, err := tx.Exec(ctx, `alter table report_cards add primary key (id); analyze report_cards`); err != nil {
+		return 0, err
+	}
 	var total int
 	err := tx.QueryRow(ctx, `select count(*) from report_cards`).Scan(&total)
 	return total, err
@@ -588,7 +593,11 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 	// строки её место в плоском порядке, у части — путь родителя и своё
 	// место. Корень — карточка, чьего родителя в выгрузке нет: часть,
 	// отобранная без задачи, стоит сама по себе, а не исчезает.
-	rows, err := tx.Query(ctx, `
+	// Дерево нужно каждому ряду. CTE с заниженной из-за RLS оценкой
+	// просматривалось целиком для каждой карточки: 50 000 × 50 000.
+	// Материализуем один раз с индексом и точной статистикой; порядок
+	// и запасной путь карточки вне дерева остаются прежними.
+	_, err := tx.Exec(ctx, `create temp table report_tree on commit drop as
 		with recursive flat as (
 			select c.id, row_number() over (
 			         order by b.name, b.id, substring(c.number from '(\d+)$')::bigint, c.number) as ord
@@ -610,6 +619,21 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 			  join up u on u.parent = t.id
 			  join flat f on f.id = u.child
 			 where cardinality(t.path) <= $1::int
+		)
+		select id, path from tree`, board.MaxSubtaskDepth)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `alter table report_tree add primary key (id); analyze report_tree`); err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, `
+		with flat as (
+			select c.id, row_number() over (
+			         order by b.name, b.id, substring(c.number from '(\d+)$')::bigint, c.number) as ord
+			  from report_cards r
+			  join cards c on c.id = r.id
+			  join boards b on b.id = c.board_id
 		)
 		select c.number, c.title, b.name, coalesce(t.name, ''), col.name,
 		       case when c.outcome is not null then c.outcome
@@ -656,7 +680,7 @@ func streamRows(ctx context.Context, tx pgx.Tx, sink Sink) error {
 		       c.description, p.percent, cardinality(coalesce(tr.path, array[f.ord])) - 1
 		  from report_cards r
 		  join flat f on f.id = r.id
-		  left join tree tr on tr.id = r.id
+		  left join report_tree tr on tr.id = r.id
 		  join cards c on c.id = r.id
 		  join boards b on b.id = c.board_id
 		  join board_columns col on col.id = c.column_id

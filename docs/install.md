@@ -30,6 +30,11 @@ storage, a message queue, a separate cache. PostgreSQL is the only
 external dependency. Turn on corporate sign-in and there is a second
 one: the OIDC provider.
 
+The application disables PostgreSQL JIT only inside its scoped
+transactions: compiling short queries with row policies can cost more
+than executing them. The setting is restored at the end of each
+transaction; no database-wide JIT setting is required.
+
 What we expect from whoever installs it. Obligations divide, and
 without saying where the line falls there is nothing to check ours
 against:

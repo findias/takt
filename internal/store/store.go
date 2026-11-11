@@ -86,12 +86,17 @@ func (s *Store) BeginScope(ctx context.Context, scope Scope) (pgx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
+	// RLS увеличивает оценку коротких запросов настолько, что PostgreSQL
+	// включает JIT: список задач компилировал сотни функций на каждый
+	// запрос и задерживал весь пул. Компиляция здесь дороже исполнения.
+	// Только на транзакцию: настройки чужих клиентов базы не меняются.
 	_, err = tx.Exec(ctx, `
 		select set_config('app.current_org', $1, true),
 		       set_config('app.current_user', $2, true),
 		       set_config('app.invite_token', $3, true),
 		       set_config('app.api_token', $4, true),
-		       set_config('app.task', $5, true)`,
+	       set_config('app.task', $5, true),
+	       set_config('jit', 'off', true)`,
 		scope.OrgID, scope.UserID, scope.InviteToken, scope.APIToken, scope.Task)
 	if err != nil {
 		_ = tx.Rollback(ctx)

@@ -307,9 +307,12 @@ security-report: ## Отчёты сканеров машинным формат�
 # к выпуску сама длится LOAD_DURATION=10m плюс подготовка — прогон,
 # который CLAUDE.md требует перед тегом, обрывался паникой таймаута
 # на 600-й секунде, не дойдя до вердикта.
+# Пакеты меряются последовательно: выгрузка 50 000 карточек и API
+# делят PostgreSQL. Одновременный запуск превращал независимые замеры
+# в конкуренцию за базу и искажал и задержки, и рост времени выгрузки.
 .PHONY: load
 load: db migrate ## Поведение под нагрузкой (идёт минуты)
-	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -tags load -count=1 -v -timeout 40m \
+	TEST_DATABASE_URL="$(DEV_DB_URL)" go test -p 1 -tags load -count=1 -v -timeout 40m \
 	  -run 'Scales|Crowd|Neighbour|ManyOpen|RateLimit|MixedLoad' ./internal/board/ ./internal/httpapi/ ./internal/report/
 
 # Обновление с прошлого выпуска — по-настоящему: база и данные заводятся

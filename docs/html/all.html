@@ -101,7 +101,7 @@ color:var(--ink-3);font-size:.85rem}
 <body>
 <main class="sheet">
 <h1>Takt — documentation</h1>
-<p>Every section in one file. Version v0.5.1-56-ge65352b-dirty.</p>
+<p>Every section in one file. Version v0.5.1-58-gf2b7714-dirty.</p>
 <h2>Содержание</h2>
 <ul>
 <li><a href="#overview">Overview</a></li>
@@ -1006,6 +1006,7 @@ kubectl exec deploy/takt -- /app/takt doctor</code></pre>
 </tbody>
 </table></div>
 <p>What the installation does <strong>not</strong> need: internet access, object storage, a message queue, a separate cache. PostgreSQL is the only external dependency. Turn on corporate sign-in and there is a second one: the OIDC provider.</p>
+<p>The application disables PostgreSQL JIT only inside its scoped transactions: compiling short queries with row policies can cost more than executing them. The setting is restored at the end of each transaction; no database-wide JIT setting is required.</p>
 <p>What we expect from whoever installs it. Obligations divide, and without saying where the line falls there is nothing to check ours against:</p>
 <ol>
 <li><strong>The database is yours.</strong> Backups, point-in-time recovery, disk space. The chart deliberately does not manage it — why, is in the section on point-in-time recovery below.</li>
