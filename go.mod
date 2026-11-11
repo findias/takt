@@ -23,7 +23,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/pb33f/libopenapi v0.40.1
 	github.com/pb33f/libopenapi-validator v0.14.0
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
+	go.yaml.in/yaml/v4 v4.0.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/text v0.42.0
 )
