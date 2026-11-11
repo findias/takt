@@ -35,11 +35,10 @@ type Task struct {
 	Outcome         *string    `json:"outcome"`
 	Blocked         bool       `json:"blocked"`
 	// Parent — номер родителя, если задача — его пункт (IsItem). Тогда
-	// Column и ColumnKind — родителя: своя колонка у пункта ничего
-	// не значит, а «где эта работа» отвечает тот, в ком она лежит.
+	// До финиша Column и ColumnKind — родителя. Если часть или родитель
+	// прошли финиш, колонка части независима: DONE не наследуется.
 	Parent *string `json:"parent"`
-	// Done — отмечена сделанной руками. У пункта это и есть «закончена»:
-	// финиша у него нет, Outcome остаётся пустым.
+	// Done — отмечена сделанной руками или прошла финиш своей колонки.
 	Done                bool     `json:"done"`
 	Labels              []Label  `json:"labels"`
 	PlannedStartOn      *string  `json:"plannedStartOn"`
@@ -80,20 +79,23 @@ func (s *Service) Tasks(ctx context.Context, orgID, viewerID, personID string, w
 			       -- Отбор «Сделаны» идёт по виду колонки, а колонка у пункта —
 			       -- родителя: отмеченный пункт в идущем родителе иначе
 			       -- числился бы «в работе».
-			       case when item.number is not null and c.done_at is not null
+			       case when item.number is not null and coalesce(`+cardDone+`, false)
 			            then 'done' else col.kind end,
 			       c.priority, to_char(c.due_on, 'YYYY-MM-DD'), c.started_at,
 			       c.column_entered_at, c.outcome,
 			       exists (select 1 from card_blocks k
 			                where k.card_id = c.id and k.unblocked_at is null),
-			       item.number, c.done_at is not null,
+			       item.number, coalesce(`+cardDone+`, false),
                    to_char(c.planned_start_on, 'YYYY-MM-DD'), to_char(c.planned_end_on, 'YYYY-MM-DD'),
                    array(select a.user_id::text from card_assignees a where a.card_id=c.id order by a.user_id),
                    b.vacation_warning_days
 			  from cards c
 			  join boards b on b.id = c.board_id
 			  left join lateral (
-			        select p.number, p.column_id from card_links l
+			        select p.number,
+                         case when c.outcome = 'done' or p.outcome = 'done'
+                              then c.column_id else p.column_id end as column_id
+                          from card_links l
 			          join cards p on p.id = l.from_card
 			         where l.to_card = c.id and l.kind = 'subtask'
 			           and p.board_id = c.board_id and p.archived_at is null

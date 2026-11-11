@@ -229,3 +229,43 @@ func (f *fixture) titleOf(id string) string {
 	})
 	return title
 }
+
+func TestSubtaskFinishIsIndependentOfParent(t *testing.T) {
+	f := newFixture(t)
+	cols := f.columns()
+	parent := f.createCard("Родитель в работе", cols[1].ID)
+	child := f.subtask(parent, "Независимая часть")
+	f.subtask(parent, "Открытая часть")
+	f.mustApply("ASSIGN_CARD", map[string]any{"cardId": child, "userId": f.actorID})
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": true})
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": child, "toColumnId": cols[2].ID, "place": "end"})
+	if c := f.card(parent); c.Outcome != nil || c.DoneAt != nil {
+		t.Fatalf("выполнение части закрыло незавершённого родителя: %+v", c)
+	}
+	list, err := f.svc.Tasks(f.ctx, f.orgID, f.actorID, f.actorID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Tasks) != 1 || list.Tasks[0].Column != cols[2].Name || !list.Tasks[0].Done || list.Tasks[0].Parent == nil {
+		t.Fatalf("финиш части потерян или связь снята: %+v", list.Tasks)
+	}
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": child, "toColumnId": cols[1].ID, "place": "end"})
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": false})
+	if c := f.card(child); c.DoneAt != nil || c.Outcome != nil {
+		t.Fatalf("часть нельзя вернуть в работу: %+v", c)
+	}
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": parent, "toColumnId": cols[2].ID, "place": "end"})
+	list, err = f.svc.Tasks(f.ctx, f.orgID, f.actorID, f.actorID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Tasks) != 1 || list.Tasks[0].ColumnKind == "done" || list.Tasks[0].Done {
+		t.Fatalf("DONE родителя закрыло часть: %+v", list.Tasks)
+	}
+	f.mustApply("MOVE_CARD", map[string]any{"cardId": parent, "toColumnId": cols[1].ID, "place": "end"})
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": true})
+	f.mustApply("SET_CARD_DONE", map[string]any{"cardId": child, "done": false})
+	if c := f.card(child); c.DoneAt != nil {
+		t.Fatal("после возврата родителя отметка части не снимается")
+	}
+}

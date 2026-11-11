@@ -478,7 +478,13 @@ so many" bar.
 When a filter or a swimlane hides the parent, its item is shown as a
 card in the parent's column, so your share of the work does not
 vanish. On **Tasks** an item shows its parent's column and the parent's
-number; a ticked item counts as finished.
+number; a ticked item counts as finished. A subtask can be moved to
+**Done** while its parent is still open; it appears in its own column
+and remains in the parent's subtask list. An open subtask of a parent
+in **Done** also stays in its own column. Returning the parent to work
+does not change the children's completion marks; these can be changed
+separately. If a child itself crossed the finish point, return it to
+work before clearing its completion mark.
 
 Parts can have parts of their own — an epic, its features, the tasks
 under them, up to five levels. The bar on a card with grandchildren

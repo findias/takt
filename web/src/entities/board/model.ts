@@ -515,10 +515,16 @@ export function isItem(base: BaseState, cardId: string): boolean {
   return itemParent(base, cardId) !== undefined
 }
 
-/** Где работа стоит: у пункта — колонка родителя, своя ничего не значит. */
+// Финиш части и родителя независимы: незакрытая часть не должна
+// оказываться в DONE родителя, а закрытая — прятаться в его работе.
+function hasOwnColumn(base: BaseState, cardId: string, parent: string): boolean {
+  return base.cards[cardId].outcome === 'done' || base.cards[parent].outcome === 'done'
+}
+
+/** На финише часть стоит в своей колонке независимо от родителя. */
 export function homeColumn(base: BaseState, cardId: string): string {
   const parent = itemParent(base, cardId)
-  return base.cards[parent ?? cardId].columnId
+  return base.cards[parent && !hasOwnColumn(base, cardId, parent) ? parent : cardId].columnId
 }
 
 /**
@@ -537,6 +543,8 @@ export function homeColumn(base: BaseState, cardId: string): string {
  * дорожке, — пункт стоит отдельной карточкой в колонке родителя:
  * иначе работа исчезла бы совсем («мои карточки», когда родитель
  * чужой), а своя колонка пункта соврала бы, где эта работа.
+ * Если часть или родитель прошли финиш, часть показана в своей
+ * колонке: их завершение независимо, связь остаётся в списке родителя.
  *
  * Родитель не на доске (в архиве или на чужой) — подзадача не пункт,
  * а обычная карточка в своей колонке.
@@ -561,7 +569,7 @@ export function withoutParts(
   for (const [columnId, ids] of Object.entries(order)) {
     next[columnId] = ids.filter((id) => {
       const parent = parentOf.get(id)
-      if (parent === undefined) return true
+      if (parent === undefined || hasOwnColumn(base, id, parent)) return true
       if (!shown.has(parent)) {
         const home = base.cards[parent].columnId
         ;(moved[home] ??= []).push(id)
