@@ -8,6 +8,22 @@ The rule for an entry: first whatever changes behaviour or needs action
 on upgrade, then the rest. A version appears here before its tag —
 otherwise the release gets made and the list gets written «later».
 
+**Unreleased working changes — 17 November 2026.** The board tree is now a
+hierarchical table with selectable columns, sibling sorting, search preserving
+ancestors, and URL-based expansion settings. Incomplete cross-board branches
+show a retry action. This is the first slice toward configurable work structures.
+
+The Reports page now keeps the period and exports above the results, with
+collapsible filters and visible, removable active conditions.
+
+The Team member list keeps roles visible and puts rare administrative
+actions in each person’s menu, preserving permissions and erase confirmation.
+
+The board keeps full card titles in compact mode, expands individual cards,
+and groups secondary controls under Tools. Creating cards, iteration actions
+and the card panel are easier to reach. Following a parent task preserves
+a return path to the subtask and its filters across boards.
+
 ## v0.6.0 — 11 November 2026
 
 ### For whoever installs and upgrades

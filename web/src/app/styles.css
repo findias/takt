@@ -1636,6 +1636,7 @@ select:disabled {
 }
 
 .card {
+  flex-shrink: 0;
   position: relative;
   background: var(--surface);
   border: 1px solid var(--rule);
@@ -1671,7 +1672,7 @@ select:disabled {
    карточке ходят в панель. */
 @container column (max-width: 14rem) {
   .card-marks .mark:not(.mark--alarm),
-  .card-due,
+  .card-due:not(.card-due--urgent),
   .card-estimate {
     display: none;
   }
@@ -1684,7 +1685,7 @@ select:disabled {
      вместе с `content-visibility`. */
   z-index: var(--layer-raised);
 }
-.card:hover {
+.card:hover:not(.card--selected) {
   border-color: var(--ink-3);
 }
 .card--dragging {
@@ -2492,7 +2493,7 @@ textarea.description {
    той же блокировки, а не новая. Меньше суток до срока — жирнее
    и с пунктиром: «это скоро кончится», как у срока, который подходит. */
 .card-block-until {
-  flex-basis: 100%;
+  flex: none;
   font-size: var(--text-sm);
   color: var(--ink-2);
 }
@@ -2960,7 +2961,8 @@ textarea.description {
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  .board-tools-line > .board-tools {
+  .board-tools-line > .board-tools,
+  .board-extra-tools > .board-tools {
     margin-left: 0;
   }
   /* Не растёт: выросшая, она занимала строку целиком и сталкивала
@@ -3372,12 +3374,8 @@ textarea.description {
   }
 }
 
-/* Плотная карточка в две строки (новый дизайн доски, шаг 2). Первая —
-   номер и название, название занимает всё, что осталось, и переносится.
-   Вторая — эпик, родитель, метки и пометки одним потоком с переносом,
-   а справа то, что сравнивают по колонке сверху вниз: возраст, люди,
-   меню. Пометки внутри второй строки — её прямые соседи, без своей
-   обёртки: иначе они уходили бы отдельным рядом. */
+/* Название, препятствие, классификация и служебные сведения читаются
+   отдельными группами. Размер ряда не меняется при появлении меню. */
 .card-meta .card-title {
   flex: 1;
   min-width: 0;
@@ -3393,6 +3391,12 @@ textarea.description {
 .card-line > .card-marks {
   display: contents;
 }
+/* Срочный срок не теряется, когда основную тревогу заняла блокировка. */
+.card-due--urgent,
+.card-iteration--late {
+  color: var(--warn);
+  font-weight: 600;
+}
 .card .card-line .card-labels {
   margin-top: 0;
 }
@@ -3405,58 +3409,85 @@ textarea.description {
 .card-line-end .card-age {
   margin-left: 0;
 }
-/* Кромка возраста (шаг 4 нового дизайна): тонкая полоса по нижнему
-   краю карточки, в её отступе, — высоты не добавляет. */
-.card-age-strip {
-  position: absolute;
-  inset-inline: var(--space-3);
-  inset-block-end: 3px;
-  block-size: 3px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  overflow: hidden;
-  pointer-events: none;
-}
-.card-age-strip::after {
-  content: '';
-  display: block;
-  block-size: 100%;
-  /* Доля прожитого обещания приходит из разметки; без неё — пусто. */
-  inline-size: calc(var(--used, 0) * 100%);
-  background: var(--rule-strong);
-}
-.card-age-strip--late::after {
-  background: var(--caution);
-}
-/* Кнопки по наведению — поверх правого нижнего угла, на подложке
-   карточки: в строке под них пришлось бы держать место всегда. Внизу,
-   а не вверху: вверху справа стоят люди, и нажать по стопке, чтобы
-   сменить исполнителя, стало бы нельзя; внизу справа — возраст, его
-   не нажимают. Пока
-   идёт выделение, флажок виден у всех карточек, и название уступает
-   ему место справа — это смена режима, а не наведение. */
+/* Действия занимают постоянное место в строке и проявляются при
+   наведении, фокусе или выделении. Подложка не перекрывает данные. */
 .card-tools {
-  position: absolute;
-  inset-block-end: var(--space-2);
-  inset-inline-end: var(--space-2);
+  position: static;
+  visibility: hidden;
   display: flex;
   align-items: center;
-  gap: 2px;
-  border-radius: var(--radius);
+  gap: var(--space-1);
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
-/* Поверх — значит, заметно поверх: рамка и тень, как у меню. Прежде
-   подложка была цвета карточки и без края, и у карточки с тревогой
-   «дольше обещанного» — таблетка на всю ширину — белый квадрат вырезал
-   угол таблетки и кромку возраста под ней: выглядело поломкой вёрстки,
-   а не кнопками. Над кромкой, а не на ней: кромка — тоже показание. */
 .card:hover .card-tools,
-.card:focus-within .card-tools {
-  padding: 2px;
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--rule), var(--shadow-drag);
+.card:focus-within .card-tools,
+.board-screen--picking .card-tools,
+.card--selected .card-tools {
+  visibility: visible;
 }
 .board-screen--picking .card-line {
-  padding-inline-end: calc(var(--target) + var(--space-1));
+  padding-inline-end: 0;
+}
+@media (pointer: coarse) {
+  .card-tools {
+    visibility: visible;
+  }
+}
+/* Визуальный квадрат — 16 px, но цель нажатия остаётся 24/44 px. */
+.card input.card-check {
+  position: relative;
+  inline-size: var(--target);
+  block-size: var(--target);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  background-image: none;
+}
+.card input.card-check::before {
+  content: '';
+  position: absolute;
+  inset: calc((var(--target) - var(--space-4)) / 2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.card input.card-check:hover::before {
+  border-color: var(--accent);
+}
+.card input.card-check:active::before {
+  background-color: var(--surface-2);
+}
+.card input.card-check:checked:active::before {
+  background-color: var(--accent);
+}
+.card input.card-check:checked::before {
+  background: var(--accent) var(--check) center / var(--space-3) var(--space-3) no-repeat;
+  border-color: var(--accent);
+}
+@media (forced-colors: active) {
+  .card input.card-check {
+    appearance: auto;
+    border: revert;
+    background: revert;
+  }
+  .card input.card-check::before {
+    display: none;
+  }
+}
+.card-expand {
+  flex: none;
+}
+/* Название не сокращается ни в одном режиме карточки. */
+.card .card-title {
+  display: block;
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  text-align: left;
 }
 
 /* Заголовок и стопка исполнителей — одна строка: «что за работа»
@@ -4027,6 +4058,26 @@ textarea.description {
    первая — вид и весь отбор, вторая — поиск, группировка, виды,
    справа палитра, «Поток», «Архив». Не помещается — переносится
    по элементу, а не сжимает подписи. */
+.board-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+.board-controls > .board-tools-line {
+  display: contents;
+}
+.board-extra-tools {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.board-tools-toggle {
+  display: inline-flex;
+}
 .board-tools-line {
   display: flex;
   align-items: center;
@@ -4040,7 +4091,8 @@ textarea.description {
 .board-tools-line--second > .filters-search {
   flex: 0 1 20rem;
 }
-.board-tools-line > .board-tools {
+.board-tools-line > .board-tools,
+.board-extra-tools > .board-tools {
   margin-left: auto;
 }
 /* Поиск, «Отбор» и сводка отбора — прямые участники строки: обёртка
@@ -4064,27 +4116,63 @@ textarea.description {
 .filters-rest--closed {
   display: none;
 }
-/* Отбор — основная панель (решение владельца 22.09.2026): на широком
-   экране открыт всегда и стоит в строке, а не под ней; кнопка «Отбор»
-   нужна только узкому экрану, где полоса съела бы треть доски. */
-@media (min-width: 48rem) {
-  .filters-toggle {
-    display: none;
+/* Условия отбора раскрываются на любом экране. Счётчик и число
+   скрытых карточек остаются видимыми при свёрнутых условиях. */
+.filters-rest select,
+.filters-rest .select-button {
+  max-inline-size: 12.5rem;
+  text-overflow: ellipsis;
+}
+.board-controls .filters-search {
+  flex: 0 1 20rem;
+  min-width: 10rem;
+}
+/* На телефоне сначала поиск и рабочие переключатели. Загрузка,
+   итерации и дополнительные инструменты раскрываются одной кнопкой. */
+@media (max-width: 40rem) {
+  .board-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
   }
-  /* Без своей коробки: части отбора текут в общую строку по одной
-     и переносятся по одной, а не всем блоком на новую строку. */
-  .filters-rest,
-  .filters-rest--closed {
+  .board-controls > .board-tools-line {
     display: contents;
   }
-  /* Списки растягиваются по самому длинному пункту: после переноса
-     это длинное название метки или человек с отчеством, и в строке
-     получается пустое поле в пол-экрана (замечено владельцем
-     22.09.2026 на ARCHTEAM). Ширину держим, длинное имя обрезаем. */
-  .filters-rest select,
-  .filters-rest .select-button {
-    max-inline-size: 12.5rem;
-    text-overflow: ellipsis;
+  .board-controls .filters-search {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  .board-controls .view-select {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .board-controls .filters-toggle {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .board-tools-toggle {
+    display: inline-flex;
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .board-controls .filters-rest,
+  .board-extra-tools {
+    grid-column: 1 / -1;
+  }
+  .board-extra-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .board-extra-tools .board-tools {
+    margin-left: 0;
   }
 }
 /* Сколько отборов включено — плашкой на кнопке: видно и тогда, когда
@@ -4226,6 +4314,24 @@ textarea.description {
 /* Длинное название метки обрывается: чип не должен распирать колонку. */
 .chip--card {
   max-inline-size: 12rem;
+}
+/* Классификация сохраняет свой цвет в точке, оставляя площадь заливки
+   предупреждениям. Общие метки вне доски используют прежнее оформление. */
+.card .chip--card {
+  background: transparent;
+  color: var(--ink-2);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius);
+}
+.card .chip--card:not(.chip--more)::before {
+  content: '';
+  display: inline-block;
+  inline-size: var(--space-1);
+  block-size: var(--space-1);
+  margin-inline-end: var(--space-1);
+  vertical-align: middle;
+  border-radius: 50%;
+  background: oklch(var(--chip-fg-l) var(--chip-fg-c-own, var(--chip-fg-c)) var(--hue, 0));
 }
 .chip {
   /* Значение собирается из рецепта и тона: сменить рецепт — сменить
@@ -5909,7 +6015,11 @@ a.card-external {
 a.card-external:hover {
   color: var(--ink);
 }
-.card-epic {
+.card .card-epic {
+  background: transparent;
+  color: var(--ink-3);
+  border-color: var(--rule);
+  border-radius: var(--radius);
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6223,4 +6333,191 @@ a.card-external:hover {
 @media (forced-colors: active) {
   .vacation-day { border: 2px solid Highlight; }
   .vacation-warning { border-color: CanvasText; }
+}
+
+/* Сводка задачи не зависит от выбранной вкладки. */
+.panel-card-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+.panel-card-summary select {
+  max-inline-size: 100%;
+}
+
+/* Политика доступна рядом с колонкой, но не отнимает место у работы. */
+.column-rules {
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+.column-rules summary {
+  min-height: var(--target);
+  cursor: pointer;
+}
+.column-rules summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Компактная карточка оставляет на доске сведения для выбора работы.
+   Подробный вид возвращается одной настройкой; шрифт не уменьшается. */
+.card-detail-option {
+  display: none;
+}
+@media (min-width: 48rem) and (pointer: fine) {
+  .card-detail-option {
+    display: inline-flex;
+  }
+  .board-screen:not(.board-screen--detailed-cards) .cards {
+    gap: var(--space-1);
+  }
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) {
+    padding: var(--space-1) var(--space-2);
+    gap: 0;
+  }
+
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) > .mark--alarm {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-labels,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-epic,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-parent,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-external,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-estimate,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-marks .mark--quiet,
+  .board-screen:not(.board-screen--detailed-cards) .card:not(.card--expanded) .card-block-until:not(.card-block-until--ending) {
+    display: none;
+  }
+}
+
+.card-expanded-description {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Явное раскрытие показывает текст целиком, а не увеличивает лимит строк. */
+.card.card--expanded > .mark--alarm {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+.card.card--expanded .card-epic,
+.card.card--expanded .chip--card,
+.card.card--expanded .card-parent {
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+/* Раскрытие различимо и после ухода курсора. Выделение сохраняет
+   собственную акцентную границу и подложку. */
+.card--expanded:not(.card--selected) {
+  border-color: var(--rule-strong);
+}
+
+.parent-return { display: inline-block; margin-block-end: var(--space-3); }
+.related--source { border-inline-start: 1px solid var(--accent); padding-inline-start: var(--space-2); }
+
+.source-subtask { display: block; }
+
+/* Иерархическая таблица: название переносится целиком, а настройки
+   столбцов раскрываются по запросу и не отнимают высоту у задач. */
+.tree-view { max-width: none; min-inline-size: 0; }
+.tree-tools, .tree-options { flex-wrap: wrap; align-items: center; }
+.tree-search { flex: 1 1 16rem; min-inline-size: 12rem; }
+.tree-search input { inline-size: 100%; }
+.tree-column-picker { padding: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tree-column-picker summary { cursor: pointer; }
+.tree-column-picker[open] > div { flex-wrap: wrap; padding-block-start: var(--space-2); }
+.tree-table-wrap { max-block-size: 70vh; }
+.tree-table th:first-child, .tree-table td:first-child { inline-size: 50%; min-inline-size: 16rem; }
+.tree-table td { vertical-align: top; }
+.tree-cell { display: flex; align-items: baseline; gap: var(--space-1); }
+.tree-cell-content { display: flex; flex-direction: column; align-items: flex-start; min-inline-size: 0; }
+.tree-cell-content .tree-title { text-align: start; overflow-wrap: anywhere; white-space: normal; }
+.tree-progress { min-inline-size: 10rem; font-variant-numeric: tabular-nums; }
+.tree-progress progress { inline-size: 6rem; margin-inline-end: var(--space-2); accent-color: var(--accent); }
+.tree-progress > .small { display: block; }
+@media (max-width: 600px) {
+  .tree-view { padding: var(--space-2); }
+  .tree-table th:first-child, .tree-table td:first-child { min-inline-size: 12rem; max-inline-size: 12rem; }
+}
+
+@media print {
+  .tree-table-wrap { max-block-size: none; overflow: visible; }
+  .tree-tools, .tree-about, .tree-options { display: none; }
+}
+
+/* Отчёт начинается с результата: компактная рабочая шапка отделена
+   от подробных условий, а выбранное видно и при закрытой форме. */
+.reports-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); flex-wrap: wrap; }
+.reports-heading h2 { margin: 0; font-size: var(--text-xl); }
+.reports-heading p { margin: var(--space-1) 0 0; }
+.reports-heading > div:first-child { flex: 1 1 20rem; }
+.reports-download { align-items: center; }
+.reports-controls { padding: var(--space-4); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-lg); gap: var(--space-3); }
+.reports-period { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); min-inline-size: 0; padding: 0; border: 0; margin: 0; }
+.reports-period legend { font-size: var(--text-sm); font-weight: 600; padding: 0; margin-block-end: var(--space-2); }
+.reports-period input { max-inline-size: 100%; min-inline-size: 0; }
+.reports-period-help { flex-basis: 100%; color: var(--ink-3); }
+.reports-period-help summary, .reports-filter-panel > summary { cursor: pointer; }
+.reports-period-help p { margin: var(--space-2) 0 0; }
+.reports-filter-panel { padding-block-start: var(--space-3); border-block-start: 1px solid var(--rule); }
+.reports-filter-panel > summary { font-weight: 600; min-block-size: 24px; }
+.reports-filter-panel > summary .badge { margin-inline-start: var(--space-2); }
+.reports-filter-panel[open] > fieldset { padding-block-start: var(--space-4); }
+.reports-selection { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; margin: 0; min-inline-size: 0; }
+.reports-selection .chip { border-radius: var(--radius); padding: var(--space-1) var(--space-2); overflow: visible; text-overflow: clip; block-size: auto; max-inline-size: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
+.reports-selection-line { justify-content: space-between; }
+.reports .report-slices { gap: var(--space-2); }
+@media (max-width: 40rem) {
+  .reports-controls { padding: var(--space-3); }
+  .reports-period > .row:first-of-type { flex-wrap: nowrap; max-inline-size: 100%; }
+  .reports-period > .row:first-of-type label { min-inline-size: 0; }
+  .reports-download { inline-size: 100%; }
+  .reports-download .btn { flex: 1; justify-content: center; }
+}
+@media print {
+  .reports-heading .reports-download, .reports-filter-panel, .reports-period-help,
+  .reports-period > .row:nth-of-type(2), .reports .report-slices { display: none; }
+  .reports-controls { border: 0; padding: 0; background: none; }
+  .reports-selection .chip { border: 0; color: var(--ink); background: none; }
+  .reports-selection .chip > span { display: none; }
+}
+
+.reports-preset-compact { display: none; }
+@media (max-width: 40rem) {
+  .reports { gap: var(--space-3); }
+  .reports-heading p, .reports-period .reports-presets { display: none; }
+  .reports-preset-compact { display: flex; inline-size: 100%; }
+  .reports-preset-compact select { inline-size: 100%; }
+}
+@media print { .reports-preset-compact { display: none; } }
+
+/* В составе читают имена и роли. Редкие операции находятся в меню,
+   а его кнопка остаётся видимой для мыши, клавиатуры и сенсорного ввода. */
+.team-people > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.team-people .member-controls { flex-wrap: nowrap; gap: var(--space-2); }
+.team-people .member-controls select { max-inline-size: 10rem; }
+.team-people .member-who .wrap-title { overflow-wrap: anywhere; }
+@media (max-width: 40rem) {
+  .team-people > li { column-gap: var(--space-2); }
+}
+
+@media print {
+  /* Экранные правила display: contents не должны возвращать панель
+     управления после общего правила печати. */
+  .board-controls, .board-controls > .board-tools-line,
+  .board-screen .board-toolbar { display: none; }
 }

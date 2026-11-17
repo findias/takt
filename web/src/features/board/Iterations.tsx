@@ -6,6 +6,8 @@ import { Button } from '../../shared/ui/Button.tsx'
 import { ConfirmDialog } from '../../shared/ui/Dialog.tsx'
 import { ScreenError } from '../../shared/ui/Field'
 import { Hint } from '../../shared/ui/Hint.tsx'
+import { Menu } from '../../shared/ui/Menu.tsx'
+import { MoreIcon } from '../../shared/ui/icons.tsx'
 import { t } from '../../shared/i18n/index.ts'
 
 // Полоса итераций — своим куском сборки (этап 32.6): первая загрузка
@@ -101,23 +103,20 @@ export function Iterations({
             <button className="link" onClick={() => onReport(i)}>
               {i.name} · {rangeWords(i.startsOn, i.endsOn)} · {i.cardCount}
             </button>
-            {/* Имя называет итерацию: кнопок «закрыть» в строке столько
-                же, сколько итераций, и с диктора они звучали одинаково. */}
             {canEdit && (
-              <button
-                className="link"
-                aria-label={t.screen.closeIterationOf(i.name)}
-                onClick={() => {
-                  setTyped('')
-                  setToClose(i)
-                }}
+              <Menu
+                label={t.screen.closeIterationOf(i.name)}
+                items={[{
+                  label: t.screen.closeIteration,
+                  danger: true,
+                  onSelect: () => {
+                    setTyped('')
+                    setToClose(i)
+                  },
+                }]}
               >
-                {/* Полностью: одинокое «закрыть» у плашки читалось как
-                    «убрать плашку», а действие необратимое — состав
-                    итерации застывает. На том же экране «Закрыть» есть
-                    у каждой панели (разбор 21.09.2026). */}
-                {t.screen.closeIteration}
-              </button>
+                <MoreIcon />
+              </Menu>
             )}
           </span>
         ))}

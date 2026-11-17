@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { request } from '../../shared/api/index.ts'
-import { boardPath, navigate } from '../../shared/router/index.ts'
+import { navigate } from '../../shared/router/index.ts'
+import { parentPath } from '../../shared/router/parent.ts'
 import { t } from '../../shared/i18n/index.ts'
 
 export type PathStep = {
@@ -27,8 +28,8 @@ const SHOWN = 3
  * карточку открыли, и только если родитель есть: у самостоятельной
  * работы пути нет, и спрашивать о нём незачем.
  *
- * Звено этой доски открывает карточку здесь же, звено другой доски
- * подписано доской и ведёт туда ссылкой. Недоступное звено названо
+ * Переход открывает родителя с подзадачами и сохраняет возврат.
+ * Звено другой доски подписано её названием. Недоступное звено названо
  * «недоступной карточкой», а не пропадает: иначе путь выглядел бы
  * короче, чем он есть.
  */
@@ -36,14 +37,12 @@ export function CardPath({
   cardId,
   parentId,
   boardId,
-  onOpenCard,
 }: {
   cardId: string
   /** Прямой родитель; пусто — карточка сама корень. Ключ перезапроса:
    *  сменился родитель — сменился путь. */
   parentId: string | null
   boardId: string
-  onOpenCard: (cardId: string) => void
 }) {
   const [path, setPath] = useState<PathStep[]>([])
 
@@ -80,26 +79,20 @@ export function CardPath({
               </span>
             ) : !step.visible ? (
               <span className="muted">{t.board.unknownParent}</span>
-            ) : step.boardId === boardId ? (
-              <button type="button" className="link" onClick={() => onOpenCard(step.id)}>
-                {step.title}
-              </button>
             ) : (
               <>
-                {/* Ссылкой — чтобы открывалась и в новой вкладке; обычное
-                    нажатие переходит без перезагрузки, как везде. */}
                 <a
                   className="link"
-                  href={boardPath(step.boardId ?? '', step.id)}
+                  href={parentPath(window.location.pathname + window.location.search, step.boardId ?? boardId, step.id, `${boardId}:${cardId}`)}
                   onClick={(e) => {
-                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
                     e.preventDefault()
-                    navigate(boardPath(step.boardId ?? '', step.id))
+                    navigate(e.currentTarget.getAttribute('href')!)
                   }}
                 >
                   {step.title}
                 </a>
-                <span className="muted card-path-board">· {step.boardName}</span>
+                {step.boardId !== boardId && <span className="muted card-path-board">· {step.boardName}</span>}
               </>
             )}
           </li>

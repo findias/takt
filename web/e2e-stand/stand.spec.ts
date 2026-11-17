@@ -79,6 +79,7 @@ test('владелец видит доску с карточками, карто
   await expect(page.getByRole('tab', { name: 'Работа' })).toBeVisible()
   await page.keyboard.press('Escape')
 
+  await page.getByRole('button', { name: 'Инструменты', exact: true }).click()
   await page.getByRole('button', { name: 'Поток' }).click()
   await expect(page.getByRole('heading', { name: /Поток/ }).first()).toBeVisible()
 })

@@ -664,6 +664,7 @@ export const ru = {
     toFlow: 'Все метрики доски →',
   },
   column: {
+    rules: 'Правила колонки',
     markupOf: (name: string) => `Разметка колонки «${name}»`,
     markup: 'Разметка',
     averageWaiting: (days: string) => `ждут в среднем ${days}`,
@@ -709,6 +710,8 @@ export const ru = {
     policyOf: (name: string) => `Правило входа в колонку «${name}»`,
   },
   cardView: {
+    expandDetails: (title: string) => `Развернуть карточку «${title}»`,
+    collapseDetails: (title: string) => `Свернуть карточку «${title}»`,
     noBoardAccess: 'не видит доску',
     blockedFor: (reason: string) => `Заблокирована: ${reason}`,
     commitmentDate: 'Дата обязательства',
@@ -844,6 +847,8 @@ export const ru = {
     assigneesFailedWhy: (why: string) => `Не удалось изменить исполнителей: ${why}`,
   },
   screen: {
+    detailedCards: 'Подробные карточки',
+    boardTools: 'Инструменты',
     cardGone: 'Карточки по этой ссылке нет: её удалили, убрали в архив или она на доске, которой вам не видно',
     showFlow: 'Показать поток',
     flowHint: 'метрики доски',

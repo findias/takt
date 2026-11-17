@@ -10,6 +10,7 @@ export const team = {
     inOrg: 'В организации',
     integrationKey: 'ключ интеграции',
     key: 'ключ',
+    actionsOf: (name: string) => `Действия участника: ${name}`,
     roleOf: (name: string) => `Роль: ${name}`,
     removeOf: (name: string) => `Исключить ${name}`,
     remove: 'Исключить',

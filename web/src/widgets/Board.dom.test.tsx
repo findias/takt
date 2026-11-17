@@ -154,6 +154,22 @@ function show(cardId: string | null = null) {
   )
 }
 
+it('колонка и готовность доступны из обсуждения; перенос сохраняет фокус в панели', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  snapshot.mockResolvedValue(board([card('первая', COL_A, 'a0')]))
+  show('первая')
+
+  const picker = await screen.findByRole('combobox', { name: 'Колонка' })
+  expect(screen.getByRole('tab', { name: 'Обсуждение' }).getAttribute('aria-selected')).toBe('true')
+  expect(screen.getByRole('checkbox', { name: 'Сделана' })).toBeTruthy()
+  await user.selectOptions(picker, COL_B)
+  await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
+  expect(operation.mock.calls[0][2]).toBe('MOVE_CARD')
+  expect(operation.mock.calls[0][3]).toMatchObject({ cardId: 'первая', toColumnId: COL_B })
+  await act(async () => { vi.advanceTimersByTime(100) })
+  expect(document.activeElement).toBe(picker)
+})
+
 describe('перенос карточки с клавиатуры', () => {
   // Требование WCAG 2.5.7: всё, что делается перетаскиванием, должно
   // делаться и без него. Это единственный путь, который у нас свой, —
@@ -278,6 +294,7 @@ describe('пустая колонка дорожки', () => {
     show()
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
+    await user.click(await screen.findByRole('button', { name: 'Инструменты' }))
     await user.selectOptions(screen.getByLabelText('Группировка'), 'priority')
 
     const пустые = await screen.findAllByText(/Пусто/)
@@ -316,6 +333,7 @@ describe('пункты при дорожках', () => {
     // Без дорожек пункт — только внутри родителя.
     expect(screen.queryByRole('group', { name: /Карточка «часть»/ })).toBeNull()
 
+    await user.click(await screen.findByRole('button', { name: 'Инструменты' }))
     await user.selectOptions(screen.getByLabelText('Группировка'), 'priority')
 
     // Дорожек две — «Высокий» с пунктом и «Средний» с родителем.
@@ -478,7 +496,7 @@ describe('наблюдатель', () => {
     show()
     await screen.findByRole('group', { name: /Карточка «первая»/ })
 
-    expect(screen.getByRole('button', { name: /Завести карточку в «Очередь»/ })).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /Завести карточку в «Очередь»/ }).at(-1)).toBeTruthy()
     expect(screen.getByRole('button', { name: /Действия карточки/ })).toBeTruthy()
   })
 })
@@ -492,7 +510,7 @@ describe('заведение карточек подряд', () => {
     snapshot.mockResolvedValue(board([]))
     show()
 
-    await userEvent.click(await screen.findByRole('button', { name: /Завести карточку в «Очередь»/ }))
+    await userEvent.click((await screen.findAllByRole('button', { name: /Завести карточку в «Очередь»/ })).at(-1)!)
     const field = await screen.findByPlaceholderText('Что нужно сделать?')
     await userEvent.type(field, 'Первая{Enter}')
 
@@ -518,11 +536,11 @@ describe('заведение карточек подряд', () => {
     snapshot.mockResolvedValue(board([]))
     show()
 
-    await userEvent.click(await screen.findByRole('button', { name: /Завести карточку в «Очередь»/ }))
+    await userEvent.click((await screen.findAllByRole('button', { name: /Завести карточку в «Очередь»/ })).at(-1)!)
     await userEvent.type(screen.getByPlaceholderText('Что нужно сделать?'), 'Черновик{Escape}')
 
     expect(screen.queryByPlaceholderText('Что нужно сделать?')).toBeNull()
-    expect(screen.getByRole('button', { name: /Завести карточку в «Очередь»/ })).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /Завести карточку в «Очередь»/ }).at(-1)).toBeTruthy()
   })
 })
 
@@ -603,6 +621,7 @@ describe('поток словами, а не машинными строками
     })
     show()
 
+    await user.click(await screen.findByRole('button', { name: 'Инструменты' }))
     await user.click(await screen.findByRole('button', { name: 'Поток' }))
     const note = await screen.findByText(/тысяча испытаний/)
     expect(note.textContent).toMatch(/всего 3 карточки за 4 недели/)
@@ -625,6 +644,7 @@ describe('поток словами, а не машинными строками
     })
     show()
 
+    await user.click(await screen.findByRole('button', { name: 'Инструменты' }))
     await user.click(await screen.findByRole('button', { name: 'Поток' }))
     const note = await screen.findByText(/тысяча испытаний/)
     expect(note.textContent).not.toMatch(/слишком мало/)
@@ -637,6 +657,7 @@ describe('поток словами, а не машинными строками
     vi.spyOn(api, 'metrics').mockResolvedValue(metrics)
     show()
 
+    await user.click(await screen.findByRole('button', { name: 'Инструменты' }))
     await user.click(await screen.findByRole('button', { name: 'Поток' }))
     const bars = await screen.findByRole('img', { name: /Пропускная способность/ })
     const titles = [...bars.querySelectorAll('.bar')].map((b) => b.getAttribute('title'))
@@ -729,17 +750,13 @@ describe('одна тревога на карточке', () => {
     expect(screen.queryByTitle('Возраст считается от начала работы')).toBeNull()
   })
 
-  // Кромка возраста (шаг 4 нового дизайна): сколько обещания прожито.
-  // Десять дней при обещанных трёх — кромка во всю ширину и янтарная.
-  it('кромка возраста показывает прожитое обещание', async () => {
+  it('возраст сверх обещания остаётся явным текстом без второй полосы прогресса', async () => {
     snapshot.mockResolvedValue(aging(null))
     const { container } = show()
 
-    await screen.findByTitle('Возраст считается от начала работы')
-    const strip = container.querySelector<HTMLElement>('.card-age-strip')
-    expect(strip).not.toBeNull()
-    expect(strip!.className).toContain('card-age-strip--late')
-    expect(strip!.style.getPropertyValue('--used')).toBe('1')
+    const alarm = await screen.findByTitle('Возраст считается от начала работы')
+    expect(alarm.textContent).toContain('дольше обещанных')
+    expect(container.querySelector('.card-age-strip')).toBeNull()
   })
 
   it('без обещания доски кромки нет: мерить не с чем', async () => {
@@ -966,16 +983,16 @@ describe('новый дизайн доски', () => {
     expect(finished.textContent).not.toMatch(/в среднем/)
   })
 
-  it('кромка возраста до обещания показывает его долю и не тревожит', async () => {
+  it('возраст до обещания остаётся тихим числом', async () => {
     const cols = [column(COL_A, 'Очередь', 'a0'), column(COL_B, 'В работе', 'a1', { kind: 'in_progress', isStartedPoint: true })]
     const young = { ...card('молодая', COL_B, 'a0'), startedAt: days(2) }
     snapshot.mockResolvedValue(withSle(board([young], cols), 10))
     show()
 
     const node = await screen.findByRole('group', { name: /Карточка «молодая»/ })
-    const strip = node.querySelector<HTMLElement>('.card-age-strip')
-    expect(Number(strip?.style.getPropertyValue('--used'))).toBeCloseTo(0.2, 1)
-    expect(strip?.classList.contains('card-age-strip--late')).toBe(false)
+    expect(node.querySelector('.card-age-strip')).toBeNull()
+    expect(node.querySelector('.card-age')?.textContent).toContain('2')
+    expect(node.querySelector('.mark--aging')).toBeNull()
   })
 
   it('«Требует внимания» собирает стоящее и переполненное, а при порядке его нет', async () => {
@@ -1068,7 +1085,7 @@ describe('новая карточка с исполнителем', () => {
     const user = userEvent.setup()
     show()
 
-    await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
+    await user.click((await screen.findAllByRole('button', { name: 'Завести карточку в «Очередь»' })).at(-1)!)
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Назначить на новую карточку' }), 'u-boris')
     // Выбранный — фишкой, которую можно снять; в списке формы его больше нет.
     expect(screen.getByRole('button', { name: 'Убрать исполнителя Борис Дятлов' })).toBeTruthy()
@@ -1090,7 +1107,7 @@ describe('новая карточка с исполнителем', () => {
     snapshot.mockResolvedValue(board([]))
     const user = userEvent.setup()
     show()
-    await user.click(await screen.findByRole('button', { name: 'Завести карточку в «Очередь»' }))
+    await user.click((await screen.findAllByRole('button', { name: 'Завести карточку в «Очередь»' })).at(-1)!)
     await user.type(await screen.findByRole('textbox', { name: 'Что нужно сделать?' }), 'Без исполнителя{Enter}')
     await waitFor(() => expect(operation).toHaveBeenCalledTimes(1))
     expect(operation.mock.calls[0][3].assigneeIds).toBeUndefined()

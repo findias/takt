@@ -8,7 +8,7 @@ import {
   extractClosestEdge,
 } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { ageDays, ageLabel, agingLabel, assigneeChoices } from '../../entities/board/model.ts'
+import { ageLabel, agingLabel, assigneeChoices } from '../../entities/board/model.ts'
 import {
   PRIORITIES,
   PRIORITY_NAMES,
@@ -200,6 +200,7 @@ function CardViewInner({
   const [dragging, setDragging] = useState(false)
   const [edge, setEdge] = useState<Edge | null>(null)
   const [editing, setEditing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   // Причина блокировки пишется на самой карточке: чего ждём — вопрос
   // к работе, а не к её карточке, и уходить за ним в панель значит
   // терять доску из виду ради одной строки.
@@ -264,11 +265,6 @@ function CardViewInner({
   // получает третью метку. Считается на отрисовке: хранить «просрочена»
   // значит завести поле, которое устаревает само по себе.
   const aging = card ? agingLabel(card, sleDays) : null
-  // Сколько обещания уже прожито — для кромки возраста (шаг 4 нового
-  // дизайна доски). Только у начатой и не доведённой работы и только
-  // если доска что-то обещает: без обещания мерить не с чем.
-  const workDays = card && !card.doneAt && !card.finishedAt ? ageDays(card) : null
-  const promiseUsed = sleDays && workDays !== null ? workDays / sleDays : null
   // Сколько идёт — у каждой начатой карточки, тихо. Неначатая
   // не стареет, она ждёт, и числа у неё нет.
   const age = card ? ageLabel(card) : null
@@ -459,7 +455,7 @@ function CardViewInner({
       // нельзя. Отдельной пометки в ряду не заводим: бюджет пометок
       // карточки занят блокировкой и прогрессом, а «сделана» — это
       // состояние названия, а не ещё одно свойство работы.
-      className={`card${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}${selected ? ' card--selected' : ''}${card?.doneAt ? ' card--done' : ''}`}
+      className={`card${expanded ? ' card--expanded' : ''}${dragging ? ' card--dragging' : ''}${edge ? ` card--edge-${edge}` : ''}${flash ? ' card--flash' : ''}${selected ? ' card--selected' : ''}${card?.doneAt ? ' card--done' : ''}`}
       tabIndex={0}
       data-card={cardId}
       role="group"
@@ -508,7 +504,7 @@ function CardViewInner({
                 явная цель и для скринридера, и для клавиатуры. Двойного
                 клика для переименования больше нет — он спорил
                 с открытием; переименование осталось в меню и на «E». */}
-            <button className="card-title" onClick={() => onOpen(cardId)}>
+            <button className="card-title" title={title} onClick={() => onOpen(cardId)}>
               {title}
             </button>
             {/* Кто делает — справа от названия, как в макете плотной
@@ -516,20 +512,34 @@ function CardViewInner({
             {assignees.length > 0 && assigneePicker}
           </div>
 
-          {/* Вторая строка — всё, что о карточке известно, кроме её
-              названия (новый дизайн доски, шаг 2: «плотная карточка
-              в две строки»). Прежде номер, название, метки и пометки
-              шли четырьмя рядами, и колонка вмещала вдвое меньше работы.
-              Строка есть всегда: исполнители и меню стоят в ней справа,
-              и появление «…» по наведению не меняет высоту карточки. */}
-          <div className="card-line">
+          {/* Препятствие идёт сразу после названия: классификация не
+              должна отодвигать причину остановки работы. */}
+          {alarm && (
+            <span
+              className={`mark mark--alarm${alarm.kind === 'aging' ? ' mark--aging' : ''}`}
+              title={alarm.title}
+            >
+              <span title={alarm.text}>{alarm.text}</span>
+            </span>
+          )}
+          {until && (
+            <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
+              {until.expired ? until.text : t.cardView.liftsIn(until.text)}
+            </span>
+          )}
+
+          {expanded && card?.description && (
+            <p className="card-expanded-description">{card.description}</p>
+          )}
+          {/* После препятствия — спокойная классификация и краткие
+              сведения; дата и приоритет сохраняют свои подписи. */}
+          <div className="card-line" id={`card-details-${cardId}`}>
             {/* Внешний номер — первым: это второе имя самой работы, его
                 называют вслух («что там с PRJ-482»). Один на карточке,
                 прочие — в подсказке: бюджет полей карточки жёсткий. */}
             {external.length > 0 && <ExternalRef refs={external} />}
-            {/* Метка эпика (этап 33.3): цвет из эпика, одинаковый у всех его
-                задач, название обрезается, полное — в подсказке. Нажатие
-                отбирает доску по эпику: «что ещё идёт ради него». */}
+            {/* Эпик — принадлежность, не тревога. Название остаётся
+                читаемым, нажатие отбирает связанные задачи. */}
             {card?.epic && (
               <button
                 type="button"
@@ -598,26 +608,6 @@ function CardViewInner({
                 card.priority !== 'medium' ||
                 card.estimate !== null) && (
               <div className="card-marks">
-                {/* Старшая тревога — одна и всегда первой: она отвечает
-                    на вопрос «почему эта работа не идёт», а он важнее
-                    остальных. */}
-                {alarm && (
-                  <span
-                    className={`mark mark--alarm${alarm.kind === 'aging' ? ' mark--aging' : ''}`}
-                    title={alarm.title}
-                  >
-                    {alarm.text}
-                  </span>
-                )}
-                {/* Срок — своей строкой под тревогой, а не её хвостом:
-                    пометка держит две строки, и хвост уходил в многоточие
-                    ровно там, где он нужен. */}
-                {until && (
-                  <span className={`card-block-until${until.soon ? ' card-block-until--ending' : ''}`}>
-                    {until.expired ? until.text : t.cardView.liftsIn(until.text)}
-                  </span>
-                )}
-
                 {/* Приоритет — решение человека, и регистр цвета у него
                     свой: тёмное поставил кто-то, кирпичное случилось
                     само. Легенды для этого не нужно.
@@ -657,7 +647,7 @@ function CardViewInner({
                     даже горящий: тревога занята блокировкой, но знать,
                     что при этом горит дата, важно именно ей. */}
                 {due && alarm?.kind !== 'due' && (
-                  <span className="card-due" title={t.cardView.commitmentDate}>
+                  <span className={`card-due${dueIsBurning(card.dueOn) ? ' card-due--urgent' : ''}`} title={t.cardView.commitmentDate}>
                     {t.cardView.dueWord} {due.text}
                   </span>
                 )}
@@ -665,7 +655,7 @@ function CardViewInner({
                 {/* Итерация — тоже про «к чему привязано». */}
                 {iteration && (
                   <span
-                    className={iterationLate ? 'mark mark--alarm' : 'mark mark--quiet'}
+                    className={`mark mark--quiet${iterationLate ? ' card-iteration--late' : ''}`}
                     title={iterationLate && iterationEnd ? t.cardView.iterationLate(iterationEnd) : t.cardView.iteration}
                   >
                     {iteration}
@@ -701,36 +691,23 @@ function CardViewInner({
                   {age}
                 </span>
               )}
-              {/* Кнопки, которые нужны по наведению, — «+ метка»,
-                  флажок выделения и «…», — ложатся поверх правого нижнего угла
-                  карточки, а не в строку: место под ними в строке съедало
-                  треть ширины и уносило возраст и людей на третий ряд.
-                  Поверх — значит, высота карточки от наведения не меняется,
-                  и соседние карточки не уезжают из-под курсора. */}
+              <button
+                type="button"
+                className="btn btn--icon btn--quiet card-expand"
+                aria-expanded={expanded}
+                aria-controls={`card-details-${cardId}`}
+                aria-label={expanded ? t.cardView.collapseDetails(title) : t.cardView.expandDetails(title)}
+                title={expanded ? t.cardView.collapseDetails(title) : t.cardView.expandDetails(title)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setExpanded((value) => !value)
+                }}
+              >
+                {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+              </button>
+              {/* Второстепенные действия проявляются без изменения
+                  высоты и без перекрытия данных карточки. */}
               <span className="card-tools">
-                {/* Никого нет — «+ кто» значком по наведению, как «+ метка». */}
-                {assignees.length === 0 && assigneePicker}
-                {/* Метки, которых ещё нет, заводятся отсюда же — значком
-                    рядом с меню: он появляется по наведению вместе с «…»,
-                    и место под ним занято всегда. Текстом «+ метка» в начале
-                    второй строки он сдвигал вправо всё, что в ней стоит. */}
-                {canEdit && own.length === 0 && (
-                  <LabelPickerButton
-                    label={t.cardView.noLabels}
-                    className="btn btn--icon btn--quiet card-slot"
-                    align="right"
-                    boardId={boardId}
-                    labels={labels}
-                    hung={cardLabels}
-                    canEdit={canEdit}
-                    onToggle={(labelId, on) => {
-                      labelsFrom.current = on
-                      onLabel(cardId, labelId, on)
-                    }}
-                  >
-                    <TagIcon />
-                  </LabelPickerButton>
-                )}
                 {/* Флажок выделения. Виден по наведению и пока выделение
                     идёт — на доске в пятьсот карточек пятьсот флажков
                     читаются как разлинованный список, а не как работа.
@@ -876,6 +853,34 @@ function CardViewInner({
               </span>
             </span>
           </div>
+
+          {expanded && (assignees.length === 0 || (canEdit && own.length === 0)) && (
+            <div className="row card-expanded-fields">
+              {/* Никого нет — «+ кто» значком по наведению, как «+ метка». */}
+              {assignees.length === 0 && assigneePicker}
+              {/* Метки, которых ещё нет, заводятся отсюда же — значком
+                  рядом с меню: он появляется по наведению вместе с «…»,
+                  и место под ним занято всегда. Текстом «+ метка» в начале
+                  второй строки он сдвигал вправо всё, что в ней стоит. */}
+              {canEdit && own.length === 0 && (
+                <LabelPickerButton
+                  label={t.cardView.noLabels}
+                  className="btn btn--icon btn--quiet card-slot"
+                  align="right"
+                  boardId={boardId}
+                  labels={labels}
+                  hung={cardLabels}
+                  canEdit={canEdit}
+                  onToggle={(labelId, on) => {
+                    labelsFrom.current = on
+                    onLabel(cardId, labelId, on)
+                  }}
+                >
+                  <TagIcon />
+                </LabelPickerButton>
+              )}
+            </div>
+          )}
 
           {/* Обе стороны зависимости — одинаковыми строками. Раньше
               держащая сообщала только число, и «какую именно задачу
@@ -1083,19 +1088,6 @@ function CardViewInner({
           )}
 
         </>
-      )}
-      {/* Кромка возраста — не поле, а нижний край карточки: бюджет
-          полей карточки занят блокировкой и прогрессом, а эта полоса
-          высоты не добавляет. Длина — сколько обещания доски уже
-          прожито, после обещания — вся и цветом «осторожно». Число
-          возраста написано на карточке, поэтому для диктора кромка
-          скрыта. */}
-      {promiseUsed !== null && (
-        <span
-          className={`card-age-strip${promiseUsed > 1 ? ' card-age-strip--late' : ''}`}
-          style={{ '--used': Math.min(promiseUsed, 1) } as React.CSSProperties}
-          aria-hidden="true"
-        />
       )}
     </article>
   )

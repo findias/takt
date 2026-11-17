@@ -31,6 +31,7 @@ import { MemberEmailDialog } from '../features/account/MemberEmailDialog.tsx'
 import { MemberNameDialog } from '../features/account/MemberNameDialog.tsx'
 import { navigate, useQuery } from '../shared/router/index.ts'
 import { Hint } from '../shared/ui/Hint.tsx'
+import { MemberControls } from '../features/team/MemberControls.tsx'
 import { buildTree, invitableTeams } from '../entities/team/model.ts'
 
 const Vacations = lazy(withSections(() => import('../features/availability/Vacations.tsx').then((m) => ({ default: m.Vacations })), 'availability'))
@@ -162,11 +163,11 @@ function TeamMembers({ principal }: { principal: Principal }) {
           <Hint topic="roles" />
         </div>
         {members === null && <Skeleton lines={2} />}
-        <ul className="member-list">
+        <ul className="member-list team-people">
           {members?.map((m) => (
             <li key={m.userId}>
               <div className="member-who">
-                <span>{m.name}</span>
+                <span className="wrap-title">{m.name}</span>
                 {/* У ключа вместо почты — то, чем он является: адрес
                     у него есть только потому, что личность требует
                     уникальной почты, и показывать «…@clients.invalid»
@@ -182,7 +183,7 @@ function TeamMembers({ principal }: { principal: Principal }) {
                     {t.team.tasks}
                   </button>
                 )}
-                <span className="muted small">
+                <span className="muted small wrap-title">
                   {m.kind === 'service' ? t.team.integrationKey : m.email}
                   {/* Кому ещё передать ссылку — без отметки этого не видно:
                       заведённый переносом выглядит как любой участник. */}
@@ -194,98 +195,18 @@ function TeamMembers({ principal }: { principal: Principal }) {
                   )}
                 </span>
               </div>
-              {/* Ключу не предлагают ни роли, ни исключения, ни удаления
-                  данных: роль у него от заведения, данных нет, а убирают
-                  его отзывом самого ключа — ниже, в «Ключах для
-                  интеграций». Раньше всё это предлагалось, и «Удалить
-                  данные» отвечало отказом. */}
-              {m.kind === 'service' ? (
-                <span className="role-chip">{t.team.key}</span>
-              ) : isOwner && m.userId !== principal.id ? (
-                <div className="row">
-                  <select
-                    value={m.role}
-                    aria-label={t.team.roleOf(m.name)}
-                    onChange={(e) => act(api.setRole(m.userId, e.target.value as Role))}
-                  >
-                    {(Object.keys(ROLE_NAMES) as Role[]).map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_NAMES[r]}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    className="link link--remove"
-                    onClick={() => act(api.removeMember(m.userId))}
-                    aria-label={t.team.removeOf(m.name)}
-                  >
-                    {t.team.remove}
-                  </button>
-                  {/* Имя и почта — только тем, кому владелец вправе их менять:
-                      сервер сказал это полем, и отказа по нажатию не будет. */}
-                  {m.nameEditable && (
-                    <button
-                      className="link"
-                      onClick={() => setToRename(m)}
-                      aria-label={t.team.renameOf(m.name)}
-                    >
-                      {t.team.rename}
-                    </button>
-                  )}
-                  {m.emailEditable && (
-                    <button
-                      className="link"
-                      onClick={() => setToReaddress(m)}
-                      aria-label={t.team.emailOf(m.name)}
-                    >
-                      {t.team.email}
-                    </button>
-                  )}
-                  {/* Тем же, кому владелец меняет почту: выпуск ссылки —
-                      смена пароля чужими руками, и права у неё те же.
-                      Без многоточия: ничего не спрашивает, ссылка
-                      выпускается сразу и показывается ниже. */}
-                  {m.emailEditable && (
-                    <button
-                      className="link"
-                      onClick={() => {
-                        setError(null)
-                        request<{ link: string }>('POST', `/api/members/${m.userId}/password-link`)
-                          .then((r) => setLoginLink({ name: m.name, link: r.link }))
-                          .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
-                      }}
-                      aria-label={t.passwordLink.issueOf(m.name)}
-                    >
-                      {t.passwordLink.issue}
-                    </button>
-                  )}
-                  {/* Исключение обратимо приглашением, обезличивание
-                      не обратимо ничем — и потому спрашивает. */}
-                  <button
-                    className="link link--danger"
-                    onClick={() => setToErase(m)}
-                    aria-label={t.team.eraseOf(m.name)}
-                  >
-                    {t.team.erase}
-                  </button>
-                </div>
-              ) : m.erasable ? (
-                /* Владелец подразделения стирает того, кто весь внутри его
-                   поддерева: остальное с человеком — роль, исключение,
-                   почта — остаётся за владельцем организации. */
-                <div className="row">
-                  <span className="role-chip">{ROLE_NAMES[m.role]}</span>
-                  <button
-                    className="link link--danger"
-                    onClick={() => setToErase(m)}
-                    aria-label={t.team.eraseOf(m.name)}
-                  >
-                    {t.team.erase}
-                  </button>
-                </div>
-              ) : (
-                <span className="role-chip">{ROLE_NAMES[m.role]}</span>
-              )}
+              <MemberControls member={m} canManage={isOwner && m.userId !== principal.id}
+                onRole={(id, role) => act(api.setRole(id, role))}
+                onRename={setToRename} onEmail={setToReaddress}
+                onIssueLink={(member) => {
+                  setError(null)
+                  request<{ link: string }>('POST', `/api/members/${member.userId}/password-link`)
+                    .then((r) => setLoginLink({ name: member.name, link: r.link }))
+                    .catch((e) => setError(e instanceof Error ? e.message : t.common.notDone))
+                }}
+                onRemove={(member) => act(api.removeMember(member.userId))}
+                onErase={setToErase}
+              />
             </li>
           ))}
         </ul>

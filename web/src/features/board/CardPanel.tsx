@@ -1,3 +1,5 @@
+import { useQuery, navigate } from '../../shared/router/index.ts'
+import { parentReturn } from '../../shared/router/parent.ts'
 import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { EditableText } from '../../shared/ui/EditableText.tsx'
@@ -9,8 +11,7 @@ import { TabPanel, Tabs, useTabIds } from '../../shared/ui/Tabs.tsx'
 import { Avatar } from '../../shared/ui/Avatar.tsx'
 import { Button, IconButton } from '../../shared/ui/Button.tsx'
 import { EditIcon } from '../../shared/ui/icons.tsx'
-import { useCopy } from '../../shared/ui/CopyButton.tsx'
-import { cardLink } from '../../shared/router/index.ts'
+import { CardPanelActions } from './CardPanelActions.tsx'
 import { api } from '../../shared/api/index.ts'
 import type {
   Card,
@@ -135,6 +136,7 @@ export function CardPanel({
   onArchive,
   onDelete,
   onMoveToBoard,
+  onMoveToColumn,
   onIteration,
   onField,
   onAddRef,
@@ -180,14 +182,15 @@ export function CardPanel({
   onMarkDone: (cardId: string, done: boolean) => void
   /** Переименовать карточку этой доски — открытую или её подзадачу. */
   onRename: (cardId: string, title: string) => void
-  /** Убрать в архив подзадачу этой доски — из её строки у родителя. */
+  /** Убрать в архив открытую карточку или её подзадачу этой доски. */
   onArchive: (cardId: string) => void
-  /** Удалить подзадачу насовсем. Пусто — это не владелец. */
+  /** Запросить у родителя удаление карточки насовсем. Пусто — это не владелец. */
   onDelete?: (cardId: string, title: string) => void
   /** Перенести на другую доску (ROADMAP 40). Пусто — некуда или нельзя:
    *  действие не предлагается. Из панели — потому что дерево и экран
    *  «Задачи» своего меню у карточки не имеют. */
   onMoveToBoard?: (cardId: string, title: string) => void
+  onMoveToColumn?: (cardId: string, columnId: string) => void
   /** null убирает карточку из текущей итерации. */
   onIteration: (cardId: string, iterationId: string | null) => void
   /** null снимает поле. */
@@ -195,16 +198,19 @@ export function CardPanel({
   onAddRef: (cardId: string, kind: RefKind, ref: string) => void
   onRemoveRef: (cardId: string, refId: string) => void
 }) {
+  const query = useQuery()
+  const parentContext = query.get('parentOpen') === `${boardId}:${cardId}`
+  const returnTo = parentContext ? parentReturn(query.get('parentReturn')) : null
+  const sourceCard = parentContext ? query.get('parentFrom') : null
   const [mode, setMode] = usePanelMode()
   const [renamingTitle, setRenamingTitle] = useState(false)
-  const copy = useCopy()
   const [editingReason, setEditingReason] = useState(false)
   // Другая карточка — правка названия прежней не переезжает на неё.
   useEffect(() => {
     setRenamingTitle(false)
     setEditingReason(false)
   }, [cardId])
-  const [tab, setTab] = useState<TabId>(FIRST_TAB)
+  const [tab, setTab] = useState<TabId>(parentContext ? 'tasks' : FIRST_TAB)
   const ids = useTabIds()
   // Какой частью сейчас объявляют блокировку. Причину всё равно пишут
   // словами: ссылка говорит, кого ждём, а чего именно от него ждут —
@@ -216,7 +222,7 @@ export function CardPanel({
   // человеку удобно смотреть вообще, вкладка — про то, зачем он открыл
   // именно эту карточку. Заглянувший в историю одной задачи открывает
   // следующую не затем, чтобы снова читать историю.
-  useEffect(() => setTab(FIRST_TAB), [cardId])
+  useEffect(() => setTab(parentContext ? 'tasks' : FIRST_TAB), [cardId, parentContext])
   useEffect(() => {
     void loadCardTasks()
   }, [])
@@ -285,7 +291,6 @@ export function CardPanel({
                 cardId={card.id}
                 parentId={details.parent.id}
                 boardId={boardId}
-                onOpenCard={onOpenCard}
               />
             </Suspense>
           )}
@@ -295,21 +300,50 @@ export function CardPanel({
       label={t.panel.cardLabel(card.number, card.title)}
       onClose={onClose}
       actions={
-        <>
-          {/* Поделиться задачей — пока ссылкой: адрес карточки открывает
-              её на доске тому, кому доска видна, и после переноса
-              на другую доску тоже. */}
-          <button className="link" onClick={() => copy(cardLink(boardId, card.id), t.cardView.linkWhat)}>
-            {t.panel.copyLink}
-          </button>
-          {onMoveToBoard && (
-            <button className="link" onClick={() => onMoveToBoard(card.id, card.title)}>
-              {t.panel.moveToBoard}
-            </button>
-          )}
-        </>
+        <CardPanelActions
+          key={card.id}
+          boardId={boardId}
+          cardId={card.id}
+          title={card.title}
+          canEdit={canEdit}
+          onArchive={onArchive}
+          onDelete={onDelete}
+          onMoveToBoard={onMoveToBoard}
+        />
       }
     >
+      {/* Основные сведения доступны и рядом с пустым обсуждением.
+          Перенос остаётся явным действием, готовность его не подменяет. */}
+      {returnTo && <a className="link parent-return" href={returnTo} onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+        e.preventDefault()
+        navigate(returnTo)
+      }}>{t.panel.returnToSubtask}</a>}
+      <div className="panel-card-summary">
+        {canEdit && onMoveToColumn ? (
+          <select
+            aria-label={t.panel.column}
+            value={card.columnId}
+            onChange={(event) => onMoveToColumn(card.id, event.target.value)}
+          >
+            {base.columnIds.map((id) => (
+              <option key={id} value={id}>{base.columns[id].name}</option>
+            ))}
+          </select>
+        ) : <span>{base.columns[card.columnId]?.name}</span>}
+        {card.dueOn && <span>{t.cardView.dueWord} {dueLabel(card.dueOn).text}</span>}
+        {(base.cardAssignees[card.id] ?? []).map((id) => (
+          <span key={id}>{base.people[id] ?? t.common.someone}</span>
+        ))}
+      </div>
+      <DoneMark
+        doneAt={card.doneAt}
+        canEdit={canEdit}
+        onChange={(done) => onMarkDone(card.id, done)}
+      />
+      {tab !== 'work' && card.blocked && (
+        <p className="blocked">{t.cardView.blockedFor(card.blocked.reason)}</p>
+      )}
       <Tabs
         base={ids}
         tabs={tabs()}
@@ -445,12 +479,6 @@ export function CardPanel({
               onSave={(text) => onDescribe(card.id, text)}
             />
 
-            <DoneMark
-              doneAt={card.doneAt}
-              canEdit={canEdit}
-              onChange={(done) => onMarkDone(card.id, done)}
-            />
-
             <DuePicker
               value={card.dueOn}
               canEdit={canEdit}
@@ -550,6 +578,7 @@ export function CardPanel({
         {tab === 'tasks' && (
           <Suspense fallback={<Skeleton lines={3} />}>
             <CardTasks
+              sourceCard={sourceCard}
               base={base}
               details={details}
               progress={label}

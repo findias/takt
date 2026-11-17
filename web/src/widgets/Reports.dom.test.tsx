@@ -197,3 +197,17 @@ it('застрявшее видно группами, карточка откр�
   await waitFor(() => expect(window.location.search).toContain('open=b-dev%3Ac-1'))
   expect(window.location.search).toContain('team=t-dev')
 })
+
+it('закрытый отбор называет выбранное; снятие условия сохраняет период и меняет выгрузку', async () => {
+  const user = userEvent.setup()
+  render(<Reports principal={anna} />)
+  const conditions = await screen.findByRole('list', { name: 'Активные условия отчёта' })
+  expect(within(conditions).getByRole('button', { name: 'Убрать «Подразделения: Разработка» из отбора' })).toBeTruthy()
+  const form = document.querySelector<HTMLDetailsElement>('.reports-filter-panel')!
+  expect(form.open).toBe(false)
+  await user.click(within(conditions).getByRole('button'))
+  await waitFor(() => expect(window.location.search).not.toContain('team='))
+  expect(window.location.search).toContain('from=2026-10-01')
+  expect(window.location.search).toContain('to=2026-10-23')
+  expect(screen.getByRole('link', { name: 'Excel (XLSX)' }).getAttribute('href')).not.toContain('team=')
+})

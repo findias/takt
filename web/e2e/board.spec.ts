@@ -24,6 +24,16 @@ function newcomer(): Newcomer {
   return { email: `e2e-${id}@example.test`, password: 'parol12345', org: `Команда ${id}` }
 }
 
+async function revealBoardControls(page: Page, kind: 'tools' | 'filters') {
+  const button = kind === 'tools'
+    ? page.getByRole('button', { name: 'Инструменты', exact: true })
+    : page.locator('.filters-toggle')
+  await expect(button).toBeVisible()
+  if (await button.getAttribute('aria-expanded') === 'false') {
+    await button.click()
+  }
+}
+
 async function register(page: Page): Promise<Newcomer> {
   const who = newcomer()
   await page.goto('/')
@@ -62,10 +72,10 @@ async function addCard(page: Page, column: string, title: string) {
   // Форма остаётся открытой после заведения карточки — карточки заводят
   // подряд. Открывать её второй раз нечем: кнопки в этот момент нет.
   if (!(await field.isVisible())) {
-    await section.getByRole('button', { name: `Завести карточку в «${column}»` }).click()
+    await section.getByRole('button', { name: `Завести карточку в «${column}»` }).last().click()
   }
   await field.fill(title)
-  await section.getByRole('button', { name: `Завести карточку в «${column}»` }).click()
+  await section.getByRole('button', { name: `Завести карточку в «${column}»` }).last().click()
   await expect(cardIn(page, column, title)).toBeVisible()
 }
 
@@ -115,7 +125,13 @@ async function openCardMenu(card: ReturnType<typeof cardIn>) {
   }).toPass({ timeout: 10_000 })
 }
 
+async function expandCard(card: ReturnType<typeof cardIn>) {
+  const button = card.locator('.card-expand')
+  if (await button.getAttribute('aria-expanded') === 'false') await button.click()
+}
+
 async function toggleAssignee(page: Page, card: ReturnType<typeof cardIn>) {
+  await expandCard(card)
   await card.hover()
   await card.getByRole('button', { name: /Исполнител/ }).click()
   await page.getByRole('menuitemcheckbox').first().click()
@@ -149,6 +165,7 @@ async function pickView(page: Page, name: 'Доска' | 'Таблица' | 'И�
 /** То же для метки: нажатие по ряду меток, пункт по названию. Имя
  *  пункта — название и откуда метка, поэтому ищется по началу. */
 async function toggleLabel(page: Page, card: ReturnType<typeof cardIn>, name: string) {
+  await expandCard(card)
   await card.hover()
   await card.getByRole('button', { name: /^Метки/ }).click()
   await labelChoice(page).getByRole('option', { name: new RegExp(`^${name}`) }).click()
@@ -173,7 +190,7 @@ test('поле обсуждения растёт по написанному и 
   await register(page)
   await createBoard(page, 'Растущее поле')
   await addCard(page, 'Очередь', 'Обсудить')
-  await cardIn(page, 'Очередь', 'Обсудить').getByRole('button', { name: 'Обсудить' }).click()
+  await cardIn(page, 'Очередь', 'Обсудить').getByRole('button', { name: 'Обсудить', exact: true }).click()
 
   const поле = page.getByPlaceholder('Написать в обсуждение')
   const высота = async () => (await поле.boundingBox())!.height
@@ -529,6 +546,7 @@ test('метка заводится в организации и вешаетс�
   // в панели, а точка отвечает «одна ли это группа». Имя метки
   // остаётся в подсказке и в имени поля — цвет не может быть
   // единственным носителем смысла.
+  await expandCard(card)
   await expect(card.getByRole('button', { name: 'Метки: Срочно' })).toBeVisible()
   // Точная подсказка — у самой точки: название и откуда метка.
   // У поля она «Метки: Срочно».
@@ -538,6 +556,7 @@ test('метка заводится в организации и вешаетс�
   // Ждём подтверждения: метка вешается мгновенно, а уходит следом.
   await savedSince(page, beforeLabel)
   await page.reload()
+  await expandCard(cardIn(page, 'Очередь', 'Пометить меня'))
   await expect(
     cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Метки: Срочно' }),
   ).toBeVisible({ timeout: 10_000 })
@@ -545,7 +564,7 @@ test('метка заводится в организации и вешаетс�
   // Метка вешается и из самой карточки: до этого за ней приходилось
   // возвращаться на доску — панель показывала о работе всё, кроме
   // того, чем она помечена.
-  await cardIn(page, 'Очередь', 'Пометить меня').click()
+  await cardIn(page, 'Очередь', 'Пометить меня').getByRole('button', { name: 'Пометить меня', exact: true }).click()
   await page.getByRole('tab', { name: 'Работа' }).click()
   const panel = page.getByLabel(/Карточка .* «Пометить меня»/)
   await panel.getByRole('combobox', { name: 'Повесить или завести метку' }).fill('Важн')
@@ -579,6 +598,7 @@ test('метка заводится прямо с карточки', async ({ pa
   // Меток в организации нет вовсе — а выбор на карточке всё равно
   // стоит: в нём и заводят.
   await card.hover()
+  await expandCard(card)
   await card.getByRole('button', { name: 'Метки: ни одной' }).click()
   const search = page.getByRole('combobox', { name: 'Найти или завести метку' })
   await expect(search).toBeFocused()
@@ -589,12 +609,14 @@ test('метка заводится прямо с карточки', async ({ pa
   await expect(labelChoice(page).getByRole('option', { selected: true })).toHaveText(/на всю организацию/)
   await page.keyboard.press('Enter')
 
+  await expandCard(card)
   await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeVisible()
   // Выбор продолжается (владелец 25.09.2026: несколько меток за один
   // раз): окно открыто у новой кнопки, фокус — в поиске. Escape
   // закрывает его и возвращает фокус на кнопку, откуда выбирали.
   await expect(page.getByRole('combobox', { name: 'Найти или завести метку' })).toBeFocused()
   await page.keyboard.press('Escape')
+  await expandCard(card)
   await expect(card.getByRole('button', { name: 'Метки: Ждём юристов' })).toBeFocused()
 
   // Набрали то же в другом регистре — предложена существующая, второй
@@ -602,6 +624,7 @@ test('метка заводится прямо с карточки', async ({ pa
   await addCard(page, 'Очередь', 'Счёт за июль')
   const second = cardIn(page, 'Очередь', 'Счёт за июль')
   await second.hover()
+  await expandCard(second)
   await second.getByRole('button', { name: 'Метки: ни одной' }).click()
   await page.keyboard.type('ЖДЁМ ЮРИСТОВ')
   await expect(labelChoice(page).getByRole('option')).toHaveCount(1)
@@ -624,6 +647,7 @@ test('метка заводится прямо с карточки', async ({ pa
   await addCard(page, 'Очередь', 'Третья')
   const third = cardIn(page, 'Очередь', 'Третья')
   await third.hover()
+  await expandCard(third)
   await third.getByRole('button', { name: 'Метки: ни одной' }).click()
   await page.keyboard.type('ждём юристов')
   await expect(labelChoice(page).getByRole('option')).toHaveText([/^Вернуть из архива «Ждём юристов»/])
@@ -651,13 +675,15 @@ test('оценка ставится шагами в панели, блокиро
   await expect(panel.getByLabel('Оценка')).toHaveValue('3')
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
-  // На карточке оценка — тихая цифра: единица одна на всю доску
-  // и живёт в подсказке.
+  // Оценка — в дополнительных свойствах карточки; единица одна
+  // на всю доску и живёт в подсказке.
+  await card.getByRole('button', { name: /^Развернуть карточку/ }).click()
   await expect(card.getByTitle(/Оценка: 3/)).toBeVisible()
 
   // Это данные, а не украшение экрана.
   await savedSince(page, beforeEstimate)
   await page.reload()
+  await cardIn(page, 'Очередь', 'Оценить меня').getByRole('button', { name: /^Развернуть карточку/ }).click()
   await expect(cardIn(page, 'Очередь', 'Оценить меня').getByTitle(/Оценка: 3/)).toBeVisible({
     timeout: 10_000,
   })
@@ -879,6 +905,7 @@ test('приоритет виден, отбирается и не трогает
 
   // «Горит» — это верх шкалы, и отбор живёт в адресе, как остальные.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Горит' }).check()
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
   await expect(second).toBeVisible()
@@ -887,6 +914,7 @@ test('приоритет виден, отбирается и не трогает
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'Первая по порядку')).toHaveCount(0)
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Горит' }).uncheck()
 
   // Поставленный уровень правится нажатием по нему самому — как
@@ -911,6 +939,7 @@ test('приоритет виден, отбирается и не трогает
 
   // Низкий из «горит» выпадает.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Горит' }).check()
   await expect(cardIn(page, 'Очередь', 'Вторая по порядку')).toHaveCount(0)
 })
@@ -959,9 +988,11 @@ test('shift берёт диапазон, а полоса делает всё с�
   await expect(bar).toContainText('Выделено: 3 карточки')
   await bar.getByRole('button', { name: 'Пометить выделенные' }).click()
   await labelChoice(page).getByRole('option', { name: /^Разобрать/ }).click()
+  await expandCard(cardIn(page, 'Очередь', 'Вторая'))
   await expect(cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: /Метки: Разобрать/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Снять', exact: true }).last().click()
+  await expandCard(cardIn(page, 'Очередь', 'Вторая'))
   await cardIn(page, 'Очередь', 'Вторая').hover()
   await expect(
     cardIn(page, 'Очередь', 'Вторая').getByRole('button', { name: 'Метки: ни одной' }),
@@ -974,9 +1005,12 @@ test('shift берёт диапазон, а полоса делает всё с�
 test('итерация видна на карточке и отбирается на доске', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска со спринтом')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки', exact: true }).check()
   await addCard(page, 'Очередь', 'В спринте')
   await addCard(page, 'Очередь', 'Мимо спринта')
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 34')
   await page.getByLabel('Начало').fill('2026-08-17')
@@ -996,6 +1030,7 @@ test('итерация видна на карточке и отбирается 
 
   // Отбор живёт в адресе, как остальные.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Неделя 34' })
   await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toHaveCount(0)
   expect(page.url()).toContain('iteration=')
@@ -1006,6 +1041,7 @@ test('итерация видна на карточке и отбирается 
   // «Не в итерации» — тоже ответ: незапланированная работа и есть та,
   // что съедает спринт незаметно.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Не в итерации' })
   await expect(cardIn(page, 'Очередь', 'Мимо спринта')).toBeVisible()
   await expect(cardIn(page, 'Очередь', 'В спринте')).toHaveCount(0)
@@ -1045,6 +1081,7 @@ test('дата обязательства ставится, видна и отб
 
   // Отбор «Срок подходит» — про обещанное наружу.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Срок подходит' }).check()
   await expect(cardIn(page, 'Очередь', 'Без обязательств')).toHaveCount(0)
   await expect(card).toBeVisible()
@@ -1052,6 +1089,7 @@ test('дата обязательства ставится, видна и отб
   await page.reload()
   await expect(cardIn(page, 'Очередь', 'К релизу')).toBeVisible()
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Срок подходит' }).uncheck()
 
   // Обязательство снимается: «обязательства нет» и «дата неизвестна» —
@@ -1148,7 +1186,7 @@ test('у задачи есть номер, он виден и находится
 
   // И в панели — над названием: открыв карточку по ссылке из переписки,
   // первым делом сверяют, та ли это задача.
-  await cardIn(page, 'Очередь', 'Согласовать смету').getByRole('button', { name: 'Согласовать смету' }).click()
+  await cardIn(page, 'Очередь', 'Согласовать смету').getByRole('button', { name: 'Согласовать смету', exact: true }).click()
   await expect(page.getByRole('complementary').getByText('ПРОД-1')).toBeVisible()
   await page.keyboard.press('Escape')
 
@@ -1186,6 +1224,7 @@ test('группировка раскладывает доску по дорож
   await toggleAssignee(page, mine)
   await expect(mine.locator('.avatar')).toBeVisible()
 
+  await revealBoardControls(page, 'tools')
   await page.getByLabel('Группировка').selectOption('assignee')
 
   // Дорожек две: своя и «ни на ком» — именно там теряется работа,
@@ -1217,9 +1256,11 @@ test('группировка раскладывает доску по дорож
   const urgent = cardIn(page, 'Очередь', 'Моя работа')
   await openCardMenu(urgent)
   await page.getByRole('menuitem', { name: 'Наивысший приоритет' }).click()
+  await revealBoardControls(page, 'tools')
   await page.getByLabel('Группировка').selectOption('priority')
   await expect(page.locator('.swimlane-title')).toHaveText(['Наивысший', 'Средний'])
 
+  await revealBoardControls(page, 'tools')
   await page.getByLabel('Группировка').selectOption('none')
   await expect(page.locator('.swimlane')).toHaveCount(1)
   expect(page.url()).not.toContain('group=')
@@ -1268,6 +1309,7 @@ test('настроенный вид сохраняется и открывает
   await page.getByRole('searchbox', { name: 'Найти карточку' }).fill('договор')
   await expect(page.getByRole('group', { name: /Согласовать смету/ })).toHaveCount(0)
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Сохранить вид' }).click()
   await page.getByLabel('Название вида').fill('Только договоры')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
@@ -1285,6 +1327,7 @@ test('настроенный вид сохраняется и открывает
 
   // Вид живёт на сервере, а не в браузере: переживает перезагрузку.
   await page.reload()
+  await revealBoardControls(page, 'tools')
   await expect(page.getByRole('button', { name: 'Только договоры', exact: true })).toBeVisible({
     timeout: 10_000,
   })
@@ -1388,6 +1431,7 @@ test('на узком экране показывается одна колон�
   await expect(page.getByRole('searchbox', { name: 'Найти карточку' })).toBeVisible()
 
   await toggle.click()
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
   await expect(toggle).toHaveAccessibleName('Отбор: включено 1')
 
@@ -1403,7 +1447,7 @@ test('подзадачи раскрываются прямо с доски', asy
   await addCard(page, 'Очередь', 'Собрать отчёт')
 
   const parent = cardIn(page, 'Очередь', 'Собрать отчёт')
-  await parent.getByRole('button', { name: 'Собрать отчёт' }).click()
+  await parent.getByRole('button', { name: 'Собрать отчёт', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Свести цифры')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -1457,7 +1501,7 @@ test('подзадачу убирают в архив из строки у ро�
   await addCard(page, 'Очередь', 'Выпустить релиз')
 
   const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
-  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await parent.getByRole('button', { name: 'Выпустить релиз', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -1508,7 +1552,7 @@ test('родитель говорит, что держащую часть убр
   await addCard(page, 'Очередь', 'Выпустить релиз')
 
   const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
-  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await parent.getByRole('button', { name: 'Выпустить релиз', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -1544,7 +1588,7 @@ test('заблокированная часть останавливает и р
   await addCard(page, 'Очередь', 'Выпустить релиз')
 
   const parent = cardIn(page, 'Очередь', 'Выпустить релиз')
-  await parent.getByRole('button', { name: 'Выпустить релиз' }).click()
+  await parent.getByRole('button', { name: 'Выпустить релиз', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Прогнать нагрузочные')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -1567,9 +1611,11 @@ test('заблокированная часть останавливает и р
 
   // И отбор «что не идёт» его показывает.
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Заблокированные' }).check()
   await expect(cardIn(page, 'Очередь', 'Выпустить релиз')).toBeVisible()
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByRole('checkbox', { name: 'Заблокированные' }).uncheck()
 
   // Часть отпустили — родитель пошёл дальше.
@@ -1650,7 +1696,7 @@ test('история спрятана за вкладкой, карточка о
   await addCard(page, 'Очередь', 'Первая задача')
   await addCard(page, 'Очередь', 'Вторая задача')
 
-  await cardIn(page, 'Очередь', 'Первая задача').getByRole('button', { name: 'Первая задача' }).click()
+  await cardIn(page, 'Очередь', 'Первая задача').getByRole('button', { name: 'Первая задача', exact: true }).click()
 
   // Открывается обсуждение: карточку чаще открывают, чтобы прочитать,
   // о чём договорились. История же раньше шла последним разделом того же
@@ -1672,7 +1718,7 @@ test('история спрятана за вкладкой, карточка о
   // Вкладка не запоминается между карточками: заглянувший в историю
   // одной задачи открывает следующую не затем, чтобы читать историю.
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
-  await cardIn(page, 'Очередь', 'Вторая задача').getByRole('button', { name: 'Вторая задача' }).click()
+  await cardIn(page, 'Очередь', 'Вторая задача').getByRole('button', { name: 'Вторая задача', exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Обсуждение' })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -1704,7 +1750,7 @@ test('подзадача заводится из карточки одним п�
   await addCard(page, 'Очередь', 'Выпустить релиз')
 
   await cardIn(page, 'Очередь', 'Выпустить релиз').click()
-  await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Выпустить релиз', exact: true })).toBeVisible()
   // Карточка открывается обсуждением; подзадачи живут на «Задачах».
   await page.getByRole('tab', { name: 'Задачи' }).click()
 
@@ -1741,8 +1787,8 @@ test('подзадача заводится из карточки одним п�
   await page.getByRole('tab', { name: 'Задачи' }).click()
   // Со вкладки «Задачи», а не с пути до корня над номером: там та же
   // карточка названа второй раз.
-  await page.getByLabel('Задачи', { exact: true }).getByRole('button', { name: 'Выпустить релиз', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Выпустить релиз' })).toBeVisible()
+  await page.getByLabel('Задачи', { exact: true }).getByRole('link', { name: 'Выпустить релиз', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Выпустить релиз', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   // Родитель показывает разбиение полосой, и она же раскрывает
@@ -1760,7 +1806,8 @@ test('подзадача заводится из карточки одним п�
   await page.getByPlaceholder('Найти карточку').fill('Прогнать тесты')
   const shown = cardIn(page, 'Очередь', 'Прогнать тесты')
   await expect(shown).toBeVisible()
-  await expect(shown.getByRole('button', { name: 'Выпустить релиз' })).toBeVisible()
+  await shown.getByRole('button', { name: /^Развернуть карточку/ }).click()
+  await expect(shown.getByRole('button', { name: 'Выпустить релиз', exact: true })).toBeVisible()
 })
 
 test('исполнителей у карточки может быть несколько', async ({ page, browser }) => {
@@ -1935,6 +1982,7 @@ test('закрытая итерация остаётся на экране и о
   await addCard(page, 'Очередь', 'Смета по объекту')
   await addCard(page, 'Очередь', 'Регламент приёмки')
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 34')
   await page.getByLabel('Начало').fill('2026-08-10')
@@ -1961,7 +2009,9 @@ test('закрытая итерация остаётся на экране и о
   // Закрываем итерацию — и она не исчезает с экрана: закрытие делается
   // ради ответа «что было в спринте», а до этого в этот же миг ответ
   // и пропадал.
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Закрыть итерацию «Неделя 34»' }).click()
+  await page.getByRole('menuitem', { name: 'Закрыть итерацию', exact: true }).click()
   // В диалоге кнопка называет то, что случится: «Закрыть» рядом
   // с «Закрыть» панели означало бы то «уйти отсюда», то «заморозить
   // состав навсегда».
@@ -1998,6 +2048,7 @@ test('убранная карточка достижима из архива и 
   // Перезагрузка уносит всплывающее уведомление — единственный путь
   // к убранной карточке, который был до архива.
   await page.reload()
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Архив' }).click()
   const panel = page.getByRole('complementary')
   await expect(panel.getByText(/Отменённая закупка/)).toBeVisible()
@@ -2032,6 +2083,7 @@ test('подзадачи уходят в архив с родителем и в�
   await expect(cardIn(page, 'Очередь', 'Соседняя работа')).toBeVisible()
   await expect(page.getByText('Заказать грузчиков')).toHaveCount(0)
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Архив' }).click()
   const panel = page.getByRole('complementary')
   await expect(panel.getByText(/Переезд офиса/)).toBeVisible()
@@ -2105,8 +2157,8 @@ test('изменения — третий вид, с отбором «тольк
   expect(await feed.count()).toBeLessThan(all)
 
   // Из ленты открывается карточка.
-  await feed.first().getByRole('button', { name: 'Согласовать смету' }).click()
-  await expect(page.getByRole('heading', { name: 'Согласовать смету' })).toBeVisible()
+  await feed.first().getByRole('button', { name: 'Согласовать смету', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Согласовать смету', exact: true })).toBeVisible()
 })
 
 test('видно, сколько на ком висит', async ({ page }) => {
@@ -2115,6 +2167,7 @@ test('видно, сколько на ком висит', async ({ page }) => {
   await addCard(page, 'Очередь', 'Первая')
   await addCard(page, 'Очередь', 'Вторая')
 
+  await revealBoardControls(page, 'tools')
   const load = page.locator('.workload')
   // Пока никто ничего не делает, сводке нечего показывать.
   await expect(load).toHaveCount(0)
@@ -2245,7 +2298,7 @@ test('Escape закрывает верхний слой, а не всё разо
 
   // Панель карточки открыта, доска за ней остаётся рабочей — так
   // и задумано, поэтому меню соседней карточки отсюда достижимо.
-  await cardIn(page, 'Очередь', 'Смета').getByRole('button', { name: 'Смета' }).click()
+  await cardIn(page, 'Очередь', 'Смета').getByRole('button', { name: 'Смета', exact: true }).click()
   await expect(page.getByRole('complementary')).toBeVisible()
 
   const other = cardIn(page, 'Очередь', 'Договор')
@@ -2349,6 +2402,8 @@ test('ширина колонки тянется мышью и пережива�
 test('блокировка со сроком: видна заранее, правится и становится бессрочной', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска со сроками')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки', exact: true }).check()
   await addCard(page, 'Очередь', 'Ждём поставку')
   const card = cardIn(page, 'Очередь', 'Ждём поставку')
 
@@ -2529,6 +2584,7 @@ test('Escape сворачивает «Отбор» и возвращает фо�
 
   const toggle = page.getByRole('button', { name: /^Отбор/ })
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   const urgent = page.getByRole('checkbox', { name: 'Горит' })
   await urgent.focus()
   await page.keyboard.press('Escape')
@@ -2626,6 +2682,7 @@ test('справка открывается на разделе текущего
   await help.hover()
   await expect(help).toHaveAttribute('href', '/help/ru/howto#board')
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Поток' }).click()
   await help.hover()
   await expect(help).toHaveAttribute('href', '/help/ru/reference#flow')
@@ -2719,6 +2776,7 @@ test('таблица переезжает на доску: предпросмо�
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByText('перенесена из таблицы')).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Поток' }).click()
   await expect(page.getByText(/1 карточка этого отчёта перенесена из другой системы/)).toBeVisible()
   await expect(page.getByText(/^В работе 1\./)).toBeVisible()
@@ -2911,7 +2969,8 @@ test('ссылка для входа задаёт пароль один раз �
 
   // Пароль забыт — владелец выпускает ссылку.
   await page.reload()
-  await page.getByRole('button', { name: 'Выпустить ссылку для входа: Забывчивый' }).click()
+  await page.getByRole('button', { name: 'Действия участника: Забывчивый' }).click()
+  await page.getByRole('menuitem', { name: 'Ссылка для входа' }).click()
   const link = page.getByRole('textbox', { name: 'Ссылка для входа' })
   await expect(link).toBeVisible()
   const url = (await link.inputValue()).trim()
@@ -2982,6 +3041,7 @@ test('выгрузка называет число карточек до фай�
   await expect(status).toHaveText('Под отбор попадают 2 карточки.')
 
   // Отбор по доске сужает число и попадает в адрес — ссылку пересылают.
+  await page.locator('.reports-filter-panel > summary').click()
   await page.getByLabel('Доски').selectOption({ label: 'Поставки' })
   await expect(status).toHaveText('Под отбор попадает 1 карточка.')
   await expect(page).toHaveURL(/[?&]board=/)
@@ -3007,6 +3067,7 @@ test('срез повторяет отчёт одной кнопкой и воз
   await page.getByRole('button', { name: 'Отчёты', exact: true }).click()
 
   await page.getByRole('button', { name: 'Прошлый квартал' }).click()
+  await page.locator('.reports-filter-panel > summary').click()
   await page.getByRole('checkbox', { name: 'Сделано' }).check()
   await page.getByRole('button', { name: 'Сохранить отбор как срез' }).click()
   await page.getByLabel('Название среза').fill('Закрыто за квартал')
@@ -3045,12 +3106,15 @@ test('шаблон доски задаёт начало, а итерации в�
   await expect(page.getByRole('region', { name: 'Очередь' })).toBeVisible()
 
   // Скрам: первая итерация уже заведена.
+  await revealBoardControls(page, 'tools')
   await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toBeVisible()
+  await revealBoardControls(page, 'tools')
   const grouping = page.getByRole('combobox', { name: 'Группировка' })
   await expect(grouping.getByRole('option', { name: 'По итерации' })).toHaveCount(1)
 
   // Выключение — в «Потоке», рядом с обещанием доски: прячет итерации
   // отовсюду и ни о чём не спрашивает.
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Поток' }).click()
   await page.getByRole('checkbox', { name: 'Работаем итерациями' }).uncheck()
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
@@ -3059,9 +3123,11 @@ test('шаблон доски задаёт начало, а итерации в�
   await expect(page.getByRole('combobox', { name: 'Итерация' })).toHaveCount(0)
 
   // Включение возвращает ту же итерацию, а не новую.
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Работать итерациями' }).click()
   await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toBeVisible()
   await page.reload()
+  await revealBoardControls(page, 'tools')
   await expect(page.getByRole('button', { name: /^Итерация 1 · / })).toHaveCount(1)
 })
 
@@ -3080,7 +3146,7 @@ test('вид «Дерево» показывает эпик с фичами и �
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
-  const tree = page.getByRole('list', { name: 'Дерево работы доски' })
+  const tree = page.getByRole('table', { name: 'Дерево работы доски' })
   await expect(tree.getByRole('button', { name: 'Переезд', exact: true })).toBeVisible()
   await expect(tree.getByRole('button', { name: 'Задача', exact: true })).toBeVisible()
   await tree.getByRole('button', { name: 'Свернуть «Переезд»' }).click()
@@ -3094,9 +3160,11 @@ test('портфель эпиков заводится шаблоном и на�
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   // Первая колонка портфеля — идея, а не очередь.
   await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
+  await revealBoardControls(page, 'tools')
   await expect(page.getByRole('button', { name: 'Работать итерациями' })).toBeVisible()
 
   // Уровень меняется в «Потоке» и возвращается обратно.
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Поток' }).click()
   const level = page.getByRole('combobox', { name: 'Уровень доски' })
   await expect(level).toHaveValue('portfolio')
@@ -3109,6 +3177,8 @@ test('портфель эпиков заводится шаблоном и на�
 test('задача команды несёт метку эпика с портфеля, и метка отбирает доску', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Склад')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await addCard(page, 'Очередь', 'Своя работа')
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByPlaceholder('Название новой доски').fill('Эпики')
@@ -3133,6 +3203,7 @@ test('задача команды несёт метку эпика с портф
   await feature.getByRole('button', { name: /Эпик «Большой переезд»/ }).click()
   await expect(page).toHaveURL(/[?&]epic=/)
   await expect(cardIn(page, 'Очередь', 'Своя работа')).toHaveCount(0)
+  await openFilters(page)
   await page.getByRole('button', { name: 'Убрать из фильтра эпик «Большой переезд»' }).click()
   await expect(cardIn(page, 'Очередь', 'Своя работа')).toBeVisible()
 })
@@ -3140,6 +3211,8 @@ test('задача команды несёт метку эпика с портф
 test('эпик портфеля говорит, где его работа, а дерево портфеля доходит до задач команды', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Склад')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByPlaceholder('Название новой доски').fill('Эпики')
   await page.getByRole('combobox', { name: 'Как работаем' }).selectOption({ label: 'Портфель эпиков' })
@@ -3169,7 +3242,7 @@ test('эпик портфеля говорит, где его работа, а �
 
   // Дерево портфеля: эпик › фича на Складе › её задача — через доску.
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
-  const tree = page.getByRole('list', { name: 'Дерево работы доски' })
+  const tree = page.getByRole('table', { name: 'Дерево работы доски' })
   await expect(tree.getByText('Задача переезда', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
 
@@ -3181,7 +3254,7 @@ test('эпик портфеля говорит, где его работа, а �
   // В дереве доски команды эпик с портфеля — ссылка: открывает его там.
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Дерево' })
   await page
-    .getByRole('list', { name: 'Дерево работы доски' })
+    .getByRole('table', { name: 'Дерево работы доски' })
     .getByRole('link', { name: 'Большой переезд', exact: true })
     .click()
   await expect(page.getByRole('region', { name: 'Идея' })).toBeVisible()
@@ -3195,6 +3268,8 @@ test('эпик портфеля говорит, где его работа, а �
 test('задача команды подвешивается к эпику со своей доски, а эпик находит готовую задачу команды', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Склад')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await addCard(page, 'Очередь', 'Готовая задача')
   await addCard(page, 'Очередь', 'Вторая задача')
   await page.getByRole('button', { name: 'Все доски' }).click()
@@ -3265,6 +3340,8 @@ test('блок подзадач остаётся на карточке посл�
 test('строка «Эпик» наверху вкладки выбирает эпик и отвязывает его', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Склад')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки', exact: true }).check()
   await addCard(page, 'Очередь', 'Задача команды')
   await page.getByRole('button', { name: 'Все доски' }).click()
   await page.getByPlaceholder('Название новой доски').fill('Эпики')
@@ -3432,6 +3509,8 @@ test('причина блокировки правится, не разрыва�
 test('при отборе по итерации карточка заводится в эту итерацию', async ({ page }) => {
   await register(page)
   await createBoard(page, 'Доска заведения в спринт')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 40')
   await page.getByLabel('Начало').fill('2026-09-28')
@@ -3439,6 +3518,7 @@ test('при отборе по итерации карточка заводит�
   await page.getByRole('button', { name: 'Завести итерацию', exact: true }).click()
 
   await openFilters(page)
+  await revealBoardControls(page, 'filters')
   await page.getByLabel('Итерация', { exact: true }).selectOption({ label: 'Неделя 40' })
   await addCard(page, 'Очередь', 'Заведена в спринте')
 
@@ -3458,6 +3538,8 @@ test('карточка показывает срок итерации и гор�
   await register(page)
   await createBoard(page, 'Доска с прошедшим спринтом')
   await addCard(page, 'Очередь', 'Не успели')
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 36')
   await page.getByLabel('Начало').fill('2026-09-01')
@@ -3471,7 +3553,7 @@ test('карточка показывает срок итерации и гор�
 
   const mark = cardIn(page, 'Очередь', 'Не успели').getByText(/Неделя 36 · до 7 сент/)
   await expect(mark).toBeVisible()
-  await expect(mark).toHaveClass(/mark--alarm/)
+  await expect(mark).toHaveClass(/card-iteration--late/)
   await expect(mark).toHaveAttribute('title', /кончилась 7 сент.*перенесите/)
 })
 
@@ -3484,6 +3566,8 @@ test('незакрытые карточки переносятся из закр
   for (const title of ['Сделали', 'Перенесём руками', 'Перенесём отчётом']) {
     await addCard(page, 'Очередь', title)
   }
+  await revealBoardControls(page, 'tools')
+  await page.getByRole('checkbox', { name: 'Подробные карточки' }).check()
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 37')
   await page.getByLabel('Начало').fill('2026-09-08')
@@ -3502,11 +3586,14 @@ test('незакрытые карточки переносятся из закр
   await page.getByRole('menuitem', { name: 'Перенести в «Готово»' }).click()
   await expect(page.getByRole('region', { name: 'Готово' }).getByText('Сделали')).toBeVisible()
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Закрыть итерацию «Неделя 37»' }).click()
+  await page.getByRole('menuitem', { name: 'Закрыть итерацию', exact: true }).click()
   await page.locator('dialog').getByLabel('Название итерации для подтверждения').fill('Неделя 37')
   await page.locator('dialog').getByRole('button', { name: 'Закрыть итерацию' }).click()
   await expect(page.getByText('Закрытые:')).toBeVisible()
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 38')
   await page.getByLabel('Начало').fill('2026-09-15')
@@ -3547,6 +3634,7 @@ test('колонка упорядочивается по итерации', asyn
     ['Неделя 40', '2026-09-28', '2026-10-04'],
     ['Неделя 39', '2026-09-21', '2026-09-27'],
   ]) {
+    await revealBoardControls(page, 'tools')
     await page.getByRole('button', { name: '+ итерация' }).click()
     await page.getByPlaceholder('Название').fill(name)
     await page.getByLabel('Начало').fill(start)
@@ -3793,6 +3881,7 @@ test('на карточку ставят несколько меток, не о�
 
   const card = cardIn(page, 'Очередь', 'Три метки')
   await card.hover()
+  await expandCard(card)
   await card.getByRole('button', { name: 'Метки: ни одной' }).click()
   for (const n of ['Срочно', 'Важное', 'Риск']) {
     await labelChoice(page).getByRole('option', { name: new RegExp(`^${n}`) }).click()
@@ -3855,7 +3944,8 @@ test('карточку переносят и из панели — панель 
   // карточки нет, а панель открывается отовсюду.
   await card.click()
   const panel = page.getByLabel(/Карточка .* «Сверить остатки»/)
-  await panel.getByRole('button', { name: 'На другую доску…' }).click()
+  await panel.getByRole('button', { name: 'Действия карточки «Сверить остатки»' }).click()
+  await page.getByRole('menuitem', { name: 'На другую доску…' }).click()
   await page.getByRole('dialog', { name: /Перенести «Сверить остатки»/ })
     .getByRole('button', { name: 'Перенести', exact: true }).click()
 

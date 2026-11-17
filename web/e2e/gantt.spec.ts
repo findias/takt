@@ -71,7 +71,7 @@ for (const lang of ['ru', 'en'] as const) for (const width of [1440, 360]) for (
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
     await page.screenshot({ path: info.outputPath('priority-board.png'), fullPage: true })
     await view.selectOption('tree')
-    await expect(page.locator('.tree-view').getByTitle(lang === 'ru' ? 'Высокий' : 'High', { exact: true })).toBeVisible()
+    await expect(page.getByRole('table', { name: lang === 'ru' ? 'Дерево работы доски' : 'Work tree of the board', exact: true }).getByRole('cell', { name: lang === 'ru' ? 'Высокий' : 'High', exact: true })).toBeVisible()
     await page.screenshot({ path: info.outputPath('priority-tree.png'), fullPage: true })
     await view.selectOption('gantt')
     await expect(chart).toBeVisible()

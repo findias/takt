@@ -134,7 +134,7 @@ color:var(--ink-3);font-size:.85rem}
 <p>The board opens straight away with three columns: <strong>Queue</strong>, <strong>In progress</strong>, <strong>Done</strong>. Those are stages of work, and you can change them. The template only sets the start: afterwards the board is set up like any other.</p>
 <h2 id="2-put-work-on-it">2. Put work on it</h2>
 <ol>
-<li>At the bottom of <strong>Queue</strong>, press <strong>Create card</strong>.</li>
+<li>Press <strong>+</strong> next to the <strong>Queue</strong> heading, or <strong>Create card</strong> at the bottom of the column.</li>
 <li>Write what needs doing and press <code>Enter</code>. If you already know who will do it, pick them under the title — <strong>Assignee…</strong>; the choice stays for the next card, so a batch for one person takes one pick.</li>
 </ol>
 <p>Create three or four cards: with one, the board shows nothing.</p>
@@ -144,13 +144,21 @@ color:var(--ink-3);font-size:.85rem}
 <h2 id="describe-work">4. Describe the work</h2>
 <ol>
 <li>Click the card&#39;s title; a panel opens.</li>
-<li>Go to the <strong>Work</strong> tab.</li>
+<li>The current column, due date, assignees and completion control are visible above the tabs. To move the card, choose another column there. Go to <strong>Work</strong> to edit its properties.</li>
 <li>Assign an owner, set an estimate and a due date.</li>
 </ol>
 <figure><img src="screenshots/карточка.png" alt="A card" loading="lazy">
 <figcaption>A card</figcaption></figure>
 <p>If work has stalled, press <strong>Block</strong> and write the reason. The reason shows on the board itself: &#34;blocked&#34; with no explanation answers no question at all. If you know when the wait ends, fill in <strong>Lifts itself (optional)</strong> — the block lifts itself at that moment.</p>
 <p>To mark what kind of work it is, add a label: hover the card, press the label icon in its bottom right corner and type. A label that does not exist yet is created right there — for this board, a subdivision, or the whole organisation.</p>
+<p>On the board, a block appears immediately below the title. Labels use small coloured dots so they do not compete with warnings. Age is shown as text; the progress bar measures completion only.</p>
+<p>The open card&#39;s <strong>…</strong> menu contains its link, transfer to another board, archive and permanent deletion where permitted. Archiving can be undone; permanent deletion requires confirmation.</p>
+<p><strong>Filter</strong> reveals the filter conditions on every screen. Its count and the number of hidden cards remain visible while collapsed.</p>
+<p>On a computer, compact cards keep the complete title, assignees, the main warning, priority, due date, age and progress visible. The title wraps without truncation. Use the arrow on a card to expand its description and additional properties directly on the board; other cards stay compact. Use the same arrow to collapse it. Hover for a warning&#39;s full text.</p>
+<p>The checkbox selects cards for bulk actions; it does not expand them. Selection and the actions menu appear on hover, keyboard focus or while selecting cards, with no floating panel over the card&#39;s contents. Enable <strong>Tools</strong> → <strong>Detailed cards</strong> to show additional properties on all cards; that choice is remembered in this browser.</p>
+<p><strong>Column rules</strong> under a column heading reveals its flow markers and entry policy.</p>
+<p><strong>Tools</strong> reveals grouping, saved views, flow, archive, workload and iterations. Search, filtering and column switching remain available while the tools are collapsed. To close an iteration, open its <strong>…</strong> menu.</p>
+<p>Click a parent task above a subtask’s title to open its Tasks tab, with all accessible direct subtasks and the source subtask highlighted. <strong>Return to subtask</strong> restores the original card and list filters, including when the parent is on another board. Access permissions remain unchanged.</p>
 <h2 id="5-carry-it-to-the-end">5. Carry it to the end</h2>
 <p>Move the card into <strong>Done</strong>. After a few such cards, open <strong>Flow</strong> in the board header: cycle time, throughput and a forecast appear there. The metrics are computed from what you have already done — nothing to invent.</p>
 <h2 id="6-invite-a-colleague">6. Invite a colleague</h2>
@@ -166,7 +174,7 @@ color:var(--ink-3);font-size:.85rem}
 <li>See everything as a list — <a href="reference.html">Reference</a>.</li>
 <li>Understand why the board works this way — [Design decisions](architecture.md).</li>
 </ul>
-<footer>Takt, version v0.6.0. Built from quickstart.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.6.0-dirty. Built from quickstart.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

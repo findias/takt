@@ -248,6 +248,11 @@ export function Board({
   // и переключатель. Это разный состав разметки, а не разное
   // оформление, — CSS такого не умеет.
   const narrow = useMedia(NARROW)
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const [detailedCards, setDetailedCards] = useState(() => {
+    try { return localStorage.getItem('detailed-cards') === 'true' }
+    catch { return false }
+  })
   const [visibleColumn, setVisibleColumn] = useState<string | null>(null)
   // Карточка, которую только что перенесли: она вспыхивает, чтобы глаз
   // нашёл её на новом месте. Живёт полсекунды — это подсказка, а не
@@ -705,7 +710,7 @@ export function Board({
    * на карточке — является.
    */
   const moveToColumn = useCallback(
-    (cardId: string, columnId: string) => {
+    (cardId: string, columnId: string, returnToCard = true) => {
       const { base } = stateRef.current
       if (!base) return
       const card = base.cards[cardId]
@@ -714,7 +719,7 @@ export function Board({
       announce(
         t.screen.movedTo(card.title, base.columns[card.columnId].name, base.columns[columnId].name),
       )
-      refocus(cardId)
+      if (returnToCard) refocus(cardId)
     },
     [moveCard, announce, refocus],
   )
@@ -1270,6 +1275,7 @@ export function Board({
   const cardPanel = openCard && base.cards[openCard] && (
     <Suspense fallback={null}>
       <CardPanel
+        onMoveToColumn={(cardId, columnId) => moveToColumn(cardId, columnId, false)}
         onRename={renameCard}
         onArchive={archiveCard}
         onDelete={canPurge ? askDelete : undefined}
@@ -1380,7 +1386,7 @@ export function Board({
     // возвращать его больше некуда: диалог, открытый из спрятавшегося
     // меню карточки, иначе оставлял фокус на `body`.
     <div
-      className={chosen.length > 0 ? 'board-screen board-screen--picking' : 'board-screen'}
+      className={`board-screen${chosen.length > 0 ? ' board-screen--picking' : ''}${detailedCards ? ' board-screen--detailed-cards' : ''}`}
       tabIndex={-1}
     >
       <ClosingDialog closing={closing} onDone={() => setClosing(null)} />
@@ -1432,122 +1438,139 @@ export function Board({
         </div>
       </header>
 
-      {/* Две строки инструментов (решение владельца 25.09.2026: отбор
-          на виду, но компактно). Первая — что показано: вид списком
-          и весь отбор, основная панель (решение 22.09.2026). Вторая —
-          как показано и куда уйти: поиск, группировка, сохранённые виды,
-          справа палитра, «Поток», «Архив». Прежде это было три строки,
-          а с открытой карточкой — пять, и «+ Колонка» уходила под панель. */}
-      <div className="board-toolbar board-tools-line">
-        {/* Вид — выпадающим списком слева (решение владельца 22.09.2026):
-            основную строку занимает отбор, а вид меняют реже, чем
-            отбирают. */}
-        <select
-          className="view-select"
-          value={view}
-          aria-label={t.screen.viewGroup}
-          onChange={(e) => {
-            const next = new URLSearchParams(query)
-            if (e.target.value === 'board') next.delete('view')
-            else next.set('view', e.target.value)
-            // Смена раскладки показывается движением: это те же
-            // карточки, а не другой экран. Довод и замер —
-            // в `withViewTransition`.
-            withViewTransition(() => setQuery(next))
-          }}
-        >
-          <option value="board">{t.screen.viewBoard}</option>
-          <option value="gantt">{t.screen.viewGantt}</option>
-          <option value="table">{t.screen.viewTable}</option>
-          <option value="tree">{t.screen.viewTree}</option>
-          <option value="changes">{t.screen.viewChanges}</option>
-        </select>
-        {asTable && (
+      {/* Поиск, вид и отбор доступны сразу. Дополнительные
+          инструменты и контекст раскрываются, оставляя место карточкам. */}
+      <div className={`board-controls${toolsOpen ? ' board-controls--open' : ''}`}>
+        <div className="board-toolbar board-tools-line">
+          {/* Вид — выпадающим списком слева (решение владельца 22.09.2026):
+              основную строку занимает отбор, а вид меняют реже, чем
+              отбирают. */}
           <select
-            value={sort}
-            aria-label={t.screen.sort}
-            onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
+            className="view-select"
+            value={view}
+            aria-label={t.screen.viewGroup}
+            onChange={(e) => {
+              const next = new URLSearchParams(query)
+              if (e.target.value === 'board') next.delete('view')
+              else next.set('view', e.target.value)
+              // Смена раскладки показывается движением: это те же
+              // карточки, а не другой экран. Довод и замер —
+              // в `withViewTransition`.
+              withViewTransition(() => setQuery(next))
+            }}
           >
-            {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
-              <option key={key} value={key}>
-                {SORT_NAMES[key]}
-              </option>
-            ))}
+            <option value="board">{t.screen.viewBoard}</option>
+            <option value="gantt">{t.screen.viewGantt}</option>
+            <option value="table">{t.screen.viewTable}</option>
+            <option value="tree">{t.screen.viewTree}</option>
+            <option value="changes">{t.screen.viewChanges}</option>
           </select>
-        )}
-        <FilterBar
-          filters={filters}
-          people={assigneeList}
-          unit={unit}
-          labels={base.labels}
-          iterations={openIterations}
-          hidden={hidden}
-          hasBlockDeadlines={hasBlockDeadlines}
-          epicTitle={
-            filters.epic
-              ? (Object.values(base.cards).find((c) => c.epic?.id === filters.epic)?.epic?.title ?? null)
-              : null
-          }
-          onChange={setFilters}
-        />
-      </div>
-      <div className="board-toolbar board-tools-line board-tools-line--second">
-        <CardSearch filters={filters} onChange={setFilters} />
-        {view !== 'gantt' && <select
-          className="grouping"
-          value={grouping}
-          aria-label={t.screen.grouping}
-          onChange={(e) => setGrouping(e.target.value as Grouping)}
-        >
-          {(Object.keys(GROUPING_NAMES) as Grouping[])
-            .filter((g) => iterationsOn || g !== 'iteration')
-            .map((g) => (
-              <option key={g} value={g}>
-                {GROUPING_NAMES[g]}
-              </option>
-            ))}
-        </select>}
-        {/* «?» — когда доска уже разложена дорожками: в строке инструментов
-            он виден всегда и становился бы шумом, а вопрос «почему
-            карточку не перетащить между дорожками» появляется, только
-            когда они есть. */}
-        {view !== 'gantt' && grouping !== 'none' && <Hint topic="grouping" />}
-        <Views
-          boardId={boardId}
-          query={query.toString()}
-          onOpen={(saved) => navigate(`${boardPath(boardId)}${saved ? `?${saved}` : ''}`)}
-        />
-        <div className="row board-tools">
-          <button className="btn btn--quiet palette-open" onClick={() => setPalette(true)}>
-            <SearchIcon />
-            {t.screen.find}
-            <span className="muted small">{paletteHint()}</span>
-          </button>
+          {asTable && (
+            <select
+              value={sort}
+              aria-label={t.screen.sort}
+              onChange={(e) => setQuery(sortToQuery(e.target.value as Sort, query))}
+            >
+              {(Object.keys(SORT_NAMES) as Sort[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORT_NAMES[key]}
+                </option>
+              ))}
+            </select>
+          )}
+          {view !== 'tree' && <FilterBar
+            filters={filters}
+            people={assigneeList}
+            unit={unit}
+            labels={base.labels}
+            iterations={openIterations}
+            hidden={hidden}
+            hasBlockDeadlines={hasBlockDeadlines}
+            epicTitle={
+              filters.epic
+                ? (Object.values(base.cards).find((c) => c.epic?.id === filters.epic)?.epic?.title ?? null)
+                : null
+            }
+            onChange={setFilters}
+          />}
+        </div>
+        <div className="board-toolbar board-tools-line board-tools-line--second">
+          {view !== 'tree' && <CardSearch filters={filters} onChange={setFilters} />}
           <button
-            className="btn btn--quiet"
-            aria-expanded={showFlow}
-            onClick={() => {
-              // Две панели разом перекрывают друг друга, а в модальном
-              // режиме ещё и спорят за фокус. Открываем по одной.
-              setOpenCard(null)
-              setShowFlow((v) => !v)
-            }}
+            className="btn btn--quiet board-tools-toggle"
+            aria-expanded={toolsOpen}
+            aria-controls="board-extra-tools board-context"
+            onClick={() => setToolsOpen((open) => !open)}
           >
-            <FlowIcon />
-            <span className="tool-label">{t.screen.flow}</span>
+            {t.screen.boardTools}
           </button>
-          <button
-            className="btn btn--quiet"
-            aria-expanded={showArchive}
-            onClick={() => {
-              setOpenCard(null)
-              setShowFlow(false)
-              setShowArchive((v) => !v)
-            }}
-          >
-            <ArchiveIcon />
-            <span className="tool-label">{t.screen.archive}</span>
-          </button>
+          <div id="board-extra-tools" className="board-extra-tools" hidden={!toolsOpen}>
+            {view !== 'tree' && <label className="card-detail-option row">
+              <input type="checkbox" checked={detailedCards} onChange={(event) => {
+                const next = event.target.checked
+                setDetailedCards(next)
+                try { localStorage.setItem('detailed-cards', String(next)) }
+                catch { /* Без хранилища выбор действует до перезагрузки. */ }
+              }} />
+              {t.screen.detailedCards}
+            </label>}
+            {view !== 'gantt' && view !== 'tree' && <select
+              className="grouping"
+              value={grouping}
+              aria-label={t.screen.grouping}
+              onChange={(e) => setGrouping(e.target.value as Grouping)}
+            >
+              {(Object.keys(GROUPING_NAMES) as Grouping[])
+                .filter((g) => iterationsOn || g !== 'iteration')
+                .map((g) => (
+                  <option key={g} value={g}>
+                    {GROUPING_NAMES[g]}
+                  </option>
+                ))}
+            </select>}
+            {/* «?» — когда доска уже разложена дорожками: в строке инструментов
+                он виден всегда и становился бы шумом, а вопрос «почему
+                карточку не перетащить между дорожками» появляется, только
+                когда они есть. */}
+            {view !== 'gantt' && view !== 'tree' && grouping !== 'none' && <Hint topic="grouping" />}
+            <Views
+              boardId={boardId}
+              query={query.toString()}
+              onOpen={(saved) => navigate(`${boardPath(boardId)}${saved ? `?${saved}` : ''}`)}
+            />
+            <div className="row board-tools">
+              <button className="btn btn--quiet palette-open" onClick={() => setPalette(true)}>
+                <SearchIcon />
+                {t.screen.find}
+                <span className="muted small">{paletteHint()}</span>
+              </button>
+              <button
+                className="btn btn--quiet"
+                aria-expanded={showFlow}
+                onClick={() => {
+                  // Две панели разом перекрывают друг друга, а в модальном
+                  // режиме ещё и спорят за фокус. Открываем по одной.
+                  setOpenCard(null)
+                  setShowFlow((v) => !v)
+                }}
+              >
+                <FlowIcon />
+                <span className="tool-label">{t.screen.flow}</span>
+              </button>
+              <button
+                className="btn btn--quiet"
+                aria-expanded={showArchive}
+                onClick={() => {
+                  setOpenCard(null)
+                  setShowFlow(false)
+                  setShowArchive((v) => !v)
+                }}
+              >
+                <ArchiveIcon />
+                <span className="tool-label">{t.screen.archive}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1556,7 +1579,7 @@ export function Board({
           в одном ряду с инструментами оно не должно. Загрузка считается
           по показанному: рядом «скрыто N» от отбора, и числа по всей
           доске спорили бы с экраном. */}
-      <div className="board-toolbar board-context">
+      <div id="board-context" className="board-toolbar board-context" hidden={!toolsOpen}>
         <Workload
           base={base}
           order={order}
@@ -1601,7 +1624,7 @@ export function Board({
         </div>
       )}
 
-      {narrow && view !== 'gantt' && (
+      {narrow && view !== 'gantt' && view !== 'tree' && (
         <div className="column-switch board-toolbar" role="tablist" aria-label={t.screen.columns}>
           {base.columnIds.map((columnId) => {
             const current = columnId === (visibleColumn ?? base.columnIds[0])

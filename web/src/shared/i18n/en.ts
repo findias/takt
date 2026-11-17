@@ -663,6 +663,7 @@ export const en: typeof ru = {
     toFlow: 'All board metrics →',
   },
   column: {
+    rules: 'Column rules',
     markupOf: (name: string) => `Markup of column “${name}”`,
     markup: 'Markup',
     averageWaiting: (days: string) => `waiting ${days} on average`,
@@ -708,6 +709,8 @@ export const en: typeof ru = {
     policyOf: (name: string) => `Entry rule for column “${name}”`,
   },
   cardView: {
+    expandDetails: (title: string) => `Expand card “${title}”`,
+    collapseDetails: (title: string) => `Collapse card “${title}”`,
     noBoardAccess: 'cannot see the board',
     blockedFor: (reason: string) => `Blocked: ${reason}`,
     commitmentDate: 'Commitment date',
@@ -840,6 +843,8 @@ export const en: typeof ru = {
     assigneesFailedWhy: (why: string) => `Could not change assignees: ${why}`,
   },
   screen: {
+    detailedCards: 'Detailed cards',
+    boardTools: 'Tools',
     cardGone: 'The card from this link is gone: it was deleted, archived, or is on a board you cannot see',
     showFlow: 'Show flow',
     flowHint: 'board metrics',

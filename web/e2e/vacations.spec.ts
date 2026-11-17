@@ -154,6 +154,9 @@ for (const lang of ['ru', 'en'] as const) for (const width of [1440, 360]) for (
     await page.goto(url)
     await expect(page.locator('.gantt-name .vacation-warning')).toHaveCount(1)
     const openSettings = async () => {
+      const tools = page.getByRole('button', { name: lang === 'ru' ? 'Инструменты' : 'Tools', exact: true })
+      await expect(tools).toBeVisible()
+      if (await tools.getAttribute('aria-expanded') === 'false') await tools.click()
       await page.getByRole('button', { name: lang === 'ru' ? 'Поток' : 'Flow', exact: true }).click()
       return page.getByRole('form', { name: lang === 'ru' ? 'Предупреждения об отпусках' : 'Vacation warnings', exact: true })
     }

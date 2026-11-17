@@ -1,3 +1,4 @@
+import { parentPath } from '../../shared/router/parent.ts'
 import { PriorityMark } from '../../entities/card/PriorityMark.tsx'
 import { useEffect, useRef, useState } from 'react'
 import { TextLine } from '../../shared/ui/TextLine.tsx'
@@ -28,6 +29,7 @@ import { EpicStatusBlock } from './EpicStatus.tsx'
  * (loadCardTasks в CardPanel), — к нажатию на вкладку он уже на месте.
  */
 export function CardTasks({
+  sourceCard,
   base,
   details,
   progress,
@@ -45,6 +47,7 @@ export function CardTasks({
   onRemoveRef,
   onHold,
 }: {
+  sourceCard?: string | null
   base: BaseState
   details: CardDetails
   /** Подпись прогресса разбиения; пусто — частей нет. */
@@ -67,9 +70,91 @@ export function CardTasks({
   onHold: (part: Related) => void
 }) {
   const { card } = details
+  const subtasks = (
+    <section className="stack">
+      <div className="row row--between">
+        <h3 className="section-title">{t.panel.subtasks}</h3>
+        {progress && <span className="muted small">{progress}</span>}
+      </div>
+
+      {progress && (
+        <div
+          className="progress"
+          role="progressbar"
+          aria-valuenow={card.progress?.done ?? 0}
+          aria-valuemin={0}
+          aria-valuemax={card.progress?.total ?? 0}
+          aria-label={t.panel.done(progress)}
+        >
+          <div
+            className="progress-fill"
+            style={{ transform: `scaleX(${progressRatio(card)})` }}
+          />
+        </div>
+      )}
+      {/* На портфеле под «готово X из Y» — когда будет готово
+          остальное и как рос объём (42.3, срез 4). */}
+      {progress && base.info.level === 'portfolio' && <EpicForecast cardId={card.id} version={base.info.version} />}
+
+      {details.subtasks.length === 0 && (
+        <p className="muted small">{t.panel.noSubtasks}</p>
+      )}
+      {details.subtasks.map((s) => (
+        <RelatedRow
+          key={s.id}
+          related={s}
+          source={s.reachable && sourceCard === `${s.boardId ?? base.info.id}:${s.id}`}
+          people={base.people}
+          canEdit={canEdit}
+          onOpen={onOpenCard}
+          onRemove={() => onUnlink(card.id, s.id, 'subtask')}
+          // Переименовать отсюда — только свою: операция идёт в эту
+          // доску. Чужую переименовывают, открыв её.
+          onRename={s.onThisBoard ? (title) => onRename(s.id, title) : undefined}
+          onMarkDone={onMarkDone}
+          // Убрать и удалить отсюда — тоже только свою: подзадача этой
+          // доски — строка родителя, а не карточка в колонке, и ни меню
+          // карточки, ни выделения у неё нет. Без этих пунктов убрать
+          // её можно было только отвязав: она выпадала в колонку
+          // отдельной карточкой, и уже оттуда её убирали.
+          onArchive={canEdit && s.onThisBoard && onArchive ? () => onArchive(s.id) : undefined}
+          onDelete={canEdit && s.onThisBoard && onDelete ? () => onDelete(s.id, s.title) : undefined}
+          // Часть может держать саму задачу, и говорят об этом
+          // отсюда: у родителя, где видно и остальные части.
+          // У заблокированной задачи предлагать нечего — вторая
+          // блокировка поверх открытой отказала бы.
+          onHold={canEdit && !card.blocked && !s.done ? () => onHold(s) : undefined}
+        />
+      ))}
+
+      {canEdit && (
+        <NewSubtask
+          boards={subtaskBoards}
+          onCreate={(title, toBoard) => onSubtask(card.id, title, toBoard)}
+        />
+      )}
+
+      {/* Связать существующую — отдельный путь и подписан отдельно:
+          без подписи два ряда полей подряд читались как одно
+          непонятное место. */}
+      {canEdit && (
+        <LinkPicker
+          boardId={base.info.id}
+          boardLevel={base.info.level ?? 'team'}
+          details={details}
+          onPick={(picked, kind) =>
+            // «Родитель» — та же связь «подзадача», только в обратную
+            // сторону: выбранная карточка встаёт над этой.
+            kind === 'parent' ? onLink(picked, card.id, 'subtask') : onLink(card.id, picked, kind)
+          }
+        />
+      )}
+    </section>
+  )
   return (
     <>
-      {/* Эпик — первым: к нему задачу привязывают чаще всего остального
+      {sourceCard && subtasks}
+      {/* При обычном открытии эпик — первым: к нему задачу привязывают чаще всего остального
           на этой вкладке, а внизу, под заявками и подзадачами, строку
           «Связать с существующей карточкой» не находили (замечено
           владельцем 25.09.2026). На портфеле строки нет: там сама
@@ -78,7 +163,7 @@ export function CardTasks({
         <EpicLine
           details={details}
           canEdit={canEdit}
-          onOpenCard={onOpenCard}
+          boardId={base.info.id}
           onLink={(epicId) => onLink(epicId, card.id, 'subtask')}
           onUnlink={(epicId) => onUnlink(epicId, card.id, 'subtask')}
         />
@@ -105,6 +190,7 @@ export function CardTasks({
           <h3 className="section-title">{t.panel.parent}</h3>
           <RelatedRow
             related={details.parent}
+            parentHref={details.parent.reachable ? parentPath(window.location.pathname + window.location.search, details.parent.boardId ?? base.info.id, details.parent.id, `${base.info.id}:${card.id}`) : undefined}
             canEdit={canEdit}
             onOpen={onOpenCard}
             onRemove={() => onUnlink(details.parent!.id, card.id, 'subtask')}
@@ -112,84 +198,7 @@ export function CardTasks({
         </section>
       )}
 
-      <section className="stack">
-        <div className="row row--between">
-          <h3 className="section-title">{t.panel.subtasks}</h3>
-          {progress && <span className="muted small">{progress}</span>}
-        </div>
-
-        {progress && (
-          <div
-            className="progress"
-            role="progressbar"
-            aria-valuenow={card.progress?.done ?? 0}
-            aria-valuemin={0}
-            aria-valuemax={card.progress?.total ?? 0}
-            aria-label={t.panel.done(progress)}
-          >
-            <div
-              className="progress-fill"
-              style={{ transform: `scaleX(${progressRatio(card)})` }}
-            />
-          </div>
-        )}
-        {/* На портфеле под «готово X из Y» — когда будет готово
-            остальное и как рос объём (42.3, срез 4). */}
-        {progress && base.info.level === 'portfolio' && <EpicForecast cardId={card.id} version={base.info.version} />}
-
-        {details.subtasks.length === 0 && (
-          <p className="muted small">{t.panel.noSubtasks}</p>
-        )}
-        {details.subtasks.map((s) => (
-          <RelatedRow
-            key={s.id}
-            related={s}
-            people={base.people}
-            canEdit={canEdit}
-            onOpen={onOpenCard}
-            onRemove={() => onUnlink(card.id, s.id, 'subtask')}
-            // Переименовать отсюда — только свою: операция идёт в эту
-            // доску. Чужую переименовывают, открыв её.
-            onRename={s.onThisBoard ? (title) => onRename(s.id, title) : undefined}
-            onMarkDone={onMarkDone}
-            // Убрать и удалить отсюда — тоже только свою: подзадача этой
-            // доски — строка родителя, а не карточка в колонке, и ни меню
-            // карточки, ни выделения у неё нет. Без этих пунктов убрать
-            // её можно было только отвязав: она выпадала в колонку
-            // отдельной карточкой, и уже оттуда её убирали.
-            onArchive={canEdit && s.onThisBoard && onArchive ? () => onArchive(s.id) : undefined}
-            onDelete={canEdit && s.onThisBoard && onDelete ? () => onDelete(s.id, s.title) : undefined}
-            // Часть может держать саму задачу, и говорят об этом
-            // отсюда: у родителя, где видно и остальные части.
-            // У заблокированной задачи предлагать нечего — вторая
-            // блокировка поверх открытой отказала бы.
-            onHold={canEdit && !card.blocked && !s.done ? () => onHold(s) : undefined}
-          />
-        ))}
-
-        {canEdit && (
-          <NewSubtask
-            boards={subtaskBoards}
-            onCreate={(title, toBoard) => onSubtask(card.id, title, toBoard)}
-          />
-        )}
-
-        {/* Связать существующую — отдельный путь и подписан отдельно:
-            без подписи два ряда полей подряд читались как одно
-            непонятное место. */}
-        {canEdit && (
-          <LinkPicker
-            boardId={base.info.id}
-            boardLevel={base.info.level ?? 'team'}
-            details={details}
-            onPick={(picked, kind) =>
-              // «Родитель» — та же связь «подзадача», только в обратную
-              // сторону: выбранная карточка встаёт над этой.
-              kind === 'parent' ? onLink(picked, card.id, 'subtask') : onLink(card.id, picked, kind)
-            }
-          />
-        )}
-      </section>
+      {!sourceCard && subtasks}
 
       {/* Связи стоят рядом с подзадачами, а не под историей, где
           они лежали раньше: история длиннее всего остального
@@ -221,11 +230,12 @@ export function CardTasks({
  * но добраться до него можно было только поиском по доске — то есть
  * связь показывалась, но не работала.
  *
- * Карточку с чужой доски открыть отсюда нельзя: она живёт в другом
- * адресе, и «открытие», которое унесёт с текущей доски, — это не то,
- * чего ждут от строки в списке.
+ * Родитель открывается ссылкой с возвратом к исходной подзадаче.
+ * Остальные карточки другой доски ведут на свой адрес.
  */
 function RelatedRow({
+  parentHref,
+  source,
   related,
   people,
   canEdit,
@@ -238,6 +248,8 @@ function RelatedRow({
   onArchive,
   onDelete,
 }: {
+  parentHref?: string
+  source?: boolean
   related: Related
   /** userId → имя. Задан — в хвосте строки видно, на ком часть. */
   people?: Record<string, string>
@@ -306,8 +318,10 @@ function RelatedRow({
 
   return (
     <div
+      aria-current={source ? true : undefined}
       className={[
         'related',
+        source ? 'related--source' : '',
         related.reachable ? '' : 'related--hidden',
         markable && related.done ? 'related--done' : '',
       ]
@@ -328,6 +342,7 @@ function RelatedRow({
         </button>
       )}
       <div className="member-who">
+        {source && <span className="source-subtask small muted">{t.panel.sourceSubtask}</span>}
         {renaming && onRename ? (
           <EditableText
             value={related.title}
@@ -340,6 +355,12 @@ function RelatedRow({
             }}
             onCancel={() => setRenaming(false)}
           />
+        ) : parentHref ? (
+          <a className="link related-open" href={parentHref} onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+            e.preventDefault()
+            navigate(parentHref)
+          }}>{title}</a>
         ) : related.onThisBoard && onOpen ? (
           <button className="link related-open" onClick={() => onOpen(related.id)}>
             {title}
@@ -624,13 +645,13 @@ function useCardSearch(query: string) {
 function EpicLine({
   details,
   canEdit,
-  onOpenCard,
+  boardId,
   onLink,
   onUnlink,
 }: {
   details: CardDetails
   canEdit: boolean
-  onOpenCard: (cardId: string) => void
+  boardId: string
   onLink: (epicId: string) => void
   onUnlink: (epicId: string) => void
 }) {
@@ -646,13 +667,17 @@ function EpicLine({
       <h3 className="section-title">{t.panel.epic}</h3>
       {epic ? (
         <div className="row row--tight">
-          <button
-            type="button"
+          <a
             className={`chip chip--${epicTone(epic.id)}`}
-            onClick={() => onOpenCard(epic.id)}
+            href={parentPath(window.location.pathname + window.location.search, epic.boardId, epic.id, `${boardId}:${card.id}`)}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+              e.preventDefault()
+              navigate(e.currentTarget.getAttribute('href')!)
+            }}
           >
             {epic.title}
-          </button>
+          </a>
           {parent && parent.id !== epic.id && (
             <span className="muted small">{t.panel.epicVia(parent.title)}</span>
           )}

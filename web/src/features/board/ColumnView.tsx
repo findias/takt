@@ -243,6 +243,20 @@ export function ColumnView(props: ColumnProps) {
           />
         </div>
         <div className="row row--tight">
+          {!props.collapsed && props.canEdit && (
+            <IconButton
+              label={t.column.addCardTo(props.name)}
+              onPointerEnter={() => void loadNewCardForm()}
+              onFocus={() => void loadNewCardForm()}
+              onClick={() => {
+                setAdding(true)
+                // Уже открытая форма сохраняет черновик и исполнителей.
+                sectionRef.current?.querySelector<HTMLTextAreaElement>('.new-card textarea')?.focus()
+              }}
+            >
+              <PlusIcon />
+            </IconButton>
+          )}
           {/* Имя называет колонку: «Разметка» в шапке каждой колонки
               звучит одинаково, и с диктора их три неотличимых. */}
           {!props.collapsed && props.canEdit && (
@@ -276,17 +290,22 @@ export function ColumnView(props: ColumnProps) {
           sleDays={props.sleDays}
         />
       )}
-      {!props.collapsed && flowMarks(props.column).length > 0 && (
-        <div className="card-marks">
-          {flowMarks(props.column).map((m) => (
-            <span key={m} className="mark">
-              {m}
-            </span>
-          ))}
-        </div>
-      )}
-      {!props.collapsed && props.column.policy && !settings && (
-        <p className="muted small column-policy">{props.column.policy}</p>
+      {!props.collapsed && !settings && (flowMarks(props.column).length > 0 || props.column.policy) && (
+        <details className="column-rules">
+          <summary>{t.column.rules}</summary>
+          {flowMarks(props.column).length > 0 && (
+            <div className="card-marks">
+              {flowMarks(props.column).map((m) => (
+                <span key={m} className="mark">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+          {props.column.policy && (
+            <p className="muted small column-policy">{props.column.policy}</p>
+          )}
+        </details>
       )}
       {!props.collapsed && settings && (
         <ColumnSettings

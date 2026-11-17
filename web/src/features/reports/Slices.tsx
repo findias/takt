@@ -26,7 +26,7 @@ const deleteSlice = (id: string) => request<void>('DELETE', `/api/reports/slices
  * Убранный срез возвращается из тоста: вернуть его — значит сохранить
  * то же имя и тот же отбор, и спрашивать перед удалением незачем.
  */
-export function Slices({ query, onOpen }: { query: string; onOpen: (query: string) => void }) {
+export function Slices({ query, onOpen, compact = false }: { query: string; onOpen: (query: string) => void; compact?: boolean }) {
   const s = t.reports
   const toast = useToast()
   const [slices, setSlices] = useState<Slice[]>([])
@@ -80,7 +80,7 @@ export function Slices({ query, onOpen }: { query: string; onOpen: (query: strin
   return (
     <div className="row row--tight report-slices" role="group" aria-label={s.slices}>
       <span className="small report-name">{s.slices}</span>
-      {slices.length === 0 && !naming && <span className="muted small">{s.slicesEmpty}</span>}
+      {!compact && slices.length === 0 && !naming && <span className="muted small">{s.slicesEmpty}</span>}
       {slices.map((slice) => (
         <span key={slice.id} className="view">
           <button

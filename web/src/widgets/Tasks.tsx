@@ -106,6 +106,9 @@ export function Tasks({ principal }: { principal: Principal }) {
 
   const set = (key: string, value: string | null, also: Record<string, null> = {}) => {
     const next = new URLSearchParams(query)
+    if (key === 'open') {
+      for (const name of ['parentOpen', 'parentFrom', 'parentReturn']) next.delete(name)
+    }
     for (const [k, v] of Object.entries({ ...also, [key]: value })) {
       if (v === null || v === '') next.delete(k)
       else next.set(k, v)

@@ -2,25 +2,19 @@ import { useEffect, useState } from 'react'
 import { api, request } from '../shared/api/index.ts'
 import type { Iteration, Principal } from '../shared/api/index.ts'
 import { Board } from './Board.tsx'
-import { PRIORITY_NAMES } from '../entities/card/model.ts'
 import { setQuery, useQuery } from '../shared/router/index.ts'
-import { PickList } from '../shared/ui/PickList.tsx'
+import { ReportControls } from './ReportControls.tsx'
 import { Slices } from '../features/reports/Slices.tsx'
-import { Button } from '../shared/ui/Button.tsx'
 import { Hint } from '../shared/ui/Hint.tsx'
 import { Bars, CumulativeFlow } from '../features/flow/charts.tsx'
 import { UNIT_NAMES, dateWords } from '../entities/card/model.ts'
 import type { EstimateUnit } from '../shared/api/index.ts'
 import { t } from '../shared/i18n/index.ts'
 import {
-  PRESETS,
-  PRIORITIES,
-  STATES,
   addressQuery,
   downloadHref,
   parseReportFilter,
   periodReversed,
-  presetPeriod,
   reportQuery,
 } from './reportFilter.ts'
 import type { Format, ReportFilter } from './reportFilter.ts'
@@ -223,8 +217,6 @@ export function Reports({ principal }: { principal: Principal }) {
     return q
   }
   const setOpen = (open: string | null) => setQuery(withOpen(addressQuery(f), open), { replace: true })
-  const toggle = <T extends string>(list: T[], value: T) =>
-    list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
 
   const reversed = periodReversed(f)
   const tooMany = count.status === 'ready' && count.total > count.limit
@@ -232,97 +224,30 @@ export function Reports({ principal }: { principal: Principal }) {
 
   return (
     <div className="stack reports">
-      <p className="muted">{s.intro}</p>
-      <Slices query={addressQuery(f).toString()} onOpen={(q) => setQuery(new URLSearchParams(q), { replace: false })} />
+      <header className="reports-heading">
+        <div><h2>{t.app.reports}</h2><p className="muted small">{s.intro}</p></div>
+        <div className="row reports-download" role="group" aria-label={s.download}>
+          {FORMATS.map((format, i) =>
+            // Ссылка, а не кнопка с запросом: файл скачивает браузер,
+            // потоком. Недоступная ссылка — просто текст с объяснением
+            // над ней: у `<a>` нет состояния disabled.
+            blocked ? (
+              <span key={format} className="btn btn--default" aria-disabled="true">
+                {s.formats[format]}
+              </span>
+            ) : (
+              <a key={format} className={`btn btn--${i === 0 ? 'primary' : 'default'}`} href={downloadHref(f, format)} download>
+                {s.formats[format]}
+              </a>
+            ),
+          )}
+        </div>
 
-      <fieldset className="stack reports-group">
-        <legend>{s.period}</legend>
-        <div className="row">
-          <label className="row row--tight">
-            <span className="sr-only">{s.from}</span>
-            <input type="date" value={f.from} max={f.to}
-              onChange={(e) => e.target.value && change({ from: e.target.value, to: f.to, period: null })} />
-          </label>
-          <span aria-hidden="true">—</span>
-          <label className="row row--tight">
-            <span className="sr-only">{s.to}</span>
-            <input type="date" value={f.to} min={f.from}
-              onChange={(e) => e.target.value && change({ from: f.from, to: e.target.value, period: null })} />
-          </label>
-        </div>
-        <div className="row row--tight">
-          {PRESETS.map((p) => (
-            <Button key={p} kind="quiet" aria-pressed={f.period === p}
-              onClick={() => change({ period: p, ...presetPeriod(p, now) })}>
-              {s.presets[p]}
-            </Button>
-          ))}
-        </div>
-        <p className="muted small">{s.periodRule}</p>
-      </fieldset>
+      </header>
+      <Slices compact query={addressQuery(f).toString()} onOpen={(q) => setQuery(new URLSearchParams(q), { replace: false })} />
 
-      <fieldset className="stack reports-group">
-        <legend className="sr-only">{s.title}</legend>
-        <PickList label={s.boards} anyText={s.allBoards} addText={s.addBoard} options={boards}
-          chosen={f.boards} removeLabel={s.remove} onChange={(v) => change({ boards: v })} />
-        <PickList label={s.teams} anyText={s.allTeams} addText={s.addTeam} options={teams}
-          chosen={f.teams} removeLabel={s.remove} onChange={(v) => change({ teams: v })} />
-        <PickList label={s.assignees} anyText={s.allAssignees} addText={s.addAssignee}
-          options={people?.candidates ?? []}
-          chosen={f.assignees} removeLabel={s.remove} onChange={(v) => change({ assignees: v })} />
-        {(f.boards.length > 0 || f.teams.length > 0) && (
-          <p className="muted small">{s.assigneesNarrowed}</p>
-        )}
-        <PickList label={s.labels} anyText={s.allLabels} addText={s.addLabel} options={labels}
-          chosen={f.labels} removeLabel={s.remove} onChange={(v) => change({ labels: v })} />
-
-        <div className="row" role="group" aria-label={s.priority}>
-          <span className="small report-name">{s.priority}</span>
-          {PRIORITIES.map((p) => (
-            <label key={p} className="row row--tight small">
-              <input type="checkbox" checked={f.priorities.includes(p)}
-                onChange={() => change({ priorities: toggle(f.priorities, p) })} />
-              <span>{PRIORITY_NAMES[p]}</span>
-            </label>
-          ))}
-        </div>
-        <div className="row" role="group" aria-label={s.state}>
-          <span className="small report-name">{s.state}</span>
-          {STATES.map((st) => (
-            <label key={st} className="row row--tight small">
-              <input type="checkbox" checked={f.states.includes(st)}
-                onChange={() => change({ states: toggle(f.states, st) })} />
-              <span>{s.states[st]}</span>
-            </label>
-          ))}
-        </div>
-        <div className="row">
-          <label className="row row--tight">
-            <span className="small report-name">{s.iteration}</span>
-            <select value={f.iteration ?? ''} disabled={!oneBoard}
-              onChange={(e) => change({ iteration: e.target.value || null })}>
-              <option value="">{s.anyIteration}</option>
-              {iterations.map((it) => (
-                <option key={it.id} value={it.id}>
-                  {it.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {!oneBoard && <span className="muted small">{s.iterationHint}</span>}
-        </div>
-        <label className="row row--tight small">
-          <input type="checkbox" checked={f.archived} onChange={(e) => change({ archived: e.target.checked })} />
-          <span>{s.archived}</span>
-        </label>
-        <div>
-          <Button kind="quiet" onClick={() => setQuery(addressQuery({ ...parseReportFilter(new URLSearchParams(), now),
-              period: f.period, from: f.from, to: f.to }), { replace: true })}>
-            {s.reset}
-          </Button>
-        </div>
-      </fieldset>
-
+      <ReportControls f={f} now={now} boards={boards} teams={teams} labels={labels} people={people}
+        iterations={iterations} change={change} onReset={() => change({ boards: [], teams: [], assignees: [], labels: [], priorities: [], states: [], iteration: null, archived: false })} />
       {/* Число — живым регионом: оно меняется от каждого выбора, и
           диктор должен узнать, сколько теперь попадает. */}
       <p className={tooMany || reversed ? 'form-error' : 'small'} role="status">
@@ -356,24 +281,6 @@ export function Reports({ principal }: { principal: Principal }) {
         </>
       )}
 
-      <div className="row">
-        <span className="small report-name">{s.download}</span>
-        {FORMATS.map((format, i) =>
-          // Ссылка, а не кнопка с запросом: файл скачивает браузер,
-          // потоком. Недоступная ссылка — просто текст с объяснением
-          // над ней: у `<a>` нет состояния disabled.
-          blocked ? (
-            <span key={format} className="btn btn--default" aria-disabled="true">
-              {s.formats[format]}
-            </span>
-          ) : (
-            <a key={format} className={`btn btn--${i === 0 ? 'primary' : 'default'}`} href={downloadHref(f, format)} download>
-              {s.formats[format]}
-            </a>
-          ),
-        )}
-      </div>
-      <p className="muted small">{s.formatsHint}</p>
       {panelBoard && (
         <Board
           key={panelBoard}

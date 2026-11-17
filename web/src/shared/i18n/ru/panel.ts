@@ -3,6 +3,9 @@
 // бы в первой загрузке (web/e2e/perf.spec.ts).
 
 export const panel = {
+    returnToSubtask: 'Вернуться к подзадаче',
+    sourceSubtask: 'Исходная подзадача',
+    column: 'Колонка',
     talk: 'Обсуждение',
     moveToBoard: 'На другую доску…',
     copyLink: 'Скопировать ссылку',

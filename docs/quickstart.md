@@ -32,7 +32,7 @@ the board is set up like any other.
 
 ## 2. Put work on it
 
-1. At the bottom of **Queue**, press **Create card**.
+1. Press **+** next to the **Queue** heading, or **Create card** at the bottom of the column.
 2. Write what needs doing and press `Enter`. If you already know who
    will do it, pick them under the title — **Assignee…**; the choice
    stays for the next card, so a batch for one person takes one pick.
@@ -51,7 +51,7 @@ it went. Everyone with this board open sees the change immediately.
 ## 4. Describe the work
 
 1. Click the card's title; a panel opens.
-2. Go to the **Work** tab.
+2. The current column, due date, assignees and completion control are visible above the tabs. To move the card, choose another column there. Go to **Work** to edit its properties.
 3. Assign an owner, set an estimate and a due date.
 
 ![A card](screenshots/карточка.png)
@@ -65,6 +65,38 @@ itself at that moment.
 To mark what kind of work it is, add a label: hover the card, press the
 label icon in its bottom right corner and type. A label that does not exist yet is created right there —
 for this board, a subdivision, or the whole organisation.
+
+On the board, a block appears immediately below the title. Labels use
+small coloured dots so they do not compete with warnings. Age is shown
+as text; the progress bar measures completion only.
+
+The open card's **…** menu contains its link, transfer to another board,
+archive and permanent deletion where permitted. Archiving can be undone;
+permanent deletion requires confirmation.
+
+**Filter** reveals the filter conditions on every screen. Its count and
+the number of hidden cards remain visible while collapsed.
+
+On a computer, compact cards keep the complete title, assignees, the main
+warning, priority, due date, age and progress visible. The title wraps
+without truncation. Use the arrow on a card to expand its description
+and additional properties directly on the board; other cards stay compact.
+Use the same arrow to collapse it. Hover for a warning's full text.
+
+The checkbox selects cards for bulk actions; it does not expand them.
+Selection and the actions menu appear on hover, keyboard focus or while
+selecting cards, with no floating panel over the card's contents.
+Enable **Tools** → **Detailed cards** to show additional properties on all
+cards; that choice is remembered in this browser.
+
+**Column rules** under a column heading reveals its flow markers and entry policy.
+
+**Tools** reveals grouping, saved views, flow, archive,
+workload and iterations. Search, filtering and column switching remain
+available while the tools are collapsed. To close an iteration, open
+its **…** menu.
+
+Click a parent task above a subtask’s title to open its Tasks tab, with all accessible direct subtasks and the source subtask highlighted. **Return to subtask** restores the original card and list filters, including when the parent is on another board. Access permissions remain unchanged.
 
 ## 5. Carry it to the end
 

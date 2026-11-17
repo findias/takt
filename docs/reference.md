@@ -23,6 +23,12 @@ subtree. An idea addressed to a subdivision is moved by that subdivision's
 owner within their subtree or up to the whole organisation; the owner
 moves any open idea anywhere, the author — their own until it is decided.
 
+On **Team**, names, email addresses, roles and links to tasks stay visible.
+Rare administrative actions are in each person’s actions menu (**⋮**),
+whose accessible name includes the person’s name. The menu only offers
+actions allowed for the current user; erasing data still asks for confirmation.
+
+
 Beyond roles, the owner appoints (and a subdivision owner, below their own node):
 
 | Appointment | What it grants |
@@ -81,6 +87,30 @@ can see the board can be called in.
 | **Block ending** | blocks that lift themselves within a day, or whose deadline has just passed; shown only on boards that have such blocks |
 | **Longer than promised** | those running longer than the board's promise |
 | Iteration | attached to an iteration; separately, "not in an iteration" |
+
+## Hierarchical table
+
+Choose **Tree** in a board's view picker. It shows the existing parent–subtask
+links, including branches on other boards you can access. **Columns** lets you
+show or hide **Board / column**, **Priority** and **Completion**. Task titles
+remain visible in full; the table scrolls horizontally on narrow screens.
+
+**Search the tree** matches titles and keys, keeps ancestors as context, and
+expands matching paths. A matching parent's whole subtree is included.
+**Order** sorts siblings by key or title, preserving the hierarchy.
+**Expand all** and **Collapse all** control branches; collapse is unavailable
+while searching. The checkbox includes tasks with no parent or parts.
+
+These settings live in the URL and can be stored with the board's saved
+views. The board's ordinary filters do not apply to the tree. Local completion
+uses the same value as the card, including manual percentages and subtree
+progress; it is not recalculated from the currently visible rows. For tasks on
+other boards, only a confirmed completion is shown as 100%; otherwise the
+completion cell is a dash because this endpoint has no partial percentage.
+An incomplete remote branch is reported with a retry action.
+
+This is a view of existing task relationships. Independently editable portfolio
+structures, folders, generators and formula columns are not available yet.
 
 ## Blocks with a deadline
 
@@ -191,6 +221,13 @@ their months never mix with a team's days.
 
 <a id="reports-numbers"></a>
 ## Numbers on **Reports**
+
+The period and export links stay at the top. Open **Filters** for detailed
+conditions; active conditions remain visible below it and can be removed
+without reopening the form. **Clear selection** keeps the chosen period.
+On narrow screens, **Quick period** offers the same presets as the buttons
+on desktop. **How the period works** explains the inclusion rule inside
+**Filters**.
 
 Every block on **Reports** has a "?" beside its title with the same
 explanation in a few sentences. Here they are together, block by block.

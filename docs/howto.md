@@ -983,7 +983,8 @@ were taken, declined or merged do not move.
 
 When someone asks you to "send a spreadsheet", open the **Reports**
 tab. Choose the **Period** — two dates, or **30 days**, **90 days**,
-**This quarter**, **Last quarter** — and narrow it down if you need to:
+**This quarter**, **Last quarter** — and open **Filters** to narrow it down
+if you need to:
 **Boards**, **Subdivisions** (a subdivision includes the ones nested in
 it), **Assignees**, **Labels**, **Priority**, **State**, and an
 **Iteration** once a single board is chosen. Empty means "any". A card
@@ -1099,8 +1100,7 @@ organisation owner.
 ### Correct someone's name
 
 An owner can change a member's name: a typo from an import, a changed
-surname, someone added under a nickname. **Team** tab → **Name…** next
-to the person → the new name → **Change name**. The name changes
+surname, someone added under a nickname. **Team** tab → the person’s actions menu (**⋮**) → **Name…** → the new name → **Change name**. The name changes
 everywhere at once, earlier records included. **Name…** is offered on
 the same terms as **Email…** below; the change shows in the audit log
 as «name: old → new».
@@ -1108,8 +1108,7 @@ as «name: old → new».
 ### Correct someone's email
 
 An owner can change a member's email: a typo, an old address, someone
-added under the wrong one. **Team** tab → **Email…** next to the
-person → the new address → **Change email**. They sign in with the new
+added under the wrong one. **Team** tab → the person’s actions menu (**⋮**) → **Email…** → the new address → **Change email**. They sign in with the new
 address from then on; takt sends no emails, so tell them yourself.
 
 **Email…** is offered only where the owner may use it. Your own email
@@ -1124,7 +1123,7 @@ directory, it is changed there. The change shows in the audit log as
 takt sends no emails, so there is no «forgot password» letter and no
 «your account is ready» letter. Instead the owner issues a link.
 
-1. **Team** tab → **Sign-in link** next to the person.
+1. **Team** tab → the person’s actions menu (**⋮**) → **Sign-in link**.
 2. Copy the link shown under the list and pass it on yourself.
 3. The person opens it, chooses a password and is signed in at once.
 
@@ -1152,7 +1151,8 @@ lock you out.
 
 ### Handle someone leaving
 
-Pick one of two; they do different things:
+Open the person’s actions menu (**⋮**) on **Team**. Pick one of two;
+they do different things:
 
 - **Remove** — the person is no longer in the
   organisation. Their cards, comments and audit entries stay.

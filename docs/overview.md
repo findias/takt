@@ -43,7 +43,9 @@ other — including across boards owned by different teams.
 
 **Views of the same data.** The board answers "how is the work
 going", the table answers "what is the oldest and what did we promise",
-the change feed answers "what happened". Gantt shows planned periods,
+the change feed answers "what happened". The tree shows cross-board task
+hierarchies in a table with selectable columns, sibling sorting and search
+that keeps the path to each match. Gantt shows planned periods,
 completion and commitment dates on one board, with subtasks. Plans can
 be moved or resized, separately from the actual flow dates.
 
@@ -81,7 +83,7 @@ with a key and a delivery log, and a full data export in one file.
 ## What the product does not do
 
 No automatic dependency or resource scheduling, no public cloud with
-self-service sign-up, no file attachments on cards. These are not
+self-service sign-up. These are not
 omissions: each refusal has a recorded reason, and some have a recorded
 condition under which they will be revisited. The full list is in the
 [requirements](../REQUIREMENTS.md) (Russian).

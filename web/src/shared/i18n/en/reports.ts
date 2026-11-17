@@ -4,6 +4,10 @@ import type { reports as ru } from '../ru/reports.ts'
 export const reports: typeof ru = {
     title: 'Card export',
     intro: 'What is stuck now, what was done in the period, and a file of the cards that match.',
+    filter: 'Filters', activeFilters: 'Active report filters',
+    noExtraFilters: 'All accessible boards',
+    quickPeriod: 'Quick period', customPeriod: 'Custom period',
+    periodHelp: 'How the period works',
     period: 'Period',
     from: 'Period start',
     to: 'Period end',

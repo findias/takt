@@ -605,7 +605,8 @@ test('снимки экранов', async ({ page, browser }) => {
   // Смена почты участнику (ROADMAP 23.6): диалог с подсказкой, что
   // сказать человеку о новом адресе придётся самому.
   await page.getByRole('button', { name: 'Команда' }).click()
-  await page.getByRole('button', { name: /^Сменить почту: / }).first().click()
+  await page.getByRole('button', { name: /^Действия участника: / }).first().click()
+  await page.getByRole('menuitem', { name: 'Почта…' }).click()
   await page.waitForTimeout(300)
   await page.screenshot({ path: `${SHOTS}/35-почта-участника.png` })
   await page.keyboard.press('Escape')
@@ -613,7 +614,8 @@ test('снимки экранов', async ({ page, browser }) => {
   // Ссылка для входа (ROADMAP 23.6): выпуск в «Команде» и страница,
   // которую откроет человек. Пароль по ней не задаём — Борис стенда
   // должен входить прежним.
-  await page.getByRole('button', { name: /^Выпустить ссылку для входа: / }).first().click()
+  await page.getByRole('button', { name: /^Действия участника: / }).first().click()
+  await page.getByRole('menuitem', { name: 'Ссылка для входа' }).click()
   const loginLink = page.getByRole('textbox', { name: 'Ссылка для входа' })
   await loginLink.scrollIntoViewIfNeeded()
   await page.waitForTimeout(300)

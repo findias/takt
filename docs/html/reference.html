@@ -131,6 +131,7 @@ color:var(--ink-3);font-size:.85rem}
 </tbody>
 </table></div>
 <p>Every role, the viewer included, suggests ideas on the <strong>Ideas</strong> tab and supports others&#39; — an idea is not work. What becomes of an idea is decided by the owner, and by a subdivision owner for the ideas addressed to their subtree. An idea addressed to a subdivision is moved by that subdivision&#39;s owner within their subtree or up to the whole organisation; the owner moves any open idea anywhere, the author — their own until it is decided.</p>
+<p>On <strong>Team</strong>, names, email addresses, roles and links to tasks stay visible. Rare administrative actions are in each person’s actions menu (<strong>⋮</strong>), whose accessible name includes the person’s name. The menu only offers actions allowed for the current user; erasing data still asks for confirmation.</p>
 <p>Beyond roles, the owner appoints (and a subdivision owner, below their own node):</p>
 <div class="tablewrap"><table>
 <thead><tr><th>Appointment</th><th>What it grants</th></tr></thead>
@@ -180,6 +181,11 @@ color:var(--ink-3);font-size:.85rem}
 <tr><td>Iteration</td><td>attached to an iteration; separately, &#34;not in an iteration&#34;</td></tr>
 </tbody>
 </table></div>
+<h2 id="hierarchical-table">Hierarchical table</h2>
+<p>Choose <strong>Tree</strong> in a board&#39;s view picker. It shows the existing parent–subtask links, including branches on other boards you can access. <strong>Columns</strong> lets you show or hide <strong>Board / column</strong>, <strong>Priority</strong> and <strong>Completion</strong>. Task titles remain visible in full; the table scrolls horizontally on narrow screens.</p>
+<p><strong>Search the tree</strong> matches titles and keys, keeps ancestors as context, and expands matching paths. A matching parent&#39;s whole subtree is included. <strong>Order</strong> sorts siblings by key or title, preserving the hierarchy. <strong>Expand all</strong> and <strong>Collapse all</strong> control branches; collapse is unavailable while searching. The checkbox includes tasks with no parent or parts.</p>
+<p>These settings live in the URL and can be stored with the board&#39;s saved views. The board&#39;s ordinary filters do not apply to the tree. Local completion uses the same value as the card, including manual percentages and subtree progress; it is not recalculated from the currently visible rows. For tasks on other boards, only a confirmed completion is shown as 100%; otherwise the completion cell is a dash because this endpoint has no partial percentage. An incomplete remote branch is reported with a retry action.</p>
+<p>This is a view of existing task relationships. Independently editable portfolio structures, folders, generators and formula columns are not available yet.</p>
 <h2 id="blocks-with-a-deadline">Blocks with a deadline</h2>
 <p>A block may be given a moment when it lifts itself — <strong>Lifts itself (optional)</strong> when blocking, <strong>Block deadline</strong> on a blocked card. Leave it empty and the block stays until someone lifts it; that is the normal case.</p>
 <ul>
@@ -242,6 +248,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <p>Every board counts its own metrics. Epics live on a portfolio board, so their months never mix with a team&#39;s days.</p>
 <h2 id="reports-numbers">Numbers on <strong>Reports</strong></h2>
+<p>The period and export links stay at the top. Open <strong>Filters</strong> for detailed conditions; active conditions remain visible below it and can be removed without reopening the form. <strong>Clear selection</strong> keeps the chosen period. On narrow screens, <strong>Quick period</strong> offers the same presets as the buttons on desktop. <strong>How the period works</strong> explains the inclusion rule inside <strong>Filters</strong>.</p>
 <p>Every block on <strong>Reports</strong> has a &#34;?&#34; beside its title with the same explanation in a few sentences. Here they are together, block by block. All of them count the cards that match the selection above.</p>
 <h3 id="reports-attention">Needs attention now</h3>
 <p>What keeps work from moving as of today. The period does not apply here; the selection does. A card with two problems is in both lists. Click a card and it opens at the side, so the problem can be fixed in place.</p>
@@ -395,7 +402,7 @@ color:var(--ink-3);font-size:.85rem}
 </table></div>
 <p>Vacation warnings in Tasks, cards and Gantt ask for review; they do not change dates, columns or assignees. They check each assignee separately. The calendar is organisation-wide; task details still require board visibility. A parent subdivision includes its descendants; multiple selected branches are combined. Calendar and coverage refresh every minute and when the window regains focus.</p>
 <p>For steps, see <a href="howto.html#new-features">the new features walkthrough</a>, <a href="howto.html#gantt">Gantt</a> and <a href="howto.html#vacations">vacations</a>.</p>
-<footer>Takt, version v0.6.0. Built from reference.md — edit the source, not this page.</footer>
+<footer>Takt, version v0.6.0-dirty. Built from reference.md — edit the source, not this page.</footer>
 </main>
 </body>
 </html>

@@ -5,6 +5,10 @@ import { plural } from '../../lib/plural.ts'
 export const reports = {
     title: 'Выгрузка карточек',
     intro: 'Что застряло сейчас, что сделано за период и файл с карточками по отбору.',
+    filter: 'Отбор', activeFilters: 'Активные условия отчёта',
+    noExtraFilters: 'Все доступные доски',
+    quickPeriod: 'Готовый период', customPeriod: 'Свой период',
+    periodHelp: 'Как считается период',
     period: 'Период',
     from: 'Начало периода',
     to: 'Конец периода',

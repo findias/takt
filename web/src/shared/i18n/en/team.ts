@@ -11,6 +11,7 @@ export const team: typeof ru = {
     inOrg: 'In the organisation',
     integrationKey: 'integration key',
     key: 'key',
+    actionsOf: (name: string) => `Member actions: ${name}`,
     roleOf: (name: string) => `Role: ${name}`,
     removeOf: (name: string) => `Remove ${name}`,
     remove: 'Remove',

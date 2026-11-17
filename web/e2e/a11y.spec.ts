@@ -21,6 +21,16 @@ type Small = { name: string; width: number; height: number }
 // клик отваливается тайм-аутом в тридцать секунд, и шесть сценариев
 // разом выглядят поломкой вёрстки, которой нет. Так и было — до тех
 // пор, пока `make e2e` доводил базу только до миграций.
+async function revealBoardControls(page: Page, kind: 'tools' | 'filters') {
+  const button = kind === 'tools'
+    ? page.getByRole('button', { name: /^(Инструменты|Tools)$/ })
+    : page.locator('.filters-toggle')
+  await expect(button).toBeVisible()
+  if (await button.getAttribute('aria-expanded') === 'false') {
+    await button.click()
+  }
+}
+
 async function signInToDemo(page: Page) {
   await page.goto('/')
   await page.getByLabel('Почта').fill('anna@example.test')
@@ -127,9 +137,9 @@ test('на всех экранах цели нажатия не мельче 24 
   await page.getByPlaceholder('Название новой доски').fill('Доступность')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
 
   // Действия карточки появляются по наведению — до этого их не измерить.
   await queue.getByRole('group', { name: /Карточка «Карточка»/ }).hover()
@@ -199,9 +209,9 @@ test('размеры текста ложатся в целые пиксели', 
   await page.getByPlaceholder('Название новой доски').fill('Типографика')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
 
   const дробные = await page.evaluate(() => {
     const out = new Set<string>()
@@ -317,7 +327,9 @@ async function lowContrast(page: Page, тема: 'Светлая' | 'Тёмна�
       if (lc < порогLc) out.push(`текст «${текст.slice(0, 20)}» Lc ${lc.toFixed(0)} < ${порогLc}`)
     }
     for (const el of document.querySelectorAll('input, select, textarea')) {
-      const cs = getComputedStyle(el)
+      // У флажка карточки границу рисует внутренний квадрат,
+      // а сам input сохраняет большую цель нажатия.
+      const cs = el.matches('input.card-check') ? getComputedStyle(el, '::before') : getComputedStyle(el)
       if (!parseFloat(cs.borderTopWidth)) continue
       const фон = подложка(el.parentElement)
       const k = отношение(числа(cs.borderTopColor), фон)
@@ -334,9 +346,9 @@ test('контраст держится в обеих темах', async ({ page
   await page.getByPlaceholder('Название новой доски').fill('Контраст')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
   // Исполнитель на карточке — ради подписи аватара: она и падала
   // в тёмной теме. Без исполнителя аватара на экране нет вовсе,
   // и проверять было бы нечего.
@@ -363,7 +375,8 @@ test('контраст держится в обеих темах', async ({ page
     [...document.querySelectorAll('input[type="checkbox"]')].filter((el) => {
       const box = el.getBoundingClientRect()
       if (!box.width) return false
-      return parseFloat(getComputedStyle(el).borderTopWidth) === 0
+      const style = el.matches('input.card-check') ? getComputedStyle(el, '::before') : getComputedStyle(el)
+      return parseFloat(style.borderTopWidth) === 0
     }).length,
   )
   expect(безГраницы, 'флажки без вычисленной границы — мимо замера контраста').toBe(0)
@@ -417,9 +430,9 @@ test('на узком экране страница не листается вб
   await page.getByPlaceholder('Название новой доски').fill('Узкое окно')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
   expect(await шире(), 'доска').toEqual({ прокрутка: 360, окно: 360 })
 
   // Часть внутри родителя: она уходит с доски внутрь задачи, но
@@ -595,10 +608,10 @@ test('при двойном размере текста название зад�
   await page.getByPlaceholder('Название новой доски').fill('Крупный текст')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const очередь = page.getByRole('region', { name: 'Очередь' })
-  await очередь.getByRole('button', { name: 'Завести карточку' }).click()
+  await очередь.getByRole('button', { name: 'Завести карточку' }).last().click()
   const длинное = 'Разобрать обращения службы поддержки за прошлую неделю и ответить всем'
   await очередь.getByPlaceholder('Что нужно сделать?').fill(длинное)
-  await очередь.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await очередь.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Таблица' })
   await expect(page.locator('.board-table')).toBeVisible()
 
@@ -621,9 +634,9 @@ test('открытое меню отдаёт фокус первому пунк�
   await page.getByPlaceholder('Название новой доски').fill('Меню с клавиатуры')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
 
   const card = queue.getByRole('group', { name: /Карточка «Карточка»/ })
   await card.hover()
@@ -665,9 +678,9 @@ test('панель над доской не обрезается ни на од�
   await page.getByPlaceholder('Название новой доски').fill('Панель')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Карточка')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
 
   for (const width of [1440, 942, 390]) {
     await page.setViewportSize({ width, height: 800 })
@@ -710,18 +723,18 @@ test('флажок не мельче цели нажатия, подпись н�
   await page.getByPlaceholder('Название новой доски').fill('Тесная строка')
   await page.getByRole('button', { name: 'Завести доску', exact: true }).click()
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue
     .getByPlaceholder('Что нужно сделать?')
     .fill('Собрать отчёт по всему кварталу и году')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
 
   // Подзадача теснит верхнюю строку: в ней появляется ссылка
   // на родителя, и места флажку остаётся меньше всего. Название
   // родителя длинное намеренно — короткое в строку помещается,
   // и тесно не становится.
   const parent = queue.getByRole('group', { name: /Карточка «Собрать отчёт/ })
-  await parent.getByRole('button', { name: /Собрать отчёт/ }).click()
+  await parent.getByRole('button', { name: 'Собрать отчёт по всему кварталу и году', exact: true }).click()
   await page.getByRole('tab', { name: 'Задачи' }).click()
   await page.getByLabel('Название подзадачи').fill('Свести цифры за весь квартал')
   await page.getByRole('button', { name: 'Подзадача' }).click()
@@ -814,11 +827,12 @@ test('кнопки, которых по нескольку, названы по 
   // В панели карточки «Снять» стоит у исполнителя, обязательства, метки
   // и блокировки — у четырёх разных объектов сразу.
   const queue = page.getByRole('region', { name: 'Очередь' })
-  await queue.getByRole('button', { name: 'Завести карточку' }).click()
+  await queue.getByRole('button', { name: 'Завести карточку' }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Работа')
-  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
   const card = queue.getByRole('group', { name: /Карточка «Работа»/ })
   await card.hover()
+  await card.getByRole('button', { name: /^Развернуть карточку/ }).click()
   await card.getByRole('button', { name: /Исполнител/ }).click()
   await page.getByRole('menuitemcheckbox').first().click()
   await page.keyboard.press('Escape')
@@ -830,6 +844,7 @@ test('кнопки, которых по нескольку, названы по 
   expect(await contextless(page), 'панель карточки').toEqual([])
   await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click()
 
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: '+ итерация' }).click()
   await page.getByPlaceholder('Название').fill('Неделя 34')
   await page.getByLabel('Начало').fill('2026-08-10')
@@ -1105,6 +1120,7 @@ test('на бумагу уходит документ, а не снимок эк
   // Открытая панель — то, ради чего печатают: доска за ней лишняя.
   await page.emulateMedia({ media: 'screen' })
   await page.getByRole('combobox', { name: 'Вид доски' }).selectOption({ label: 'Доска' })
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: /^Неделя \d+$/ }).first().click()
   await expect(page.locator('.panel-card')).toBeVisible()
   await page.emulateMedia({ media: 'print' })
@@ -1238,6 +1254,7 @@ test('в архиве название карточки не обрезаетс�
   await page.setViewportSize({ width: 1440, height: 900 })
   await signInToDemo(page)
   await openDemoBoard(page)
+  await revealBoardControls(page, 'tools')
   await page.getByRole('button', { name: 'Архив' }).click()
   await expect(page.getByRole('searchbox', { name: /архиве/ })).toBeVisible()
 
@@ -1328,6 +1345,7 @@ test('на узком экране выбранная группировка в�
   await page.setViewportSize({ width: 360, height: 800 })
   await signInToDemo(page)
   await openDemoBoard(page)
+  await revealBoardControls(page, 'tools')
   const grouping = page.getByRole('combobox', { name: 'Группировка' })
   await expect(grouping).toBeVisible()
   const { text, room } = await grouping.evaluate((el) => {
@@ -1414,6 +1432,7 @@ test('на узком экране архив и отчёт итерации н�
           .map((el) => el.textContent),
       )
 
+    await revealBoardControls(page, 'tools')
     await page.getByRole('button', { name: l.archive }).click()
     await expect(page.locator('.panel-card li').first()).toBeVisible()
     expect(await clipped(), `${l.locale}, архив: обрезано`).toEqual([])
@@ -1425,6 +1444,7 @@ test('на узком экране архив и отчёт итерации н�
     expect(torn, `${l.locale}, архив: действие на двух строках`).toEqual([])
 
     await page.goto(boardUrl)
+    await revealBoardControls(page, 'tools')
     await page.getByRole('button', { name: l.week }).first().click()
     await expect(page.locator('.panel-card .related-open').first()).toBeVisible()
     expect(await clipped(), `${l.locale}, отчёт итерации: обрезано`).toEqual([])

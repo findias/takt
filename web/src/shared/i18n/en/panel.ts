@@ -2,6 +2,9 @@
 import type { panel as ru } from '../ru/panel.ts'
 
 export const panel: typeof ru = {
+    returnToSubtask: 'Return to subtask',
+    sourceSubtask: 'Source subtask',
+    column: 'Column',
     talk: 'Discussion',
     moveToBoard: 'To another board…',
     copyLink: 'Copy link',
