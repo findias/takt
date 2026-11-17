@@ -111,7 +111,7 @@ test('участник заводит доску и карточку, а дос�
   const queue = page.getByRole('region', { name: 'Очередь' })
   await expect(queue).toBeVisible()
 
-  await queue.getByRole('button', { name: /Завести карточку/ }).click()
+  await queue.getByRole('button', { name: 'Завести карточку в «Очередь»', exact: true }).last().click()
   await queue.getByPlaceholder('Что нужно сделать?').fill('Проверить стенд')
   await page.keyboard.press('Enter')
   await expect(queue.getByRole('group', { name: /Проверить стенд/ })).toBeVisible()
